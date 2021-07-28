@@ -5,6 +5,7 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
+use async_utils::async_once::Once;
 use dhcp::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
 use futures::future::TryFutureExt as _;
@@ -13,7 +14,7 @@ use net_declare::{fidl_ip_v4, fidl_mac};
 use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
-use test_case::test_case;
+use std::cell::RefCell;
 
 // Encapsulates a minimal configuration needed to test a DHCP client/server combination.
 struct DhcpTestConfig<'a> {
@@ -79,48 +80,58 @@ const DEFAULT_TEST_CONFIG: DhcpTestConfig<'static> = DhcpTestConfig {
     netemul_device_name: "eth2",
 };
 
-const ALT_TEST_CONFIG: DhcpTestConfig<'static> = DhcpTestConfig {
-    server_addr: fidl_ip_v4!("192.168.1.1"),
-    managed_addrs: dhcp::configuration::ManagedAddresses {
-        // We know this is safe because 25 is less than the size of an IPv4 address in bits.
-        mask: unsafe { dhcp::configuration::SubnetMask::new_unchecked(25) },
-        pool_range_start: std::net::Ipv4Addr::new(192, 168, 1, 2),
-        pool_range_stop: std::net::Ipv4Addr::new(192, 168, 1, 5),
-    },
-    netemul_device_name: "eth3",
-};
+const DEFAULT_NETWORK_NAME: &'static str = "net1";
 
-const DEFAULT_NETWORK_NAME: &'static str = "net";
-
-/// Endpoints in DHCP tests are either
-/// 1. attached to the server stack, which will have DHCP servers serving on them.
-/// 2. or attached to the client stack, which will have DHCP clients started on
-///    them to request addresses.
-enum DhcpTestEnv {
-    Client(fidl_fuchsia_net::Subnet),
-    Server,
+enum DhcpEndpointType {
+    Client { expected_acquired: fidl_fuchsia_net::Subnet },
+    Server { static_addrs: Vec<fidl_fuchsia_net::Subnet> },
 }
 
-struct DhcpTestEndpoint<'a> {
-    name: &'a str,
-    env: DhcpTestEnv,
-    /// static_addrs holds the static addresses configured on the endpoint
-    /// before any server or client is started.
-    static_addrs: Vec<fidl_fuchsia_net::Subnet>,
+struct DhcpTestEndpointConfig<'a> {
+    ep_type: DhcpEndpointType,
+    network: &'a DhcpTestNetwork<'a>,
 }
 
-struct DhcpTestCase<'a, 'b> {
-    network_configs: &'a mut [DhcpTestNetwork<'a>],
-    dhcp_settings: &'b mut [Settings<'b>],
-    cycles: usize,
-    client_renews: bool,
-}
-
-/// A network can have multiple endpoints. Each endpoint can be attached to a
-/// different stack.
+// Struct for encapsulating a netemul network alongside various metadata.
+// We rely heavily on the interior mutability pattern here so that we can
+// pass around multiple references to the network while still modifying
+// its internals.
 struct DhcpTestNetwork<'a> {
     name: &'a str,
-    eps: &'a mut [DhcpTestEndpoint<'a>],
+    network: Once<netemul::TestNetwork<'a>>,
+    next_ep_idx: RefCell<usize>,
+    sandbox: &'a netemul::TestSandbox,
+}
+
+impl<'a> DhcpTestNetwork<'a> {
+    fn new(name: &'a str, sandbox: &'a netemul::TestSandbox) -> DhcpTestNetwork<'a> {
+        DhcpTestNetwork { name, network: Once::new(), next_ep_idx: RefCell::new(0), sandbox }
+    }
+
+    async fn create_endpoint<E: netemul::Endpoint>(&self) -> Result<netemul::TestEndpoint<'_>> {
+        let DhcpTestNetwork { name, network, next_ep_idx, sandbox } = self;
+        let net = network
+            .get_or_try_init(async { sandbox.create_network(name.to_string()).await })
+            .await
+            .context("failed to create network")?;
+        let curr_idx: usize = next_ep_idx.replace_with(|&mut old| old + 1);
+        let ep_name = format!("{}-{}", name, curr_idx);
+        let endpoint = net
+            .create_endpoint::<E, _>(ep_name.clone())
+            .await
+            .context("failed to create endpoint")?;
+        Ok(endpoint)
+    }
+}
+
+struct TestServerConfig<'a> {
+    bound_endpoints: &'a [DhcpTestEndpointConfig<'a>],
+    settings: Settings<'a>,
+}
+
+struct TestNetstackEnvConfig<'a> {
+    clients: &'a [DhcpTestEndpointConfig<'a>],
+    servers: &'a mut [TestServerConfig<'a>],
 }
 
 async fn set_server_settings(
@@ -156,91 +167,88 @@ async fn set_server_settings(
     Ok(())
 }
 
-async fn client_acquires_addr(
+async fn assert_client_aquires_addr(
     client_env: &netemul::TestEnvironment<'_>,
-    interfaces: &[netemul::TestInterface<'_>],
+    client_interface: &netemul::TestInterface<'_>,
     expected_acquired: fidl_fuchsia_net::Subnet,
     cycles: usize,
     client_renews: bool,
-) -> Result {
+) {
     let client_interface_state = client_env
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("failed to connect to client fuchsia.net.interfaces/State")?;
+        .expect("failed to connect to client fuchsia.net.interfaces/State");
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-            .context("failed to create interface watcher proxy")?;
+            .expect("failed to create interface watcher proxy");
     let () = client_interface_state
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .context("failed to initialize interface watcher")?;
-    for interface in interfaces.iter() {
-        let mut properties =
-            fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
-        for () in std::iter::repeat(()).take(cycles) {
-            // Enable the interface and assert that binding fails before the address is acquired.
-            let () = interface.stop_dhcp().await.context("failed to stop DHCP")?;
-            let () = interface.set_link_up(true).await.context("failed to bring link up")?;
-            matches::assert_matches!(
-                bind(&client_env, expected_acquired).await,
-                Err(e @ anyhow::Error {..})
-                    if e.downcast_ref::<std::io::Error>()
-                        .ok_or(anyhow::anyhow!("bind() did not return std::io::Error"))?
-                        .raw_os_error() == Some(libc::EADDRNOTAVAIL)
-            );
+        .expect("failed to initialize interface watcher");
+    let mut properties =
+        fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(client_interface.id());
+    for () in std::iter::repeat(()).take(cycles) {
+        // Enable the interface and assert that binding fails before the address is acquired.
+        let () = client_interface.stop_dhcp().await.expect("failed to stop DHCP");
+        let () = client_interface.set_link_up(true).await.expect("failed to bring link up");
+        matches::assert_matches!(
+            bind(&client_env, expected_acquired).await,
+            Err(e @ anyhow::Error {..})
+                if e.downcast_ref::<std::io::Error>()
+                    .expect("bind() did not return std::io::Error")
+                    .raw_os_error() == Some(libc::EADDRNOTAVAIL)
+        );
 
-            let () = interface.start_dhcp().await.context("failed to start DHCP")?;
+        let () = client_interface.start_dhcp().await.expect("failed to start DHCP");
 
+        let () = assert_interface_assigned_addr(
+            client_env,
+            expected_acquired,
+            &watcher,
+            &mut properties,
+        )
+        .await;
+
+        // If test covers renewal behavior, check that a subsequent interface changed event
+        // occurs where the client retains its address, i.e. that it successfully renewed its
+        // lease. It will take lease_length/2 duration for the client to renew its address
+        // and trigger the subsequent interface changed event.
+        if client_renews {
             let () = assert_interface_assigned_addr(
                 client_env,
                 expected_acquired,
                 &watcher,
                 &mut properties,
             )
-            .await?;
-
-            // If test covers renewal behavior, check that a subsequent interface changed event
-            // occurs where the client retains its address, i.e. that it successfully renewed its
-            // lease. It will take lease_length/2 duration for the client to renew its address
-            // and trigger the subsequent interface changed event.
-            if client_renews {
-                let () = assert_interface_assigned_addr(
-                    client_env,
-                    expected_acquired,
-                    &watcher,
-                    &mut properties,
-                )
-                .await?;
-            }
-            // Set interface online signal to down and wait for address to be removed.
-            let () = interface.set_link_up(false).await.context("failed to bring link down")?;
-
-            let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-                fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
-                &mut properties,
-                |fidl_fuchsia_net_interfaces_ext::Properties {
-                     id: _,
-                     addresses,
-                     online: _,
-                     device_class: _,
-                     has_default_ipv4_route: _,
-                     has_default_ipv6_route: _,
-                     name: _,
-                 }| {
-                    if addresses.iter().any(
-                        |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                            addr == expected_acquired
-                        },
-                    ) {
-                        None
-                    } else {
-                        Some(())
-                    }
-                },
-            )
-            .await
-            .context("failed to wait for address removal")?;
+            .await;
         }
+        // Set interface online signal to down and wait for address to be removed.
+        let () = client_interface.set_link_up(false).await.expect("failed to bring link down");
+
+        let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            &mut properties,
+            |fidl_fuchsia_net_interfaces_ext::Properties {
+                 id: _,
+                 addresses,
+                 online: _,
+                 device_class: _,
+                 has_default_ipv4_route: _,
+                 has_default_ipv6_route: _,
+                 name: _,
+             }| {
+                if addresses.iter().any(
+                    |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr == expected_acquired
+                    },
+                ) {
+                    None
+                } else {
+                    Some(())
+                }
+            },
+        )
+        .await
+        .expect("failed to wait for address removal");
     }
-    Ok(())
 }
 
 async fn assert_interface_assigned_addr(
@@ -248,7 +256,7 @@ async fn assert_interface_assigned_addr(
     expected_acquired: fidl_fuchsia_net::Subnet,
     watcher: &fidl_fuchsia_net_interfaces::WatcherProxy,
     mut properties: &mut fidl_fuchsia_net_interfaces_ext::InterfaceState,
-) -> Result {
+) {
     let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut properties,
@@ -282,13 +290,12 @@ async fn assert_interface_assigned_addr(
         || Err(anyhow::anyhow!("timed out")),
     )
     .await
-    .context("failed to observe DHCP acquisition on client ep")?;
+    .expect("failed to observe DHCP acquisition on client ep");
     assert_eq!(addr, expected_acquired);
 
     // Address acquired; bind is expected to succeed.
     let _: std::net::UdpSocket =
-        bind(&client_env, expected_acquired).await.context("binding to UDP socket failed")?;
-    Ok(())
+        bind(&client_env, expected_acquired).await.expect("binding to UDP socket failed");
 }
 
 fn bind<'a>(
@@ -306,329 +313,299 @@ struct Settings<'a> {
     options: &'a mut [fidl_fuchsia_net_dhcp::Option_],
 }
 
-/// test_dhcp starts 2 netstacks, client and server, and attaches endpoints to
-/// them in potentially multiple networks based on the input network
-/// configuration.
-///
-/// DHCP servers are started on the server side, configured from the dhcp_settings argument.
-/// Notice based on the configuration, it is possible that multiple servers are started and bound
-/// to different endpoints.
-///
-/// DHCP clients are started on each client endpoint, attempt to acquire
-/// addresses through DHCP and compare them to expected address.
-///
-/// The DHCP client's renewal path is tested with the `client_renews` flag. If this flag is enabled,
-/// the user will likely want to set custom renewal and rebinding times, with short values, so as to
-/// minimize time spent waiting for renewal to trigger.
 #[variants_test]
-#[test_case(
-    "acquire_with_dhcpd_bound_device",
-    DhcpTestCase{
-        network_configs: &mut [DhcpTestNetwork {
-            name: DEFAULT_NETWORK_NAME,
-            eps: &mut [
-                DhcpTestEndpoint {
-                    name: "server-ep",
-                    env: DhcpTestEnv::Server,
-                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                },
-                DhcpTestEndpoint {
-                    name: "client-ep",
-                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                    static_addrs: Vec::new(),
-                },
-            ],
-        }],
-        dhcp_settings: &mut [Settings {
-            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
-            options: &mut [],
-        }],
-        cycles:1,
-        client_renews: false,
-    }; "acquire dhcp with dhcpd bound device")]
-#[test_case(
-    "acquire_with_multiple_networks",
-    DhcpTestCase{
-        network_configs: &mut [
-            DhcpTestNetwork {
-                name: "net1",
-                eps: &mut [
-                    DhcpTestEndpoint {
-                        name: "server-ep1",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep1",
-                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            },
-            DhcpTestNetwork {
-                name: "net2",
-                eps: &mut [
-                    DhcpTestEndpoint {
-                        name: "server-ep2",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![ALT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep2",
-                        env: DhcpTestEnv::Client(ALT_TEST_CONFIG.expected_acquired()),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            },
-        ],
-        dhcp_settings: &mut [
-            Settings { parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
-            Settings { parameters: &mut ALT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
-        ],
-        cycles:1,
-        client_renews:false,
-    }; "acquire dhcp with multiple networks")]
-#[test_case(
-    "acquire_then_renew_with_dhcpd_bound_device",
-    {
-        // A realistic lease length that won't expire within the test timeout of 2 minutes.
-        const LONG_LEASE: u32 = 60 * 60 * 24;
-        // A short client renewal time which will trigger well before the test timeout of 2 minutes.
-        const SHORT_RENEW: u32 = 3;
-
-        let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
-        parameters.push(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
-            default: Some(LONG_LEASE),
-            max: Some(LONG_LEASE),
-            ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
-        }));
-
-        DhcpTestCase{
-            network_configs: &mut [DhcpTestNetwork {
-                name: DEFAULT_NETWORK_NAME,
-                eps: &mut [
-                    DhcpTestEndpoint {
-                        name: "server-ep",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep",
-                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            }],
-            dhcp_settings: &mut [Settings {
-                parameters: &mut parameters.to_vec(),
-                options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(SHORT_RENEW)],
-            }],
-            cycles:1,
-            client_renews: true,
-        }
-    }; "acquire dhcp then renew with dhcpd bound device")]
-#[test_case(
-    "acquire_with_dhcpd_bound_device_dup_addr",
-    {
-        let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
-        let expected_addr = match expected_acquired.addr {
-            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
-                // We expect to assign the address numericaly succeeding the default client address
-                // since the default client address will be assigned to a neighbor of the client so
-                // the client should decline the offer and restart DHCP.
-                *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
-                    1;
-
-                fidl_fuchsia_net::Subnet {
-                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                        addr: octets,
-                    }),
-                    ..expected_acquired
-                }
-            }
-            fidl_fuchsia_net::IpAddress::Ipv6(a) => {
-                panic!("expected IPv4 address; got IPv6 address = {:?}", a)
-            }
-        };
-
-        DhcpTestCase {
-            network_configs: &mut [DhcpTestNetwork {
-                name: DEFAULT_NETWORK_NAME,
-                eps: &mut [
-                    // Use two separate endpoints for the server so that its unicast responses to
-                    // the expected address acquired actually reach the network. This is not a hack around
-                    // Fuchsia behavior: Linux behaves the same way. On Linux, given an endpoint that
-                    // is BINDTODEVICE, unicasting to an IP address bound to another endpoint on the
-                    // same host WILL reach the network, rather than going through loopback. However,
-                    // if the first endpoint is NOT BINDTODEVICE, the outgoing message will be sent via
-                    // loopback.
-                    DhcpTestEndpoint {
-                        name: "server-ep",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "server-ep2",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![expected_acquired],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep",
-                        env: DhcpTestEnv::Client(expected_addr),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            }],
-            dhcp_settings: &mut [Settings {
-                parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
-                options: &mut [],
-            }],
-            cycles: 1,
-            client_renews: false,
-        }
-    }; "acquire dhcp with dhcpd bound device dup addr")]
-async fn test_dhcp<E: netemul::Endpoint>(
-    test_name: &str,
-    sub_test_name: &str,
-    test_case: DhcpTestCase<'_, '_>,
-) {
-    let DhcpTestCase { network_configs, dhcp_settings, cycles, client_renews } = test_case;
-
-    let name = format!("{}_{}", test_name, sub_test_name);
-    let name = name.as_str();
-
+async fn test_acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
 
-    let sandbox_ref = &sandbox;
-    let server_environments = stream::iter(dhcp_settings.into_iter())
-        .enumerate()
-        .then(|(id, Settings { parameters, options })| async move {
-            let server_environment = sandbox_ref
-                .create_netstack_environment_with::<Netstack2, _, _>(
-                    format!("{}_server_{}", name, id),
-                    &[KnownServices::SecureStash],
-                )
-                .context("failed to create server environment")?;
-
-            let launcher =
-                server_environment.get_launcher().context("failed to create launcher")?;
-
-            let dhcpd = fuchsia_component::client::launch(
-                &launcher,
-                KnownServices::DhcpServer.get_url().to_string(),
-                None,
-            )
-            .context("failed to start dhcpd")?;
-
-            let dhcp_server = dhcpd
-                .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
-                .context("failed to connect to DHCP server")?;
-            let () = set_server_settings(&dhcp_server, parameters, options).await?;
-            Result::Ok((server_environment, dhcpd))
-        })
-        .try_collect::<Vec<_>>()
-        .await
-        .expect("failed to create server environments");
-
-    let client_environment = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
-        .expect("failed to create client environment");
-    let client_env_ref = &client_environment;
-
-    let server_environments_ref = &server_environments;
-    let networks = stream::iter(network_configs)
-        .then(|DhcpTestNetwork { name, eps }| async move {
-            let network =
-                sandbox_ref.create_network(*name).await.context("failed to create network")?;
-            // `network` is returned at the end of the scope so it is not
-            // dropped.
-            let network_ref = &network;
-            let eps = stream::iter(eps.into_iter())
-                .then(|DhcpTestEndpoint { name, env, static_addrs }| async move {
-                    let test_environments = match env {
-                        DhcpTestEnv::Client(subnet) => {
-                            let _: &fidl_fuchsia_net::Subnet = subnet;
-                            stream::iter(std::iter::once(client_env_ref)).left_stream()
-                        }
-                        DhcpTestEnv::Server => {
-                            stream::iter(server_environments_ref.iter().map(|(env, _dhcpd)| env))
-                                .right_stream()
-                        }
-                    };
-
-                    let name = &*name;
-                    let interfaces = test_environments
-                        .enumerate()
-                        .zip(futures::stream::repeat(static_addrs.clone()))
-                        .then(|((id, test_environment), static_addrs)| async move {
-                            let name = format!("{}-{}", name, id);
-                            let iface = test_environment
-                                .join_network::<E, _>(
-                                    network_ref,
-                                    name,
-                                    &netemul::InterfaceConfig::None,
-                                )
-                                .await
-                                .context("failed to create endpoint")?;
-                            for a in static_addrs.into_iter() {
-                                let () = iface
-                                    .add_ip_addr(a)
-                                    .await
-                                    .with_context(|| format!("failed to add address {:?}", a))?;
-                            }
-
-                            Ok::<_, anyhow::Error>(iface)
-                        })
-                        .try_collect::<Vec<_>>()
-                        .await
-                        .context("failed to create interface")?;
-
-                    Result::Ok((env, interfaces))
-                })
-                .try_collect::<Vec<_>>()
-                .await?;
-
-            Result::Ok((network, eps))
-        })
-        .try_collect::<Vec<_>>()
-        .await
-        .expect("failed to install endpoints");
-
-    let () = stream::iter(server_environments.iter())
-        .map(Ok)
-        .try_for_each_concurrent(None, |(_env, dhcpd)| async move {
-            let dhcp_server = dhcpd
-                .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
-                .context("failed to connect to DHCP server")?;
-            dhcp_server
-                .start_serving()
-                .await
-                .context("failed to call dhcp/Server.StartServing")?
-                .map_err(fuchsia_zircon::Status::from_raw)
-                .context("dhcp/Server.StartServing returned error")
-        })
-        .await
-        .expect("failed to start DHCP servers");
-
-    stream::iter(
-        // Iterate over references to prevent filter from dropping endpoints.
-        networks
-            .iter()
-            .flat_map(|(_, eps)| eps)
-            .filter_map(|(env, interfaces)| match env {
-                // We only care about whether client endpoints can acquire
-                // addresses through DHCP client or not.
-                DhcpTestEnv::Client(expected_acquired) => Some((expected_acquired, interfaces)),
-                DhcpTestEnv::Server => None,
-            })
-            .map(Result::Ok),
+    test_dhcp::<E>(
+        name,
+        &sandbox,
+        &mut [
+            TestNetstackEnvConfig {
+                clients: &[DhcpTestEndpointConfig {
+                    ep_type: DhcpEndpointType::Client {
+                        expected_acquired: DEFAULT_TEST_CONFIG.expected_acquired(),
+                    },
+                    network: &network,
+                }],
+                servers: &mut [],
+            },
+            TestNetstackEnvConfig {
+                clients: &[],
+                servers: &mut [TestServerConfig {
+                    bound_endpoints: &[DhcpTestEndpointConfig {
+                        ep_type: DhcpEndpointType::Server {
+                            static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                        },
+                        network: &network,
+                    }],
+                    settings: Settings {
+                        parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+                        options: &mut [],
+                    },
+                }],
+            },
+        ],
+        1,
+        false,
     )
-    .try_for_each(|(expected_acquired, interfaces)| async move {
-        client_acquires_addr(client_env_ref, interfaces, *expected_acquired, cycles, client_renews)
-            .await
-    })
     .await
-    .expect("client failed to acquire expected addresses")
+}
+
+#[variants_test]
+async fn test_acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
+
+    // A realistic lease length that won't expire within the test timeout of 2 minutes.
+    const LONG_LEASE: u32 = 60 * 60 * 24;
+    // A short client renewal time which will trigger well before the test timeout of 2 minutes.
+    const SHORT_RENEW: u32 = 3;
+
+    let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
+    parameters.push(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+        default: Some(LONG_LEASE),
+        max: Some(LONG_LEASE),
+        ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+    }));
+
+    test_dhcp::<E>(
+        name,
+        &sandbox,
+        &mut [
+            TestNetstackEnvConfig {
+                clients: &[DhcpTestEndpointConfig {
+                    ep_type: DhcpEndpointType::Client {
+                        expected_acquired: DEFAULT_TEST_CONFIG.expected_acquired(),
+                    },
+                    network: &network,
+                }],
+                servers: &mut [],
+            },
+            TestNetstackEnvConfig {
+                clients: &[],
+                servers: &mut [TestServerConfig {
+                    bound_endpoints: &[DhcpTestEndpointConfig {
+                        ep_type: DhcpEndpointType::Server {
+                            static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                        },
+                        network: &network,
+                    }],
+                    settings: Settings {
+                        parameters: &mut parameters.to_vec(),
+                        options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(
+                            SHORT_RENEW,
+                        )],
+                    },
+                }],
+            },
+        ],
+        1,
+        true,
+    )
+    .await
+}
+
+#[variants_test]
+async fn test_acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = DhcpTestNetwork::new(DEFAULT_NETWORK_NAME, &sandbox);
+
+    let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
+    let expected_addr = match expected_acquired.addr {
+        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
+            // We expect to assign the address numericaly succeeding the default client address
+            // since the default client address will be assigned to a neighbor of the client so
+            // the client should decline the offer and restart DHCP.
+            *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
+                1;
+
+            fidl_fuchsia_net::Subnet {
+                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: octets,
+                }),
+                ..expected_acquired
+            }
+        }
+        fidl_fuchsia_net::IpAddress::Ipv6(a) => {
+            panic!("expected IPv4 address; got IPv6 address = {:?}", a)
+        }
+    };
+
+    test_dhcp::<E>(
+        name,
+        &sandbox,
+        &mut [
+            TestNetstackEnvConfig {
+                clients: &[DhcpTestEndpointConfig {
+                    ep_type: DhcpEndpointType::Client { expected_acquired: expected_addr },
+                    network: &network,
+                }],
+                servers: &mut [],
+            },
+            TestNetstackEnvConfig {
+                clients: &[],
+                servers: &mut [TestServerConfig {
+                    bound_endpoints: &[
+                        DhcpTestEndpointConfig {
+                            ep_type: DhcpEndpointType::Server {
+                                static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                            },
+                            network: &network,
+                        },
+                        DhcpTestEndpointConfig {
+                            ep_type: DhcpEndpointType::Server {
+                                static_addrs: vec![expected_acquired],
+                            },
+                            network: &network,
+                        },
+                    ],
+                    settings: Settings {
+                        parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+                        options: &mut [],
+                    },
+                }],
+            },
+        ],
+        1,
+        false,
+    )
+    .await
+}
+
+/// test_dhcp provides a flexible way to test DHCP acquisition across various network topologies.
+///
+/// This method will:
+///   -- For each passed netstack config:
+///        -- Start a netstack in a new environment
+///        -- Create netemul endpoints in the referenced network and install them on the netstack
+///        -- Start DHCP servers on each server endpoint
+///        -- Start DHCP clients on each client endpoint and verify that they acquire the expected
+///           addresses
+fn test_dhcp<'a, E: netemul::Endpoint>(
+    test_name: &'a str,
+    sandbox: &'a netemul::TestSandbox,
+    netstack_configs: &'a mut [TestNetstackEnvConfig<'a>],
+    dhcp_loop_cycles: usize,
+    expect_client_renews: bool,
+) -> impl futures::Future<Output = ()> + 'a {
+    async move {
+        let dhcp_objects = stream::iter(netstack_configs.into_iter())
+            .enumerate()
+            .then(|(id, netstack)| async move {
+                let TestNetstackEnvConfig { servers, clients } = netstack;
+                let netstack_env = sandbox
+                    .create_netstack_environment_with::<Netstack2, _, _>(
+                        format!("netstack_env_{}_{}", test_name, id),
+                        &[KnownServices::SecureStash],
+                    )
+                    .context("failed to create netstack environment")?;
+                let netstack_env_ref = &netstack_env;
+
+                let launcher = netstack_env.get_launcher().context("failed to create launcher")?;
+                let launcher_ref = &launcher;
+
+                let servers = stream::iter(servers.into_iter())
+                    .then(|server| async move {
+                        let TestServerConfig {
+                            bound_endpoints,
+                            settings: Settings { options, parameters },
+                        } = server;
+
+                        let dhcpd = fuchsia_component::client::launch(
+                            launcher_ref,
+                            KnownServices::DhcpServer.get_url().to_string(),
+                            None,
+                        )
+                        .context("failed to start dhcpd")?;
+
+                        let dhcp_server = dhcpd
+                            .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                            .context("failed to connect to DHCP server")?;
+
+                        let () = set_server_settings(&dhcp_server, *parameters, *options).await?;
+                        let ifaces = stream::iter(bound_endpoints.into_iter())
+                            .then(|bound_endpoint| async move {
+                                let DhcpTestEndpointConfig { ep_type, network } = bound_endpoint;
+                                let endpoint = network
+                                    .create_endpoint::<E>()
+                                    .await
+                                    .expect("failed to create endpoint");
+                                let iface = netstack_env_ref
+                                    .install_endpoint(endpoint, &netemul::InterfaceConfig::None)
+                                    .await
+                                    .context("failed to install server endpoint")?;
+                                let static_addrs = match ep_type {
+                                    DhcpEndpointType::Client { expected_acquired: _ } => {
+                                        Err(anyhow::anyhow!(
+                                            "found client endpoint instead of server endpoint"
+                                        ))
+                                    }
+                                    DhcpEndpointType::Server { static_addrs } => Ok(static_addrs),
+                                }?;
+                                for addr in static_addrs.into_iter() {
+                                    let () = iface.add_ip_addr(*addr).await.with_context(|| {
+                                        format!("failed to add address {:?}", addr)
+                                    })?;
+                                }
+                                Result::Ok(iface)
+                            })
+                            .try_collect::<Vec<netemul::TestInterface<'_>>>()
+                            .await?;
+
+                        dhcp_server
+                            .start_serving()
+                            .await
+                            .context("failed to call dhcp/Server.StartServing")?
+                            .map_err(fuchsia_zircon::Status::from_raw)
+                            .context("dhcp/Server.StartServing returned error")?;
+                        Result::Ok((dhcpd, ifaces))
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
+                let clients = stream::iter(clients.into_iter())
+                    .then(|client| async move {
+                        let DhcpTestEndpointConfig { ep_type, network } = client;
+                        let endpoint = network
+                            .create_endpoint::<E>()
+                            .await
+                            .expect("failed to create endpoint");
+                        let iface = netstack_env_ref
+                            .install_endpoint(endpoint, &&netemul::InterfaceConfig::None)
+                            .await
+                            .context("failed to install client endpoint")?;
+                        let expected_acquired = match ep_type {
+                            DhcpEndpointType::Client { expected_acquired } => Ok(expected_acquired),
+                            DhcpEndpointType::Server { static_addrs: _ } => Err(anyhow::anyhow!(
+                                "found client endpoint instead of server endpoint"
+                            )),
+                        }?;
+                        Result::Ok((iface, expected_acquired))
+                    })
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
+                Result::Ok((netstack_env, servers, clients))
+            })
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("failed to create DHCP domain objects");
+
+        for (netstack_env, _, clients) in dhcp_objects {
+            for (client, expected_acquired) in clients {
+                assert_client_aquires_addr(
+                    &netstack_env,
+                    &client,
+                    *expected_acquired,
+                    dhcp_loop_cycles,
+                    expect_client_renews,
+                )
+                .await;
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -836,15 +813,14 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
             .context("failed to call dhcp/Server.StartServing")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("dhcp/Server.StartServing returned error")?;
-        let () = client_acquires_addr(
+        let () = assert_client_aquires_addr(
             &client_env,
-            &[client_ep],
+            &client_ep,
             DEFAULT_TEST_CONFIG.expected_acquired(),
             1,
             false,
         )
-        .await
-        .context("client failed to acquire address")?;
+        .await;
         let () =
             dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
         let () = cleanup_component(&mut dhcpd).await?;
