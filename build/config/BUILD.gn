@@ -806,7 +806,7 @@ config("Wno-conversion-generated") {
 config("Wno-unused-but-set-parameter") {
   cflags = [ "-Wno-unused-but-set-parameter" ]
   visibility = [
-    "//third_party/android/device/generic/goldfish-opengl:libvulkan_goldfish",
+    "//third_party/*",
     "//vendor/*",
     "//zircon/third_party/uapp/dash",
   ]
