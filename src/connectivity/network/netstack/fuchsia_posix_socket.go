@@ -962,8 +962,8 @@ type endpointWithSocket struct {
 	mu struct {
 		sync.Mutex
 
-		// loop{Read,Write,Poll}Done are signaled iff loop{Read,Write,Poll} have
-		// exited, respectively.
+		// loop{Read,Write}Done are signaled iff loop{Read,Write} have exited,
+		// respectively.
 		loopReadDone, loopWriteDone <-chan struct{}
 	}
 
@@ -1395,7 +1395,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 						// signals show the client has closed the socket.
 						continue
 					case obs&localSignalClosing != 0:
-						// We're shutting down.
+						// We're closing the endpoint.
 						return
 					case obs&zx.SignalSocketPeerWriteDisabled != 0:
 						// Fallthrough.
@@ -1445,7 +1445,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 				if err := eps.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
 					panic(err)
 				}
-				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_READ", eps)
+				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=0, disposition_peer=ZX_SOCKET_DISPOSITION_WRITE_DISABLED", eps)
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
@@ -1515,7 +1515,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				if err := eps.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
 					panic(err)
 				}
-				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_WRITE", eps)
+				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=ZX_SOCKET_DISPOSITION_WRITE_DISABLED, disposition_peer=0", eps)
 			}
 			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
@@ -1550,22 +1550,13 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 					}
 					fallthrough
 				case zx.ErrBadState:
-					// Writing has been disabled for this socket endpoint.
-					// TODO(https://fxbug.dev/78892): we might not need to shutdown the
-					// endpoint here, since it is done by the Shutdown fidl method.
-					switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
-					case nil:
-					case *tcpip.ErrNotConnected:
-						// An ErrNotConnected while connected is expected if there
-						// is pending data to be read and the connection has been
-						// reset by the other end of the endpoint. The endpoint will
-						// allow the pending data to be read without error but will
-						// return ErrNotConnected if Shutdown is called. Otherwise
-						// this is unexpected, panic.
-						_ = syslog.InfoTf("loopRead", "%p: client shutdown a closed endpoint; ep info: %#v", eps, eps.endpoint.ep.Info())
-					default:
-						panic(err)
-					}
+					// Writing has been disabled for this zircon socket endpoint. This
+					// happens when the client called the Shutdown FIDL method, with
+					// socket.ShutdownModeRead: because the client will not read from this
+					// zircon socket endpoint anymore, writes are disabled.
+					//
+					// Clients can't revert a shutdown, so we can terminate this infinite
+					// loop here.
 					return
 				}
 			}
@@ -1579,13 +1570,19 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 func (eps *endpointWithSocket) shutdown(how socket.ShutdownMode) (posix.Errno, error) {
 	var disposition, dispositionPeer uint32
 
-	if how&socket.ShutdownModeWrite != 0 {
-		disposition = zx.SocketDispositionWriteDisabled
-		how ^= socket.ShutdownModeWrite
-	}
+	// Typically, a Shutdown(Write) is equivalent to disabling the writes on the
+	// local zircon socket. Similarly, a Shutdown(Read) translates to
+	// disabling the writes on the peer zircon socket.
+	// Here, the client wants to shutdown its endpoint but we are calling
+	// setDisposition on our local zircon socket (eg, the client's peer), which is
+	// why disposition and dispositionPeer seem backwards.
 	if how&socket.ShutdownModeRead != 0 {
-		dispositionPeer = zx.SocketDispositionWriteDisabled
+		disposition = zx.SocketDispositionWriteDisabled
 		how ^= socket.ShutdownModeRead
+	}
+	if how&socket.ShutdownModeWrite != 0 {
+		dispositionPeer = zx.SocketDispositionWriteDisabled
+		how ^= socket.ShutdownModeWrite
 	}
 	if how != 0 || (disposition == 0 && dispositionPeer == 0) {
 		return posix.ErrnoEinval, nil
@@ -1595,18 +1592,26 @@ func (eps *endpointWithSocket) shutdown(how socket.ShutdownMode) (posix.Errno, e
 		return tcpipErrorToCode(&tcpip.ErrNotConnected{}), nil
 	}
 
-	if err := eps.peer.SetDisposition(disposition, dispositionPeer); err != nil {
+	if err := eps.local.SetDisposition(disposition, dispositionPeer); err != nil {
 		return 0, err
 	}
 
 	// Only handle a shutdown read on the endpoint here. Shutdown write is
 	// performed by the loopWrite goroutine: it ensures that it happens *after*
 	// all the buffered data in the zircon socket was read.
-	if dispositionPeer&zx.SocketDispositionWriteDisabled != 0 {
+	if disposition&zx.SocketDispositionWriteDisabled != 0 {
 		switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
 		case nil, *tcpip.ErrNotConnected:
-			// Shutdown can return ErrNotConnected if the endpoint was connected
-			// but no longer is.
+			// Shutdown can return ErrNotConnected if the endpoint was connected but
+			// no longer is, in which case the loopRead is also expected to be
+			// terminating.
+			eps.mu.Lock()
+			ch := eps.mu.loopReadDone
+			eps.mu.Unlock()
+			if ch != nil {
+				for range ch {
+				}
+			}
 		default:
 			panic(err)
 		}
