@@ -22,21 +22,25 @@ def filter_line(line):
     #
     # Note that protoc-gen-go-grpc does not embed its version number
     # in its output, so isn't checked here.
-    #
     for version_prefix in ('// \tprotoc ', '// \tprotoc-gen-go '):
         if line.startswith(version_prefix):
-            line = version_prefix + '\n'
+            return version_prefix + '\n'
 
     # The Golang protobuf URL is being migrated. See https://fxbug.dev/70570.
-    line = line.replace(
-        'github.com/golang/protobuf', 'google.golang.org/protobuf')
+    line = line.replace('structpb', '_struct')
+    # Since imports are sorted, direct replacement may not work.
+    if '_struct "' in line:
+        return None
     return line
 
 
 def read_file(path):
     """Read input .pb.go file into a list of filtered lines."""
     with open(path) as f:
-        return [filter_line(l) for l in f.readlines()]
+        return [
+            filtered for line in f.readlines()
+            if (filtered := filter_line(line) is not None)
+        ]
 
 
 def main():
@@ -64,7 +68,7 @@ def main():
         print(
             f'''Error: Golden file mismatch! To print the differences, run:
 
-  diff -burN {current_path} {golden_path}
+  diff -burN <(sed s/structpb/_struct/ {current_path}) {golden_path}
 
 To acknowledge this change, please run:
 
