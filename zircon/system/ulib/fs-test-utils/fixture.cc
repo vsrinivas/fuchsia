@@ -144,7 +144,7 @@ zx_status_t MakeFvm(int devfs_root, const char* root_path, const fbl::String& bl
     return result;
   }
 
-  result = wait_for_device(fvm_device_path.c_str(), zx::sec(3).get());
+  result = wait_for_device(fvm_device_path.c_str(), zx::sec(20).get());
   if (result != ZX_OK) {
     LOG_ERROR(result, "FVM driver failed to start.\nfvm_device_path:%s\n", fvm_device_path.c_str());
     return result;
@@ -353,7 +353,7 @@ zx_status_t Fixture::SetUpTestCase() {
       return result;
     }
     // Wait for RamCtl to appear.
-    result = wait_for_device_at(devmgr_.devfs_root().get(), kRamdiskCtlPath, zx::sec(5).get());
+    result = wait_for_device_at(devmgr_.devfs_root().get(), kRamdiskCtlPath, zx::sec(20).get());
 
     if (result != ZX_OK) {
       return result;
