@@ -128,14 +128,37 @@ int Osd::RdmaThread() {
       break;
     }
 
+    auto status_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
+
     // For AFBC, we simply clear the interrupt. We keep it enabled since it needs to get triggered
     // every vsync. It will get disabled if FlipOnVsync does not use AFBC.
-    if (RdmaStatusReg::ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
+    if (status_reg.ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
       RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
     }
 
-    if (!RdmaStatusReg::ChannelDone(kRdmaChannel, &(*vpu_mmio_))) {
-      continue;
+    if (!status_reg.ChannelDone(kRdmaChannel, &(*vpu_mmio_))) {
+      // If the RDMA transfer is not pending, then wait for the next IRQ to fire.
+      if (!status_reg.RequestLatched(kRdmaChannel)) {
+        continue;
+      }
+
+      DISP_INFO("rdma_thread: RDMA channel 1 request latched - looping until channel is done");
+
+      // The RDMA request is yet to be serviced. Wait until it has completed.
+      while (!status_reg.ChannelDone(kRdmaChannel)) {
+        zx::nanosleep(zx::deadline_after(zx::usec(10)));
+        status_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
+
+        // If at any point in our busy wait RDMA was intentionally shut down, then break out of this
+        // loop.
+        fbl::AutoLock lock(&rdma_lock_);
+        if (!rdma_active_) {
+          DISP_INFO("rdma_thread: RDMA no longer active; done waiting");
+          break;
+        }
+      }
+
+      DISP_INFO("rdma_thread: done waiting for RDMA channel 1 request");
     }
 
     // RDMA completed. Remove source for all finished DMA channels
