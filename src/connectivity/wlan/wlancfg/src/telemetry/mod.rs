@@ -179,6 +179,7 @@ fn record_inspect_counters(
                     connected_duration: counters.connected_duration.into_nanos(),
                     downtime_duration: counters.downtime_duration.into_nanos(),
                     downtime_no_saved_neighbor_duration: counters.downtime_no_saved_neighbor_duration.into_nanos(),
+                    disconnect_count: counters.disconnect_count,
                     tx_high_packet_drop_duration: counters.tx_high_packet_drop_duration.into_nanos(),
                     rx_high_packet_drop_duration: counters.rx_high_packet_drop_duration.into_nanos(),
                     no_rx_duration: counters.no_rx_duration.into_nanos(),
@@ -293,6 +294,8 @@ impl Telemetry {
                 self.last_checked_connection_state = now;
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime } => {
+                self.stats_logger.log_stat(StatOp::AddDisconnectCount);
+
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Connected { .. } = self.connection_state {
                     self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration));
@@ -376,6 +379,7 @@ impl StatsLogger {
             StatOp::AddDowntimeNoSavedNeighborDuration(duration) => {
                 StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
             }
+            StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
             StatOp::AddTxHighPacketDropDuration(duration) => {
                 StatCounters { tx_high_packet_drop_duration: duration, ..zero }
             }
@@ -402,6 +406,7 @@ enum StatOp {
     AddDowntimeDuration(zx::Duration),
     // Downtime with no saved network in vicinity
     AddDowntimeNoSavedNeighborDuration(zx::Duration),
+    AddDisconnectCount,
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
     AddNoRxDuration(zx::Duration),
@@ -412,6 +417,7 @@ struct StatCounters {
     connected_duration: zx::Duration,
     downtime_duration: zx::Duration,
     downtime_no_saved_neighbor_duration: zx::Duration,
+    disconnect_count: u64,
     tx_high_packet_drop_duration: zx::Duration,
     rx_high_packet_drop_duration: zx::Duration,
     no_rx_duration: zx::Duration,
@@ -427,6 +433,7 @@ impl Add for StatCounters {
             downtime_duration: self.downtime_duration + other.downtime_duration,
             downtime_no_saved_neighbor_duration: self.downtime_no_saved_neighbor_duration
                 + other.downtime_no_saved_neighbor_duration,
+            disconnect_count: self.disconnect_count + other.disconnect_count,
             tx_high_packet_drop_duration: self.tx_high_packet_drop_duration
                 + other.tx_high_packet_drop_duration,
             rx_high_packet_drop_duration: self.rx_high_packet_drop_duration
@@ -454,6 +461,7 @@ impl SaturatingAdd for StatCounters {
                     .into_nanos()
                     .saturating_add(v.downtime_no_saved_neighbor_duration.into_nanos()),
             ),
+            disconnect_count: self.disconnect_count.saturating_add(v.disconnect_count),
             tx_high_packet_drop_duration: zx::Duration::from_nanos(
                 self.tx_high_packet_drop_duration
                     .into_nanos()
@@ -831,6 +839,56 @@ mod tests {
                     connected_duration: 0i64,
                     downtime_duration: downtime_duration,
                     downtime_no_saved_neighbor_duration: 2.seconds().into_nanos(),
+                },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_disconnect_count_counter() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    disconnect_count: 0u64,
+                },
+                "7d_counters": contains {
+                    disconnect_count: 0u64,
+                },
+            }
+        });
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    disconnect_count: 1u64,
+                },
+                "7d_counters": contains {
+                    disconnect_count: 1u64,
+                },
+            }
+        });
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    disconnect_count: 2u64,
+                },
+                "7d_counters": contains {
+                    disconnect_count: 2u64,
                 },
             }
         });
