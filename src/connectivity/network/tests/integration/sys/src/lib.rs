@@ -23,11 +23,11 @@ use {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn start_with_cache_no_space() {
     struct NoSpaceEntryConstructor {
-        paths: std::sync::Mutex<Vec<String>>,
-        requests: std::sync::atomic::AtomicUsize,
+        paths: Vec<String>,
     }
+    struct SyncNoSpaceEntryConstructor(std::sync::Mutex<NoSpaceEntryConstructor>);
 
-    impl vfs::directory::mutable::entry_constructor::EntryConstructor for NoSpaceEntryConstructor {
+    impl vfs::directory::mutable::entry_constructor::EntryConstructor for SyncNoSpaceEntryConstructor {
         fn create_entry(
             self: std::sync::Arc<Self>,
             _parent: std::sync::Arc<dyn vfs::directory::entry::DirectoryEntry>,
@@ -35,17 +35,16 @@ async fn start_with_cache_no_space() {
             name: &str,
             _path: &vfs::path::Path,
         ) -> Result<std::sync::Arc<dyn vfs::directory::entry::DirectoryEntry>, zx::Status> {
-            let Self { paths, requests } = &*self;
-            let () = paths.lock().unwrap().push(name.into());
-            let _: usize = requests.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let Self(this) = &*self;
+            let NoSpaceEntryConstructor { paths } = &mut *this.lock().unwrap();
+            let () = paths.push(name.into());
             Err(zx::Status::NO_SPACE)
         }
     }
 
-    let constructor = std::sync::Arc::new(NoSpaceEntryConstructor {
-        paths: std::sync::Mutex::new(Vec::new()),
-        requests: std::sync::atomic::AtomicUsize::new(0),
-    });
+    let constructor = std::sync::Arc::new(SyncNoSpaceEntryConstructor(std::sync::Mutex::new(
+        NoSpaceEntryConstructor { paths: Vec::new() },
+    )));
 
     let root = vfs::mut_pseudo_directory! {};
     let (client, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
@@ -192,10 +191,7 @@ async fn start_with_cache_no_space() {
         }
     };
 
-    let (paths, requests) = {
-        let NoSpaceEntryConstructor { paths, requests } = &*constructor;
-        (paths.lock().unwrap().clone(), requests.load(std::sync::atomic::Ordering::SeqCst))
-    };
+    let SyncNoSpaceEntryConstructor(this) = &*constructor;
+    let NoSpaceEntryConstructor { paths } = &*this.lock().unwrap();
     assert_eq!(paths[..], ["pprof"]);
-    assert_eq!(requests, 1);
 }
