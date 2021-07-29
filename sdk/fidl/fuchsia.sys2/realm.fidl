@@ -28,8 +28,8 @@ protocol Realm {
     /// will remain running until it either stops on its own, or `DestroyChild`
     /// causes the child instance to be destroyed.
     ///
-    /// For example, if the child exposes a service `/svc/example.Echo` then
-    /// `exposed_dir` will contain that service at that path.
+    /// For example, if the child exposes a protocol named `example.Echo` then
+    /// `exposed_dir` will contain that protocol at `/example.Echo`.
     ///
     /// NOTE: `BindChild` does not support pipelining with `CreateChild`. If
     /// `BindChild` is called on an instance before `CreateChild` successfully
