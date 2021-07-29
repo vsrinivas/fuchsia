@@ -11,8 +11,7 @@ import("//build/compiled_action.gni")
 import("//build/components/fuchsia_system_package.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
-import("//build/images/assembly/generated_board_config.gni")
-import("//build/images/assembly/generated_product_config.gni")
+import("//build/images/assemble_system.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
@@ -20,12 +19,6 @@ import("//build/packages/package_metadata.gni")
 import("//build/security.gni")
 import("//build/testing/verify_files_match.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
-
-# These imports to be replaced by board-config json files
-import("//build/images/filesystem_limits.gni")
-import("//build/images/fvm.gni")
-import("//build/product.gni")
-import("//build/zbi/zbi.gni")
 
 ####
 #
@@ -46,7 +39,7 @@ uses_base_package = !bootfs_only
 group("assembly") {
   testonly = true
   deps = [
-    ":images",
+    ":fuchsia",
     ":input_validation_checks",
     ":output_validation_checks",
   ]
@@ -70,11 +63,8 @@ group("assembly") {
 #  used by the actions in this file.
 #
 files = {
-  outdir = target_out_dir
-  gendir = "${target_out_dir}/gen"
-
-  product_config = "${outdir}/product_config.json"
-  board_config = "${outdir}/board_config.json"
+  outdir = "${target_out_dir}/fuchsia"
+  gendir = "${outdir}/gen"
 
   base_static_packages = "${gendir}/data/static_packages"
   base_cache_packages = "${gendir}/data/cache_packages"
@@ -195,60 +185,27 @@ if (uses_base_package) {
     old_update_meta_contents = "${old_update_package_dir}/meta/contents"
     old_update_meta_package = "${old_update_package_dir}/meta/package"
   }
-}
 
-rebased_files = {
-  gendir = rebase_path(files.gendir, root_build_dir)
-  outdir = rebase_path(files.outdir, root_build_dir)
-  product_config = rebase_path(files.product_config, root_build_dir)
-  board_config = rebase_path(files.board_config, root_build_dir)
-  minfs = rebase_path(old_files.minfs, root_build_dir)
+  rebased_files = {
+    gendir = rebase_path(files.gendir, root_build_dir)
+    outdir = rebase_path(files.outdir, root_build_dir)
+    minfs = rebase_path(old_files.minfs, root_build_dir)
 
-  if (uses_base_package) {
-    old_base_package = rebase_path(old_files.base_package, root_build_dir)
-    old_base_package_dir =
-        rebase_path(extracted_files.old_base_package_dir, root_build_dir)
-    base_package = rebase_path(files.base_package, root_build_dir)
-    base_package_dir =
-        rebase_path(extracted_files.base_package_dir, root_build_dir)
-    old_update_package = rebase_path(old_files.update_package, root_build_dir)
-    old_update_package_dir =
-        rebase_path(extracted_files.old_update_package_dir, root_build_dir)
-    update_package = rebase_path(files.update_package, root_build_dir)
-    update_package_dir =
-        rebase_path(extracted_files.update_package_dir, root_build_dir)
+    if (uses_base_package) {
+      old_base_package = rebase_path(old_files.base_package, root_build_dir)
+      old_base_package_dir =
+          rebase_path(extracted_files.old_base_package_dir, root_build_dir)
+      base_package = rebase_path(files.base_package, root_build_dir)
+      base_package_dir =
+          rebase_path(extracted_files.base_package_dir, root_build_dir)
+      old_update_package = rebase_path(old_files.update_package, root_build_dir)
+      old_update_package_dir =
+          rebase_path(extracted_files.old_update_package_dir, root_build_dir)
+      update_package = rebase_path(files.update_package, root_build_dir)
+      update_package_dir =
+          rebase_path(extracted_files.update_package_dir, root_build_dir)
+    }
   }
-}
-
-generated_product_config("product_config") {
-  testonly = true
-  output_path = files.product_config
-  kernel_image = "//zircon/kernel"
-  include_version_and_epoch = true
-
-  _base_packages = [
-    "//:additional_base_driver_packages",
-    "//:additional_base_packages",
-    "//build/images:driver-manager-base-config",
-  ]
-  _base_packages += meta_package_labels
-  _cache_packages = [ "//:additional_cache_packages" ]
-
-  bootfs_labels = [ "//build/input:bootfs" ]
-
-  if (bootfs_only) {
-    # BootFS-only builds put all the packages in BootFS.
-    bootfs_labels += [ "//build/input:system_image" ]
-    bootfs_labels += _base_packages + _cache_packages
-    bootfs_labels += [ "//:additional_universe_packages" ]
-  } else {
-    # All other builds, put their packages in the FVM.
-    base_packages = _base_packages
-    cache_packages = _cache_packages
-    extra_base_deps = [ "//build/input:system_image" ]
-  }
-
-  cmdline_deps = [ "//build/input:bootfs" ]
 }
 
 # Select the correct vbmeta and salt depending on if it is bootfs_only or not.
@@ -263,10 +220,56 @@ if (use_vbmeta) {
   vbmeta_salt = rebase_path("${vbmeta_file}.salt", root_build_dir)
 }
 
-generated_board_config("board_config") {
+assemble_system("fuchsia") {
   testonly = true
+  include_version_and_epoch = true
+  include_component_id_index = true
+  base_driver_packages = [ "//:additional_base_driver_packages" ]
   board_name = board_name
-  output_path = files.board_config
+
+  _base_packages = [
+    "//:additional_base_driver_packages",
+    "//:additional_base_packages",
+    "//build/images:driver-manager-base-config",
+  ]
+
+  # The shell commands may be included by the meta_package_labels.
+  # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
+  # Assembler.
+  include_shell_commands = false
+
+  # Add the meta_package_labels, but ensure we do not include config-data or
+  # component_index, because these are already included by assemble_system.
+  _base_packages += meta_package_labels
+  _base_packages += [
+    "//build/images:config-data",
+    "//src/sys/component_index:component_index",
+  ]
+  _base_packages -= [
+    "//build/images:config-data",
+    "//src/sys/component_index:component_index",
+  ]
+
+  _cache_packages = [ "//:additional_cache_packages" ]
+
+  bootfs_labels = [ "//build/input:bootfs" ]
+  if (bootfs_only) {
+    # BootFS-only builds put all the packages in BootFS.
+    bootfs_labels += [ "//build/input:system_image" ]
+    bootfs_labels += _base_packages + _cache_packages
+    bootfs_labels += [ "//:additional_universe_packages" ]
+    base_packages = []
+  } else {
+    # All other builds, put their packages in the FVM.
+    base_packages = _base_packages
+
+    # TODO: Remove once the inclusion of component_index is unified under assemble_system.gni
+    base_packages += [ "//src/sys/component_index" ]
+    cache_packages = _cache_packages
+    system_image_deps = [ "//build/input:system_image" ]
+  }
+
+  cmdline_deps = [ "//build/input:bootfs" ]
   recovery = recovery_label
   use_esp = target_cpu != "arm64" && !use_vboot
   zbi_name = "fuchsia"
@@ -339,92 +342,6 @@ if (fvm_partition != "" && !bootfs_only &&
 }
 
 #####
-# Create the images themselves using `ffx assembly`
-#
-#
-ffx_action("images") {
-  # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
-  hermetic_deps = false
-
-  testonly = true
-  deps = [
-    ":board_config",
-    ":product_config",
-  ]
-  if (use_vbmeta) {
-    deps += [ vbmeta_label ]
-  }
-
-  args = []
-  if (verbose_image_assembly) {
-    args += [ "-v" ]
-  }
-  args += [
-    "--config",
-    "assembly_enabled=true",
-    "assembly",
-    "image",
-    "--product",
-    rebased_files.product_config,
-    "--board",
-    rebased_files.board_config,
-    "--gendir",
-    rebased_files.gendir,
-    "--outdir",
-    rebased_files.outdir,
-  ]
-
-  inputs = [
-    files.product_config,
-    files.board_config,
-  ]
-
-  outputs = []
-
-  # Base package outputs, if this configuration uses them
-  if (uses_base_package) {
-    outputs += [
-      files.base_package,
-      files.blobfs,
-      files.fvm,
-      files.fvm_sparse,
-      files.fvm_blob_sparse,
-
-      # intermediate outputs that are in gendir:
-      files.base_static_packages,
-      files.base_cache_packages,
-      files.base_meta_package,
-      files.update_meta_package,
-    ]
-
-    if (build_fastboot_fvm) {
-      outputs += [ files.fvm_fastboot ]
-    }
-  }
-
-  # zbi outputs
-  outputs += [
-    files.zbi,
-    files.zbi_manifest,
-    files.update_package,
-  ]
-
-  if (use_vbmeta) {
-    inputs += [ old_files.vbmeta_salt ]
-    outputs += [ files.vbmeta ]
-  }
-
-  # These are from custom signing of the ZBI.
-  if (use_vboot) {
-    deps += vboot_action.deps
-    inputs += vboot_action.inputs
-  }
-  if (custom_signing_script != "" || use_vboot) {
-    outputs += [ files.zbi_signed ]
-  }
-}
-
-#####
 #
 # Validation that the inputs generated for the ffx assembly match those of the
 # current implementation in //build/images/BUILD.gn
@@ -450,7 +367,7 @@ if (uses_base_package) {
   verify_files_match("pkgsvr_index_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       "//build/images:pkgsvr_index",
     ]
 
@@ -463,7 +380,7 @@ if (uses_base_package) {
   verify_files_match("cache_index_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       "//build/images:cache_index",
     ]
 
@@ -553,7 +470,7 @@ if (uses_base_package) {
       extracted_files.base_meta_package,
     ]
 
-    deps = [ ":images" ]
+    deps = [ ":fuchsia" ]
   }
 
   verify_files_match("base_pkg_meta_contents_matches") {
@@ -572,7 +489,7 @@ if (uses_base_package) {
   verify_files_match("base_pkg_meta_far_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       "//build/images:system_image.meta",
     ]
 
@@ -584,7 +501,7 @@ if (uses_base_package) {
 verify_files_match("zbi_matches") {
   testonly = true
   deps = [
-    ":images",
+    ":fuchsia",
     old_labels.zbi,
   ]
 
@@ -600,7 +517,7 @@ verify_files_match("zbi_matches") {
 verify_files_match("zbi_manifest_matches") {
   testonly = true
   deps = [
-    ":images",
+    ":fuchsia",
     old_labels.zbi_manifest,
   ]
 
@@ -614,7 +531,7 @@ if (use_vbmeta) {
   verify_files_match("vbmeta_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.vbmeta,
     ]
 
@@ -627,7 +544,7 @@ if (uses_base_package) {
   verify_files_match("update_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.update_package,
     ]
 
@@ -654,7 +571,7 @@ if (uses_base_package) {
       extracted_files.update_meta_package,
     ]
 
-    deps = [ ":images" ]
+    deps = [ ":fuchsia" ]
   }
 
   # Extract update package's contents for inspection
@@ -708,7 +625,7 @@ if (uses_base_package) {
   verify_files_match("blobfs_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.blobfs,
     ]
 
@@ -719,7 +636,7 @@ if (uses_base_package) {
   verify_files_match("fvm_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.fvm,
     ]
 
@@ -730,7 +647,7 @@ if (uses_base_package) {
   verify_files_match("sparse_fvm_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.fvm_sparse,
     ]
 
@@ -741,7 +658,7 @@ if (uses_base_package) {
   verify_files_match("sparse_blob_fvm_matches") {
     testonly = true
     deps = [
-      ":images",
+      ":fuchsia",
       old_labels.fvm_blob_sparse,
     ]
 
@@ -753,7 +670,7 @@ if (uses_base_package) {
     verify_files_match("fastboot_fvm_matches") {
       testonly = true
       deps = [
-        ":images",
+        ":fuchsia",
         old_labels.fvm_fastboot,
       ]
 

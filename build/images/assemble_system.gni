@@ -28,54 +28,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 # Given base, cache, and universe packages, assembles a Fuchsia system
 # containing those packages.
 #
-# Parameters
-#
-#   base_packages (required)
-#     [list of labels] The packages to include in the base package set.
-#
-#   base_driver_packages (optional)
-#     [list of labels] The driver packages to include in the base package set.
-#
-#   cache_packages (optional)
-#     [list of labels] The packages to cache in the images.
-#
-#   universe_packages (optional)
-#     [list of labels] The packages to build in addition to the base and cache
-#     sets. These packages do not contribute to the produced images directly,
-#     however they may contribute to the config-data and shell-commands meta
-#     packages.
-#
-#   bootfs_labels (required)
-#     [list of labels] The objects installed on the bootfs partition of the
-#     generated ZBI.
-#
-#   system_image_deps (optional)
-#     [list of labels] The objects installed in the system image.
-#
-#   ramdisk_fvm_in_zbi (default: false)
-#     [boolean] Whether the generated ZBI should contain the system's FVM as a ramdisk.
-#
-#   devmgr_config (default: [])
-#     [list of strings] List of arguments to add to /boot/config/devmgr.
-#     These arguments come after synthesized arguments to configure blobfs and
-#     pkgfs.
+# Parameters:
 #
 #   sysmgr_golden, sysmgr_golden_warn (optional, default: false)
 #     [path, boolean] Passed directly to the config_package template, see //build/config.gni.
-#
-#   cmdline (optional)
-#     [list of strings] Kernel command line text.
-#
-#   cmdline_inputs (optional)
-#     [list of files] Input files treated as kernel command line text.
-#
-#   compress_blobs (default: true)
-#     [boolean] Whether the blobs added to the blobfs image should be compressed.
-#
-#   blob_layout_format (default: "compact")
-#     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
-#     "compact". The deprecated padded format is supported only for Astro devices and will be
-#     removed in the future (it wastes space).
 #
 #   output_dir (optional; default: target_out_dir)
 #     [string] The output directory into which the final system ZBI is written.
@@ -101,20 +57,120 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     supported for soft migration, if the content matches either of the entries,
 #     it is consider a match. Only one entry should be used for normal case.
 #
+#   testonly (optional)
+#     [bool] Usual GN meanings.
+#
+# Product parameters:
+#
+#   base_packages (required)
+#     [list of labels] The packages to include in the base package set.
+#
+#   base_driver_packages (optional)
+#     [list of labels] The driver packages to include in the base package set.
+#
+#   cache_packages (optional)
+#     [list of labels] The packages to cache in the images.
+#
+#   universe_packages (optional)
+#     [list of labels] The packages to build in addition to the base and cache
+#     sets. These packages do not contribute to the produced images directly,
+#     however they may contribute to the config-data and shell-commands meta
+#     packages.
+#
+#   bootfs_labels (required)
+#     [list of labels] The objects installed on the bootfs partition of the
+#     generated ZBI.
+#
+#   system_image_deps (optional)
+#     [list of labels] The objects installed in the system image.
+#
+#   devmgr_config (default: [])
+#     [list of strings] List of arguments to add to /boot/config/devmgr.
+#     These arguments come after synthesized arguments to configure blobfs and
+#     pkgfs.
+#
+#   cmdline (optional)
+#     [list of strings] Kernel command line text.
+#
+#   cmdline_deps (optional)
+#     [list of labels] Dependencies with metadata including additional kernel
+#     command arguments to add to the ZBI.
+#
 #   include_component_id_index (default: false)
 #     [bool] Collect and merges a component id index from the base
 #     package set.
-#
-#   check_production_tag (default: false)
-#      [bool] Whether to check there is no non_production_tag dependencies.
 #
 #   include_shell_commands (default: true)
 #      [bool] Whether to include shell commands. Should be set to false for
 #      build without shell access.
 #
-#   testonly (optional)
-#     [bool] Usual GN meanings.
+# Board parameters:
+#
+#   board_name (required)
+#     [string] The name of the board to place in the images.
+#
+#   compress_blobs (default: true)
+#     [boolean] Whether the blobs added to the blobfs image should be compressed.
+#
+#   blob_layout_format (default: "compact")
+#     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
+#     "compact". The deprecated padded format is supported only for Astro devices and will be
+#     removed in the future (it wastes space).
+#
+#   check_production_tag (default: false)
+#      [bool] Whether to check there is no non_production_tag dependencies.
+#
+#   include_version_and_epoch (default: false)
+#      [bool] Whether to include the version and epoch files into the Update
+#      Package.
+#
+#   salt_file (optional)
+#     [path] Pre-defined salt to use in VBMeta.
+#
+#   recovery (optional)
+#     [label] Recovery label to include in the update package.
+#
+#   use_esp (optional)
+#     [bool] Whether to include ESP bootloaders in the update package.
+#
+# Board: MinFS parameters:
+#
+#   minfs (optional)
+#     [path] Path to prebuilt MinFS block file.
+#
+#   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
+#     [int] Size options for minfs to pass to the fvm tool.
+#
+# Board: BlobFS parameters
+#
+#   blobfs_minimum_inodes, blobfs_minimum_data_bytes, blobfs_maximum_bytes (optional)
+#     [int] Size options for blobfs to pass to the fvm tool.
+#
+# Board: FVM parameters
+#
+#   ramdisk_fvm_in_zbi (optional)
+#     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
+#
+#   fvm_slice_size (optional; default: 1048576)
+#     [int] The slice size of the FVM.
+#
+# Board: ZBI arguments
+#
+#   zbi_name (optional; default: target_name)
+#     [string] The name to give the ZBI in the out directory.
+#     Typically: fuchsia, recovery, etc.
+#
+#   zbi_signing_script (optional)
+#     [path] Location of script to use to sign the ZBI.
+#
+#   zbi_signing_args (optional)
+#     [list of strings] Arguments to pass to the signing script.
+#
 template("assemble_system") {
+  assert(defined(invoker.base_packages), "Need to define base_packages")
+  assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
+  assert(defined(invoker.board_name), "Need to define board_name")
+
   image_name = target_name
 
   # Internal labels used for Image Assembly.
@@ -124,7 +180,7 @@ template("assemble_system") {
     image_assembler = "${image_name}_image_assembler"
     copy_images = "${image_name}_copy_images"
     config_data = "${image_name}_config-data"
-    minfs = "${image_name}_data.blk"
+    empty_minfs = "${image_name}_data.blk"
     shell_commands = "${image_name}_shell_commands"
   }
 
@@ -132,13 +188,15 @@ template("assemble_system") {
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
-    zbi = "$target_out_dir/${image_name}/${image_name}.zbi"
     blobfs_manifest = "$target_out_dir/${image_name}/gen/blob.manifest"
-    minfs = "$target_out_dir/${image_name}_data.blk"
-  }
+    empty_minfs = "$target_out_dir/${image_name}_data.blk"
 
-  assert(defined(invoker.base_packages), "Need to define base_packages")
-  assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
+    if (defined(invoker.zbi_signing_script)) {
+      zbi = "$target_out_dir/${image_name}/${image_name}.zbi.signed"
+    } else {
+      zbi = "$target_out_dir/${image_name}/${image_name}.zbi"
+    }
+  }
 
   _base_packages = invoker.base_packages
   _base_driver_packages = []
@@ -161,9 +219,9 @@ template("assemble_system") {
     system_image_deps += invoker.system_image_deps
   }
 
-  ramdisk_fvm_in_zbi = false
+  embed_fvm_in_zbi = false
   if (defined(invoker.ramdisk_fvm_in_zbi)) {
-    ramdisk_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
+    embed_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
   }
 
   compress_blobs = true
@@ -192,7 +250,7 @@ template("assemble_system") {
   base_driver_manifest_label = "${target_name}_base-driver-manifest"
   combined_driver_manifest(base_driver_manifest_label) {
     forward_variables_from(invoker, [ "testonly" ])
-    manifest_name = "base-driver-manifest"
+    manifest_name = "base-driver-manifest.json"
     deps = _base_driver_packages
   }
 
@@ -248,14 +306,13 @@ template("assemble_system") {
     }
   }
 
-  compiled_action(labels.minfs) {
-    data_image_path = "$target_out_dir/${target_name}"
+  compiled_action(labels.empty_minfs) {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
-    outputs = [ data_image_path ]
+    outputs = [ files.empty_minfs ]
     tool = "//zircon/tools/minfs"
     args = [
-      rebase_path(data_image_path, root_build_dir),
+      rebase_path(files.empty_minfs, root_build_dir),
       "create",
     ]
   }
@@ -265,64 +322,97 @@ template("assemble_system") {
   #
 
   generated_product_config(labels.product_config) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "include_version_and_epoch",
+                             "testonly",
+                           ])
 
     output_path = files.product_config
     kernel_image = "//zircon/kernel"
 
-    base_packages = _base_packages
-    base_packages += component_id_index_dep
-    base_packages += [
-      ":${labels.config_data}",
-      pkgfs_package_label,
-    ]
-    if (include_shell_commands) {
-      base_packages += [ ":${labels.shell_commands}" ]
+    base_packages = []
+    if (!bootfs_only) {
+      base_packages = _base_packages
+      base_packages += component_id_index_dep
+      base_packages += [
+        ":${labels.config_data}",
+        pkgfs_package_label,
+      ]
+      if (include_shell_commands) {
+        base_packages += [ ":${labels.shell_commands}" ]
+      }
+      cache_packages = _cache_packages
     }
 
-    cache_packages = _cache_packages
     boot_args = devmgr_config
 
     # Search for BootFS files in these targets.
     bootfs_labels = invoker.bootfs_labels
     bootfs_labels += component_id_index_dep
-    bootfs_labels += [
-      "//src/sys/base-resolver:bootfs",
-      "//zircon/kernel",
-    ]
+    bootfs_labels += [ "//zircon/kernel" ]
 
-    if (ramdisk_fvm_in_zbi) {
+    # BootFS-only builds do not have pkgfs, therefore they do not need base-resolver.
+    if (!bootfs_only) {
+      bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
+    }
+
+    if (embed_fvm_in_zbi) {
       bootfs_labels += [ "//src/storage/fshost:minfs_ramdisk" ]
     }
     extra_base_deps = system_image_deps
 
     # Search for the Kernel cmdline in the BootFS dependencies.
     cmdline_deps = invoker.bootfs_labels
+    if (defined(invoker.cmdline_deps)) {
+      cmdline_deps += invoker.cmdline_deps
+    }
     if (defined(invoker.cmdline)) {
       cmdline = invoker.cmdline
     }
   }
 
-  generated_board_config(labels.board_config) {
-    forward_variables_from(invoker, [ "testonly" ])
-    board_name = "${image_name}"
-    output_path = files.board_config
-    zbi_name = "${image_name}"
+  fvm_slice_size = 1048576
+  if (defined(invoker.fvm_slice_size)) {
+    fvm_slice_size = invoker.fvm_slice_size
+  }
 
-    # minfs arguments
-    if (!bootfs_only) {
-      minfs = rebase_path(files.minfs, root_out_dir)
-      deps = [ ":${labels.minfs}" ]
+  generated_board_config(labels.board_config) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "recovery",
+                             "use_esp",
+                             "blobfs_layout_format",
+                             "blobfs_minimum_inodes",
+                             "blobfs_minimum_data_bytes",
+                             "blobfs_maximum_bytes",
+                             "minfs_minimum_inodes",
+                             "minfs_minimum_data_bytes",
+                             "minfs_maximum_bytes",
+                             "embed_fvm_in_zbi",
+                             "salt_file",
+                             "zbi_name",
+                             "zbi_signing_script",
+                             "zbi_signing_args",
+                           ])
+    board_name = invoker.board_name
+    compress_blobs = compress_blobs
+    output_path = files.board_config
+
+    zbi_name = "${image_name}"
+    if (defined(invoker.zbi_name)) {
+      zbi_name = invoker.zbi_name
     }
 
-    # blobfs arguments
-    blob_layout_format = blob_layout_format
-    compress_blobs = compress_blobs
-
-    # fvm arguments
-    embed_fvm_in_zbi = ramdisk_fvm_in_zbi
+    # Use an empty minfs by default, otherwise use the supplied minfs.
     if (!bootfs_only) {
-      fvm_slice_size = 1048576
+      if (defined(invoker.minfs)) {
+        minfs = invoker.minfs
+      } else {
+        minfs = rebase_path(files.empty_minfs, root_build_dir)
+        deps = [ ":${labels.empty_minfs}" ]
+      }
     }
   }
 
@@ -331,10 +421,19 @@ template("assemble_system") {
     check_production_tag = invoker.check_production_tag
   }
 
+  # Determine if a fastboot-supported FVM should be generated.
+  if (!bootfs_only) {
+    build_fastboot_fvm = false
+    if (fvm_partition != "" && !bootfs_only &&
+        (fvm_emmc_partition_size != false ||
+         fvm_ftl_nand_block_count != false)) {
+      build_fastboot_fvm = true
+    }
+  }
+
   ffx_action(labels.image_assembler) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "testonly",
                              "visibility",
                            ])
@@ -370,7 +469,11 @@ template("assemble_system") {
       rebase_path(outdir, root_build_dir),
     ]
 
-    deps = [
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    deps += [
       ":${labels.board_config}",
       ":${labels.product_config}",
     ]
@@ -386,6 +489,10 @@ template("assemble_system") {
       "${gendir}/zbi.json",
       "${outdir}/update.far",
     ]
+
+    if (use_vbmeta) {
+      outputs += [ "${outdir}/${image_name}.vbmeta" ]
+    }
 
     # Base package outputs, if this configuration uses them.
     if (!bootfs_only) {
@@ -403,6 +510,10 @@ template("assemble_system") {
         "${gendir}/system_image/meta/package",
         "${gendir}/update/meta/package",
       ]
+
+      if (build_fastboot_fvm) {
+        outputs += [ "${outdir}/fvm.fastboot.blk" ]
+      }
     }
 
     if (check_production_tag) {

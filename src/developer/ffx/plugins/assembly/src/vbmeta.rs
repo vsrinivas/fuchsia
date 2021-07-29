@@ -11,6 +11,7 @@ use vbmeta::{HashDescriptor, Key, Salt, VBMeta};
 
 pub fn construct_vbmeta(
     outdir: impl AsRef<Path>,
+    name: impl AsRef<str>,
     vbmeta: &VBMetaConfig,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
@@ -35,7 +36,7 @@ pub fn construct_vbmeta(
     )?;
 
     // Write VBMeta to a file and return the path.
-    let vbmeta_path = outdir.as_ref().join("fuchsia.vbmeta");
+    let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", name.as_ref()));
     std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
     Ok(vbmeta_path)
 }
@@ -108,7 +109,8 @@ mod tests {
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
-        let vbmeta_path = construct_vbmeta(dir.path(), &vbmeta_config, zbi_path).unwrap();
+        let vbmeta_path =
+            construct_vbmeta(dir.path(), "fuchsia", &vbmeta_config, zbi_path).unwrap();
         assert_eq!(vbmeta_path, dir.path().join("fuchsia.vbmeta"));
     }
 

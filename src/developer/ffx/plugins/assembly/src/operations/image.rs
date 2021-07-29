@@ -65,7 +65,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
-        Some(construct_vbmeta(&outdir, vbmeta_config, &zbi_path)?)
+        Some(construct_vbmeta(&outdir, &board.zbi.name, vbmeta_config, &zbi_path)?)
     } else {
         info!("Skipping vbmeta creation");
         None
