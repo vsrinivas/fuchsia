@@ -871,7 +871,7 @@ impl FileConnection {
 
     fn get_as_private(vmo: &zx::Vmo, flags: u32, size: u64) -> Result<zx::Vmo, zx::Status> {
         let new_vmo = vmo.create_child(
-            zx::VmoChildOptions::COPY_ON_WRITE | zx::VmoChildOptions::RESIZABLE,
+            zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | zx::VmoChildOptions::RESIZABLE,
             0,
             size,
         )?;
