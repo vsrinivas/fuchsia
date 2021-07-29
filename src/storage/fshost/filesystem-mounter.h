@@ -67,12 +67,8 @@ class FilesystemMounter {
   // - The data partition has been mounted
   void TryMountPkgfs();
 
-  // Returns a pointer to the |FsHostMetrics| instance.
-  FsHostMetrics* mutable_metrics() { return fshost_.mutable_metrics(); }
-
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
-
-  void FlushMetrics() { fshost_.FlushMetrics(); }
+  void ReportMinfsCorruption() { fshost_.ReportMinfsCorruption(); }
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }

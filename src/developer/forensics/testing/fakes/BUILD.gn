@@ -40,9 +40,21 @@ fuchsia_package("fake-last-reboot-info-provider") {
 # COMPONENTS
 ###############################################################################
 fuchsia_component("fake_crash_reporter") {
+  testonly = true
+
   manifest = "meta/fake_crash_reporter.cmx"
 
   deps = [ ":fake_crash_reporter_exe" ]
+}
+
+fuchsia_component("fake_crash_reporter_v2") {
+  testonly = true
+
+  manifest = "meta/fake_crash_reporter.cml"
+
+  deps = [ ":fake_crash_reporter_exe" ]
+
+  visibility += [ "//src/storage/fshost/*" ]
 }
 
 fuchsia_component("fake_data_provider") {
@@ -70,6 +82,8 @@ fuchsia_component("fake_last_reboot_info_provider") {
 # EXECUTABLES
 ###############################################################################
 executable("fake_crash_reporter_exe") {
+  testonly = true
+
   sources = [
     "crash_reporter.cc",
     "crash_reporter.h",
@@ -185,7 +199,11 @@ source_set("privacy_settings") {
 # FIDLS
 ###############################################################################
 fidl("fuchsia.feedback.testing") {
+  testonly = true
+
   sources = [ "query.test.fidl" ]
+
+  visibility += [ "//src/storage/fshost/*" ]
 }
 
 ###############################################################################

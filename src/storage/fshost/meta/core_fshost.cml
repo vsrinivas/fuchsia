@@ -4,7 +4,10 @@
 {
     use: [
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.feedback.CrashReporter",
+            ],
         },
     ],
 }

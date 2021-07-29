@@ -19,6 +19,10 @@
             name: "decompressor",
             url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/decompressor-sandbox.cm",
         },
+        {
+            name: "fake-crash-reporter",
+            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/fake_crash_reporter_v2.cm",
+        },
     ],
     collections: [
         {
@@ -34,6 +38,10 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
+        {
+            protocol: [ "fuchsia.feedback.testing.FakeCrashReporterQuerier" ],
+            from: "#fake-crash-reporter",
+        },
     ],
     offer: [
         {
@@ -45,6 +53,7 @@
             from: "parent",
             to: [
                 "#decompressor",
+                "#fake-crash-reporter",
                 "#fshost-collection",
                 "#isolated-devmgr",
             ],
@@ -57,6 +66,11 @@
         {
             protocol: "fuchsia.blobfs.internal.DecompressorCreator",
             from: "#decompressor",
+            to: "#fshost-collection",
+        },
+        {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#fake-crash-reporter",
             to: "#fshost-collection",
         },
     ],

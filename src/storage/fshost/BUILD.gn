@@ -72,6 +72,7 @@ source_set("fshost-registry") {
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fit",
@@ -84,6 +85,7 @@ source_set("fshost-registry") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   deps = [
     "//sdk/lib/fdio",
@@ -380,6 +382,7 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.sys2",
+    "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
@@ -393,6 +396,7 @@ test("fshost_integration_test") {
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -467,6 +471,7 @@ fuchsia_test_package("fshost-tests") {
   ]
   deps = [
     ":test-fshost",
+    "//src/developer/forensics/testing/fakes:fake_crash_reporter_v2",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
@@ -552,6 +557,10 @@ template("fshost_config") {
       contents += [ "use-fxfs" ]
     }
 
+    if (defined(invoker.check_filesystems) && invoker.check_filesystems) {
+      contents += [ "check-filesystems" ]
+    }
+
     output_conversion = "list lines"
     outputs = [ "config/fshost" ]
   }
@@ -597,4 +606,5 @@ fshost_config("integration_test_config") {
   minfs_maximum_runtime_bytes_override = 117440512
 
   apply_limits_to_ramdisk = true
+  check_filesystems = true
 }

@@ -528,8 +528,6 @@ zx_status_t BlockDevice::CheckFilesystem() {
       }
 
       if (status != ZX_OK) {
-        mounter_->mutable_metrics()->LogMinfsCorruption();
-        mounter_->FlushMetrics();
         FX_LOGS(ERROR) << "\n--------------------------------------------------------------\n"
                           "|\n"
                           "|   WARNING: fshost fsck failure!\n"
@@ -543,6 +541,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "|\n"
                           "--------------------------------------------------------------";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
+        mounter_->ReportMinfsCorruption();
       } else {
         FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " completed OK";
       }

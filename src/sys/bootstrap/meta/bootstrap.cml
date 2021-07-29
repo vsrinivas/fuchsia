@@ -257,6 +257,7 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
+                "fuchsia.feedback.CrashReporter",
                 "fuchsia.process.Launcher",
             ],
             from: "parent",

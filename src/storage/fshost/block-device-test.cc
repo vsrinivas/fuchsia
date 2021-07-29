@@ -76,6 +76,7 @@ class BlockDeviceTest : public testing::Test {
     ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
                                   zx::channel(), nullptr, watcher_),
               ZX_OK);
+    manager_.DisableCrashReporting();
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.

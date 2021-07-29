@@ -37,6 +37,8 @@ source_set("storage_driver_test_support") {
     "fvm.h",
     "ram_disk.cc",
     "ram_disk.h",
+    "zxcrypt.cc",
+    "zxcrypt.h",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device",
@@ -44,6 +46,8 @@ source_set("storage_driver_test_support") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/security/zxcrypt:zxcrypt-fdio",
+    "//src/storage/lib/utils:topological_path",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",

@@ -5,6 +5,7 @@
 #include "fs-manager.h"
 
 #include <fcntl.h>
+#include <fuchsia/feedback/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -12,6 +13,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/inspect/service/cpp/service.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -383,6 +385,45 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
                                        request.release());
       });
   return svc_dir_->AddEntry(service_name, std::move(service_node));
+}
+
+void FsManager::ReportMinfsCorruption() {
+  mutable_metrics()->LogMinfsCorruption();
+  FlushMetrics();
+
+  if (!file_crash_report_) {
+    return;
+  }
+
+  FX_LOGS(INFO) << "Filing a crash report for minfs corruption";
+  std::thread t([]() {
+    auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
+    if (client_end.is_error()) {
+      FX_LOGS(WARNING) << "Unable to connect to crash reporting service for minfs corruption: "
+                       << client_end.status_string();
+      return;
+    }
+    auto client = fidl::BindSyncClient(std::move(*client_end));
+
+    fidl::FidlAllocator allocator;
+    fuchsia_feedback::wire::CrashReport report(allocator);
+    report.set_program_name(allocator, allocator, "minfs");
+    report.set_crash_signature(allocator, allocator, "fuchsia-corrupted-minfs");
+    report.set_is_fatal(allocator, false);
+
+    auto res = client.File(report);
+    if (!res.ok()) {
+      FX_LOGS(WARNING) << "Unable to send crash report (fidl error) for minfs corruption: "
+                       << res.status_string();
+    }
+    if (res->result.is_err()) {
+      FX_LOGS(WARNING) << "Failed to file crash report for minfs corruption: "
+                       << zx_status_get_string(res->result.err());
+    } else {
+      FX_LOGS(INFO) << "Crash report successfully filed for minfs corruption";
+    }
+  });
+  t.detach();
 }
 
 }  // namespace fshost

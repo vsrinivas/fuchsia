@@ -112,6 +112,13 @@ class FsManager {
   // directory of the given filesystem previously installed via |InstallFs()| at |point|.
   zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
+  // Disables filing a crash report when minfs corruptions are detected.
+  void DisableCrashReporting() { file_crash_report_ = false; }
+
+  // Reports a new minfs corruption event. This files a crash report with the crash reporting
+  // service and increments a corruption tracking cobalt metric.
+  void ReportMinfsCorruption();
+
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
@@ -171,6 +178,8 @@ class FsManager {
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
   fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
+
+  bool file_crash_report_ = true;
 };
 
 }  // namespace fshost
