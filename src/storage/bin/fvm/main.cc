@@ -811,35 +811,15 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "extend")) {
-    if (length == 0 || offset > 0) {
-      usage();
-    }
-
-    size_t disk_size = get_disk_size(path, 0);
-
-    if (length <= disk_size) {
-      fprintf(stderr, "Cannot extend to a value %zu less than current size %zu\n", length,
-              disk_size);
-      usage();
-    }
-
-    std::unique_ptr<FvmContainer> fvmContainer;
-    if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
+    auto extend_params_or = storage::volume_image::ExtendParams::FromArguments(arguments);
+    if (extend_params_or.is_error()) {
+      std::cout << extend_params_or.error() << std::endl;
       return -1;
     }
 
-    if (length_is_lower_bound) {
-      fvmContainer->SetExtendLengthType(FvmContainer::ExtendLengthType::LOWER_BOUND);
-    }
-
-    if (fvmContainer->Extend(length) != ZX_OK) {
+    if (auto extend_res = Extend(extend_params_or.value()); extend_res.is_error()) {
+      std::cout << extend_res.error() << std::endl;
       return -1;
-    }
-
-    if (resize_image_file_to_fit) {
-      if (auto status = fvmContainer->ResizeImageFileToFit(); status != ZX_OK) {
-        return status;
-      }
     }
   } else if (!strcmp(command, "sparse")) {
     auto create_params_or = storage::volume_image::CreateParams::FromArguments(arguments);
