@@ -139,6 +139,8 @@ def _get_files(element_meta):
     elif type == 'device_profile':
         # This type is pure metadata.
         pass
+    elif type == 'bind_library':
+      common_files.update(element_meta['sources'])
     else:
         raise Exception('Unknown element type: ' + type)
     return (common_files, arch_files)
