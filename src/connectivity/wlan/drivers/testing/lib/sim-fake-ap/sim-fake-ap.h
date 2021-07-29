@@ -61,7 +61,7 @@ class FakeAp final : public StationIfc {
 
   explicit FakeAp(Environment* environ) : environment_(environ) { environ->AddStation(this); }
 
-  FakeAp(Environment* environ, const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+  FakeAp(Environment* environ, const common::MacAddr& bssid, const cssid_t& ssid,
          const wlan_channel_t channel)
       : environment_(environ), bssid_(bssid), ssid_(ssid) {
     environ->AddStation(this);
@@ -77,12 +77,12 @@ class FakeAp final : public StationIfc {
 
   void SetChannel(const wlan_channel_t& channel);
   void SetBssid(const common::MacAddr& bssid);
-  void SetSsid(const wlan_ssid_t& ssid);
+  void SetSsid(const cssid_t& ssid);
   void SetCsaBeaconInterval(zx::duration interval);
 
   wlan_channel_t GetChannel() const { return tx_info_.channel; }
   common::MacAddr GetBssid() const { return bssid_; }
-  wlan_ssid_t GetSsid() const { return ssid_; }
+  cssid_t GetSsid() const { return ssid_; }
   uint32_t GetNumAssociatedClient() const;
 
   // Will we receive a message sent on the specified channel?
@@ -151,7 +151,7 @@ class FakeAp final : public StationIfc {
   // meta information needed for sending transmissions
   simulation::WlanTxInfo tx_info_;
   common::MacAddr bssid_;
-  wlan_ssid_t ssid_;
+  cssid_t ssid_;
   struct Security security_ = {.cipher_suite = IEEE80211_CIPHER_SUITE_NONE};
 
   struct BeaconState {

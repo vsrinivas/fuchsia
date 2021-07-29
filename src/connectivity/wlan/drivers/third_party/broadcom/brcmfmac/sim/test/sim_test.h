@@ -41,7 +41,7 @@ class SimInterface {
   };
 
   struct SoftApContext {
-    wlan_ssid_t ssid;
+    cssid_t ssid;
   };
 
   // Useful statistics about operations performed
@@ -67,7 +67,7 @@ class SimInterface {
   static constexpr uint32_t kDefaultPassiveScanDwellTimeMs = 120;
 
   // SoftAP defaults
-  static constexpr wlan_ssid_t kDefaultSoftApSsid = {.len = 10, .ssid = "Sim_SoftAP"};
+  static constexpr cssid_t kDefaultSoftApSsid = {.len = 10, .data = "Sim_SoftAP"};
   static constexpr wlan_channel_t kDefaultSoftApChannel = {
       .primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   static constexpr uint32_t kDefaultSoftApBeaconPeriod = 100;
@@ -124,8 +124,7 @@ class SimInterface {
   // Start an assocation with a fake AP. We can use these for subsequent association events, but
   // not interleaved association events (which I doubt are terribly useful, anyway). Note that for
   // the moment only non-authenticated associations are supported.
-  void StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                  const wlan_channel_t& channel);
+  void StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid, const wlan_channel_t& channel);
   void AssociateWith(const simulation::FakeAp& ap,
                      std::optional<zx::duration> delay = std::nullopt);
 
@@ -137,7 +136,7 @@ class SimInterface {
   const std::list<bss_description_t>* ScanResultBssList(uint64_t txn_id);
 
   // SoftAP operation
-  void StartSoftAp(const wlan_ssid_t& ssid = kDefaultSoftApSsid,
+  void StartSoftAp(const cssid_t& ssid = kDefaultSoftApSsid,
                    const wlan_channel_t& channel = kDefaultSoftApChannel,
                    uint32_t beacon_period = kDefaultSoftApBeaconPeriod,
                    uint32_t dtim_period = kDefaultSoftApDtimPeriod);

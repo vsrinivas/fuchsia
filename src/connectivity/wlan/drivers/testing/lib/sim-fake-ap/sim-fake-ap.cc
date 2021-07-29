@@ -54,7 +54,7 @@ void FakeAp::SetBssid(const common::MacAddr& bssid) {
   beacon_state_.beacon_frame_.bssid_ = bssid;
 }
 
-void FakeAp::SetSsid(const wlan_ssid_t& ssid) {
+void FakeAp::SetSsid(const cssid_t& ssid) {
   ssid_ = ssid;
   beacon_state_.beacon_frame_.AddSsidIe(ssid);
 }
@@ -260,7 +260,7 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
       }
 
       if ((assoc_req_frame->ssid_.len != ssid_.len) ||
-          memcmp(assoc_req_frame->ssid_.ssid, ssid_.ssid, ssid_.len)) {
+          memcmp(assoc_req_frame->ssid_.data, ssid_.data, ssid_.len)) {
         ScheduleAssocResp(StatusCode::REFUSED_REASON_UNSPECIFIED, assoc_req_frame->src_addr_);
         return;
       }

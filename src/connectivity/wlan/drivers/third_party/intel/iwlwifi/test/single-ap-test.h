@@ -31,7 +31,7 @@ class SingleApTest : public ::zxtest::Test {
  protected:
   static constexpr std::array<uint8_t, common::kMacAddrLen> kApAddr = {0x12, 0x34, 0x56,
                                                                        0x78, 0x9a, 0xbc};
-  static constexpr wlan_ssid_t kSsid = {.len = 6 /* strlen("MySSID") */, .ssid = "MySSID"};
+  static constexpr cssid_t kSsid = {.len = 6 /* strlen("MySSID") */, .data = "MySSID"};
   static constexpr wlan_channel_t kChannel = {.primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20};
 
   static const common::MacAddr default_macaddr_;

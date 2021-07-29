@@ -67,7 +67,7 @@ void ConvertWlanChan(wlan_channel_t* wlanif_channel, const wlan_common::WlanChan
   wlanif_channel->secondary80 = fidl_channel.secondary80;
 }
 
-void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
+void CopySSID(const ::std::vector<uint8_t>& in_ssid, cssid_t* out_ssid) {
   size_t ssid_len = in_ssid.size();
   if (ssid_len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
     warnf("wlanif: truncating ssid from %zu to %d\n", ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);

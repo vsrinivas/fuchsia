@@ -246,7 +246,7 @@ void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
   memcpy(out_macaddr->byte, info.mac_addr, ETH_ALEN);
 }
 
-void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
                               const wlan_channel_t& channel) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on a Client interface
@@ -261,7 +261,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   assoc_ctx_.ies.clear();
   assoc_ctx_.ies.push_back(0);         // SSID IE type ID
   assoc_ctx_.ies.push_back(ssid.len);  // SSID IE length
-  assoc_ctx_.ies.insert(assoc_ctx_.ies.end(), ssid.ssid, ssid.ssid + ssid.len);
+  assoc_ctx_.ies.insert(assoc_ctx_.ies.end(), ssid.data, ssid.data + ssid.len);
   assoc_ctx_.channel = channel;
 
   // Send join request
@@ -279,7 +279,7 @@ void SimInterface::AssociateWith(const simulation::FakeAp& ap, std::optional<zx:
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
 
   common::MacAddr bssid = ap.GetBssid();
-  wlan_ssid_t ssid = ap.GetSsid();
+  cssid_t ssid = ap.GetSsid();
   wlan_channel_t channel = ap.GetChannel();
 
   if (delay) {
@@ -347,7 +347,7 @@ const std::list<bss_description_t>* SimInterface::ScanResultBssList(uint64_t txn
   return &results->second.result_list;
 }
 
-void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& channel,
+void SimInterface::StartSoftAp(const cssid_t& ssid, const wlan_channel_t& channel,
                                uint32_t beacon_period, uint32_t dtim_period) {
   ZX_ASSERT(if_impl_ops_);
   // This should only be performed on an AP interface
@@ -363,9 +363,9 @@ void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& ch
 
   // Set the SSID field in the request
   const size_t kSsidLen = sizeof(start_req.ssid.data);
-  ZX_ASSERT(kSsidLen == sizeof(ssid.ssid));
+  ZX_ASSERT(kSsidLen == sizeof(ssid.data));
   start_req.ssid.len = ssid.len;
-  memcpy(start_req.ssid.data, ssid.ssid, kSsidLen);
+  memcpy(start_req.ssid.data, ssid.data, kSsidLen);
 
   // Send request to driver
   if_impl_ops_->start_req(if_impl_ctx_, &start_req);
@@ -386,7 +386,7 @@ void SimInterface::StopSoftAp() {
   ZX_ASSERT(sizeof(stop_req.ssid.data) == wlan_ieee80211::MAX_SSID_BYTE_LEN);
   // Use the ssid from the last call to StartSoftAp
   stop_req.ssid.len = soft_ap_ctx_.ssid.len;
-  memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.ssid, wlan_ieee80211::MAX_SSID_BYTE_LEN);
+  memcpy(stop_req.ssid.data, soft_ap_ctx_.ssid.data, wlan_ieee80211::MAX_SSID_BYTE_LEN);
 
   // Send request to driver
   if_impl_ops_->stop_req(if_impl_ctx_, &stop_req);

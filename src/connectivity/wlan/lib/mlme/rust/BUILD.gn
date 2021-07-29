@@ -19,6 +19,7 @@ rustc_library("wlan-mlme") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
+    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",

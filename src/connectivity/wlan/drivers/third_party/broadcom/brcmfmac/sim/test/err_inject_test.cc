@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
@@ -129,7 +129,7 @@ TEST_F(ErrInjTest, CmdFirmwareErrorLifecycle) {
 
   // Initialize parameter for BRCMF_C_SET_SSID, here we use kDefaultSoftApSsid as the fake
   // association target, the content doesn't really affect the result.
-  memcpy(&join_params.ssid_le.SSID, SimInterface::kDefaultSoftApSsid.ssid,
+  memcpy(&join_params.ssid_le.SSID, SimInterface::kDefaultSoftApSsid.data,
          SimInterface::kDefaultSoftApSsid.len);
   join_params.ssid_le.SSID_len = SimInterface::kDefaultSoftApSsid.len;
 

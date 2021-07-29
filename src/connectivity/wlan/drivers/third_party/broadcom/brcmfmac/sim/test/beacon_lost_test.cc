@@ -21,7 +21,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kSecondBssid({0x12, 0x34, 0x56, 0x78, 0x9b, 0xbd});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
@@ -157,7 +157,7 @@ TEST_F(BeaconLostTest, WrongBeaconLossTest) {
   // Start up fake AP
   simulation::FakeAp ap1(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   ap1.EnableBeacon(zx::msec(100));
-  constexpr wlan_ssid_t kWrongSsid = {.len = 14, .ssid = "Fuchsia Fake AP"};
+  constexpr cssid_t kWrongSsid = {.len = 14, .data = "Fuchsia Fake AP"};
   ASSERT_NE(kDefaultSsid.len, kWrongSsid.len);
   env_->MoveStation(&ap1, -50, 0);
   aps_.push_back(&ap1);
@@ -201,7 +201,7 @@ TEST_F(BeaconLostTest, TempBeaconLossTest) {
   // Start up fake AP
   simulation::FakeAp ap1(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
   ap1.EnableBeacon(zx::msec(100));
-  constexpr wlan_ssid_t kWrongSsid = {.len = 14, .ssid = "Fuchsia Fake AP"};
+  constexpr cssid_t kWrongSsid = {.len = 14, .data = "Fuchsia Fake AP"};
   ASSERT_NE(kDefaultSsid.len, kWrongSsid.len);
   env_->MoveStation(&ap1, 0, 0);
   aps_.push_back(&ap1);

@@ -109,7 +109,7 @@ class SimFirmware {
     bool is_active;
 
     // Optional filters
-    std::optional<wlan_ssid_t> ssid;
+    std::optional<cssid_t> ssid;
     std::optional<common::MacAddr> bssid;
 
     // Time per channel
@@ -130,7 +130,7 @@ class SimFirmware {
 
   struct AssocOpts {
     common::MacAddr bssid;
-    wlan_ssid_t ssid;
+    cssid_t ssid;
     bss_type_t bss_type;
   };
 

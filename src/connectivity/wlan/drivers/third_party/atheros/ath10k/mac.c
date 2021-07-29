@@ -5545,7 +5545,7 @@ static zx_status_t ath10k_mac_convert_scan_config(const wlan_hw_scan_config_t* s
   if (scan_config->ssid.len > 0) {
     arg->n_ssids = 1;
     arg->ssids[0].len = scan_config->ssid.len;
-    arg->ssids[0].ssid = scan_config->ssid.ssid;
+    arg->ssids[0].ssid = scan_config->ssid.data;
   } else {
     arg->n_ssids = 0;
   }

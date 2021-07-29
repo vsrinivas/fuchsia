@@ -248,7 +248,7 @@ type AssociateIndication = struct {
     peer_sta_address array<uint8, 6>;
     capability_info internal.CapabilityInfo;
     listen_interval uint16;
-    ssid bytes:optional;
+    ssid ieee80211.Ssid:optional;
     rates bytes:internal.RATES_MAX_LEN;
     // BSSMembershipSelectorSet
     rsne bytes:optional;

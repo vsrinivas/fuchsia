@@ -19,7 +19,7 @@ namespace wlan::brcmfmac {
 // Fake AP configuration
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr zx::duration kBeaconInterval = zx::msec(SimInterface::kDefaultPassiveScanDwellTimeMs - 1);
 
@@ -73,7 +73,7 @@ TEST_F(ScanTest, PassiveDwellTime) {
       EXPECT_EQ(kDefaultBssid, common::MacAddr(bss.bssid));
       auto ssid = brcmf_find_ssid_in_ies(bss.ies_list, bss.ies_count);
       EXPECT_EQ(kDefaultSsid.len, ssid.size());
-      EXPECT_EQ(memcmp(kDefaultSsid.ssid, ssid.data(), ssid.size()), 0);
+      EXPECT_EQ(memcmp(kDefaultSsid.data, ssid.data(), ssid.size()), 0);
       EXPECT_EQ(kDefaultChannel.primary, bss.channel.primary);
       EXPECT_EQ(kDefaultChannel.cbw, bss.channel.cbw);
     }

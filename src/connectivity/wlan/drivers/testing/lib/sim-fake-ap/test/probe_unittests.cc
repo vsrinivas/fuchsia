@@ -23,12 +23,12 @@ using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kAp1TxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kAp1Ssid = {.len = 16, .ssid = "Fuchsia Fake AP1"};
+constexpr cssid_t kAp1Ssid = {.len = 16, .data = "Fuchsia Fake AP1"};
 const common::MacAddr kAp1Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 constexpr simulation::WlanTxInfo kAp2TxInfo = {
     .channel = {.primary = 10, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kAp2Ssid = {.len = 16, .ssid = "Fuchsia Fake AP2"};
+constexpr cssid_t kAp2Ssid = {.len = 16, .data = "Fuchsia Fake AP2"};
 const common::MacAddr kAp2Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xcc});
 
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
@@ -47,7 +47,7 @@ class ProbeTest : public ::testing::Test, public simulation::StationIfc {
 
   unsigned probe_resp_count_ = 0;
   std::list<common::MacAddr> bssid_resp_list_;
-  std::list<wlan_ssid_t> ssid_resp_list_;
+  std::list<cssid_t> ssid_resp_list_;
   std::list<wlan_channel_t> channel_resp_list_;
   std::list<double> sig_strength_resp_list;
 
@@ -85,9 +85,9 @@ void compareChannel(const wlan_channel_t& channel1, const wlan_channel_t& channe
   EXPECT_EQ(channel1.secondary80, channel2.secondary80);
 }
 
-void compareSsid(const wlan_ssid_t& ssid1, const wlan_ssid_t& ssid2) {
+void compareSsid(const cssid_t& ssid1, const cssid_t& ssid2) {
   ASSERT_EQ(ssid1.len, ssid2.len);
-  EXPECT_EQ(memcmp(ssid1.ssid, ssid2.ssid, ssid1.len), 0);
+  EXPECT_EQ(memcmp(ssid1.data, ssid2.data, ssid1.len), 0);
 }
 
 /* Verify that probe request which is sent to a channel with no ap active on, will not get

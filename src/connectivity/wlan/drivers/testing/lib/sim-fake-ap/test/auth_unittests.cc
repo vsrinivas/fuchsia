@@ -24,7 +24,7 @@ constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
 constexpr simulation::WlanTxInfo kWrongChannelTxInfo = {
     .channel = {.primary = 10, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kApSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x11, 0x11, 0x11, 0x11, 0x11, 0x11});
 static const common::MacAddr kWrongBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbd});
 const common::MacAddr kClientMacAddr({0x22, 0x22, 0x22, 0x22, 0x22, 0x22});

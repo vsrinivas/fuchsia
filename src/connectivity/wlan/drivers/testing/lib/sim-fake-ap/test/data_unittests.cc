@@ -19,7 +19,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kApSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kSrcClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
 const common::MacAddr kDstClientMacAddr({0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54});

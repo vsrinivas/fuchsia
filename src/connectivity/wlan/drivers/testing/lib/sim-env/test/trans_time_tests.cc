@@ -27,7 +27,7 @@ using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 // This is the distance between stations we used in this test.
@@ -102,7 +102,7 @@ void SimStation::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFram
       ASSERT_THAT(ssid_generic_ie, NotNull());
       auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ssid_generic_ie);
       EXPECT_EQ(ssid_ie->ssid_.len, kDefaultSsid.len);
-      EXPECT_EQ(std::memcmp(ssid_ie->ssid_.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+      EXPECT_EQ(std::memcmp(ssid_ie->ssid_.data, kDefaultSsid.data, kDefaultSsid.len), 0);
       EXPECT_EQ(beacon_frame->bssid_, kDefaultBssid);
       recv_times_.push_back(env_->GetTime());
       break;

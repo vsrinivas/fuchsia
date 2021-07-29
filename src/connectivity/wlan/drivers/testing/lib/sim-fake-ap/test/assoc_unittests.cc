@@ -22,7 +22,7 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kApSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
 constexpr auto kClientDisassocReason = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
@@ -119,8 +119,8 @@ TEST_F(AssocTest, RefuseIfNotAuthenticated) {
 }
 
 TEST_F(AssocTest, RefusedWrongSsid) {
-  static constexpr wlan_ssid_t kWrongLenSsid = {.len = 14, .ssid = "Fuchsia Fake A"};
-  static constexpr wlan_ssid_t kWrongSsid = {.len = 15, .ssid = "Fuchsia Fake AA"};
+  static constexpr cssid_t kWrongLenSsid = {.len = 14, .data = "Fuchsia Fake A"};
+  static constexpr cssid_t kWrongSsid = {.len = 15, .data = "Fuchsia Fake AA"};
 
   FinishAuth();
 

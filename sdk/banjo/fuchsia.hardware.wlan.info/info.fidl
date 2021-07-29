@@ -15,11 +15,6 @@ type WlanKeyType = strict enum : uint8 {
 };
 // LINT.ThenChange(//src/connectivity/wlan/lib/mlme/rust/src/key.rs)
 
-type WlanSsid = struct {
-    len uint8;
-    ssid array<uint8, ddk.hw.wlan.ieee80211.IEEE80211_MAX_SSID_LEN>;
-};
-
 // IEEE Std 802.11-2016, 9.4.2.57
 @packed
 type WlanHtOp = struct {

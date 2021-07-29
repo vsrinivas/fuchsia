@@ -41,7 +41,7 @@ constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 const common::MacAddr kFakeMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x02});
-constexpr wlan_ssid_t kDefaultSsid = {.len = 6, .ssid = "Sim_AP"};
+constexpr cssid_t kDefaultSsid = {.len = 6, .data = "Sim_AP"};
 
 class CreateSoftAPTest : public SimTest {
  public:

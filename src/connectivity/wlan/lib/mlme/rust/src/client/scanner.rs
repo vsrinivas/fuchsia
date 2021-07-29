@@ -17,10 +17,10 @@ use {
     },
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
-    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, warn},
     thiserror::Error,
     wlan_common::{
@@ -180,7 +180,7 @@ impl<'a> BoundScanner<'a> {
                 scan_type,
                 num_channels: channel_list.len() as u8,
                 channels,
-                ssid: banjo_wlan_info::WlanSsid { len: req.ssid.len() as u8, ssid },
+                ssid: banjo_ieee80211::CSsid { len: req.ssid.len() as u8, data: ssid },
             };
             if let Err(status) = self.ctx.device.start_hw_scan(&config) {
                 self.scanner.ongoing_scan.take();
@@ -699,7 +699,7 @@ mod tests {
 
             let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
             ssid[..4].copy_from_slice(b"ssid");
-            assert_eq!(config.ssid, banjo_wlan_info::WlanSsid { len: 4, ssid });
+            assert_eq!(config.ssid, banjo_ieee80211::CSsid { len: 4, data: ssid });
         }, "HW scan not initiated");
 
         // Mock receiving a beacon

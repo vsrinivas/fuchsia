@@ -32,8 +32,8 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 }  // namespace
 
 struct ApInfo {
-  explicit ApInfo(simulation::Environment* env, const common::MacAddr& bssid,
-                  const wlan_ssid_t& ssid, const wlan_channel_t& channel)
+  explicit ApInfo(simulation::Environment* env, const common::MacAddr& bssid, const cssid_t& ssid,
+                  const wlan_channel_t& channel)
       : ap_(env, bssid, ssid, channel) {}
 
   simulation::FakeAp ap_;
@@ -62,8 +62,8 @@ class ActiveScanTest : public SimTest {
 
   ActiveScanTest() = default;
   void Init();
-  void StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                   const wlan_channel_t& channel, zx::duration beacon_interval = kBeaconInterval);
+  void StartFakeAp(const common::MacAddr& bssid, const cssid_t& ssid, const wlan_channel_t& channel,
+                   zx::duration beacon_interval = kBeaconInterval);
 
   void StartScan(const wlanif_scan_req_t* req);
   void VerifyScanResults();
@@ -129,7 +129,7 @@ void ActiveScanTest::Init() {
   };
 }
 
-void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const cssid_t& ssid,
                                  const wlan_channel_t& channel, zx::duration beacon_interval) {
   auto ap_info = std::make_unique<ApInfo>(env_.get(), bssid, ssid, channel);
   // Beacon is also enabled here to make sure this is not disturbing the correct result.
@@ -171,11 +171,11 @@ void ActiveScanTest::VerifyScanResults() {
         matches_seen++;
 
         // Verify SSID
-        wlan_ssid_t ssid_info = ap_info->ap_.GetSsid();
+        cssid_t ssid_info = ap_info->ap_.GetSsid();
         auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
         EXPECT_EQ(ssid.size(), ssid_info.len);
-        ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
-        EXPECT_EQ(memcmp(ssid.data(), ssid_info.ssid, ssid_info.len), 0);
+        ASSERT_LE(ssid_info.len, sizeof(ssid_info.data));
+        EXPECT_EQ(memcmp(ssid.data(), ssid_info.data, ssid_info.len), 0);
 
         // Verify channel
         wlan_channel_t channel = ap_info->ap_.GetChannel();
@@ -239,15 +239,15 @@ void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 // AP 1&2 on channel 2.
 constexpr wlan_channel_t kDefaultChannel1 = {
     .primary = 2, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
-constexpr wlan_ssid_t kAp1Ssid = {.len = 16, .ssid = "Fuchsia Fake AP1"};
+constexpr cssid_t kAp1Ssid = {.len = 16, .data = "Fuchsia Fake AP1"};
 const common::MacAddr kAp1Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
-constexpr wlan_ssid_t kAp2Ssid = {.len = 16, .ssid = "Fuchsia Fake AP2"};
+constexpr cssid_t kAp2Ssid = {.len = 16, .data = "Fuchsia Fake AP2"};
 const common::MacAddr kAp2Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbd});
 
 // AP 3 on channel 4.
 constexpr wlan_channel_t kDefaultChannel2 = {
     .primary = 4, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
-constexpr wlan_ssid_t kAp3Ssid = {.len = 16, .ssid = "Fuchsia Fake AP3"};
+constexpr cssid_t kAp3Ssid = {.len = 16, .data = "Fuchsia Fake AP3"};
 const common::MacAddr kAp3Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbe});
 
 // This test case might fail in a very low possibility because it's random.
@@ -325,12 +325,12 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
 
   StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
 
-  wlanif_ssid_t invalid_scan_ssid = {
+  cssid_t invalid_scan_ssid = {
       .len = 33,
       .data = "1234567890",
   };
 
-  wlanif_ssid_t valid_scan_ssid = {
+  cssid_t valid_scan_ssid = {
       .len = 16,
       .data = "Fuchsia Fake AP1",
   };

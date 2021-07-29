@@ -8,6 +8,7 @@ using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
 type WlanmacInfo = struct {
@@ -200,7 +201,7 @@ type WlanHwScanConfig = struct {
     /// Channel numbers to scan
     channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     /// SSID for directed probe requests
-    ssid fuchsia.hardware.wlan.info.WlanSsid;
+    ssid ieee80211.CSsid;
 };
 
 type WlanHwScan = strict enum : uint8 {

@@ -18,7 +18,7 @@ using ::testing::IsNull;
 using ::testing::NotNull;
 using ::testing::SizeIs;
 
-const wlan_ssid_t kDefaultSsid{.len = 15, .ssid = "Fuchsia Fake AP"};
+const cssid_t kDefaultSsid{.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid{0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 20, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
@@ -92,7 +92,7 @@ TEST_F(FrameIeTest, SsidIeAddRemove) {
   ASSERT_EQ(ssid_untyped_ie->IeType(), InformationElement::IE_TYPE_SSID);
   auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ssid_untyped_ie);
   EXPECT_EQ(ssid_ie->ssid_.len, kDefaultSsid.len);
-  EXPECT_THAT(ssid_ie->ssid_.ssid, ElementsAreArray(kDefaultSsid.ssid));
+  EXPECT_THAT(ssid_ie->ssid_.data, ElementsAreArray(kDefaultSsid.data));
 
   // Add IE with same type again, add will fail.
   beacon_created_without_ssid.AddSsidIe(kDefaultSsid);
@@ -109,7 +109,7 @@ TEST_F(FrameIeTest, SsidIeAddRemove) {
   ASSERT_EQ(ssid_untyped_ie->IeType(), InformationElement::IE_TYPE_SSID);
   ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ssid_untyped_ie);
   EXPECT_EQ(ssid_ie->ssid_.len, kDefaultSsid.len);
-  EXPECT_THAT(ssid_ie->ssid_.ssid, ElementsAreArray(kDefaultSsid.ssid));
+  EXPECT_THAT(ssid_ie->ssid_.data, ElementsAreArray(kDefaultSsid.data));
 
   // Add IE with same type again, add will fail.
   beacon_created_with_ssid.AddSsidIe(kDefaultSsid);
@@ -128,7 +128,7 @@ TEST_F(FrameIeTest, SsidIeToRawIe) {
   ASSERT_THAT(raw_ie, SizeIs(expected_size));
   std::vector<uint8_t> expected_bytes({InformationElement::IE_TYPE_SSID, kDefaultSsid.len});
   for (int i = 0; i < kDefaultSsid.len; ++i) {
-    expected_bytes.push_back(kDefaultSsid.ssid[i]);
+    expected_bytes.push_back(kDefaultSsid.data[i]);
   }
   EXPECT_THAT(raw_ie, ElementsAreArray(expected_bytes));
 }
@@ -211,11 +211,11 @@ TEST_F(FrameIeTest, DeepCopyBeaconFrame) {
   // use a simple matcher.
   std::vector<uint8_t> origin_ssid(origin_ssid_ie->ssid_.len);
   for (int i = 0; i < origin_ssid_ie->ssid_.len; ++i) {
-    origin_ssid.push_back(origin_ssid_ie->ssid_.ssid[i]);
+    origin_ssid.push_back(origin_ssid_ie->ssid_.data[i]);
   }
   std::vector<uint8_t> copied_ssid(copied_ssid_ie->ssid_.len);
   for (int i = 0; i < copied_ssid_ie->ssid_.len; ++i) {
-    copied_ssid.push_back(copied_ssid_ie->ssid_.ssid[i]);
+    copied_ssid.push_back(copied_ssid_ie->ssid_.data[i]);
   }
   EXPECT_THAT(origin_ssid, ElementsAreArray(copied_ssid));
 

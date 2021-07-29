@@ -23,7 +23,7 @@ using ::testing::NotNull;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 
 class CrashRecoveryTest : public SimTest {
  public:
@@ -86,7 +86,7 @@ void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_resu
 
   EXPECT_EQ(res_bssid, kDefaultBssid);
   EXPECT_EQ(ssid.size(), kDefaultSsid.len);
-  EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.ssid, kDefaultSsid.len), 0);
+  EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.data, kDefaultSsid.len), 0);
 
   ASSERT_NE(client_ifc_.ScanResultCode(scan_id), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(scan_id).value(), expect_code);

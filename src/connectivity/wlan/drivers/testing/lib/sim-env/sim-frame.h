@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_FRAME_H_
 
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/types.h>
 
@@ -59,7 +60,7 @@ class InformationElement {
 // IEEE Std 802.11-2016, 9.4.2.2
 class SsidInformationElement : public InformationElement {
  public:
-  explicit SsidInformationElement(const wlan_ssid_t& ssid) : ssid_(ssid){};
+  explicit SsidInformationElement(const cssid_t& ssid) : ssid_(ssid){};
 
   SsidInformationElement(const SsidInformationElement& ssid_ie);
 
@@ -69,7 +70,7 @@ class SsidInformationElement : public InformationElement {
 
   std::vector<uint8_t> ToRawIe() const override;
 
-  wlan_ssid_t ssid_;
+  cssid_t ssid_;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.19
@@ -132,7 +133,7 @@ class SimManagementFrame : public SimFrame {
   SimFrameType FrameType() const override;
   // Frame subtype identifier for management frames
   virtual SimMgmtFrameType MgmtFrameType() const = 0;
-  void AddSsidIe(const wlan_ssid_t& ssid);
+  void AddSsidIe(const cssid_t& ssid);
   void AddCsaIe(const wlan_channel_t& channel, uint8_t channel_switch_count);
   void AddRawIes(fbl::Span<const uint8_t> raw_ies);
   std::shared_ptr<InformationElement> FindIe(InformationElement::SimIeType ie_type) const;
@@ -153,7 +154,7 @@ class SimManagementFrame : public SimFrame {
 class SimBeaconFrame : public SimManagementFrame {
  public:
   SimBeaconFrame() = default;
-  explicit SimBeaconFrame(const wlan_ssid_t& ssid, const common::MacAddr& bssid);
+  explicit SimBeaconFrame(const cssid_t& ssid, const common::MacAddr& bssid);
 
   SimBeaconFrame(const SimBeaconFrame& beacon);
 
@@ -186,7 +187,7 @@ class SimProbeRespFrame : public SimManagementFrame {
  public:
   SimProbeRespFrame() = default;
   explicit SimProbeRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                             const wlan_ssid_t& ssid);
+                             const cssid_t& ssid);
 
   SimProbeRespFrame(const SimProbeRespFrame& probe_resp);
 
@@ -203,7 +204,7 @@ class SimAssocReqFrame : public SimManagementFrame {
  public:
   SimAssocReqFrame() = default;
   explicit SimAssocReqFrame(const common::MacAddr& src, const common::MacAddr bssid,
-                            const wlan_ssid_t& ssid)
+                            const cssid_t& ssid)
       : SimManagementFrame(src, {}), bssid_(bssid), ssid_(ssid){};
 
   SimAssocReqFrame(const SimAssocReqFrame& assoc_req);
@@ -215,7 +216,7 @@ class SimAssocReqFrame : public SimManagementFrame {
   SimFrame* CopyFrame() const override;
 
   common::MacAddr bssid_;
-  wlan_ssid_t ssid_;
+  cssid_t ssid_;
 };
 
 class SimAssocRespFrame : public SimManagementFrame {

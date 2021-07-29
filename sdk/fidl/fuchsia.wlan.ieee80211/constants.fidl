@@ -9,8 +9,17 @@ library fuchsia.wlan.ieee80211;
 /// the 802.11 standard is byte oriented, the word BYTE is included in the
 /// name of this constant to emphasize the importance that it not be applied
 /// to the length of a UTF-8 encoded string.
+@namespaced
 const MAX_SSID_BYTE_LEN uint8 = 32;
 alias Ssid = bytes:MAX_SSID_BYTE_LEN;
 
+// CSsid is intended for use only in source code using C bindings where
+// the Ssid alias does not exist.
+type CSsid = struct {
+    len uint8;
+    data array<uint8, MAX_SSID_BYTE_LEN>;
+};
+
 /// IEEE Std 802.11-2016, 9.4.2.99
+@namespaced
 const MAX_MESH_ID_BYTE_LEN uint8 = 32;

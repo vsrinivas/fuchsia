@@ -12,6 +12,7 @@ fidl("fuchsia.hardware.wlanif") {
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.ethernet.mac",
     "//sdk/banjo/fuchsia.hardware.wlan.info",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal",
     "//zircon/vdso/zx",
   ]

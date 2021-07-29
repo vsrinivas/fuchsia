@@ -33,7 +33,7 @@ using ::testing::SizeIs;
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const uint8_t kIes[] = {
     // SSID
     0x00, 0x0f, 'F', 'u', 'c', 'h', 's', 'i', 'a', ' ', 'F', 'a', 'k', 'e', ' ', 'A', 'P',
@@ -131,7 +131,7 @@ class AssocTest : public SimTest {
     // appropriate MLME calls (Join => Auth => Assoc).
     simulation::WlanTxInfo tx_info = {.channel = kDefaultChannel};
     common::MacAddr bssid = kDefaultBssid;
-    wlan_ssid_t ssid = kDefaultSsid;
+    cssid_t ssid = kDefaultSsid;
     std::vector<uint8_t> ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
 
     // There should be one result for each association response received
@@ -662,7 +662,7 @@ TEST_F(AssocTest, NoAps) {
   const common::MacAddr kBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
   context_.bssid = kBssid;
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
-  context_.ssid = {.len = 6, .ssid = "TestAP"};
+  context_.ssid = {.len = 6, .data = "TestAP"};
   context_.tx_info.channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
@@ -720,7 +720,7 @@ TEST_F(AssocTest, WrongIds) {
   constexpr wlan_channel_t kWrongChannel = {
       .primary = 8, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   ASSERT_NE(kDefaultChannel.primary, kWrongChannel.primary);
-  constexpr wlan_ssid_t kWrongSsid = {.len = 14, .ssid = "Fuchsia Fake AP"};
+  constexpr cssid_t kWrongSsid = {.len = 14, .data = "Fuchsia Fake AP"};
   ASSERT_NE(kDefaultSsid.len, kWrongSsid.len);
   const common::MacAddr kWrongBssid({0x12, 0x34, 0x56, 0x78, 0x9b, 0xbc});
   ASSERT_NE(kDefaultBssid, kWrongBssid);

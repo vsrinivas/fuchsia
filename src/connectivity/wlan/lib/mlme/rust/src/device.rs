@@ -553,6 +553,7 @@ mod tests {
     use {
         super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
         banjo_ddk_hw_wlan_wlaninfo::*, banjo_fuchsia_hardware_wlan_mac::WlanHwScanType,
+        banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, wlan_common::assert_variant,
     };
@@ -680,9 +681,9 @@ mod tests {
             scan_type: WlanHwScanType::PASSIVE,
             num_channels: 3,
             channels: arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize),
-            ssid: WlanSsid {
+            ssid: banjo_ieee80211::CSsid {
                 len: 3,
-                ssid: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
+                data: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
             },
         });
         assert!(result.is_ok());
@@ -690,7 +691,7 @@ mod tests {
             assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
             assert_eq!(config.num_channels, 3);
             assert_eq!(&config.channels[..], &arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize)[..]);
-            assert_eq!(config.ssid, WlanSsid { len: 3, ssid: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) });
+            assert_eq!(config.ssid, banjo_ieee80211::CSsid { len: 3, data: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) });
         }, "expected HW scan config");
     }
 

@@ -15,7 +15,7 @@ InformationElement::~InformationElement() = default;
 SsidInformationElement::SsidInformationElement(
     const wlan::simulation::SsidInformationElement& ssid_ie) {
   ssid_.len = ssid_ie.ssid_.len;
-  std::memcpy(ssid_.ssid, ssid_ie.ssid_.ssid, ssid_.len);
+  std::memcpy(ssid_.data, ssid_ie.ssid_.data, ssid_.len);
 };
 
 InformationElement::SimIeType SsidInformationElement::IeType() const { return IE_TYPE_SSID; }
@@ -23,7 +23,7 @@ InformationElement::SimIeType SsidInformationElement::IeType() const { return IE
 std::vector<uint8_t> SsidInformationElement::ToRawIe() const {
   std::vector<uint8_t> buf = {IE_TYPE_SSID, ssid_.len};
   for (int i = 0; i < ssid_.len; ++i) {
-    buf.push_back(ssid_.ssid[i]);
+    buf.push_back(ssid_.data[i]);
   }
   return buf;
 }
@@ -90,7 +90,7 @@ std::shared_ptr<InformationElement> SimManagementFrame::FindIe(
   return std::shared_ptr<InformationElement>(nullptr);
 }
 
-void SimManagementFrame::AddSsidIe(const wlan_ssid_t& ssid) {
+void SimManagementFrame::AddSsidIe(const cssid_t& ssid) {
   auto ie = std::make_shared<SsidInformationElement>(ssid);
   // Ensure no IE with this IE type exists.
   AddIe(InformationElement::IE_TYPE_SSID, ie);
@@ -127,8 +127,7 @@ void SimManagementFrame::RemoveIe(InformationElement::SimIeType ie_type) {
 }
 
 /* SimBeaconFrame function implementations.*/
-SimBeaconFrame::SimBeaconFrame(const wlan_ssid_t& ssid, const common::MacAddr& bssid)
-    : bssid_(bssid) {
+SimBeaconFrame::SimBeaconFrame(const cssid_t& ssid, const common::MacAddr& bssid) : bssid_(bssid) {
   // Beacon automatically gets the SSID information element.
   AddSsidIe(ssid);
 }
@@ -160,7 +159,7 @@ SimFrame* SimProbeReqFrame::CopyFrame() const { return new SimProbeReqFrame(*thi
 
 /* SimProbeRespFrame function implementations.*/
 SimProbeRespFrame::SimProbeRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
-                                     const wlan_ssid_t& ssid)
+                                     const cssid_t& ssid)
     : SimManagementFrame(src, dst) {
   // Probe response automatically gets the SSID information element.
   AddSsidIe(ssid);

@@ -35,7 +35,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
-constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kApSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr uint8_t kIes[] = {
     // SSID
@@ -135,7 +135,7 @@ class DataFrameTest : public SimTest {
     // appropriate MLME calls (Join => Auth => Assoc).
     wlan_channel_t channel = kDefaultChannel;
     common::MacAddr bssid = kApBssid;
-    wlan_ssid_t ssid = kApSsid;
+    cssid_t ssid = kApSsid;
     std::vector<uint8_t> ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
 
     // There should be one result for each association response received

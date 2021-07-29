@@ -23,7 +23,7 @@ using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
-constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
+constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 void checkChannel(const wlan_channel_t& channel) {
@@ -32,9 +32,9 @@ void checkChannel(const wlan_channel_t& channel) {
   EXPECT_EQ(channel.secondary80, kDefaultTxInfo.channel.secondary80);
 }
 
-void checkSsid(const wlan_ssid_t& ssid) {
+void checkSsid(const cssid_t& ssid) {
   EXPECT_EQ(ssid.len, kDefaultSsid.len);
-  EXPECT_EQ(std::memcmp(ssid.ssid, kDefaultSsid.ssid, kDefaultSsid.len), 0);
+  EXPECT_EQ(std::memcmp(ssid.data, kDefaultSsid.data, kDefaultSsid.len), 0);
 }
 
 class SimStation : public wlan::simulation::StationIfc {
