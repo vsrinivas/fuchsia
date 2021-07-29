@@ -147,10 +147,21 @@ type ConnectRequest = struct {
     deprecated_scan_type fuchsia.wlan.common.ScanType;
 };
 
-type ClientStatusResponse = struct {
-    connected_to box<BssInfo>;
-    // If non-empty, this is the SSID we are currently trying to connect to
-    connecting_to_ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+type ServingApInfo = struct {
+    bssid array<uint8, 6>;
+    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    rssi_dbm int8;
+    snr_db int8;
+    channel fuchsia.wlan.common.WlanChannel;
+    protection Protection;
+};
+
+alias Ssid = vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+
+type ClientStatusResponse = strict union {
+    1: connected ServingApInfo;
+    2: connecting Ssid;
+    3: idle Empty;
 };
 
 protocol ClientSme {

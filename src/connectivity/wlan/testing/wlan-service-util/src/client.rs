@@ -71,50 +71,37 @@ pub async fn connect(
 
     let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
 
-    let connection_code = handle_connect_transaction(connection_proxy).await?;
+    let connection_result_code = handle_connect_transaction(connection_proxy).await?;
 
-    #[allow(unreachable_patterns)]
-    let mut connected = match connection_code {
-        fidl_sme::ConnectResultCode::Success => true,
-        fidl_sme::ConnectResultCode::Canceled => {
-            fx_log_err!("Connecting was canceled or superseded by another command");
-            false
-        }
-        fidl_sme::ConnectResultCode::Failed => {
-            fx_log_err!("Failed to connect to network");
-            false
-        }
-        fidl_sme::ConnectResultCode::CredentialRejected => {
-            fx_log_err!("Failed to connect to network: {:?}", connection_code);
-            false
-        }
-        e => {
-            // also need to handle new result codes, generically return false here
-            fx_log_err!("Failed to connect: {:?}", e);
-            false
-        }
-    };
-
-    if connected == true {
-        let rsp =
-            iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
-
-        connected = connected
-            && match rsp.connected_to {
-                Some(ref bss) if bss.ssid.as_slice().to_vec() == target_ssid_clone => true,
-                Some(ref bss) => {
-                    fx_log_err!(
-                        "Connected to wrong network: {:?}. Expected: {:?}.",
-                        bss.ssid.as_slice(),
-                        target_ssid_clone
-                    );
-                    false
-                }
-                _ => false,
-            };
+    if !matches!(connection_result_code, fidl_sme::ConnectResultCode::Success) {
+        fx_log_err!("Failed to connect to network: {:?}", connection_result_code);
+        return Ok(false);
     }
 
-    Ok(connected)
+    let client_status_response =
+        iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
+    Ok(match client_status_response {
+        fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
+            if serving_ap_info.ssid != target_ssid_clone.as_slice() {
+                fx_log_err!(
+                    "Connected to wrong network: {:?}. Expected: {:?}.",
+                    serving_ap_info.ssid.as_slice(),
+                    target_ssid_clone.as_slice()
+                );
+                false
+            } else {
+                true
+            }
+        }
+        fidl_sme::ClientStatusResponse::Connecting(_) | fidl_sme::ClientStatusResponse::Idle(_) => {
+            fx_log_err!(
+                "Unexpected status {:?} after {:?}",
+                client_status_response,
+                connection_result_code
+            );
+            false
+        }
+    })
 }
 
 async fn handle_connect_transaction(
@@ -147,15 +134,15 @@ pub async fn disconnect(iface_sme_proxy: &fidl_sme::ClientSmeProxy) -> Result<()
         .context("failed to trigger disconnect")?;
 
     // check the status and ensure we are not connected to or connecting to anything
-    let rsp = iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
-    if rsp.connected_to.is_some() || !rsp.connecting_to_ssid.is_empty() {
-        return Err(format_err!(
-            "Disconnect confirmation failed: connected_to[{:?}] connecting_to_ssid:[{:?}]",
-            rsp.connected_to,
-            rsp.connecting_to_ssid
-        ));
+    let client_status_response =
+        iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
+    match client_status_response {
+        fidl_sme::ClientStatusResponse::Connected(_)
+        | fidl_sme::ClientStatusResponse::Connecting(_) => {
+            Err(format_err!("Disconnect confirmation failed: {:?}", client_status_response))
+        }
+        fidl_sme::ClientStatusResponse::Idle(_) => Ok(()),
     }
-    Ok(())
 }
 
 pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
@@ -260,7 +247,7 @@ mod tests {
             DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse,
         },
         fidl_fuchsia_wlan_sme::{
-            BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
+            ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
             Protection,
         },
         fuchsia_async::TestExecutor,
@@ -351,12 +338,6 @@ mod tests {
         responder.send().expect("fake disconnect response: send failed")
     }
 
-    // In response to the Client SME Status request, respond based on input
-    // status. Status response is made up of connected  (bss info) and
-    // connecting (to ssid). Here are the 3 supported scenarios:
-    // Empty Status: Both fields are empty (IF delete success)
-    // Connected: connected is set and connecting is null (IF deleted failed)
-    // Connecting: connected is null and connecting is set (IF delete failed)
     fn respond_to_client_sme_status_request(
         exec: &mut TestExecutor,
         req_stream: &mut ClientSmeRequestStream,
@@ -370,28 +351,17 @@ mod tests {
 
         // Send appropriate status response
         match status {
-            StatusResponse::Empty => {
-                let connected_to_bss_info = create_bssinfo_using_ssid(vec![]);
-                let mut response = fidl_sme::ClientStatusResponse {
-                    connected_to: connected_to_bss_info,
-                    connecting_to_ssid: vec![],
-                };
+            StatusResponse::Idle => {
+                let mut response = fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty {});
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
             StatusResponse::Connected => {
-                let connected_to_bss_info = create_bssinfo_using_ssid(vec![1, 2, 3, 4]);
-                let mut response = fidl_sme::ClientStatusResponse {
-                    connected_to: connected_to_bss_info,
-                    connecting_to_ssid: vec![],
-                };
+                let serving_ap_info = create_serving_ap_info_using_ssid(vec![1, 2, 3, 4]);
+                let mut response = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
             StatusResponse::Connecting => {
-                let connected_to_bss_info = create_bssinfo_using_ssid(vec![]);
-                let mut response = fidl_sme::ClientStatusResponse {
-                    connected_to: connected_to_bss_info,
-                    connecting_to_ssid: vec![1, 2, 3, 4],
-                };
+                let mut response = fidl_sme::ClientStatusResponse::Connecting(vec![1, 2, 3, 4]);
                 responder.send(&mut response).expect("Failed to send StatusResponse.");
             }
         }
@@ -507,7 +477,7 @@ mod tests {
     #[test]
     fn check_disconnect_all_client_and_ap_success() {
         let iface_list: Vec<(MacRole, StatusResponse)> =
-            vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Client, StatusResponse::Empty)];
+            vec![(MacRole::Ap, StatusResponse::Idle), (MacRole::Client, StatusResponse::Idle)];
         test_disconnect_all(&iface_list).expect("Expect success but failed")
     }
 
@@ -515,10 +485,8 @@ mod tests {
     // IFs are clients and both deletes should succeed.
     #[test]
     fn check_disconnect_all_all_clients_success() {
-        let iface_list: Vec<(MacRole, StatusResponse)> = vec![
-            (MacRole::Client, StatusResponse::Empty),
-            (MacRole::Client, StatusResponse::Empty),
-        ];
+        let iface_list: Vec<(MacRole, StatusResponse)> =
+            vec![(MacRole::Client, StatusResponse::Idle), (MacRole::Client, StatusResponse::Idle)];
         test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 
@@ -536,7 +504,7 @@ mod tests {
     #[test]
     fn check_disconnect_all_no_clients_success() {
         let iface_list: Vec<(MacRole, StatusResponse)> =
-            vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Ap, StatusResponse::Empty)];
+            vec![(MacRole::Ap, StatusResponse::Idle), (MacRole::Ap, StatusResponse::Idle)];
         test_disconnect_all(&iface_list).expect("Expect success but failed");
     }
 
@@ -845,8 +813,8 @@ mod tests {
             send_status_response(
                 &mut exec,
                 &mut next_client_sme_req,
-                connected_to.as_bytes().to_vec(),
-                target_ssid.to_vec(),
+                Some(connected_to.as_bytes().to_vec()),
+                None,
             );
         }
 
@@ -998,14 +966,14 @@ mod tests {
     }
 
     enum StatusResponse {
-        Empty,
+        Idle,
         Connected,
         Connecting,
     }
 
     #[test]
     fn disconnect_with_empty_status_response() {
-        if let Poll::Ready(result) = test_disconnect(StatusResponse::Empty) {
+        if let Poll::Ready(result) = test_disconnect(StatusResponse::Idle) {
             return assert!(result.is_ok());
         }
         panic!("disconnect did not return a Poll::Ready")
@@ -1041,14 +1009,14 @@ mod tests {
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
         match status {
-            StatusResponse::Empty => {
-                send_status_response(&mut exec, &mut client_sme_req, vec![], vec![])
+            StatusResponse::Idle => {
+                send_status_response(&mut exec, &mut client_sme_req, None, None)
             }
             StatusResponse::Connected => {
-                send_status_response(&mut exec, &mut client_sme_req, vec![1, 2, 3, 4], vec![])
+                send_status_response(&mut exec, &mut client_sme_req, Some(vec![1, 2, 3, 4]), None)
             }
             StatusResponse::Connecting => {
-                send_status_response(&mut exec, &mut client_sme_req, vec![], vec![1, 2, 3, 4])
+                send_status_response(&mut exec, &mut client_sme_req, None, Some(vec![1, 2, 3, 4]))
             }
         }
 
@@ -1067,34 +1035,26 @@ mod tests {
         rsp.send().expect("Failed to send DisconnectResponse.");
     }
 
-    fn create_bssinfo_using_ssid(ssid: Vec<u8>) -> Option<Box<BssInfo>> {
-        (!ssid.is_empty()).then(|| {
-            Box::new(fidl_sme::BssInfo {
-                bssid: [0, 1, 2, 3, 4, 5],
-                ssid: ssid.clone(),
-                rssi_dbm: -30,
-                snr_db: 10,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: Protection::Wpa2Personal,
-                compatible: true,
-                bss_desc: fake_fidl_bss!(
-                    Wpa2,
-                    ssid: ssid,
-                    bssid: [0, 1, 2, 3, 4, 5],
-                ),
-            })
-        })
+    fn create_serving_ap_info_using_ssid(ssid: Vec<u8>) -> fidl_sme::ServingApInfo {
+        fidl_sme::ServingApInfo {
+            bssid: [0, 1, 2, 3, 4, 5],
+            ssid,
+            rssi_dbm: -30,
+            snr_db: 10,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+            protection: Protection::Wpa2Personal,
+        }
     }
 
     fn send_status_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
-        connected_to: Vec<u8>,
-        connecting_to_ssid: Vec<u8>,
+        connected_to_ssid: Option<Vec<u8>>,
+        connecting_to_ssid: Option<Vec<u8>>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
             Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
@@ -1102,11 +1062,14 @@ mod tests {
             _ => panic!("Expected a StatusRequest"),
         };
 
-        let connected_to_bss_info = create_bssinfo_using_ssid(connected_to);
-
-        let mut response = fidl_sme::ClientStatusResponse {
-            connected_to: connected_to_bss_info,
-            connecting_to_ssid: connecting_to_ssid,
+        let mut response = match (connected_to_ssid, connecting_to_ssid) {
+            (Some(_), Some(_)) => panic!("SME cannot simultaneously be Connected and Connecting."),
+            (Some(ssid), None) => {
+                let serving_ap_info = create_serving_ap_info_using_ssid(ssid);
+                fidl_sme::ClientStatusResponse::Connected(serving_ap_info)
+            }
+            (None, Some(ssid)) => fidl_sme::ClientStatusResponse::Connecting(ssid),
+            (None, None) => fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty {}),
         };
 
         rsp.send(&mut response).expect("Failed to send StatusResponse.");

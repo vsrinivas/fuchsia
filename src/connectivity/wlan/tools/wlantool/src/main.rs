@@ -363,24 +363,26 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
     }
     match resp.unwrap().role {
         MacRole::Client => {
-            let sme = get_client_sme(dev_svc_proxy, iface_id).await?;
-            let st = sme.status().await?;
-            match st.connected_to {
-                Some(bss) => {
+            let client_sme = get_client_sme(dev_svc_proxy, iface_id).await?;
+            let client_status_response = client_sme.status().await?;
+            match client_status_response {
+                fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
                     println!(
                         "Iface {}: Connected to '{}' (bssid {}) channel: {} rssi: {}dBm snr: {}dB",
                         iface_id,
-                        String::from_utf8_lossy(&bss.ssid),
-                        MacAddr(bss.bssid),
-                        Channel::from_fidl(bss.channel),
-                        bss.rssi_dbm,
-                        bss.snr_db,
+                        String::from_utf8_lossy(&serving_ap_info.ssid),
+                        MacAddr(serving_ap_info.bssid),
+                        Channel::from_fidl(serving_ap_info.channel),
+                        serving_ap_info.rssi_dbm,
+                        serving_ap_info.snr_db,
                     );
                 }
-                None => println!("Iface {}: Not connected to a network", iface_id),
-            }
-            if !st.connecting_to_ssid.is_empty() {
-                println!("Connecting to '{}'", String::from_utf8_lossy(&st.connecting_to_ssid));
+                fidl_sme::ClientStatusResponse::Connecting(ssid) => {
+                    println!("Connecting to '{}'", String::from_utf8_lossy(&ssid));
+                }
+                fidl_sme::ClientStatusResponse::Idle(_) => {
+                    println!("Iface {}: Not connected to a network", iface_id)
+                }
             }
         }
         MacRole::Ap => {

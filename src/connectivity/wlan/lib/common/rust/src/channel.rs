@@ -302,6 +302,7 @@ impl Channel {
         self.is_unii2a() || self.is_unii2c()
     }
 
+    // TODO(fxbug.dev/80703): Modify these to be implementations of From/To
     pub fn to_fidl(&self) -> fidl_common::WlanChannel {
         let (cbw, secondary80) = self.cbw.to_fidl();
         fidl_common::WlanChannel { primary: self.primary, cbw, secondary80 }

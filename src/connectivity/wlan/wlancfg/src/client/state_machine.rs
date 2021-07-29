@@ -617,24 +617,23 @@ async fn connected_state(
 
     loop {
         select! {
-            status_response = pending_status_req.select_next_some() => {
-                let status_response = status_response.map_err(|e| {
-                    ExitReason(Err(format_err!("failed to get sme status: {:?}", e)))
-                })?;
-                // Check if we're still connected to a network.
-                match status_response.connected_to {
-                    Some(bss_info) => {
-                        // TODO(fxbug.dev/53545): send some stats to the saved network manager
-                        if bss_info.ssid != options.currently_fulfilled_request.target.network.ssid {
-                            error!("Currently connected SSID changed unexpectedly");
-                            return Err(ExitReason(Err(format_err!("Currently connected SSID changed unexpectedly"))));
+                status_response = pending_status_req.select_next_some() => {
+                    let status_response = status_response.map_err(|e| {
+                        ExitReason(Err(format_err!("failed to get sme status: {:?}", e)))
+                    })?;
+                    // Check if we're still connected to a network.
+                    match status_response {
+                        fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
+                            // TODO(fxbug.dev/53545): send some stats to the saved network manager
+                            if serving_ap_info.ssid != options.currently_fulfilled_request.target.network.ssid {
+                                error!("Currently connected SSID changed unexpectedly");
+                                return Err(ExitReason(Err(format_err!("Currently connected SSID changed unexpectedly"))));
+                            }
                         }
-                    }
-                    None => {
-                        // We're no longer connected to a network. When the SME layer detects a
-                        // Disassociation, it will automatically attempt a reconnection. We can
-                        // check for that scenario via the `connecting_to_ssid` field.
-                        if status_response.connecting_to_ssid == options.currently_fulfilled_request.target.network.ssid {
+                        fidl_sme::ClientStatusResponse::Connecting(ssid) if ssid == options.currently_fulfilled_request.target.network.ssid => {
+                            // We're no longer connected to a network. When the SME layer detects a
+                            // Disassociation, it will automatically attempt a reconnection. We can
+                            // check for that scenario.
                             // Log a disconnect in Cobalt
                             common_options.cobalt_api.log_event(
                                 DISCONNECTION_METRIC_ID,
@@ -642,7 +641,8 @@ async fn connected_state(
                             );
                             // TODO(fxbug.dev/53545): record this blip in connectivity
                             // TODO(fxbug.dev/67605): record a re-connection metric, if successful
-                        } else {
+                        }
+                        fidl_sme::ClientStatusResponse::Connecting(_) | fidl_sme::ClientStatusResponse::Idle(_) => {
                             // Record disconnect for future network selection.
                             let curr_time = zx::Time::get_monotonic();
                             let uptime = curr_time - connect_start_time;
@@ -678,58 +678,57 @@ async fn connected_state(
                             return Ok(disconnecting_state(common_options, options).into_state());
                         }
                     }
-                }
-            },
-            _ = status_timer.select_next_some() => {
-                if pending_status_req.is_empty() {
-                    pending_status_req.push(common_options.proxy.clone().status());
-                }
-            },
-            req = common_options.req_stream.next() => {
-                match req {
-                    Some(ManualRequest::Disconnect((reason, responder))) => {
-                        debug!("Disconnect requested");
-                        let options = DisconnectingOptions {
-                            disconnect_responder: Some(responder),
-                            previous_network: Some((options.currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
-                            next_network: None,
-                            reason
-                        };
-                        common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
-                        return Ok(disconnecting_state(common_options, options).into_state());
+                },
+                _ = status_timer.select_next_some() => {
+                    if pending_status_req.is_empty() {
+                        pending_status_req.push(common_options.proxy.clone().status());
                     }
-                    Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
-                        // Check if it's the same network as we're currently connected to. If yes, reply immediately
-                        if new_connect_request.target.network == options.currently_fulfilled_request.target.network {
-                            info!("Received connection request for current network, deduping");
-                            new_responder.send(()).unwrap_or_else(|_| ());
-                        } else {
-                            let next_connecting_options = ConnectingOptions {
-                                connect_responder: Some(new_responder),
-                                connect_request: new_connect_request.clone(),
-                                attempt_counter: 0,
-                            };
+                },
+                req = common_options.req_stream.next() => {
+                    match req {
+                        Some(ManualRequest::Disconnect((reason, responder))) => {
+                            debug!("Disconnect requested");
                             let options = DisconnectingOptions {
-                                disconnect_responder: None,
+                                disconnect_responder: Some(responder),
                                 previous_network: Some((options.currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
-                                next_network: Some(next_connecting_options),
-                                reason: match new_connect_request.reason {
-                                    types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
-                                    types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
-                                    _ => {
-                                        error!("Unexpected connection reason: {:?}", new_connect_request.reason);
-                                        types::DisconnectReason::Unknown
-                                    }
-                                }
+                                next_network: None,
+                                reason
                             };
-                            info!("Connection to new network requested, disconnecting from current network");
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
-                            return Ok(disconnecting_state(common_options, options).into_state())
+                            return Ok(disconnecting_state(common_options, options).into_state());
                         }
-                    }
-                    None => return handle_none_request(),
-                };
-            }
+                        Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
+                            // Check if it's the same network as we're currently connected to. If yes, reply immediately
+                            if new_connect_request.target.network == options.currently_fulfilled_request.target.network {
+                                info!("Received connection request for current network, deduping");
+                                new_responder.send(()).unwrap_or_else(|_| ());
+                            } else {
+                                let next_connecting_options = ConnectingOptions {
+                                    connect_responder: Some(new_responder),
+                                    connect_request: new_connect_request.clone(),
+                                    attempt_counter: 0,
+                                };
+                                let options = DisconnectingOptions {
+                                    disconnect_responder: None,
+                                    previous_network: Some((options.currently_fulfilled_request.target.network, types::DisconnectStatus::ConnectionStopped)),
+                                    next_network: Some(next_connecting_options),
+                                    reason: match new_connect_request.reason {
+                                        types::ConnectReason::ProactiveNetworkSwitch => types::DisconnectReason::ProactiveNetworkSwitch,
+                                        types::ConnectReason::FidlConnectRequest => types::DisconnectReason::FidlConnectRequest,
+                                        _ => {
+                                            error!("Unexpected connection reason: {:?}", new_connect_request.reason);
+                                            types::DisconnectReason::Unknown
+                                        }
+                                    }
+                                };
+                                info!("Connection to new network requested, disconnecting from current network");
+                                common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+                                return Ok(disconnecting_state(common_options, options).into_state())
+                            }
+                        }
+                        None => return handle_none_request(),
+                    };
+                }
         }
     }
 }
@@ -2502,9 +2501,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: network_ssid.as_bytes().to_vec(),
                         rssi_dbm: 0,
@@ -2515,10 +2512,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc: bss_desc,
-                    }))
-                }).expect("could not send sme response");
+                    })).expect("could not send sme response");
             }
         );
 
@@ -2641,10 +2635,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: None
-                }).expect("could not send sme response");
+                responder.send(&mut fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty{})).expect("could not send sme response");
             }
         );
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -2783,10 +2774,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: Vec::new(),
-                    connected_to: None
-                }).expect("could not send sme response");
+                responder.send(&mut fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty{})).expect("could not send sme response");
             }
         );
         assert_variant!(exec.run_until_stalled(&mut state_fut), Poll::Pending);
@@ -2844,9 +2832,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: network_ssid.as_bytes().to_vec(),
                         rssi_dbm: 0,
@@ -2857,10 +2843,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc,
-                    }))
-                }).expect("could not send sme response");
+                    })).expect("could not send sme response");
             }
         );
 
@@ -2924,9 +2907,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: first_network_ssid.as_bytes().to_vec(),
                         rssi_dbm: 0,
@@ -2937,10 +2918,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc: bss_desc.clone(),
-                    }))
-                }).expect("could not send sme response");
+                    })).expect("could not send sme response");
             }
         );
 
@@ -3153,10 +3131,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: None
-                }).expect("could not send sme response");
+                responder.send(&mut fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty{})).expect("could not send sme response");
             }
         );
 
@@ -3310,10 +3285,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: network_ssid.as_bytes().to_vec(),
-                    connected_to: None
-                }).expect("could not send sme response");
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connecting(network_ssid.as_bytes().to_vec())).expect("could not send sme response");
             }
         );
 
@@ -3326,9 +3298,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: network_ssid.as_bytes().to_vec(),
                         rssi_dbm: 0,
@@ -3339,10 +3309,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc: bss_desc.clone(),
-                    }))
-                }).expect("could not send sme response");
+                    })).expect("could not send sme response");
             }
         );
 
@@ -3745,9 +3712,7 @@ mod tests {
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Status{ responder }) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: "no_password".as_bytes().to_vec(),
                         rssi_dbm: 0,
@@ -3758,10 +3723,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc,
-                    }))
-                }).expect("could not send sme response");
+                    })).expect("could not send sme response");
             }
         );
 

@@ -14,8 +14,8 @@ use {
             info::{DisconnectCause, DisconnectInfo, DisconnectMlmeEventName, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
-            report_connect_finished, AssociationFailure, ConnectFailure, ConnectResult,
-            EstablishRsnaFailure, EstablishRsnaFailureReason, Status,
+            report_connect_finished, AssociationFailure, ClientSmeStatus, ConnectFailure,
+            ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason, ServingApInfo,
         },
         mlme_event_name,
         phy_selection::derive_phy_cbw,
@@ -1132,41 +1132,36 @@ impl ClientState {
         }
     }
 
-    pub fn status(&self) -> Status {
+    pub fn status(&self) -> ClientSmeStatus {
         match self {
-            Self::Idle(_) => Status { connected_to: None, connecting_to: None },
-            Self::Joining(joining) => {
-                Status { connected_to: None, connecting_to: Some(joining.cmd.bss.ssid().to_vec()) }
+            Self::Idle(_) => ClientSmeStatus::Idle,
+            Self::Joining(joining) => ClientSmeStatus::Connecting(joining.cmd.bss.ssid().to_vec()),
+            Self::Authenticating(authenticating) => {
+                ClientSmeStatus::Connecting(authenticating.cmd.bss.ssid().to_vec())
             }
-            Self::Authenticating(authenticating) => Status {
-                connected_to: None,
-                connecting_to: Some(authenticating.cmd.bss.ssid().to_vec()),
-            },
-            Self::Associating(associating) => Status {
-                connected_to: None,
-                connecting_to: Some(associating.cmd.bss.ssid().to_vec()),
-            },
+            Self::Associating(associating) => {
+                ClientSmeStatus::Connecting(associating.cmd.bss.ssid().to_vec())
+            }
             Self::Associated(associated) => match associated.link_state {
-                LinkState::EstablishingRsna { .. } => Status {
-                    connected_to: None,
-                    connecting_to: Some(associated.bss.ssid().to_vec()),
-                },
-                LinkState::LinkUp { .. } => Status {
-                    connected_to: {
-                        let mut bss =
-                            associated.cfg.convert_bss_description_skip_compatibility_check(
-                                &associated.bss,
-                                associated.wmm_param,
-                            );
-                        // Since we are already in LinkUp, we are sure that BSS is compatible
-                        bss.compatible = true;
-                        bss.rssi_dbm = associated.last_rssi;
-                        bss.snr_db = associated.last_snr;
-                        bss.signal_report_time = associated.last_signal_report_time;
-                        Some(bss)
-                    },
-                    connecting_to: None,
-                },
+                LinkState::EstablishingRsna { .. } => {
+                    ClientSmeStatus::Connecting(associated.bss.ssid().to_vec())
+                }
+                LinkState::LinkUp { .. } => {
+                    let bss_desc = &associated.bss;
+                    ClientSmeStatus::Connected(ServingApInfo {
+                        bssid: bss_desc.bssid.clone(),
+                        ssid: bss_desc.ssid().to_vec(),
+                        rssi_dbm: associated.last_rssi,
+                        snr_db: associated.last_snr,
+                        signal_report_time: associated.last_signal_report_time,
+                        channel: Channel::from_fidl(bss_desc.channel),
+                        protection: bss_desc.protection(),
+                        ht_cap: bss_desc.raw_ht_cap(),
+                        vht_cap: bss_desc.raw_vht_cap(),
+                        probe_resp_wsc: bss_desc.probe_resp_wsc(),
+                        wmm_param: associated.wmm_param,
+                    })
+                }
                 _ => unreachable!(),
             },
         }
@@ -2563,20 +2558,35 @@ mod tests {
         let state =
             link_up_state(Box::new(fake_bss!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6])));
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
-        assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -42);
-        assert_eq!(state.status().connected_to.unwrap().snr_db, 20);
-        assert!(state.status().connected_to.unwrap().signal_report_time > time_a);
+        let serving_ap_info = assert_variant!(state.status(),
+                                                     ClientSmeStatus::Connected(serving_ap_info) =>
+                                                     serving_ap_info);
+        assert_eq!(serving_ap_info.rssi_dbm, -42);
+        assert_eq!(serving_ap_info.snr_db, 20);
+        assert!(serving_ap_info.signal_report_time > time_a);
 
         let time_b = now();
-        assert!(state.status().connected_to.unwrap().signal_report_time < time_b);
+        let signal_report_time = assert_variant!(state.status(),
+                                                 ClientSmeStatus::Connected(serving_ap_info) =>
+                                                 serving_ap_info.signal_report_time);
+        assert!(signal_report_time < time_b);
 
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-24, 10), &mut h.context);
-        assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -24);
-        assert_eq!(state.status().connected_to.unwrap().snr_db, 10);
-        assert!(state.status().connected_to.unwrap().signal_report_time > time_b);
+        let serving_ap_info = assert_variant!(state.status(),
+                                                     ClientSmeStatus::Connected(serving_ap_info) =>
+                                                     serving_ap_info);
+        assert_eq!(serving_ap_info.rssi_dbm, -24);
+        assert_eq!(serving_ap_info.snr_db, 10);
+        let signal_report_time = assert_variant!(state.status(),
+                                                 ClientSmeStatus::Connected(serving_ap_info) =>
+                                                 serving_ap_info.signal_report_time);
+        assert!(signal_report_time > time_b);
 
         let time_c = now();
-        assert!(state.status().connected_to.unwrap().signal_report_time < time_c);
+        let signal_report_time = assert_variant!(state.status(),
+                                                 ClientSmeStatus::Connected(serving_ap_info) =>
+                                                 serving_ap_info.signal_report_time);
+        assert!(signal_report_time < time_c);
     }
 
     fn test_sae_frame_rx_tx(

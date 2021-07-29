@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::{bss::BssInfo, Status as SmeStatus},
+    crate::client::{ClientSmeStatus, ServingApInfo},
     fidl_fuchsia_wlan_common as fidl_common,
     fuchsia_inspect::{
         BoolProperty, BytesProperty, IntProperty, Node, Property, StringProperty, UintProperty,
@@ -80,7 +80,7 @@ impl SmeTree {
         }
     }
 
-    pub fn update_pulse(&self, new_status: SmeStatus) {
+    pub fn update_pulse(&self, new_status: ClientSmeStatus) {
         self.last_pulse.lock().update(new_status, &self.hasher)
     }
 }
@@ -92,10 +92,10 @@ pub struct PulseNode {
     _started: TimeProperty,
     last_updated: TimeProperty,
     last_link_up: Option<TimeProperty>,
-    status: Option<StatusNode>,
+    status: Option<ClientSmeStatusNode>,
 
     // Not part of Inspect node. We use it to compare new status against existing status
-    last_status: Option<SmeStatus>,
+    last_status: Option<ClientSmeStatus>,
 }
 
 impl PulseNode {
@@ -113,22 +113,23 @@ impl PulseNode {
         }
     }
 
-    pub fn update(&mut self, new_status: SmeStatus, hasher: &WlanHasher) {
+    pub fn update(&mut self, new_status: ClientSmeStatus, hasher: &WlanHasher) {
         let now = zx::Time::get_monotonic();
         self.last_updated.set_at(now);
 
         // This method is always called when there's a state transition, so even if the client is
         // no longer connected now, if the client was previously connected, we can conclude
         // that they were connected until now.
-        let previously_connected =
-            self.last_status.as_ref().map(|s| s.connected_to.is_some()).unwrap_or(false);
-        if new_status.connected_to.is_some() || previously_connected {
+        if new_status.is_connected()
+            || self.last_status.as_ref().map(|s| s.is_connected()).unwrap_or(false)
+        {
             match &self.last_link_up {
                 Some(last_link_up) => last_link_up.set_at(now),
                 None => self.last_link_up = Some(self.node.create_time_at("last_link_up", now)),
             }
         }
 
+        // TODO(fxbug.dev/80694): Refactor to remove unwrap()
         let old_status = self.last_status.replace(new_status);
         if old_status != self.last_status {
             // Safe to unwrap because value was inserted two lines above
@@ -136,24 +137,27 @@ impl PulseNode {
             match self.status.as_mut() {
                 Some(status_node) => status_node.update(old_status, new_status, hasher),
                 None => {
-                    self.status =
-                        Some(StatusNode::new(self.node.create_child("status"), new_status, hasher))
+                    self.status = Some(ClientSmeStatusNode::new(
+                        self.node.create_child("status"),
+                        new_status,
+                        hasher,
+                    ))
                 }
             }
         }
     }
 }
 
-pub struct StatusNode {
+pub struct ClientSmeStatusNode {
     node: Node,
     status_str: StringProperty,
-    prev_connected_to: Option<BssInfoNode>,
-    connected_to: Option<BssInfoNode>,
+    prev_connected_to: Option<ServingApInfoNode>,
+    connected_to: Option<ServingApInfoNode>,
     connecting_to: Option<ConnectingToNode>,
 }
 
-impl StatusNode {
-    fn new(node: Node, status: &SmeStatus, hasher: &WlanHasher) -> Self {
+impl ClientSmeStatusNode {
+    fn new(node: Node, status: &ClientSmeStatus, hasher: &WlanHasher) -> Self {
         let status_str = node.create_string("status_str", IDLE_STR);
         let mut status_node = Self {
             node,
@@ -168,27 +172,25 @@ impl StatusNode {
 
     pub fn update(
         &mut self,
-        old_status: Option<SmeStatus>,
-        new_status: &SmeStatus,
+        old_status: Option<ClientSmeStatus>,
+        new_status: &ClientSmeStatus,
         hasher: &WlanHasher,
     ) {
-        let status_str = if new_status.connected_to.is_some() {
-            "connected"
-        } else if new_status.connecting_to.is_some() {
-            "connecting"
-        } else {
-            IDLE_STR
+        let status_str = match new_status {
+            ClientSmeStatus::Connected(_) => "connected",
+            ClientSmeStatus::Connecting(_) => "connecting",
+            ClientSmeStatus::Idle => IDLE_STR,
         };
         self.status_str.set(status_str);
 
         if status_str == IDLE_STR {
-            if let Some(bss_info) = old_status.map(|s| s.connected_to).flatten() {
+            if let Some(ClientSmeStatus::Connected(serving_ap_info)) = old_status {
                 match self.prev_connected_to.as_mut() {
-                    Some(prev_connected_to) => prev_connected_to.update(&bss_info, hasher),
+                    Some(prev_connected_to) => prev_connected_to.update(&serving_ap_info, hasher),
                     None => {
-                        self.prev_connected_to = Some(BssInfoNode::new(
+                        self.prev_connected_to = Some(ServingApInfoNode::new(
                             self.node.create_child("prev_connected_to"),
-                            &bss_info,
+                            &serving_ap_info,
                             hasher,
                         ));
                     }
@@ -196,23 +198,24 @@ impl StatusNode {
             }
         }
 
-        match &new_status.connected_to {
-            Some(bss_info) => match self.connected_to.as_mut() {
-                Some(connected_to) => connected_to.update(bss_info, hasher),
+        match &new_status {
+            ClientSmeStatus::Connected(serving_ap_info) => match self.connected_to.as_mut() {
+                Some(connected_to) => connected_to.update(serving_ap_info, hasher),
                 None => {
-                    self.connected_to = Some(BssInfoNode::new(
+                    self.connected_to = Some(ServingApInfoNode::new(
                         self.node.create_child("connected_to"),
-                        bss_info,
+                        serving_ap_info,
                         hasher,
                     ));
                 }
             },
-            None => {
+            ClientSmeStatus::Connecting(_) | ClientSmeStatus::Idle => {
                 self.connected_to.take();
             }
         }
-        match &new_status.connecting_to {
-            Some(ssid) => match self.connecting_to.as_mut() {
+
+        match &new_status {
+            ClientSmeStatus::Connecting(ssid) => match self.connecting_to.as_mut() {
                 Some(connecting_to) => connecting_to.update(&ssid[..], hasher),
                 None => {
                     self.connecting_to = Some(ConnectingToNode::new(
@@ -222,14 +225,14 @@ impl StatusNode {
                     ));
                 }
             },
-            None => {
+            ClientSmeStatus::Connected(_) | ClientSmeStatus::Idle => {
                 self.connecting_to.take();
             }
         }
     }
 }
 
-pub struct BssInfoNode {
+pub struct ServingApInfoNode {
     node: Node,
     bssid: StringProperty,
     bssid_hash: StringProperty,
@@ -247,29 +250,24 @@ pub struct BssInfoNode {
     wsc: Option<BssWscNode>,
 }
 
-impl BssInfoNode {
-    fn new(node: Node, bss_info: &BssInfo, hasher: &WlanHasher) -> Self {
-        let bssid = node.create_string("bssid", bss_info.bssid.to_mac_string());
-        let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&bss_info.bssid));
-        let ssid = node.create_string("ssid", bss_info.ssid.to_ssid_string());
-        let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(&bss_info.ssid));
-        let rssi_dbm = node.create_int("rssi_dbm", bss_info.rssi_dbm as i64);
-        let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
-        let signal_report_time =
-            node.create_time_at("signal_report_time", bss_info.signal_report_time);
-        let channel = ChannelNode::new(node.create_child("channel"), bss_info.channel.to_fidl());
-        let protection = node.create_string("protection", format!("{}", bss_info.protection));
-        let is_wmm_assoc = node.create_bool("is_wmm_assoc", bss_info.wmm_param.is_some());
-        let wmm_param = bss_info
-            .wmm_param
-            .as_ref()
-            .map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
-        let ht_cap = bss_info
-            .ht_cap
-            .map(|capability_info| node.create_bytes("ht_cap", capability_info.bytes));
-        let vht_cap = bss_info
-            .vht_cap
-            .map(|capability_info| node.create_bytes("vht_cap", capability_info.bytes));
+impl ServingApInfoNode {
+    fn new(node: Node, ap: &ServingApInfo, hasher: &WlanHasher) -> Self {
+        let bssid = node.create_string("bssid", ap.bssid.to_mac_string());
+        let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid));
+        let ssid = node.create_string("ssid", ap.ssid.to_ssid_string());
+        let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(&ap.ssid));
+        let rssi_dbm = node.create_int("rssi_dbm", ap.rssi_dbm as i64);
+        let snr_db = node.create_int("snr_db", ap.snr_db as i64);
+        let signal_report_time = node.create_time_at("signal_report_time", ap.signal_report_time);
+        let channel = ChannelNode::new(node.create_child("channel"), ap.channel.to_fidl());
+        let protection = node.create_string("protection", format!("{}", ap.protection));
+        let is_wmm_assoc = node.create_bool("is_wmm_assoc", ap.wmm_param.is_some());
+        let wmm_param =
+            ap.wmm_param.as_ref().map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
+        let ht_cap =
+            ap.ht_cap.map(|capability_info| node.create_bytes("ht_cap", capability_info.bytes));
+        let vht_cap =
+            ap.vht_cap.map(|capability_info| node.create_bytes("vht_cap", capability_info.bytes));
 
         let mut this = Self {
             node,
@@ -288,21 +286,21 @@ impl BssInfoNode {
             vht_cap,
             wsc: None,
         };
-        this.update_wsc_node(bss_info);
+        this.update_wsc_node(ap);
         this
     }
 
-    fn update(&mut self, bss_info: &BssInfo, hasher: &WlanHasher) {
-        self.bssid.set(&bss_info.bssid.to_mac_string());
-        self.bssid_hash.set(&hasher.hash_mac_addr(&bss_info.bssid));
-        self.ssid.set(&bss_info.ssid.to_ssid_string());
-        self.ssid_hash.set(&hasher.hash_ssid(&bss_info.ssid));
-        self.rssi_dbm.set(bss_info.rssi_dbm as i64);
-        self.snr_db.set(bss_info.snr_db as i64);
-        self.signal_report_time.set_at(bss_info.signal_report_time);
-        self.channel.update(bss_info.channel.to_fidl());
-        self.protection.set(&format!("{}", bss_info.protection));
-        match &bss_info.ht_cap {
+    fn update(&mut self, ap: &ServingApInfo, hasher: &WlanHasher) {
+        self.bssid.set(&ap.bssid.to_mac_string());
+        self.bssid_hash.set(&hasher.hash_mac_addr(&ap.bssid));
+        self.ssid.set(&ap.ssid.to_ssid_string());
+        self.ssid_hash.set(&hasher.hash_ssid(&ap.ssid));
+        self.rssi_dbm.set(ap.rssi_dbm as i64);
+        self.snr_db.set(ap.snr_db as i64);
+        self.signal_report_time.set_at(ap.signal_report_time);
+        self.channel.update(ap.channel.to_fidl());
+        self.protection.set(&format!("{}", ap.protection));
+        match &ap.ht_cap {
             Some(ht_cap) => match self.ht_cap.as_mut() {
                 Some(ht_cap_prop) => ht_cap_prop.set(&ht_cap.bytes),
                 None => self.ht_cap = Some(self.node.create_bytes("ht_cap", ht_cap.bytes)),
@@ -311,7 +309,7 @@ impl BssInfoNode {
                 self.ht_cap.take();
             }
         }
-        match &bss_info.vht_cap {
+        match &ap.vht_cap {
             Some(vht_cap) => match self.vht_cap.as_mut() {
                 Some(vht_cap_prop) => vht_cap_prop.set(&vht_cap.bytes),
                 None => self.vht_cap = Some(self.node.create_bytes("vht_cap", vht_cap.bytes)),
@@ -320,12 +318,12 @@ impl BssInfoNode {
                 self.vht_cap.take();
             }
         }
-        self.update_wmm_node(bss_info);
-        self.update_wsc_node(bss_info);
+        self.update_wmm_node(ap);
+        self.update_wsc_node(ap);
     }
 
-    fn update_wmm_node(&mut self, bss_info: &BssInfo) {
-        match &bss_info.wmm_param {
+    fn update_wmm_node(&mut self, ap: &ServingApInfo) {
+        match &ap.wmm_param {
             Some(wmm_param) => {
                 self.is_wmm_assoc.set(true);
                 match self.wmm_param.as_mut() {
@@ -345,8 +343,8 @@ impl BssInfoNode {
         }
     }
 
-    fn update_wsc_node(&mut self, bss_info: &BssInfo) {
-        match &bss_info.probe_resp_wsc {
+    fn update_wsc_node(&mut self, ap: &ServingApInfo) {
+        match &ap.probe_resp_wsc {
             Some(wsc) => match self.wsc.as_mut() {
                 Some(wsc_node) => wsc_node.update(wsc),
                 None => self.wsc = Some(BssWscNode::new(self.node.create_child("wsc"), wsc)),
@@ -522,7 +520,7 @@ mod tests {
         let mut pulse = PulseNode::new(root.create_child("last_pulse"));
 
         // SME is idle. Pulse node should not have any field except "last_updated" and "status"
-        let status = SmeStatus { connected_to: None, connecting_to: None };
+        let status = ClientSmeStatus::Idle;
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {
@@ -534,7 +532,7 @@ mod tests {
 
         // SME is connecting. Check that "connecting_to" field now appears, and that existing
         // fields are still kept.
-        let status = SmeStatus { connected_to: None, connecting_to: Some(b"foo".to_vec()) };
+        let status = ClientSmeStatus::Connecting(b"foo".to_vec());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {
@@ -550,8 +548,7 @@ mod tests {
         // SME is connected. Aside from verifying that existing fields are kept, key things we
         // want to check are that "last_link_up" and "connected_to" are populated, and
         // "connecting_to" is cleared out.
-        let status =
-            SmeStatus { connected_to: Some(test_utils::fake_bss_info()), connecting_to: None };
+        let status = ClientSmeStatus::Connected(test_utils::fake_serving_ap_info());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {
@@ -572,7 +569,7 @@ mod tests {
 
         // SME is idle. The "connected_to" field is cleared out.
         // The "prev_connected_to" field is logged.
-        let status = SmeStatus { connected_to: None, connecting_to: None };
+        let status = ClientSmeStatus::Idle;
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: {
@@ -599,9 +596,9 @@ mod tests {
         let root = inspector.root();
         let mut pulse = PulseNode::new(root.create_child("last_pulse"));
 
-        let mut bss_info = test_utils::fake_bss_info();
-        bss_info.wmm_param = None;
-        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        let mut serving_ap_info = test_utils::fake_serving_ap_info();
+        serving_ap_info.wmm_param = None;
+        let status = ClientSmeStatus::Connected(serving_ap_info.clone());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: contains {
@@ -615,8 +612,8 @@ mod tests {
 
         let mut wmm_param =
             *ie::parse_wmm_param(&test_utils::fake_wmm_param().bytes[..]).expect("parse wmm");
-        bss_info.wmm_param = Some(wmm_param);
-        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        serving_ap_info.wmm_param = Some(wmm_param);
+        let status = ClientSmeStatus::Connected(serving_ap_info.clone());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: contains {
@@ -669,8 +666,8 @@ mod tests {
         wmm_param.ac_vi_params.ecw_min_max.set_ecw_min(11);
         wmm_param.ac_vi_params.ecw_min_max.set_ecw_max(14);
         wmm_param.ac_vo_params.txop_limit = 0xaa;
-        bss_info.wmm_param = Some(wmm_param);
-        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        serving_ap_info.wmm_param = Some(wmm_param);
+        let status = ClientSmeStatus::Connected(serving_ap_info.clone());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: contains {
@@ -715,8 +712,8 @@ mod tests {
             }
         });
 
-        bss_info.wmm_param = None;
-        let status = SmeStatus { connected_to: Some(bss_info.clone()), connecting_to: None };
+        serving_ap_info.wmm_param = None;
+        let status = ClientSmeStatus::Connected(serving_ap_info.clone());
         pulse.update(status, &hasher);
         assert_data_tree!(inspector, root: {
             last_pulse: contains {

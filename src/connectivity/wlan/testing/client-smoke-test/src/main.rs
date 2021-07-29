@@ -304,16 +304,20 @@ fn report_results(test_results: &TestResults) {
 fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
     stay_connected: bool,
     target_ssid: T,
-    status: &fidl_sme::ClientStatusResponse,
+    client_status_response: &fidl_sme::ClientStatusResponse,
 ) -> bool {
     if !stay_connected {
         // doesn't matter if we are connected, we will force a reconnection
         return true;
     }
     // are we already connected?  if so, check the current ssid
-    match status.connected_to {
-        Some(ref bss) if bss.ssid.as_slice() == target_ssid.as_ref() => false,
-        _ => true,
+    match client_status_response {
+        fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
+            serving_ap_info.ssid.as_slice() != target_ssid.as_ref()
+        }
+        fidl_sme::ClientStatusResponse::Connecting(_) | fidl_sme::ClientStatusResponse::Idle(_) => {
+            true
+        }
     }
 }
 
@@ -382,7 +386,7 @@ async fn can_download_data(http_svc: &http::LoaderProxy) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_wlan_common as fidl_common, wlan_common::fake_fidl_bss};
+    use {super::*, fidl_fuchsia_wlan_common as fidl_common};
 
     /// Test to verify a connection will be triggered for an SSID that is not already connected.
     /// This is called with stay connected true and a different target SSID.
@@ -391,12 +395,8 @@ mod tests {
         let stay_connected = true;
         let target_ssid = "target_ssid";
         let current_ssid = "current_ssid";
-        let connected_to_bss_info = create_bssinfo_using_ssid(Some(current_ssid));
-
-        let current_status = fidl_sme::ClientStatusResponse {
-            connected_to: connected_to_bss_info,
-            connecting_to_ssid: vec![],
-        };
+        let serving_ap_info = create_serving_ap_info(current_ssid);
+        let current_status = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
 
         assert!(is_connect_to_target_network_needed(
             stay_connected,
@@ -411,12 +411,8 @@ mod tests {
     fn test_target_network_needs_connection_stay_connected_false() {
         let stay_connected = false;
         let target_ssid = "target_ssid";
-        let connected_to_bss_info = create_bssinfo_using_ssid(Some(target_ssid));
-
-        let current_status = fidl_sme::ClientStatusResponse {
-            connected_to: connected_to_bss_info,
-            connecting_to_ssid: vec![],
-        };
+        let serving_ap_info = create_serving_ap_info(target_ssid);
+        let current_status = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
 
         assert!(is_connect_to_target_network_needed(
             stay_connected,
@@ -431,12 +427,8 @@ mod tests {
     fn test_target_network_does_not_need_connection() {
         let stay_connected = true;
         let target_ssid = "target_ssid";
-        let connected_to_bss_info = create_bssinfo_using_ssid(Some(target_ssid));
-
-        let current_status = fidl_sme::ClientStatusResponse {
-            connected_to: connected_to_bss_info,
-            connecting_to_ssid: vec![],
-        };
+        let serving_ap_info = create_serving_ap_info(target_ssid);
+        let current_status = fidl_sme::ClientStatusResponse::Connected(serving_ap_info);
 
         assert_eq!(
             is_connect_to_target_network_needed(
@@ -448,27 +440,18 @@ mod tests {
         );
     }
 
-    fn create_bssinfo_using_ssid<S: ToString>(ssid: Option<S>) -> Option<Box<fidl_sme::BssInfo>> {
-        ssid.map(|ssid| {
-            let ssid = ssid.to_string().as_bytes().to_vec();
-            Box::new(fidl_sme::BssInfo {
-                bssid: [0, 1, 2, 3, 4, 5],
-                ssid: ssid.clone(),
-                rssi_dbm: -30,
-                snr_db: 0,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa2Personal,
-                compatible: true,
-                bss_desc: fake_fidl_bss!(
-                    Wpa2,
-                    ssid: ssid,
-                    bssid: [0, 1, 2, 3, 4, 5],
-                ),
-            })
-        })
+    fn create_serving_ap_info(ssid: &str) -> fidl_sme::ServingApInfo {
+        fidl_sme::ServingApInfo {
+            bssid: [0, 1, 2, 3, 4, 5],
+            ssid: ssid.as_bytes().to_vec(),
+            rssi_dbm: -30,
+            snr_db: 0,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+            protection: fidl_sme::Protection::Wpa2Personal,
+        }
     }
 }

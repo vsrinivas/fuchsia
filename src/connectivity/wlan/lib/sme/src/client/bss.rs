@@ -33,19 +33,6 @@ impl ClientConfig {
         device_info: &fidl_mlme::DeviceInfo,
     ) -> BssInfo {
         BssInfo {
-            compatible: self.is_bss_compatible(bss, device_info),
-            ..self.convert_bss_description_skip_compatibility_check(bss, wmm_param)
-        }
-    }
-
-    /// Convert a given BssDescription into a BssInfo. Because we don't do compatibility check
-    /// in this method, the |compatible| flag is always set to `false`.
-    pub fn convert_bss_description_skip_compatibility_check(
-        &self,
-        bss: &BssDescription,
-        wmm_param: Option<ie::WmmParam>,
-    ) -> BssInfo {
-        BssInfo {
             bssid: bss.bssid.clone(),
             ssid: bss.ssid().to_vec(),
             rssi_dbm: bss.rssi_dbm,
@@ -57,9 +44,8 @@ impl ClientConfig {
             vht_cap: bss.raw_vht_cap(),
             probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
+            compatible: self.is_bss_compatible(bss, device_info),
             bss_desc: bss.clone().to_fidl(),
-            // Default to false since we didn't do compatibility check
-            compatible: false,
         }
     }
 

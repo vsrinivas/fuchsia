@@ -5,7 +5,7 @@
 use {
     crate::{
         capabilities::{ClientCapabilities, StaCapabilities},
-        client::{bss::BssInfo, rsn::Supplicant},
+        client::{bss::BssInfo, rsn::Supplicant, ServingApInfo},
         Ssid,
     },
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -42,6 +42,22 @@ pub fn fake_bss_info() -> BssInfo {
         probe_resp_wsc: None,
         wmm_param: None,
         bss_desc: fake_fidl_bss!(Wpa2, ssid: [55, 11, 22, 3, 9, 70].to_vec()),
+    }
+}
+
+pub fn fake_serving_ap_info() -> ServingApInfo {
+    ServingApInfo {
+        bssid: [55, 11, 22, 3, 9, 70],
+        ssid: Ssid::from(b"foo".clone()),
+        rssi_dbm: 0,
+        snr_db: 0,
+        signal_report_time: zx::Time::ZERO,
+        channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
+        protection: Protection::Wpa2Personal,
+        ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+        vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+        probe_resp_wsc: None,
+        wmm_param: None,
     }
 }
 

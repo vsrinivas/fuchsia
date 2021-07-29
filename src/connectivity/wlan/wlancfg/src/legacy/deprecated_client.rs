@@ -67,23 +67,23 @@ async fn status(iface: &IfaceRef) -> deprecated::WlanStatus {
 
 /// Translates a client SME's status information into a deprecated client state.
 fn convert_state(status: &fidl_sme::ClientStatusResponse) -> deprecated::State {
-    if status.connected_to.is_some() {
-        deprecated::State::Associated
-    } else if !status.connecting_to_ssid.is_empty() {
-        deprecated::State::Associating
-    } else {
-        deprecated::State::Disassociated
+    match status {
+        fidl_sme::ClientStatusResponse::Connected(_) => deprecated::State::Associated,
+        fidl_sme::ClientStatusResponse::Connecting(_) => deprecated::State::Associating,
+        fidl_sme::ClientStatusResponse::Idle(_) => deprecated::State::Disassociated,
     }
 }
 
 /// Parses a Client SME's status and extracts AP SSID and RSSI if applicable.
 fn extract_current_ap(status: &fidl_sme::ClientStatusResponse) -> Option<Box<deprecated::Ap>> {
-    match status.connected_to.as_ref() {
-        None => None,
-        Some(bss_info) => {
-            let ssid = std::string::String::from_utf8_lossy(&bss_info.ssid).to_string();
-            let rssi_dbm = bss_info.rssi_dbm;
+    match status {
+        fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
+            let ssid = String::from_utf8_lossy(&serving_ap_info.ssid).to_string();
+            let rssi_dbm = serving_ap_info.rssi_dbm;
             Some(Box::new(deprecated::Ap { ssid, rssi_dbm }))
+        }
+        fidl_sme::ClientStatusResponse::Connecting(_) | fidl_sme::ClientStatusResponse::Idle(_) => {
+            None
         }
     }
 }
@@ -91,13 +91,9 @@ fn extract_current_ap(status: &fidl_sme::ClientStatusResponse) -> Option<Box<dep
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::legacy::Iface,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
-        futures::task::Poll,
-        pin_utils::pin_mut,
-        wlan_common::{assert_variant, fake_fidl_bss},
+        super::*, crate::legacy::Iface, fidl::endpoints::create_proxy,
+        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, futures::task::Poll,
+        pin_utils::pin_mut, wlan_common::assert_variant,
     };
 
     struct TestValues {
@@ -170,10 +166,7 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { responder }))) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: None,
-                }).expect("could not send sme response")
+                responder.send(&mut fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty{})).expect("could not send sme response")
             }
         );
 
@@ -198,14 +191,12 @@ mod tests {
         // connecting.
         assert_variant!(exec.run_until_stalled(&mut status_fut), Poll::Pending);
         assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { responder }))) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: "test_ssid".as_bytes().to_vec(),
-                    connected_to: None,
-                }).expect("could not send sme response")
-            }
-        );
+                    exec.run_until_stalled(&mut test_values.sme_stream.next()),
+                    Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { responder }))) => {
+                        responder.send(&mut fidl_sme::ClientStatusResponse::Connecting("test_ssid".as_bytes().to_vec()))
+        .expect("could not send sme response")
+                    }
+                );
 
         // Expect a connecting status.
         assert_variant!(
@@ -232,9 +223,8 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { responder }))) => {
-                responder.send(&mut fidl_sme::ClientStatusResponse{
-                    connecting_to_ssid: vec![],
-                    connected_to: Some(Box::new(fidl_sme::BssInfo{
+                responder.send(&mut fidl_sme::ClientStatusResponse::Connected(
+                    fidl_sme::ServingApInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: ssid.as_bytes().to_vec(),
                         rssi_dbm,
@@ -245,10 +235,7 @@ mod tests {
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,
-                        compatible: true,
-                        bss_desc: fake_fidl_bss!(Open, ssid: ssid.as_bytes().to_vec()),
-                    }))
-                }).expect("could not send sme response")
+                    })).expect("could not send sme response")
             }
         );
 

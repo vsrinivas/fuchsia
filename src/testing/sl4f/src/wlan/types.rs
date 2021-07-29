@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -127,19 +127,45 @@ impl From<fidl_sme::BssInfo> for BssInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ClientStatusResponse {
-    pub connected_to: Option<BssInfo>,
-    pub connecting_to_ssid: Vec<u8>,
+pub struct ServingApInfo {
+    pub bssid: [u8; 6],
+    pub ssid: Vec<u8>,
+    pub rssi_dbm: i8,
+    pub snr_db: i8,
+    pub channel: u8,
+    pub protection: Protection,
+}
+
+impl From<fidl_sme::ServingApInfo> for ServingApInfo {
+    fn from(client_connection_info: fidl_sme::ServingApInfo) -> Self {
+        ServingApInfo {
+            bssid: client_connection_info.bssid,
+            ssid: client_connection_info.ssid,
+            rssi_dbm: client_connection_info.rssi_dbm,
+            snr_db: client_connection_info.snr_db,
+            channel: client_connection_info.channel.primary,
+            protection: Protection::from(client_connection_info.protection),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ClientStatusResponse {
+    Connected(ServingApInfo),
+    Connecting(Vec<u8>),
+    Idle,
 }
 
 impl From<fidl_sme::ClientStatusResponse> for ClientStatusResponse {
     fn from(status: fidl_sme::ClientStatusResponse) -> Self {
-        ClientStatusResponse {
-            connected_to: match status.connected_to {
-                None => None,
-                Some(connected_to) => Some(BssInfo::from(*connected_to)),
-            },
-            connecting_to_ssid: status.connecting_to_ssid,
+        match status {
+            fidl_sme::ClientStatusResponse::Connected(client_connection_info) => {
+                ClientStatusResponse::Connected(client_connection_info.into())
+            }
+            fidl_sme::ClientStatusResponse::Connecting(ssid) => {
+                ClientStatusResponse::Connecting(ssid)
+            }
+            fidl_sme::ClientStatusResponse::Idle(fidl_sme::Empty {}) => ClientStatusResponse::Idle,
         }
     }
 }

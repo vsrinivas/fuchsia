@@ -202,11 +202,7 @@ fn disconnect(sme: &Mutex<Sme>, policy_disconnect_reason: fidl_sme::UserDisconne
 }
 
 fn status(sme: &Mutex<Sme>) -> fidl_sme::ClientStatusResponse {
-    let status = sme.lock().unwrap().status();
-    fidl_sme::ClientStatusResponse {
-        connected_to: status.connected_to.map(|bss| Box::new(convert_bss_info(bss))),
-        connecting_to_ssid: status.connecting_to.unwrap_or(Vec::new()),
-    }
+    sme.lock().unwrap().status().into()
 }
 
 async fn wmm_status(
