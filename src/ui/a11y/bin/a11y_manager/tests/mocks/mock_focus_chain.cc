@@ -12,13 +12,7 @@ namespace accessibility_test {
 
 MockFocusChain::MockFocusChain(sys::testing::ComponentContextProvider* context)
     : focuser_binding_(this) {
-  context->service_directory_provider()->AddService(focuser_registry_bindings_.GetHandler(this));
   context->service_directory_provider()->AddService(listener_registry_bindings_.GetHandler(this));
-}
-
-void MockFocusChain::RegisterFocuser(
-    fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
-  focuser_binding_.Bind(std::move(view_focuser));
 }
 
 void MockFocusChain::Register(

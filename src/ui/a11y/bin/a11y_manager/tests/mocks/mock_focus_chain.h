@@ -16,8 +16,7 @@
 namespace accessibility_test {
 
 // A mock that implements all services related to the Focus Chain used by A11y Manager.
-class MockFocusChain : public fuchsia::ui::views::accessibility::FocuserRegistry,
-                       public fuchsia::ui::focus::FocusChainListenerRegistry,
+class MockFocusChain : public fuchsia::ui::focus::FocusChainListenerRegistry,
                        public fuchsia::ui::views::Focuser {
  public:
   explicit MockFocusChain(sys::testing::ComponentContextProvider* context);
@@ -36,16 +35,12 @@ class MockFocusChain : public fuchsia::ui::views::accessibility::FocuserRegistry
   zx_koid_t GetFocusedViewKoid();
 
  private:
-  // |fuchsia.ui.views.accessibility.FocuserRegistry|
-  void RegisterFocuser(fidl::InterfaceRequest<::fuchsia::ui::views::Focuser> view_focuser) override;
-
   // |fuchsia.ui.focus.FocusChainListenerRegistry|
   void Register(fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> listener) override;
 
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
-  fidl::BindingSet<fuchsia::ui::views::accessibility::FocuserRegistry> focuser_registry_bindings_;
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListenerRegistry> listener_registry_bindings_;
 
   fidl::Binding<fuchsia::ui::views::Focuser> focuser_binding_;

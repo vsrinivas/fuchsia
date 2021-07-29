@@ -187,10 +187,6 @@ class App {
   // accessibility pointer event listener.
   fuchsia::ui::policy::accessibility::PointerEventRegistryPtr pointer_event_registry_;
 
-  // Interface between a11y manager and Root presenter to register a
-  // Focuser.
-  fuchsia::ui::views::accessibility::FocuserRegistryPtr focuser_registry_;
-
   // Interface between Setui and a11y manager to get updates when user settings change.
   fuchsia::settings::AccessibilityPtr setui_settings_;
 
