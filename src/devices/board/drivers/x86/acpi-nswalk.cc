@@ -51,6 +51,8 @@ const std::string_view hid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
   return std::string_view{};
 }
 
+// TODO(fxbug.dev/81684): remove these hacks once we have a proper solution for managing power of
+// ACPI devices.
 void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   // Slate workaround: Turn on the HID controller.
   if (!memcmp(&info->Name, "I2C0", 4)) {
@@ -70,6 +72,25 @@ void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_IN
         }
       }
     }
+
+    // Atlas workaround: Turn on the HID controller.
+    acpi_status = acpi->EvaluateObject(object, "H049._PR0", std::nullopt);
+    if (acpi_status.is_ok()) {
+      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
+      for (unsigned i = 0; i < pkg->Package.Count; i++) {
+        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
+        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
+          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
+        } else {
+          zxlogf(DEBUG, "acpi: Enabling HID controller at I2C0.H049._PR0[%u]", i);
+          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
+          if (acpi_status.is_error()) {
+            zxlogf(ERROR, "acpi: acpi error 0x%x in I2C0._PR0._ON", acpi_status.error_value());
+          }
+        }
+      }
+    }
+
   }
   // Acer workaround: Turn on the HID controller.
   else if (!memcmp(&info->Name, "I2C1", 4)) {
