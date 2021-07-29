@@ -11,14 +11,6 @@
 
 namespace codelab::testing {
 
-class FizzBuzzMock final : public sys::testing::MockComponent {
- public:
-  void Start(std::unique_ptr<sys::testing::MockHandles> mock_handles) override;
-
- private:
-  std::unique_ptr<sys::testing::MockHandles> mock_handles_;
-};
-
 class IntegrationTest : public gtest::RealLoopFixture {
  public:
   // Options for each test.
@@ -38,7 +30,6 @@ class IntegrationTest : public gtest::RealLoopFixture {
 
  private:
   std::optional<sys::testing::Realm> realm_;
-  std::unique_ptr<FizzBuzzMock> fizzbuzz_mock_;
 };
 
 };  // namespace codelab::testing

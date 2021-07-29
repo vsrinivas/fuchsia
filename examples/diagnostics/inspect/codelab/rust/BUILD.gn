@@ -63,4 +63,12 @@ fuchsia_test_package("inspect_rust_codelab_unittests") {
 
 fuchsia_test_package("inspect_rust_codelab_integration_tests") {
   test_components = integration_test_components
+
+  # There's expected error logs that happen in the integration test where PEER_CLOSED arises when
+  # testing without FizzBuzz being present.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

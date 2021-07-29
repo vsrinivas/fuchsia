@@ -12,10 +12,8 @@ rustc_library("inspect-rust-codelab-testing") {
 
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/lib.rs" ]

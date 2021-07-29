@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl_fuchsia_examples_inspect::{FizzBuzzRequestStream, ReverserMarker, ReverserProxy};
-use fuchsia_component::server::ServiceFs;
+use fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy};
 use fuchsia_component_test::{
     builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
-    mock::Mock,
     RealmInstance,
 };
-use futures::StreamExt;
+
+const FIZZBUZZ_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/fizzbuzz.cm";
 
 pub struct TestOptions {
     pub include_fizzbuzz: bool,
@@ -31,32 +31,18 @@ impl IntegrationTest {
         let mut builder = RealmBuilder::new().await?;
         if options.include_fizzbuzz {
             builder
-                .add_component(
-                    "fizzbuzz",
-                    ComponentSource::url(
-                        "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/fizzbuzz.cm",
-                    ),
-                )
-                .await?;
-        } else {
-            builder
-                .add_component(
-                    "fizzbuzz",
-                    ComponentSource::Mock(Mock::new(move |mock_handles| {
-                        Box::pin(async move {
-                            let mut fs = ServiceFs::new();
-                            fs.dir("svc").add_fidl_service(
-                                move |_stream: FizzBuzzRequestStream| {
-                                    // Don't handle requests for testing purposes.
-                                },
-                            );
-                            fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
-                            fs.collect::<()>().await;
-                            Ok(())
-                        })
-                    })),
-                )
-                .await?;
+                .add_component("fizzbuzz", ComponentSource::url(FIZZBUZZ_URL))
+                .await?
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.examples.inspect.FizzBuzz"),
+                    source: RouteEndpoint::component("fizzbuzz"),
+                    targets: vec![RouteEndpoint::component("reverser")],
+                })?
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.logger.LogSink"),
+                    source: RouteEndpoint::AboveRoot,
+                    targets: vec![RouteEndpoint::component("fizzbuzz")],
+                })?;
         }
         builder
             .add_component(
@@ -73,16 +59,10 @@ impl IntegrationTest {
                 targets: vec![RouteEndpoint::AboveRoot],
             })?
             .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.examples.inspect.FizzBuzz"),
-                source: RouteEndpoint::component("fizzbuzz"),
-                targets: vec![RouteEndpoint::component("reverser")],
-            })?
-            .add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.logger.LogSink"),
                 source: RouteEndpoint::AboveRoot,
                 targets: vec![
                     RouteEndpoint::component("reverser"),
-                    RouteEndpoint::component("fizzbuzz"),
                 ],
             })?;
         let instance = builder.build().create().await?;
