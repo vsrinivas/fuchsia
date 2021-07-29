@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
+#include <type_traits>
 #include <variant>
 
 namespace forensics {
@@ -35,6 +36,13 @@ class ErrorOr {
  public:
   ErrorOr(T value) : data_(std::move(value)) {}
   ErrorOr(enum Error error) : data_(error) {}
+
+  // Allow construction from a type U iff U is convertible to T, but not the otherway around.
+  template <typename U,
+            std::enable_if_t<std::conjunction_v<std::is_convertible<U, T>,
+                                                std::negation<std::is_convertible<T, U>>>,
+                             bool> = true>
+  ErrorOr(U value) : data_(T(std::move(value))) {}
 
   bool HasValue() const { return data_.index() == 0; }
 

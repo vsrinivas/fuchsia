@@ -90,11 +90,10 @@ TEST_F(ChannelProviderTest, Succeed_BothChannels) {
 
   const auto result = GetChannels();
 
-  EXPECT_THAT(result,
-              UnorderedElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("current-channel")),
-                  Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr("target-channel")),
-              }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelCurrent, "current-channel"),
+                          Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
+                      }));
 }
 
 TEST_F(ChannelProviderTest, Succeed_OnlyCurrentChannel) {
@@ -107,10 +106,9 @@ TEST_F(ChannelProviderTest, Succeed_OnlyCurrentChannel) {
 
   const auto result = GetChannels({kAnnotationSystemUpdateChannelCurrent});
 
-  EXPECT_THAT(result,
-              UnorderedElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("current-channel")),
-              }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelCurrent, "current-channel"),
+                      }));
 }
 
 TEST_F(ChannelProviderTest, Succeed_OnlyTargetChannel) {
@@ -123,10 +121,9 @@ TEST_F(ChannelProviderTest, Succeed_OnlyTargetChannel) {
 
   const auto result = GetChannels({kAnnotationSystemUpdateChannelTarget});
 
-  EXPECT_THAT(result,
-              UnorderedElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr("target-channel")),
-              }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
+                      }));
 }
 
 TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
@@ -135,8 +132,8 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
   const auto result = GetChannels();
 
   EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr("")),
-                          Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr("")),
+                          Pair(kAnnotationSystemUpdateChannelCurrent, ""),
+                          Pair(kAnnotationSystemUpdateChannelTarget, ""),
                       }));
 }
 
@@ -153,12 +150,10 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
 
   const auto result = GetChannels();
 
-  EXPECT_THAT(
-      result,
-      UnorderedElementsAreArray({
-          Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr(Error::kConnectionError)),
-          Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr(Error::kConnectionError)),
-      }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kConnectionError),
+                          Pair(kAnnotationSystemUpdateChannelTarget, Error::kConnectionError),
+                      }));
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
@@ -166,12 +161,10 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
 
   const auto result = GetChannels();
 
-  EXPECT_THAT(
-      result,
-      UnorderedElementsAreArray({
-          Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr(Error::kConnectionError)),
-          Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr(Error::kConnectionError)),
-      }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kConnectionError),
+                          Pair(kAnnotationSystemUpdateChannelTarget, Error::kConnectionError),
+                      }));
 }
 
 TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
@@ -179,11 +172,10 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
 
   const auto result = GetChannels();
 
-  EXPECT_THAT(result,
-              UnorderedElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, AnnotationOr(Error::kTimeout)),
-                  Pair(kAnnotationSystemUpdateChannelTarget, AnnotationOr(Error::kTimeout)),
-              }));
+  EXPECT_THAT(result, UnorderedElementsAreArray({
+                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kTimeout),
+                          Pair(kAnnotationSystemUpdateChannelTarget, Error::kTimeout),
+                      }));
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kChannel),
                                       }));

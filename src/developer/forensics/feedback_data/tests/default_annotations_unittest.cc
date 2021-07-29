@@ -21,8 +21,7 @@ TEST(DefaultAnnotationsTest, GetCurrentBuildVersion) {
   ASSERT_TRUE(temp_dir.NewTempFileWithData("current_build_version", &build_version_path));
 
   EXPECT_EQ(GetCurrentBuildVersion("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetCurrentBuildVersion(build_version_path),
-            ErrorOr<std::string>("current_build_version"));
+  EXPECT_EQ(GetCurrentBuildVersion(build_version_path), "current_build_version");
 }
 
 TEST(DefaultAnnotationsTest, GetPreviousBuildVersion) {
@@ -31,8 +30,7 @@ TEST(DefaultAnnotationsTest, GetPreviousBuildVersion) {
   ASSERT_TRUE(temp_dir.NewTempFileWithData("previous_build_version", &build_version_path));
 
   EXPECT_EQ(GetPreviousBuildVersion("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetPreviousBuildVersion(build_version_path),
-            ErrorOr<std::string>("previous_build_version"));
+  EXPECT_EQ(GetPreviousBuildVersion(build_version_path), "previous_build_version");
 }
 
 TEST(DefaultAnnotationsTest, GetCurrentBootId) {
@@ -41,7 +39,7 @@ TEST(DefaultAnnotationsTest, GetCurrentBootId) {
   ASSERT_TRUE(temp_dir.NewTempFileWithData("current_boot_id", &boot_id_path));
 
   EXPECT_EQ(GetCurrentBootId("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetCurrentBootId(boot_id_path), ErrorOr<std::string>("current_boot_id"));
+  EXPECT_EQ(GetCurrentBootId(boot_id_path), "current_boot_id");
 }
 
 TEST(DefaultAnnotationsTest, GetPreviousBootId) {
@@ -50,7 +48,7 @@ TEST(DefaultAnnotationsTest, GetPreviousBootId) {
   ASSERT_TRUE(temp_dir.NewTempFileWithData("previous_boot_id", &boot_id_path));
 
   EXPECT_EQ(GetPreviousBootId("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetPreviousBootId(boot_id_path), ErrorOr<std::string>("previous_boot_id"));
+  EXPECT_EQ(GetPreviousBootId(boot_id_path), "previous_boot_id");
 }
 
 }  // namespace

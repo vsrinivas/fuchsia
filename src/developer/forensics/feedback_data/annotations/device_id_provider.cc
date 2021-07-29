@@ -33,9 +33,9 @@ DeviceIdProviderClient::DeviceIdProviderClient(feedback::DeviceIdProvider* devic
       [=](::fpromise::result<std::string, Error>& result) {
         Annotations annotations;
         if (result.is_error()) {
-          annotations.insert({kAnnotationDeviceFeedbackId, AnnotationOr(result.error())});
+          annotations.insert({kAnnotationDeviceFeedbackId, result.error()});
         } else {
-          annotations.insert({kAnnotationDeviceFeedbackId, AnnotationOr(result.take_value())});
+          annotations.insert({kAnnotationDeviceFeedbackId, result.take_value()});
         }
 
         return ::fpromise::ok(std::move(annotations));

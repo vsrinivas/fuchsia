@@ -101,9 +101,8 @@ class CrashRegisterTest : public UnitTestFixture {
   }
 
   void MakeNewCrashRegister() {
-    crash_register_ =
-        std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
-                                        ErrorOr<std::string>(kBuildVersion), RegisterJsonPath());
+    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
+                                                      kBuildVersion, RegisterJsonPath());
   }
 
  private:
@@ -253,8 +252,8 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelControl) {
 
   const auto expected = Product{
       .name = "Fuchsia",
-      .version = ErrorOr<std::string>(kBuildVersion),
-      .channel = ErrorOr<std::string>(Error::kConnectionError),
+      .version = kBuildVersion,
+      .channel = Error::kConnectionError,
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
   EXPECT_TRUE(ReadRegisterJson().empty());
@@ -342,7 +341,7 @@ TEST_F(CrashRegisterTest, ReinitializesFromJson) {
   expected = Product{
       .name = "yet another name",
       .version = std::string("yet another version"),
-      .channel = ErrorOr<std::string>(Error::kMissingValue),
+      .channel = Error::kMissingValue,
 
   };
   EXPECT_THAT(GetProduct(kOtherComponentUrl), expected);

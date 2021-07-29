@@ -71,8 +71,8 @@ TEST(MakeReport, AddsSnapshotAnnotations) {
 
   Product product{
       .name = "product_name",
-      .version = ErrorOr<std::string>("product_version"),
-      .channel = ErrorOr<std::string>("product_channel"),
+      .version = "product_version",
+      .channel = "product_channel",
   };
 
   const auto report =

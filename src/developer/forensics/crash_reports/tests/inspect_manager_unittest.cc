@@ -441,9 +441,7 @@ TEST_F(InspectManagerTest, Check_CanAccessMultipleReportsForTheSameProgram) {
 
 TEST_F(InspectManagerTest, UpsertComponentToProductMapping) {
   // 1. We insert a product with all the fields set.
-  const Product product{.name = "some name",
-                        .version = ErrorOr<std::string>("some version"),
-                        .channel = ErrorOr<std::string>("some channel")};
+  const Product product{.name = "some name", .version = "some version", .channel = "some channel"};
   inspect_manager_->UpsertComponentToProductMapping(kComponentUrl, product);
   EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
                                  NodeMatches(NameMatches("crash_register")),
@@ -481,9 +479,8 @@ TEST_F(InspectManagerTest, UpsertComponentToProductMapping) {
                                      })))))))));
 
   // 3. We update the product under the first component URL with some missing fields.
-  const Product another_product{.name = "some other name",
-                                .version = ErrorOr<std::string>(Error::kMissingValue),
-                                .channel = ErrorOr<std::string>(Error::kMissingValue)};
+  const Product another_product{
+      .name = "some other name", .version = Error::kMissingValue, .channel = Error::kMissingValue};
   inspect_manager_->UpsertComponentToProductMapping(kComponentUrl, another_product);
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(

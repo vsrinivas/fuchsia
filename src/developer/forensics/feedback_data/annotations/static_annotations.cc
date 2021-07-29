@@ -38,9 +38,9 @@ const AnnotationKeys kSupportedAnnotations = {
 AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
-    return AnnotationOr(Error::kFileReadFailure);
+    return Error::kFileReadFailure;
   }
-  return AnnotationOr(std::string(fxl::TrimString(content, "\r\n")));
+  return std::string(fxl::TrimString(content, "\r\n"));
 }
 
 AnnotationOr ReadAnnotationOrFromFilepath(const AnnotationKey& key, const std::string& filepath) {
@@ -67,9 +67,9 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
     return previous_build_version;
   } else if (key == kAnnotationBuildIsDebug) {
 #ifndef NDEBUG
-    return AnnotationOr("true");
+    return "true";
 #else
-    return AnnotationOr("false");
+    return "false";
 #endif
   } else if (key == kAnnotationDeviceBoardName) {
     return GetBoardName();
@@ -84,7 +84,7 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
   }
   // We should never attempt to build a non-static annotation as a static annotation.
   FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
-  return AnnotationOr(Error::kNotSet);
+  return Error::kNotSet;
 }
 
 }  // namespace

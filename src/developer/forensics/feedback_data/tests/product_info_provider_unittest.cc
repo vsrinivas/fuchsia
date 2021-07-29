@@ -133,8 +133,8 @@ TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
       kAnnotationHardwareProductModel,
   });
   EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductModel, AnnotationOr("some-model")),
-                                Pair(kAnnotationHardwareProductSKU, AnnotationOr("some-sku")),
+                                Pair(kAnnotationHardwareProductModel, "some-model"),
+                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
                             }));
 }
 
@@ -156,8 +156,8 @@ TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
   });
 
   EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductModel, AnnotationOr("some-model")),
-                                Pair(kAnnotationHardwareProductSKU, AnnotationOr("some-sku")),
+                                Pair(kAnnotationHardwareProductModel, "some-model"),
+                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
                             }));
 }
 
@@ -204,7 +204,7 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
   });
 
   EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductSKU, AnnotationOr(Error::kTimeout)),
+                                Pair(kAnnotationHardwareProductSKU, Error::kTimeout),
                             }));
   EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kProductInfo),
@@ -274,7 +274,7 @@ TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
   auto product_info = GetProductInfo(/*allowlist=*/keys);
   EXPECT_EQ(product_info.size(), annotations.size());
   for (const auto& [key, value] : annotations) {
-    EXPECT_EQ(product_info.at(key), AnnotationOr(value));
+    EXPECT_EQ(product_info.at(key), value);
   }
 }
 

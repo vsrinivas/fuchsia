@@ -55,13 +55,13 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
 
         if (result.is_error()) {
           for (const auto& key : annotations_to_get) {
-            annotations.insert({key, AnnotationOr(result.error())});
+            annotations.insert({key, result.error()});
           }
         } else {
           for (const auto& key : annotations_to_get) {
             const auto& board_info = result.value();
             if (board_info.find(key) == board_info.end()) {
-              annotations.insert({key, AnnotationOr(Error::kMissingValue)});
+              annotations.insert({key, Error::kMissingValue});
             } else {
               annotations.insert({key, board_info.at(key)});
             }

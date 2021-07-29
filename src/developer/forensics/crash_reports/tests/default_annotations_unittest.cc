@@ -21,7 +21,7 @@ TEST(DefaultAnnotationsTest, GetBuildVersion) {
   ASSERT_TRUE(temp_dir.NewTempFileWithData("build_version", &build_version_path));
 
   EXPECT_EQ(GetBuildVersion("/bad/path"), Error::kFileReadFailure);
-  EXPECT_EQ(GetBuildVersion(build_version_path), ErrorOr<std::string>("build_version"));
+  EXPECT_EQ(GetBuildVersion(build_version_path), "build_version");
 }
 
 TEST(DefaultAnnotationsTest, GetDefaultAnnotations) {

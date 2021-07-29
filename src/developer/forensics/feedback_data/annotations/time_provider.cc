@@ -30,20 +30,20 @@ AnnotationOr GetUptime() {
   const auto uptime = FormatDuration(zx::nsec(zx_clock_get_monotonic()));
   if (!uptime) {
     FX_LOGS(ERROR) << "Got negative uptime from zx_clock_get_monotonic()";
-    return AnnotationOr(Error::kBadValue);
+    return Error::kBadValue;
   }
 
-  return AnnotationOr(*uptime);
+  return *uptime;
 }
 
 AnnotationOr GetUtcTime(Clock* clock) {
   const auto time = CurrentUtcTime(clock);
   if (!time) {
     FX_LOGS(ERROR) << "Error getting UTC time from timekeeper::Clock::Now()";
-    return AnnotationOr(Error::kBadValue);
+    return Error::kBadValue;
   }
 
-  return AnnotationOr(*time);
+  return *time;
 }
 
 }  // namespace

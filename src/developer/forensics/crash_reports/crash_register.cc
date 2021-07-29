@@ -180,16 +180,16 @@ void CrashRegister::RestoreFromJson() {
 
     Product internal_product{
         .name = json_product["name"].GetString(),
-        .version = ErrorOr<std::string>(Error::kMissingValue),
-        .channel = ErrorOr<std::string>(Error::kMissingValue),
+        .version = Error::kMissingValue,
+        .channel = Error::kMissingValue,
     };
 
     if (json_product.HasMember("version") && json_product["version"].IsString()) {
-      internal_product.version = ErrorOr<std::string>(json_product["version"].GetString());
+      internal_product.version = json_product["version"].GetString();
     }
 
     if (json_product.HasMember("channel") && json_product["channel"].IsString()) {
-      internal_product.channel = ErrorOr<std::string>(json_product["channel"].GetString());
+      internal_product.channel = json_product["channel"].GetString();
     }
 
     component_to_products_.insert_or_assign(component_url, std::move(internal_product));

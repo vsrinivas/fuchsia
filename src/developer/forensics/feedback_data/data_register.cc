@@ -65,8 +65,7 @@ void DataRegister::Upsert(fuchsia::feedback::ComponentData data, UpsertCallback 
   }
 
   for (const auto& annotation : data.annotations()) {
-    namespaced_annotations_[namespace_].insert_or_assign(annotation.key,
-                                                         AnnotationOr(annotation.value));
+    namespaced_annotations_[namespace_].insert_or_assign(annotation.key, annotation.value);
   }
 
   UpdateJson(namespace_, namespaced_annotations_[namespace_]);
@@ -162,7 +161,7 @@ void DataRegister::RestoreFromJson() {
 
       const std::string key = annotation.name.GetString();
       const std::string value = annotation.value.GetString();
-      namespaced_annotations_[_namespace].emplace(key, AnnotationOr(value));
+      namespaced_annotations_[_namespace].emplace(key, value);
     }
   }
 

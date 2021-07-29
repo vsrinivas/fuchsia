@@ -72,11 +72,11 @@ TEST_F(DataRegisterTest, Upsert_Basic) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -96,11 +96,11 @@ TEST_F(DataRegisterTest, Upsert_DefaultNamespaceIfNoNamespaceProvided) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("misc", UnorderedElementsAreArray({
-                                   Pair("k", AnnotationOr("v")),
+                                   Pair("k", "v"),
                                })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("misc.k", AnnotationOr("v")),
+                                                          Pair("misc.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "misc": {
@@ -145,11 +145,11 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -167,11 +167,11 @@ TEST_F(DataRegisterTest, Upsert_NoUpdatesOnEmptyAnnotations) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -192,11 +192,11 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -216,15 +216,15 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentNamespaces) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
                   Pair("namespace2", UnorderedElementsAreArray({
-                                         Pair("k", AnnotationOr("v")),
+                                         Pair("k", "v"),
                                      })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
-                                                          Pair("namespace2.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
+                                                          Pair("namespace2.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -248,11 +248,11 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
 
   // We upsert another ComponentData under the same namespace, but with a different key.
@@ -267,13 +267,13 @@ TEST_F(DataRegisterTest, Upsert_InsertIfDifferentKey) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
-                                        Pair("k2", AnnotationOr("v2")),
+                                        Pair("k", "v"),
+                                        Pair("k2", "v2"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
-                                                          Pair("namespace.k2", AnnotationOr("v2")),
+                                                          Pair("namespace.k", "v"),
+                                                          Pair("namespace.k2", "v2"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -295,11 +295,11 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v")),
+                                        Pair("k", "v"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v")),
+                                                          Pair("namespace.k", "v"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -319,11 +319,11 @@ TEST_F(DataRegisterTest, Upsert_UpdateIfSameKey) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace", UnorderedElementsAreArray({
-                                        Pair("k", AnnotationOr("v2")),
+                                        Pair("k", "v2"),
                                     })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace.k", AnnotationOr("v2")),
+                                                          Pair("namespace.k", "v2"),
                                                       }));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "namespace": {
@@ -355,19 +355,19 @@ TEST_F(DataRegisterTest, ReinitializesFromJson) {
   EXPECT_THAT(data_register_->GetNamespacedAnnotations(),
               UnorderedElementsAreArray({
                   Pair("namespace1", UnorderedElementsAreArray({
-                                         Pair("k1", AnnotationOr("v1")),
-                                         Pair("k2", AnnotationOr("v2")),
+                                         Pair("k1", "v1"),
+                                         Pair("k2", "v2"),
                                      })),
                   Pair("namespace2", UnorderedElementsAreArray({
-                                         Pair("k3", AnnotationOr("v3")),
-                                         Pair("k4", AnnotationOr("v4")),
+                                         Pair("k3", "v3"),
+                                         Pair("k4", "v4"),
                                      })),
               }));
   EXPECT_THAT(datastore_.GetNonPlatformAnnotations(), UnorderedElementsAreArray({
-                                                          Pair("namespace1.k1", AnnotationOr("v1")),
-                                                          Pair("namespace1.k2", AnnotationOr("v2")),
-                                                          Pair("namespace2.k3", AnnotationOr("v3")),
-                                                          Pair("namespace2.k4", AnnotationOr("v4")),
+                                                          Pair("namespace1.k1", "v1"),
+                                                          Pair("namespace1.k2", "v2"),
+                                                          Pair("namespace2.k3", "v3"),
+                                                          Pair("namespace2.k4", "v4"),
                                                       }));
 }
 

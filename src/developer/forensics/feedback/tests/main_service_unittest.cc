@@ -48,7 +48,7 @@ class MainServiceTest : public UnitTestFixture {
                 .snapshot_manager_max_annotations_size = StorageSize::Bytes(0),
                 .snapshot_manager_max_archives_size = StorageSize::Bytes(0),
                 .snapshot_manager_window_duration = zx::sec(0),
-                .build_version = ErrorOr<std::string>("build_version"),
+                .build_version = "build_version",
                 .default_annotations = {},
             },
             FeedbackData::Options{

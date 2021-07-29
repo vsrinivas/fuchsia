@@ -117,7 +117,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
         for (const auto& key : annotation_allowlist_) {
           if (ok_annotations.find(key) == ok_annotations.end()) {
             FX_LOGS(ERROR) << "No provider collected annotation " << key;
-            ok_annotations.insert({key, AnnotationOr(Error::kMissingValue)});
+            ok_annotations.insert({key, Error::kMissingValue});
           }
         }
 
