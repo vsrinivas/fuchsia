@@ -1209,23 +1209,12 @@ Update your code to reference the content path from the v2 Hub directory
 structure. Here are some examples of path differences between the Hub
 implementations:
 
-| [v1 Hub][hub-v1] Path             | [v2 Hub][hub-v2] Path                 |
-| --------------------------------- | ------------------------------------- |
-| `/hub/c/{{ '<var>'                | `/hub/url`                            |
-: }}component-name{{ '</var>' }}/{{ :                                       :
-: '<var>' }}instance-id{{ '</var>'  :                                       :
-: }}/url`                           :                                       :
-| `/hub/c/{{ '<var>'                | `/hub/exec/in/{{ '<var>' }}svc-path{{ |
-: }}component-name{{ '</var>' }}/{{ : '</var>' }}`                          :
-: '<var>' }}instance-id{{ '</var>'  :                                       :
-: }}/in/{{ '<var>' }}svc-path{{     :                                       :
-: '</var>' }}`                      :                                       :
-| `/hub/c/{{ '<var>'                | `/hub/exec/runtime/elf/process-id`    |
-: }}component-name{{ '</var>' }}/{{ :                                       :
-: '<var>' }}instance-id{{ '</var>'  :                                       :
-: }}/process-id`                    :                                       :
-| `/hub/c/{{ '<var>'                | `/hub/children/{{ '<var>'             |
-: }}child-component{{ '</var>' }}`  : }}child-component{{ '</var>' }}`      :
+| [v1 Hub][hub-v1] Path | [v2 Hub][hub-v2] Path |
+| --------------------- | --------------------- |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/url` | `/hub/url` |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/in/{{ '<var>' }}svc-path{{ '</var>' }}` | `/hub/exec/in/{{ '<var>' }}svc-path{{ '</var>' }}` |
+| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/process-id` | `/hub/exec/runtime/elf/process-id` |
+| `/hub/c/{{ '<var>' }}child-component{{ '</var>' }}` | `/hub/children/{{ '<var>' }}child-component{{ '</var>' }}` |
 
 Note: The `hub` directory routed to your component is scoped to the current
 realm. To access hub contents from the parent realm, route the hub from `parent`
