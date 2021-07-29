@@ -18,21 +18,6 @@ class TestPlatformPciDevice {
     g_instance = platform_device;
   }
 
-  static bool is_intel_gen(uint32_t device_id) {
-    switch (device_id) {
-      case 0x1916:  // Intel(R) HD Graphics 520 (Skylake GT2)
-      case 0x191E:  // Intel(R) HD Graphics 515 (Skylake GT2)
-      case 0x193b:  // Intel(R) Iris Pro Graphics 580 (Skylake GT4e)
-      case 0x5916:  // Intel(R) HD Graphics 620 (Kabylake GT2)
-      case 0x591C:  // Intel(R) HD Graphics 615 (Amberlake (Kabylake) GT2)
-      case 0x591E:  // Intel(R) HD Graphics 615 (Kabylake GT2)
-      case 0x5926:  // Intel(R) Iris Graphics 640 (Kabylake GT3e)
-      case 0x5927:  // Intel(R) Iris Graphics 650 (Kabylake GT3e)
-        return true;
-    }
-    return false;
-  }
-
   static magma::PlatformPciDevice* g_instance;
   static void* core_device_;
 };

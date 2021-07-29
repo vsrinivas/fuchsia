@@ -73,8 +73,7 @@ class TestMultithread {
       EXPECT_TRUE(connection->ImportBuffer(handle, &id));
       EXPECT_EQ(id, batch_buffer->id());
 
-      if (!InitBatchBuffer(batch_buffer.get()))
-        break;  // Abort the test
+      InitBatchBufferIntel(batch_buffer.get());
 
       constexpr uint64_t kMapFlags =
           MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
@@ -106,18 +105,11 @@ class TestMultithread {
     return true;
   }
 
-  bool InitBatchBuffer(magma::PlatformBuffer* buffer) {
-    EXPECT_TRUE(TestPlatformPciDevice::is_intel_gen(device_->GetDeviceId()));
-
+  void InitBatchBufferIntel(magma::PlatformBuffer* buffer) {
     void* vaddr;
-    if (!buffer->MapCpu(&vaddr))
-      return false;
-
+    ASSERT_TRUE(buffer->MapCpu(&vaddr));
     *reinterpret_cast<uint32_t*>(vaddr) = 0xA << 23;
-
     EXPECT_TRUE(buffer->UnmapCpu());
-
-    return true;
   }
 
  private:
@@ -135,6 +127,7 @@ TEST(MagmaSystem, Multithread) {
 
   uint64_t vendor_id;
   ASSERT_TRUE(device->Query(MAGMA_QUERY_VENDOR_ID, &vendor_id));
+  // Test only supports Intel GPUs.
   if (vendor_id != 0x8086)
     GTEST_SKIP();
 
