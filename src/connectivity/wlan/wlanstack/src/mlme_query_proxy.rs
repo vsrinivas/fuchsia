@@ -26,9 +26,9 @@ impl MlmeQueryProxy {
 
     pub fn get_minstrel_peer(
         &self,
-        mac_addr: [u8; 6],
+        peer_addr: [u8; 6],
     ) -> impl Future<Output = Result<MinstrelStatsResponse, fidl::Error>> {
-        let mut req = MinstrelStatsRequest { mac_addr };
+        let mut req = MinstrelStatsRequest { peer_addr };
         self.proxy.get_minstrel_stats(&mut req)
     }
 }

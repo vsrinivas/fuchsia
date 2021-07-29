@@ -141,7 +141,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   ZX_DEBUG_ASSERT(mlme_channel != ZX_HANDLE_INVALID);
 
-  state_->set_address(common::MacAddr(wlanmac_info_.mac_addr));
+  state_->set_address(common::MacAddr(wlanmac_info_.sta_addr));
 
   std::unique_ptr<Mlme> mlme;
 
@@ -300,7 +300,7 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     return ZX_ERR_INVALID_ARGS;
 
   memset(info, 0, sizeof(*info));
-  memcpy(info->mac, wlanmac_info_.mac_addr, ETH_MAC_SIZE);
+  memcpy(info->mac, wlanmac_info_.sta_addr, ETH_MAC_SIZE);
   info->features = ETHERNET_FEATURE_WLAN;
   if (wlanmac_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
     info->features |= ETHERNET_FEATURE_SYNTH;

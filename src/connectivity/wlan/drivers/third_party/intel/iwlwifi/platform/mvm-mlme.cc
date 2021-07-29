@@ -180,7 +180,7 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
   ZX_ASSERT(mvmvif->mvm->nvm_data);
   struct iwl_nvm_data* nvm_data = mvmvif->mvm->nvm_data;
 
-  memcpy(info->mac_addr, nvm_data->hw_addr, sizeof(info->mac_addr));
+  memcpy(info->sta_addr, nvm_data->hw_addr, sizeof(info->sta_addr));
   info->mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;

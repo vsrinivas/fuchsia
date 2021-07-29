@@ -42,7 +42,7 @@ type QueryIfaceResponse = struct {
     /// Local ID assigned by this iface's PHY.
     phy_assigned_id uint16;
     /// The iface's MAC.
-    mac_addr ieee80211.MacAddr;
+    sta_addr ieee80211.MacAddr;
     /// The driver features supported on this iface.
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
 };
@@ -54,7 +54,7 @@ type ListIfacesResponse = struct {
 type CreateIfaceRequest = struct {
     phy_id uint16;
     role fuchsia.wlan.device.MacRole;
-    mac_addr ieee80211.MacAddr;
+    sta_addr ieee80211.MacAddr;
 };
 
 type CreateIfaceResponse = struct {

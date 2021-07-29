@@ -87,7 +87,7 @@ struct MockDevice : public DeviceInterface {
     state = fbl::AdoptRef(new DeviceState);
     state->set_address(addr);
 
-    memcpy(wlanmac_info.mac_addr, addr.byte, 6);
+    memcpy(wlanmac_info.sta_addr, addr.byte, 6);
     wlanmac_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
     wlanmac_info.supported_phys =
         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;

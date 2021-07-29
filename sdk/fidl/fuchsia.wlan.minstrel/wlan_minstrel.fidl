@@ -6,7 +6,7 @@ library fuchsia.wlan.minstrel;
 using fuchsia.wlan.ieee80211 as ieee80211;
 
 type Peers = struct {
-    peers vector<ieee80211.MacAddr>;
+    addrs vector<ieee80211.MacAddr>;
 };
 
 // LINT.IfChange
@@ -24,7 +24,7 @@ type StatsEntry = struct {
 };
 
 type Peer = struct {
-    mac_addr ieee80211.MacAddr;
+    addr ieee80211.MacAddr;
     max_tp uint16;
     max_probability uint16;
     basic_highest uint16;

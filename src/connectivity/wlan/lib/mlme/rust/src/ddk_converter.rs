@@ -114,7 +114,7 @@ fn blank_wmm_ac_params() -> banjo_wlan_info::WlanWmmAcParams {
 pub fn device_info_from_wlanmac_info(
     info: banjo_wlan_mac::WlanmacInfo,
 ) -> Result<fidl_mlme::DeviceInfo, Error> {
-    let mac_addr = info.mac_addr;
+    let sta_addr = info.sta_addr;
     let role = match info.mac_role {
         banjo_ddk_wlaninfo::WlanInfoMacRole::CLIENT => fidl_mlme::MacRole::Client,
         banjo_ddk_wlaninfo::WlanInfoMacRole::AP => fidl_mlme::MacRole::Ap,
@@ -128,7 +128,7 @@ pub fn device_info_from_wlanmac_info(
         .map(|band_info| convert_ddk_band_info(band_info, cap))
         .collect();
     let driver_features = convert_driver_features(&info.driver_features);
-    Ok(fidl_mlme::DeviceInfo { mac_addr, role, bands, driver_features, qos_capable: false })
+    Ok(fidl_mlme::DeviceInfo { sta_addr, role, bands, driver_features, qos_capable: false })
 }
 
 fn convert_ddk_band_info(
@@ -361,7 +361,7 @@ mod tests {
         let wlanmac_info = fake_wlanmac_info();
         let device_info =
             device_info_from_wlanmac_info(wlanmac_info).expect("Failed to conver wlanmac info");
-        assert_eq!(device_info.mac_addr, wlanmac_info.mac_addr);
+        assert_eq!(device_info.sta_addr, wlanmac_info.sta_addr);
         assert_eq!(device_info.role, fidl_mlme::MacRole::Client);
         assert_eq!(device_info.bands.len(), 2);
         assert_eq!(

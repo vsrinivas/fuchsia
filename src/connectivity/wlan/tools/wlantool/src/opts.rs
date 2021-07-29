@@ -176,11 +176,11 @@ pub enum IfaceCmd {
 
         #[structopt(
             short = "m",
-            long = "macaddr",
-            help = "Optional mac addr when we create an iface"
+            long = "sta_addr",
+            help = "Optional sta addr when we create an iface"
         )]
-        /// initial mac address for this iface
-        mac_addr: Option<String>,
+        /// initial sta address for this iface
+        sta_addr: Option<String>,
     },
 
     #[structopt(name = "del")]

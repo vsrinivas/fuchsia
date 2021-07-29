@@ -556,8 +556,8 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
 
   wlan_mlme::DeviceInfo fidl_resp;
 
-  // mac_addr
-  std::memcpy(fidl_resp.mac_addr.data(), query_info_.mac_addr, ETH_ALEN);
+  // sta_addr
+  std::memcpy(fidl_resp.sta_addr.data(), query_info_.sta_addr, ETH_ALEN);
 
   // role
   fidl_resp.role = ConvertMacRole(query_info_.role);
@@ -1111,8 +1111,8 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
   info->mtu = 1500;
   info->netbuf_size = sizeof(ethernet_netbuf_t);
 
-  // mac
-  std::memcpy(info->mac, query_info_.mac_addr, ETH_ALEN);
+  // sta
+  std::memcpy(info->mac, query_info_.sta_addr, ETH_ALEN);
 
   return ZX_OK;
 }

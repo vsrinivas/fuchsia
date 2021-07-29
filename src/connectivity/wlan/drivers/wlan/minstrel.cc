@@ -527,10 +527,10 @@ const Peer* MinstrelRateSelector::GetPeer(const common::MacAddr& addr) const {
 }
 
 zx_status_t MinstrelRateSelector::GetListToFidl(wlan_minstrel::Peers* peers_fidl) const {
-  peers_fidl->peers.resize(peer_map_.size());
+  peers_fidl->addrs.resize(peer_map_.size());
   size_t idx = 0;
   for (const auto& iter : peer_map_) {
-    iter.first.CopyTo(peers_fidl->peers[idx].data());
+    iter.first.CopyTo(peers_fidl->addrs[idx].data());
     ++idx;
   }
   return ZX_OK;
@@ -558,7 +558,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
     return ZX_ERR_NOT_FOUND;
   }
 
-  peer_addr.CopyTo(peer_fidl->mac_addr.data());
+  peer_addr.CopyTo(peer_fidl->addr.data());
 
   std::lock_guard<std::mutex> guard(*peer->update_lock);
   peer_fidl->entries.resize(peer->tx_stats_map.size());

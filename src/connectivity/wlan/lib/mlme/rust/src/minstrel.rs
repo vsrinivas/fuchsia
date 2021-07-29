@@ -557,7 +557,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
     }
 
     pub fn get_fidl_peers(&self) -> fidl_minstrel::Peers {
-        fidl_minstrel::Peers { peers: self.peer_map.iter().map(|(peer, _)| *peer).collect() }
+        fidl_minstrel::Peers { addrs: self.peer_map.iter().map(|(peer, _)| *peer).collect() }
     }
 
     pub fn get_fidl_peer_stats(
@@ -566,7 +566,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
     ) -> Result<fidl_minstrel::Peer, zx::Status> {
         let peer = self.peer_map.get(peer_addr).ok_or(zx::Status::NOT_FOUND)?;
         Ok(fidl_minstrel::Peer {
-            mac_addr: peer_addr.clone(),
+            addr: peer_addr.clone(),
             max_tp: tx_vec_idx_opt_to_u16(&peer.best_expected_throughput),
             max_probability: tx_vec_idx_opt_to_u16(&peer.best_for_reliability),
             basic_highest: tx_vec_idx_opt_to_u16(&peer.highest_erp_rate),
@@ -784,12 +784,12 @@ mod tests {
         assert!(timer.lock().unwrap().is_some()); // A timer is scheduled.
 
         let peers = minstrel.get_fidl_peers();
-        assert_eq!(peers.peers.len(), 1);
+        assert_eq!(peers.addrs.len(), 1);
         let mut peer_addr = [0u8; 6];
-        peer_addr.copy_from_slice(&peers.peers[0][..]);
+        peer_addr.copy_from_slice(&peers.addrs[0][..]);
         let peer_stats =
             minstrel.get_fidl_peer_stats(&peer_addr).expect("Failed to get peer stats");
-        assert_eq!(peer_stats.mac_addr, TEST_MAC_ADDR);
+        assert_eq!(peer_stats.addr, TEST_MAC_ADDR);
         // TODO(fxbug.dev/28744): Size would be 40 if 40 MHz is supported and 72 if 40 MHz + SGI are supported.
         assert_eq!(peer_stats.entries.len(), 24);
         assert_eq!(peer_stats.max_tp, 16); // In the absence of data, our highest supported rate is max throughput.
@@ -801,13 +801,13 @@ mod tests {
     fn remove_peer() {
         let (mut minstrel, timer) = mock_minstrel();
         minstrel.add_peer(&ht_assoc_ctx());
-        assert_eq!(minstrel.get_fidl_peers().peers.len(), 1);
+        assert_eq!(minstrel.get_fidl_peers().addrs.len(), 1);
         assert!(timer.lock().unwrap().is_some()); // A timer is scheduled.
 
         minstrel.remove_peer(&TEST_MAC_ADDR);
         assert!(timer.lock().unwrap().is_none()); // No more peers -- timer cancelled.
 
-        assert!(minstrel.get_fidl_peers().peers.is_empty());
+        assert!(minstrel.get_fidl_peers().addrs.is_empty());
         assert_eq!(minstrel.get_fidl_peer_stats(&TEST_MAC_ADDR), Err(zx::Status::NOT_FOUND));
     }
 
@@ -818,11 +818,11 @@ mod tests {
         let mut peer2 = ht_assoc_ctx();
         peer2.bssid = [11, 12, 13, 14, 15, 16];
         minstrel.add_peer(&peer2);
-        assert_eq!(minstrel.get_fidl_peers().peers.len(), 2);
+        assert_eq!(minstrel.get_fidl_peers().addrs.len(), 2);
         assert!(timer.lock().unwrap().is_some()); // A timer is scheduled.
 
         minstrel.remove_peer(&TEST_MAC_ADDR);
-        assert_eq!(minstrel.get_fidl_peers().peers.len(), 1);
+        assert_eq!(minstrel.get_fidl_peers().addrs.len(), 1);
         assert!(timer.lock().unwrap().is_some()); // A timer is still scheduled.
 
         assert_eq!(minstrel.get_fidl_peer_stats(&TEST_MAC_ADDR), Err(zx::Status::NOT_FOUND));

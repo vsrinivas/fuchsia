@@ -12,8 +12,8 @@ using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
 type WlanmacInfo = struct {
-    /// MAC address.
-    mac_addr ieee80211.MacAddr;
+    /// Station address.
+    sta_addr ieee80211.MacAddr;
 
     /// MAC role
     mac_role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;

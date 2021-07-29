@@ -38,7 +38,7 @@ async fn multiple_interfaces_per_phy() {
     assert_eq!(resp.len(), 1);
 
     let phy_id = resp[0];
-    let mut req = CreateIfaceRequest { phy_id, role: Client, mac_addr: NULL_MAC_ADDR };
+    let mut req = CreateIfaceRequest { phy_id, role: Client, sta_addr: NULL_MAC_ADDR };
     let (status, resp) =
         wlan_monitor_svc.create_iface(&mut req).await.expect("creating a new iface");
     assert_eq!(status, ZX_OK);

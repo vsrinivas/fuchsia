@@ -493,7 +493,7 @@ mod test_utils {
         };
 
         WlanmacInfo {
-            mac_addr: [7u8; 6],
+            sta_addr: [7u8; 6],
             mac_role: WlanInfoMacRole::CLIENT,
             supported_phys: WlanInfoPhyType::ERP | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
             driver_features: WlanInfoDriverFeature(0),
@@ -701,7 +701,7 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
         let info = dev.wlanmac_info();
-        assert_eq!(info.mac_addr, [7u8; 6]);
+        assert_eq!(info.sta_addr, [7u8; 6]);
         assert_eq!(info.mac_role, WlanInfoMacRole::CLIENT);
         assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
         assert_eq!(info.caps, WlanInfoHardwareCapability(0));

@@ -8,7 +8,7 @@ use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BandCapabilities};
 
 pub fn clone_device_info(d: &fidl_mlme::DeviceInfo) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
-        mac_addr: d.mac_addr,
+        sta_addr: d.sta_addr,
         role: d.role,
         bands: clone_bands(&d.bands),
         driver_features: d.driver_features.clone(),

@@ -150,11 +150,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 wlan_iface.connection_success = true;
             }
 
-            fx_log_info!("checking mac address");
-            let mac_addr = match wlan_service_util::get_wlan_mac_addr(&wlan_svc, *iface_id).await {
+            fx_log_info!("checking sta address");
+            let mac_addr = match wlan_service_util::get_wlan_sta_addr(&wlan_svc, *iface_id).await {
                 Ok(addr) => addr,
                 Err(e) => {
-                    fx_log_warn!("error getting mac address: {}", e);
+                    fx_log_warn!("error getting sta address: {}", e);
                     continue;
                 }
             };

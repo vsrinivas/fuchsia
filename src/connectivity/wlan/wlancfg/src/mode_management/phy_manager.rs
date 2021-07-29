@@ -591,9 +591,9 @@ async fn create_iface(
     proxy: &fidl_service::DeviceMonitorProxy,
     phy_id: u16,
     role: MacRole,
-    mac_addr: MacAddr,
+    sta_addr: MacAddr,
 ) -> Result<u16, PhyManagerError> {
-    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr };
+    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, sta_addr };
     let create_iface_response = match proxy.create_iface(&mut request).await {
         Ok((status, iface_response)) => {
             if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {
@@ -840,7 +840,7 @@ mod tests {
             id: id,
             phy_id: phy_id,
             phy_assigned_id: phy_assigned_id,
-            mac_addr: mac,
+            sta_addr: mac,
             driver_features,
         }
     }
@@ -971,14 +971,14 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles.clone());
 
         let fake_phy_assigned_id = 0;
-        let fake_mac_addr = [0, 0, 0, 0, 0, 0];
+        let fake_sta_addr = [0, 0, 0, 0, 0, 0];
         let driver_features = vec![fidl_common::DriverFeature::SaeDriverAuth];
         let mut iface_response = create_iface_response(
             fake_mac_roles[0],
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
-            fake_mac_addr,
+            fake_sta_addr,
             driver_features.clone(),
         );
 
@@ -1136,14 +1136,14 @@ mod tests {
         let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
-        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_sta_addr = [0, 1, 2, 3, 4, 5];
         let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
-            fake_mac_addr,
+            fake_sta_addr,
             driver_features,
         );
 
@@ -1192,14 +1192,14 @@ mod tests {
         let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
-        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_sta_addr = [0, 1, 2, 3, 4, 5];
         let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
-            fake_mac_addr,
+            fake_sta_addr,
             driver_features,
         );
 
@@ -1264,14 +1264,14 @@ mod tests {
         let fake_role = MacRole::Client;
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
-        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_sta_addr = [0, 1, 2, 3, 4, 5];
         let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
-            fake_mac_addr,
+            fake_sta_addr,
             driver_features,
         );
 
@@ -1920,7 +1920,7 @@ mod tests {
                     responder,
                 }
             ))) => {
-                let requested_mac = MacAddress::from_bytes(&req.mac_addr).unwrap();
+                let requested_mac = MacAddress::from_bytes(&req.sta_addr).unwrap();
                 assert_eq!(requested_mac, mac);
                 let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
                 let response = Some(&mut response);
@@ -1966,7 +1966,7 @@ mod tests {
                     responder,
                 }
             ))) => {
-                assert_eq!(req.mac_addr, ieee80211::NULL_MAC_ADDR);
+                assert_eq!(req.sta_addr, ieee80211::NULL_MAC_ADDR);
                 let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
                 let response = Some(&mut response);
                 responder.send(ZX_OK, response).expect("sending fake iface id");
@@ -1975,14 +1975,14 @@ mod tests {
         // Expect an IfaceQuery to get driver features. and send back a response
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Pending);
         let fake_phy_assigned_id = 1;
-        let fake_mac_addr = [0, 1, 2, 3, 4, 5];
+        let fake_sta_addr = [0, 1, 2, 3, 4, 5];
         let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_mac_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
-            fake_mac_addr,
+            fake_sta_addr,
             driver_features,
         );
         send_query_iface_response(

@@ -181,7 +181,7 @@ impl WlanFacade {
             id: iface_info.id,
             phy_id: iface_info.phy_id,
             phy_assigned_id: iface_info.phy_assigned_id,
-            mac_addr: iface_info.mac_addr,
+            sta_addr: iface_info.sta_addr,
         })
     }
 }

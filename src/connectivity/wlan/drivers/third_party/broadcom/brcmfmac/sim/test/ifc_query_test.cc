@@ -36,7 +36,7 @@ TEST_F(SimTest, ClientIfcQuery) {
   // Mac address returned should match the one we specified when we created the interface
   ASSERT_EQ(fuchsia_wlan_ieee80211_MAC_ADDR_LEN, common::kMacAddrLen);
   EXPECT_EQ(
-      0, memcmp(kDefaultMac.byte, ifc_query_result.mac_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN));
+      0, memcmp(kDefaultMac.byte, ifc_query_result.sta_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN));
 
   EXPECT_EQ(ifc_query_result.role, WLAN_INFO_MAC_ROLE_CLIENT);
 

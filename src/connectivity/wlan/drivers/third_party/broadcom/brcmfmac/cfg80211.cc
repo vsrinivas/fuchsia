@@ -588,8 +588,8 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
   const char* iface_role_name;
 
   std::optional<wlan::common::MacAddr> mac_addr;
-  if (req->has_init_mac_addr) {
-    mac_addr.emplace(req->init_mac_addr);
+  if (req->has_init_sta_addr) {
+    mac_addr.emplace(req->init_sta_addr);
   }
 
   switch (req->role) {
@@ -4052,7 +4052,7 @@ static void brcmf_dump_if_band_caps(wlanif_band_capabilities_t* band) {
 
 static void brcmf_dump_if_query_info(wlanif_query_info_t* info) {
   BRCMF_DBG_UNFILTERED(" Device capabilities as reported to wlanif:");
-  BRCMF_DBG_UNFILTERED("   mac_addr: " MAC_FMT_STR, MAC_FMT_ARGS(info->mac_addr));
+  BRCMF_DBG_UNFILTERED("   mac_addr: " MAC_FMT_STR, MAC_FMT_ARGS(info->sta_addr));
   BRCMF_DBG_UNFILTERED("   role(s): %s%s%s",
                        info->role & WLAN_INFO_MAC_ROLE_CLIENT ? "client " : "",
                        info->role & WLAN_INFO_MAC_ROLE_AP ? "ap " : "",
@@ -4084,7 +4084,7 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   memset(info, 0, sizeof(*info));
 
   // mac_addr
-  memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
+  memcpy(info->sta_addr, ifp->mac_addr, ETH_ALEN);
 
   // role
   info->role = wdev->iftype;

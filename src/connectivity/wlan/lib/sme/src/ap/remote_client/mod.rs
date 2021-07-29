@@ -149,7 +149,7 @@ impl RemoteClient {
     /// Sends MLME-EAPOL.request (IEEE Std 802.11-2016, 6.3.22.1) to the MLME.
     pub fn send_eapol_req(&mut self, ctx: &mut Context, frame: eapol::KeyFrameBuf) {
         ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
-            src_addr: ctx.device_info.mac_addr.clone(),
+            src_addr: ctx.device_info.sta_addr.clone(),
             dst_addr: self.addr.clone(),
             data: frame.into(),
         }));

@@ -243,7 +243,7 @@ void SimInterface::Query(wlanif_query_info_t* out_info) {
 void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
   wlanif_query_info_t info;
   Query(&info);
-  memcpy(out_macaddr->byte, info.mac_addr, ETH_ALEN);
+  memcpy(out_macaddr->byte, info.sta_addr, ETH_ALEN);
 }
 
 void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
@@ -453,10 +453,10 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   wlanphy_impl_create_iface_req_t req = {
       .role = role,
       .mlme_channel = sim_ifc->ch_mlme_,
-      .has_init_mac_addr = mac_addr ? true : false,
+      .has_init_sta_addr = mac_addr ? true : false,
   };
   if (mac_addr)
-    memcpy(req.init_mac_addr, mac_addr.value().byte, ETH_ALEN);
+    memcpy(req.init_sta_addr, mac_addr.value().byte, ETH_ALEN);
 
   if ((status = device_->WlanphyImplCreateIface(&req, &sim_ifc->iface_id_)) != ZX_OK) {
     return status;

@@ -143,13 +143,13 @@ async fn do_iface(
     monitor_proxy: DeviceMonitor,
 ) -> Result<(), Error> {
     match cmd {
-        opts::IfaceCmd::New { phy_id, role, mac_addr } => {
-            let mac_addr = match mac_addr {
+        opts::IfaceCmd::New { phy_id, role, sta_addr } => {
+            let sta_addr = match sta_addr {
                 Some(s) => s.parse::<MacAddr>()?.0,
                 None => NULL_MAC_ADDR,
             };
 
-            let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into(), mac_addr };
+            let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into(), sta_addr };
 
             let response =
                 monitor_proxy.create_iface(&mut req).await.context("error getting response")?;
@@ -821,12 +821,12 @@ async fn list_minstrel_peers(
     dev_svc_proxy: DeviceService,
     iface_id: u16,
 ) -> Result<Vec<MacAddr>, Error> {
-    let (status, resp) = dev_svc_proxy
+    let (status, peers) = dev_svc_proxy
         .get_minstrel_list(iface_id)
         .await
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
     if status == zx::sys::ZX_OK {
-        Ok(resp.peers.into_iter().map(|v| MacAddr(v)).collect())
+        Ok(peers.addrs.into_iter().map(|v| MacAddr(v)).collect())
     } else {
         println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
         Ok(vec![])
@@ -874,12 +874,12 @@ async fn get_peer_addrs(
 
 fn format_iface_query_response(resp: QueryIfaceResponse) -> String {
     format!(
-        "QueryIfaceResponse {{ role: {:?}, id: {}, phy_id: {}, phy_assigned_id: {}, mac_addr: {} }}",
+        "QueryIfaceResponse {{ role: {:?}, id: {}, phy_id: {}, phy_assigned_id: {}, sta_addr: {} }}",
         resp.role,
         resp.id,
         resp.phy_id,
         resp.phy_assigned_id,
-        MacAddr(resp.mac_addr)
+        MacAddr(resp.sta_addr)
     )
 }
 
@@ -888,7 +888,7 @@ fn print_minstrel_stats(mut peer: Box<Peer>) {
     let total_success: f64 = peer.entries.iter().map(|e| e.success_total as f64).sum();
     println!(
         "{}, max_tp: {}, max_probability: {}, attempts/success: {:.6}, probes: {}",
-        MacAddr(peer.mac_addr),
+        MacAddr(peer.addr),
         peer.max_tp,
         peer.max_probability,
         total_attempts / total_success,
@@ -925,7 +925,7 @@ mod tests {
     };
 
     #[test]
-    fn format_bssid() {
+    fn format_mac_addr() {
         assert_eq!(
             "01:02:03:ab:cd:ef",
             format!("{}", MacAddr([0x01, 0x02, 0x03, 0xab, 0xcd, 0xef]))

@@ -144,9 +144,9 @@ pub fn get_wpa2_rsna(
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
         // Note: There should be one Reader per device, not per SME.
         // Follow-up with improving on this.
-        NonceReader::new(&device_info.mac_addr[..])?,
+        NonceReader::new(&device_info.sta_addr[..])?,
         psk,
-        device_info.mac_addr,
+        device_info.sta_addr,
         ProtectionInfo::Rsne(s_rsne),
         bss.bssid.0,
         ProtectionInfo::Rsne(a_rsne),
@@ -194,7 +194,7 @@ fn get_wpa3_auth_config(
     match selected_feature {
         Some(DriverFeature::SaeSmeAuth) => Ok(auth::Config::Sae {
             password,
-            mac: device_info.mac_addr.clone(),
+            mac: device_info.sta_addr.clone(),
             peer_mac: bss.bssid.0,
         }),
         Some(DriverFeature::SaeDriverAuth) => Ok(auth::Config::DriverSae { password }),
@@ -221,9 +221,9 @@ pub fn get_wpa3_rsna(
     let s_rsne = a_rsne.derive_wpa3_s_rsne()?;
     let negotiated_protection = NegotiatedProtection::from_rsne(&s_rsne)?;
     let supplicant = wlan_rsn::Supplicant::new_wpa_personal(
-        NonceReader::new(&device_info.mac_addr[..])?,
+        NonceReader::new(&device_info.sta_addr[..])?,
         get_wpa3_auth_config(device_info, password, bss)?,
-        device_info.mac_addr,
+        device_info.sta_addr,
         ProtectionInfo::Rsne(s_rsne),
         bss.bssid.0,
         ProtectionInfo::Rsne(a_rsne),

@@ -104,7 +104,7 @@ impl ClientMlme {
         // TODO(fxbug.dev/41417): Remove this once devmgr installs a Rust logger.
         logger::install();
 
-        let iface_mac = device.wlanmac_info().mac_addr;
+        let iface_mac = device.wlanmac_info().sta_addr;
         let timer = Timer::<TimedEvent>::new(scheduler);
         Self {
             sta: None,
@@ -189,7 +189,7 @@ impl ClientMlme {
             MlmeMsg::QueryDeviceInfo { tx_id } => self.on_sme_query_device_info(tx_id),
             MlmeMsg::ListMinstrelPeers { tx_id } => self.on_sme_list_minstrel_peers(tx_id),
             MlmeMsg::GetMinstrelStats { tx_id, req } => {
-                self.on_sme_get_minstrel_stats(tx_id, &req.mac_addr)
+                self.on_sme_get_minstrel_stats(tx_id, &req.peer_addr)
             }
             other_message => match &mut self.sta {
                 None => Err(Error::Status(format!("No client sta."), zx::Status::BAD_STATE)),
@@ -230,7 +230,7 @@ impl ClientMlme {
                 self.sta.replace(Client::new(
                     bss.ssid.clone(),
                     bss.bssid,
-                    self.ctx.device.wlanmac_info().mac_addr,
+                    self.ctx.device.wlanmac_info().sta_addr,
                     bss.beacon_period,
                     bss.rsne().is_some()
                     // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
@@ -293,7 +293,7 @@ impl ClientMlme {
     fn on_sme_list_minstrel_peers(&self, txid: fidl::client::Txid) -> Result<(), Error> {
         // TODO(fxbug.dev/79543): Implement once Minstrel is in Rust.
         error!("ListMinstrelPeers is not supported.");
-        let peers = fidl_minstrel::Peers { peers: vec![] };
+        let peers = fidl_minstrel::Peers { addrs: vec![] };
         let mut resp = fidl_mlme::MinstrelListResponse { peers };
         self.ctx
             .device

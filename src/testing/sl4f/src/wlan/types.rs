@@ -183,5 +183,5 @@ pub struct QueryIfaceResponse {
     pub id: u16,
     pub phy_id: u16,
     pub phy_assigned_id: u16,
-    pub mac_addr: [u8; 6],
+    pub sta_addr: [u8; 6],
 }
