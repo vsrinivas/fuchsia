@@ -2,40 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/http_client_integration_test",
+    },
     children: [
         {
-            name: "test-driver",
-            url: "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/test-driver.cm",
-        },
-        {
             name: "netstack-debug",
-            url: "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/netstack-debug.cm",
+            url: "#meta/netstack-debug.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack-debug",
         },
     ],
     offer: [
         {
             protocol: "fuchsia.posix.socket.Provider",
             from: "#netstack-debug",
-            to: "#test-driver",
+            to: "#coll",
         },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#coll",
                 "#netstack-debug",
-                "#test-driver",
             ],
         },
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: "#test-driver",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test-driver",
+            to: "#coll",
         },
     ],
 }

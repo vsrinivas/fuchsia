@@ -23,26 +23,16 @@ rustc_test("http_client_integration_test") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-# TODO(fxbug.dev/71088): Combine `test-driver` and the test root once
-# `use from child` is supported
-fuchsia_component("test-driver") {
-  component_name = "test-driver"
-  testonly = true
-  manifest = "meta/test_driver.cml"
-  deps = [ ":http_client_integration_test" ]
-}
-
 fuchsia_component("component") {
   component_name = "http-client-integration-test"
   testonly = true
   manifest = "meta/http_client_integration_test.cml"
+  deps = [ ":http_client_integration_test" ]
 }
 
 fuchsia_test_package("http-client-integration-tests") {
   test_components = [ ":component" ]
   deps = [
-    ":test-driver",
-
     # The component under test.
     "../:component_v2",
     "//src/connectivity/network/netstack:component-debug-v2",
