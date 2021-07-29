@@ -122,6 +122,9 @@ class HermeticAudioTest : public TestFixture {
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
   ::test::thermal::ControlSyncPtr& thermal_test_control() { return thermal_test_control_sync_; }
+  fuchsia::media::audio::EffectsControllerSyncPtr& effects_controller() {
+    return effects_controller_;
+  }
 
  private:
   // Configurable for an entire test suite by calling `SetUpTestSuiteWithOptions()`.
@@ -162,6 +165,7 @@ class HermeticAudioTest : public TestFixture {
   fuchsia::thermal::ControllerPtr thermal_controller_;
   ::test::thermal::ControlSyncPtr thermal_test_control_sync_;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
+  fuchsia::media::audio::EffectsControllerSyncPtr effects_controller_;
 
   size_t capturer_shim_next_inspect_id_ = 1;
   size_t renderer_shim_next_inspect_id_ = 1;

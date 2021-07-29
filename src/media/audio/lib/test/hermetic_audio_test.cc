@@ -77,6 +77,8 @@ void HermeticAudioTest::SetUp() {
   environment_->ConnectToService(audio_core_.NewRequest());
   AddErrorHandler(audio_core_, "AudioCore");
 
+  environment_->ConnectToService(effects_controller_.NewRequest());
+
   environment_->ConnectToService(ultrasound_factory_.NewRequest());
   AddErrorHandler(ultrasound_factory_, "UltrasoundFactory");
 
