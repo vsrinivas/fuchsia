@@ -48,6 +48,8 @@ the function returns **ZX_ERR_NOT_SUPPORTED**.
 on the kernel command line.
 
 **ZX_ERR_BUFFER_TOO_SMALL**  If the provided buffer is too small for the ZBI.
+In this case, the caller is expected to make the syscall again with a larger
+buffer.
 
 ## SEE ALSO
 

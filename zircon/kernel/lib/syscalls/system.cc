@@ -300,11 +300,17 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
     auto append_result = image.Append(zbi_header_t{
         .type = ZBI_TYPE_CRASHLOG, .length = static_cast<uint32_t>(stashed_crashlog->size())});
     if (append_result.is_error()) {
+      // The only possible storage error that can result from a span-backed
+      // Image would be a failure to increase the capacity. In this case, the
+      // expectation is that ZX_ERR_BUFFER_TOO_SMALL is returned and the caller
+      // will react by making the syscall again with a larger buffer.
+      if (append_result.error_value().storage_error) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+
       printf("mexec: could not append crashlog: ");
       zbitl::PrintViewError(append_result.error_value());
-      // The only possible storage error that can result from a span-backed
-      // Image would be a failure to increase the capacity.
-      return append_result.error_value().storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
+      return ZX_ERR_INTERNAL;
     }
     auto it = ktl::move(append_result).value();
     ktl::span<ktl::byte> payload = (*it).payload;
