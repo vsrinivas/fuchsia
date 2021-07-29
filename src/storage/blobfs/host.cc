@@ -621,7 +621,7 @@ zx::status<> Blobfs::LoadBitmap() {
 zx::status<> Blobfs::LoadNodeMap() {
   const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
   nodes_ = std::make_unique<Inode[]>(nodes_to_load);
-  return ReadBlocks(node_map_start_block_, node_map_block_count_, nodes_.get());
+  return ReadBlocks(node_map_start_block_, NodeMapBlocks(info_), nodes_.get());
 }
 
 zx::status<std::unique_ptr<Blobfs::InodeBlock>> Blobfs::NewBlob(const Digest& digest) {
