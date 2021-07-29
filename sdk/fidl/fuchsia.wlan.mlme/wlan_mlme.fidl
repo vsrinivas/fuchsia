@@ -27,14 +27,14 @@ type ScanRequest = struct {
     txn_id uint64;
     bss_type_selector internal.BssTypeSelector;
     bssid array<uint8, 6>;
-    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     scan_type ScanTypes;
     probe_delay uint32; // in TimeUnits
     channel_list vector<uint8>:optional;
     min_channel_time uint32; // in TimeUnits
     max_channel_time uint32; // in TimeUnits
     // RequestInformation
-    ssid_list vector<bytes:ieee80211.MAX_SSID_BYTE_LEN>:<MAX_SSIDS_PER_SCAN_REQUEST, optional>;
+    ssid_list vector<ieee80211.Ssid>:<MAX_SSIDS_PER_SCAN_REQUEST, optional>;
 // ChannelUsage
 // AccessNetworkType
 // HESSID
@@ -325,7 +325,7 @@ type Country = struct {
 };
 
 type StartRequest = struct {
-    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     bss_type internal.BssType;
     beacon_period uint16; // in TU
     dtim_period uint8;
@@ -386,7 +386,7 @@ type StartConfirm = struct {
 // MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
 
 type StopRequest = struct {
-    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
 };
 
 type StopResultCode = strict enum {

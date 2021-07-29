@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.policy;
@@ -23,7 +23,7 @@ type SecurityType = strict enum {
 /// to distinguish between different network protection (or lack thereof) types.
 type NetworkIdentifier = struct {
     /// Network name, often used by users to choose between networks in the UI.
-    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
 
     /// Protection type (or not) for the network.
     type SecurityType;

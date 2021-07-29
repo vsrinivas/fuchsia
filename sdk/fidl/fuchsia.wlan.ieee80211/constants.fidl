@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.ieee80211;
@@ -10,6 +10,7 @@ library fuchsia.wlan.ieee80211;
 /// name of this constant to emphasize the importance that it not be applied
 /// to the length of a UTF-8 encoded string.
 const MAX_SSID_BYTE_LEN uint8 = 32;
+alias Ssid = bytes:MAX_SSID_BYTE_LEN;
 
 /// IEEE Std 802.11-2016, 9.4.2.99
 const MAX_MESH_ID_BYTE_LEN uint8 = 32;

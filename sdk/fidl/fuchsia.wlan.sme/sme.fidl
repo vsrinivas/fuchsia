@@ -45,7 +45,7 @@ type UserDisconnectReason = strict enum {
 
 type BssInfo = struct {
     bssid array<uint8, 6>;
-    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     rssi_dbm int8;
     snr_db int8;
     channel fuchsia.wlan.common.WlanChannel;
@@ -86,7 +86,7 @@ type PassiveScanRequest = struct {};
 
 type ActiveScanRequest = struct {
     // The SSIDs to scan for. Leave empty for a wildcard active scan.
-    ssids vector<vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN>:16;
+    ssids vector<ieee80211.Ssid>:16;
     // Channels to scan on. Leave empty for all supported channels.
     channels vector<uint8>:500;
 };
@@ -134,7 +134,7 @@ type Credential = flexible union {
 };
 
 type ConnectRequest = struct {
-    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     bss_desc fuchsia.wlan.internal.BssDescription;
     /// Informs SME whether multiple candidates were available, for metrics.
     multiple_bss_candidates bool;
@@ -149,18 +149,16 @@ type ConnectRequest = struct {
 
 type ServingApInfo = struct {
     bssid array<uint8, 6>;
-    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     rssi_dbm int8;
     snr_db int8;
     channel fuchsia.wlan.common.WlanChannel;
     protection Protection;
 };
 
-alias Ssid = vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
-
 type ClientStatusResponse = strict union {
     1: connected ServingApInfo;
-    2: connecting Ssid;
+    2: connecting ieee80211.Ssid;
     3: idle Empty;
 };
 
@@ -185,7 +183,7 @@ protocol ClientSme {
 };
 
 type ApConfig = struct {
-    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     password vector<uint8>:64;
     radio_cfg RadioConfig;
 };
@@ -209,7 +207,7 @@ type StopApResultCode = strict enum {
 };
 
 type Ap = struct {
-    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    ssid ieee80211.Ssid;
     channel uint8;
     num_clients uint16;
 };
