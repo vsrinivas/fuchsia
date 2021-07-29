@@ -16,7 +16,7 @@ use crate::{
         ViewAssistantContext, ViewAssistantPtr, ViewDetails, ViewKey,
     },
 };
-use anyhow::Error;
+use anyhow::{ensure, Error};
 use async_trait::async_trait;
 use euclid::size2;
 use fuchsia_async::{self as fasync};
@@ -56,6 +56,8 @@ pub(crate) struct FrameBufferViewStrategy {
     pub collection_id: u64,
     pixel_format: fuchsia_framebuffer::PixelFormat,
     display_resource_release_delay: std::time::Duration,
+    render_frame_count: usize,
+    presented: Option<u64>,
 }
 
 const RENDER_FRAME_COUNT: usize = 2;
@@ -92,6 +94,8 @@ impl FrameBufferViewStrategy {
         display_resource_release_delay: std::time::Duration,
     ) -> Result<ViewStrategyPtr, Error> {
         let collection_id = 1;
+        let render_frame_count = Config::get().buffer_count.unwrap_or(RENDER_FRAME_COUNT);
+        ensure!(render_frame_count > 0, "buffer_count from config must be greater than zero");
         app_sender.unbounded_send(MessageInternal::Render(key)).expect("unbounded_send");
         app_sender.unbounded_send(MessageInternal::Focus(key)).expect("unbounded_send");
 
@@ -102,6 +106,7 @@ impl FrameBufferViewStrategy {
             &frame_buffer,
             pixel_format,
             display_rotation,
+            render_frame_count,
         )
         .await?;
 
@@ -140,6 +145,8 @@ impl FrameBufferViewStrategy {
             pixel_format,
             collection_id,
             display_resource_release_delay,
+            render_frame_count,
+            presented: None,
         }))
     }
 
@@ -205,6 +212,7 @@ impl FrameBufferViewStrategy {
         frame_buffer: &FrameBufferPtr,
         pixel_format: fuchsia_framebuffer::PixelFormat,
         display_rotation: DisplayRotation,
+        render_frame_count: usize,
     ) -> Result<DisplayResources, Error> {
         let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let unsize = size.floor().to_u32();
@@ -214,7 +222,7 @@ impl FrameBufferViewStrategy {
             unsize.height,
             pixel_format.into(),
             usage,
-            RENDER_FRAME_COUNT,
+            render_frame_count,
         )?;
         let context = {
             let context_token = frame_collection_builder.duplicate_token().await?;
@@ -271,6 +279,7 @@ impl FrameBufferViewStrategy {
                     &self.frame_buffer,
                     self.pixel_format,
                     self.display_rotation,
+                    self.render_frame_count,
                 )
                 .await?,
             );
@@ -280,6 +289,29 @@ impl FrameBufferViewStrategy {
 
     fn display_resources(&mut self) -> &mut DisplayResources {
         self.display_resources.as_mut().expect("display_resources")
+    }
+
+    fn update_image(
+        &mut self,
+        view_details: &ViewDetails,
+        view_assistant: &mut ViewAssistantPtr,
+        image: u64,
+    ) {
+        instant!(
+            "gfx",
+            "FrameBufferViewStrategy::update_image",
+            fuchsia_trace::Scope::Process,
+            "image" => format!("{}", image).as_str()
+        );
+        let buffer_ready_event =
+            self.display_resources().wait_events.get(&image).expect("wait event");
+        let buffer_ready_event =
+            buffer_ready_event.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("duplicate_handle");
+        let framebuffer_context = self.make_context(view_details, Some(image));
+
+        view_assistant
+            .render(&mut self.display_resources().context, buffer_ready_event, &framebuffer_context)
+            .unwrap_or_else(|e| panic!("Update error: {:?}", e));
     }
 }
 
@@ -318,35 +350,24 @@ impl ViewStrategy for FrameBufferViewStrategy {
             .await
             .expect("maybe_reallocate_display_resources");
         if let Some(available) = self.display_resources().frame_set.get_available_image() {
-            instant!(
-                "gfx",
-                "FrameBufferViewStrategy::update_image",
-                fuchsia_trace::Scope::Process,
-                "available" => format!("{}", available).as_str()
-            );
-            let buffer_ready_event =
-                self.display_resources().wait_events.get(&available).expect("wait event");
-            let buffer_ready_event = buffer_ready_event
-                .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                .expect("duplicate_handle");
-            let framebuffer_context = self.make_context(view_details, Some(available));
-
-            view_assistant
-                .render(
-                    &mut self.display_resources().context,
-                    buffer_ready_event,
-                    &framebuffer_context,
-                )
-                .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+            self.update_image(view_details, view_assistant, available);
             self.display_resources().frame_set.mark_prepared(available);
             true
         } else {
-            false
+            if let Some(presented) = self.presented {
+                self.update_image(view_details, view_assistant, presented);
+                true
+            } else {
+                false
+            }
         }
     }
 
     fn present(&mut self, _view_details: &ViewDetails) {
         duration!("gfx", "FrameBufferViewStrategy::present");
+        if self.render_frame_count == 1 && self.presented.is_some() {
+            return;
+        }
         if let Some(prepared) = self.display_resources().frame_set.prepared {
             instant!(
                 "gfx",
@@ -360,6 +381,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
                 fb.present_frame(frame, Some(self.image_sender.clone()), false)
                     .unwrap_or_else(|e| panic!("Present error: {:?}", e));
                 display_resources.frame_set.mark_presented(prepared);
+                self.presented = Some(prepared);
             }
         }
     }
@@ -469,6 +491,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
                 "" => ""
             );
             self.display_resources = None;
+            self.presented = None;
         }
     }
 }

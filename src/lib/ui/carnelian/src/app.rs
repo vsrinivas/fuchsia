@@ -123,6 +123,12 @@ pub struct Config {
     /// value is five seconds, so that the resource will not be rapidly allocated
     /// and deallocated when switching quickly between virtcon and the regular display.
     pub display_resource_release_delay: std::time::Duration,
+    #[serde(default)]
+    /// In a bringup build the display controller might not support multiple
+    /// buffers so Carnelian might have to run with only a
+    /// single buffer. This configuration option is to allow testing rendering
+    /// with a single buffer even in build that supports multiple.
+    pub buffer_count: Option<usize>,
 }
 
 impl Config {
@@ -144,6 +150,7 @@ impl Default for Config {
             display_rotation: DisplayRotation::Deg0,
             keymap_name: None,
             display_resource_release_delay: display_resource_release_delay_default(),
+            buffer_count: None,
         }
     }
 }

@@ -42,7 +42,7 @@ additional_static_libraries = [
 
 data_files = [
 # leave this line here as an example of how to load a config using Fargo
-#    { src = "config/autorepeat_config.toml", dst = "data/config/carnelian.toml"},
+#    { src = "config/single_buffer_config.toml", dst = "data/config/carnelian.toml"},
     { src = "src/render/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
     { src = "examples/static/lenna.png", dst = "data/static/lenna.png"},
     { src = "examples/static/baboon.png", dst = "data/static/baboon.png"},
