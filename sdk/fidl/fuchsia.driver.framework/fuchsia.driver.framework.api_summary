@@ -1,0 +1,61 @@
+protocol fuchsia.driver.framework/Driver
+table/member fuchsia.driver.framework/DriverCapabilities.exposed_dir fuchsia.io/Directory
+table/member fuchsia.driver.framework/DriverCapabilities.node_name string:128
+table/member fuchsia.driver.framework/DriverCapabilities.offers vector<string:100>:64
+resource table fuchsia.driver.framework/DriverCapabilities
+protocol/member fuchsia.driver.framework/DriverHost.Start(fuchsia.driver.framework/DriverStartArgs start_args,server_end:fuchsia.driver.framework/Driver driver)
+protocol fuchsia.driver.framework/DriverHost
+protocol/member fuchsia.driver.framework/DriverIndex.MatchDriver(fuchsia.driver.framework/NodeAddArgs args) -> (fuchsia.driver.framework/DriverIndex_MatchDriver_Result result)
+protocol fuchsia.driver.framework/DriverIndex
+struct/member fuchsia.driver.framework/DriverIndex_MatchDriver_Response.driver fuchsia.driver.framework/MatchedDriver
+struct fuchsia.driver.framework/DriverIndex_MatchDriver_Response
+union/member fuchsia.driver.framework/DriverIndex_MatchDriver_Result.err int32
+union/member fuchsia.driver.framework/DriverIndex_MatchDriver_Result.response fuchsia.driver.framework/DriverIndex_MatchDriver_Response
+strict union fuchsia.driver.framework/DriverIndex_MatchDriver_Result
+table/member fuchsia.driver.framework/DriverStartArgs.capabilities vector<fuchsia.driver.framework/DriverCapabilities>:64
+table/member fuchsia.driver.framework/DriverStartArgs.node client_end:fuchsia.driver.framework/Node
+table/member fuchsia.driver.framework/DriverStartArgs.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
+table/member fuchsia.driver.framework/DriverStartArgs.outgoing_dir server_end:fuchsia.io/Directory
+table/member fuchsia.driver.framework/DriverStartArgs.program fuchsia.data/Dictionary
+table/member fuchsia.driver.framework/DriverStartArgs.symbols vector<fuchsia.driver.framework/NodeSymbol>:64
+table/member fuchsia.driver.framework/DriverStartArgs.url string:4096
+resource table fuchsia.driver.framework/DriverStartArgs
+const fuchsia.driver.framework/MAX_CAPABILITY_COUNT uint8 64
+const fuchsia.driver.framework/MAX_NODE_NAME_LENGTH uint8 128
+const fuchsia.driver.framework/MAX_OFFER_COUNT uint8 64
+const fuchsia.driver.framework/MAX_PROPERTY_COUNT uint8 64
+const fuchsia.driver.framework/MAX_SYMBOL_COUNT uint8 64
+const fuchsia.driver.framework/MAX_SYMBOL_NAME_LENGTH uint8 128
+table/member fuchsia.driver.framework/MatchedDriver.node_index uint32
+table/member fuchsia.driver.framework/MatchedDriver.num_nodes uint32
+table/member fuchsia.driver.framework/MatchedDriver.url string:4096
+table fuchsia.driver.framework/MatchedDriver
+protocol/member fuchsia.driver.framework/Node.AddChild(fuchsia.driver.framework/NodeAddArgs args,server_end:fuchsia.driver.framework/NodeController controller,server_end:<fuchsia.driver.framework/Node,optional> node) -> (fuchsia.driver.framework/Node_AddChild_Result result)
+protocol fuchsia.driver.framework/Node
+table/member fuchsia.driver.framework/NodeAddArgs.name string:128
+table/member fuchsia.driver.framework/NodeAddArgs.offers vector<string:100>:64
+table/member fuchsia.driver.framework/NodeAddArgs.properties vector<fuchsia.driver.framework/NodeProperty>:64
+table/member fuchsia.driver.framework/NodeAddArgs.symbols vector<fuchsia.driver.framework/NodeSymbol>:64
+table fuchsia.driver.framework/NodeAddArgs
+protocol/member fuchsia.driver.framework/NodeController.Remove()
+protocol fuchsia.driver.framework/NodeController
+enum/member fuchsia.driver.framework/NodeError.NAME_ALREADY_EXISTS 4
+enum/member fuchsia.driver.framework/NodeError.NAME_INVALID 3
+enum/member fuchsia.driver.framework/NodeError.NAME_MISSING 2
+enum/member fuchsia.driver.framework/NodeError.NODE_REMOVED 1
+enum/member fuchsia.driver.framework/NodeError.OFFER_ALREADY_EXISTS 5
+enum/member fuchsia.driver.framework/NodeError.SYMBOL_ADDRESS_MISSING 7
+enum/member fuchsia.driver.framework/NodeError.SYMBOL_ALREADY_EXISTS 8
+enum/member fuchsia.driver.framework/NodeError.SYMBOL_NAME_MISSING 6
+strict enum fuchsia.driver.framework/NodeError uint32
+table/member fuchsia.driver.framework/NodeProperty.key uint32
+table/member fuchsia.driver.framework/NodeProperty.value uint32
+table fuchsia.driver.framework/NodeProperty
+table/member fuchsia.driver.framework/NodeSymbol.address uint64
+table/member fuchsia.driver.framework/NodeSymbol.name string:128
+table fuchsia.driver.framework/NodeSymbol
+struct fuchsia.driver.framework/Node_AddChild_Response
+union/member fuchsia.driver.framework/Node_AddChild_Result.err fuchsia.driver.framework/NodeError
+union/member fuchsia.driver.framework/Node_AddChild_Result.response fuchsia.driver.framework/Node_AddChild_Response
+strict union fuchsia.driver.framework/Node_AddChild_Result
+library fuchsia.driver.framework

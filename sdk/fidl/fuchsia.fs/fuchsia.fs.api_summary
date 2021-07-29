@@ -1,0 +1,43 @@
+protocol/member fuchsia.fs/Admin.GetRoot(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.fs/Admin.Shutdown() -> ()
+protocol fuchsia.fs/Admin
+table/member fuchsia.fs/FilesystemInfo.block_size uint32
+table/member fuchsia.fs/FilesystemInfo.device_path string:4095
+table/member fuchsia.fs/FilesystemInfo.free_shared_pool_bytes uint64
+table/member fuchsia.fs/FilesystemInfo.fs_id zx/handle:EVENT
+table/member fuchsia.fs/FilesystemInfo.fs_type fuchsia.fs/FsType
+table/member fuchsia.fs/FilesystemInfo.max_node_name_size uint32
+table/member fuchsia.fs/FilesystemInfo.name string:32
+table/member fuchsia.fs/FilesystemInfo.total_bytes uint64
+table/member fuchsia.fs/FilesystemInfo.total_nodes uint64
+table/member fuchsia.fs/FilesystemInfo.used_bytes uint64
+table/member fuchsia.fs/FilesystemInfo.used_nodes uint64
+resource table fuchsia.fs/FilesystemInfo
+bits/member fuchsia.fs/FilesystemInfoQuery.BLOCK_SIZE 64
+bits/member fuchsia.fs/FilesystemInfoQuery.DEVICE_PATH 1024
+bits/member fuchsia.fs/FilesystemInfoQuery.FREE_SHARED_POOL_BYTES 16
+bits/member fuchsia.fs/FilesystemInfoQuery.FS_ID 32
+bits/member fuchsia.fs/FilesystemInfoQuery.FS_TYPE 256
+bits/member fuchsia.fs/FilesystemInfoQuery.MAX_NODE_NAME_SIZE 128
+bits/member fuchsia.fs/FilesystemInfoQuery.NAME 512
+bits/member fuchsia.fs/FilesystemInfoQuery.TOTAL_BYTES 1
+bits/member fuchsia.fs/FilesystemInfoQuery.TOTAL_NODES 4
+bits/member fuchsia.fs/FilesystemInfoQuery.USED_BYTES 2
+bits/member fuchsia.fs/FilesystemInfoQuery.USED_NODES 8
+strict bits fuchsia.fs/FilesystemInfoQuery uint64
+enum/member fuchsia.fs/FsType.BLOBFS 2657701153
+enum/member fuchsia.fs/FsType.FACTORYFS 510217505
+enum/member fuchsia.fs/FsType.FATFS 3463007521
+enum/member fuchsia.fs/FsType.MEMFS 1047088417
+enum/member fuchsia.fs/FsType.MINFS 1852394785
+strict enum fuchsia.fs/FsType uint32
+const fuchsia.fs/MAX_FS_NAME_LENGTH uint64 32
+protocol/member fuchsia.fs/Query.GetInfo(fuchsia.fs/FilesystemInfoQuery query) -> (fuchsia.fs/Query_GetInfo_Result result)
+protocol/member fuchsia.fs/Query.IsNodeInFilesystem(zx/handle:EVENT token) -> (bool is_in_filesystem)
+protocol fuchsia.fs/Query
+struct/member fuchsia.fs/Query_GetInfo_Response.info fuchsia.fs/FilesystemInfo
+resource struct fuchsia.fs/Query_GetInfo_Response
+union/member fuchsia.fs/Query_GetInfo_Result.err int32
+union/member fuchsia.fs/Query_GetInfo_Result.response fuchsia.fs/Query_GetInfo_Response
+resource strict union fuchsia.fs/Query_GetInfo_Result
+library fuchsia.fs

@@ -1,0 +1,51 @@
+union/member fuchsia.net/IpAddress.ipv4 fuchsia.net/Ipv4Address
+union/member fuchsia.net/IpAddress.ipv6 fuchsia.net/Ipv6Address
+strict union fuchsia.net/IpAddress
+enum/member fuchsia.net/IpVersion.V4 1
+enum/member fuchsia.net/IpVersion.V6 2
+strict enum fuchsia.net/IpVersion uint32
+struct/member fuchsia.net/Ipv4Address.addr array<uint8,4>
+struct fuchsia.net/Ipv4Address
+struct/member fuchsia.net/Ipv4SocketAddress.address fuchsia.net/Ipv4Address
+struct/member fuchsia.net/Ipv4SocketAddress.port uint16
+struct fuchsia.net/Ipv4SocketAddress
+struct/member fuchsia.net/Ipv6Address.addr array<uint8,16>
+struct fuchsia.net/Ipv6Address
+struct/member fuchsia.net/Ipv6SocketAddress.address fuchsia.net/Ipv6Address
+struct/member fuchsia.net/Ipv6SocketAddress.port uint16
+struct/member fuchsia.net/Ipv6SocketAddress.zone_index uint64
+struct fuchsia.net/Ipv6SocketAddress
+enum/member fuchsia.net/LookupError.INTERNAL_ERROR 4
+enum/member fuchsia.net/LookupError.INVALID_ARGS 3
+enum/member fuchsia.net/LookupError.NOT_FOUND 1
+enum/member fuchsia.net/LookupError.TRANSIENT 2
+strict enum fuchsia.net/LookupError uint32
+table/member fuchsia.net/LookupIpOptions2.ipv4_lookup bool
+table/member fuchsia.net/LookupIpOptions2.ipv6_lookup bool
+table/member fuchsia.net/LookupIpOptions2.sort_addresses bool
+table fuchsia.net/LookupIpOptions2
+table/member fuchsia.net/LookupResult.addresses vector<fuchsia.net/IpAddress>
+table fuchsia.net/LookupResult
+const fuchsia.net/MAX_HOSTNAME_SIZE uint64 255
+struct/member fuchsia.net/MacAddress.octets array<uint8,6>
+struct fuchsia.net/MacAddress
+protocol/member fuchsia.net/NameLookup.LookupHostname(fuchsia.net/IpAddress addr) -> (fuchsia.net/NameLookup_LookupHostname_Result result)
+protocol/member fuchsia.net/NameLookup.LookupIp2(string:255 hostname,fuchsia.net/LookupIpOptions2 options) -> (fuchsia.net/NameLookup_LookupIp2_Result result)
+protocol fuchsia.net/NameLookup
+struct/member fuchsia.net/NameLookup_LookupHostname_Response.hostname string:255
+struct fuchsia.net/NameLookup_LookupHostname_Response
+union/member fuchsia.net/NameLookup_LookupHostname_Result.err fuchsia.net/LookupError
+union/member fuchsia.net/NameLookup_LookupHostname_Result.response fuchsia.net/NameLookup_LookupHostname_Response
+strict union fuchsia.net/NameLookup_LookupHostname_Result
+struct/member fuchsia.net/NameLookup_LookupIp2_Response.result fuchsia.net/LookupResult
+struct fuchsia.net/NameLookup_LookupIp2_Response
+union/member fuchsia.net/NameLookup_LookupIp2_Result.err fuchsia.net/LookupError
+union/member fuchsia.net/NameLookup_LookupIp2_Result.response fuchsia.net/NameLookup_LookupIp2_Response
+strict union fuchsia.net/NameLookup_LookupIp2_Result
+union/member fuchsia.net/SocketAddress.ipv4 fuchsia.net/Ipv4SocketAddress
+union/member fuchsia.net/SocketAddress.ipv6 fuchsia.net/Ipv6SocketAddress
+strict union fuchsia.net/SocketAddress
+struct/member fuchsia.net/Subnet.addr fuchsia.net/IpAddress
+struct/member fuchsia.net/Subnet.prefix_len uint8
+struct fuchsia.net/Subnet
+library fuchsia.net

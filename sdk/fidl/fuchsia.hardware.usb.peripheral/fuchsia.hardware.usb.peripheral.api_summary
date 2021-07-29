@@ -1,0 +1,33 @@
+protocol/member fuchsia.hardware.usb.peripheral/Device.ClearFunctions() -> ()
+protocol/member fuchsia.hardware.usb.peripheral/Device.SetConfiguration(fuchsia.hardware.usb.peripheral/DeviceDescriptor device_desc,vector<vector<fuchsia.hardware.usb.peripheral/FunctionDescriptor>:32>:5 config_descriptors) -> (fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Result result)
+protocol/member fuchsia.hardware.usb.peripheral/Device.SetStateChangeListener(server_end:fuchsia.hardware.usb.peripheral/Events listener)
+protocol fuchsia.hardware.usb.peripheral/Device
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.b_device_class uint8
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.b_device_protocol uint8
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.b_device_sub_class uint8
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.b_max_packet_size0 uint8
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.b_num_configurations uint8
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.bcd_device uint16
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.bcd_usb uint16
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.id_product uint16
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.id_vendor uint16
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.manufacturer string:127
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.product string:127
+struct/member fuchsia.hardware.usb.peripheral/DeviceDescriptor.serial string:127
+struct fuchsia.hardware.usb.peripheral/DeviceDescriptor
+struct fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Response
+union/member fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Result.err int32
+union/member fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Result.response fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Response
+strict union fuchsia.hardware.usb.peripheral/Device_SetConfiguration_Result
+protocol/member fuchsia.hardware.usb.peripheral/Events.FunctionRegistered() -> ()
+protocol/member fuchsia.hardware.usb.peripheral/Events.FunctionsCleared()
+protocol fuchsia.hardware.usb.peripheral/Events
+struct/member fuchsia.hardware.usb.peripheral/FunctionDescriptor.interface_class uint8
+struct/member fuchsia.hardware.usb.peripheral/FunctionDescriptor.interface_protocol uint8
+struct/member fuchsia.hardware.usb.peripheral/FunctionDescriptor.interface_subclass uint8
+struct fuchsia.hardware.usb.peripheral/FunctionDescriptor
+const fuchsia.hardware.usb.peripheral/MAX_CONFIG_DESCRIPTORS uint32 5
+const fuchsia.hardware.usb.peripheral/MAX_FUNCTION_DESCRIPTORS uint32 32
+const fuchsia.hardware.usb.peripheral/MAX_STRING_DESCRIPTORS uint32 255
+const fuchsia.hardware.usb.peripheral/MAX_STRING_LENGTH uint32 127
+library fuchsia.hardware.usb.peripheral

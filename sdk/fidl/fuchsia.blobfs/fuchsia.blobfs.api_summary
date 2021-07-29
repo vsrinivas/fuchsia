@@ -1,0 +1,9 @@
+protocol/member fuchsia.blobfs/Blobfs.GetAllocatedRegions() -> (int32 status,zx/handle:<VMO,optional> regions,uint64 count)
+protocol/member fuchsia.blobfs/Blobfs.SetCorruptBlobHandler(client_end:fuchsia.blobfs/CorruptBlobHandler handler) -> (int32 status)
+protocol fuchsia.blobfs/Blobfs
+struct/member fuchsia.blobfs/BlockRegion.length uint64
+struct/member fuchsia.blobfs/BlockRegion.offset uint64
+struct fuchsia.blobfs/BlockRegion
+protocol/member fuchsia.blobfs/CorruptBlobHandler.CorruptBlob(vector<uint8>:64 merkleroot)
+protocol fuchsia.blobfs/CorruptBlobHandler
+library fuchsia.blobfs

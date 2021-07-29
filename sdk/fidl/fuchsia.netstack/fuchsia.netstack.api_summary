@@ -1,0 +1,45 @@
+struct/member fuchsia.netstack/InterfaceConfig.filepath string
+struct/member fuchsia.netstack/InterfaceConfig.metric uint32
+struct/member fuchsia.netstack/InterfaceConfig.name string:15
+struct fuchsia.netstack/InterfaceConfig
+struct/member fuchsia.netstack/NetErr.message string
+struct/member fuchsia.netstack/NetErr.status fuchsia.netstack/Status
+struct fuchsia.netstack/NetErr
+protocol/member fuchsia.netstack/Netstack.AddEthernetDevice(string topological_path,fuchsia.netstack/InterfaceConfig interface_config,fuchsia.hardware.ethernet/Device device) -> (fuchsia.netstack/Netstack_AddEthernetDevice_Result result)
+protocol/member fuchsia.netstack/Netstack.BridgeInterfaces(vector<uint32> nicids) -> (fuchsia.netstack/NetErr result,uint32 nicid)
+protocol/member fuchsia.netstack/Netstack.GetDhcpClient(uint32 nicid,server_end:fuchsia.net.dhcp/Client client) -> (fuchsia.netstack/Netstack_GetDhcpClient_Result result)
+protocol/member fuchsia.netstack/Netstack.GetRouteTable() -> (vector<fuchsia.netstack/RouteTableEntry> rt)
+protocol/member fuchsia.netstack/Netstack.RemoveInterfaceAddress(uint32 nicid,fuchsia.net/IpAddress addr,uint8 prefix_len) -> (fuchsia.netstack/NetErr result)
+protocol/member fuchsia.netstack/Netstack.SetInterfaceAddress(uint32 nicid,fuchsia.net/IpAddress addr,uint8 prefix_len) -> (fuchsia.netstack/NetErr result)
+protocol/member fuchsia.netstack/Netstack.SetInterfaceMetric(uint32 nicid,uint32 metric) -> (fuchsia.netstack/NetErr result)
+protocol/member fuchsia.netstack/Netstack.SetInterfaceStatus(uint32 nicid,bool enabled)
+protocol/member fuchsia.netstack/Netstack.StartRouteTableTransaction(server_end:fuchsia.netstack/RouteTableTransaction route_table_transaction) -> (int32 status)
+protocol fuchsia.netstack/Netstack
+struct/member fuchsia.netstack/Netstack_AddEthernetDevice_Response.nicid uint32
+struct fuchsia.netstack/Netstack_AddEthernetDevice_Response
+union/member fuchsia.netstack/Netstack_AddEthernetDevice_Result.err int32
+union/member fuchsia.netstack/Netstack_AddEthernetDevice_Result.response fuchsia.netstack/Netstack_AddEthernetDevice_Response
+strict union fuchsia.netstack/Netstack_AddEthernetDevice_Result
+struct fuchsia.netstack/Netstack_GetDhcpClient_Response
+union/member fuchsia.netstack/Netstack_GetDhcpClient_Result.err int32
+union/member fuchsia.netstack/Netstack_GetDhcpClient_Result.response fuchsia.netstack/Netstack_GetDhcpClient_Response
+strict union fuchsia.netstack/Netstack_GetDhcpClient_Result
+struct/member fuchsia.netstack/RouteTableEntry.destination fuchsia.net/Subnet
+struct/member fuchsia.netstack/RouteTableEntry.gateway fuchsia.net/IpAddress:optional
+struct/member fuchsia.netstack/RouteTableEntry.metric uint32
+struct/member fuchsia.netstack/RouteTableEntry.nicid uint32
+struct fuchsia.netstack/RouteTableEntry
+protocol/member fuchsia.netstack/RouteTableTransaction.AddRoute(fuchsia.netstack/RouteTableEntry r) -> (int32 status)
+protocol/member fuchsia.netstack/RouteTableTransaction.DelRoute(fuchsia.netstack/RouteTableEntry r) -> (int32 status)
+protocol fuchsia.netstack/RouteTableTransaction
+struct/member fuchsia.netstack/SocketAddress.addr fuchsia.net/IpAddress
+struct/member fuchsia.netstack/SocketAddress.port uint16
+struct fuchsia.netstack/SocketAddress
+enum/member fuchsia.netstack/Status.DNS_ERROR 2
+enum/member fuchsia.netstack/Status.IPV4_ONLY 4
+enum/member fuchsia.netstack/Status.OK 0
+enum/member fuchsia.netstack/Status.PARSE_ERROR 3
+enum/member fuchsia.netstack/Status.UNKNOWN_ERROR 1
+enum/member fuchsia.netstack/Status.UNKNOWN_INTERFACE 5
+strict enum fuchsia.netstack/Status uint32
+library fuchsia.netstack

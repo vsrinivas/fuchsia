@@ -1,0 +1,111 @@
+struct/member fuchsia.bluetooth/Address.bytes array<uint8,6>
+struct/member fuchsia.bluetooth/Address.type fuchsia.bluetooth/AddressType
+struct fuchsia.bluetooth/Address
+enum/member fuchsia.bluetooth/AddressType.PUBLIC 1
+enum/member fuchsia.bluetooth/AddressType.RANDOM 2
+strict enum fuchsia.bluetooth/AddressType uint8
+enum/member fuchsia.bluetooth/Appearance.BARCODE_SCANNER 704
+enum/member fuchsia.bluetooth/Appearance.BLOOD_PRESSURE 896
+enum/member fuchsia.bluetooth/Appearance.BLOOD_PRESSURE_ARM 897
+enum/member fuchsia.bluetooth/Appearance.BLOOD_PRESSURE_WRIST 898
+enum/member fuchsia.bluetooth/Appearance.CLOCK 256
+enum/member fuchsia.bluetooth/Appearance.COMPUTER 128
+enum/member fuchsia.bluetooth/Appearance.CYCLING 1152
+enum/member fuchsia.bluetooth/Appearance.CYCLING_CADENCE_SENSOR 1155
+enum/member fuchsia.bluetooth/Appearance.CYCLING_COMPUTER 1153
+enum/member fuchsia.bluetooth/Appearance.CYCLING_POWER_SENSOR 1156
+enum/member fuchsia.bluetooth/Appearance.CYCLING_SPEED_AND_CADENCE_SENSOR 1157
+enum/member fuchsia.bluetooth/Appearance.CYCLING_SPEED_SENSOR 1154
+enum/member fuchsia.bluetooth/Appearance.DISPLAY 320
+enum/member fuchsia.bluetooth/Appearance.EYE_GLASSES 448
+enum/member fuchsia.bluetooth/Appearance.GLUCOSE_METER 1024
+enum/member fuchsia.bluetooth/Appearance.GLUCOSE_MONITOR 3328
+enum/member fuchsia.bluetooth/Appearance.HEART_RATE_SENSOR 832
+enum/member fuchsia.bluetooth/Appearance.HEART_RATE_SENSOR_BELT 833
+enum/member fuchsia.bluetooth/Appearance.HID 960
+enum/member fuchsia.bluetooth/Appearance.HID_BARCODE_SCANNER 968
+enum/member fuchsia.bluetooth/Appearance.HID_CARD_READER 966
+enum/member fuchsia.bluetooth/Appearance.HID_DIGITAL_PEN 967
+enum/member fuchsia.bluetooth/Appearance.HID_DIGITIZER_TABLET 965
+enum/member fuchsia.bluetooth/Appearance.HID_GAMEPAD 964
+enum/member fuchsia.bluetooth/Appearance.HID_JOYSTICK 963
+enum/member fuchsia.bluetooth/Appearance.HID_KEYBOARD 961
+enum/member fuchsia.bluetooth/Appearance.HID_MOUSE 962
+enum/member fuchsia.bluetooth/Appearance.KEYRING 576
+enum/member fuchsia.bluetooth/Appearance.MEDIA_PLAYER 640
+enum/member fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY 3264
+enum/member fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY_SCOOTER 3266
+enum/member fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY_WHEELCHAIR 3265
+enum/member fuchsia.bluetooth/Appearance.PHONE 64
+enum/member fuchsia.bluetooth/Appearance.PULSE_OXIMETER 3136
+enum/member fuchsia.bluetooth/Appearance.PULSE_OXIMETER_FINGERTIP 3137
+enum/member fuchsia.bluetooth/Appearance.PULSE_OXIMETER_WRIST 3138
+enum/member fuchsia.bluetooth/Appearance.REMOTE_CONTROL 384
+enum/member fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR 1088
+enum/member fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_IN_SHOE 1089
+enum/member fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_ON_HIP 1091
+enum/member fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_ON_SHOE 1090
+enum/member fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY 5184
+enum/member fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY 5186
+enum/member fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_POD 5188
+enum/member fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_DISPLAY 5185
+enum/member fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_POD 5187
+enum/member fuchsia.bluetooth/Appearance.TAG 512
+enum/member fuchsia.bluetooth/Appearance.THERMOMETER 768
+enum/member fuchsia.bluetooth/Appearance.THERMOMETER_EAR 769
+enum/member fuchsia.bluetooth/Appearance.UNKNOWN 0
+enum/member fuchsia.bluetooth/Appearance.WATCH 192
+enum/member fuchsia.bluetooth/Appearance.WATCH_SPORTS 193
+enum/member fuchsia.bluetooth/Appearance.WEIGHT_SCALE 3200
+flexible enum fuchsia.bluetooth/Appearance uint16
+struct/member fuchsia.bluetooth/Bool.value bool
+struct fuchsia.bluetooth/Bool
+enum/member fuchsia.bluetooth/ConnectionRole.FOLLOWER 2
+enum/member fuchsia.bluetooth/ConnectionRole.LEADER 1
+strict enum fuchsia.bluetooth/ConnectionRole uint32
+struct/member fuchsia.bluetooth/DeviceClass.value uint32
+struct fuchsia.bluetooth/DeviceClass
+struct/member fuchsia.bluetooth/Error.description string:optional
+struct/member fuchsia.bluetooth/Error.error_code fuchsia.bluetooth/ErrorCode
+struct/member fuchsia.bluetooth/Error.protocol_error_code uint32
+struct fuchsia.bluetooth/Error
+enum/member fuchsia.bluetooth/ErrorCode.ALREADY 10
+enum/member fuchsia.bluetooth/ErrorCode.BAD_STATE 8
+enum/member fuchsia.bluetooth/ErrorCode.BLUETOOTH_NOT_AVAILABLE 7
+enum/member fuchsia.bluetooth/ErrorCode.CANCELED 2
+enum/member fuchsia.bluetooth/ErrorCode.FAILED 1
+enum/member fuchsia.bluetooth/ErrorCode.INVALID_ARGUMENTS 9
+enum/member fuchsia.bluetooth/ErrorCode.IN_PROGRESS 3
+enum/member fuchsia.bluetooth/ErrorCode.NOT_FOUND 5
+enum/member fuchsia.bluetooth/ErrorCode.NOT_SUPPORTED 6
+enum/member fuchsia.bluetooth/ErrorCode.PROTOCOL_ERROR 11
+enum/member fuchsia.bluetooth/ErrorCode.TIMED_OUT 4
+enum/member fuchsia.bluetooth/ErrorCode.UNKNOWN 0
+strict enum fuchsia.bluetooth/ErrorCode uint32
+struct/member fuchsia.bluetooth/HostId.value uint64
+struct fuchsia.bluetooth/HostId
+struct/member fuchsia.bluetooth/Int8.value int8
+struct fuchsia.bluetooth/Int8
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_AUDIO_VIDEO uint32 1024
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_COMPUTER uint32 256
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_HEALTH uint32 2304
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_IMAGING uint32 1536
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_LAN uint32 768
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MASK uint32 7936
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MISCELLANEOUS uint32 0
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PERIPHERAL uint32 1280
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PHONE uint32 512
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_TOY uint32 2048
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_UNCATEGORIZED uint32 7936
+const fuchsia.bluetooth/MAJOR_DEVICE_CLASS_WEARABLE uint32 1792
+const fuchsia.bluetooth/MAX_DEVICE_NAME_LENGTH uint8 248
+struct/member fuchsia.bluetooth/PeerId.value uint64
+struct fuchsia.bluetooth/PeerId
+struct/member fuchsia.bluetooth/Status.error box<fuchsia.bluetooth/Error>
+struct fuchsia.bluetooth/Status
+struct/member fuchsia.bluetooth/UInt16.value uint16
+struct fuchsia.bluetooth/UInt16
+const fuchsia.bluetooth/UUID_STRING_REPRESENTATION_LENGTH uint8 36
+struct/member fuchsia.bluetooth/Uuid.value array<uint8,16>
+struct fuchsia.bluetooth/Uuid
+library fuchsia.bluetooth

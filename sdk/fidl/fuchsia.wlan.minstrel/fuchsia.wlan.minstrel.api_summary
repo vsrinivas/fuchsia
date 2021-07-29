@@ -1,0 +1,22 @@
+struct/member fuchsia.wlan.minstrel/Peer.basic_highest uint16
+struct/member fuchsia.wlan.minstrel/Peer.basic_max_probability uint16
+struct/member fuchsia.wlan.minstrel/Peer.entries vector<fuchsia.wlan.minstrel/StatsEntry>
+struct/member fuchsia.wlan.minstrel/Peer.mac_addr array<uint8,6>
+struct/member fuchsia.wlan.minstrel/Peer.max_probability uint16
+struct/member fuchsia.wlan.minstrel/Peer.max_tp uint16
+struct/member fuchsia.wlan.minstrel/Peer.probes uint64
+struct fuchsia.wlan.minstrel/Peer
+struct/member fuchsia.wlan.minstrel/Peers.peers vector<vector<uint8>:6>
+struct fuchsia.wlan.minstrel/Peers
+struct/member fuchsia.wlan.minstrel/StatsEntry.attempts_cur uint64
+struct/member fuchsia.wlan.minstrel/StatsEntry.attempts_total uint64
+struct/member fuchsia.wlan.minstrel/StatsEntry.cur_tp float32
+struct/member fuchsia.wlan.minstrel/StatsEntry.probability float32
+struct/member fuchsia.wlan.minstrel/StatsEntry.probe_cycles_skipped uint8
+struct/member fuchsia.wlan.minstrel/StatsEntry.probes_total uint64
+struct/member fuchsia.wlan.minstrel/StatsEntry.success_cur uint64
+struct/member fuchsia.wlan.minstrel/StatsEntry.success_total uint64
+struct/member fuchsia.wlan.minstrel/StatsEntry.tx_vec_desc string
+struct/member fuchsia.wlan.minstrel/StatsEntry.tx_vector_idx uint16
+struct fuchsia.wlan.minstrel/StatsEntry
+library fuchsia.wlan.minstrel

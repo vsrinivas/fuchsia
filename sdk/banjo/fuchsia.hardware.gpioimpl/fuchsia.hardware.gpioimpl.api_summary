@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.ConfigIn(uint32 index,uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.ConfigOut(uint32 index,uint8 initial_value) -> (int32 s)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.GetInterrupt(uint32 index,uint32 flags) -> (int32 s,zx/handle:INTERRUPT irq)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.Read(uint32 index) -> (int32 s,uint8 value)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.ReleaseInterrupt(uint32 index) -> (int32 s)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.SetAltFunction(uint32 index,uint64 function) -> (int32 s)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.SetDriveStrength(uint32 index,uint64 ua) -> (int32 s,uint64 actual_ua)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.SetPolarity(uint32 index,fuchsia.hardware.gpio/GpioPolarity polarity) -> (int32 s)
+protocol/member fuchsia.hardware.gpioimpl/GpioImpl.Write(uint32 index,uint8 value) -> (int32 s)
+protocol fuchsia.hardware.gpioimpl/GpioImpl
+library fuchsia.hardware.gpioimpl

@@ -1,0 +1,42 @@
+const fuchsia.hardware.ethernet/ETHERNET_MULTICAST_FILTER_OVERFLOW int32 -1
+const fuchsia.hardware.ethernet/ETHERNET_SETPARAM_DUMP_REGS uint32 4
+const fuchsia.hardware.ethernet/ETHERNET_SETPARAM_MULTICAST_FILTER uint32 3
+const fuchsia.hardware.ethernet/ETHERNET_SETPARAM_MULTICAST_PROMISC uint32 2
+const fuchsia.hardware.ethernet/ETHERNET_SETPARAM_PROMISC uint32 1
+const fuchsia.hardware.ethernet/ETHERNET_STATUS_ONLINE uint32 1
+const fuchsia.hardware.ethernet/ETHERNET_TX_OPT_MORE uint32 1
+const fuchsia.hardware.ethernet/ETH_FRAME_MAX_HDR_SIZE uint32 18
+const fuchsia.hardware.ethernet/ETH_FRAME_MAX_SIZE uint32 1518
+const fuchsia.hardware.ethernet/ETH_MAC_SIZE uint32 6
+const fuchsia.hardware.ethernet/ETH_MTU_SIZE uint32 1500
+struct/member fuchsia.hardware.ethernet/EthDevMetadata.did uint32
+struct/member fuchsia.hardware.ethernet/EthDevMetadata.pid uint32
+struct/member fuchsia.hardware.ethernet/EthDevMetadata.vid uint32
+struct fuchsia.hardware.ethernet/EthDevMetadata
+enum/member fuchsia.hardware.ethernet/EthernetFeature.DMA 4
+enum/member fuchsia.hardware.ethernet/EthernetFeature.SYNTH 2
+enum/member fuchsia.hardware.ethernet/EthernetFeature.WLAN 1
+strict enum fuchsia.hardware.ethernet/EthernetFeature uint32
+protocol/member fuchsia.hardware.ethernet/EthernetIfc.Recv(vector<uint8> data,uint32 flags) -> ()
+protocol/member fuchsia.hardware.ethernet/EthernetIfc.Status(uint32 status) -> ()
+protocol fuchsia.hardware.ethernet/EthernetIfc
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.GetBti() -> (zx/handle:BTI bti)
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.Query(uint32 options) -> (int32 s,fuchsia.hardware.ethernet/EthernetInfo info)
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.QueueTx(uint32 options,fuchsia.hardware.ethernet/EthernetNetbuf netbuf) -> (int32 status,fuchsia.hardware.ethernet/EthernetNetbuf netbuf)
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.SetParam(uint32 param,int32 value,vector<uint8> data) -> (int32 s)
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.Start(client_end:fuchsia.hardware.ethernet/EthernetIfc ifc) -> (int32 s)
+protocol/member fuchsia.hardware.ethernet/EthernetImpl.Stop() -> ()
+protocol fuchsia.hardware.ethernet/EthernetImpl
+struct/member fuchsia.hardware.ethernet/EthernetInfo.features uint32
+struct/member fuchsia.hardware.ethernet/EthernetInfo.mac array<uint8,6>
+struct/member fuchsia.hardware.ethernet/EthernetInfo.mtu uint32
+struct/member fuchsia.hardware.ethernet/EthernetInfo.netbuf_size uint64
+struct/member fuchsia.hardware.ethernet/EthernetInfo.reserved0 array<uint8,2>
+struct/member fuchsia.hardware.ethernet/EthernetInfo.reserved1 array<uint32,2>
+struct fuchsia.hardware.ethernet/EthernetInfo
+struct/member fuchsia.hardware.ethernet/EthernetNetbuf.data vector<uint8>
+struct/member fuchsia.hardware.ethernet/EthernetNetbuf.flags uint32
+struct/member fuchsia.hardware.ethernet/EthernetNetbuf.phys uint64
+struct/member fuchsia.hardware.ethernet/EthernetNetbuf.reserved uint16
+struct fuchsia.hardware.ethernet/EthernetNetbuf
+library fuchsia.hardware.ethernet

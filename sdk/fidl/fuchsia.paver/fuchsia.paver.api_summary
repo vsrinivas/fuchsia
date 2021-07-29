@@ -1,0 +1,99 @@
+enum/member fuchsia.paver/Asset.KERNEL 1
+enum/member fuchsia.paver/Asset.VERIFIED_BOOT_METADATA 2
+strict enum fuchsia.paver/Asset uint32
+protocol/member fuchsia.paver/BootManager.Flush() -> (int32 status)
+protocol/member fuchsia.paver/BootManager.QueryActiveConfiguration() -> (fuchsia.paver/BootManager_QueryActiveConfiguration_Result result)
+protocol/member fuchsia.paver/BootManager.QueryConfigurationStatus(fuchsia.paver/Configuration configuration) -> (fuchsia.paver/BootManager_QueryConfigurationStatus_Result result)
+protocol/member fuchsia.paver/BootManager.QueryCurrentConfiguration() -> (fuchsia.paver/BootManager_QueryCurrentConfiguration_Result result)
+protocol/member fuchsia.paver/BootManager.SetConfigurationActive(fuchsia.paver/Configuration configuration) -> (int32 status)
+protocol/member fuchsia.paver/BootManager.SetConfigurationHealthy(fuchsia.paver/Configuration configuration) -> (int32 status)
+protocol/member fuchsia.paver/BootManager.SetConfigurationUnbootable(fuchsia.paver/Configuration configuration) -> (int32 status)
+protocol fuchsia.paver/BootManager
+struct/member fuchsia.paver/BootManager_QueryActiveConfiguration_Response.configuration fuchsia.paver/Configuration
+struct fuchsia.paver/BootManager_QueryActiveConfiguration_Response
+union/member fuchsia.paver/BootManager_QueryActiveConfiguration_Result.err int32
+union/member fuchsia.paver/BootManager_QueryActiveConfiguration_Result.response fuchsia.paver/BootManager_QueryActiveConfiguration_Response
+strict union fuchsia.paver/BootManager_QueryActiveConfiguration_Result
+struct/member fuchsia.paver/BootManager_QueryConfigurationStatus_Response.status fuchsia.paver/ConfigurationStatus
+struct fuchsia.paver/BootManager_QueryConfigurationStatus_Response
+union/member fuchsia.paver/BootManager_QueryConfigurationStatus_Result.err int32
+union/member fuchsia.paver/BootManager_QueryConfigurationStatus_Result.response fuchsia.paver/BootManager_QueryConfigurationStatus_Response
+strict union fuchsia.paver/BootManager_QueryConfigurationStatus_Result
+struct/member fuchsia.paver/BootManager_QueryCurrentConfiguration_Response.configuration fuchsia.paver/Configuration
+struct fuchsia.paver/BootManager_QueryCurrentConfiguration_Response
+union/member fuchsia.paver/BootManager_QueryCurrentConfiguration_Result.err int32
+union/member fuchsia.paver/BootManager_QueryCurrentConfiguration_Result.response fuchsia.paver/BootManager_QueryCurrentConfiguration_Response
+strict union fuchsia.paver/BootManager_QueryCurrentConfiguration_Result
+enum/member fuchsia.paver/Configuration.A 1
+enum/member fuchsia.paver/Configuration.B 2
+enum/member fuchsia.paver/Configuration.RECOVERY 3
+strict enum fuchsia.paver/Configuration uint32
+enum/member fuchsia.paver/ConfigurationStatus.HEALTHY 1
+enum/member fuchsia.paver/ConfigurationStatus.PENDING 2
+enum/member fuchsia.paver/ConfigurationStatus.UNBOOTABLE 3
+strict enum fuchsia.paver/ConfigurationStatus uint32
+protocol/member fuchsia.paver/DataSink.Flush() -> (int32 status)
+protocol/member fuchsia.paver/DataSink.ReadAsset(fuchsia.paver/Configuration configuration,fuchsia.paver/Asset asset) -> (fuchsia.paver/DataSink_ReadAsset_Result result)
+protocol/member fuchsia.paver/DataSink.WipeVolume() -> (fuchsia.paver/DataSink_WipeVolume_Result result)
+protocol/member fuchsia.paver/DataSink.WriteAsset(fuchsia.paver/Configuration configuration,fuchsia.paver/Asset asset,fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DataSink.WriteBootloader(fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DataSink.WriteDataFile(string:4096 filename,fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DataSink.WriteFirmware(fuchsia.paver/Configuration configuration,string:256 type,fuchsia.mem/Buffer payload) -> (fuchsia.paver/WriteFirmwareResult result)
+protocol/member fuchsia.paver/DataSink.WriteVolumes(client_end:fuchsia.paver/PayloadStream payload) -> (int32 status)
+protocol fuchsia.paver/DataSink
+struct/member fuchsia.paver/DataSink_ReadAsset_Response.asset fuchsia.mem/Buffer
+resource struct fuchsia.paver/DataSink_ReadAsset_Response
+union/member fuchsia.paver/DataSink_ReadAsset_Result.err int32
+union/member fuchsia.paver/DataSink_ReadAsset_Result.response fuchsia.paver/DataSink_ReadAsset_Response
+resource strict union fuchsia.paver/DataSink_ReadAsset_Result
+struct/member fuchsia.paver/DataSink_WipeVolume_Response.volume fuchsia.hardware.block.volume/VolumeManager
+resource struct fuchsia.paver/DataSink_WipeVolume_Response
+union/member fuchsia.paver/DataSink_WipeVolume_Result.err int32
+union/member fuchsia.paver/DataSink_WipeVolume_Result.response fuchsia.paver/DataSink_WipeVolume_Response
+resource strict union fuchsia.paver/DataSink_WipeVolume_Result
+protocol/member fuchsia.paver/DynamicDataSink.Flush() -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.InitializePartitionTables() -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.ReadAsset(fuchsia.paver/Configuration configuration,fuchsia.paver/Asset asset) -> (fuchsia.paver/DataSink_ReadAsset_Result result)
+protocol/member fuchsia.paver/DynamicDataSink.WipePartitionTables() -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.WipeVolume() -> (fuchsia.paver/DataSink_WipeVolume_Result result)
+protocol/member fuchsia.paver/DynamicDataSink.WriteAsset(fuchsia.paver/Configuration configuration,fuchsia.paver/Asset asset,fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.WriteBootloader(fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.WriteDataFile(string:4096 filename,fuchsia.mem/Buffer payload) -> (int32 status)
+protocol/member fuchsia.paver/DynamicDataSink.WriteFirmware(fuchsia.paver/Configuration configuration,string:256 type,fuchsia.mem/Buffer payload) -> (fuchsia.paver/WriteFirmwareResult result)
+protocol/member fuchsia.paver/DynamicDataSink.WriteVolumes(client_end:fuchsia.paver/PayloadStream payload) -> (int32 status)
+protocol fuchsia.paver/DynamicDataSink
+protocol/member fuchsia.paver/Paver.FindBootManager(server_end:fuchsia.paver/BootManager boot_manager)
+protocol/member fuchsia.paver/Paver.FindDataSink(server_end:fuchsia.paver/DataSink data_sink)
+protocol/member fuchsia.paver/Paver.FindSysconfig(server_end:fuchsia.paver/Sysconfig sysconfig)
+protocol/member fuchsia.paver/Paver.UseBlockDevice(fuchsia.hardware.block/Block block_device,server_end:fuchsia.paver/DynamicDataSink data_sink)
+protocol fuchsia.paver/Paver
+protocol/member fuchsia.paver/PayloadStream.ReadData() -> (fuchsia.paver/ReadResult result)
+protocol/member fuchsia.paver/PayloadStream.RegisterVmo(zx/handle:VMO vmo) -> (int32 status)
+protocol fuchsia.paver/PayloadStream
+struct/member fuchsia.paver/ReadInfo.offset uint64
+struct/member fuchsia.paver/ReadInfo.size uint64
+struct fuchsia.paver/ReadInfo
+union/member fuchsia.paver/ReadResult.eof bool
+union/member fuchsia.paver/ReadResult.err int32
+union/member fuchsia.paver/ReadResult.info fuchsia.paver/ReadInfo
+strict union fuchsia.paver/ReadResult
+protocol/member fuchsia.paver/Sysconfig.Flush() -> (int32 status)
+protocol/member fuchsia.paver/Sysconfig.GetPartitionSize() -> (fuchsia.paver/Sysconfig_GetPartitionSize_Result result)
+protocol/member fuchsia.paver/Sysconfig.Read() -> (fuchsia.paver/Sysconfig_Read_Result result)
+protocol/member fuchsia.paver/Sysconfig.Wipe() -> (int32 status)
+protocol/member fuchsia.paver/Sysconfig.Write(fuchsia.mem/Buffer payload) -> (int32 status)
+protocol fuchsia.paver/Sysconfig
+struct/member fuchsia.paver/Sysconfig_GetPartitionSize_Response.size uint64
+struct fuchsia.paver/Sysconfig_GetPartitionSize_Response
+union/member fuchsia.paver/Sysconfig_GetPartitionSize_Result.err int32
+union/member fuchsia.paver/Sysconfig_GetPartitionSize_Result.response fuchsia.paver/Sysconfig_GetPartitionSize_Response
+strict union fuchsia.paver/Sysconfig_GetPartitionSize_Result
+struct/member fuchsia.paver/Sysconfig_Read_Response.data fuchsia.mem/Buffer
+resource struct fuchsia.paver/Sysconfig_Read_Response
+union/member fuchsia.paver/Sysconfig_Read_Result.err int32
+union/member fuchsia.paver/Sysconfig_Read_Result.response fuchsia.paver/Sysconfig_Read_Response
+resource strict union fuchsia.paver/Sysconfig_Read_Result
+union/member fuchsia.paver/WriteFirmwareResult.status int32
+union/member fuchsia.paver/WriteFirmwareResult.unsupported bool
+strict union fuchsia.paver/WriteFirmwareResult
+library fuchsia.paver

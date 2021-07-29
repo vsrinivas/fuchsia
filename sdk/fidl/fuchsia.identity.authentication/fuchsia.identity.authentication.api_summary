@@ -1,0 +1,39 @@
+struct/member fuchsia.identity.authentication/AttemptedEvent.enrollment_id uint64
+struct/member fuchsia.identity.authentication/AttemptedEvent.prekey_material vector<uint8>:32
+struct/member fuchsia.identity.authentication/AttemptedEvent.timestamp int64
+struct/member fuchsia.identity.authentication/AttemptedEvent.updated_enrollment_data vector<uint8>:<256,optional>
+struct fuchsia.identity.authentication/AttemptedEvent
+const fuchsia.identity.authentication/ENROLLMENT_DATA_MAX_SIZE uint32 256
+struct/member fuchsia.identity.authentication/Enrollment.data vector<uint8>:256
+struct/member fuchsia.identity.authentication/Enrollment.id uint64
+struct fuchsia.identity.authentication/Enrollment
+enum/member fuchsia.identity.authentication/Error.ABORTED 8
+enum/member fuchsia.identity.authentication/Error.INTERNAL 2
+enum/member fuchsia.identity.authentication/Error.INVALID_AUTH_CONTEXT 4
+enum/member fuchsia.identity.authentication/Error.INVALID_DATA_FORMAT 6
+enum/member fuchsia.identity.authentication/Error.INVALID_REQUEST 5
+enum/member fuchsia.identity.authentication/Error.RESOURCE 7
+enum/member fuchsia.identity.authentication/Error.UNKNOWN 1
+enum/member fuchsia.identity.authentication/Error.UNSUPPORTED_OPERATION 3
+strict enum fuchsia.identity.authentication/Error uint32
+const fuchsia.identity.authentication/MAX_ENROLLMENTS uint32 16
+struct/member fuchsia.identity.authentication/NegativeEvent.timestamp int64
+struct fuchsia.identity.authentication/NegativeEvent
+const fuchsia.identity.authentication/PREKEY_MATERIAL_MAX_SIZE uint32 32
+struct/member fuchsia.identity.authentication/PositiveEvent.timestamp int64
+struct fuchsia.identity.authentication/PositiveEvent
+protocol/member fuchsia.identity.authentication/StorageUnlockMechanism.Authenticate(vector<fuchsia.identity.authentication/Enrollment>:16 enrollments) -> (fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Result result)
+protocol/member fuchsia.identity.authentication/StorageUnlockMechanism.Enroll() -> (fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Result result)
+protocol fuchsia.identity.authentication/StorageUnlockMechanism
+struct/member fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Response.attempt fuchsia.identity.authentication/AttemptedEvent
+struct fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Response
+union/member fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Result.err fuchsia.identity.authentication/Error
+union/member fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Result.response fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Response
+strict union fuchsia.identity.authentication/StorageUnlockMechanism_Authenticate_Result
+struct/member fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Response.enrollment_data vector<uint8>:256
+struct/member fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Response.prekey_material vector<uint8>:32
+struct fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Response
+union/member fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Result.err fuchsia.identity.authentication/Error
+union/member fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Result.response fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Response
+strict union fuchsia.identity.authentication/StorageUnlockMechanism_Enroll_Result
+library fuchsia.identity.authentication

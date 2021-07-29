@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.buttons/Buttons.GetChannel(zx/handle:CHANNEL chan) -> (int32 status)
+protocol fuchsia.hardware.buttons/Buttons
+library fuchsia.hardware.buttons

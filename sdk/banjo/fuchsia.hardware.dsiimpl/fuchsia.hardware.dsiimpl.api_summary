@@ -1,0 +1,64 @@
+enum/member fuchsia.hardware.dsiimpl/ColorCode.LOOSE_24BIT_666 2
+enum/member fuchsia.hardware.dsiimpl/ColorCode.PACKED_16BIT_565 0
+enum/member fuchsia.hardware.dsiimpl/ColorCode.PACKED_18BIT_666 1
+enum/member fuchsia.hardware.dsiimpl/ColorCode.PACKED_24BIT_888 3
+strict enum fuchsia.hardware.dsiimpl/ColorCode uint8
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.auto_clklane uint8
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.lp_cmd_pkt_size uint32
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.lp_escape_time uint32
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.phy_timer_clkhs_to_lp uint32
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.phy_timer_clklp_to_hs uint32
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.phy_timer_hs_to_lp uint32
+struct/member fuchsia.hardware.dsiimpl/DesignwareConfig.phy_timer_lp_to_hs uint32
+struct fuchsia.hardware.dsiimpl/DesignwareConfig
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.bit_rate_max uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.clock_factor uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.h_active uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.h_period uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.hsync_bp uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.hsync_pol uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.hsync_width uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.lane_num uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.lcd_clock uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.v_active uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.v_period uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.vsync_bp uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.vsync_pol uint32
+struct/member fuchsia.hardware.dsiimpl/DisplaySetting.vsync_width uint32
+struct fuchsia.hardware.dsiimpl/DisplaySetting
+struct/member fuchsia.hardware.dsiimpl/DsiConfig.color_coding fuchsia.hardware.dsiimpl/ColorCode
+struct/member fuchsia.hardware.dsiimpl/DsiConfig.display_setting fuchsia.hardware.dsiimpl/DisplaySetting
+struct/member fuchsia.hardware.dsiimpl/DsiConfig.vendor_config vector<uint8>
+struct/member fuchsia.hardware.dsiimpl/DsiConfig.video_mode_type fuchsia.hardware.dsiimpl/VideoMode
+struct fuchsia.hardware.dsiimpl/DsiConfig
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.Config(fuchsia.hardware.dsiimpl/DsiConfig dsi_config) -> (int32 s)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.EnableBist(uint32 pattern) -> (int32 s)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.IsPoweredUp() -> (bool on)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PhyConfig(fuchsia.hardware.dsiimpl/DsiConfig dsi_config) -> (int32 s)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PhyPowerDown() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PhyPowerUp() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PhySendCode(uint32 code,uint32 parameter) -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PhyWaitForReady() -> (int32 s)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PowerDown() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PowerUp() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.PrintDsiRegisters() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.ReadReg(uint32 reg) -> (int32 s,uint32 val)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.Reset() -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.SendCmd(vector<fuchsia.hardware.dsiimpl/MipiDsiCmd> cmd) -> (int32 s)
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.SetMode(fuchsia.hardware.dsiimpl/DsiMode mode) -> ()
+protocol/member fuchsia.hardware.dsiimpl/DsiImpl.WriteReg(uint32 reg,uint32 val) -> (int32 s)
+protocol fuchsia.hardware.dsiimpl/DsiImpl
+enum/member fuchsia.hardware.dsiimpl/DsiMode.COMMAND 1
+enum/member fuchsia.hardware.dsiimpl/DsiMode.VIDEO 0
+strict enum fuchsia.hardware.dsiimpl/DsiMode uint8
+struct/member fuchsia.hardware.dsiimpl/MipiDsiCmd.dsi_data_type uint8
+struct/member fuchsia.hardware.dsiimpl/MipiDsiCmd.flags uint32
+struct/member fuchsia.hardware.dsiimpl/MipiDsiCmd.pld_data vector<uint8>
+struct/member fuchsia.hardware.dsiimpl/MipiDsiCmd.rsp_data vector<uint8>
+struct/member fuchsia.hardware.dsiimpl/MipiDsiCmd.virt_chn_id uint8
+struct fuchsia.hardware.dsiimpl/MipiDsiCmd
+enum/member fuchsia.hardware.dsiimpl/VideoMode.BURST 2
+enum/member fuchsia.hardware.dsiimpl/VideoMode.NON_BURST_EVENT 1
+enum/member fuchsia.hardware.dsiimpl/VideoMode.NON_BURST_PULSE 0
+strict enum fuchsia.hardware.dsiimpl/VideoMode uint8
+library fuchsia.hardware.dsiimpl

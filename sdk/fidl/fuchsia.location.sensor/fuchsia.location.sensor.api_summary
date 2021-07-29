@@ -1,0 +1,3 @@
+protocol/member fuchsia.location.sensor/WlanBaseStationWatcher.ReportCurrentStations(fuchsia.wlan.policy/ScanResultIterator stations)
+protocol fuchsia.location.sensor/WlanBaseStationWatcher
+library fuchsia.location.sensor

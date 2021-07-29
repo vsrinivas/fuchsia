@@ -1,0 +1,66 @@
+table/member fuchsia.net.tun/BaseConfig.min_tx_buffer_length uint32
+table/member fuchsia.net.tun/BaseConfig.mtu uint32
+table/member fuchsia.net.tun/BaseConfig.report_metadata bool
+table/member fuchsia.net.tun/BaseConfig.rx_types vector<fuchsia.hardware.network/FrameType>:4
+table/member fuchsia.net.tun/BaseConfig.tx_types vector<fuchsia.hardware.network/FrameTypeSupport>:4
+table fuchsia.net.tun/BaseConfig
+protocol/member fuchsia.net.tun/Control.CreateDevice(fuchsia.net.tun/DeviceConfig config,server_end:fuchsia.net.tun/Device device)
+protocol/member fuchsia.net.tun/Control.CreatePair(fuchsia.net.tun/DevicePairConfig config,server_end:fuchsia.net.tun/DevicePair device_pair)
+protocol fuchsia.net.tun/Control
+protocol/member fuchsia.net.tun/Device.ConnectProtocols(fuchsia.net.tun/Protocols protos)
+protocol/member fuchsia.net.tun/Device.GetSignals() -> (zx/handle:EVENTPAIR signals)
+protocol/member fuchsia.net.tun/Device.GetState() -> (fuchsia.net.tun/InternalState state)
+protocol/member fuchsia.net.tun/Device.ReadFrame() -> (fuchsia.net.tun/Device_ReadFrame_Result result)
+protocol/member fuchsia.net.tun/Device.SetOnline(bool online) -> ()
+protocol/member fuchsia.net.tun/Device.WatchState() -> (fuchsia.net.tun/InternalState state)
+protocol/member fuchsia.net.tun/Device.WriteFrame(fuchsia.net.tun/Frame frame) -> (fuchsia.net.tun/Device_WriteFrame_Result result)
+protocol fuchsia.net.tun/Device
+table/member fuchsia.net.tun/DeviceConfig.base fuchsia.net.tun/BaseConfig
+table/member fuchsia.net.tun/DeviceConfig.blocking bool
+table/member fuchsia.net.tun/DeviceConfig.mac fuchsia.net/MacAddress
+table/member fuchsia.net.tun/DeviceConfig.online bool
+table fuchsia.net.tun/DeviceConfig
+protocol/member fuchsia.net.tun/DevicePair.ConnectProtocols(fuchsia.net.tun/DevicePairEnds requests)
+protocol fuchsia.net.tun/DevicePair
+table/member fuchsia.net.tun/DevicePairConfig.base fuchsia.net.tun/BaseConfig
+table/member fuchsia.net.tun/DevicePairConfig.fallible_transmit_left bool
+table/member fuchsia.net.tun/DevicePairConfig.fallible_transmit_right bool
+table/member fuchsia.net.tun/DevicePairConfig.mac_left fuchsia.net/MacAddress
+table/member fuchsia.net.tun/DevicePairConfig.mac_right fuchsia.net/MacAddress
+table fuchsia.net.tun/DevicePairConfig
+table/member fuchsia.net.tun/DevicePairEnds.left fuchsia.net.tun/Protocols
+table/member fuchsia.net.tun/DevicePairEnds.right fuchsia.net.tun/Protocols
+resource table fuchsia.net.tun/DevicePairEnds
+struct/member fuchsia.net.tun/Device_ReadFrame_Response.frame fuchsia.net.tun/Frame
+struct fuchsia.net.tun/Device_ReadFrame_Response
+union/member fuchsia.net.tun/Device_ReadFrame_Result.err int32
+union/member fuchsia.net.tun/Device_ReadFrame_Result.response fuchsia.net.tun/Device_ReadFrame_Response
+strict union fuchsia.net.tun/Device_ReadFrame_Result
+struct fuchsia.net.tun/Device_WriteFrame_Response
+union/member fuchsia.net.tun/Device_WriteFrame_Result.err int32
+union/member fuchsia.net.tun/Device_WriteFrame_Result.response fuchsia.net.tun/Device_WriteFrame_Response
+strict union fuchsia.net.tun/Device_WriteFrame_Result
+table/member fuchsia.net.tun/Frame.data vector<uint8>:16384
+table/member fuchsia.net.tun/Frame.frame_type fuchsia.hardware.network/FrameType
+table/member fuchsia.net.tun/Frame.meta fuchsia.net.tun/FrameMetadata
+table fuchsia.net.tun/Frame
+struct/member fuchsia.net.tun/FrameMetadata.flags uint32
+struct/member fuchsia.net.tun/FrameMetadata.info vector<uint8>:4096
+struct/member fuchsia.net.tun/FrameMetadata.info_type fuchsia.hardware.network/InfoType
+struct fuchsia.net.tun/FrameMetadata
+table/member fuchsia.net.tun/InternalState.has_session bool
+table/member fuchsia.net.tun/InternalState.mac fuchsia.net.tun/MacState
+table fuchsia.net.tun/InternalState
+const fuchsia.net.tun/MAX_MTU uint32 16384
+const fuchsia.net.tun/MAX_MULTICAST_FILTERS uint32 64
+const fuchsia.net.tun/MAX_PENDING_OPERATIONS uint32 32
+table/member fuchsia.net.tun/MacState.mode fuchsia.hardware.network/MacFilterMode
+table/member fuchsia.net.tun/MacState.multicast_filters vector<fuchsia.net/MacAddress>:64
+table fuchsia.net.tun/MacState
+table/member fuchsia.net.tun/Protocols.mac_addressing server_end:fuchsia.hardware.network/MacAddressing
+table/member fuchsia.net.tun/Protocols.network_device server_end:fuchsia.hardware.network/Device
+resource table fuchsia.net.tun/Protocols
+bits/member fuchsia.net.tun/Signals.READABLE 33554432
+bits/member fuchsia.net.tun/Signals.WRITABLE 16777216
+strict bits fuchsia.net.tun/Signals uint32
+library fuchsia.net.tun

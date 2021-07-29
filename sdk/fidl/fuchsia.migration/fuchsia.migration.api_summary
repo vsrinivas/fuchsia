@@ -1,0 +1,26 @@
+protocol/member fuchsia.migration/CastProvider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/CastProvider.Processed()
+protocol fuchsia.migration/CastProvider
+protocol/member fuchsia.migration/DisplayProvider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/DisplayProvider.Processed()
+protocol fuchsia.migration/DisplayProvider
+protocol/member fuchsia.migration/KronkProvider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/KronkProvider.Processed()
+protocol fuchsia.migration/KronkProvider
+table/member fuchsia.migration/MigrationState.progress_percentage uint8
+table/member fuchsia.migration/MigrationState.status fuchsia.migration/MigrationStatus
+table fuchsia.migration/MigrationState
+enum/member fuchsia.migration/MigrationStatus.COMPLETE 3
+enum/member fuchsia.migration/MigrationStatus.ENCOUNTERED_ERROR 4
+enum/member fuchsia.migration/MigrationStatus.IN_PROGRESS 2
+enum/member fuchsia.migration/MigrationStatus.UNKNOWN 1
+strict enum fuchsia.migration/MigrationStatus uint32
+protocol/member fuchsia.migration/Provider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/Provider.Processed()
+protocol fuchsia.migration/Provider
+protocol/member fuchsia.migration/State.Watch() -> (fuchsia.migration/MigrationState state)
+protocol fuchsia.migration/State
+protocol/member fuchsia.migration/UltrasoundProvider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/UltrasoundProvider.Processed()
+protocol fuchsia.migration/UltrasoundProvider
+library fuchsia.migration

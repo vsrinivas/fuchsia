@@ -1,0 +1,3 @@
+protocol/member fuchsia.scenic.snapshot/Loader.Load(fuchsia.mem/Buffer payload)
+protocol fuchsia.scenic.snapshot/Loader
+library fuchsia.scenic.snapshot

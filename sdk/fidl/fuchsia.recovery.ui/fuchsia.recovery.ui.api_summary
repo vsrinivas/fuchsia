@@ -1,0 +1,5 @@
+protocol/member fuchsia.recovery.ui/FactoryResetCountdown.Watch() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)
+protocol fuchsia.recovery.ui/FactoryResetCountdown
+table/member fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time int64
+table fuchsia.recovery.ui/FactoryResetCountdownState
+library fuchsia.recovery.ui

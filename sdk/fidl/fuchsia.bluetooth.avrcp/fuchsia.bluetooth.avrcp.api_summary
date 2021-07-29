@@ -1,0 +1,340 @@
+protocol/member fuchsia.bluetooth.avrcp/AbsoluteVolumeHandler.GetCurrentVolume() -> (uint8 volume)
+protocol/member fuchsia.bluetooth.avrcp/AbsoluteVolumeHandler.OnVolumeChanged() -> (uint8 new_volume)
+protocol/member fuchsia.bluetooth.avrcp/AbsoluteVolumeHandler.SetVolume(uint8 requested_volume) -> (uint8 set_volume)
+protocol fuchsia.bluetooth.avrcp/AbsoluteVolumeHandler
+struct/member fuchsia.bluetooth.avrcp/AddressedPlayerId.id uint16
+struct fuchsia.bluetooth.avrcp/AddressedPlayerId
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.APPS_MENU 15
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.BACKWARD 76
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.BLUE 124
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.CHANNEL_DOWN 49
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.CHANNEL_PREVIOUS 50
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.CHANNEL_UP 48
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.CONTENTS_MENU 11
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.DOT 42
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.DOWN 2
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.EJECT 74
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.ENTER 43
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.EXIT 13
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F1 113
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F2 114
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F3 115
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F4 116
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F5 117
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F6 118
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F7 119
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F8 120
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.F9 121
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.FAST_FORWARD 73
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.FAVORITE_MENU 12
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.FORWARD 75
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.GREEN 123
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.HELP 54
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.INFO 53
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.INPUT_SELECT 52
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_0 32
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_1 33
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_2 34
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_3 35
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_4 36
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_5 37
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_6 38
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_7 39
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_8 40
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.KEY_9 41
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.LEFT 3
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.LIST 77
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.LOCK 58
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.MUTE 67
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.ON_DEMAND_MENU 14
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.PAGE_DOWN 56
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.PAGE_UP 55
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.PAUSE 70
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.PLAY 68
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.POWER 64
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.RECORD 71
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.RED 122
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.REWIND 72
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.RIGHT 4
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.ROOT_MENU 9
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.SELECT 0
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.STOP 69
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.UP 1
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.VOLUME_DOWN 66
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.VOLUME_UP 65
+enum/member fuchsia.bluetooth.avrcp/AvcPanelCommand.YELLOW 125
+strict enum fuchsia.bluetooth.avrcp/AvcPanelCommand uint8
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.CRITICAL 2
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.EXTERNAL 3
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.FULL_CHARGE 4
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.NORMAL 0
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.RESERVED 5
+enum/member fuchsia.bluetooth.avrcp/BatteryStatus.WARNING 1
+strict enum fuchsia.bluetooth.avrcp/BatteryStatus uint8
+protocol/member fuchsia.bluetooth.avrcp/Controller.GetMediaAttributes() -> (fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.GetPlayStatus() -> (fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.GetPlayerApplicationSettings(vector<fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId>:131 attribute_ids) -> (fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.InformBatteryStatus(fuchsia.bluetooth.avrcp/BatteryStatus battery_status) -> (fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.NotifyNotificationHandled()
+protocol/member fuchsia.bluetooth.avrcp/Controller.OnNotification -> (int64 timestamp,fuchsia.bluetooth.avrcp/Notification notification)
+protocol/member fuchsia.bluetooth.avrcp/Controller.SendCommand(fuchsia.bluetooth.avrcp/AvcPanelCommand command) -> (fuchsia.bluetooth.avrcp/Controller_SendCommand_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.SetAbsoluteVolume(uint8 requested_volume) -> (fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.SetAddressedPlayer(uint16 player_id) -> (fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Result result)
+protocol/member fuchsia.bluetooth.avrcp/Controller.SetNotificationFilter(fuchsia.bluetooth.avrcp/Notifications notifications,uint32 position_change_interval)
+protocol/member fuchsia.bluetooth.avrcp/Controller.SetPlayerApplicationSettings(fuchsia.bluetooth.avrcp/PlayerApplicationSettings requested_settings) -> (fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Result result)
+protocol fuchsia.bluetooth.avrcp/Controller
+enum/member fuchsia.bluetooth.avrcp/ControllerError.COMMAND_NOT_IMPLEMENTED 4
+enum/member fuchsia.bluetooth.avrcp/ControllerError.COMMAND_REJECTED 5
+enum/member fuchsia.bluetooth.avrcp/ControllerError.COMMAND_UNEXPECTED 6
+enum/member fuchsia.bluetooth.avrcp/ControllerError.CONNECTION_ERROR 10
+enum/member fuchsia.bluetooth.avrcp/ControllerError.INVALID_ARGUMENTS 7
+enum/member fuchsia.bluetooth.avrcp/ControllerError.PACKET_ENCODING 8
+enum/member fuchsia.bluetooth.avrcp/ControllerError.PROTOCOL_ERROR 9
+enum/member fuchsia.bluetooth.avrcp/ControllerError.REMOTE_NOT_CONNECTED 3
+enum/member fuchsia.bluetooth.avrcp/ControllerError.TIMED_OUT 2
+enum/member fuchsia.bluetooth.avrcp/ControllerError.UNEXPECTED_RESPONSE 11
+enum/member fuchsia.bluetooth.avrcp/ControllerError.UNKOWN_FAILURE 1
+strict enum fuchsia.bluetooth.avrcp/ControllerError uint32
+struct/member fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Response.attributes fuchsia.bluetooth.avrcp/MediaAttributes
+struct fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Response
+union/member fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Result.response fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Response
+strict union fuchsia.bluetooth.avrcp/Controller_GetMediaAttributes_Result
+struct/member fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Response.play_status fuchsia.bluetooth.avrcp/PlayStatus
+struct fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Response
+union/member fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Result.response fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Response
+strict union fuchsia.bluetooth.avrcp/Controller_GetPlayStatus_Result
+struct/member fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Response.current_settings fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+struct fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Response
+union/member fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Result.response fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Response
+strict union fuchsia.bluetooth.avrcp/Controller_GetPlayerApplicationSettings_Result
+struct fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Response
+union/member fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Result.response fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Response
+strict union fuchsia.bluetooth.avrcp/Controller_InformBatteryStatus_Result
+struct fuchsia.bluetooth.avrcp/Controller_SendCommand_Response
+union/member fuchsia.bluetooth.avrcp/Controller_SendCommand_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_SendCommand_Result.response fuchsia.bluetooth.avrcp/Controller_SendCommand_Response
+strict union fuchsia.bluetooth.avrcp/Controller_SendCommand_Result
+struct/member fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Response.set_volume uint8
+struct fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Response
+union/member fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Result.response fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Response
+strict union fuchsia.bluetooth.avrcp/Controller_SetAbsoluteVolume_Result
+struct fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Response
+union/member fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Result.response fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Response
+strict union fuchsia.bluetooth.avrcp/Controller_SetAddressedPlayer_Result
+struct/member fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Response.set_settings fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+struct fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Response
+union/member fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Result.response fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Response
+strict union fuchsia.bluetooth.avrcp/Controller_SetPlayerApplicationSettings_Result
+struct/member fuchsia.bluetooth.avrcp/CustomAttributeValue.description string:255
+struct/member fuchsia.bluetooth.avrcp/CustomAttributeValue.value uint8
+struct fuchsia.bluetooth.avrcp/CustomAttributeValue
+table/member fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting.attribute_id uint8
+table/member fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting.attribute_name string:255
+table/member fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting.current_value uint8
+table/member fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting.possible_values vector<fuchsia.bluetooth.avrcp/CustomAttributeValue>:255
+table fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting
+enum/member fuchsia.bluetooth.avrcp/Equalizer.OFF 1
+enum/member fuchsia.bluetooth.avrcp/Equalizer.ON 2
+strict enum fuchsia.bluetooth.avrcp/Equalizer uint8
+const fuchsia.bluetooth.avrcp/MAX_ATTRIBUTES uint64 131
+const fuchsia.bluetooth.avrcp/MAX_ATTRIBUTE_VALUES uint64 255
+const fuchsia.bluetooth.avrcp/MAX_ATTRIBUTE_VALUE_LENGTH uint64 65535
+const fuchsia.bluetooth.avrcp/MAX_CUSTOM_ATTRIBUTES uint64 127
+const fuchsia.bluetooth.avrcp/MAX_MEDIA_PLAYER_ITEMS uint16 16
+const fuchsia.bluetooth.avrcp/MAX_NOTIFICATIONS uint8 255
+bits/member fuchsia.bluetooth.avrcp/MajorPlayerType.AUDIO 1
+bits/member fuchsia.bluetooth.avrcp/MajorPlayerType.BROADCASTING_AUDIO 4
+bits/member fuchsia.bluetooth.avrcp/MajorPlayerType.BROADCASTING_VIDEO 8
+bits/member fuchsia.bluetooth.avrcp/MajorPlayerType.VIDEO 2
+strict bits fuchsia.bluetooth.avrcp/MajorPlayerType uint8
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.album_name string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.artist_name string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.genre string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.playing_time string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.title string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.total_number_of_tracks string:65535
+table/member fuchsia.bluetooth.avrcp/MediaAttributes.track_number string:65535
+table fuchsia.bluetooth.avrcp/MediaAttributes
+table/member fuchsia.bluetooth.avrcp/MediaPlayerItem.displayable_name string:255
+table/member fuchsia.bluetooth.avrcp/MediaPlayerItem.major_type fuchsia.bluetooth.avrcp/MajorPlayerType
+table/member fuchsia.bluetooth.avrcp/MediaPlayerItem.playback_status fuchsia.bluetooth.avrcp/PlaybackStatus
+table/member fuchsia.bluetooth.avrcp/MediaPlayerItem.player_id uint16
+table/member fuchsia.bluetooth.avrcp/MediaPlayerItem.sub_type fuchsia.bluetooth.avrcp/PlayerSubType
+table fuchsia.bluetooth.avrcp/MediaPlayerItem
+table/member fuchsia.bluetooth.avrcp/Notification.application_settings fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+table/member fuchsia.bluetooth.avrcp/Notification.battery_status fuchsia.bluetooth.avrcp/BatteryStatus
+table/member fuchsia.bluetooth.avrcp/Notification.device_connected bool
+table/member fuchsia.bluetooth.avrcp/Notification.player_id uint16
+table/member fuchsia.bluetooth.avrcp/Notification.pos uint32
+table/member fuchsia.bluetooth.avrcp/Notification.status fuchsia.bluetooth.avrcp/PlaybackStatus
+table/member fuchsia.bluetooth.avrcp/Notification.system_status fuchsia.bluetooth.avrcp/SystemStatus
+table/member fuchsia.bluetooth.avrcp/Notification.track_id uint64
+table/member fuchsia.bluetooth.avrcp/Notification.volume uint8
+table fuchsia.bluetooth.avrcp/Notification
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.ADDRESSED_PLAYER_CHANGED 11
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.AVAILABLE_PLAYERS_CHANGED 10
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.BATT_STATUS_CHANGED 6
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.NOW_PLAYING_CONTENT_CHANGED 9
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.PLAYBACK_STATUS_CHANGED 1
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.PLAYER_APPLICATION_SETTING_CHANGED 8
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.SYSTEM_STATUS_CHANGED 7
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.TRACK_CHANGED 2
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.TRACK_POS_CHANGED 5
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.TRACK_REACHED_END 3
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.TRACK_REACHED_START 4
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.UIDS_CHANGED 12
+enum/member fuchsia.bluetooth.avrcp/NotificationEvent.VOLUME_CHANGED 13
+strict enum fuchsia.bluetooth.avrcp/NotificationEvent uint8
+bits/member fuchsia.bluetooth.avrcp/Notifications.ADDRESSED_PLAYER 64
+bits/member fuchsia.bluetooth.avrcp/Notifications.BATT_STATUS 8
+bits/member fuchsia.bluetooth.avrcp/Notifications.CONNECTION 65536
+bits/member fuchsia.bluetooth.avrcp/Notifications.PLAYBACK_STATUS 1
+bits/member fuchsia.bluetooth.avrcp/Notifications.PLAYER_APPLICATION_SETTINGS 32
+bits/member fuchsia.bluetooth.avrcp/Notifications.SYSTEM_STATUS 16
+bits/member fuchsia.bluetooth.avrcp/Notifications.TRACK 2
+bits/member fuchsia.bluetooth.avrcp/Notifications.TRACK_POS 4
+bits/member fuchsia.bluetooth.avrcp/Notifications.VOLUME 128
+strict bits fuchsia.bluetooth.avrcp/Notifications uint32
+protocol/member fuchsia.bluetooth.avrcp/PeerManager.GetControllerForTarget(fuchsia.bluetooth/PeerId peer_id,server_end:fuchsia.bluetooth.avrcp/Controller client) -> (fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Result result)
+protocol/member fuchsia.bluetooth.avrcp/PeerManager.RegisterTargetHandler(client_end:fuchsia.bluetooth.avrcp/TargetHandler handler) -> (fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Result result)
+protocol/member fuchsia.bluetooth.avrcp/PeerManager.SetAbsoluteVolumeHandler(client_end:fuchsia.bluetooth.avrcp/AbsoluteVolumeHandler handler) -> (fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Result result)
+protocol fuchsia.bluetooth.avrcp/PeerManager
+struct fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Response
+union/member fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Result.err int32
+union/member fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Result.response fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Response
+strict union fuchsia.bluetooth.avrcp/PeerManager_GetControllerForTarget_Result
+struct fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Response
+union/member fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Result.err int32
+union/member fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Result.response fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Response
+strict union fuchsia.bluetooth.avrcp/PeerManager_RegisterTargetHandler_Result
+struct fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Response
+union/member fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Result.err int32
+union/member fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Result.response fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Response
+strict union fuchsia.bluetooth.avrcp/PeerManager_SetAbsoluteVolumeHandler_Result
+table/member fuchsia.bluetooth.avrcp/PlayStatus.playback_status fuchsia.bluetooth.avrcp/PlaybackStatus
+table/member fuchsia.bluetooth.avrcp/PlayStatus.song_length uint32
+table/member fuchsia.bluetooth.avrcp/PlayStatus.song_position uint32
+table fuchsia.bluetooth.avrcp/PlayStatus
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.ERROR 255
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.FWD_SEEK 3
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.PAUSED 2
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.PLAYING 1
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.REV_SEEK 4
+enum/member fuchsia.bluetooth.avrcp/PlaybackStatus.STOPPED 0
+strict enum fuchsia.bluetooth.avrcp/PlaybackStatus uint8
+enum/member fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId.EQUALIZER 1
+enum/member fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId.REPEAT_STATUS_MODE 2
+enum/member fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId.SCAN_MODE 4
+enum/member fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId.SHUFFLE_MODE 3
+strict enum fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId uint8
+table/member fuchsia.bluetooth.avrcp/PlayerApplicationSettings.custom_settings vector<fuchsia.bluetooth.avrcp/CustomPlayerApplicationSetting>:127
+table/member fuchsia.bluetooth.avrcp/PlayerApplicationSettings.equalizer fuchsia.bluetooth.avrcp/Equalizer
+table/member fuchsia.bluetooth.avrcp/PlayerApplicationSettings.repeat_status_mode fuchsia.bluetooth.avrcp/RepeatStatusMode
+table/member fuchsia.bluetooth.avrcp/PlayerApplicationSettings.scan_mode fuchsia.bluetooth.avrcp/ScanMode
+table/member fuchsia.bluetooth.avrcp/PlayerApplicationSettings.shuffle_mode fuchsia.bluetooth.avrcp/ShuffleMode
+table fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+bits/member fuchsia.bluetooth.avrcp/PlayerSubType.AUDIO_BOOK 1
+bits/member fuchsia.bluetooth.avrcp/PlayerSubType.PODCAST 2
+strict bits fuchsia.bluetooth.avrcp/PlayerSubType uint32
+enum/member fuchsia.bluetooth.avrcp/RepeatStatusMode.ALL_TRACK_REPEAT 3
+enum/member fuchsia.bluetooth.avrcp/RepeatStatusMode.GROUP_REPEAT 4
+enum/member fuchsia.bluetooth.avrcp/RepeatStatusMode.OFF 1
+enum/member fuchsia.bluetooth.avrcp/RepeatStatusMode.SINGLE_TRACK_REPEAT 2
+strict enum fuchsia.bluetooth.avrcp/RepeatStatusMode uint8
+enum/member fuchsia.bluetooth.avrcp/ScanMode.ALL_TRACK_SCAN 2
+enum/member fuchsia.bluetooth.avrcp/ScanMode.GROUP_SCAN 3
+enum/member fuchsia.bluetooth.avrcp/ScanMode.OFF 1
+strict enum fuchsia.bluetooth.avrcp/ScanMode uint8
+enum/member fuchsia.bluetooth.avrcp/ShuffleMode.ALL_TRACK_SHUFFLE 2
+enum/member fuchsia.bluetooth.avrcp/ShuffleMode.GROUP_SHUFFLE 3
+enum/member fuchsia.bluetooth.avrcp/ShuffleMode.OFF 1
+strict enum fuchsia.bluetooth.avrcp/ShuffleMode uint8
+enum/member fuchsia.bluetooth.avrcp/SystemStatus.POWER_OFF 1
+enum/member fuchsia.bluetooth.avrcp/SystemStatus.POWER_ON 0
+enum/member fuchsia.bluetooth.avrcp/SystemStatus.UNPLUGGED 2
+strict enum fuchsia.bluetooth.avrcp/SystemStatus uint8
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_ADDRESSED_PLAYER_CHANGED 22
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_INTERNAL_ERROR 3
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_INVALID_COMMAND 0
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_INVALID_PARAMETER 1
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_INVALID_PLAYER_ID 17
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_NO_AVAILABLE_PLAYERS 21
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_PARAMETER_CONTENT_ERROR 2
+enum/member fuchsia.bluetooth.avrcp/TargetAvcError.REJECTED_UID_CHANGED 5
+strict enum fuchsia.bluetooth.avrcp/TargetAvcError uint32
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetEventsSupported() -> (fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetMediaAttributes() -> (fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetMediaPlayerItems() -> (fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetNotification(fuchsia.bluetooth.avrcp/NotificationEvent event_id) -> (fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetPlayStatus() -> (fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.GetPlayerApplicationSettings(vector<fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId>:131 attribute_ids) -> (fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.ListPlayerApplicationSettingAttributes() -> (fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.SendCommand(fuchsia.bluetooth.avrcp/AvcPanelCommand command,bool pressed) -> (fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.SetAddressedPlayer(fuchsia.bluetooth.avrcp/AddressedPlayerId player_id) -> (fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.SetPlayerApplicationSettings(fuchsia.bluetooth.avrcp/PlayerApplicationSettings requested_settings) -> (fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Result result)
+protocol/member fuchsia.bluetooth.avrcp/TargetHandler.WatchNotification(fuchsia.bluetooth.avrcp/NotificationEvent event_id,fuchsia.bluetooth.avrcp/Notification current,uint32 pos_change_interval) -> (fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Result result)
+protocol fuchsia.bluetooth.avrcp/TargetHandler
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Response.notification_ids vector<fuchsia.bluetooth.avrcp/NotificationEvent>:255
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetEventsSupported_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Response.attributes fuchsia.bluetooth.avrcp/MediaAttributes
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetMediaAttributes_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Response.items vector<fuchsia.bluetooth.avrcp/MediaPlayerItem>:16
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetMediaPlayerItems_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Response.current_value fuchsia.bluetooth.avrcp/Notification
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetNotification_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Response.play_status fuchsia.bluetooth.avrcp/PlayStatus
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetPlayStatus_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Response.current_settings fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+struct fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Result.response fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_GetPlayerApplicationSettings_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Response.attributes vector<fuchsia.bluetooth.avrcp/PlayerApplicationSettingAttributeId>:131
+struct fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Result.response fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_ListPlayerApplicationSettingAttributes_Result
+struct fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Result.err fuchsia.bluetooth.avrcp/TargetPassthroughError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Result.response fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_SendCommand_Result
+struct fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Result.response fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_SetAddressedPlayer_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Response.set_settings fuchsia.bluetooth.avrcp/PlayerApplicationSettings
+struct fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Result.response fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_SetPlayerApplicationSettings_Result
+struct/member fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Response.new_value fuchsia.bluetooth.avrcp/Notification
+struct fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Response
+union/member fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Result.err fuchsia.bluetooth.avrcp/TargetAvcError
+union/member fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Result.response fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Response
+strict union fuchsia.bluetooth.avrcp/TargetHandler_WatchNotification_Result
+enum/member fuchsia.bluetooth.avrcp/TargetPassthroughError.COMMAND_NOT_IMPLEMENTED 1
+enum/member fuchsia.bluetooth.avrcp/TargetPassthroughError.COMMAND_REJECTED 2
+strict enum fuchsia.bluetooth.avrcp/TargetPassthroughError uint32
+library fuchsia.bluetooth.avrcp

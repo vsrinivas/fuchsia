@@ -1,0 +1,11 @@
+struct/member fuchsia.mem/Buffer.size uint64
+struct/member fuchsia.mem/Buffer.vmo zx/handle:VMO
+resource struct fuchsia.mem/Buffer
+union/member fuchsia.mem/Data.buffer fuchsia.mem/Buffer
+union/member fuchsia.mem/Data.bytes vector<uint8>
+resource flexible union fuchsia.mem/Data
+struct/member fuchsia.mem/Range.offset uint64
+struct/member fuchsia.mem/Range.size uint64
+struct/member fuchsia.mem/Range.vmo zx/handle:VMO
+resource struct fuchsia.mem/Range
+library fuchsia.mem

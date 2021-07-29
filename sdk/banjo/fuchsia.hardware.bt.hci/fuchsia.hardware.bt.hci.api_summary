@@ -1,0 +1,5 @@
+protocol/member fuchsia.hardware.bt.hci/BtHci.OpenAclDataChannel(zx/handle:CHANNEL channel) -> (int32 s)
+protocol/member fuchsia.hardware.bt.hci/BtHci.OpenCommandChannel(zx/handle:CHANNEL channel) -> (int32 s)
+protocol/member fuchsia.hardware.bt.hci/BtHci.OpenSnoopChannel(zx/handle:CHANNEL channel) -> (int32 s)
+protocol fuchsia.hardware.bt.hci/BtHci
+library fuchsia.hardware.bt.hci

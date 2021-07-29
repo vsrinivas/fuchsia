@@ -1,0 +1,28 @@
+table/member fuchsia.net.interfaces/Address.addr fuchsia.net/Subnet
+table/member fuchsia.net.interfaces/Address.valid_until int64
+table fuchsia.net.interfaces/Address
+union/member fuchsia.net.interfaces/DeviceClass.device fuchsia.hardware.network/DeviceClass
+union/member fuchsia.net.interfaces/DeviceClass.loopback fuchsia.net.interfaces/Empty
+strict union fuchsia.net.interfaces/DeviceClass
+struct fuchsia.net.interfaces/Empty
+union/member fuchsia.net.interfaces/Event.added fuchsia.net.interfaces/Properties
+union/member fuchsia.net.interfaces/Event.changed fuchsia.net.interfaces/Properties
+union/member fuchsia.net.interfaces/Event.existing fuchsia.net.interfaces/Properties
+union/member fuchsia.net.interfaces/Event.idle fuchsia.net.interfaces/Empty
+union/member fuchsia.net.interfaces/Event.removed uint64
+strict union fuchsia.net.interfaces/Event
+const fuchsia.net.interfaces/INTERFACE_NAME_LENGTH uint8 15
+table/member fuchsia.net.interfaces/Properties.addresses vector<fuchsia.net.interfaces/Address>
+table/member fuchsia.net.interfaces/Properties.device_class fuchsia.net.interfaces/DeviceClass
+table/member fuchsia.net.interfaces/Properties.has_default_ipv4_route bool
+table/member fuchsia.net.interfaces/Properties.has_default_ipv6_route bool
+table/member fuchsia.net.interfaces/Properties.id uint64
+table/member fuchsia.net.interfaces/Properties.name string:15
+table/member fuchsia.net.interfaces/Properties.online bool
+table fuchsia.net.interfaces/Properties
+protocol/member fuchsia.net.interfaces/State.GetWatcher(fuchsia.net.interfaces/WatcherOptions options,server_end:fuchsia.net.interfaces/Watcher watcher)
+protocol fuchsia.net.interfaces/State
+protocol/member fuchsia.net.interfaces/Watcher.Watch() -> (fuchsia.net.interfaces/Event event)
+protocol fuchsia.net.interfaces/Watcher
+table fuchsia.net.interfaces/WatcherOptions
+library fuchsia.net.interfaces

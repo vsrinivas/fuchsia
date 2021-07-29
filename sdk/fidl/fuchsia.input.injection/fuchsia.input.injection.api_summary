@@ -1,0 +1,3 @@
+protocol/member fuchsia.input.injection/InputDeviceRegistry.Register(fuchsia.input.report/InputDevice device)
+protocol fuchsia.input.injection/InputDeviceRegistry
+library fuchsia.input.injection

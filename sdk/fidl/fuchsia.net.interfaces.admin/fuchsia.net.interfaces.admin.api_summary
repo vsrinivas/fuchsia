@@ -1,0 +1,24 @@
+enum/member fuchsia.net.interfaces.admin/AddressAssignmentState.ASSIGNED 1
+enum/member fuchsia.net.interfaces.admin/AddressAssignmentState.TENTATIVE 0
+enum/member fuchsia.net.interfaces.admin/AddressAssignmentState.UNAVAILABLE 2
+strict enum fuchsia.net.interfaces.admin/AddressAssignmentState uint32
+table/member fuchsia.net.interfaces.admin/AddressParameters.address_state_provider server_end:fuchsia.net.interfaces.admin/AddressStateProvider
+table/member fuchsia.net.interfaces.admin/AddressParameters.intial_properties fuchsia.net.interfaces.admin/AddressProperties
+table/member fuchsia.net.interfaces.admin/AddressParameters.temporary bool
+resource table fuchsia.net.interfaces.admin/AddressParameters
+table/member fuchsia.net.interfaces.admin/AddressProperties.preferred_lifetime_info fuchsia.net.interfaces.admin/PreferredLifetimeInfo
+table/member fuchsia.net.interfaces.admin/AddressProperties.valid_lifetime_end int64
+table fuchsia.net.interfaces.admin/AddressProperties
+enum/member fuchsia.net.interfaces.admin/AddressRemovalReason.ALREADY_ASSIGNED 2
+enum/member fuchsia.net.interfaces.admin/AddressRemovalReason.DAD_FAILED 1
+enum/member fuchsia.net.interfaces.admin/AddressRemovalReason.REMOVED 3
+strict enum fuchsia.net.interfaces.admin/AddressRemovalReason uint32
+protocol/member fuchsia.net.interfaces.admin/AddressStateProvider.OnAddressRemoved -> (fuchsia.net.interfaces.admin/AddressRemovalReason error)
+protocol/member fuchsia.net.interfaces.admin/AddressStateProvider.UpdateAddressProperties(fuchsia.net.interfaces.admin/AddressProperties address_properties) -> ()
+protocol/member fuchsia.net.interfaces.admin/AddressStateProvider.WatchAddressAssignmentState() -> (fuchsia.net.interfaces.admin/AddressAssignmentState assignment_state)
+protocol fuchsia.net.interfaces.admin/AddressStateProvider
+struct fuchsia.net.interfaces.admin/Empty
+union/member fuchsia.net.interfaces.admin/PreferredLifetimeInfo.deprecated fuchsia.net.interfaces.admin/Empty
+union/member fuchsia.net.interfaces.admin/PreferredLifetimeInfo.preferred_lifetime_end int64
+strict union fuchsia.net.interfaces.admin/PreferredLifetimeInfo
+library fuchsia.net.interfaces.admin

@@ -1,0 +1,8 @@
+protocol/member fuchsia.hardware.tee/Tee.ConnectToApplication(fuchsia.hardware.tee/Uuid application_uuid,zx/handle:CHANNEL tee_app_request,zx/handle:CHANNEL service_provider) -> (int32 s)
+protocol fuchsia.hardware.tee/Tee
+struct/member fuchsia.hardware.tee/Uuid.clock_seq_and_node array<uint8,8>
+struct/member fuchsia.hardware.tee/Uuid.time_hi_and_version uint16
+struct/member fuchsia.hardware.tee/Uuid.time_low uint32
+struct/member fuchsia.hardware.tee/Uuid.time_mid uint16
+struct fuchsia.hardware.tee/Uuid
+library fuchsia.hardware.tee

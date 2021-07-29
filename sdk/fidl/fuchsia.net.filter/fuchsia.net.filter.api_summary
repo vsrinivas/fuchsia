@@ -1,0 +1,58 @@
+enum/member fuchsia.net.filter/Action.DROP 1
+enum/member fuchsia.net.filter/Action.DROP_RESET 2
+enum/member fuchsia.net.filter/Action.PASS 0
+strict enum fuchsia.net.filter/Action uint32
+enum/member fuchsia.net.filter/Direction.INCOMING 0
+enum/member fuchsia.net.filter/Direction.OUTGOING 1
+strict enum fuchsia.net.filter/Direction uint32
+protocol/member fuchsia.net.filter/Filter.Enable(bool enabled) -> (fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.GetNatRules() -> (vector<fuchsia.net.filter/Nat>:128 rules,uint32 generation,fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.GetRdrRules() -> (vector<fuchsia.net.filter/Rdr>:128 rules,uint32 generation,fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.GetRules() -> (vector<fuchsia.net.filter/Rule>:128 rules,uint32 generation,fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.IsEnabled() -> (bool enabled)
+protocol/member fuchsia.net.filter/Filter.UpdateNatRules(vector<fuchsia.net.filter/Nat>:128 rules,uint32 generation) -> (fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.UpdateRdrRules(vector<fuchsia.net.filter/Rdr>:128 rules,uint32 generation) -> (fuchsia.net.filter/Status status)
+protocol/member fuchsia.net.filter/Filter.UpdateRules(vector<fuchsia.net.filter/Rule>:128 rules,uint32 generation) -> (fuchsia.net.filter/Status status)
+protocol fuchsia.net.filter/Filter
+const fuchsia.net.filter/MAX_RULES uint32 128
+struct/member fuchsia.net.filter/Nat.new_src_addr fuchsia.net/IpAddress
+struct/member fuchsia.net.filter/Nat.nic uint32
+struct/member fuchsia.net.filter/Nat.proto fuchsia.net.filter/SocketProtocol
+struct/member fuchsia.net.filter/Nat.src_subnet fuchsia.net/Subnet
+struct fuchsia.net.filter/Nat
+struct/member fuchsia.net.filter/PortRange.end uint16
+struct/member fuchsia.net.filter/PortRange.start uint16
+struct fuchsia.net.filter/PortRange
+struct/member fuchsia.net.filter/Rdr.dst_addr fuchsia.net/IpAddress
+struct/member fuchsia.net.filter/Rdr.dst_port_range fuchsia.net.filter/PortRange
+struct/member fuchsia.net.filter/Rdr.new_dst_addr fuchsia.net/IpAddress
+struct/member fuchsia.net.filter/Rdr.new_dst_port_range fuchsia.net.filter/PortRange
+struct/member fuchsia.net.filter/Rdr.nic uint32
+struct/member fuchsia.net.filter/Rdr.proto fuchsia.net.filter/SocketProtocol
+struct fuchsia.net.filter/Rdr
+struct/member fuchsia.net.filter/Rule.action fuchsia.net.filter/Action
+struct/member fuchsia.net.filter/Rule.direction fuchsia.net.filter/Direction
+struct/member fuchsia.net.filter/Rule.dst_port_range fuchsia.net.filter/PortRange
+struct/member fuchsia.net.filter/Rule.dst_subnet fuchsia.net/Subnet:optional
+struct/member fuchsia.net.filter/Rule.dst_subnet_invert_match bool
+struct/member fuchsia.net.filter/Rule.keep_state bool
+struct/member fuchsia.net.filter/Rule.log bool
+struct/member fuchsia.net.filter/Rule.nic uint32
+struct/member fuchsia.net.filter/Rule.proto fuchsia.net.filter/SocketProtocol
+struct/member fuchsia.net.filter/Rule.src_port_range fuchsia.net.filter/PortRange
+struct/member fuchsia.net.filter/Rule.src_subnet fuchsia.net/Subnet:optional
+struct/member fuchsia.net.filter/Rule.src_subnet_invert_match bool
+struct fuchsia.net.filter/Rule
+enum/member fuchsia.net.filter/SocketProtocol.ANY 0
+enum/member fuchsia.net.filter/SocketProtocol.ICMP 1
+enum/member fuchsia.net.filter/SocketProtocol.ICMPV6 4
+enum/member fuchsia.net.filter/SocketProtocol.TCP 2
+enum/member fuchsia.net.filter/SocketProtocol.UDP 3
+strict enum fuchsia.net.filter/SocketProtocol uint32
+enum/member fuchsia.net.filter/Status.ERR_BAD_RULE 3
+enum/member fuchsia.net.filter/Status.ERR_GENERATION_MISMATCH 2
+enum/member fuchsia.net.filter/Status.ERR_INTERNAL 1
+enum/member fuchsia.net.filter/Status.ERR_NOT_SUPPORTED 4
+enum/member fuchsia.net.filter/Status.OK 0
+strict enum fuchsia.net.filter/Status uint32
+library fuchsia.net.filter

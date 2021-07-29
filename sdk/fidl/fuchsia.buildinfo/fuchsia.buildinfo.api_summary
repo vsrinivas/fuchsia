@@ -1,0 +1,10 @@
+table/member fuchsia.buildinfo/BuildInfo.board_config string:100
+table/member fuchsia.buildinfo/BuildInfo.latest_commit_date string:100
+table/member fuchsia.buildinfo/BuildInfo.product_config string:100
+table/member fuchsia.buildinfo/BuildInfo.version string:100
+table fuchsia.buildinfo/BuildInfo
+const fuchsia.buildinfo/MAX_STRING_LENGTH uint64 100
+protocol/member fuchsia.buildinfo/Provider.GetBuildInfo() -> (fuchsia.buildinfo/BuildInfo build_info)
+protocol/member fuchsia.buildinfo/Provider.GetSnapshotInfo() -> (zx/handle:VMO snapshot)
+protocol fuchsia.buildinfo/Provider
+library fuchsia.buildinfo

@@ -1,0 +1,48 @@
+enum/member fuchsia.net.oldhttp/CacheMode.BYPASS_CACHE 1
+enum/member fuchsia.net.oldhttp/CacheMode.DEFAULT 0
+enum/member fuchsia.net.oldhttp/CacheMode.ONLY_FROM_CACHE 2
+strict enum fuchsia.net.oldhttp/CacheMode uint32
+struct/member fuchsia.net.oldhttp/HttpError.code int32
+struct/member fuchsia.net.oldhttp/HttpError.description string:optional
+struct fuchsia.net.oldhttp/HttpError
+struct/member fuchsia.net.oldhttp/HttpHeader.name string
+struct/member fuchsia.net.oldhttp/HttpHeader.value string
+struct fuchsia.net.oldhttp/HttpHeader
+protocol/member fuchsia.net.oldhttp/HttpService.CreateURLLoader(server_end:fuchsia.net.oldhttp/URLLoader loader)
+protocol fuchsia.net.oldhttp/HttpService
+enum/member fuchsia.net.oldhttp/ResponseBodyMode.BUFFER 0
+enum/member fuchsia.net.oldhttp/ResponseBodyMode.BUFFER_OR_STREAM 2
+enum/member fuchsia.net.oldhttp/ResponseBodyMode.STREAM 1
+strict enum fuchsia.net.oldhttp/ResponseBodyMode uint32
+union/member fuchsia.net.oldhttp/URLBody.buffer fuchsia.mem/Buffer
+union/member fuchsia.net.oldhttp/URLBody.stream zx/handle:SOCKET
+resource strict union fuchsia.net.oldhttp/URLBody
+protocol/member fuchsia.net.oldhttp/URLLoader.FollowRedirect() -> (fuchsia.net.oldhttp/URLResponse response)
+protocol/member fuchsia.net.oldhttp/URLLoader.QueryStatus() -> (fuchsia.net.oldhttp/URLLoaderStatus status)
+protocol/member fuchsia.net.oldhttp/URLLoader.Start(fuchsia.net.oldhttp/URLRequest request) -> (fuchsia.net.oldhttp/URLResponse response)
+protocol fuchsia.net.oldhttp/URLLoader
+struct/member fuchsia.net.oldhttp/URLLoaderStatus.error box<fuchsia.net.oldhttp/HttpError>
+struct/member fuchsia.net.oldhttp/URLLoaderStatus.is_loading bool
+struct fuchsia.net.oldhttp/URLLoaderStatus
+struct/member fuchsia.net.oldhttp/URLRequest.auto_follow_redirects bool false
+struct/member fuchsia.net.oldhttp/URLRequest.body fuchsia.net.oldhttp/URLBody:optional
+struct/member fuchsia.net.oldhttp/URLRequest.cache_mode fuchsia.net.oldhttp/CacheMode 0
+struct/member fuchsia.net.oldhttp/URLRequest.headers vector<fuchsia.net.oldhttp/HttpHeader>:optional
+struct/member fuchsia.net.oldhttp/URLRequest.method string "GET"
+struct/member fuchsia.net.oldhttp/URLRequest.response_body_buffer_size uint32 0
+struct/member fuchsia.net.oldhttp/URLRequest.response_body_mode fuchsia.net.oldhttp/ResponseBodyMode 1
+struct/member fuchsia.net.oldhttp/URLRequest.url string
+resource struct fuchsia.net.oldhttp/URLRequest
+struct/member fuchsia.net.oldhttp/URLResponse.body fuchsia.net.oldhttp/URLBody:optional
+struct/member fuchsia.net.oldhttp/URLResponse.charset string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.error box<fuchsia.net.oldhttp/HttpError>
+struct/member fuchsia.net.oldhttp/URLResponse.headers vector<fuchsia.net.oldhttp/HttpHeader>:optional
+struct/member fuchsia.net.oldhttp/URLResponse.mime_type string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.redirect_method string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.redirect_referrer string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.redirect_url string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.status_code uint32
+struct/member fuchsia.net.oldhttp/URLResponse.status_line string:optional
+struct/member fuchsia.net.oldhttp/URLResponse.url string:optional
+resource struct fuchsia.net.oldhttp/URLResponse
+library fuchsia.net.oldhttp

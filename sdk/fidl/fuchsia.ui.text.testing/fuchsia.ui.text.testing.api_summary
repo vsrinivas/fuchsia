@@ -1,0 +1,7 @@
+struct/member fuchsia.ui.text.testing/TestInfo.id uint64
+struct/member fuchsia.ui.text.testing/TestInfo.name string
+struct fuchsia.ui.text.testing/TestInfo
+protocol/member fuchsia.ui.text.testing/TextFieldTestSuite.ListTests() -> (vector<fuchsia.ui.text.testing/TestInfo> results)
+protocol/member fuchsia.ui.text.testing/TextFieldTestSuite.RunTest(fuchsia.ui.text/TextFieldLegacy field,uint64 test_id) -> (bool passed,string message)
+protocol fuchsia.ui.text.testing/TextFieldTestSuite
+library fuchsia.ui.text.testing

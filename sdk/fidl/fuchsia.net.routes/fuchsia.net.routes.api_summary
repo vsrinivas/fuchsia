@@ -1,0 +1,16 @@
+table/member fuchsia.net.routes/Destination.address fuchsia.net/IpAddress
+table/member fuchsia.net.routes/Destination.interface_id uint64
+table/member fuchsia.net.routes/Destination.mac fuchsia.net/MacAddress
+table/member fuchsia.net.routes/Destination.source_address fuchsia.net/IpAddress
+table fuchsia.net.routes/Destination
+union/member fuchsia.net.routes/Resolved.direct fuchsia.net.routes/Destination
+union/member fuchsia.net.routes/Resolved.gateway fuchsia.net.routes/Destination
+strict union fuchsia.net.routes/Resolved
+protocol/member fuchsia.net.routes/State.Resolve(fuchsia.net/IpAddress destination) -> (fuchsia.net.routes/State_Resolve_Result result)
+protocol fuchsia.net.routes/State
+struct/member fuchsia.net.routes/State_Resolve_Response.result fuchsia.net.routes/Resolved
+struct fuchsia.net.routes/State_Resolve_Response
+union/member fuchsia.net.routes/State_Resolve_Result.err int32
+union/member fuchsia.net.routes/State_Resolve_Result.response fuchsia.net.routes/State_Resolve_Response
+strict union fuchsia.net.routes/State_Resolve_Result
+library fuchsia.net.routes

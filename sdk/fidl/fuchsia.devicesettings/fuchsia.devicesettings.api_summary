@@ -1,0 +1,19 @@
+protocol/member fuchsia.devicesettings/DeviceSettingsManager.GetInteger(string key) -> (int64 val,fuchsia.devicesettings/Status s)
+protocol/member fuchsia.devicesettings/DeviceSettingsManager.GetString(string key) -> (string val,fuchsia.devicesettings/Status s)
+protocol/member fuchsia.devicesettings/DeviceSettingsManager.SetInteger(string key,int64 val) -> (bool result)
+protocol/member fuchsia.devicesettings/DeviceSettingsManager.SetString(string key,string val) -> (bool result)
+protocol/member fuchsia.devicesettings/DeviceSettingsManager.Watch(string key,client_end:fuchsia.devicesettings/DeviceSettingsWatcher watcher) -> (fuchsia.devicesettings/Status s)
+protocol fuchsia.devicesettings/DeviceSettingsManager
+protocol/member fuchsia.devicesettings/DeviceSettingsWatcher.OnChangeSettings(fuchsia.devicesettings/ValueType type)
+protocol fuchsia.devicesettings/DeviceSettingsWatcher
+enum/member fuchsia.devicesettings/Status.errIncorrectType 5
+enum/member fuchsia.devicesettings/Status.errInvalidSetting 3
+enum/member fuchsia.devicesettings/Status.errNotSet 2
+enum/member fuchsia.devicesettings/Status.errRead 4
+enum/member fuchsia.devicesettings/Status.errUnknown 6
+enum/member fuchsia.devicesettings/Status.ok 1
+strict enum fuchsia.devicesettings/Status uint8
+enum/member fuchsia.devicesettings/ValueType.number 1
+enum/member fuchsia.devicesettings/ValueType.text 2
+strict enum fuchsia.devicesettings/ValueType uint8
+library fuchsia.devicesettings

@@ -1,0 +1,15 @@
+const fuchsia.hardware.usb.device/DEVICE_DESC_SIZE uint32 18
+protocol/member fuchsia.hardware.usb.device/Device.GetConfiguration() -> (uint8 configuration)
+protocol/member fuchsia.hardware.usb.device/Device.GetConfigurationDescriptor(uint8 config) -> (int32 s,vector<uint8>:65536 desc)
+protocol/member fuchsia.hardware.usb.device/Device.GetConfigurationDescriptorSize(uint8 config) -> (int32 s,uint16 size)
+protocol/member fuchsia.hardware.usb.device/Device.GetDeviceDescriptor() -> (array<uint8,18> desc)
+protocol/member fuchsia.hardware.usb.device/Device.GetDeviceId() -> (uint32 device_id)
+protocol/member fuchsia.hardware.usb.device/Device.GetDeviceSpeed() -> (uint32 speed)
+protocol/member fuchsia.hardware.usb.device/Device.GetHubDeviceId() -> (uint32 hub_device_id)
+protocol/member fuchsia.hardware.usb.device/Device.GetStringDescriptor(uint8 desc_id,uint16 lang_id) -> (int32 s,string:384 desc,uint16 actual_lang_id)
+protocol/member fuchsia.hardware.usb.device/Device.SetConfiguration(uint8 configuration) -> (int32 s)
+protocol/member fuchsia.hardware.usb.device/Device.SetInterface(uint8 interface_number,uint8 alt_setting) -> (int32 s)
+protocol fuchsia.hardware.usb.device/Device
+const fuchsia.hardware.usb.device/MAX_CONFIG_DESC_SIZE uint32 65536
+const fuchsia.hardware.usb.device/MAX_STRING_DESC_SIZE uint32 384
+library fuchsia.hardware.usb.device

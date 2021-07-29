@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.accessibility.view/Registry.CreateAccessibilityViewHolder(fuchsia.ui.views/ViewRef a11y_view_ref,fuchsia.ui.views/ViewHolderToken a11y_view_token) -> (fuchsia.ui.views/ViewHolderToken client_view_holder_token)
+protocol fuchsia.ui.accessibility.view/Registry
+library fuchsia.ui.accessibility.view

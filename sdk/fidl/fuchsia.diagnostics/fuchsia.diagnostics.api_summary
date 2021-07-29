@@ -1,0 +1,72 @@
+protocol/member fuchsia.diagnostics/ArchiveAccessor.StreamDiagnostics(fuchsia.diagnostics/StreamParameters stream_parameters,server_end:fuchsia.diagnostics/BatchIterator result_stream)
+protocol fuchsia.diagnostics/ArchiveAccessor
+protocol/member fuchsia.diagnostics/BatchIterator.GetNext() -> (fuchsia.diagnostics/BatchIterator_GetNext_Result result)
+protocol fuchsia.diagnostics/BatchIterator
+struct/member fuchsia.diagnostics/BatchIterator_GetNext_Response.batch vector<fuchsia.diagnostics/FormattedContent>:64
+resource struct fuchsia.diagnostics/BatchIterator_GetNext_Response
+union/member fuchsia.diagnostics/BatchIterator_GetNext_Result.err fuchsia.diagnostics/ReaderError
+union/member fuchsia.diagnostics/BatchIterator_GetNext_Result.response fuchsia.diagnostics/BatchIterator_GetNext_Response
+resource strict union fuchsia.diagnostics/BatchIterator_GetNext_Result
+union/member fuchsia.diagnostics/ClientSelectorConfiguration.select_all bool
+union/member fuchsia.diagnostics/ClientSelectorConfiguration.selectors vector<fuchsia.diagnostics/SelectorArgument>
+flexible union fuchsia.diagnostics/ClientSelectorConfiguration
+table/member fuchsia.diagnostics/ComponentSelector.moniker_segments vector<fuchsia.diagnostics/StringSelector>:25
+table fuchsia.diagnostics/ComponentSelector
+enum/member fuchsia.diagnostics/DataType.INSPECT 1
+enum/member fuchsia.diagnostics/DataType.LIFECYCLE 2
+enum/member fuchsia.diagnostics/DataType.LOGS 3
+strict enum fuchsia.diagnostics/DataType uint8
+enum/member fuchsia.diagnostics/Format.JSON 1
+enum/member fuchsia.diagnostics/Format.TEXT 2
+strict enum fuchsia.diagnostics/Format uint32
+union/member fuchsia.diagnostics/FormattedContent.json fuchsia.mem/Buffer
+union/member fuchsia.diagnostics/FormattedContent.text fuchsia.mem/Buffer
+resource flexible union fuchsia.diagnostics/FormattedContent
+table/member fuchsia.diagnostics/Interest.min_severity fuchsia.diagnostics/Severity
+table fuchsia.diagnostics/Interest
+const fuchsia.diagnostics/MAXIMUM_ENTRIES_PER_BATCH uint16 64
+const fuchsia.diagnostics/MAXIMUM_RAW_SELECTOR_LENGTH uint16 1024
+const fuchsia.diagnostics/MAX_DATA_HIERARCHY_DEPTH uint16 100
+const fuchsia.diagnostics/MAX_MONIKER_SEGMENTS uint16 25
+const fuchsia.diagnostics/MAX_STRING_SELECTOR_LENGTH uint16 100
+table/member fuchsia.diagnostics/PerformanceConfiguration.batch_retrieval_timeout_seconds int64
+table/member fuchsia.diagnostics/PerformanceConfiguration.max_aggregate_content_size_bytes uint64
+table fuchsia.diagnostics/PerformanceConfiguration
+struct/member fuchsia.diagnostics/PropertySelector.node_path vector<fuchsia.diagnostics/StringSelector>:100
+struct/member fuchsia.diagnostics/PropertySelector.target_properties fuchsia.diagnostics/StringSelector
+struct fuchsia.diagnostics/PropertySelector
+enum/member fuchsia.diagnostics/ReaderError.IO 1
+strict enum fuchsia.diagnostics/ReaderError uint32
+table/member fuchsia.diagnostics/Selector.component_selector fuchsia.diagnostics/ComponentSelector
+table/member fuchsia.diagnostics/Selector.tree_selector fuchsia.diagnostics/TreeSelector
+table fuchsia.diagnostics/Selector
+union/member fuchsia.diagnostics/SelectorArgument.raw_selector string:1024
+union/member fuchsia.diagnostics/SelectorArgument.structured_selector fuchsia.diagnostics/Selector
+flexible union fuchsia.diagnostics/SelectorArgument
+enum/member fuchsia.diagnostics/Severity.DEBUG 32
+enum/member fuchsia.diagnostics/Severity.ERROR 80
+enum/member fuchsia.diagnostics/Severity.FATAL 96
+enum/member fuchsia.diagnostics/Severity.INFO 48
+enum/member fuchsia.diagnostics/Severity.TRACE 16
+enum/member fuchsia.diagnostics/Severity.WARN 64
+strict enum fuchsia.diagnostics/Severity uint8
+enum/member fuchsia.diagnostics/StreamMode.SNAPSHOT 1
+enum/member fuchsia.diagnostics/StreamMode.SNAPSHOT_THEN_SUBSCRIBE 2
+enum/member fuchsia.diagnostics/StreamMode.SUBSCRIBE 3
+strict enum fuchsia.diagnostics/StreamMode uint8
+table/member fuchsia.diagnostics/StreamParameters.batch_retrieval_timeout_seconds int64
+table/member fuchsia.diagnostics/StreamParameters.client_selector_configuration fuchsia.diagnostics/ClientSelectorConfiguration
+table/member fuchsia.diagnostics/StreamParameters.data_type fuchsia.diagnostics/DataType
+table/member fuchsia.diagnostics/StreamParameters.format fuchsia.diagnostics/Format
+table/member fuchsia.diagnostics/StreamParameters.performance_configuration fuchsia.diagnostics/PerformanceConfiguration
+table/member fuchsia.diagnostics/StreamParameters.stream_mode fuchsia.diagnostics/StreamMode
+table fuchsia.diagnostics/StreamParameters
+union/member fuchsia.diagnostics/StringSelector.exact_match string:100
+union/member fuchsia.diagnostics/StringSelector.string_pattern string:100
+flexible union fuchsia.diagnostics/StringSelector
+struct/member fuchsia.diagnostics/SubtreeSelector.node_path vector<fuchsia.diagnostics/StringSelector>:100
+struct fuchsia.diagnostics/SubtreeSelector
+union/member fuchsia.diagnostics/TreeSelector.property_selector fuchsia.diagnostics/PropertySelector
+union/member fuchsia.diagnostics/TreeSelector.subtree_selector fuchsia.diagnostics/SubtreeSelector
+flexible union fuchsia.diagnostics/TreeSelector
+library fuchsia.diagnostics

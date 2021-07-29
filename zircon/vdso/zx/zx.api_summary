@@ -1,0 +1,65 @@
+const zx/CHANNEL_MAX_MSG_BYTES uint64 65536
+const zx/CHANNEL_MAX_MSG_HANDLES uint64 64
+const zx/DEFAULT_CHANNEL_RIGHTS zx/rights 61454
+const zx/DEFAULT_EVENT_RIGHTS zx/rights 53251
+const zx/MAX_CPUS uint64 512
+const zx/MAX_NAME_LEN uint64 32
+const zx/RIGHTS_BASIC zx/rights 49155
+const zx/RIGHTS_IO zx/rights 12
+const zx/RIGHTS_POLICY zx/rights 3072
+const zx/RIGHTS_PROPERTY zx/rights 192
+enum/member zx/obj_type.BTI 24
+enum/member zx/obj_type.CHANNEL 4
+enum/member zx/obj_type.CLOCK 30
+enum/member zx/obj_type.EVENT 5
+enum/member zx/obj_type.EVENTPAIR 16
+enum/member zx/obj_type.EXCEPTION 29
+enum/member zx/obj_type.FIFO 19
+enum/member zx/obj_type.GUEST 20
+enum/member zx/obj_type.INTERRUPT 9
+enum/member zx/obj_type.IOMMU 23
+enum/member zx/obj_type.JOB 17
+enum/member zx/obj_type.LOG 12
+enum/member zx/obj_type.MSI_ALLOCATION 32
+enum/member zx/obj_type.MSI_INTERRUPT 33
+enum/member zx/obj_type.NONE 0
+enum/member zx/obj_type.PAGER 28
+enum/member zx/obj_type.PCI_DEVICE 11
+enum/member zx/obj_type.PMT 26
+enum/member zx/obj_type.PORT 6
+enum/member zx/obj_type.PROCESS 1
+enum/member zx/obj_type.PROFILE 25
+enum/member zx/obj_type.RESOURCE 15
+enum/member zx/obj_type.SOCKET 14
+enum/member zx/obj_type.STREAM 31
+enum/member zx/obj_type.SUSPEND_TOKEN 27
+enum/member zx/obj_type.THREAD 2
+enum/member zx/obj_type.TIMER 22
+enum/member zx/obj_type.VCPU 21
+enum/member zx/obj_type.VMAR 18
+enum/member zx/obj_type.VMO 3
+strict enum zx/obj_type uint32
+bits/member zx/rights.APPLY_PROFILE 524288
+bits/member zx/rights.DESTROY 512
+bits/member zx/rights.DUPLICATE 1
+bits/member zx/rights.ENUMERATE 256
+bits/member zx/rights.EXECUTE 16
+bits/member zx/rights.GET_POLICY 2048
+bits/member zx/rights.GET_PROPERTY 64
+bits/member zx/rights.INSPECT 32768
+bits/member zx/rights.MANAGE_JOB 65536
+bits/member zx/rights.MANAGE_PROCESS 131072
+bits/member zx/rights.MANAGE_SOCKET 1048576
+bits/member zx/rights.MANAGE_THREAD 262144
+bits/member zx/rights.MAP 32
+bits/member zx/rights.READ 4
+bits/member zx/rights.SAME_RIGHTS 2147483648
+bits/member zx/rights.SET_POLICY 1024
+bits/member zx/rights.SET_PROPERTY 128
+bits/member zx/rights.SIGNAL 4096
+bits/member zx/rights.SIGNAL_PEER 8192
+bits/member zx/rights.TRANSFER 2
+bits/member zx/rights.WAIT 16384
+bits/member zx/rights.WRITE 8
+strict bits zx/rights uint32
+library zx

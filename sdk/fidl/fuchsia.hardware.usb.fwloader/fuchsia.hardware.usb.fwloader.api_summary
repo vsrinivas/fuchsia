@@ -1,0 +1,8 @@
+protocol/member fuchsia.hardware.usb.fwloader/Device.LoadFirmware(fuchsia.mem/Buffer firmware) -> (int32 s)
+protocol/member fuchsia.hardware.usb.fwloader/Device.LoadPrebuiltFirmware(fuchsia.hardware.usb.fwloader/PrebuiltType prebuilt_type) -> (int32 s)
+protocol fuchsia.hardware.usb.fwloader/Device
+enum/member fuchsia.hardware.usb.fwloader/PrebuiltType.BOOT 3
+enum/member fuchsia.hardware.usb.fwloader/PrebuiltType.FLASH 2
+enum/member fuchsia.hardware.usb.fwloader/PrebuiltType.TESTER 1
+strict enum fuchsia.hardware.usb.fwloader/PrebuiltType uint8
+library fuchsia.hardware.usb.fwloader

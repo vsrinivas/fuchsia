@@ -1,0 +1,31 @@
+struct/member fuchsia.process/HandleInfo.handle zx/handle
+struct/member fuchsia.process/HandleInfo.id uint32
+resource struct fuchsia.process/HandleInfo
+struct/member fuchsia.process/LaunchInfo.executable zx/handle:VMO
+struct/member fuchsia.process/LaunchInfo.job zx/handle:JOB
+struct/member fuchsia.process/LaunchInfo.name string:32
+resource struct fuchsia.process/LaunchInfo
+protocol/member fuchsia.process/Launcher.AddArgs(vector<vector<uint8>> args)
+protocol/member fuchsia.process/Launcher.AddEnvirons(vector<vector<uint8>> environ)
+protocol/member fuchsia.process/Launcher.AddHandles(vector<fuchsia.process/HandleInfo> handles)
+protocol/member fuchsia.process/Launcher.AddNames(vector<fuchsia.process/NameInfo> names)
+protocol/member fuchsia.process/Launcher.CreateWithoutStarting(fuchsia.process/LaunchInfo info) -> (int32 status,box<fuchsia.process/ProcessStartData> data)
+protocol/member fuchsia.process/Launcher.Launch(fuchsia.process/LaunchInfo info) -> (int32 status,zx/handle:<PROCESS,optional> process)
+protocol fuchsia.process/Launcher
+const fuchsia.process/MAX uint32 4294967295
+const fuchsia.process/MAX_RESOLVE_NAME_SIZE uint32 2048
+struct/member fuchsia.process/NameInfo.directory fuchsia.io/Directory
+struct/member fuchsia.process/NameInfo.path string:4096
+resource struct fuchsia.process/NameInfo
+struct/member fuchsia.process/ProcessStartData.base uint64
+struct/member fuchsia.process/ProcessStartData.bootstrap zx/handle:CHANNEL
+struct/member fuchsia.process/ProcessStartData.entry uint64
+struct/member fuchsia.process/ProcessStartData.process zx/handle:PROCESS
+struct/member fuchsia.process/ProcessStartData.root_vmar zx/handle:VMAR
+struct/member fuchsia.process/ProcessStartData.stack uint64
+struct/member fuchsia.process/ProcessStartData.thread zx/handle:THREAD
+struct/member fuchsia.process/ProcessStartData.vdso_base uint64
+resource struct fuchsia.process/ProcessStartData
+protocol/member fuchsia.process/Resolver.Resolve(string:2048 name) -> (int32 status,zx/handle:<VMO,optional> executable,fuchsia.ldsvc/Loader:optional ldsvc)
+protocol fuchsia.process/Resolver
+library fuchsia.process

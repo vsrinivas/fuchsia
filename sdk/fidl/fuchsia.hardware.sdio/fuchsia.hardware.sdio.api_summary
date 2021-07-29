@@ -1,0 +1,117 @@
+protocol/member fuchsia.hardware.sdio/Device.DisableFn() -> (fuchsia.hardware.sdio/Device_DisableFn_Result result)
+protocol/member fuchsia.hardware.sdio/Device.DisableFnIntr() -> (fuchsia.hardware.sdio/Device_DisableFnIntr_Result result)
+protocol/member fuchsia.hardware.sdio/Device.DoRwByte(bool write,uint32 addr,uint8 write_byte) -> (fuchsia.hardware.sdio/Device_DoRwByte_Result result)
+protocol/member fuchsia.hardware.sdio/Device.DoRwTxn(fuchsia.hardware.sdio/SdioRwTxn txn) -> (fuchsia.hardware.sdio/Device_DoRwTxn_Result result)
+protocol/member fuchsia.hardware.sdio/Device.DoVendorControlRwByte(bool write,uint8 addr,uint8 write_byte) -> (fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Result result)
+protocol/member fuchsia.hardware.sdio/Device.EnableFn() -> (fuchsia.hardware.sdio/Device_EnableFn_Result result)
+protocol/member fuchsia.hardware.sdio/Device.EnableFnIntr() -> (fuchsia.hardware.sdio/Device_EnableFnIntr_Result result)
+protocol/member fuchsia.hardware.sdio/Device.GetBlockSize() -> (fuchsia.hardware.sdio/Device_GetBlockSize_Result result)
+protocol/member fuchsia.hardware.sdio/Device.GetDevHwInfo() -> (fuchsia.hardware.sdio/Device_GetDevHwInfo_Result result)
+protocol/member fuchsia.hardware.sdio/Device.GetInBandIntr() -> (fuchsia.hardware.sdio/Device_GetInBandIntr_Result result)
+protocol/member fuchsia.hardware.sdio/Device.IntrPending() -> (fuchsia.hardware.sdio/Device_IntrPending_Result result)
+protocol/member fuchsia.hardware.sdio/Device.IoAbort() -> (fuchsia.hardware.sdio/Device_IoAbort_Result result)
+protocol/member fuchsia.hardware.sdio/Device.UpdateBlockSize(uint16 blk_sz,bool deflt) -> (fuchsia.hardware.sdio/Device_UpdateBlockSize_Result result)
+protocol fuchsia.hardware.sdio/Device
+struct fuchsia.hardware.sdio/Device_DisableFnIntr_Response
+union/member fuchsia.hardware.sdio/Device_DisableFnIntr_Result.err int32
+union/member fuchsia.hardware.sdio/Device_DisableFnIntr_Result.response fuchsia.hardware.sdio/Device_DisableFnIntr_Response
+strict union fuchsia.hardware.sdio/Device_DisableFnIntr_Result
+struct fuchsia.hardware.sdio/Device_DisableFn_Response
+union/member fuchsia.hardware.sdio/Device_DisableFn_Result.err int32
+union/member fuchsia.hardware.sdio/Device_DisableFn_Result.response fuchsia.hardware.sdio/Device_DisableFn_Response
+strict union fuchsia.hardware.sdio/Device_DisableFn_Result
+struct/member fuchsia.hardware.sdio/Device_DoRwByte_Response.read_byte uint8
+struct fuchsia.hardware.sdio/Device_DoRwByte_Response
+union/member fuchsia.hardware.sdio/Device_DoRwByte_Result.err int32
+union/member fuchsia.hardware.sdio/Device_DoRwByte_Result.response fuchsia.hardware.sdio/Device_DoRwByte_Response
+strict union fuchsia.hardware.sdio/Device_DoRwByte_Result
+struct/member fuchsia.hardware.sdio/Device_DoRwTxn_Response.txn fuchsia.hardware.sdio/SdioRwTxn
+resource struct fuchsia.hardware.sdio/Device_DoRwTxn_Response
+union/member fuchsia.hardware.sdio/Device_DoRwTxn_Result.err int32
+union/member fuchsia.hardware.sdio/Device_DoRwTxn_Result.response fuchsia.hardware.sdio/Device_DoRwTxn_Response
+resource strict union fuchsia.hardware.sdio/Device_DoRwTxn_Result
+struct/member fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Response.read_byte uint8
+struct fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Response
+union/member fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Result.err int32
+union/member fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Result.response fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Response
+strict union fuchsia.hardware.sdio/Device_DoVendorControlRwByte_Result
+struct fuchsia.hardware.sdio/Device_EnableFnIntr_Response
+union/member fuchsia.hardware.sdio/Device_EnableFnIntr_Result.err int32
+union/member fuchsia.hardware.sdio/Device_EnableFnIntr_Result.response fuchsia.hardware.sdio/Device_EnableFnIntr_Response
+strict union fuchsia.hardware.sdio/Device_EnableFnIntr_Result
+struct fuchsia.hardware.sdio/Device_EnableFn_Response
+union/member fuchsia.hardware.sdio/Device_EnableFn_Result.err int32
+union/member fuchsia.hardware.sdio/Device_EnableFn_Result.response fuchsia.hardware.sdio/Device_EnableFn_Response
+strict union fuchsia.hardware.sdio/Device_EnableFn_Result
+struct/member fuchsia.hardware.sdio/Device_GetBlockSize_Response.cur_blk_size uint16
+struct fuchsia.hardware.sdio/Device_GetBlockSize_Response
+union/member fuchsia.hardware.sdio/Device_GetBlockSize_Result.err int32
+union/member fuchsia.hardware.sdio/Device_GetBlockSize_Result.response fuchsia.hardware.sdio/Device_GetBlockSize_Response
+strict union fuchsia.hardware.sdio/Device_GetBlockSize_Result
+struct/member fuchsia.hardware.sdio/Device_GetDevHwInfo_Response.hw_info fuchsia.hardware.sdio/SdioHwInfo
+struct fuchsia.hardware.sdio/Device_GetDevHwInfo_Response
+union/member fuchsia.hardware.sdio/Device_GetDevHwInfo_Result.err int32
+union/member fuchsia.hardware.sdio/Device_GetDevHwInfo_Result.response fuchsia.hardware.sdio/Device_GetDevHwInfo_Response
+strict union fuchsia.hardware.sdio/Device_GetDevHwInfo_Result
+struct/member fuchsia.hardware.sdio/Device_GetInBandIntr_Response.irq zx/handle:INTERRUPT
+resource struct fuchsia.hardware.sdio/Device_GetInBandIntr_Response
+union/member fuchsia.hardware.sdio/Device_GetInBandIntr_Result.err int32
+union/member fuchsia.hardware.sdio/Device_GetInBandIntr_Result.response fuchsia.hardware.sdio/Device_GetInBandIntr_Response
+resource strict union fuchsia.hardware.sdio/Device_GetInBandIntr_Result
+struct/member fuchsia.hardware.sdio/Device_IntrPending_Response.pending bool
+struct fuchsia.hardware.sdio/Device_IntrPending_Response
+union/member fuchsia.hardware.sdio/Device_IntrPending_Result.err int32
+union/member fuchsia.hardware.sdio/Device_IntrPending_Result.response fuchsia.hardware.sdio/Device_IntrPending_Response
+strict union fuchsia.hardware.sdio/Device_IntrPending_Result
+struct fuchsia.hardware.sdio/Device_IoAbort_Response
+union/member fuchsia.hardware.sdio/Device_IoAbort_Result.err int32
+union/member fuchsia.hardware.sdio/Device_IoAbort_Result.response fuchsia.hardware.sdio/Device_IoAbort_Response
+strict union fuchsia.hardware.sdio/Device_IoAbort_Result
+struct fuchsia.hardware.sdio/Device_UpdateBlockSize_Response
+union/member fuchsia.hardware.sdio/Device_UpdateBlockSize_Result.err int32
+union/member fuchsia.hardware.sdio/Device_UpdateBlockSize_Result.response fuchsia.hardware.sdio/Device_UpdateBlockSize_Response
+strict union fuchsia.hardware.sdio/Device_UpdateBlockSize_Result
+const fuchsia.hardware.sdio/MAX_TRANSFER_SIZE uint32 2097152
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.DIRECT_COMMAND 4
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.FOUR_BIT_BUS 128
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.HIGH_POWER 64
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.HIGH_SPEED 32
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.HS_SDR12 256
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.HS_SDR25 512
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.LOW_SPEED 16
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.MULTI_BLOCK 1
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.SRW 2
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.SUSPEND_RESUME 8
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.TYPE_A 8192
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.TYPE_B 16384
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.TYPE_C 32768
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.TYPE_D 65536
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.UHS_DDR50 4096
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.UHS_SDR104 2048
+enum/member fuchsia.hardware.sdio/SdioDeviceCapabilities.UHS_SDR50 1024
+strict enum fuchsia.hardware.sdio/SdioDeviceCapabilities uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.caps uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.cccr_vsn uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.num_funcs uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.sdio_vsn uint32
+struct fuchsia.hardware.sdio/SdioDeviceHwInfo
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.fn_intf_code uint8
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.manufacturer_id uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.max_blk_size uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.max_tran_speed uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.product_id uint32
+struct fuchsia.hardware.sdio/SdioFuncHwInfo
+struct/member fuchsia.hardware.sdio/SdioHwInfo.dev_hw_info fuchsia.hardware.sdio/SdioDeviceHwInfo
+struct/member fuchsia.hardware.sdio/SdioHwInfo.funcs_hw_info array<fuchsia.hardware.sdio/SdioFuncHwInfo,8>
+struct/member fuchsia.hardware.sdio/SdioHwInfo.host_max_transfer_size uint32
+struct fuchsia.hardware.sdio/SdioHwInfo
+struct/member fuchsia.hardware.sdio/SdioRwTxn.addr uint32
+struct/member fuchsia.hardware.sdio/SdioRwTxn.buf_offset uint64
+struct/member fuchsia.hardware.sdio/SdioRwTxn.data_size uint32
+struct/member fuchsia.hardware.sdio/SdioRwTxn.dma_vmo zx/handle:<VMO,optional>
+struct/member fuchsia.hardware.sdio/SdioRwTxn.incr bool
+struct/member fuchsia.hardware.sdio/SdioRwTxn.use_dma bool
+struct/member fuchsia.hardware.sdio/SdioRwTxn.virt vector<uint8>:<2097152,optional>
+struct/member fuchsia.hardware.sdio/SdioRwTxn.write bool
+resource struct fuchsia.hardware.sdio/SdioRwTxn
+library fuchsia.hardware.sdio

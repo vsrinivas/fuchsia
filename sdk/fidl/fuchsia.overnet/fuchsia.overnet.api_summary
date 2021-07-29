@@ -1,0 +1,20 @@
+table/member fuchsia.overnet/ConnectionInfo.peer fuchsia.overnet.protocol/NodeId
+table fuchsia.overnet/ConnectionInfo
+protocol/member fuchsia.overnet/HostOvernet.ConnectMeshController(server_end:fuchsia.overnet/MeshController svc)
+protocol/member fuchsia.overnet/HostOvernet.ConnectServiceConsumer(server_end:fuchsia.overnet/ServiceConsumer svc)
+protocol/member fuchsia.overnet/HostOvernet.ConnectServicePublisher(server_end:fuchsia.overnet/ServicePublisher svc)
+protocol fuchsia.overnet/HostOvernet
+protocol/member fuchsia.overnet/MeshController.AttachSocketLink(zx/handle:SOCKET socket)
+protocol fuchsia.overnet/MeshController
+struct/member fuchsia.overnet/Peer.description fuchsia.overnet.protocol/PeerDescription
+struct/member fuchsia.overnet/Peer.id fuchsia.overnet.protocol/NodeId
+struct/member fuchsia.overnet/Peer.is_self bool
+struct fuchsia.overnet/Peer
+protocol/member fuchsia.overnet/ServiceConsumer.ConnectToService(fuchsia.overnet.protocol/NodeId node,string:255 service_name,zx/handle:CHANNEL chan)
+protocol/member fuchsia.overnet/ServiceConsumer.ListPeers() -> (vector<fuchsia.overnet/Peer> peers)
+protocol fuchsia.overnet/ServiceConsumer
+protocol/member fuchsia.overnet/ServiceProvider.ConnectToService(zx/handle:CHANNEL chan,fuchsia.overnet/ConnectionInfo info)
+protocol fuchsia.overnet/ServiceProvider
+protocol/member fuchsia.overnet/ServicePublisher.PublishService(string:255 service_name,client_end:fuchsia.overnet/ServiceProvider provider)
+protocol fuchsia.overnet/ServicePublisher
+library fuchsia.overnet

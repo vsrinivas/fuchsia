@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.iommu/Iommu.GetBti(uint32 iommu_index,uint32 bti_id) -> (int32 s,zx/handle:BTI handle)
+protocol fuchsia.hardware.iommu/Iommu
+library fuchsia.hardware.iommu

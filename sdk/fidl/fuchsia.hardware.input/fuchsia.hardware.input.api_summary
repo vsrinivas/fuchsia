@@ -1,0 +1,42 @@
+enum/member fuchsia.hardware.input/BootProtocol.KBD 1
+enum/member fuchsia.hardware.input/BootProtocol.MOUSE 2
+enum/member fuchsia.hardware.input/BootProtocol.NONE 0
+strict enum fuchsia.hardware.input/BootProtocol uint32
+protocol/member fuchsia.hardware.input/Device.GetBootProtocol() -> (fuchsia.hardware.input/BootProtocol protocol)
+protocol/member fuchsia.hardware.input/Device.GetDeviceIds() -> (fuchsia.hardware.input/DeviceIds ids)
+protocol/member fuchsia.hardware.input/Device.GetDeviceReportsReader(server_end:fuchsia.hardware.input/DeviceReportsReader reader) -> (fuchsia.hardware.input/Device_GetDeviceReportsReader_Result result)
+protocol/member fuchsia.hardware.input/Device.GetReport(fuchsia.hardware.input/ReportType type,uint8 id) -> (int32 status,vector<uint8>:8192 report)
+protocol/member fuchsia.hardware.input/Device.GetReportDesc() -> (vector<uint8>:8192 desc)
+protocol/member fuchsia.hardware.input/Device.GetReportsEvent() -> (int32 status,zx/handle:EVENT event)
+protocol/member fuchsia.hardware.input/Device.ReadReport() -> (int32 status,vector<uint8>:8192 data,int64 time)
+protocol/member fuchsia.hardware.input/Device.ReadReports() -> (int32 status,vector<uint8>:8192 data)
+protocol/member fuchsia.hardware.input/Device.SetReport(fuchsia.hardware.input/ReportType type,uint8 id,vector<uint8>:8192 report) -> (int32 status)
+protocol/member fuchsia.hardware.input/Device.SetTraceId(uint32 id)
+protocol fuchsia.hardware.input/Device
+struct/member fuchsia.hardware.input/DeviceIds.product_id uint32
+struct/member fuchsia.hardware.input/DeviceIds.vendor_id uint32
+struct/member fuchsia.hardware.input/DeviceIds.version uint32
+struct fuchsia.hardware.input/DeviceIds
+protocol/member fuchsia.hardware.input/DeviceReportsReader.ReadReports() -> (fuchsia.hardware.input/DeviceReportsReader_ReadReports_Result result)
+protocol fuchsia.hardware.input/DeviceReportsReader
+struct/member fuchsia.hardware.input/DeviceReportsReader_ReadReports_Response.reports vector<fuchsia.hardware.input/Report>:50
+struct fuchsia.hardware.input/DeviceReportsReader_ReadReports_Response
+union/member fuchsia.hardware.input/DeviceReportsReader_ReadReports_Result.err int32
+union/member fuchsia.hardware.input/DeviceReportsReader_ReadReports_Result.response fuchsia.hardware.input/DeviceReportsReader_ReadReports_Response
+strict union fuchsia.hardware.input/DeviceReportsReader_ReadReports_Result
+struct fuchsia.hardware.input/Device_GetDeviceReportsReader_Response
+union/member fuchsia.hardware.input/Device_GetDeviceReportsReader_Result.err int32
+union/member fuchsia.hardware.input/Device_GetDeviceReportsReader_Result.response fuchsia.hardware.input/Device_GetDeviceReportsReader_Response
+strict union fuchsia.hardware.input/Device_GetDeviceReportsReader_Result
+const fuchsia.hardware.input/MAX_DESC_LEN uint16 8192
+const fuchsia.hardware.input/MAX_REPORTS_COUNT uint32 50
+const fuchsia.hardware.input/MAX_REPORT_DATA uint16 8192
+const fuchsia.hardware.input/MAX_REPORT_LEN uint16 8192
+struct/member fuchsia.hardware.input/Report.data vector<uint8>:8192
+struct/member fuchsia.hardware.input/Report.time int64
+struct fuchsia.hardware.input/Report
+enum/member fuchsia.hardware.input/ReportType.FEATURE 3
+enum/member fuchsia.hardware.input/ReportType.INPUT 1
+enum/member fuchsia.hardware.input/ReportType.OUTPUT 2
+strict enum fuchsia.hardware.input/ReportType uint8
+library fuchsia.hardware.input

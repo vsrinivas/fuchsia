@@ -1,0 +1,100 @@
+protocol/member fuchsia.virtualization/BalloonController.GetMemStats() -> (int32 status,vector<fuchsia.virtualization/MemStat>:optional mem_stats)
+protocol/member fuchsia.virtualization/BalloonController.GetNumPages() -> (uint32 num_pages)
+protocol/member fuchsia.virtualization/BalloonController.RequestNumPages(uint32 num_pages)
+protocol fuchsia.virtualization/BalloonController
+enum/member fuchsia.virtualization/BlockFormat.QCOW 1
+enum/member fuchsia.virtualization/BlockFormat.RAW 0
+strict enum fuchsia.virtualization/BlockFormat uint32
+enum/member fuchsia.virtualization/BlockMode.READ_ONLY 1
+enum/member fuchsia.virtualization/BlockMode.READ_WRITE 0
+enum/member fuchsia.virtualization/BlockMode.VOLATILE_WRITE 2
+strict enum fuchsia.virtualization/BlockMode uint32
+struct/member fuchsia.virtualization/BlockSpec.file fuchsia.io/File
+struct/member fuchsia.virtualization/BlockSpec.format fuchsia.virtualization/BlockFormat
+struct/member fuchsia.virtualization/BlockSpec.id string:20
+struct/member fuchsia.virtualization/BlockSpec.mode fuchsia.virtualization/BlockMode
+resource struct fuchsia.virtualization/BlockSpec
+struct/member fuchsia.virtualization/EnvironmentInfo.id uint32
+struct/member fuchsia.virtualization/EnvironmentInfo.instances vector<fuchsia.virtualization/InstanceInfo>
+struct/member fuchsia.virtualization/EnvironmentInfo.label string
+struct fuchsia.virtualization/EnvironmentInfo
+protocol/member fuchsia.virtualization/Guest.GetSerial() -> (zx/handle:SOCKET socket)
+protocol fuchsia.virtualization/Guest
+table/member fuchsia.virtualization/GuestConfig.block_devices vector<fuchsia.virtualization/BlockSpec>:32
+table/member fuchsia.virtualization/GuestConfig.cmdline string
+table/member fuchsia.virtualization/GuestConfig.cmdline_add vector<string>
+table/member fuchsia.virtualization/GuestConfig.cpus uint8
+table/member fuchsia.virtualization/GuestConfig.default_net bool
+table/member fuchsia.virtualization/GuestConfig.dtb_overlay fuchsia.io/File
+table/member fuchsia.virtualization/GuestConfig.interrupts vector<uint32>:128
+table/member fuchsia.virtualization/GuestConfig.kernel fuchsia.io/File
+table/member fuchsia.virtualization/GuestConfig.kernel_type fuchsia.virtualization/KernelType
+table/member fuchsia.virtualization/GuestConfig.magma_device fuchsia.virtualization/MagmaDevice
+table/member fuchsia.virtualization/GuestConfig.memory vector<fuchsia.virtualization/MemorySpec>:32
+table/member fuchsia.virtualization/GuestConfig.net_devices vector<fuchsia.virtualization/NetSpec>:32
+table/member fuchsia.virtualization/GuestConfig.ramdisk fuchsia.io/File
+table/member fuchsia.virtualization/GuestConfig.virtio_balloon bool
+table/member fuchsia.virtualization/GuestConfig.virtio_console bool
+table/member fuchsia.virtualization/GuestConfig.virtio_gpu bool
+table/member fuchsia.virtualization/GuestConfig.virtio_rng bool
+table/member fuchsia.virtualization/GuestConfig.virtio_vsock bool
+table/member fuchsia.virtualization/GuestConfig.wayland_device fuchsia.virtualization/WaylandDevice
+resource table fuchsia.virtualization/GuestConfig
+protocol/member fuchsia.virtualization/GuestConfigProvider.Get() -> (fuchsia.virtualization/GuestConfig guest_config)
+protocol fuchsia.virtualization/GuestConfigProvider
+protocol/member fuchsia.virtualization/GuestVsockAcceptor.Accept(uint32 src_cid,uint32 src_port,uint32 port,zx/handle:optional handle) -> (int32 status)
+protocol fuchsia.virtualization/GuestVsockAcceptor
+protocol/member fuchsia.virtualization/GuestVsockEndpoint.OnShutdown -> (uint32 src_cid,uint32 src_port,uint32 dst_cid,uint32 dst_port)
+protocol/member fuchsia.virtualization/GuestVsockEndpoint.SetContextId(uint32 cid,client_end:fuchsia.virtualization/HostVsockConnector connector,server_end:fuchsia.virtualization/GuestVsockAcceptor acceptor)
+protocol fuchsia.virtualization/GuestVsockEndpoint
+const fuchsia.virtualization/HOST_CID uint32 2
+protocol/member fuchsia.virtualization/HostVsockAcceptor.Accept(uint32 src_cid,uint32 src_port,uint32 port) -> (int32 status,zx/handle:optional handle)
+protocol fuchsia.virtualization/HostVsockAcceptor
+protocol/member fuchsia.virtualization/HostVsockConnector.Connect(uint32 src_cid,uint32 src_port,uint32 cid,uint32 port) -> (int32 status,zx/handle:optional handle)
+protocol fuchsia.virtualization/HostVsockConnector
+protocol/member fuchsia.virtualization/HostVsockEndpoint.Connect(uint32 cid,uint32 port,zx/handle:optional handle) -> (int32 status)
+protocol/member fuchsia.virtualization/HostVsockEndpoint.Listen(uint32 port,client_end:fuchsia.virtualization/HostVsockAcceptor acceptor) -> (int32 status)
+protocol fuchsia.virtualization/HostVsockEndpoint
+struct/member fuchsia.virtualization/InstanceInfo.cid uint32
+struct/member fuchsia.virtualization/InstanceInfo.label string
+struct fuchsia.virtualization/InstanceInfo
+enum/member fuchsia.virtualization/KernelType.LINUX 1
+enum/member fuchsia.virtualization/KernelType.ZIRCON 0
+strict enum fuchsia.virtualization/KernelType uint32
+const fuchsia.virtualization/MAX_BLOCK_DEVICES uint8 32
+const fuchsia.virtualization/MAX_BLOCK_DEVICE_ID uint8 20
+const fuchsia.virtualization/MAX_INTERRUPTS uint8 128
+const fuchsia.virtualization/MAX_MEMORY uint8 32
+const fuchsia.virtualization/MAX_NET_DEVICES uint8 32
+struct/member fuchsia.virtualization/MagmaDevice.memory uint64 17179869184
+struct fuchsia.virtualization/MagmaDevice
+protocol/member fuchsia.virtualization/Manager.Connect(uint32 id,server_end:fuchsia.virtualization/Realm env)
+protocol/member fuchsia.virtualization/Manager.Create(string:optional label,server_end:fuchsia.virtualization/Realm env)
+protocol/member fuchsia.virtualization/Manager.List() -> (vector<fuchsia.virtualization/EnvironmentInfo> env_infos)
+protocol fuchsia.virtualization/Manager
+struct/member fuchsia.virtualization/MemStat.tag uint16
+struct/member fuchsia.virtualization/MemStat.val uint64
+struct fuchsia.virtualization/MemStat
+enum/member fuchsia.virtualization/MemoryPolicy.GUEST_CACHED 0
+enum/member fuchsia.virtualization/MemoryPolicy.HOST_CACHED 1
+enum/member fuchsia.virtualization/MemoryPolicy.HOST_DEVICE 2
+strict enum fuchsia.virtualization/MemoryPolicy uint32
+struct/member fuchsia.virtualization/MemorySpec.base uint64
+struct/member fuchsia.virtualization/MemorySpec.policy fuchsia.virtualization/MemoryPolicy
+struct/member fuchsia.virtualization/MemorySpec.size uint64
+struct fuchsia.virtualization/MemorySpec
+struct/member fuchsia.virtualization/NetSpec.enable_bridge bool
+struct/member fuchsia.virtualization/NetSpec.mac_address fuchsia.hardware.ethernet/MacAddress
+struct fuchsia.virtualization/NetSpec
+protocol/member fuchsia.virtualization/Realm.ConnectToBalloon(uint32 cid,server_end:fuchsia.virtualization/BalloonController controller)
+protocol/member fuchsia.virtualization/Realm.ConnectToInstance(uint32 cid,server_end:fuchsia.virtualization/Guest controller)
+protocol/member fuchsia.virtualization/Realm.GetHostVsockEndpoint(server_end:fuchsia.virtualization/HostVsockEndpoint endpoint)
+protocol/member fuchsia.virtualization/Realm.LaunchInstance(string:2083 url,string:optional label,fuchsia.virtualization/GuestConfig guest_config,server_end:fuchsia.virtualization/Guest controller) -> (uint32 cid)
+protocol/member fuchsia.virtualization/Realm.ListInstances() -> (vector<fuchsia.virtualization/InstanceInfo> instances)
+protocol fuchsia.virtualization/Realm
+struct/member fuchsia.virtualization/WaylandDevice.dispatcher client_end:fuchsia.virtualization/WaylandDispatcher
+struct/member fuchsia.virtualization/WaylandDevice.memory uint64 1073741824
+resource struct fuchsia.virtualization/WaylandDevice
+protocol/member fuchsia.virtualization/WaylandDispatcher.OnNewConnection(zx/handle:CHANNEL channel)
+protocol fuchsia.virtualization/WaylandDispatcher
+library fuchsia.virtualization

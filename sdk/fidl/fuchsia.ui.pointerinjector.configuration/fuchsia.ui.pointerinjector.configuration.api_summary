@@ -1,0 +1,4 @@
+protocol/member fuchsia.ui.pointerinjector.configuration/Setup.GetViewRefs() -> (fuchsia.ui.views/ViewRef context,fuchsia.ui.views/ViewRef target)
+protocol/member fuchsia.ui.pointerinjector.configuration/Setup.WatchViewport() -> (fuchsia.ui.pointerinjector/Viewport viewport)
+protocol fuchsia.ui.pointerinjector.configuration/Setup
+library fuchsia.ui.pointerinjector.configuration

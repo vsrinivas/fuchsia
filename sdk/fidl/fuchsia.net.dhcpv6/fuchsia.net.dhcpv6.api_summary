@@ -1,0 +1,28 @@
+table/member fuchsia.net.dhcpv6/AddressAssignmentConfig.non_temporary_address_config fuchsia.net.dhcpv6/AddressConfig
+table fuchsia.net.dhcpv6/AddressAssignmentConfig
+table/member fuchsia.net.dhcpv6/AddressConfig.address_count uint8
+table/member fuchsia.net.dhcpv6/AddressConfig.preferred_addresses vector<fuchsia.net/Ipv6Address>
+table fuchsia.net.dhcpv6/AddressConfig
+protocol/member fuchsia.net.dhcpv6/Client.Shutdown() -> (fuchsia.net.dhcpv6/Client_Shutdown_Result result)
+protocol/member fuchsia.net.dhcpv6/Client.WatchAddress() -> (fuchsia.net/Subnet address,fuchsia.net.interfaces.admin/AddressParameters address_parameters)
+protocol/member fuchsia.net.dhcpv6/Client.WatchServers() -> (vector<fuchsia.net.name/DnsServer> servers)
+protocol fuchsia.net.dhcpv6/Client
+table/member fuchsia.net.dhcpv6/ClientConfig.address_assignment_config fuchsia.net.dhcpv6/AddressAssignmentConfig
+table/member fuchsia.net.dhcpv6/ClientConfig.information_config fuchsia.net.dhcpv6/InformationConfig
+table fuchsia.net.dhcpv6/ClientConfig
+protocol/member fuchsia.net.dhcpv6/ClientProvider.NewClient(fuchsia.net.dhcpv6/NewClientParams params,server_end:fuchsia.net.dhcpv6/Client request)
+protocol fuchsia.net.dhcpv6/ClientProvider
+struct fuchsia.net.dhcpv6/Client_Shutdown_Response
+union/member fuchsia.net.dhcpv6/Client_Shutdown_Result.err int32
+union/member fuchsia.net.dhcpv6/Client_Shutdown_Result.response fuchsia.net.dhcpv6/Client_Shutdown_Response
+strict union fuchsia.net.dhcpv6/Client_Shutdown_Result
+const fuchsia.net.dhcpv6/DEFAULT_CLIENT_PORT uint16 546
+table/member fuchsia.net.dhcpv6/InformationConfig.dns_servers bool
+table fuchsia.net.dhcpv6/InformationConfig
+table/member fuchsia.net.dhcpv6/NewClientParams.address fuchsia.net/Ipv6SocketAddress
+table/member fuchsia.net.dhcpv6/NewClientParams.config fuchsia.net.dhcpv6/ClientConfig
+table/member fuchsia.net.dhcpv6/NewClientParams.interface_id uint64
+table fuchsia.net.dhcpv6/NewClientParams
+const fuchsia.net.dhcpv6/RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS string "ff02::1:2"
+const fuchsia.net.dhcpv6/RELAY_AGENT_AND_SERVER_PORT uint16 547
+library fuchsia.net.dhcpv6

@@ -1,0 +1,10 @@
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.DisablePowerDomain(uint32 index) -> (int32 s)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.EnablePowerDomain(uint32 index) -> (int32 s)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.GetCurrentVoltage(uint32 index) -> (int32 s,uint32 current_voltage)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.GetPowerDomainStatus(uint32 index) -> (int32 s,fuchsia.hardware.power/PowerDomainStatus status)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.GetSupportedVoltageRange(uint32 index) -> (int32 s,uint32 min,uint32 max)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.ReadPmicCtrlReg(uint32 index,uint32 reg_addr) -> (int32 s,uint32 value)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.RequestVoltage(uint32 index,uint32 voltage) -> (int32 s,uint32 actual_voltage)
+protocol/member fuchsia.hardware.powerimpl/PowerImpl.WritePmicCtrlReg(uint32 index,uint32 reg_addr,uint32 value) -> (int32 s)
+protocol fuchsia.hardware.powerimpl/PowerImpl
+library fuchsia.hardware.powerimpl

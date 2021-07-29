@@ -1,0 +1,12 @@
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.Exchange(uint32 chip_select,vector<uint8> txdata) -> (int32 status,vector<uint8> rxdata)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.ExchangeVmo(uint32 chip_select,uint32 tx_vmo_id,uint64 tx_offset,uint32 rx_vmo_id,uint64 rx_offset,uint64 size) -> (int32 status)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.GetChipSelectCount() -> (uint32 count)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.ReceiveVmo(uint32 chip_select,uint32 vmo_id,uint64 offset,uint64 size) -> (int32 status)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.RegisterVmo(uint32 chip_select,uint32 vmo_id,zx/handle:VMO vmo,uint64 offset,uint64 size,uint32 rights) -> (int32 status)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.TransmitVmo(uint32 chip_select,uint32 vmo_id,uint64 offset,uint64 size) -> (int32 status)
+protocol/member fuchsia.hardware.spiimpl/SpiImpl.UnregisterVmo(uint32 chip_select,uint32 vmo_id) -> (int32 status,zx/handle:VMO vmo)
+protocol fuchsia.hardware.spiimpl/SpiImpl
+enum/member fuchsia.hardware.spiimpl/SpiVmoRight.READ 1
+enum/member fuchsia.hardware.spiimpl/SpiVmoRight.WRITE 2
+strict enum fuchsia.hardware.spiimpl/SpiVmoRight uint32
+library fuchsia.hardware.spiimpl

@@ -1,0 +1,39 @@
+protocol/member fuchsia.hardware.block/Block.AttachVmo(zx/handle:VMO vmo) -> (int32 status,box<fuchsia.hardware.block/VmoId> vmoid)
+protocol/member fuchsia.hardware.block/Block.CloseFifo() -> (int32 status)
+protocol/member fuchsia.hardware.block/Block.GetFifo() -> (int32 status,zx/handle:<FIFO,optional> fifo)
+protocol/member fuchsia.hardware.block/Block.GetInfo() -> (int32 status,box<fuchsia.hardware.block/BlockInfo> info)
+protocol/member fuchsia.hardware.block/Block.GetStats(bool clear) -> (int32 status,box<fuchsia.hardware.block/BlockStats> stats)
+protocol/member fuchsia.hardware.block/Block.RebindDevice() -> (int32 status)
+protocol fuchsia.hardware.block/Block
+struct/member fuchsia.hardware.block/BlockInfo.block_count uint64
+struct/member fuchsia.hardware.block/BlockInfo.block_size uint32
+struct/member fuchsia.hardware.block/BlockInfo.flags uint32
+struct/member fuchsia.hardware.block/BlockInfo.max_transfer_size uint32
+struct/member fuchsia.hardware.block/BlockInfo.reserved uint32
+struct fuchsia.hardware.block/BlockInfo
+struct/member fuchsia.hardware.block/BlockStats.barrier_after fuchsia.storage.metrics/CallStat
+struct/member fuchsia.hardware.block/BlockStats.barrier_before fuchsia.storage.metrics/CallStat
+struct/member fuchsia.hardware.block/BlockStats.flush fuchsia.storage.metrics/CallStat
+struct/member fuchsia.hardware.block/BlockStats.read fuchsia.storage.metrics/CallStat
+struct/member fuchsia.hardware.block/BlockStats.trim fuchsia.storage.metrics/CallStat
+struct/member fuchsia.hardware.block/BlockStats.write fuchsia.storage.metrics/CallStat
+struct fuchsia.hardware.block/BlockStats
+const fuchsia.hardware.block/FLAG_BOOTPART uint32 4
+const fuchsia.hardware.block/FLAG_READONLY uint32 1
+const fuchsia.hardware.block/FLAG_REMOVABLE uint32 2
+const fuchsia.hardware.block/FLAG_TRIM_SUPPORT uint32 8
+protocol/member fuchsia.hardware.block/Ftl.Format() -> (int32 status)
+protocol/member fuchsia.hardware.block/Ftl.GetVmo() -> (fuchsia.hardware.block/InspectVmoProvider_GetVmo_Result result)
+protocol fuchsia.hardware.block/Ftl
+protocol/member fuchsia.hardware.block/InspectVmoProvider.GetVmo() -> (fuchsia.hardware.block/InspectVmoProvider_GetVmo_Result result)
+protocol fuchsia.hardware.block/InspectVmoProvider
+struct/member fuchsia.hardware.block/InspectVmoProvider_GetVmo_Response.vmo zx/handle:VMO
+resource struct fuchsia.hardware.block/InspectVmoProvider_GetVmo_Response
+union/member fuchsia.hardware.block/InspectVmoProvider_GetVmo_Result.err int32
+union/member fuchsia.hardware.block/InspectVmoProvider_GetVmo_Result.response fuchsia.hardware.block/InspectVmoProvider_GetVmo_Response
+resource strict union fuchsia.hardware.block/InspectVmoProvider_GetVmo_Result
+const fuchsia.hardware.block/MAX_TRANSFER_UNBOUNDED uint32 4294967295
+const fuchsia.hardware.block/VMOID_INVALID uint16 0
+struct/member fuchsia.hardware.block/VmoId.id uint16
+struct fuchsia.hardware.block/VmoId
+library fuchsia.hardware.block

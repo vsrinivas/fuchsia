@@ -1,0 +1,93 @@
+protocol/member fuchsia.weave/Bootstrap.ImportWeaveConfig(fuchsia.mem/Buffer config_json) -> (fuchsia.weave/Bootstrap_ImportWeaveConfig_Result result)
+protocol fuchsia.weave/Bootstrap
+struct fuchsia.weave/Bootstrap_ImportWeaveConfig_Response
+union/member fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.err int32
+union/member fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.response fuchsia.weave/Bootstrap_ImportWeaveConfig_Response
+strict union fuchsia.weave/Bootstrap_ImportWeaveConfig_Result
+enum/member fuchsia.weave/ErrorCode.CRYPTO_ERROR 2
+enum/member fuchsia.weave/ErrorCode.FILE_NOT_FOUND 1
+enum/member fuchsia.weave/ErrorCode.INVALID_ARGUMENT 3
+enum/member fuchsia.weave/ErrorCode.INVALID_STATE 4
+enum/member fuchsia.weave/ErrorCode.UNSPECIFIED_ERROR 2147483647
+strict enum fuchsia.weave/ErrorCode uint32
+protocol/member fuchsia.weave/FactoryDataManager.GetPairingCode() -> (fuchsia.weave/FactoryDataManager_GetPairingCode_Result result)
+protocol/member fuchsia.weave/FactoryDataManager.GetWeaveCertificate() -> (fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result result)
+protocol fuchsia.weave/FactoryDataManager
+struct/member fuchsia.weave/FactoryDataManager_GetPairingCode_Response.pairing_code vector<uint8>:16
+struct fuchsia.weave/FactoryDataManager_GetPairingCode_Response
+union/member fuchsia.weave/FactoryDataManager_GetPairingCode_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/FactoryDataManager_GetPairingCode_Result.response fuchsia.weave/FactoryDataManager_GetPairingCode_Response
+strict union fuchsia.weave/FactoryDataManager_GetPairingCode_Result
+struct/member fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response.certificate fuchsia.mem/Buffer
+resource struct fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response
+union/member fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.response fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response
+resource strict union fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result
+union/member fuchsia.weave/Host.hostname string:255
+union/member fuchsia.weave/Host.ip_address fuchsia.net/IpAddress
+strict union fuchsia.weave/Host
+struct/member fuchsia.weave/HostPort.host fuchsia.weave/Host
+struct/member fuchsia.weave/HostPort.port uint16
+struct fuchsia.weave/HostPort
+const fuchsia.weave/MAX_HOST_PORTS uint32 256
+const fuchsia.weave/MAX_PUBLIC_KEY_SIZE uint32 65
+const fuchsia.weave/MAX_QR_CODE_SIZE uint32 256
+const fuchsia.weave/MAX_SIGNATURE_SIZE uint32 139
+table/member fuchsia.weave/PairingState.is_fabric_provisioned bool
+table/member fuchsia.weave/PairingState.is_service_provisioned bool
+table/member fuchsia.weave/PairingState.is_thread_provisioned bool
+table/member fuchsia.weave/PairingState.is_weave_fully_provisioned bool
+table/member fuchsia.weave/PairingState.is_wlan_provisioned bool
+table fuchsia.weave/PairingState
+protocol/member fuchsia.weave/PairingStateWatcher.WatchPairingState() -> (fuchsia.weave/PairingState state)
+protocol fuchsia.weave/PairingStateWatcher
+protocol/member fuchsia.weave/Provisioner.GenerateKeyPair() -> (fuchsia.weave/Provisioner_GenerateKeyPair_Result result)
+protocol fuchsia.weave/Provisioner
+struct/member fuchsia.weave/Provisioner_GenerateKeyPair_Response.public_key vector<uint8>:65
+struct/member fuchsia.weave/Provisioner_GenerateKeyPair_Response.wrapped_private_key vector<uint8>
+struct fuchsia.weave/Provisioner_GenerateKeyPair_Response
+union/member fuchsia.weave/Provisioner_GenerateKeyPair_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/Provisioner_GenerateKeyPair_Result.response fuchsia.weave/Provisioner_GenerateKeyPair_Response
+strict union fuchsia.weave/Provisioner_GenerateKeyPair_Result
+struct/member fuchsia.weave/QrCode.data string:256
+struct fuchsia.weave/QrCode
+const fuchsia.weave/RESET_CONFIG_ALL uint16 255
+bits/member fuchsia.weave/ResetConfigFlags.FABRIC_CONFIG 2
+bits/member fuchsia.weave/ResetConfigFlags.NETWORK_CONFIG 1
+bits/member fuchsia.weave/ResetConfigFlags.OPERATIONAL_CREDENTIALS 8
+bits/member fuchsia.weave/ResetConfigFlags.SERVICE_CONFIG 4
+strict bits fuchsia.weave/ResetConfigFlags uint16
+protocol/member fuchsia.weave/Signer.SignHash(vector<uint8>:32 hash) -> (fuchsia.weave/Signer_SignHash_Result result)
+protocol/member fuchsia.weave/Signer.SignHashWithPrivateKey(vector<uint8>:32 hash,vector<uint8> wrapped_private_key) -> (fuchsia.weave/Signer_SignHashWithPrivateKey_Result result)
+protocol fuchsia.weave/Signer
+struct/member fuchsia.weave/Signer_SignHashWithPrivateKey_Response.signature vector<uint8>:139
+struct fuchsia.weave/Signer_SignHashWithPrivateKey_Response
+union/member fuchsia.weave/Signer_SignHashWithPrivateKey_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/Signer_SignHashWithPrivateKey_Result.response fuchsia.weave/Signer_SignHashWithPrivateKey_Response
+strict union fuchsia.weave/Signer_SignHashWithPrivateKey_Result
+struct/member fuchsia.weave/Signer_SignHash_Response.signature vector<uint8>:139
+struct fuchsia.weave/Signer_SignHash_Response
+union/member fuchsia.weave/Signer_SignHash_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/Signer_SignHash_Result.response fuchsia.weave/Signer_SignHash_Response
+strict union fuchsia.weave/Signer_SignHash_Result
+protocol/member fuchsia.weave/Stack.GetPairingStateWatcher(server_end:fuchsia.weave/PairingStateWatcher watcher)
+protocol/member fuchsia.weave/Stack.GetQrCode() -> (fuchsia.weave/Stack_GetQrCode_Result result)
+protocol/member fuchsia.weave/Stack.GetSvcDirectoryWatcher(uint64 endpoint_id,server_end:fuchsia.weave/SvcDirectoryWatcher watcher)
+protocol/member fuchsia.weave/Stack.ResetConfig(fuchsia.weave/ResetConfigFlags flags) -> (fuchsia.weave/Stack_ResetConfig_Result result)
+protocol fuchsia.weave/Stack
+protocol/member fuchsia.weave/StackProvider.SetWlanNetworkConfigProvider(client_end:fuchsia.weave/WlanNetworkConfigProvider provider)
+protocol fuchsia.weave/StackProvider
+struct/member fuchsia.weave/Stack_GetQrCode_Response.qr_code fuchsia.weave/QrCode
+struct fuchsia.weave/Stack_GetQrCode_Response
+union/member fuchsia.weave/Stack_GetQrCode_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/Stack_GetQrCode_Result.response fuchsia.weave/Stack_GetQrCode_Response
+strict union fuchsia.weave/Stack_GetQrCode_Result
+struct fuchsia.weave/Stack_ResetConfig_Response
+union/member fuchsia.weave/Stack_ResetConfig_Result.err fuchsia.weave/ErrorCode
+union/member fuchsia.weave/Stack_ResetConfig_Result.response fuchsia.weave/Stack_ResetConfig_Response
+strict union fuchsia.weave/Stack_ResetConfig_Result
+protocol/member fuchsia.weave/SvcDirectoryWatcher.WatchServiceDirectory() -> (vector<fuchsia.weave/HostPort>:256 host_port_list)
+protocol fuchsia.weave/SvcDirectoryWatcher
+protocol/member fuchsia.weave/WlanNetworkConfigProvider.WatchConnectedNetwork() -> (fuchsia.wlan.policy/NetworkConfig network_config)
+protocol fuchsia.weave/WlanNetworkConfigProvider
+library fuchsia.weave

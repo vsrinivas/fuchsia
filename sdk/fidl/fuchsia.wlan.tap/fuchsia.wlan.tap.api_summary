@@ -1,0 +1,77 @@
+struct/member fuchsia.wlan.tap/ConfigureBssArgs.config fuchsia.wlan.tap/WlanBssConfig
+struct/member fuchsia.wlan.tap/ConfigureBssArgs.wlanmac_id uint16
+struct fuchsia.wlan.tap/ConfigureBssArgs
+struct/member fuchsia.wlan.tap/SetChannelArgs.chan fuchsia.wlan.common/WlanChan
+struct/member fuchsia.wlan.tap/SetChannelArgs.wlanmac_id uint16
+struct fuchsia.wlan.tap/SetChannelArgs
+struct/member fuchsia.wlan.tap/SetCountryArgs.alpha2 array<uint8,2>
+struct fuchsia.wlan.tap/SetCountryArgs
+struct/member fuchsia.wlan.tap/SetKeyArgs.config fuchsia.wlan.tap/WlanKeyConfig
+struct/member fuchsia.wlan.tap/SetKeyArgs.wlanmac_id uint16
+struct fuchsia.wlan.tap/SetKeyArgs
+struct/member fuchsia.wlan.tap/TxArgs.packet fuchsia.wlan.tap/WlanTxPacket
+struct/member fuchsia.wlan.tap/TxArgs.wlanmac_id uint16
+struct fuchsia.wlan.tap/TxArgs
+struct/member fuchsia.wlan.tap/WlanBssConfig.bss_type uint8
+struct/member fuchsia.wlan.tap/WlanBssConfig.bssid array<uint8,6>
+struct/member fuchsia.wlan.tap/WlanBssConfig.remote bool
+struct fuchsia.wlan.tap/WlanBssConfig
+struct/member fuchsia.wlan.tap/WlanKeyConfig.cipher_oui array<uint8,3>
+struct/member fuchsia.wlan.tap/WlanKeyConfig.cipher_type uint8
+struct/member fuchsia.wlan.tap/WlanKeyConfig.key vector<uint8>:32
+struct/member fuchsia.wlan.tap/WlanKeyConfig.key_idx uint8
+struct/member fuchsia.wlan.tap/WlanKeyConfig.key_type uint8
+struct/member fuchsia.wlan.tap/WlanKeyConfig.peer_addr array<uint8,6>
+struct/member fuchsia.wlan.tap/WlanKeyConfig.protection uint8
+struct fuchsia.wlan.tap/WlanKeyConfig
+struct/member fuchsia.wlan.tap/WlanRxInfo.chan fuchsia.wlan.common/WlanChan
+struct/member fuchsia.wlan.tap/WlanRxInfo.data_rate uint32
+struct/member fuchsia.wlan.tap/WlanRxInfo.mcs uint8
+struct/member fuchsia.wlan.tap/WlanRxInfo.phy uint16
+struct/member fuchsia.wlan.tap/WlanRxInfo.rssi_dbm int8
+struct/member fuchsia.wlan.tap/WlanRxInfo.rx_flags uint32
+struct/member fuchsia.wlan.tap/WlanRxInfo.snr_dbh int16
+struct/member fuchsia.wlan.tap/WlanRxInfo.valid_fields uint32
+struct fuchsia.wlan.tap/WlanRxInfo
+struct/member fuchsia.wlan.tap/WlanTxInfo.cbw uint8
+struct/member fuchsia.wlan.tap/WlanTxInfo.mcs uint8
+struct/member fuchsia.wlan.tap/WlanTxInfo.phy uint16
+struct/member fuchsia.wlan.tap/WlanTxInfo.tx_flags uint32
+struct/member fuchsia.wlan.tap/WlanTxInfo.tx_vector_idx uint16
+struct/member fuchsia.wlan.tap/WlanTxInfo.valid_fields uint32
+struct fuchsia.wlan.tap/WlanTxInfo
+struct/member fuchsia.wlan.tap/WlanTxPacket.data vector<uint8>
+struct/member fuchsia.wlan.tap/WlanTxPacket.info fuchsia.wlan.tap/WlanTxInfo
+struct fuchsia.wlan.tap/WlanTxPacket
+struct/member fuchsia.wlan.tap/WlanTxStatus.peer_addr array<uint8,6>
+struct/member fuchsia.wlan.tap/WlanTxStatus.success bool
+struct/member fuchsia.wlan.tap/WlanTxStatus.tx_status_entries array<fuchsia.wlan.tap/WlanTxStatusEntry,8>
+struct fuchsia.wlan.tap/WlanTxStatus
+struct/member fuchsia.wlan.tap/WlanTxStatusEntry.attempts uint8
+struct/member fuchsia.wlan.tap/WlanTxStatusEntry.tx_vec_idx uint16
+struct fuchsia.wlan.tap/WlanTxStatusEntry
+struct/member fuchsia.wlan.tap/WlanmacStartArgs.wlanmac_id uint16
+struct fuchsia.wlan.tap/WlanmacStartArgs
+protocol/member fuchsia.wlan.tap/WlantapCtl.CreatePhy(fuchsia.wlan.tap/WlantapPhyConfig config,server_end:fuchsia.wlan.tap/WlantapPhy proxy) -> (int32 status)
+protocol fuchsia.wlan.tap/WlantapCtl
+protocol/member fuchsia.wlan.tap/WlantapPhy.ConfigureBss -> (fuchsia.wlan.tap/ConfigureBssArgs args)
+protocol/member fuchsia.wlan.tap/WlantapPhy.ReportTxStatus(uint16 wlanmac_id,fuchsia.wlan.tap/WlanTxStatus txs)
+protocol/member fuchsia.wlan.tap/WlantapPhy.Rx(uint16 wlanmac_id,vector<uint8> data,fuchsia.wlan.tap/WlanRxInfo info)
+protocol/member fuchsia.wlan.tap/WlantapPhy.SetChannel -> (fuchsia.wlan.tap/SetChannelArgs args)
+protocol/member fuchsia.wlan.tap/WlantapPhy.SetCountry -> (fuchsia.wlan.tap/SetCountryArgs args)
+protocol/member fuchsia.wlan.tap/WlantapPhy.SetKey -> (fuchsia.wlan.tap/SetKeyArgs args)
+protocol/member fuchsia.wlan.tap/WlantapPhy.Shutdown() -> ()
+protocol/member fuchsia.wlan.tap/WlantapPhy.Status(uint16 wlanmac_id,uint32 st)
+protocol/member fuchsia.wlan.tap/WlantapPhy.Tx -> (fuchsia.wlan.tap/TxArgs args)
+protocol/member fuchsia.wlan.tap/WlantapPhy.WlanmacStart -> (fuchsia.wlan.tap/WlanmacStartArgs args)
+protocol fuchsia.wlan.tap/WlantapPhy
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.bands vector<fuchsia.wlan.device/BandInfo>:8
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.caps vector<fuchsia.wlan.device/Capability>:8
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.driver_features vector<fuchsia.wlan.common/DriverFeature>:8
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.iface_mac_addr array<uint8,6>
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.mac_role fuchsia.wlan.device/MacRole
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.name string:32
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.quiet bool
+struct/member fuchsia.wlan.tap/WlantapPhyConfig.supported_phys vector<fuchsia.wlan.device/SupportedPhy>:8
+struct fuchsia.wlan.tap/WlantapPhyConfig
+library fuchsia.wlan.tap

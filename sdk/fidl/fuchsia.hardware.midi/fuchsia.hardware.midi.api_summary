@@ -1,0 +1,18 @@
+protocol/member fuchsia.hardware.midi/Device.GetInfo() -> (fuchsia.hardware.midi/Info info)
+protocol/member fuchsia.hardware.midi/Device.Read() -> (fuchsia.hardware.midi/Device_Read_Result result)
+protocol/member fuchsia.hardware.midi/Device.Write(vector<uint8> data) -> (fuchsia.hardware.midi/Device_Write_Result result)
+protocol fuchsia.hardware.midi/Device
+struct/member fuchsia.hardware.midi/Device_Read_Response.event vector<uint8>:3
+struct fuchsia.hardware.midi/Device_Read_Response
+union/member fuchsia.hardware.midi/Device_Read_Result.err int32
+union/member fuchsia.hardware.midi/Device_Read_Result.response fuchsia.hardware.midi/Device_Read_Response
+strict union fuchsia.hardware.midi/Device_Read_Result
+struct fuchsia.hardware.midi/Device_Write_Response
+union/member fuchsia.hardware.midi/Device_Write_Result.err int32
+union/member fuchsia.hardware.midi/Device_Write_Result.response fuchsia.hardware.midi/Device_Write_Response
+strict union fuchsia.hardware.midi/Device_Write_Result
+struct/member fuchsia.hardware.midi/Info.is_sink bool
+struct/member fuchsia.hardware.midi/Info.is_source bool
+struct fuchsia.hardware.midi/Info
+const fuchsia.hardware.midi/READ_SIZE uint32 3
+library fuchsia.hardware.midi

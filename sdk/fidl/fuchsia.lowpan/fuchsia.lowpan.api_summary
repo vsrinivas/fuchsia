@@ -1,0 +1,55 @@
+const fuchsia.lowpan/BEACON_INFO_FLAG_CAN_ASSIST uint32 1
+struct/member fuchsia.lowpan/BeaconInfo.address vector<uint8>:16
+struct/member fuchsia.lowpan/BeaconInfo.flags vector<int32>:32
+struct/member fuchsia.lowpan/BeaconInfo.identity fuchsia.lowpan/Identity
+struct/member fuchsia.lowpan/BeaconInfo.lqi uint8
+struct/member fuchsia.lowpan/BeaconInfo.rssi int32
+struct fuchsia.lowpan/BeaconInfo
+const fuchsia.lowpan/CHANNEL_UNSPECIFIED uint16 65535
+table/member fuchsia.lowpan/ChannelInfo.id string:16
+table/member fuchsia.lowpan/ChannelInfo.index uint16
+table/member fuchsia.lowpan/ChannelInfo.masked_by_regulatory_domain bool
+table/member fuchsia.lowpan/ChannelInfo.max_transmit_power int32
+table/member fuchsia.lowpan/ChannelInfo.spectrum_bandwidth uint64
+table/member fuchsia.lowpan/ChannelInfo.spectrum_center_frequency uint64
+table fuchsia.lowpan/ChannelInfo
+enum/member fuchsia.lowpan/ConnectivityState.ATTACHED 5
+enum/member fuchsia.lowpan/ConnectivityState.ATTACHING 4
+enum/member fuchsia.lowpan/ConnectivityState.COMMISSIONING 7
+enum/member fuchsia.lowpan/ConnectivityState.INACTIVE 1
+enum/member fuchsia.lowpan/ConnectivityState.ISOLATED 6
+enum/member fuchsia.lowpan/ConnectivityState.OFFLINE 3
+enum/member fuchsia.lowpan/ConnectivityState.READY 2
+strict enum fuchsia.lowpan/ConnectivityState int32
+union/member fuchsia.lowpan/Credential.master_key vector<uint8>:32
+flexible union fuchsia.lowpan/Credential
+table/member fuchsia.lowpan/Identity.channel uint16
+table/member fuchsia.lowpan/Identity.mesh_local_prefix fuchsia.net/Ipv6Address
+table/member fuchsia.lowpan/Identity.net_type string:64
+table/member fuchsia.lowpan/Identity.panid uint16
+table/member fuchsia.lowpan/Identity.raw_name vector<uint8>:63
+table/member fuchsia.lowpan/Identity.xpanid vector<uint8>:8
+table fuchsia.lowpan/Identity
+struct/member fuchsia.lowpan/Ipv6Subnet.addr fuchsia.net/Ipv6Address
+struct/member fuchsia.lowpan/Ipv6Subnet.prefix_len uint8
+struct fuchsia.lowpan/Ipv6Subnet
+const fuchsia.lowpan/LQI_UNSPECIFIED uint8 0
+const fuchsia.lowpan/MAX_CHANNELS uint16 100
+const fuchsia.lowpan/MAX_NET_TYPE_LEN uint16 64
+const fuchsia.lowpan/NET_TYPE_RAW_6LOWPAN string "fuchsia.lowpan.net_type.6lowpan"
+const fuchsia.lowpan/NET_TYPE_THREAD_1_X string "org.threadgroup.std.thread.1"
+const fuchsia.lowpan/NET_TYPE_UNKNOWN_802_15_4_PID string "fuchsia.lowpan.net_type.802.15.4.pid"
+const fuchsia.lowpan/NET_TYPE_ZIGBEE_IP_1_X string "org.zigbee.std.zigbee-ip.1"
+struct/member fuchsia.lowpan/ProvisioningParams.credential fuchsia.lowpan/Credential:optional
+struct/member fuchsia.lowpan/ProvisioningParams.identity fuchsia.lowpan/Identity
+struct fuchsia.lowpan/ProvisioningParams
+const fuchsia.lowpan/RSSI_UNSPECIFIED int8 -128
+enum/member fuchsia.lowpan/Role.COORDINATOR 7
+enum/member fuchsia.lowpan/Role.DETACHED 1
+enum/member fuchsia.lowpan/Role.END_DEVICE 2
+enum/member fuchsia.lowpan/Role.LEADER 6
+enum/member fuchsia.lowpan/Role.ROUTER 3
+enum/member fuchsia.lowpan/Role.SLEEPY_END_DEVICE 4
+enum/member fuchsia.lowpan/Role.SLEEPY_ROUTER 5
+strict enum fuchsia.lowpan/Role int32
+library fuchsia.lowpan

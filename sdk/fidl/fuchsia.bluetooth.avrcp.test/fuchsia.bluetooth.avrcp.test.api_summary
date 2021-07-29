@@ -1,0 +1,23 @@
+protocol/member fuchsia.bluetooth.avrcp.test/ControllerExt.Connect()
+protocol/member fuchsia.bluetooth.avrcp.test/ControllerExt.Disconnect()
+protocol/member fuchsia.bluetooth.avrcp.test/ControllerExt.GetEventsSupported() -> (fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Result result)
+protocol/member fuchsia.bluetooth.avrcp.test/ControllerExt.IsConnected() -> (bool connected)
+protocol/member fuchsia.bluetooth.avrcp.test/ControllerExt.SendRawVendorDependentCommand(uint8 pdu_id,vector<uint8> command) -> (fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Result result)
+protocol fuchsia.bluetooth.avrcp.test/ControllerExt
+struct/member fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Response.events_supported vector<fuchsia.bluetooth.avrcp/NotificationEvent>:255
+struct fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Response
+union/member fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Result.response fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Response
+strict union fuchsia.bluetooth.avrcp.test/ControllerExt_GetEventsSupported_Result
+struct/member fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Response.response vector<uint8>
+struct fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Response
+union/member fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Result.err fuchsia.bluetooth.avrcp/ControllerError
+union/member fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Result.response fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Response
+strict union fuchsia.bluetooth.avrcp.test/ControllerExt_SendRawVendorDependentCommand_Result
+protocol/member fuchsia.bluetooth.avrcp.test/PeerManagerExt.GetControllerForTarget(fuchsia.bluetooth/PeerId peer_id,server_end:fuchsia.bluetooth.avrcp.test/ControllerExt client) -> (fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Result result)
+protocol fuchsia.bluetooth.avrcp.test/PeerManagerExt
+struct fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Response
+union/member fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Result.err int32
+union/member fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Result.response fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Response
+strict union fuchsia.bluetooth.avrcp.test/PeerManagerExt_GetControllerForTarget_Result
+library fuchsia.bluetooth.avrcp.test

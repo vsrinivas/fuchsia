@@ -1,0 +1,61 @@
+struct/member fuchsia.element/Annotation.key fuchsia.element/AnnotationKey
+struct/member fuchsia.element/Annotation.value fuchsia.element/AnnotationValue
+resource struct fuchsia.element/Annotation
+protocol/member fuchsia.element/AnnotationController.GetAnnotations() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)
+protocol/member fuchsia.element/AnnotationController.UpdateAnnotations(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)
+protocol fuchsia.element/AnnotationController
+struct/member fuchsia.element/AnnotationController_GetAnnotations_Response.annotations vector<fuchsia.element/Annotation>:1024
+resource struct fuchsia.element/AnnotationController_GetAnnotations_Response
+union/member fuchsia.element/AnnotationController_GetAnnotations_Result.err fuchsia.element/GetAnnotationsError
+union/member fuchsia.element/AnnotationController_GetAnnotations_Result.response fuchsia.element/AnnotationController_GetAnnotations_Response
+resource strict union fuchsia.element/AnnotationController_GetAnnotations_Result
+struct fuchsia.element/AnnotationController_UpdateAnnotations_Response
+union/member fuchsia.element/AnnotationController_UpdateAnnotations_Result.err fuchsia.element/UpdateAnnotationsError
+union/member fuchsia.element/AnnotationController_UpdateAnnotations_Result.response fuchsia.element/AnnotationController_UpdateAnnotations_Response
+strict union fuchsia.element/AnnotationController_UpdateAnnotations_Result
+struct/member fuchsia.element/AnnotationKey.namespace string:128
+struct/member fuchsia.element/AnnotationKey.value string:128
+struct fuchsia.element/AnnotationKey
+union/member fuchsia.element/AnnotationValue.buffer fuchsia.mem/Buffer
+union/member fuchsia.element/AnnotationValue.text string
+resource strict union fuchsia.element/AnnotationValue
+protocol/member fuchsia.element/Controller.GetAnnotations() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)
+protocol/member fuchsia.element/Controller.UpdateAnnotations(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)
+protocol fuchsia.element/Controller
+enum/member fuchsia.element/GetAnnotationsError.BUFFER_READ_FAILED 1
+strict enum fuchsia.element/GetAnnotationsError uint32
+protocol/member fuchsia.element/GraphicalPresenter.PresentView(fuchsia.element/ViewSpec view_spec,client_end:<fuchsia.element/AnnotationController,optional> annotation_controller,server_end:<fuchsia.element/ViewController,optional> view_controller_request) -> (fuchsia.element/GraphicalPresenter_PresentView_Result result)
+protocol fuchsia.element/GraphicalPresenter
+struct fuchsia.element/GraphicalPresenter_PresentView_Response
+union/member fuchsia.element/GraphicalPresenter_PresentView_Result.err fuchsia.element/PresentViewError
+union/member fuchsia.element/GraphicalPresenter_PresentView_Result.response fuchsia.element/GraphicalPresenter_PresentView_Response
+strict union fuchsia.element/GraphicalPresenter_PresentView_Result
+const fuchsia.element/MAX_ANNOTATIONS_PER_ELEMENT uint32 1024
+const fuchsia.element/MAX_ANNOTATION_KEY_NAMESPACE_SIZE uint32 128
+const fuchsia.element/MAX_ANNOTATION_KEY_VALUE_SIZE uint32 128
+protocol/member fuchsia.element/Manager.ProposeElement(fuchsia.element/Spec spec,server_end:<fuchsia.element/Controller,optional> controller) -> (fuchsia.element/Manager_ProposeElement_Result result)
+protocol fuchsia.element/Manager
+struct fuchsia.element/Manager_ProposeElement_Response
+union/member fuchsia.element/Manager_ProposeElement_Result.err fuchsia.element/ProposeElementError
+union/member fuchsia.element/Manager_ProposeElement_Result.response fuchsia.element/Manager_ProposeElement_Response
+strict union fuchsia.element/Manager_ProposeElement_Result
+enum/member fuchsia.element/PresentViewError.INVALID_ARGS 1
+strict enum fuchsia.element/PresentViewError uint32
+enum/member fuchsia.element/ProposeElementError.INVALID_ARGS 1
+enum/member fuchsia.element/ProposeElementError.NOT_FOUND 2
+strict enum fuchsia.element/ProposeElementError uint32
+table/member fuchsia.element/Spec.additional_services fuchsia.sys/ServiceList
+table/member fuchsia.element/Spec.annotations vector<fuchsia.element/Annotation>:1024
+table/member fuchsia.element/Spec.component_url string:4096
+resource table fuchsia.element/Spec
+enum/member fuchsia.element/UpdateAnnotationsError.INVALID_ARGS 1
+enum/member fuchsia.element/UpdateAnnotationsError.TOO_MANY_ANNOTATIONS 2
+strict enum fuchsia.element/UpdateAnnotationsError uint32
+protocol/member fuchsia.element/ViewController.Dismiss()
+protocol/member fuchsia.element/ViewController.OnPresented -> ()
+protocol fuchsia.element/ViewController
+table/member fuchsia.element/ViewSpec.annotations vector<fuchsia.element/Annotation>:1024
+table/member fuchsia.element/ViewSpec.view_holder_token fuchsia.ui.views/ViewHolderToken
+table/member fuchsia.element/ViewSpec.view_ref fuchsia.ui.views/ViewRef
+resource table fuchsia.element/ViewSpec
+library fuchsia.element

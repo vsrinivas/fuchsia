@@ -1,0 +1,106 @@
+struct/member fuchsia.feedback/Annotation.key string:128
+struct/member fuchsia.feedback/Annotation.value string:1024
+struct fuchsia.feedback/Annotation
+table/member fuchsia.feedback/Annotations.annotations vector<fuchsia.feedback/Annotation>:64
+table fuchsia.feedback/Annotations
+struct/member fuchsia.feedback/Attachment.key string:128
+struct/member fuchsia.feedback/Attachment.value fuchsia.mem/Buffer
+resource struct fuchsia.feedback/Attachment
+table/member fuchsia.feedback/ComponentData.annotations vector<fuchsia.feedback/Annotation>:16
+table/member fuchsia.feedback/ComponentData.namespace string:32
+table fuchsia.feedback/ComponentData
+protocol/member fuchsia.feedback/ComponentDataRegister.Upsert(fuchsia.feedback/ComponentData data) -> ()
+protocol fuchsia.feedback/ComponentDataRegister
+table/member fuchsia.feedback/CrashReport.annotations vector<fuchsia.feedback/Annotation>:32
+table/member fuchsia.feedback/CrashReport.attachments vector<fuchsia.feedback/Attachment>:16
+table/member fuchsia.feedback/CrashReport.crash_signature string:128
+table/member fuchsia.feedback/CrashReport.event_id string:128
+table/member fuchsia.feedback/CrashReport.is_fatal bool
+table/member fuchsia.feedback/CrashReport.program_name string:1024
+table/member fuchsia.feedback/CrashReport.program_uptime int64
+table/member fuchsia.feedback/CrashReport.specific_report fuchsia.feedback/SpecificCrashReport
+resource table fuchsia.feedback/CrashReport
+protocol/member fuchsia.feedback/CrashReporter.File(fuchsia.feedback/CrashReport report) -> (fuchsia.feedback/CrashReporter_File_Result result)
+protocol fuchsia.feedback/CrashReporter
+struct fuchsia.feedback/CrashReporter_File_Response
+union/member fuchsia.feedback/CrashReporter_File_Result.err int32
+union/member fuchsia.feedback/CrashReporter_File_Result.response fuchsia.feedback/CrashReporter_File_Response
+strict union fuchsia.feedback/CrashReporter_File_Result
+table/member fuchsia.feedback/CrashReportingProduct.channel string
+table/member fuchsia.feedback/CrashReportingProduct.name string
+table/member fuchsia.feedback/CrashReportingProduct.version string
+table fuchsia.feedback/CrashReportingProduct
+protocol/member fuchsia.feedback/CrashReportingProductRegister.Upsert(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product)
+protocol/member fuchsia.feedback/CrashReportingProductRegister.UpsertWithAck(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product) -> ()
+protocol fuchsia.feedback/CrashReportingProductRegister
+protocol/member fuchsia.feedback/DataProvider.GetAnnotations(fuchsia.feedback/GetAnnotationsParameters params) -> (fuchsia.feedback/Annotations annotations)
+protocol/member fuchsia.feedback/DataProvider.GetScreenshot(fuchsia.feedback/ImageEncoding encoding) -> (box<fuchsia.feedback/Screenshot> screenshot)
+protocol/member fuchsia.feedback/DataProvider.GetSnapshot(fuchsia.feedback/GetSnapshotParameters params) -> (fuchsia.feedback/Snapshot snapshot)
+protocol fuchsia.feedback/DataProvider
+protocol/member fuchsia.feedback/DataProviderController.DisableAndDropPersistentLogs() -> ()
+protocol fuchsia.feedback/DataProviderController
+protocol/member fuchsia.feedback/DeviceIdProvider.GetId() -> (string:64 feedback_id)
+protocol fuchsia.feedback/DeviceIdProvider
+table/member fuchsia.feedback/GetAnnotationsParameters.collection_timeout_per_annotation int64
+table fuchsia.feedback/GetAnnotationsParameters
+table/member fuchsia.feedback/GetSnapshotParameters.collection_timeout_per_data int64
+table/member fuchsia.feedback/GetSnapshotParameters.response_channel zx/handle:CHANNEL
+resource table fuchsia.feedback/GetSnapshotParameters
+enum/member fuchsia.feedback/ImageEncoding.PNG 0
+strict enum fuchsia.feedback/ImageEncoding uint32
+table/member fuchsia.feedback/LastReboot.graceful bool
+table/member fuchsia.feedback/LastReboot.reason fuchsia.feedback/RebootReason
+table/member fuchsia.feedback/LastReboot.uptime int64
+table fuchsia.feedback/LastReboot
+protocol/member fuchsia.feedback/LastRebootInfoProvider.Get() -> (fuchsia.feedback/LastReboot last_reboot)
+protocol fuchsia.feedback/LastRebootInfoProvider
+const fuchsia.feedback/MAX_CRASH_SIGNATURE_LENGTH uint32 128
+const fuchsia.feedback/MAX_EVENT_ID_LENGTH uint32 128
+const fuchsia.feedback/MAX_EXCEPTION_MESSAGE_LENGTH uint32 2048
+const fuchsia.feedback/MAX_EXCEPTION_TYPE_LENGTH uint32 128
+const fuchsia.feedback/MAX_NAMESPACE_LENGTH uint32 32
+const fuchsia.feedback/MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT uint32 32
+const fuchsia.feedback/MAX_NUM_ANNOTATIONS_PER_NAMESPACE uint32 16
+const fuchsia.feedback/MAX_NUM_ANNOTATIONS_PROVIDED uint32 64
+const fuchsia.feedback/MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT uint32 16
+const fuchsia.feedback/MAX_PROCESS_NAME_LENGTH uint32 64
+const fuchsia.feedback/MAX_PROGRAM_NAME_LENGTH uint32 1024
+const fuchsia.feedback/MAX_THREAD_NAME_LENGTH uint32 64
+table/member fuchsia.feedback/NativeCrashReport.minidump fuchsia.mem/Buffer
+table/member fuchsia.feedback/NativeCrashReport.process_koid uint64
+table/member fuchsia.feedback/NativeCrashReport.process_name string:64
+table/member fuchsia.feedback/NativeCrashReport.thread_koid uint64
+table/member fuchsia.feedback/NativeCrashReport.thread_name string:64
+resource table fuchsia.feedback/NativeCrashReport
+enum/member fuchsia.feedback/RebootReason.BRIEF_POWER_LOSS 3
+enum/member fuchsia.feedback/RebootReason.BROWNOUT 4
+enum/member fuchsia.feedback/RebootReason.COLD 2
+enum/member fuchsia.feedback/RebootReason.CRITICAL_COMPONENT_FAILURE 16
+enum/member fuchsia.feedback/RebootReason.FACTORY_DATA_RESET 14
+enum/member fuchsia.feedback/RebootReason.HARDWARE_WATCHDOG_TIMEOUT 7
+enum/member fuchsia.feedback/RebootReason.HIGH_TEMPERATURE 11
+enum/member fuchsia.feedback/RebootReason.KERNEL_PANIC 5
+enum/member fuchsia.feedback/RebootReason.RETRY_SYSTEM_UPDATE 17
+enum/member fuchsia.feedback/RebootReason.ROOT_JOB_TERMINATION 19
+enum/member fuchsia.feedback/RebootReason.SESSION_FAILURE 12
+enum/member fuchsia.feedback/RebootReason.SOFTWARE_WATCHDOG_TIMEOUT 8
+enum/member fuchsia.feedback/RebootReason.SYSMGR_FAILURE 15
+enum/member fuchsia.feedback/RebootReason.SYSTEM_OUT_OF_MEMORY 6
+enum/member fuchsia.feedback/RebootReason.SYSTEM_UPDATE 10
+enum/member fuchsia.feedback/RebootReason.USER_REQUEST 9
+enum/member fuchsia.feedback/RebootReason.ZBI_SWAP 18
+strict enum fuchsia.feedback/RebootReason uint16
+table/member fuchsia.feedback/RuntimeCrashReport.exception_message string:2048
+table/member fuchsia.feedback/RuntimeCrashReport.exception_stack_trace fuchsia.mem/Buffer
+table/member fuchsia.feedback/RuntimeCrashReport.exception_type string:128
+resource table fuchsia.feedback/RuntimeCrashReport
+struct/member fuchsia.feedback/Screenshot.dimensions_in_px fuchsia.math/Size
+struct/member fuchsia.feedback/Screenshot.image fuchsia.mem/Buffer
+resource struct fuchsia.feedback/Screenshot
+table/member fuchsia.feedback/Snapshot.annotations vector<fuchsia.feedback/Annotation>:64
+table/member fuchsia.feedback/Snapshot.archive fuchsia.feedback/Attachment
+resource table fuchsia.feedback/Snapshot
+union/member fuchsia.feedback/SpecificCrashReport.dart fuchsia.feedback/RuntimeCrashReport
+union/member fuchsia.feedback/SpecificCrashReport.native fuchsia.feedback/NativeCrashReport
+resource flexible union fuchsia.feedback/SpecificCrashReport
+library fuchsia.feedback

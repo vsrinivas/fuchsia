@@ -1,0 +1,127 @@
+enum/member fuchsia.identity.keys/Error.FROZEN 8
+enum/member fuchsia.identity.keys/Error.INTERNAL 2
+enum/member fuchsia.identity.keys/Error.INVALID_REQUEST 4
+enum/member fuchsia.identity.keys/Error.NOT_FOUND 7
+enum/member fuchsia.identity.keys/Error.RESOURCE 5
+enum/member fuchsia.identity.keys/Error.UNKNOWN 1
+enum/member fuchsia.identity.keys/Error.UNSUPPORTED_OPERATION 3
+strict enum fuchsia.identity.keys/Error uint32
+union/member fuchsia.identity.keys/Key.random_key vector<uint8>:64
+flexible union fuchsia.identity.keys/Key
+protocol/member fuchsia.identity.keys/KeyManager.DeleteKeySet(string:128 name) -> (fuchsia.identity.keys/KeyManager_DeleteKeySet_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.DeleteKeySingleton(string:128 name) -> (fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.FreezeKeySet(string:128 name) -> (fuchsia.identity.keys/KeyManager_FreezeKeySet_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.GetKeySet(string:128 name,server_end:fuchsia.identity.keys/KeySet key_set) -> (fuchsia.identity.keys/KeyManager_GetKeySet_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.GetOrCreateKeySet(fuchsia.identity.keys/KeySetProperties properties,string:<128,optional> key_set_to_freeze,server_end:fuchsia.identity.keys/KeySet key_set) -> (fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.WatchKeySingleton(string:128 name) -> (fuchsia.identity.keys/KeyManager_WatchKeySingleton_Result result)
+protocol/member fuchsia.identity.keys/KeyManager.WatchOrCreateKeySingleton(fuchsia.identity.keys/KeySingletonProperties properties) -> (fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Result result)
+protocol fuchsia.identity.keys/KeyManager
+struct fuchsia.identity.keys/KeyManager_DeleteKeySet_Response
+union/member fuchsia.identity.keys/KeyManager_DeleteKeySet_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_DeleteKeySet_Result.response fuchsia.identity.keys/KeyManager_DeleteKeySet_Response
+strict union fuchsia.identity.keys/KeyManager_DeleteKeySet_Result
+struct fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Response
+union/member fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Result.response fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Response
+strict union fuchsia.identity.keys/KeyManager_DeleteKeySingleton_Result
+struct fuchsia.identity.keys/KeyManager_FreezeKeySet_Response
+union/member fuchsia.identity.keys/KeyManager_FreezeKeySet_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_FreezeKeySet_Result.response fuchsia.identity.keys/KeyManager_FreezeKeySet_Response
+strict union fuchsia.identity.keys/KeyManager_FreezeKeySet_Result
+struct fuchsia.identity.keys/KeyManager_GetKeySet_Response
+union/member fuchsia.identity.keys/KeyManager_GetKeySet_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_GetKeySet_Result.response fuchsia.identity.keys/KeyManager_GetKeySet_Response
+strict union fuchsia.identity.keys/KeyManager_GetKeySet_Result
+struct fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Response
+union/member fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Result.response fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Response
+strict union fuchsia.identity.keys/KeyManager_GetOrCreateKeySet_Result
+struct/member fuchsia.identity.keys/KeyManager_WatchKeySingleton_Response.key fuchsia.identity.keys/Key
+struct/member fuchsia.identity.keys/KeyManager_WatchKeySingleton_Response.properties fuchsia.identity.keys/KeySingletonProperties
+struct/member fuchsia.identity.keys/KeyManager_WatchKeySingleton_Response.state fuchsia.identity.keys/SynchronizationState
+struct fuchsia.identity.keys/KeyManager_WatchKeySingleton_Response
+union/member fuchsia.identity.keys/KeyManager_WatchKeySingleton_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_WatchKeySingleton_Result.response fuchsia.identity.keys/KeyManager_WatchKeySingleton_Response
+strict union fuchsia.identity.keys/KeyManager_WatchKeySingleton_Result
+struct/member fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Response.key fuchsia.identity.keys/Key
+struct/member fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Response.properties fuchsia.identity.keys/KeySingletonProperties
+struct/member fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Response.state fuchsia.identity.keys/SynchronizationState
+struct fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Response
+union/member fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Result.response fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Response
+strict union fuchsia.identity.keys/KeyManager_WatchOrCreateKeySingleton_Result
+protocol/member fuchsia.identity.keys/KeySet.AddKey() -> (fuchsia.identity.keys/KeySet_AddKey_Result result)
+protocol/member fuchsia.identity.keys/KeySet.DeleteKey(uint32 id) -> (fuchsia.identity.keys/KeySet_DeleteKey_Result result)
+protocol/member fuchsia.identity.keys/KeySet.GetProperties() -> (fuchsia.identity.keys/KeySetProperties properties)
+protocol/member fuchsia.identity.keys/KeySet.MarkId(uint32 id) -> (fuchsia.identity.keys/KeySet_MarkId_Result result)
+protocol/member fuchsia.identity.keys/KeySet.WatchAllIds() -> (fuchsia.identity.keys/KeySet_WatchAllIds_Result result)
+protocol/member fuchsia.identity.keys/KeySet.WatchKey(uint32 id) -> (fuchsia.identity.keys/KeySet_WatchKey_Result result)
+protocol/member fuchsia.identity.keys/KeySet.WatchMaxCommittedMarkedId() -> (fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Result result)
+protocol/member fuchsia.identity.keys/KeySet.WatchMaxPendingMarkedId() -> (fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Result result)
+protocol/member fuchsia.identity.keys/KeySet.WatchSynchronizationState() -> (fuchsia.identity.keys/SynchronizationState state)
+protocol/member fuchsia.identity.keys/KeySet.WatchSynchronizedIds() -> (fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Result result)
+protocol fuchsia.identity.keys/KeySet
+table/member fuchsia.identity.keys/KeySetProperties.automatic_rotation bool
+table/member fuchsia.identity.keys/KeySetProperties.key_length uint32
+table/member fuchsia.identity.keys/KeySetProperties.manual_rotation bool
+table/member fuchsia.identity.keys/KeySetProperties.max_keys uint32
+table/member fuchsia.identity.keys/KeySetProperties.metadata vector<uint8>:128
+table/member fuchsia.identity.keys/KeySetProperties.name string:128
+table/member fuchsia.identity.keys/KeySetProperties.uid uint64
+table fuchsia.identity.keys/KeySetProperties
+struct fuchsia.identity.keys/KeySet_AddKey_Response
+union/member fuchsia.identity.keys/KeySet_AddKey_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_AddKey_Result.response fuchsia.identity.keys/KeySet_AddKey_Response
+strict union fuchsia.identity.keys/KeySet_AddKey_Result
+struct fuchsia.identity.keys/KeySet_DeleteKey_Response
+union/member fuchsia.identity.keys/KeySet_DeleteKey_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_DeleteKey_Result.response fuchsia.identity.keys/KeySet_DeleteKey_Response
+strict union fuchsia.identity.keys/KeySet_DeleteKey_Result
+struct fuchsia.identity.keys/KeySet_MarkId_Response
+union/member fuchsia.identity.keys/KeySet_MarkId_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_MarkId_Result.response fuchsia.identity.keys/KeySet_MarkId_Response
+strict union fuchsia.identity.keys/KeySet_MarkId_Result
+struct/member fuchsia.identity.keys/KeySet_WatchAllIds_Response.ids vector<uint32>:128
+struct fuchsia.identity.keys/KeySet_WatchAllIds_Response
+union/member fuchsia.identity.keys/KeySet_WatchAllIds_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_WatchAllIds_Result.response fuchsia.identity.keys/KeySet_WatchAllIds_Response
+strict union fuchsia.identity.keys/KeySet_WatchAllIds_Result
+struct/member fuchsia.identity.keys/KeySet_WatchKey_Response.key fuchsia.identity.keys/Key
+struct/member fuchsia.identity.keys/KeySet_WatchKey_Response.state fuchsia.identity.keys/SynchronizationState
+struct fuchsia.identity.keys/KeySet_WatchKey_Response
+union/member fuchsia.identity.keys/KeySet_WatchKey_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_WatchKey_Result.response fuchsia.identity.keys/KeySet_WatchKey_Response
+strict union fuchsia.identity.keys/KeySet_WatchKey_Result
+struct/member fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Response.id uint32
+struct fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Response
+union/member fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Result.response fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Response
+strict union fuchsia.identity.keys/KeySet_WatchMaxCommittedMarkedId_Result
+struct/member fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Response.id uint32
+struct fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Response
+union/member fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Result.response fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Response
+strict union fuchsia.identity.keys/KeySet_WatchMaxPendingMarkedId_Result
+struct/member fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Response.ids vector<uint32>:64
+struct fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Response
+union/member fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Result.err fuchsia.identity.keys/Error
+union/member fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Result.response fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Response
+strict union fuchsia.identity.keys/KeySet_WatchSynchronizedIds_Result
+table/member fuchsia.identity.keys/KeySingletonProperties.key_length uint32
+table/member fuchsia.identity.keys/KeySingletonProperties.metadata vector<uint8>:128
+table/member fuchsia.identity.keys/KeySingletonProperties.name string:128
+table/member fuchsia.identity.keys/KeySingletonProperties.uid uint64
+table fuchsia.identity.keys/KeySingletonProperties
+const fuchsia.identity.keys/MAX_KEYSET_SIZE uint32 64
+const fuchsia.identity.keys/MAX_KEY_LEN uint32 64
+const fuchsia.identity.keys/MAX_METADATA_LEN uint32 128
+const fuchsia.identity.keys/MAX_NAME_LEN uint32 128
+enum/member fuchsia.identity.keys/SynchronizationState.FROZEN 5
+enum/member fuchsia.identity.keys/SynchronizationState.LIVE 3
+enum/member fuchsia.identity.keys/SynchronizationState.PENDING_ADDITION 1
+enum/member fuchsia.identity.keys/SynchronizationState.PENDING_DELETION 6
+enum/member fuchsia.identity.keys/SynchronizationState.PENDING_FREEZE 4
+enum/member fuchsia.identity.keys/SynchronizationState.PENDING_FROZEN_ADDITION 2
+strict enum fuchsia.identity.keys/SynchronizationState uint32
+const fuchsia.identity.keys/TWICE_MAX_KEYSET_SIZE uint32 128
+library fuchsia.identity.keys

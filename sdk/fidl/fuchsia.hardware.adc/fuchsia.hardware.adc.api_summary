@@ -1,0 +1,20 @@
+protocol/member fuchsia.hardware.adc/Device.GetNormalizedSample() -> (fuchsia.hardware.adc/Device_GetNormalizedSample_Result result)
+protocol/member fuchsia.hardware.adc/Device.GetResolution() -> (fuchsia.hardware.adc/Device_GetResolution_Result result)
+protocol/member fuchsia.hardware.adc/Device.GetSample() -> (fuchsia.hardware.adc/Device_GetSample_Result result)
+protocol fuchsia.hardware.adc/Device
+struct/member fuchsia.hardware.adc/Device_GetNormalizedSample_Response.value float32
+struct fuchsia.hardware.adc/Device_GetNormalizedSample_Response
+union/member fuchsia.hardware.adc/Device_GetNormalizedSample_Result.err int32
+union/member fuchsia.hardware.adc/Device_GetNormalizedSample_Result.response fuchsia.hardware.adc/Device_GetNormalizedSample_Response
+strict union fuchsia.hardware.adc/Device_GetNormalizedSample_Result
+struct/member fuchsia.hardware.adc/Device_GetResolution_Response.resolution uint8
+struct fuchsia.hardware.adc/Device_GetResolution_Response
+union/member fuchsia.hardware.adc/Device_GetResolution_Result.err int32
+union/member fuchsia.hardware.adc/Device_GetResolution_Result.response fuchsia.hardware.adc/Device_GetResolution_Response
+strict union fuchsia.hardware.adc/Device_GetResolution_Result
+struct/member fuchsia.hardware.adc/Device_GetSample_Response.value uint32
+struct fuchsia.hardware.adc/Device_GetSample_Response
+union/member fuchsia.hardware.adc/Device_GetSample_Result.err int32
+union/member fuchsia.hardware.adc/Device_GetSample_Result.response fuchsia.hardware.adc/Device_GetSample_Response
+strict union fuchsia.hardware.adc/Device_GetSample_Result
+library fuchsia.hardware.adc

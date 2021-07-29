@@ -1,0 +1,6 @@
+protocol/member fuchsia.hardware.block.encrypted/DeviceManager.Seal() -> (int32 status)
+protocol/member fuchsia.hardware.block.encrypted/DeviceManager.Shred() -> (int32 status)
+protocol/member fuchsia.hardware.block.encrypted/DeviceManager.Unseal(vector<uint8>:256 key,uint8 slot) -> (int32 status)
+protocol fuchsia.hardware.block.encrypted/DeviceManager
+const fuchsia.hardware.block.encrypted/MAX_KEY_SIZE uint32 256
+library fuchsia.hardware.block.encrypted

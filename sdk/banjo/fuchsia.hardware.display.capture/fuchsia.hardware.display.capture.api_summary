@@ -1,0 +1,9 @@
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureImpl.ImportImageForCapture(uint32 collection,uint32 index) -> (int32 s,uint64 capture_handle)
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureImpl.IsCaptureCompleted() -> (bool b)
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureImpl.ReleaseCapture(uint64 capture_handle) -> (int32 s)
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureImpl.SetDisplayCaptureInterface(client_end:fuchsia.hardware.display.capture/DisplayCaptureInterface intf) -> ()
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureImpl.StartCapture(uint64 capture_handle) -> (int32 s)
+protocol fuchsia.hardware.display.capture/DisplayCaptureImpl
+protocol/member fuchsia.hardware.display.capture/DisplayCaptureInterface.OnCaptureComplete() -> ()
+protocol fuchsia.hardware.display.capture/DisplayCaptureInterface
+library fuchsia.hardware.display.capture

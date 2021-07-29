@@ -1,0 +1,79 @@
+union/member fuchsia.component.internal/AllowlistedCapability.directory fuchsia.component.internal/AllowlistedDirectory
+union/member fuchsia.component.internal/AllowlistedCapability.event fuchsia.component.internal/AllowlistedEvent
+union/member fuchsia.component.internal/AllowlistedCapability.protocol fuchsia.component.internal/AllowlistedProtocol
+union/member fuchsia.component.internal/AllowlistedCapability.resolver fuchsia.component.internal/AllowlistedResolver
+union/member fuchsia.component.internal/AllowlistedCapability.runner fuchsia.component.internal/AllowlistedRunner
+union/member fuchsia.component.internal/AllowlistedCapability.service fuchsia.component.internal/AllowlistedService
+union/member fuchsia.component.internal/AllowlistedCapability.storage fuchsia.component.internal/AllowlistedStorage
+flexible union fuchsia.component.internal/AllowlistedCapability
+union/member fuchsia.component.internal/AllowlistedDebugRegistration.protocol fuchsia.component.internal/AllowlistedProtocol
+flexible union fuchsia.component.internal/AllowlistedDebugRegistration
+table fuchsia.component.internal/AllowlistedDirectory
+table fuchsia.component.internal/AllowlistedEvent
+table fuchsia.component.internal/AllowlistedProtocol
+table fuchsia.component.internal/AllowlistedResolver
+table fuchsia.component.internal/AllowlistedRunner
+table fuchsia.component.internal/AllowlistedService
+table fuchsia.component.internal/AllowlistedStorage
+table/member fuchsia.component.internal/AppmgrMoniker.realm_path vector<string:100>:256
+table/member fuchsia.component.internal/AppmgrMoniker.transitional_realm_paths vector<vector<string:100>:256>:64
+table/member fuchsia.component.internal/AppmgrMoniker.url string:2083
+table fuchsia.component.internal/AppmgrMoniker
+enum/member fuchsia.component.internal/BuiltinBootResolver.BOOT 2
+enum/member fuchsia.component.internal/BuiltinBootResolver.NONE 1
+enum/member fuchsia.component.internal/BuiltinBootResolver.PKG 3
+strict enum fuchsia.component.internal/BuiltinBootResolver uint8
+enum/member fuchsia.component.internal/BuiltinPkgResolver.APPMGR_BRIDGE 3
+enum/member fuchsia.component.internal/BuiltinPkgResolver.NONE 1
+strict enum fuchsia.component.internal/BuiltinPkgResolver uint8
+table/member fuchsia.component.internal/CapabilityAllowlistEntry.capability fuchsia.component.internal/AllowlistedCapability
+table/member fuchsia.component.internal/CapabilityAllowlistEntry.source fuchsia.sys2/Ref
+table/member fuchsia.component.internal/CapabilityAllowlistEntry.source_moniker string:4096
+table/member fuchsia.component.internal/CapabilityAllowlistEntry.source_name string:100
+table/member fuchsia.component.internal/CapabilityAllowlistEntry.target_monikers vector<string:4096>:128
+table fuchsia.component.internal/CapabilityAllowlistEntry
+table/member fuchsia.component.internal/CapabilityPolicyAllowlists.allowlist vector<fuchsia.component.internal/CapabilityAllowlistEntry>:128
+table fuchsia.component.internal/CapabilityPolicyAllowlists
+table/member fuchsia.component.internal/ComponentIdIndex.appmgr_restrict_isolated_persistent_storage bool
+table/member fuchsia.component.internal/ComponentIdIndex.instances vector<fuchsia.component.internal/InstanceIdEntry>:1024
+table fuchsia.component.internal/ComponentIdIndex
+table/member fuchsia.component.internal/Config.builtin_boot_resolver fuchsia.component.internal/BuiltinBootResolver
+table/member fuchsia.component.internal/Config.builtin_pkg_resolver fuchsia.component.internal/BuiltinPkgResolver
+table/member fuchsia.component.internal/Config.component_id_index_path string:1024
+table/member fuchsia.component.internal/Config.debug bool
+table/member fuchsia.component.internal/Config.list_children_batch_size uint32
+table/member fuchsia.component.internal/Config.log_all_events bool
+table/member fuchsia.component.internal/Config.maintain_utc_clock bool
+table/member fuchsia.component.internal/Config.namespace_capabilities vector<fuchsia.sys2/CapabilityDecl>
+table/member fuchsia.component.internal/Config.num_threads uint32
+table/member fuchsia.component.internal/Config.out_dir_contents fuchsia.component.internal/OutDirContents
+table/member fuchsia.component.internal/Config.root_component_url string:100
+table/member fuchsia.component.internal/Config.security_policy fuchsia.component.internal/SecurityPolicy
+table/member fuchsia.component.internal/Config.use_builtin_process_launcher bool
+table fuchsia.component.internal/Config
+table/member fuchsia.component.internal/DebugRegistrationAllowlistEntry.debug fuchsia.component.internal/AllowlistedDebugRegistration
+table/member fuchsia.component.internal/DebugRegistrationAllowlistEntry.environment_name string:100
+table/member fuchsia.component.internal/DebugRegistrationAllowlistEntry.source_moniker string:4096
+table/member fuchsia.component.internal/DebugRegistrationAllowlistEntry.source_name string:100
+table/member fuchsia.component.internal/DebugRegistrationAllowlistEntry.target_moniker string:4096
+table fuchsia.component.internal/DebugRegistrationAllowlistEntry
+table/member fuchsia.component.internal/DebugRegistrationPolicyAllowlists.allowlist vector<fuchsia.component.internal/DebugRegistrationAllowlistEntry>:128
+table fuchsia.component.internal/DebugRegistrationPolicyAllowlists
+table/member fuchsia.component.internal/InstanceIdEntry.appmgr_moniker fuchsia.component.internal/AppmgrMoniker
+table/member fuchsia.component.internal/InstanceIdEntry.instance_id string:64
+table/member fuchsia.component.internal/InstanceIdEntry.moniker string:4096
+table fuchsia.component.internal/InstanceIdEntry
+table/member fuchsia.component.internal/JobPolicyAllowlists.ambient_mark_vmo_exec vector<string:4096>:128
+table/member fuchsia.component.internal/JobPolicyAllowlists.create_raw_processes vector<string:4096>:128
+table/member fuchsia.component.internal/JobPolicyAllowlists.main_process_critical vector<string:4096>:128
+table fuchsia.component.internal/JobPolicyAllowlists
+const fuchsia.component.internal/MAX_ALLOWLIST_SIZE uint64 128
+enum/member fuchsia.component.internal/OutDirContents.HUB 2
+enum/member fuchsia.component.internal/OutDirContents.NONE 1
+enum/member fuchsia.component.internal/OutDirContents.SVC 3
+strict enum fuchsia.component.internal/OutDirContents uint8
+table/member fuchsia.component.internal/SecurityPolicy.capability_policy fuchsia.component.internal/CapabilityPolicyAllowlists
+table/member fuchsia.component.internal/SecurityPolicy.debug_registration_policy fuchsia.component.internal/DebugRegistrationPolicyAllowlists
+table/member fuchsia.component.internal/SecurityPolicy.job_policy fuchsia.component.internal/JobPolicyAllowlists
+table fuchsia.component.internal/SecurityPolicy
+library fuchsia.component.internal

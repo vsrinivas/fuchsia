@@ -1,0 +1,22 @@
+union/member fuchsia.legacymetrics/Event.histogram fuchsia.legacymetrics/Histogram
+union/member fuchsia.legacymetrics/Event.impl_defined_event fuchsia.legacymetrics/ImplementationDefinedEvent
+union/member fuchsia.legacymetrics/Event.user_action_event fuchsia.legacymetrics/UserActionEvent
+strict union fuchsia.legacymetrics/Event
+table/member fuchsia.legacymetrics/Histogram.buckets vector<fuchsia.legacymetrics/HistogramBucket>
+table/member fuchsia.legacymetrics/Histogram.name string
+table/member fuchsia.legacymetrics/Histogram.sum int64
+table fuchsia.legacymetrics/Histogram
+struct/member fuchsia.legacymetrics/HistogramBucket.count int64
+struct/member fuchsia.legacymetrics/HistogramBucket.max int64
+struct/member fuchsia.legacymetrics/HistogramBucket.min int64
+struct fuchsia.legacymetrics/HistogramBucket
+table/member fuchsia.legacymetrics/ImplementationDefinedEvent.data vector<uint8>
+table/member fuchsia.legacymetrics/ImplementationDefinedEvent.name string
+table fuchsia.legacymetrics/ImplementationDefinedEvent
+protocol/member fuchsia.legacymetrics/MetricsRecorder.OnCloseSoon -> ()
+protocol/member fuchsia.legacymetrics/MetricsRecorder.Record(vector<fuchsia.legacymetrics/Event> events) -> ()
+protocol fuchsia.legacymetrics/MetricsRecorder
+table/member fuchsia.legacymetrics/UserActionEvent.name string
+table/member fuchsia.legacymetrics/UserActionEvent.time int64
+table fuchsia.legacymetrics/UserActionEvent
+library fuchsia.legacymetrics

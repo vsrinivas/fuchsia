@@ -1,0 +1,134 @@
+protocol/member fuchsia.media.sessions2/ActiveSession.WatchActiveSession() -> (client_end:<fuchsia.media.sessions2/SessionControl,optional> session)
+protocol fuchsia.media.sessions2/ActiveSession
+enum/member fuchsia.media.sessions2/ContentType.AUDIO 2
+enum/member fuchsia.media.sessions2/ContentType.MOVIE 6
+enum/member fuchsia.media.sessions2/ContentType.MUSIC 4
+enum/member fuchsia.media.sessions2/ContentType.OTHER 1
+enum/member fuchsia.media.sessions2/ContentType.TV_SHOW 5
+enum/member fuchsia.media.sessions2/ContentType.VIDEO 3
+strict enum fuchsia.media.sessions2/ContentType uint32
+protocol/member fuchsia.media.sessions2/Discovery.ConnectToSession(uint64 session_id,server_end:fuchsia.media.sessions2/SessionControl session_control_request)
+protocol/member fuchsia.media.sessions2/Discovery.WatchSessions(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher session_watcher)
+protocol fuchsia.media.sessions2/Discovery
+enum/member fuchsia.media.sessions2/Error.OTHER 1
+strict enum fuchsia.media.sessions2/Error uint32
+struct/member fuchsia.media.sessions2/ImageSizeVariant.height uint32
+struct/member fuchsia.media.sessions2/ImageSizeVariant.url string:4096
+struct/member fuchsia.media.sessions2/ImageSizeVariant.width uint32
+struct fuchsia.media.sessions2/ImageSizeVariant
+enum/member fuchsia.media.sessions2/InterruptionBehavior.NONE 0
+enum/member fuchsia.media.sessions2/InterruptionBehavior.PAUSE 1
+strict enum fuchsia.media.sessions2/InterruptionBehavior uint32
+table/member fuchsia.media.sessions2/MediaImage.image_type fuchsia.media.sessions2/MediaImageType
+table/member fuchsia.media.sessions2/MediaImage.sizes vector<fuchsia.media.sessions2/ImageSizeVariant>:16
+table fuchsia.media.sessions2/MediaImage
+enum/member fuchsia.media.sessions2/MediaImageType.ARTWORK 0
+enum/member fuchsia.media.sessions2/MediaImageType.SOURCE_ICON 1
+strict enum fuchsia.media.sessions2/MediaImageType uint32
+protocol/member fuchsia.media.sessions2/ObserverDiscovery.ConnectToSession(uint64 session_id,server_end:fuchsia.media.sessions2/SessionObserver session_request)
+protocol/member fuchsia.media.sessions2/ObserverDiscovery.WatchSessions(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher sessions_watcher)
+protocol fuchsia.media.sessions2/ObserverDiscovery
+protocol/member fuchsia.media.sessions2/Player.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.sessions2/Player.NextItem()
+protocol/member fuchsia.media.sessions2/Player.Pause()
+protocol/member fuchsia.media.sessions2/Player.Play()
+protocol/member fuchsia.media.sessions2/Player.PrevItem()
+protocol/member fuchsia.media.sessions2/Player.Seek(int64 position)
+protocol/member fuchsia.media.sessions2/Player.SetPlaybackRate(float32 playback_rate)
+protocol/member fuchsia.media.sessions2/Player.SetRepeatMode(fuchsia.media.sessions2/RepeatMode repeat_mode)
+protocol/member fuchsia.media.sessions2/Player.SetShuffleMode(bool shuffle_on)
+protocol/member fuchsia.media.sessions2/Player.SkipForward()
+protocol/member fuchsia.media.sessions2/Player.SkipReverse()
+protocol/member fuchsia.media.sessions2/Player.Stop()
+protocol/member fuchsia.media.sessions2/Player.WatchInfoChange() -> (fuchsia.media.sessions2/PlayerInfoDelta player_info_delta)
+protocol fuchsia.media.sessions2/Player
+table/member fuchsia.media.sessions2/PlayerCapabilities.flags fuchsia.media.sessions2/PlayerCapabilityFlags
+table fuchsia.media.sessions2/PlayerCapabilities
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.CHANGE_TO_NEXT_ITEM 128
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.CHANGE_TO_PREV_ITEM 256
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.HAS_GAIN_CONTROL 512
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.PAUSE 4
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.PLAY 1
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.REPEAT_GROUPS 1024
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.REPEAT_SINGLE 2048
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.SEEK 8
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.SET_PLAYBACK_RATE 4096
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.SHUFFLE 64
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.SKIP_FORWARD 16
+bits/member fuchsia.media.sessions2/PlayerCapabilityFlags.SKIP_REVERSE 32
+strict bits fuchsia.media.sessions2/PlayerCapabilityFlags uint32
+protocol/member fuchsia.media.sessions2/PlayerControl.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.sessions2/PlayerControl.NextItem()
+protocol/member fuchsia.media.sessions2/PlayerControl.Pause()
+protocol/member fuchsia.media.sessions2/PlayerControl.Play()
+protocol/member fuchsia.media.sessions2/PlayerControl.PrevItem()
+protocol/member fuchsia.media.sessions2/PlayerControl.Seek(int64 position)
+protocol/member fuchsia.media.sessions2/PlayerControl.SetPlaybackRate(float32 playback_rate)
+protocol/member fuchsia.media.sessions2/PlayerControl.SetRepeatMode(fuchsia.media.sessions2/RepeatMode repeat_mode)
+protocol/member fuchsia.media.sessions2/PlayerControl.SetShuffleMode(bool shuffle_on)
+protocol/member fuchsia.media.sessions2/PlayerControl.SkipForward()
+protocol/member fuchsia.media.sessions2/PlayerControl.SkipReverse()
+protocol/member fuchsia.media.sessions2/PlayerControl.Stop()
+protocol fuchsia.media.sessions2/PlayerControl
+table/member fuchsia.media.sessions2/PlayerInfoDelta.interruption_behavior fuchsia.media.sessions2/InterruptionBehavior
+table/member fuchsia.media.sessions2/PlayerInfoDelta.local bool
+table/member fuchsia.media.sessions2/PlayerInfoDelta.media_images vector<fuchsia.media.sessions2/MediaImage>:16
+table/member fuchsia.media.sessions2/PlayerInfoDelta.metadata fuchsia.media/Metadata
+table/member fuchsia.media.sessions2/PlayerInfoDelta.player_capabilities fuchsia.media.sessions2/PlayerCapabilities
+table/member fuchsia.media.sessions2/PlayerInfoDelta.player_status fuchsia.media.sessions2/PlayerStatus
+table fuchsia.media.sessions2/PlayerInfoDelta
+table/member fuchsia.media.sessions2/PlayerRegistration.domain string:1000
+table/member fuchsia.media.sessions2/PlayerRegistration.usage fuchsia.media/AudioRenderUsage
+table fuchsia.media.sessions2/PlayerRegistration
+enum/member fuchsia.media.sessions2/PlayerState.BUFFERING 3
+enum/member fuchsia.media.sessions2/PlayerState.ERROR 4
+enum/member fuchsia.media.sessions2/PlayerState.IDLE 0
+enum/member fuchsia.media.sessions2/PlayerState.PAUSED 2
+enum/member fuchsia.media.sessions2/PlayerState.PLAYING 1
+strict enum fuchsia.media.sessions2/PlayerState uint32
+table/member fuchsia.media.sessions2/PlayerStatus.content_type fuchsia.media.sessions2/ContentType
+table/member fuchsia.media.sessions2/PlayerStatus.duration int64
+table/member fuchsia.media.sessions2/PlayerStatus.error fuchsia.media.sessions2/Error
+table/member fuchsia.media.sessions2/PlayerStatus.is_live bool
+table/member fuchsia.media.sessions2/PlayerStatus.player_state fuchsia.media.sessions2/PlayerState
+table/member fuchsia.media.sessions2/PlayerStatus.repeat_mode fuchsia.media.sessions2/RepeatMode
+table/member fuchsia.media.sessions2/PlayerStatus.shuffle_on bool
+table/member fuchsia.media.sessions2/PlayerStatus.timeline_function fuchsia.media/TimelineFunction
+table fuchsia.media.sessions2/PlayerStatus
+protocol/member fuchsia.media.sessions2/Publisher.Publish(client_end:fuchsia.media.sessions2/Player player,fuchsia.media.sessions2/PlayerRegistration registration) -> (uint64 session_id)
+protocol fuchsia.media.sessions2/Publisher
+enum/member fuchsia.media.sessions2/RepeatMode.GROUP 1
+enum/member fuchsia.media.sessions2/RepeatMode.OFF 0
+enum/member fuchsia.media.sessions2/RepeatMode.SINGLE 2
+strict enum fuchsia.media.sessions2/RepeatMode uint32
+protocol/member fuchsia.media.sessions2/SessionControl.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.sessions2/SessionControl.NextItem()
+protocol/member fuchsia.media.sessions2/SessionControl.Pause()
+protocol/member fuchsia.media.sessions2/SessionControl.Play()
+protocol/member fuchsia.media.sessions2/SessionControl.PrevItem()
+protocol/member fuchsia.media.sessions2/SessionControl.Seek(int64 position)
+protocol/member fuchsia.media.sessions2/SessionControl.SetPlaybackRate(float32 playback_rate)
+protocol/member fuchsia.media.sessions2/SessionControl.SetRepeatMode(fuchsia.media.sessions2/RepeatMode repeat_mode)
+protocol/member fuchsia.media.sessions2/SessionControl.SetShuffleMode(bool shuffle_on)
+protocol/member fuchsia.media.sessions2/SessionControl.SkipForward()
+protocol/member fuchsia.media.sessions2/SessionControl.SkipReverse()
+protocol/member fuchsia.media.sessions2/SessionControl.Stop()
+protocol/member fuchsia.media.sessions2/SessionControl.WatchStatus() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)
+protocol fuchsia.media.sessions2/SessionControl
+table/member fuchsia.media.sessions2/SessionInfoDelta.domain string:1000
+table/member fuchsia.media.sessions2/SessionInfoDelta.is_local bool
+table/member fuchsia.media.sessions2/SessionInfoDelta.is_locally_active bool
+table/member fuchsia.media.sessions2/SessionInfoDelta.media_images vector<fuchsia.media.sessions2/MediaImage>
+table/member fuchsia.media.sessions2/SessionInfoDelta.metadata fuchsia.media/Metadata
+table/member fuchsia.media.sessions2/SessionInfoDelta.player_capabilities fuchsia.media.sessions2/PlayerCapabilities
+table/member fuchsia.media.sessions2/SessionInfoDelta.player_status fuchsia.media.sessions2/PlayerStatus
+table fuchsia.media.sessions2/SessionInfoDelta
+protocol/member fuchsia.media.sessions2/SessionObserver.WatchStatus() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)
+protocol fuchsia.media.sessions2/SessionObserver
+protocol/member fuchsia.media.sessions2/SessionsWatcher.SessionRemoved(uint64 session_id) -> ()
+protocol/member fuchsia.media.sessions2/SessionsWatcher.SessionUpdated(uint64 session_id,fuchsia.media.sessions2/SessionInfoDelta session_info_delta) -> ()
+protocol fuchsia.media.sessions2/SessionsWatcher
+table/member fuchsia.media.sessions2/WatchOptions.allowed_sessions vector<uint64>:1000
+table/member fuchsia.media.sessions2/WatchOptions.only_active bool
+table fuchsia.media.sessions2/WatchOptions
+library fuchsia.media.sessions2

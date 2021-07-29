@@ -1,0 +1,17 @@
+protocol/member fuchsia.factory.lowpan/FactoryDevice.SendMfgCommand(string:2000 command) -> (string:2000 response)
+protocol fuchsia.factory.lowpan/FactoryDevice
+protocol/member fuchsia.factory.lowpan/FactoryDriver.GetFactoryDevice(server_end:fuchsia.factory.lowpan/FactoryDevice device_factory)
+protocol fuchsia.factory.lowpan/FactoryDriver
+protocol/member fuchsia.factory.lowpan/FactoryLookup.Lookup(string:32 name,server_end:fuchsia.factory.lowpan/FactoryDevice device_factory) -> (fuchsia.factory.lowpan/FactoryLookup_Lookup_Result result)
+protocol fuchsia.factory.lowpan/FactoryLookup
+struct fuchsia.factory.lowpan/FactoryLookup_Lookup_Response
+union/member fuchsia.factory.lowpan/FactoryLookup_Lookup_Result.err fuchsia.lowpan.device/ServiceError
+union/member fuchsia.factory.lowpan/FactoryLookup_Lookup_Result.response fuchsia.factory.lowpan/FactoryLookup_Lookup_Response
+strict union fuchsia.factory.lowpan/FactoryLookup_Lookup_Result
+protocol/member fuchsia.factory.lowpan/FactoryRegister.Register(string:32 name,client_end:fuchsia.factory.lowpan/FactoryDriver driver) -> (fuchsia.factory.lowpan/FactoryRegister_Register_Result result)
+protocol fuchsia.factory.lowpan/FactoryRegister
+struct fuchsia.factory.lowpan/FactoryRegister_Register_Response
+union/member fuchsia.factory.lowpan/FactoryRegister_Register_Result.err fuchsia.lowpan.device/ServiceError
+union/member fuchsia.factory.lowpan/FactoryRegister_Register_Result.response fuchsia.factory.lowpan/FactoryRegister_Register_Response
+strict union fuchsia.factory.lowpan/FactoryRegister_Register_Result
+library fuchsia.factory.lowpan

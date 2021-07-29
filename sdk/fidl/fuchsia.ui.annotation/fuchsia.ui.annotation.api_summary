@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.annotation/Registry.CreateAnnotationViewHolder(fuchsia.ui.views/ViewRef client_view,fuchsia.ui.views/ViewHolderToken view_holder_token) -> ()
+protocol fuchsia.ui.annotation/Registry
+library fuchsia.ui.annotation

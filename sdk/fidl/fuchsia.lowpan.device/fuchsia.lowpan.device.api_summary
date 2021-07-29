@@ -1,0 +1,141 @@
+table/member fuchsia.lowpan.device/AllCounters.mac_rx fuchsia.lowpan.device/MacCounters
+table/member fuchsia.lowpan.device/AllCounters.mac_tx fuchsia.lowpan.device/MacCounters
+table fuchsia.lowpan.device/AllCounters
+protocol/member fuchsia.lowpan.device/BeaconInfoStream.Next() -> (vector<fuchsia.lowpan/BeaconInfo>:32 beacons)
+protocol fuchsia.lowpan.device/BeaconInfoStream
+protocol/member fuchsia.lowpan.device/Counters.Get() -> (fuchsia.lowpan.device/AllCounters counters)
+protocol/member fuchsia.lowpan.device/Counters.Reset() -> (fuchsia.lowpan.device/AllCounters counters)
+protocol fuchsia.lowpan.device/Counters
+protocol/member fuchsia.lowpan.device/Device.GetSupportedChannels() -> (vector<fuchsia.lowpan/ChannelInfo>:100 channels_info)
+protocol/member fuchsia.lowpan.device/Device.GetSupportedNetworkTypes() -> (vector<string:64>:16 network_types)
+protocol/member fuchsia.lowpan.device/Device.LeaveNetwork() -> ()
+protocol/member fuchsia.lowpan.device/Device.ProvisionNetwork(fuchsia.lowpan/ProvisioningParams params) -> ()
+protocol/member fuchsia.lowpan.device/Device.SetActive(bool active) -> ()
+protocol/member fuchsia.lowpan.device/Device.WatchDeviceState() -> (fuchsia.lowpan.device/DeviceState device_combined_state)
+protocol fuchsia.lowpan.device/Device
+struct/member fuchsia.lowpan.device/DeviceChanges.added vector<string:32>:8
+struct/member fuchsia.lowpan.device/DeviceChanges.removed vector<string:32>:8
+struct fuchsia.lowpan.device/DeviceChanges
+protocol/member fuchsia.lowpan.device/DeviceExtra.CommissionNetwork(vector<uint8>:32 secret,server_end:fuchsia.lowpan.device/ProvisioningMonitor progress)
+protocol/member fuchsia.lowpan.device/DeviceExtra.FormNetwork(fuchsia.lowpan/ProvisioningParams params,server_end:fuchsia.lowpan.device/ProvisioningMonitor progress)
+protocol/member fuchsia.lowpan.device/DeviceExtra.GetCredential() -> (fuchsia.lowpan/Credential:optional credential)
+protocol/member fuchsia.lowpan.device/DeviceExtra.JoinNetwork(fuchsia.lowpan/ProvisioningParams params,server_end:fuchsia.lowpan.device/ProvisioningMonitor progress)
+protocol/member fuchsia.lowpan.device/DeviceExtra.StartEnergyScan(fuchsia.lowpan.device/EnergyScanParameters params,server_end:fuchsia.lowpan.device/EnergyScanResultStream stream)
+protocol/member fuchsia.lowpan.device/DeviceExtra.StartNetworkScan(fuchsia.lowpan.device/NetworkScanParameters params,server_end:fuchsia.lowpan.device/BeaconInfoStream stream)
+protocol/member fuchsia.lowpan.device/DeviceExtra.WatchIdentity() -> (fuchsia.lowpan/Identity identity)
+protocol fuchsia.lowpan.device/DeviceExtra
+protocol/member fuchsia.lowpan.device/DeviceRoute.RegisterExternalRoute(fuchsia.lowpan.device/ExternalRoute external_route) -> ()
+protocol/member fuchsia.lowpan.device/DeviceRoute.RegisterOnMeshPrefix(fuchsia.lowpan.device/OnMeshPrefix prefix) -> ()
+protocol/member fuchsia.lowpan.device/DeviceRoute.UnregisterExternalRoute(fuchsia.lowpan/Ipv6Subnet subnet) -> ()
+protocol/member fuchsia.lowpan.device/DeviceRoute.UnregisterOnMeshPrefix(fuchsia.lowpan/Ipv6Subnet subnet) -> ()
+protocol fuchsia.lowpan.device/DeviceRoute
+protocol/member fuchsia.lowpan.device/DeviceRouteExtra.GetLocalExternalRoutes() -> (vector<fuchsia.lowpan.device/ExternalRoute>:32 external_routes)
+protocol/member fuchsia.lowpan.device/DeviceRouteExtra.GetLocalOnMeshPrefixes() -> (vector<fuchsia.lowpan.device/OnMeshPrefix>:32 prefixes)
+protocol fuchsia.lowpan.device/DeviceRouteExtra
+table/member fuchsia.lowpan.device/DeviceState.connectivity_state fuchsia.lowpan/ConnectivityState
+table/member fuchsia.lowpan.device/DeviceState.role fuchsia.lowpan/Role
+table fuchsia.lowpan.device/DeviceState
+protocol/member fuchsia.lowpan.device/Driver.GetProtocols(fuchsia.lowpan.device/Protocols protocols)
+protocol fuchsia.lowpan.device/Driver
+table/member fuchsia.lowpan.device/EnergyScanParameters.channels vector<uint16>:100
+table/member fuchsia.lowpan.device/EnergyScanParameters.dwell_time_ms uint32
+table fuchsia.lowpan.device/EnergyScanParameters
+table/member fuchsia.lowpan.device/EnergyScanResult.channel_index uint16
+table/member fuchsia.lowpan.device/EnergyScanResult.max_rssi int32
+table/member fuchsia.lowpan.device/EnergyScanResult.min_rssi int32
+table fuchsia.lowpan.device/EnergyScanResult
+protocol/member fuchsia.lowpan.device/EnergyScanResultStream.Next() -> (vector<fuchsia.lowpan.device/EnergyScanResult>:32 results)
+protocol fuchsia.lowpan.device/EnergyScanResultStream
+table/member fuchsia.lowpan.device/ExternalRoute.route_preference fuchsia.lowpan.device/RoutePreference
+table/member fuchsia.lowpan.device/ExternalRoute.stable bool
+table/member fuchsia.lowpan.device/ExternalRoute.subnet fuchsia.lowpan/Ipv6Subnet
+table fuchsia.lowpan.device/ExternalRoute
+protocol/member fuchsia.lowpan.device/Lookup.GetDevices() -> (vector<string:32>:8 device_names)
+protocol/member fuchsia.lowpan.device/Lookup.LookupDevice(string:32 name,fuchsia.lowpan.device/Protocols protocols) -> (fuchsia.lowpan.device/Lookup_LookupDevice_Result result)
+protocol/member fuchsia.lowpan.device/Lookup.WatchDevices() -> (fuchsia.lowpan.device/DeviceChanges device_changes)
+protocol fuchsia.lowpan.device/Lookup
+struct fuchsia.lowpan.device/Lookup_LookupDevice_Response
+union/member fuchsia.lowpan.device/Lookup_LookupDevice_Result.err fuchsia.lowpan.device/ServiceError
+union/member fuchsia.lowpan.device/Lookup_LookupDevice_Result.response fuchsia.lowpan.device/Lookup_LookupDevice_Response
+strict union fuchsia.lowpan.device/Lookup_LookupDevice_Result
+const fuchsia.lowpan.device/MAX_EXTERNAL_ROUTES uint32 32
+const fuchsia.lowpan.device/MAX_LOWPAN_DEVICES uint32 8
+const fuchsia.lowpan.device/MAX_NETWORK_TYPES uint16 16
+const fuchsia.lowpan.device/MAX_ON_MESH_PREFIXES uint32 32
+const fuchsia.lowpan.device/MAX_STREAM_SET_SIZE uint16 32
+table/member fuchsia.lowpan.device/MacCounters.ack_requested uint32
+table/member fuchsia.lowpan.device/MacCounters.acked uint32
+table/member fuchsia.lowpan.device/MacCounters.address_filtered uint32
+table/member fuchsia.lowpan.device/MacCounters.beacon uint32
+table/member fuchsia.lowpan.device/MacCounters.beacon_request uint32
+table/member fuchsia.lowpan.device/MacCounters.broadcast uint32
+table/member fuchsia.lowpan.device/MacCounters.data uint32
+table/member fuchsia.lowpan.device/MacCounters.data_poll uint32
+table/member fuchsia.lowpan.device/MacCounters.dest_addr_filtered uint32
+table/member fuchsia.lowpan.device/MacCounters.direct_max_retry_expiry uint32
+table/member fuchsia.lowpan.device/MacCounters.duplicated uint32
+table/member fuchsia.lowpan.device/MacCounters.err_abort uint32
+table/member fuchsia.lowpan.device/MacCounters.err_busy_channel uint32
+table/member fuchsia.lowpan.device/MacCounters.err_cca uint32
+table/member fuchsia.lowpan.device/MacCounters.err_fcs uint32
+table/member fuchsia.lowpan.device/MacCounters.err_invalid_src_addr uint32
+table/member fuchsia.lowpan.device/MacCounters.err_no_frame uint32
+table/member fuchsia.lowpan.device/MacCounters.err_other uint32
+table/member fuchsia.lowpan.device/MacCounters.err_sec uint32
+table/member fuchsia.lowpan.device/MacCounters.err_unknown_neighbor uint32
+table/member fuchsia.lowpan.device/MacCounters.indirect_max_retry_expiry uint32
+table/member fuchsia.lowpan.device/MacCounters.no_ack_requested uint32
+table/member fuchsia.lowpan.device/MacCounters.other uint32
+table/member fuchsia.lowpan.device/MacCounters.retries uint32
+table/member fuchsia.lowpan.device/MacCounters.total uint32
+table/member fuchsia.lowpan.device/MacCounters.unicast uint32
+table fuchsia.lowpan.device/MacCounters
+table/member fuchsia.lowpan.device/NetworkScanParameters.channels vector<uint16>:100
+table/member fuchsia.lowpan.device/NetworkScanParameters.tx_power_dbm int32
+table fuchsia.lowpan.device/NetworkScanParameters
+table/member fuchsia.lowpan.device/OnMeshPrefix.default_route_preference fuchsia.lowpan.device/RoutePreference
+table/member fuchsia.lowpan.device/OnMeshPrefix.slaac_preferred bool
+table/member fuchsia.lowpan.device/OnMeshPrefix.slaac_valid bool
+table/member fuchsia.lowpan.device/OnMeshPrefix.stable bool
+table/member fuchsia.lowpan.device/OnMeshPrefix.subnet fuchsia.lowpan/Ipv6Subnet
+table fuchsia.lowpan.device/OnMeshPrefix
+table/member fuchsia.lowpan.device/Protocols.counters server_end:fuchsia.lowpan.device/Counters
+table/member fuchsia.lowpan.device/Protocols.device server_end:fuchsia.lowpan.device/Device
+table/member fuchsia.lowpan.device/Protocols.device_extra server_end:fuchsia.lowpan.device/DeviceExtra
+table/member fuchsia.lowpan.device/Protocols.device_route server_end:fuchsia.lowpan.device/DeviceRoute
+table/member fuchsia.lowpan.device/Protocols.device_route_extra server_end:fuchsia.lowpan.device/DeviceRouteExtra
+table/member fuchsia.lowpan.device/Protocols.device_test server_end:fuchsia.lowpan.test/DeviceTest
+table/member fuchsia.lowpan.device/Protocols.thread_legacy_joining server_end:fuchsia.lowpan.thread/LegacyJoining
+resource table fuchsia.lowpan.device/Protocols
+enum/member fuchsia.lowpan.device/ProvisionError.CANCELED 4
+enum/member fuchsia.lowpan.device/ProvisionError.CREDENTIAL_REJECTED 1
+enum/member fuchsia.lowpan.device/ProvisionError.NETWORK_ALREADY_EXISTS 3
+enum/member fuchsia.lowpan.device/ProvisionError.NETWORK_NOT_FOUND 2
+strict enum fuchsia.lowpan.device/ProvisionError int32
+protocol/member fuchsia.lowpan.device/ProvisioningMonitor.WatchProgress() -> (fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Result result)
+protocol fuchsia.lowpan.device/ProvisioningMonitor
+struct/member fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Response.progress fuchsia.lowpan.device/ProvisioningProgress
+struct fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Response
+union/member fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Result.err fuchsia.lowpan.device/ProvisionError
+union/member fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Result.response fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Response
+strict union fuchsia.lowpan.device/ProvisioningMonitor_WatchProgress_Result
+union/member fuchsia.lowpan.device/ProvisioningProgress.identity fuchsia.lowpan/Identity
+union/member fuchsia.lowpan.device/ProvisioningProgress.progress float32
+strict union fuchsia.lowpan.device/ProvisioningProgress
+protocol/member fuchsia.lowpan.device/Register.RegisterDevice(string:32 name,client_end:fuchsia.lowpan.device/Driver driver) -> (fuchsia.lowpan.device/Register_RegisterDevice_Result result)
+protocol fuchsia.lowpan.device/Register
+struct fuchsia.lowpan.device/Register_RegisterDevice_Response
+union/member fuchsia.lowpan.device/Register_RegisterDevice_Result.err fuchsia.lowpan.device/ServiceError
+union/member fuchsia.lowpan.device/Register_RegisterDevice_Result.response fuchsia.lowpan.device/Register_RegisterDevice_Response
+strict union fuchsia.lowpan.device/Register_RegisterDevice_Result
+enum/member fuchsia.lowpan.device/RoutePreference.HIGH 1
+enum/member fuchsia.lowpan.device/RoutePreference.LOW -1
+enum/member fuchsia.lowpan.device/RoutePreference.MEDIUM 0
+strict enum fuchsia.lowpan.device/RoutePreference int8
+enum/member fuchsia.lowpan.device/ServiceError.DEVICE_ALREADY_EXISTS 3
+enum/member fuchsia.lowpan.device/ServiceError.DEVICE_NOT_FOUND 2
+enum/member fuchsia.lowpan.device/ServiceError.INVALID_ARGUMENT 1
+enum/member fuchsia.lowpan.device/ServiceError.INVALID_INTERFACE_NAME 4
+enum/member fuchsia.lowpan.device/ServiceError.TOO_MANY_DEVICES 5
+strict enum fuchsia.lowpan.device/ServiceError int32
+library fuchsia.lowpan.device

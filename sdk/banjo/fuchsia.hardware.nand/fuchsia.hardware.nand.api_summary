@@ -1,0 +1,26 @@
+protocol/member fuchsia.hardware.nand/Nand.GetFactoryBadBlockList() -> (int32 status,vector<uint32> bad_blocks)
+protocol/member fuchsia.hardware.nand/Nand.Query() -> (fuchsia.hardware.nandinfo/NandInfo info,uint64 nand_op_size)
+protocol/member fuchsia.hardware.nand/Nand.Queue(fuchsia.hardware.nand/NandOperation op) -> (int32 status,fuchsia.hardware.nand/NandOperation op)
+protocol fuchsia.hardware.nand/Nand
+struct/member fuchsia.hardware.nand/NandErase.command fuchsia.hardware.nand/NandOp
+struct/member fuchsia.hardware.nand/NandErase.first_block uint32
+struct/member fuchsia.hardware.nand/NandErase.num_blocks uint32
+struct fuchsia.hardware.nand/NandErase
+enum/member fuchsia.hardware.nand/NandOp.ERASE 3
+enum/member fuchsia.hardware.nand/NandOp.READ 1
+enum/member fuchsia.hardware.nand/NandOp.WRITE 2
+strict enum fuchsia.hardware.nand/NandOp uint32
+union/member fuchsia.hardware.nand/NandOperation.command fuchsia.hardware.nand/NandOp
+union/member fuchsia.hardware.nand/NandOperation.erase fuchsia.hardware.nand/NandErase
+union/member fuchsia.hardware.nand/NandOperation.rw fuchsia.hardware.nand/NandReadWrite
+resource strict union fuchsia.hardware.nand/NandOperation
+struct/member fuchsia.hardware.nand/NandReadWrite.command fuchsia.hardware.nand/NandOp
+struct/member fuchsia.hardware.nand/NandReadWrite.corrected_bit_flips uint32
+struct/member fuchsia.hardware.nand/NandReadWrite.data_vmo zx/handle:VMO
+struct/member fuchsia.hardware.nand/NandReadWrite.length uint32
+struct/member fuchsia.hardware.nand/NandReadWrite.offset_data_vmo uint64
+struct/member fuchsia.hardware.nand/NandReadWrite.offset_nand uint32
+struct/member fuchsia.hardware.nand/NandReadWrite.offset_oob_vmo uint64
+struct/member fuchsia.hardware.nand/NandReadWrite.oob_vmo zx/handle:VMO
+resource struct fuchsia.hardware.nand/NandReadWrite
+library fuchsia.hardware.nand

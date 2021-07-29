@@ -1,0 +1,44 @@
+protocol/member fuchsia.hardware.backlight/Device.GetMaxAbsoluteBrightness() -> (fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Result result)
+protocol/member fuchsia.hardware.backlight/Device.GetNormalizedBrightnessScale() -> (fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Result result)
+protocol/member fuchsia.hardware.backlight/Device.GetStateAbsolute() -> (fuchsia.hardware.backlight/Device_GetStateAbsolute_Result result)
+protocol/member fuchsia.hardware.backlight/Device.GetStateNormalized() -> (fuchsia.hardware.backlight/Device_GetStateNormalized_Result result)
+protocol/member fuchsia.hardware.backlight/Device.SetNormalizedBrightnessScale(float64 scale) -> (fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Result result)
+protocol/member fuchsia.hardware.backlight/Device.SetStateAbsolute(fuchsia.hardware.backlight/State state) -> (fuchsia.hardware.backlight/Device_SetStateAbsolute_Result result)
+protocol/member fuchsia.hardware.backlight/Device.SetStateNormalized(fuchsia.hardware.backlight/State state) -> (fuchsia.hardware.backlight/Device_SetStateNormalized_Result result)
+protocol fuchsia.hardware.backlight/Device
+struct/member fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Response.max_brightness float64
+struct fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Response
+union/member fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Result.err int32
+union/member fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Result.response fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Response
+strict union fuchsia.hardware.backlight/Device_GetMaxAbsoluteBrightness_Result
+struct/member fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Response.scale float64
+struct fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Response
+union/member fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Result.err int32
+union/member fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Result.response fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Response
+strict union fuchsia.hardware.backlight/Device_GetNormalizedBrightnessScale_Result
+struct/member fuchsia.hardware.backlight/Device_GetStateAbsolute_Response.state fuchsia.hardware.backlight/State
+struct fuchsia.hardware.backlight/Device_GetStateAbsolute_Response
+union/member fuchsia.hardware.backlight/Device_GetStateAbsolute_Result.err int32
+union/member fuchsia.hardware.backlight/Device_GetStateAbsolute_Result.response fuchsia.hardware.backlight/Device_GetStateAbsolute_Response
+strict union fuchsia.hardware.backlight/Device_GetStateAbsolute_Result
+struct/member fuchsia.hardware.backlight/Device_GetStateNormalized_Response.state fuchsia.hardware.backlight/State
+struct fuchsia.hardware.backlight/Device_GetStateNormalized_Response
+union/member fuchsia.hardware.backlight/Device_GetStateNormalized_Result.err int32
+union/member fuchsia.hardware.backlight/Device_GetStateNormalized_Result.response fuchsia.hardware.backlight/Device_GetStateNormalized_Response
+strict union fuchsia.hardware.backlight/Device_GetStateNormalized_Result
+struct fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Response
+union/member fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Result.err int32
+union/member fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Result.response fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Response
+strict union fuchsia.hardware.backlight/Device_SetNormalizedBrightnessScale_Result
+struct fuchsia.hardware.backlight/Device_SetStateAbsolute_Response
+union/member fuchsia.hardware.backlight/Device_SetStateAbsolute_Result.err int32
+union/member fuchsia.hardware.backlight/Device_SetStateAbsolute_Result.response fuchsia.hardware.backlight/Device_SetStateAbsolute_Response
+strict union fuchsia.hardware.backlight/Device_SetStateAbsolute_Result
+struct fuchsia.hardware.backlight/Device_SetStateNormalized_Response
+union/member fuchsia.hardware.backlight/Device_SetStateNormalized_Result.err int32
+union/member fuchsia.hardware.backlight/Device_SetStateNormalized_Result.response fuchsia.hardware.backlight/Device_SetStateNormalized_Response
+strict union fuchsia.hardware.backlight/Device_SetStateNormalized_Result
+struct/member fuchsia.hardware.backlight/State.backlight_on bool
+struct/member fuchsia.hardware.backlight/State.brightness float64
+struct fuchsia.hardware.backlight/State
+library fuchsia.hardware.backlight

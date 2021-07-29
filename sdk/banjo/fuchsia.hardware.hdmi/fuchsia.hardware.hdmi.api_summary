@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.hdmi/Hdmi.Connect(zx/handle:CHANNEL server_chan) -> ()
+protocol fuchsia.hardware.hdmi/Hdmi
+library fuchsia.hardware.hdmi

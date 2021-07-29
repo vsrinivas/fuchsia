@@ -1,0 +1,5 @@
+protocol/member fuchsia.recovery.policy/Device.SetIsLocalResetAllowed(bool allowed)
+protocol fuchsia.recovery.policy/Device
+protocol/member fuchsia.recovery.policy/FactoryReset.GetEnabled() -> (bool fdr_enabled)
+protocol fuchsia.recovery.policy/FactoryReset
+library fuchsia.recovery.policy

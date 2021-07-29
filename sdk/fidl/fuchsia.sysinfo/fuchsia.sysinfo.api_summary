@@ -1,0 +1,15 @@
+const fuchsia.sysinfo/BOARD_NAME_LEN uint8 32
+const fuchsia.sysinfo/BOOTLOADER_VENDOR_LEN uint8 32
+struct/member fuchsia.sysinfo/InterruptControllerInfo.type fuchsia.sysinfo/InterruptControllerType
+struct fuchsia.sysinfo/InterruptControllerInfo
+enum/member fuchsia.sysinfo/InterruptControllerType.APIC 1
+enum/member fuchsia.sysinfo/InterruptControllerType.GIC_V2 2
+enum/member fuchsia.sysinfo/InterruptControllerType.GIC_V3 3
+enum/member fuchsia.sysinfo/InterruptControllerType.UNKNOWN 0
+strict enum fuchsia.sysinfo/InterruptControllerType uint32
+protocol/member fuchsia.sysinfo/SysInfo.GetBoardName() -> (int32 status,string:<32,optional> name)
+protocol/member fuchsia.sysinfo/SysInfo.GetBoardRevision() -> (int32 status,uint32 revision)
+protocol/member fuchsia.sysinfo/SysInfo.GetBootloaderVendor() -> (int32 status,string:<32,optional> vendor)
+protocol/member fuchsia.sysinfo/SysInfo.GetInterruptControllerInfo() -> (int32 status,box<fuchsia.sysinfo/InterruptControllerInfo> info)
+protocol fuchsia.sysinfo/SysInfo
+library fuchsia.sysinfo

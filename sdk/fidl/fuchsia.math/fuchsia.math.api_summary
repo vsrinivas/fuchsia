@@ -1,0 +1,58 @@
+struct/member fuchsia.math/Inset.bottom int32
+struct/member fuchsia.math/Inset.left int32
+struct/member fuchsia.math/Inset.right int32
+struct/member fuchsia.math/Inset.top int32
+struct fuchsia.math/Inset
+struct/member fuchsia.math/InsetF.bottom float32
+struct/member fuchsia.math/InsetF.left float32
+struct/member fuchsia.math/InsetF.right float32
+struct/member fuchsia.math/InsetF.top float32
+struct fuchsia.math/InsetF
+struct/member fuchsia.math/Point.x int32
+struct/member fuchsia.math/Point.y int32
+struct fuchsia.math/Point
+struct/member fuchsia.math/Point3F.x float32
+struct/member fuchsia.math/Point3F.y float32
+struct/member fuchsia.math/Point3F.z float32
+struct fuchsia.math/Point3F
+struct/member fuchsia.math/PointF.x float32
+struct/member fuchsia.math/PointF.y float32
+struct fuchsia.math/PointF
+struct/member fuchsia.math/RRectF.bottom_left_radius_x float32
+struct/member fuchsia.math/RRectF.bottom_left_radius_y float32
+struct/member fuchsia.math/RRectF.bottom_right_radius_x float32
+struct/member fuchsia.math/RRectF.bottom_right_radius_y float32
+struct/member fuchsia.math/RRectF.height float32
+struct/member fuchsia.math/RRectF.top_left_radius_x float32
+struct/member fuchsia.math/RRectF.top_left_radius_y float32
+struct/member fuchsia.math/RRectF.top_right_radius_x float32
+struct/member fuchsia.math/RRectF.top_right_radius_y float32
+struct/member fuchsia.math/RRectF.width float32
+struct/member fuchsia.math/RRectF.x float32
+struct/member fuchsia.math/RRectF.y float32
+struct fuchsia.math/RRectF
+struct/member fuchsia.math/Rect.height int32
+struct/member fuchsia.math/Rect.width int32
+struct/member fuchsia.math/Rect.x int32
+struct/member fuchsia.math/Rect.y int32
+struct fuchsia.math/Rect
+struct/member fuchsia.math/RectF.height float32
+struct/member fuchsia.math/RectF.width float32
+struct/member fuchsia.math/RectF.x float32
+struct/member fuchsia.math/RectF.y float32
+struct fuchsia.math/RectF
+struct/member fuchsia.math/Size.height int32
+struct/member fuchsia.math/Size.width int32
+struct fuchsia.math/Size
+struct/member fuchsia.math/SizeF.height float32
+struct/member fuchsia.math/SizeF.width float32
+struct fuchsia.math/SizeF
+struct/member fuchsia.math/SizeU.height uint32
+struct/member fuchsia.math/SizeU.width uint32
+struct fuchsia.math/SizeU
+struct/member fuchsia.math/Transform.matrix array<float32,16>
+struct fuchsia.math/Transform
+struct/member fuchsia.math/Vec.x int32
+struct/member fuchsia.math/Vec.y int32
+struct fuchsia.math/Vec
+library fuchsia.math

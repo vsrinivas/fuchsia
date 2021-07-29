@@ -1,0 +1,25 @@
+struct/member fuchsia.ui.brightness/BrightnessPoint.ambient_lux float32
+struct/member fuchsia.ui.brightness/BrightnessPoint.display_nits float32
+struct fuchsia.ui.brightness/BrightnessPoint
+struct/member fuchsia.ui.brightness/BrightnessTable.points vector<fuchsia.ui.brightness/BrightnessPoint>:50
+struct fuchsia.ui.brightness/BrightnessTable
+protocol/member fuchsia.ui.brightness/ColorAdjustmentHandler.SetColorAdjustment(fuchsia.ui.brightness/ColorAdjustmentTable color_adjustment)
+protocol fuchsia.ui.brightness/ColorAdjustmentHandler
+table/member fuchsia.ui.brightness/ColorAdjustmentTable.matrix array<float32,9>
+table fuchsia.ui.brightness/ColorAdjustmentTable
+protocol/member fuchsia.ui.brightness/Control.GetMaxAbsoluteBrightness() -> (fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result result)
+protocol/member fuchsia.ui.brightness/Control.SetAutoBrightness()
+protocol/member fuchsia.ui.brightness/Control.SetAutoBrightnessAdjustment(float32 adjustment)
+protocol/member fuchsia.ui.brightness/Control.SetBrightnessTable(fuchsia.ui.brightness/BrightnessTable table)
+protocol/member fuchsia.ui.brightness/Control.SetManualBrightness(float32 value)
+protocol/member fuchsia.ui.brightness/Control.SetManualBrightnessSmooth(float32 value,int64 duration)
+protocol/member fuchsia.ui.brightness/Control.WatchAutoBrightness() -> (bool enabled)
+protocol/member fuchsia.ui.brightness/Control.WatchAutoBrightnessAdjustment() -> (float32 adjustment)
+protocol/member fuchsia.ui.brightness/Control.WatchCurrentBrightness() -> (float32 value)
+protocol fuchsia.ui.brightness/Control
+struct/member fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response.max_brightness float64
+struct fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response
+union/member fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.err int32
+union/member fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.response fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response
+strict union fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result
+library fuchsia.ui.brightness

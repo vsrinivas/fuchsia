@@ -1,0 +1,61 @@
+struct/member fuchsia.exception/ExceptionInfo.process_koid uint64
+struct/member fuchsia.exception/ExceptionInfo.thread_koid uint64
+struct/member fuchsia.exception/ExceptionInfo.type fuchsia.exception/ExceptionType
+struct fuchsia.exception/ExceptionInfo
+enum/member fuchsia.exception/ExceptionType.FATAL_PAGE_FAULT 264
+enum/member fuchsia.exception/ExceptionType.GENERAL 8
+enum/member fuchsia.exception/ExceptionType.HW_BREAKPOINT 1032
+enum/member fuchsia.exception/ExceptionType.POLICY_ERROR 33288
+enum/member fuchsia.exception/ExceptionType.PROCESS_STARTING 33544
+enum/member fuchsia.exception/ExceptionType.SW_BREAKPOINT 776
+enum/member fuchsia.exception/ExceptionType.THREAD_EXITING 33032
+enum/member fuchsia.exception/ExceptionType.THREAD_STARTING 32776
+enum/member fuchsia.exception/ExceptionType.UNALIGNED_ACCESS 1288
+enum/member fuchsia.exception/ExceptionType.UNDEFINED_INSTRUCTION 520
+strict enum fuchsia.exception/ExceptionType uint32
+protocol/member fuchsia.exception/Handler.OnException(zx/handle:EXCEPTION exception,fuchsia.exception/ExceptionInfo info) -> ()
+protocol fuchsia.exception/Handler
+const fuchsia.exception/MAX_EXCEPTIONS_PER_CALL uint64 32
+const fuchsia.exception/MAX_FILTERS_PER_CALL uint64 32
+const fuchsia.exception/MAX_FILTER_LENGTH uint64 32
+table/member fuchsia.exception/ProcessException.exception zx/handle:EXCEPTION
+table/member fuchsia.exception/ProcessException.info fuchsia.exception/ExceptionInfo
+table/member fuchsia.exception/ProcessException.process zx/handle:PROCESS
+table/member fuchsia.exception/ProcessException.thread zx/handle:THREAD
+resource table fuchsia.exception/ProcessException
+table/member fuchsia.exception/ProcessExceptionMetadata.info fuchsia.exception/ExceptionInfo
+table/member fuchsia.exception/ProcessExceptionMetadata.process zx/handle:PROCESS
+table/member fuchsia.exception/ProcessExceptionMetadata.thread zx/handle:THREAD
+resource table fuchsia.exception/ProcessExceptionMetadata
+protocol/member fuchsia.exception/ProcessLimbo.AppendFilters(vector<string:32>:32 filters) -> (fuchsia.exception/ProcessLimbo_AppendFilters_Result result)
+protocol/member fuchsia.exception/ProcessLimbo.GetFilters() -> (vector<string:32>:32 filters)
+protocol/member fuchsia.exception/ProcessLimbo.ReleaseProcess(uint64 process_koid) -> (fuchsia.exception/ProcessLimbo_ReleaseProcess_Result result)
+protocol/member fuchsia.exception/ProcessLimbo.RemoveFilters(vector<string:32>:32 filters) -> (fuchsia.exception/ProcessLimbo_RemoveFilters_Result result)
+protocol/member fuchsia.exception/ProcessLimbo.RetrieveException(uint64 process_koid) -> (fuchsia.exception/ProcessLimbo_RetrieveException_Result result)
+protocol/member fuchsia.exception/ProcessLimbo.SetActive(bool active) -> ()
+protocol/member fuchsia.exception/ProcessLimbo.WatchActive() -> (bool is_active)
+protocol/member fuchsia.exception/ProcessLimbo.WatchProcessesWaitingOnException() -> (fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Result result)
+protocol fuchsia.exception/ProcessLimbo
+struct fuchsia.exception/ProcessLimbo_AppendFilters_Response
+union/member fuchsia.exception/ProcessLimbo_AppendFilters_Result.err int32
+union/member fuchsia.exception/ProcessLimbo_AppendFilters_Result.response fuchsia.exception/ProcessLimbo_AppendFilters_Response
+strict union fuchsia.exception/ProcessLimbo_AppendFilters_Result
+struct fuchsia.exception/ProcessLimbo_ReleaseProcess_Response
+union/member fuchsia.exception/ProcessLimbo_ReleaseProcess_Result.err int32
+union/member fuchsia.exception/ProcessLimbo_ReleaseProcess_Result.response fuchsia.exception/ProcessLimbo_ReleaseProcess_Response
+strict union fuchsia.exception/ProcessLimbo_ReleaseProcess_Result
+struct fuchsia.exception/ProcessLimbo_RemoveFilters_Response
+union/member fuchsia.exception/ProcessLimbo_RemoveFilters_Result.err int32
+union/member fuchsia.exception/ProcessLimbo_RemoveFilters_Result.response fuchsia.exception/ProcessLimbo_RemoveFilters_Response
+strict union fuchsia.exception/ProcessLimbo_RemoveFilters_Result
+struct/member fuchsia.exception/ProcessLimbo_RetrieveException_Response.process_exception fuchsia.exception/ProcessException
+resource struct fuchsia.exception/ProcessLimbo_RetrieveException_Response
+union/member fuchsia.exception/ProcessLimbo_RetrieveException_Result.err int32
+union/member fuchsia.exception/ProcessLimbo_RetrieveException_Result.response fuchsia.exception/ProcessLimbo_RetrieveException_Response
+resource strict union fuchsia.exception/ProcessLimbo_RetrieveException_Result
+struct/member fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Response.exception_list vector<fuchsia.exception/ProcessExceptionMetadata>:32
+resource struct fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Response
+union/member fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Result.err int32
+union/member fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Result.response fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Response
+resource strict union fuchsia.exception/ProcessLimbo_WatchProcessesWaitingOnException_Result
+library fuchsia.exception

@@ -1,0 +1,21 @@
+struct/member fuchsia.intl/CalendarId.id string
+struct fuchsia.intl/CalendarId
+const fuchsia.intl/DEFAULT_TIME_ZONE_ID string "UTC"
+struct/member fuchsia.intl/LocaleId.id string
+struct fuchsia.intl/LocaleId
+table/member fuchsia.intl/Profile.calendars vector<fuchsia.intl/CalendarId>
+table/member fuchsia.intl/Profile.locales vector<fuchsia.intl/LocaleId>
+table/member fuchsia.intl/Profile.temperature_unit fuchsia.intl/TemperatureUnit
+table/member fuchsia.intl/Profile.time_zones vector<fuchsia.intl/TimeZoneId>
+table fuchsia.intl/Profile
+protocol/member fuchsia.intl/PropertyProvider.GetProfile() -> (fuchsia.intl/Profile profile)
+protocol/member fuchsia.intl/PropertyProvider.OnChange -> ()
+protocol fuchsia.intl/PropertyProvider
+table/member fuchsia.intl/RegulatoryDomain.country_code string
+table fuchsia.intl/RegulatoryDomain
+enum/member fuchsia.intl/TemperatureUnit.CELSIUS 0
+enum/member fuchsia.intl/TemperatureUnit.FAHRENHEIT 1
+strict enum fuchsia.intl/TemperatureUnit uint32
+struct/member fuchsia.intl/TimeZoneId.id string
+struct fuchsia.intl/TimeZoneId
+library fuchsia.intl

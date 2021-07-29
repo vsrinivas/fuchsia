@@ -1,0 +1,13 @@
+protocol/member fuchsia.hardware.telephony.transport/Qmi.SetChannel(zx/handle:CHANNEL transport) -> (fuchsia.hardware.telephony.transport/Qmi_SetChannel_Result result)
+protocol/member fuchsia.hardware.telephony.transport/Qmi.SetNetwork(bool connected) -> ()
+protocol/member fuchsia.hardware.telephony.transport/Qmi.SetSnoopChannel(fuchsia.telephony.snoop/Publisher interface) -> (fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Result result)
+protocol fuchsia.hardware.telephony.transport/Qmi
+struct fuchsia.hardware.telephony.transport/Qmi_SetChannel_Response
+union/member fuchsia.hardware.telephony.transport/Qmi_SetChannel_Result.err int32
+union/member fuchsia.hardware.telephony.transport/Qmi_SetChannel_Result.response fuchsia.hardware.telephony.transport/Qmi_SetChannel_Response
+strict union fuchsia.hardware.telephony.transport/Qmi_SetChannel_Result
+struct fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Response
+union/member fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Result.err int32
+union/member fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Result.response fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Response
+strict union fuchsia.hardware.telephony.transport/Qmi_SetSnoopChannel_Result
+library fuchsia.hardware.telephony.transport

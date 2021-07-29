@@ -1,0 +1,39 @@
+const fuchsia.mediacodec/CODEC_FACTORY_CODEC_LIST_SIZE_MAX uint32 256
+const fuchsia.mediacodec/CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX uint32 16
+const fuchsia.mediacodec/CODEC_FACTORY_MAX_MIME_TYPE_LENGTH uint32 256
+struct/member fuchsia.mediacodec/CodecDescription.can_find_start bool true
+struct/member fuchsia.mediacodec/CodecDescription.can_re_sync bool true
+struct/member fuchsia.mediacodec/CodecDescription.can_stream_bytes_input bool true
+struct/member fuchsia.mediacodec/CodecDescription.codec_type fuchsia.mediacodec/CodecType
+struct/member fuchsia.mediacodec/CodecDescription.is_hw bool true
+struct/member fuchsia.mediacodec/CodecDescription.mime_type string:256
+struct/member fuchsia.mediacodec/CodecDescription.split_header_handling bool true
+struct/member fuchsia.mediacodec/CodecDescription.will_report_all_detected_errors bool true
+struct fuchsia.mediacodec/CodecDescription
+protocol/member fuchsia.mediacodec/CodecFactory.AttachLifetimeTracking(zx/handle:EVENTPAIR codec_end)
+protocol/member fuchsia.mediacodec/CodecFactory.CreateDecoder(fuchsia.mediacodec/CreateDecoder_Params decoder_params,server_end:fuchsia.media/StreamProcessor decoder)
+protocol/member fuchsia.mediacodec/CodecFactory.CreateEncoder(fuchsia.mediacodec/CreateEncoder_Params encoder_params,server_end:fuchsia.media/StreamProcessor encoder)
+protocol/member fuchsia.mediacodec/CodecFactory.OnCodecList -> (vector<fuchsia.mediacodec/CodecDescription>:256 codecs)
+protocol fuchsia.mediacodec/CodecFactory
+enum/member fuchsia.mediacodec/CodecType.DECODER 0
+enum/member fuchsia.mediacodec/CodecType.ENCODER 1
+strict enum fuchsia.mediacodec/CodecType uint32
+table/member fuchsia.mediacodec/CreateDecoder_Params.input_details fuchsia.media/FormatDetails
+table/member fuchsia.mediacodec/CreateDecoder_Params.permit_lack_of_split_header_handling bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.promise_separate_access_units_on_input bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_can_find_start bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_can_re_sync bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_can_stream_bytes_input bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_hw bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_report_all_detected_errors bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.require_sw bool
+table/member fuchsia.mediacodec/CreateDecoder_Params.secure_input_mode fuchsia.mediacodec/SecureMemoryMode
+table/member fuchsia.mediacodec/CreateDecoder_Params.secure_output_mode fuchsia.mediacodec/SecureMemoryMode
+table fuchsia.mediacodec/CreateDecoder_Params
+table/member fuchsia.mediacodec/CreateEncoder_Params.input_details fuchsia.media/FormatDetails
+table/member fuchsia.mediacodec/CreateEncoder_Params.require_hw bool
+table fuchsia.mediacodec/CreateEncoder_Params
+enum/member fuchsia.mediacodec/SecureMemoryMode.OFF 0
+enum/member fuchsia.mediacodec/SecureMemoryMode.ON 1
+strict enum fuchsia.mediacodec/SecureMemoryMode uint32
+library fuchsia.mediacodec

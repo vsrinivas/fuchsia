@@ -1,0 +1,19 @@
+enum/member fuchsia.castsetup/ApiMode.ACCEPTS_DATA 2
+enum/member fuchsia.castsetup/ApiMode.ACCEPTS_NO_DATA 1
+strict enum fuchsia.castsetup/ApiMode uint32
+protocol/member fuchsia.castsetup/ApiRegistry.RegisterApi(string:1024 path,fuchsia.castsetup/ApiMode api_mode,fuchsia.castsetup/SecurityState security_state,client_end:fuchsia.castsetup/ApiRequestHandler api_handler)
+protocol fuchsia.castsetup/ApiRegistry
+protocol/member fuchsia.castsetup/ApiRequestHandler.HandleRequest(string:optional data) -> (uint32 response_code,string:optional data)
+protocol fuchsia.castsetup/ApiRequestHandler
+enum/member fuchsia.castsetup/SecurityState.SECURITY_STATE_ENCRYPTED 1
+enum/member fuchsia.castsetup/SecurityState.SECURITY_STATE_NONE 0
+enum/member fuchsia.castsetup/SecurityState.SECURITY_STATE_TRUSTED 2
+strict enum fuchsia.castsetup/SecurityState uint32
+enum/member fuchsia.castsetup/State.COMPLETE 3
+enum/member fuchsia.castsetup/State.IN_PROGRESS 1
+enum/member fuchsia.castsetup/State.OFFLINE 2
+enum/member fuchsia.castsetup/State.UNKNOWN 0
+strict enum fuchsia.castsetup/State uint32
+protocol/member fuchsia.castsetup/StateWatcher.Watch() -> (fuchsia.castsetup/State state)
+protocol fuchsia.castsetup/StateWatcher
+library fuchsia.castsetup

@@ -1,0 +1,73 @@
+enum/member fuchsia.ui.text/Affinity.DOWNSTREAM 1
+enum/member fuchsia.ui.text/Affinity.UPSTREAM 0
+strict enum fuchsia.ui.text/Affinity uint32
+protocol/member fuchsia.ui.text/EditableTextField.Replace(fuchsia.ui.text/Range range,string new_text)
+protocol fuchsia.ui.text/EditableTextField
+enum/member fuchsia.ui.text/Error.BAD_REVISION 1
+enum/member fuchsia.ui.text/Error.INVALID_RANGE 2
+strict enum fuchsia.ui.text/Error uint32
+enum/member fuchsia.ui.text/ErrorLegacy.BAD_REQUEST 3
+enum/member fuchsia.ui.text/ErrorLegacy.BAD_REVISION 1
+enum/member fuchsia.ui.text/ErrorLegacy.INVALID_EDIT 2
+enum/member fuchsia.ui.text/ErrorLegacy.OK 0
+enum/member fuchsia.ui.text/ErrorLegacy.UNKNOWABLE 4
+strict enum fuchsia.ui.text/ErrorLegacy uint32
+struct/member fuchsia.ui.text/Position.id uint64
+struct fuchsia.ui.text/Position
+struct/member fuchsia.ui.text/Range.end fuchsia.ui.text/Position
+struct/member fuchsia.ui.text/Range.start fuchsia.ui.text/Position
+struct fuchsia.ui.text/Range
+protocol/member fuchsia.ui.text/ReadableTextField.GetContents(uint64 revision,fuchsia.ui.text/Range range) -> (fuchsia.ui.text/ReadableTextField_GetContents_Result result)
+protocol/member fuchsia.ui.text/ReadableTextField.WatchState() -> (fuchsia.ui.text/TextFieldState state)
+protocol fuchsia.ui.text/ReadableTextField
+struct/member fuchsia.ui.text/ReadableTextField_GetContents_Response.contents string
+struct fuchsia.ui.text/ReadableTextField_GetContents_Response
+union/member fuchsia.ui.text/ReadableTextField_GetContents_Result.err fuchsia.ui.text/Error
+union/member fuchsia.ui.text/ReadableTextField_GetContents_Result.response fuchsia.ui.text/ReadableTextField_GetContents_Response
+strict union fuchsia.ui.text/ReadableTextField_GetContents_Result
+struct/member fuchsia.ui.text/Selection.affinity fuchsia.ui.text/Affinity
+struct/member fuchsia.ui.text/Selection.anchor fuchsia.ui.text/SelectionAnchor
+struct/member fuchsia.ui.text/Selection.range fuchsia.ui.text/Range
+struct fuchsia.ui.text/Selection
+enum/member fuchsia.ui.text/SelectionAnchor.ANCHORED_AT_END 2
+enum/member fuchsia.ui.text/SelectionAnchor.ANCHORED_AT_START 1
+strict enum fuchsia.ui.text/SelectionAnchor uint32
+protocol/member fuchsia.ui.text/TextField.GetContents(uint64 revision,fuchsia.ui.text/Range range) -> (fuchsia.ui.text/ReadableTextField_GetContents_Result result)
+protocol/member fuchsia.ui.text/TextField.Replace(fuchsia.ui.text/Range range,string new_text)
+protocol/member fuchsia.ui.text/TextField.WatchState() -> (fuchsia.ui.text/TextFieldState state)
+protocol fuchsia.ui.text/TextField
+protocol/member fuchsia.ui.text/TextFieldLegacy.AbortEdit()
+protocol/member fuchsia.ui.text/TextFieldLegacy.BeginEdit(uint64 revision)
+protocol/member fuchsia.ui.text/TextFieldLegacy.ClearComposition()
+protocol/member fuchsia.ui.text/TextFieldLegacy.ClearDeadKeyHighlight()
+protocol/member fuchsia.ui.text/TextFieldLegacy.CommitEdit() -> (fuchsia.ui.text/ErrorLegacy error)
+protocol/member fuchsia.ui.text/TextFieldLegacy.Contents(fuchsia.ui.text/Range range,uint64 revision) -> (string contents,fuchsia.ui.text/Position start,fuchsia.ui.text/ErrorLegacy error)
+protocol/member fuchsia.ui.text/TextFieldLegacy.Distance(fuchsia.ui.text/Range range,uint64 revision) -> (int64 distance,fuchsia.ui.text/ErrorLegacy error)
+protocol/member fuchsia.ui.text/TextFieldLegacy.OnUpdate -> (fuchsia.ui.text/TextFieldStateLegacy state)
+protocol/member fuchsia.ui.text/TextFieldLegacy.PositionOffset(fuchsia.ui.text/Position old_position,int64 offset,uint64 revision) -> (fuchsia.ui.text/Position new_position,fuchsia.ui.text/ErrorLegacy error)
+protocol/member fuchsia.ui.text/TextFieldLegacy.Replace(fuchsia.ui.text/Range range,string new_text)
+protocol/member fuchsia.ui.text/TextFieldLegacy.SetComposition(fuchsia.ui.text/Range composition_range,box<fuchsia.ui.text/Range> highlight_range)
+protocol/member fuchsia.ui.text/TextFieldLegacy.SetDeadKeyHighlight(fuchsia.ui.text/Range range)
+protocol/member fuchsia.ui.text/TextFieldLegacy.SetSelection(fuchsia.ui.text/Selection selection)
+protocol fuchsia.ui.text/TextFieldLegacy
+table/member fuchsia.ui.text/TextFieldState.document fuchsia.ui.text/Range
+table/member fuchsia.ui.text/TextFieldState.revision uint64
+table fuchsia.ui.text/TextFieldState
+table/member fuchsia.ui.text/TextFieldStateLegacy.composition fuchsia.ui.text/Range
+table/member fuchsia.ui.text/TextFieldStateLegacy.composition_highlight fuchsia.ui.text/Range
+table/member fuchsia.ui.text/TextFieldStateLegacy.dead_key_highlight fuchsia.ui.text/Range
+table/member fuchsia.ui.text/TextFieldStateLegacy.document fuchsia.ui.text/Range
+table/member fuchsia.ui.text/TextFieldStateLegacy.revision uint64
+table/member fuchsia.ui.text/TextFieldStateLegacy.selection fuchsia.ui.text/Selection
+table fuchsia.ui.text/TextFieldStateLegacy
+protocol/member fuchsia.ui.text/TextInputContext.WatchFocusedTextField() -> (client_end:fuchsia.ui.text/TextField text_field)
+protocol fuchsia.ui.text/TextInputContext
+protocol/member fuchsia.ui.text/TextInputContextLegacy.HideKeyboard()
+protocol/member fuchsia.ui.text/TextInputContextLegacy.OnFocus -> (client_end:fuchsia.ui.text/TextFieldLegacy text_field)
+protocol/member fuchsia.ui.text/TextInputContextLegacy.OnInputEvent -> (fuchsia.ui.input/InputEvent event)
+protocol/member fuchsia.ui.text/TextInputContextLegacy.OnKey3Event -> (fuchsia.ui.input3/KeyEvent event)
+protocol fuchsia.ui.text/TextInputContextLegacy
+protocol/member fuchsia.ui.text/TextInputContextManager.CreateNewFocusedTextField(server_end:fuchsia.ui.text/TextField text_field)
+protocol/member fuchsia.ui.text/TextInputContextManager.SetView(fuchsia.ui.views/ViewRef view_ref)
+protocol fuchsia.ui.text/TextInputContextManager
+library fuchsia.ui.text

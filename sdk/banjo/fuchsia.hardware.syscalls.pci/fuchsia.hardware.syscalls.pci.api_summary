@@ -1,0 +1,24 @@
+struct/member fuchsia.hardware.syscalls.pci/PciBar.address uint64
+struct/member fuchsia.hardware.syscalls.pci/PciBar.handle zx/handle:VMO
+struct/member fuchsia.hardware.syscalls.pci/PciBar.id uint32
+struct/member fuchsia.hardware.syscalls.pci/PciBar.size uint64
+struct/member fuchsia.hardware.syscalls.pci/PciBar.type uint32
+resource struct fuchsia.hardware.syscalls.pci/PciBar
+enum/member fuchsia.hardware.syscalls.pci/PciIrqMode.DISABLED 0
+enum/member fuchsia.hardware.syscalls.pci/PciIrqMode.LEGACY 1
+enum/member fuchsia.hardware.syscalls.pci/PciIrqMode.LEGACY_NOACK 2
+enum/member fuchsia.hardware.syscalls.pci/PciIrqMode.MSI 3
+enum/member fuchsia.hardware.syscalls.pci/PciIrqMode.MSI_X 4
+strict enum fuchsia.hardware.syscalls.pci/PciIrqMode uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.base_class uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.bus_id uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.dev_id uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.device_id uint16
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.func_id uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.padding1 uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.program_interface uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.revision_id uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.sub_class uint8
+struct/member fuchsia.hardware.syscalls.pci/PcieDeviceInfo.vendor_id uint16
+struct fuchsia.hardware.syscalls.pci/PcieDeviceInfo
+library fuchsia.hardware.syscalls.pci

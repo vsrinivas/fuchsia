@@ -1,0 +1,54 @@
+enum/member fuchsia.fonts.experimental/Error.INTERNAL 2
+enum/member fuchsia.fonts.experimental/Error.NOT_FOUND 1
+strict enum fuchsia.fonts.experimental/Error uint32
+bits/member fuchsia.fonts.experimental/ListTypefacesFlags.MATCH_FAMILY_NAME_SUBSTRING 1
+strict bits fuchsia.fonts.experimental/ListTypefacesFlags uint32
+protocol/member fuchsia.fonts.experimental/ListTypefacesIterator.GetNext() -> (fuchsia.fonts.experimental/TypefaceInfoResponse response)
+protocol fuchsia.fonts.experimental/ListTypefacesIterator
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.code_points vector<uint32>
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.family fuchsia.fonts/FamilyName
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.flags fuchsia.fonts.experimental/ListTypefacesFlags
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.generic_family fuchsia.fonts/GenericFontFamily
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.languages vector<fuchsia.intl/LocaleId>:8
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.slant fuchsia.fonts.experimental/SlantRange
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.weight fuchsia.fonts.experimental/WeightRange
+table/member fuchsia.fonts.experimental/ListTypefacesRequest.width fuchsia.fonts.experimental/WidthRange
+table fuchsia.fonts.experimental/ListTypefacesRequest
+const fuchsia.fonts.experimental/MAX_TYPEFACE_RESULTS uint32 16
+protocol/member fuchsia.fonts.experimental/Provider.GetTypefaceById(uint32 id) -> (fuchsia.fonts.experimental/Provider_GetTypefaceById_Result result)
+protocol/member fuchsia.fonts.experimental/Provider.GetTypefacesByFamily(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Result result)
+protocol/member fuchsia.fonts.experimental/Provider.ListTypefaces(fuchsia.fonts.experimental/ListTypefacesRequest request,server_end:fuchsia.fonts.experimental/ListTypefacesIterator iterator) -> (fuchsia.fonts.experimental/Provider_ListTypefaces_Result result)
+protocol fuchsia.fonts.experimental/Provider
+struct/member fuchsia.fonts.experimental/Provider_GetTypefaceById_Response.response fuchsia.fonts/TypefaceResponse
+resource struct fuchsia.fonts.experimental/Provider_GetTypefaceById_Response
+union/member fuchsia.fonts.experimental/Provider_GetTypefaceById_Result.err fuchsia.fonts.experimental/Error
+union/member fuchsia.fonts.experimental/Provider_GetTypefaceById_Result.response fuchsia.fonts.experimental/Provider_GetTypefaceById_Response
+resource strict union fuchsia.fonts.experimental/Provider_GetTypefaceById_Result
+struct/member fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Response.response fuchsia.fonts.experimental/TypefaceInfoResponse
+struct fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Response
+union/member fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Result.err fuchsia.fonts.experimental/Error
+union/member fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Result.response fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Response
+strict union fuchsia.fonts.experimental/Provider_GetTypefacesByFamily_Result
+struct fuchsia.fonts.experimental/Provider_ListTypefaces_Response
+union/member fuchsia.fonts.experimental/Provider_ListTypefaces_Result.err fuchsia.fonts.experimental/Error
+union/member fuchsia.fonts.experimental/Provider_ListTypefaces_Result.response fuchsia.fonts.experimental/Provider_ListTypefaces_Response
+strict union fuchsia.fonts.experimental/Provider_ListTypefaces_Result
+struct/member fuchsia.fonts.experimental/SlantRange.lower fuchsia.fonts/Slant
+struct/member fuchsia.fonts.experimental/SlantRange.upper fuchsia.fonts/Slant
+struct fuchsia.fonts.experimental/SlantRange
+table/member fuchsia.fonts.experimental/TypefaceInfo.asset_id uint32
+table/member fuchsia.fonts.experimental/TypefaceInfo.family fuchsia.fonts/FamilyName
+table/member fuchsia.fonts.experimental/TypefaceInfo.font_index uint32
+table/member fuchsia.fonts.experimental/TypefaceInfo.generic_family fuchsia.fonts/GenericFontFamily
+table/member fuchsia.fonts.experimental/TypefaceInfo.languages vector<fuchsia.intl/LocaleId>
+table/member fuchsia.fonts.experimental/TypefaceInfo.style fuchsia.fonts/Style2
+table fuchsia.fonts.experimental/TypefaceInfo
+table/member fuchsia.fonts.experimental/TypefaceInfoResponse.results vector<fuchsia.fonts.experimental/TypefaceInfo>:16
+table fuchsia.fonts.experimental/TypefaceInfoResponse
+struct/member fuchsia.fonts.experimental/WeightRange.lower uint16
+struct/member fuchsia.fonts.experimental/WeightRange.upper uint16
+struct fuchsia.fonts.experimental/WeightRange
+struct/member fuchsia.fonts.experimental/WidthRange.lower fuchsia.fonts/Width
+struct/member fuchsia.fonts.experimental/WidthRange.upper fuchsia.fonts/Width
+struct fuchsia.fonts.experimental/WidthRange
+library fuchsia.fonts.experimental

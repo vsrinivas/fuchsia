@@ -1,0 +1,73 @@
+const fuchsia.hardware.block/BLOCK_FLAG_BOOTPART uint32 4
+const fuchsia.hardware.block/BLOCK_FLAG_MASK uint32 65280
+const fuchsia.hardware.block/BLOCK_FLAG_READONLY uint32 1
+const fuchsia.hardware.block/BLOCK_FLAG_REMOVABLE uint32 2
+const fuchsia.hardware.block/BLOCK_FLAG_TRIM_SUPPORT uint32 8
+const fuchsia.hardware.block/BLOCK_FL_BARRIER_AFTER uint32 512
+const fuchsia.hardware.block/BLOCK_FL_BARRIER_BEFORE uint32 256
+const fuchsia.hardware.block/BLOCK_FL_FORCE_ACCESS uint32 4096
+const fuchsia.hardware.block/BLOCK_GROUP_ITEM uint32 1024
+const fuchsia.hardware.block/BLOCK_GROUP_LAST uint32 2048
+const fuchsia.hardware.block/BLOCK_GUID_LEN uint32 16
+const fuchsia.hardware.block/BLOCK_MAX_TRANSFER_UNBOUNDED uint32 4294967295
+const fuchsia.hardware.block/BLOCK_OP_CLOSE_VMO uint32 5
+const fuchsia.hardware.block/BLOCK_OP_FLUSH uint32 3
+const fuchsia.hardware.block/BLOCK_OP_MASK uint32 255
+const fuchsia.hardware.block/BLOCK_OP_READ uint32 1
+const fuchsia.hardware.block/BLOCK_OP_TRIM uint32 4
+const fuchsia.hardware.block/BLOCK_OP_WRITE uint32 2
+const fuchsia.hardware.block/BLOCK_VMOID_INVALID uint32 0
+protocol/member fuchsia.hardware.block/Block.Query() -> (fuchsia.hardware.block/BlockInfo info,uint64 block_op_size)
+protocol/member fuchsia.hardware.block/Block.Queue(fuchsia.hardware.block/BlockOp txn) -> (int32 status,fuchsia.hardware.block/BlockOp op)
+protocol fuchsia.hardware.block/Block
+struct/member fuchsia.hardware.block/BlockFifoRequest.dev_offset uint64
+struct/member fuchsia.hardware.block/BlockFifoRequest.group uint16
+struct/member fuchsia.hardware.block/BlockFifoRequest.length uint32
+struct/member fuchsia.hardware.block/BlockFifoRequest.opcode uint32
+struct/member fuchsia.hardware.block/BlockFifoRequest.reqid uint32
+struct/member fuchsia.hardware.block/BlockFifoRequest.trace_flow_id uint64
+struct/member fuchsia.hardware.block/BlockFifoRequest.vmo_offset uint64
+struct/member fuchsia.hardware.block/BlockFifoRequest.vmoid uint16
+struct fuchsia.hardware.block/BlockFifoRequest
+struct/member fuchsia.hardware.block/BlockFifoResponse.count uint32
+struct/member fuchsia.hardware.block/BlockFifoResponse.group uint16
+struct/member fuchsia.hardware.block/BlockFifoResponse.reqid uint32
+struct/member fuchsia.hardware.block/BlockFifoResponse.reserved0 uint16
+struct/member fuchsia.hardware.block/BlockFifoResponse.reserved1 uint64
+struct/member fuchsia.hardware.block/BlockFifoResponse.reserved2 uint64
+struct/member fuchsia.hardware.block/BlockFifoResponse.reserved3 uint64
+struct/member fuchsia.hardware.block/BlockFifoResponse.status int32
+struct fuchsia.hardware.block/BlockFifoResponse
+protocol/member fuchsia.hardware.block/BlockImpl.Query() -> (fuchsia.hardware.block/BlockInfo info,uint64 block_op_size)
+protocol/member fuchsia.hardware.block/BlockImpl.Queue(fuchsia.hardware.block/BlockOp txn) -> (int32 status,fuchsia.hardware.block/BlockOp op)
+protocol fuchsia.hardware.block/BlockImpl
+struct/member fuchsia.hardware.block/BlockInfo.block_count uint64
+struct/member fuchsia.hardware.block/BlockInfo.block_size uint32
+struct/member fuchsia.hardware.block/BlockInfo.flags uint32
+struct/member fuchsia.hardware.block/BlockInfo.max_transfer_size uint32
+struct/member fuchsia.hardware.block/BlockInfo.reserved uint32
+struct fuchsia.hardware.block/BlockInfo
+union/member fuchsia.hardware.block/BlockOp.command uint32
+union/member fuchsia.hardware.block/BlockOp.rw fuchsia.hardware.block/BlockReadWrite
+union/member fuchsia.hardware.block/BlockOp.trim fuchsia.hardware.block/BlockTrim
+resource strict union fuchsia.hardware.block/BlockOp
+struct/member fuchsia.hardware.block/BlockReadWrite.command uint32
+struct/member fuchsia.hardware.block/BlockReadWrite.extra uint32
+struct/member fuchsia.hardware.block/BlockReadWrite.length uint32
+struct/member fuchsia.hardware.block/BlockReadWrite.offset_dev uint64
+struct/member fuchsia.hardware.block/BlockReadWrite.offset_vmo uint64
+struct/member fuchsia.hardware.block/BlockReadWrite.vmo zx/handle:VMO
+resource struct fuchsia.hardware.block/BlockReadWrite
+struct/member fuchsia.hardware.block/BlockStats.total_blocks uint64
+struct/member fuchsia.hardware.block/BlockStats.total_blocks_read uint64
+struct/member fuchsia.hardware.block/BlockStats.total_blocks_written uint64
+struct/member fuchsia.hardware.block/BlockStats.total_ops uint64
+struct/member fuchsia.hardware.block/BlockStats.total_reads uint64
+struct/member fuchsia.hardware.block/BlockStats.total_writes uint64
+struct fuchsia.hardware.block/BlockStats
+struct/member fuchsia.hardware.block/BlockTrim.command uint32
+struct/member fuchsia.hardware.block/BlockTrim.length uint32
+struct/member fuchsia.hardware.block/BlockTrim.offset_dev uint64
+struct fuchsia.hardware.block/BlockTrim
+const fuchsia.hardware.block/MAX_TXN_GROUP_COUNT uint32 8
+library fuchsia.hardware.block

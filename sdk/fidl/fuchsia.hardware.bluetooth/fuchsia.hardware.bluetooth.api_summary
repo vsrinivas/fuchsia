@@ -1,0 +1,9 @@
+protocol/member fuchsia.hardware.bluetooth/Emulator.Open(zx/handle:CHANNEL channel)
+protocol fuchsia.hardware.bluetooth/Emulator
+protocol/member fuchsia.hardware.bluetooth/Hci.OpenAclDataChannel(zx/handle:CHANNEL channel)
+protocol/member fuchsia.hardware.bluetooth/Hci.OpenCommandChannel(zx/handle:CHANNEL channel)
+protocol/member fuchsia.hardware.bluetooth/Hci.OpenSnoopChannel(zx/handle:CHANNEL channel)
+protocol fuchsia.hardware.bluetooth/Hci
+protocol/member fuchsia.hardware.bluetooth/Host.Open(zx/handle:CHANNEL channel)
+protocol fuchsia.hardware.bluetooth/Host
+library fuchsia.hardware.bluetooth

@@ -1,0 +1,20 @@
+enum/member fuchsia.media.sounds/PlaySoundError.NO_SUCH_SOUND 1
+enum/member fuchsia.media.sounds/PlaySoundError.RENDERER_FAILED 2
+enum/member fuchsia.media.sounds/PlaySoundError.STOPPED 3
+strict enum fuchsia.media.sounds/PlaySoundError uint32
+protocol/member fuchsia.media.sounds/Player.AddSoundBuffer(uint32 id,fuchsia.mem/Buffer buffer,fuchsia.media/AudioStreamType stream_type)
+protocol/member fuchsia.media.sounds/Player.AddSoundFromFile(uint32 id,fuchsia.io/File file) -> (fuchsia.media.sounds/Player_AddSoundFromFile_Result result)
+protocol/member fuchsia.media.sounds/Player.PlaySound(uint32 id,fuchsia.media/AudioRenderUsage usage) -> (fuchsia.media.sounds/Player_PlaySound_Result result)
+protocol/member fuchsia.media.sounds/Player.RemoveSound(uint32 id)
+protocol/member fuchsia.media.sounds/Player.StopPlayingSound(uint32 id)
+protocol fuchsia.media.sounds/Player
+struct/member fuchsia.media.sounds/Player_AddSoundFromFile_Response.duration int64
+struct fuchsia.media.sounds/Player_AddSoundFromFile_Response
+union/member fuchsia.media.sounds/Player_AddSoundFromFile_Result.err int32
+union/member fuchsia.media.sounds/Player_AddSoundFromFile_Result.response fuchsia.media.sounds/Player_AddSoundFromFile_Response
+strict union fuchsia.media.sounds/Player_AddSoundFromFile_Result
+struct fuchsia.media.sounds/Player_PlaySound_Response
+union/member fuchsia.media.sounds/Player_PlaySound_Result.err fuchsia.media.sounds/PlaySoundError
+union/member fuchsia.media.sounds/Player_PlaySound_Result.response fuchsia.media.sounds/Player_PlaySound_Response
+strict union fuchsia.media.sounds/Player_PlaySound_Result
+library fuchsia.media.sounds

@@ -1,0 +1,112 @@
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.ECDSA_SHA256_P256 7
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.ECDSA_SHA512_P384 8
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.ECDSA_SHA512_P521 9
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PKCS1_SHA256_2048 4
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PKCS1_SHA256_3072 5
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PKCS1_SHA512_4096 6
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PSS_SHA256_2048 1
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PSS_SHA256_3072 2
+enum/member fuchsia.kms/AsymmetricKeyAlgorithm.RSA_SSA_PSS_SHA512_4096 3
+strict enum fuchsia.kms/AsymmetricKeyAlgorithm uint32
+protocol/member fuchsia.kms/AsymmetricPrivateKey.GetKeyAlgorithm() -> (fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Result result)
+protocol/member fuchsia.kms/AsymmetricPrivateKey.GetKeyOrigin() -> (fuchsia.kms/Key_GetKeyOrigin_Result result)
+protocol/member fuchsia.kms/AsymmetricPrivateKey.GetKeyProvider() -> (fuchsia.kms/Key_GetKeyProvider_Result result)
+protocol/member fuchsia.kms/AsymmetricPrivateKey.GetPublicKey() -> (fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Result result)
+protocol/member fuchsia.kms/AsymmetricPrivateKey.Sign(fuchsia.mem/Buffer data) -> (fuchsia.kms/AsymmetricPrivateKey_Sign_Result result)
+protocol fuchsia.kms/AsymmetricPrivateKey
+struct/member fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Response.key_algorithm fuchsia.kms/AsymmetricKeyAlgorithm
+struct fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Response
+union/member fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Result.response fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Response
+strict union fuchsia.kms/AsymmetricPrivateKey_GetKeyAlgorithm_Result
+struct/member fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Response.public_key fuchsia.kms/PublicKey
+struct fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Response
+union/member fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Result.response fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Response
+strict union fuchsia.kms/AsymmetricPrivateKey_GetPublicKey_Result
+struct/member fuchsia.kms/AsymmetricPrivateKey_Sign_Response.signature fuchsia.kms/Signature
+struct fuchsia.kms/AsymmetricPrivateKey_Sign_Response
+union/member fuchsia.kms/AsymmetricPrivateKey_Sign_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/AsymmetricPrivateKey_Sign_Result.response fuchsia.kms/AsymmetricPrivateKey_Sign_Response
+strict union fuchsia.kms/AsymmetricPrivateKey_Sign_Result
+enum/member fuchsia.kms/Error.INPUT_TOO_LARGE 5
+enum/member fuchsia.kms/Error.INTERNAL_ERROR 1
+enum/member fuchsia.kms/Error.KEY_ALREADY_EXISTS 2
+enum/member fuchsia.kms/Error.KEY_NOT_FOUND 3
+enum/member fuchsia.kms/Error.PARSE_KEY_ERROR 4
+strict enum fuchsia.kms/Error uint32
+protocol/member fuchsia.kms/Key.GetKeyOrigin() -> (fuchsia.kms/Key_GetKeyOrigin_Result result)
+protocol/member fuchsia.kms/Key.GetKeyProvider() -> (fuchsia.kms/Key_GetKeyProvider_Result result)
+protocol fuchsia.kms/Key
+protocol/member fuchsia.kms/KeyManager.DeleteKey(string:32 key_name) -> (fuchsia.kms/KeyManager_DeleteKey_Result result)
+protocol/member fuchsia.kms/KeyManager.GenerateAsymmetricKey(string:32 key_name,server_end:fuchsia.kms/AsymmetricPrivateKey key) -> (fuchsia.kms/KeyManager_GenerateAsymmetricKey_Result result)
+protocol/member fuchsia.kms/KeyManager.GenerateAsymmetricKeyWithAlgorithm(string:32 key_name,fuchsia.kms/AsymmetricKeyAlgorithm key_algorithm,server_end:fuchsia.kms/AsymmetricPrivateKey key) -> (fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Result result)
+protocol/member fuchsia.kms/KeyManager.GetAsymmetricPrivateKey(string:32 key_name,server_end:fuchsia.kms/AsymmetricPrivateKey key) -> (fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Result result)
+protocol/member fuchsia.kms/KeyManager.ImportAsymmetricPrivateKey(vector<uint8> data,string:32 key_name,fuchsia.kms/AsymmetricKeyAlgorithm key_algorithm,server_end:fuchsia.kms/AsymmetricPrivateKey key) -> (fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Result result)
+protocol/member fuchsia.kms/KeyManager.SealData(fuchsia.mem/Buffer plain_text) -> (fuchsia.kms/KeyManager_SealData_Result result)
+protocol/member fuchsia.kms/KeyManager.UnsealData(fuchsia.mem/Buffer cipher_text) -> (fuchsia.kms/KeyManager_UnsealData_Result result)
+protocol fuchsia.kms/KeyManager
+struct fuchsia.kms/KeyManager_DeleteKey_Response
+union/member fuchsia.kms/KeyManager_DeleteKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_DeleteKey_Result.response fuchsia.kms/KeyManager_DeleteKey_Response
+strict union fuchsia.kms/KeyManager_DeleteKey_Result
+struct fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Response
+union/member fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Result.response fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Response
+strict union fuchsia.kms/KeyManager_GenerateAsymmetricKeyWithAlgorithm_Result
+struct fuchsia.kms/KeyManager_GenerateAsymmetricKey_Response
+union/member fuchsia.kms/KeyManager_GenerateAsymmetricKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_GenerateAsymmetricKey_Result.response fuchsia.kms/KeyManager_GenerateAsymmetricKey_Response
+strict union fuchsia.kms/KeyManager_GenerateAsymmetricKey_Result
+struct fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Response
+union/member fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Result.response fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Response
+strict union fuchsia.kms/KeyManager_GetAsymmetricPrivateKey_Result
+struct fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Response
+union/member fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Result.response fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Response
+strict union fuchsia.kms/KeyManager_ImportAsymmetricPrivateKey_Result
+struct/member fuchsia.kms/KeyManager_SealData_Response.cipher_text fuchsia.mem/Buffer
+resource struct fuchsia.kms/KeyManager_SealData_Response
+union/member fuchsia.kms/KeyManager_SealData_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_SealData_Result.response fuchsia.kms/KeyManager_SealData_Response
+resource strict union fuchsia.kms/KeyManager_SealData_Result
+struct/member fuchsia.kms/KeyManager_UnsealData_Response.plain_text fuchsia.mem/Buffer
+resource struct fuchsia.kms/KeyManager_UnsealData_Response
+union/member fuchsia.kms/KeyManager_UnsealData_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/KeyManager_UnsealData_Result.response fuchsia.kms/KeyManager_UnsealData_Response
+resource strict union fuchsia.kms/KeyManager_UnsealData_Result
+enum/member fuchsia.kms/KeyOrigin.GENERATED 1
+enum/member fuchsia.kms/KeyOrigin.IMPORTED 2
+strict enum fuchsia.kms/KeyOrigin uint32
+enum/member fuchsia.kms/KeyProvider.MOCK_PROVIDER 1
+enum/member fuchsia.kms/KeyProvider.OPTEE_PROVIDER 4
+enum/member fuchsia.kms/KeyProvider.SOFTWARE_ASYMMETRIC_ONLY_PROVIDER 3
+enum/member fuchsia.kms/KeyProvider.SOFTWARE_PROVIDER 2
+strict enum fuchsia.kms/KeyProvider uint32
+struct/member fuchsia.kms/Key_GetKeyOrigin_Response.key_origin fuchsia.kms/KeyOrigin
+struct fuchsia.kms/Key_GetKeyOrigin_Response
+union/member fuchsia.kms/Key_GetKeyOrigin_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/Key_GetKeyOrigin_Result.response fuchsia.kms/Key_GetKeyOrigin_Response
+strict union fuchsia.kms/Key_GetKeyOrigin_Result
+struct/member fuchsia.kms/Key_GetKeyProvider_Response.key_provider fuchsia.kms/KeyProvider
+struct fuchsia.kms/Key_GetKeyProvider_Response
+union/member fuchsia.kms/Key_GetKeyProvider_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/Key_GetKeyProvider_Result.response fuchsia.kms/Key_GetKeyProvider_Response
+strict union fuchsia.kms/Key_GetKeyProvider_Result
+const fuchsia.kms/MAX_DATA_SIZE uint32 65536
+const fuchsia.kms/MAX_HARDWARE_DERIVED_KEY_SIZE uint8 32
+const fuchsia.kms/MAX_HARDWARE_DERIVE_KEY_INFO_SIZE uint8 32
+const fuchsia.kms/MAX_KEY_NAME_SIZE uint8 32
+struct/member fuchsia.kms/PublicKey.bytes vector<uint8>:256
+struct fuchsia.kms/PublicKey
+struct/member fuchsia.kms/Signature.bytes vector<uint8>:512
+struct fuchsia.kms/Signature
+protocol/member fuchsia.kms/StatelessKeyManager.GetHardwareDerivedKey(vector<uint8>:32 key_info) -> (fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Result result)
+protocol fuchsia.kms/StatelessKeyManager
+struct/member fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Response.derived_key vector<uint8>:32
+struct fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Response
+union/member fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Result.err fuchsia.kms/Error
+union/member fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Result.response fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Response
+strict union fuchsia.kms/StatelessKeyManager_GetHardwareDerivedKey_Result
+library fuchsia.kms

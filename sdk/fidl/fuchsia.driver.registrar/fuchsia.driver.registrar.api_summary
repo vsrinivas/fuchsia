@@ -1,0 +1,7 @@
+protocol/member fuchsia.driver.registrar/DriverRegistrar.Register(fuchsia.pkg/PackageUrl package_url) -> (fuchsia.driver.registrar/DriverRegistrar_Register_Result result)
+protocol fuchsia.driver.registrar/DriverRegistrar
+struct fuchsia.driver.registrar/DriverRegistrar_Register_Response
+union/member fuchsia.driver.registrar/DriverRegistrar_Register_Result.err int32
+union/member fuchsia.driver.registrar/DriverRegistrar_Register_Result.response fuchsia.driver.registrar/DriverRegistrar_Register_Response
+strict union fuchsia.driver.registrar/DriverRegistrar_Register_Result
+library fuchsia.driver.registrar

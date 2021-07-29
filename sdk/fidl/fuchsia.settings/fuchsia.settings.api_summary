@@ -1,0 +1,260 @@
+protocol/member fuchsia.settings/Accessibility.Set(fuchsia.settings/AccessibilitySettings settings) -> (fuchsia.settings/Accessibility_Set_Result result)
+protocol/member fuchsia.settings/Accessibility.Watch() -> (fuchsia.settings/AccessibilitySettings settings)
+protocol fuchsia.settings/Accessibility
+table/member fuchsia.settings/AccessibilitySettings.audio_description bool
+table/member fuchsia.settings/AccessibilitySettings.captions_settings fuchsia.settings/CaptionsSettings
+table/member fuchsia.settings/AccessibilitySettings.color_correction fuchsia.settings/ColorBlindnessType
+table/member fuchsia.settings/AccessibilitySettings.color_inversion bool
+table/member fuchsia.settings/AccessibilitySettings.enable_magnification bool
+table/member fuchsia.settings/AccessibilitySettings.screen_reader bool
+table fuchsia.settings/AccessibilitySettings
+struct fuchsia.settings/Accessibility_Set_Response
+union/member fuchsia.settings/Accessibility_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Accessibility_Set_Result.response fuchsia.settings/Accessibility_Set_Response
+strict union fuchsia.settings/Accessibility_Set_Result
+protocol/member fuchsia.settings/Audio.Set(fuchsia.settings/AudioSettings settings) -> (fuchsia.settings/Audio_Set_Result result)
+protocol/member fuchsia.settings/Audio.Watch() -> (fuchsia.settings/AudioSettings settings)
+protocol fuchsia.settings/Audio
+table/member fuchsia.settings/AudioInput.muted bool
+table fuchsia.settings/AudioInput
+table/member fuchsia.settings/AudioSettings.input fuchsia.settings/AudioInput
+table/member fuchsia.settings/AudioSettings.streams vector<fuchsia.settings/AudioStreamSettings>:5
+table fuchsia.settings/AudioSettings
+enum/member fuchsia.settings/AudioStreamSettingSource.SYSTEM 1
+enum/member fuchsia.settings/AudioStreamSettingSource.USER 0
+strict enum fuchsia.settings/AudioStreamSettingSource uint32
+table/member fuchsia.settings/AudioStreamSettings.source fuchsia.settings/AudioStreamSettingSource
+table/member fuchsia.settings/AudioStreamSettings.stream fuchsia.media/AudioRenderUsage
+table/member fuchsia.settings/AudioStreamSettings.user_volume fuchsia.settings/Volume
+table fuchsia.settings/AudioStreamSettings
+struct fuchsia.settings/Audio_Set_Response
+union/member fuchsia.settings/Audio_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Audio_Set_Result.response fuchsia.settings/Audio_Set_Response
+strict union fuchsia.settings/Audio_Set_Result
+enum/member fuchsia.settings/CaptionFontFamily.CASUAL 5
+enum/member fuchsia.settings/CaptionFontFamily.CURSIVE 6
+enum/member fuchsia.settings/CaptionFontFamily.MONOSPACED_SANS_SERIF 3
+enum/member fuchsia.settings/CaptionFontFamily.MONOSPACED_SERIF 1
+enum/member fuchsia.settings/CaptionFontFamily.PROPORTIONAL_SANS_SERIF 4
+enum/member fuchsia.settings/CaptionFontFamily.PROPORTIONAL_SERIF 2
+enum/member fuchsia.settings/CaptionFontFamily.SMALL_CAPITALS 7
+enum/member fuchsia.settings/CaptionFontFamily.UNKNOWN 0
+strict enum fuchsia.settings/CaptionFontFamily uint32
+table/member fuchsia.settings/CaptionFontStyle.char_edge_style fuchsia.settings/EdgeStyle
+table/member fuchsia.settings/CaptionFontStyle.color fuchsia.ui.types/ColorRgba
+table/member fuchsia.settings/CaptionFontStyle.family fuchsia.settings/CaptionFontFamily
+table/member fuchsia.settings/CaptionFontStyle.relative_size float32
+table fuchsia.settings/CaptionFontStyle
+table/member fuchsia.settings/CaptionsSettings.background_color fuchsia.ui.types/ColorRgba
+table/member fuchsia.settings/CaptionsSettings.font_style fuchsia.settings/CaptionFontStyle
+table/member fuchsia.settings/CaptionsSettings.for_media bool
+table/member fuchsia.settings/CaptionsSettings.for_tts bool
+table/member fuchsia.settings/CaptionsSettings.window_color fuchsia.ui.types/ColorRgba
+table fuchsia.settings/CaptionsSettings
+enum/member fuchsia.settings/ColorBlindnessType.DEUTERANOMALY 2
+enum/member fuchsia.settings/ColorBlindnessType.NONE 0
+enum/member fuchsia.settings/ColorBlindnessType.PROTANOMALY 1
+enum/member fuchsia.settings/ColorBlindnessType.TRITANOMALY 3
+strict enum fuchsia.settings/ColorBlindnessType uint32
+bits/member fuchsia.settings/ConfigurationInterfaces.ETHERNET 1
+bits/member fuchsia.settings/ConfigurationInterfaces.WIFI 2
+strict bits fuchsia.settings/ConfigurationInterfaces uint32
+protocol/member fuchsia.settings/Device.Watch() -> (fuchsia.settings/DeviceSettings device_settings)
+protocol fuchsia.settings/Device
+table/member fuchsia.settings/DeviceSettings.build_tag string:50
+table fuchsia.settings/DeviceSettings
+table/member fuchsia.settings/DeviceState.toggle_flags fuchsia.settings/ToggleStateFlags
+table fuchsia.settings/DeviceState
+enum/member fuchsia.settings/DeviceStateSource.HARDWARE 1
+enum/member fuchsia.settings/DeviceStateSource.SOFTWARE 2
+strict enum fuchsia.settings/DeviceStateSource uint32
+enum/member fuchsia.settings/DeviceType.CAMERA 2
+enum/member fuchsia.settings/DeviceType.MICROPHONE 1
+strict enum fuchsia.settings/DeviceType uint32
+protocol/member fuchsia.settings/Display.Set(fuchsia.settings/DisplaySettings settings) -> (fuchsia.settings/Display_Set_Result result)
+protocol/member fuchsia.settings/Display.Watch() -> (fuchsia.settings/DisplaySettings settings)
+protocol/member fuchsia.settings/Display.WatchLightSensor(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)
+protocol/member fuchsia.settings/Display.WatchLightSensor2(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)
+protocol fuchsia.settings/Display
+table/member fuchsia.settings/DisplaySettings.adjusted_auto_brightness float32
+table/member fuchsia.settings/DisplaySettings.auto_brightness bool
+table/member fuchsia.settings/DisplaySettings.brightness_value float32
+table/member fuchsia.settings/DisplaySettings.low_light_mode fuchsia.settings/LowLightMode
+table/member fuchsia.settings/DisplaySettings.screen_enabled bool
+table/member fuchsia.settings/DisplaySettings.theme fuchsia.settings/Theme
+table fuchsia.settings/DisplaySettings
+struct fuchsia.settings/Display_Set_Response
+union/member fuchsia.settings/Display_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Display_Set_Result.response fuchsia.settings/Display_Set_Response
+strict union fuchsia.settings/Display_Set_Result
+protocol/member fuchsia.settings/DoNotDisturb.Set(fuchsia.settings/DoNotDisturbSettings settings) -> (fuchsia.settings/DoNotDisturb_Set_Result result)
+protocol/member fuchsia.settings/DoNotDisturb.Watch() -> (fuchsia.settings/DoNotDisturbSettings settings)
+protocol fuchsia.settings/DoNotDisturb
+table/member fuchsia.settings/DoNotDisturbSettings.night_mode_initiated_do_not_disturb bool
+table/member fuchsia.settings/DoNotDisturbSettings.user_initiated_do_not_disturb bool
+table fuchsia.settings/DoNotDisturbSettings
+struct fuchsia.settings/DoNotDisturb_Set_Response
+union/member fuchsia.settings/DoNotDisturb_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/DoNotDisturb_Set_Result.response fuchsia.settings/DoNotDisturb_Set_Response
+strict union fuchsia.settings/DoNotDisturb_Set_Result
+enum/member fuchsia.settings/EdgeStyle.DEPRESSED 3
+enum/member fuchsia.settings/EdgeStyle.DROP_SHADOW 1
+enum/member fuchsia.settings/EdgeStyle.NONE 0
+enum/member fuchsia.settings/EdgeStyle.OUTLINE 4
+enum/member fuchsia.settings/EdgeStyle.RAISED 2
+strict enum fuchsia.settings/EdgeStyle uint32
+enum/member fuchsia.settings/Error.FAILED 1
+enum/member fuchsia.settings/Error.UNSUPPORTED 2
+strict enum fuchsia.settings/Error uint32
+protocol/member fuchsia.settings/FactoryReset.Set(fuchsia.settings/FactoryResetSettings settings) -> (fuchsia.settings/FactoryReset_Set_Result result)
+protocol/member fuchsia.settings/FactoryReset.Watch() -> (fuchsia.settings/FactoryResetSettings settings)
+protocol fuchsia.settings/FactoryReset
+table/member fuchsia.settings/FactoryResetSettings.is_local_reset_allowed bool
+table fuchsia.settings/FactoryResetSettings
+struct fuchsia.settings/FactoryReset_Set_Response
+union/member fuchsia.settings/FactoryReset_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/FactoryReset_Set_Result.response fuchsia.settings/FactoryReset_Set_Response
+strict union fuchsia.settings/FactoryReset_Set_Result
+enum/member fuchsia.settings/HourCycle.H11 1
+enum/member fuchsia.settings/HourCycle.H12 2
+enum/member fuchsia.settings/HourCycle.H23 3
+enum/member fuchsia.settings/HourCycle.H24 4
+enum/member fuchsia.settings/HourCycle.UNKNOWN 0
+strict enum fuchsia.settings/HourCycle uint32
+protocol/member fuchsia.settings/Input.Set(fuchsia.settings/InputDeviceSettings settings) -> (fuchsia.settings/Input_Set_Result result)
+protocol/member fuchsia.settings/Input.SetStates(vector<fuchsia.settings/InputState> input_states) -> (fuchsia.settings/Input_SetStates_Result result)
+protocol/member fuchsia.settings/Input.Watch() -> (fuchsia.settings/InputDeviceSettings settings)
+protocol/member fuchsia.settings/Input.Watch2() -> (fuchsia.settings/InputSettings settings)
+protocol fuchsia.settings/Input
+table/member fuchsia.settings/InputDevice.device_name string
+table/member fuchsia.settings/InputDevice.device_type fuchsia.settings/DeviceType
+table/member fuchsia.settings/InputDevice.mutable_toggle_state fuchsia.settings/ToggleStateFlags
+table/member fuchsia.settings/InputDevice.source_states vector<fuchsia.settings/SourceState>
+table/member fuchsia.settings/InputDevice.state fuchsia.settings/DeviceState
+table fuchsia.settings/InputDevice
+table/member fuchsia.settings/InputDeviceSettings.microphone fuchsia.settings/Microphone
+table fuchsia.settings/InputDeviceSettings
+table/member fuchsia.settings/InputSettings.devices vector<fuchsia.settings/InputDevice>
+table fuchsia.settings/InputSettings
+table/member fuchsia.settings/InputState.device_type fuchsia.settings/DeviceType
+table/member fuchsia.settings/InputState.name string
+table/member fuchsia.settings/InputState.state fuchsia.settings/DeviceState
+table fuchsia.settings/InputState
+struct fuchsia.settings/Input_SetStates_Response
+union/member fuchsia.settings/Input_SetStates_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Input_SetStates_Result.response fuchsia.settings/Input_SetStates_Response
+strict union fuchsia.settings/Input_SetStates_Result
+struct fuchsia.settings/Input_Set_Response
+union/member fuchsia.settings/Input_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Input_Set_Result.response fuchsia.settings/Input_Set_Response
+strict union fuchsia.settings/Input_Set_Result
+protocol/member fuchsia.settings/Intl.Set(fuchsia.settings/IntlSettings settings) -> (fuchsia.settings/Intl_Set_Result result)
+protocol/member fuchsia.settings/Intl.Watch() -> (fuchsia.settings/IntlSettings settings)
+protocol fuchsia.settings/Intl
+table/member fuchsia.settings/IntlSettings.hour_cycle fuchsia.settings/HourCycle
+table/member fuchsia.settings/IntlSettings.locales vector<fuchsia.intl/LocaleId>:10
+table/member fuchsia.settings/IntlSettings.temperature_unit fuchsia.intl/TemperatureUnit
+table/member fuchsia.settings/IntlSettings.time_zone_id fuchsia.intl/TimeZoneId
+table fuchsia.settings/IntlSettings
+struct fuchsia.settings/Intl_Set_Response
+union/member fuchsia.settings/Intl_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Intl_Set_Result.response fuchsia.settings/Intl_Set_Response
+strict union fuchsia.settings/Intl_Set_Result
+protocol/member fuchsia.settings/Light.SetLightGroupValues(string:32 name,vector<fuchsia.settings/LightState> state) -> (fuchsia.settings/Light_SetLightGroupValues_Result result)
+protocol/member fuchsia.settings/Light.WatchLightGroup(string:32 name) -> (fuchsia.settings/LightGroup group)
+protocol/member fuchsia.settings/Light.WatchLightGroups() -> (vector<fuchsia.settings/LightGroup> groups)
+protocol fuchsia.settings/Light
+enum/member fuchsia.settings/LightError.FAILED 1
+enum/member fuchsia.settings/LightError.INVALID_NAME 3
+enum/member fuchsia.settings/LightError.INVALID_VALUE 4
+enum/member fuchsia.settings/LightError.UNSUPPORTED 2
+strict enum fuchsia.settings/LightError uint32
+table/member fuchsia.settings/LightGroup.enabled bool
+table/member fuchsia.settings/LightGroup.lights vector<fuchsia.settings/LightState>
+table/member fuchsia.settings/LightGroup.name string:32
+table/member fuchsia.settings/LightGroup.type fuchsia.settings/LightType
+table fuchsia.settings/LightGroup
+table/member fuchsia.settings/LightSensorData.color fuchsia.ui.types/ColorRgb
+table/member fuchsia.settings/LightSensorData.illuminance_lux float32
+table fuchsia.settings/LightSensorData
+table/member fuchsia.settings/LightState.value fuchsia.settings/LightValue
+table fuchsia.settings/LightState
+enum/member fuchsia.settings/LightType.BRIGHTNESS 1
+enum/member fuchsia.settings/LightType.RGB 2
+enum/member fuchsia.settings/LightType.SIMPLE 3
+strict enum fuchsia.settings/LightType uint32
+union/member fuchsia.settings/LightValue.brightness float64
+union/member fuchsia.settings/LightValue.color fuchsia.ui.types/ColorRgb
+union/member fuchsia.settings/LightValue.on bool
+strict union fuchsia.settings/LightValue
+struct fuchsia.settings/Light_SetLightGroupValues_Response
+union/member fuchsia.settings/Light_SetLightGroupValues_Result.err fuchsia.settings/LightError
+union/member fuchsia.settings/Light_SetLightGroupValues_Result.response fuchsia.settings/Light_SetLightGroupValues_Response
+strict union fuchsia.settings/Light_SetLightGroupValues_Result
+enum/member fuchsia.settings/LowLightMode.DISABLE 0
+enum/member fuchsia.settings/LowLightMode.DISABLE_IMMEDIATELY 1
+enum/member fuchsia.settings/LowLightMode.ENABLE 2
+strict enum fuchsia.settings/LowLightMode uint32
+const fuchsia.settings/MAX_LIGHT_NAME_LENGTH uint8 32
+table/member fuchsia.settings/Microphone.muted bool
+table fuchsia.settings/Microphone
+protocol/member fuchsia.settings/NightMode.Set(fuchsia.settings/NightModeSettings settings) -> (fuchsia.settings/NightMode_Set_Result result)
+protocol/member fuchsia.settings/NightMode.Watch() -> (fuchsia.settings/NightModeSettings settings)
+protocol fuchsia.settings/NightMode
+table/member fuchsia.settings/NightModeSettings.night_mode_enabled bool
+table fuchsia.settings/NightModeSettings
+struct fuchsia.settings/NightMode_Set_Response
+union/member fuchsia.settings/NightMode_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/NightMode_Set_Result.response fuchsia.settings/NightMode_Set_Response
+strict union fuchsia.settings/NightMode_Set_Result
+protocol/member fuchsia.settings/Privacy.Set(fuchsia.settings/PrivacySettings settings) -> (fuchsia.settings/Privacy_Set_Result result)
+protocol/member fuchsia.settings/Privacy.Watch() -> (fuchsia.settings/PrivacySettings settings)
+protocol fuchsia.settings/Privacy
+table/member fuchsia.settings/PrivacySettings.user_data_sharing_consent bool
+table fuchsia.settings/PrivacySettings
+struct fuchsia.settings/Privacy_Set_Response
+union/member fuchsia.settings/Privacy_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Privacy_Set_Result.response fuchsia.settings/Privacy_Set_Response
+strict union fuchsia.settings/Privacy_Set_Result
+enum/member fuchsia.settings/SettingsEpitaph.FILE_READ_ERROR 4
+enum/member fuchsia.settings/SettingsEpitaph.INTERNAL_SERVICE_ERROR 2
+enum/member fuchsia.settings/SettingsEpitaph.PERSISTENT_STORAGE_ERROR 3
+enum/member fuchsia.settings/SettingsEpitaph.REQUEST_NOT_SUPPORTED 1
+strict enum fuchsia.settings/SettingsEpitaph uint32
+protocol/member fuchsia.settings/Setup.Set(fuchsia.settings/SetupSettings settings) -> (fuchsia.settings/Setup_Set_Result result)
+protocol/member fuchsia.settings/Setup.Set2(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set2_Result result)
+protocol/member fuchsia.settings/Setup.Watch() -> (fuchsia.settings/SetupSettings settings)
+protocol fuchsia.settings/Setup
+table/member fuchsia.settings/SetupSettings.enabled_configuration_interfaces fuchsia.settings/ConfigurationInterfaces
+table fuchsia.settings/SetupSettings
+struct fuchsia.settings/Setup_Set2_Response
+union/member fuchsia.settings/Setup_Set2_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Setup_Set2_Result.response fuchsia.settings/Setup_Set2_Response
+strict union fuchsia.settings/Setup_Set2_Result
+struct fuchsia.settings/Setup_Set_Response
+union/member fuchsia.settings/Setup_Set_Result.err fuchsia.settings/Error
+union/member fuchsia.settings/Setup_Set_Result.response fuchsia.settings/Setup_Set_Response
+strict union fuchsia.settings/Setup_Set_Result
+table/member fuchsia.settings/SourceState.source fuchsia.settings/DeviceStateSource
+table/member fuchsia.settings/SourceState.state fuchsia.settings/DeviceState
+table fuchsia.settings/SourceState
+table/member fuchsia.settings/Theme.theme_mode fuchsia.settings/ThemeMode
+table/member fuchsia.settings/Theme.theme_type fuchsia.settings/ThemeType
+table fuchsia.settings/Theme
+bits/member fuchsia.settings/ThemeMode.AUTO 1
+strict bits fuchsia.settings/ThemeMode uint32
+enum/member fuchsia.settings/ThemeType.AUTO 3
+enum/member fuchsia.settings/ThemeType.DARK 2
+enum/member fuchsia.settings/ThemeType.DEFAULT 0
+enum/member fuchsia.settings/ThemeType.LIGHT 1
+strict enum fuchsia.settings/ThemeType uint32
+bits/member fuchsia.settings/ToggleStateFlags.ACTIVE 2
+bits/member fuchsia.settings/ToggleStateFlags.AVAILABLE 1
+bits/member fuchsia.settings/ToggleStateFlags.DISABLED 8
+bits/member fuchsia.settings/ToggleStateFlags.ERROR 16
+bits/member fuchsia.settings/ToggleStateFlags.MUTED 4
+strict bits fuchsia.settings/ToggleStateFlags uint64
+table/member fuchsia.settings/Volume.level float32
+table/member fuchsia.settings/Volume.muted bool
+table fuchsia.settings/Volume
+library fuchsia.settings

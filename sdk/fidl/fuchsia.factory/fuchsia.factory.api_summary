@@ -1,0 +1,15 @@
+protocol/member fuchsia.factory/AlphaFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/AlphaFactoryStoreProvider
+protocol/member fuchsia.factory/CastCredentialsFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/CastCredentialsFactoryStoreProvider
+protocol/member fuchsia.factory/FactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/FactoryStoreProvider
+protocol/member fuchsia.factory/MiscFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/MiscFactoryStoreProvider
+protocol/member fuchsia.factory/PlayReadyFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/PlayReadyFactoryStoreProvider
+protocol/member fuchsia.factory/WeaveFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/WeaveFactoryStoreProvider
+protocol/member fuchsia.factory/WidevineFactoryStoreProvider.GetFactoryStore(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.factory/WidevineFactoryStoreProvider
+library fuchsia.factory

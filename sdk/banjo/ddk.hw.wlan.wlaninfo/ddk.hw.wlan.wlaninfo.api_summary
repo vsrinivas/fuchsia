@@ -1,0 +1,50 @@
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_BAND_2GHZ uint32 0
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_BAND_5GHZ uint32 1
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_BAND_INFO_MAX_RATES uint32 12
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 64
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_MAX_BANDS uint32 2
+const ddk.hw.wlan.wlaninfo/WLAN_INFO_PHY_TYPE_OFDM uint32 4
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoBand.COUNT 2
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoBand.FIVE_GHZ 1
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoBand.TWO_GHZ 0
+strict enum ddk.hw.wlan.wlaninfo/WlanInfoBand uint32
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.band ddk.hw.wlan.wlaninfo/WlanInfoBand
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.ht_supported bool
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.rates array<uint8,12>
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.supported_channels ddk.hw.wlan.wlaninfo/WlanInfoChannelList
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoBandInfo.vht_supported bool
+struct ddk.hw.wlan.wlaninfo/WlanInfoBandInfo
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoChannelList.base_freq uint16
+struct/member ddk.hw.wlan.wlaninfo/WlanInfoChannelList.channels array<uint8,64>
+struct ddk.hw.wlan.wlaninfo/WlanInfoChannelList
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.DFS 16
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.MFP 256
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.PROBE_RESP_OFFLOAD 32
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.RATE_SELECTION 2
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.SAE_DRIVER_AUTH 128
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.SAE_SME_AUTH 64
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.SCAN_OFFLOAD 1
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.SYNTH 4
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature.TX_STATUS_REPORT 8
+strict enum ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature uint32
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.QOS 512
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.RADIO_MSMT 4096
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.SHORT_PREAMBLE 32
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.SHORT_SLOT_TIME 1024
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.SIMULTANEOUS_CLIENT_AP 65536
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability.SPECTRUM_MGMT 256
+strict enum ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability uint32
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoMacRole.AP 2
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoMacRole.CLIENT 1
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoMacRole.MESH 4
+strict enum ddk.hw.wlan.wlaninfo/WlanInfoMacRole uint8
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.CCK 2
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.DSSS 1
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.ERP 4
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.HEW 32
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.HT 8
+enum/member ddk.hw.wlan.wlaninfo/WlanInfoPhyType.VHT 16
+strict enum ddk.hw.wlan.wlaninfo/WlanInfoPhyType uint32
+library ddk.hw.wlan.wlaninfo

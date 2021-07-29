@@ -1,0 +1,7 @@
+protocol/member fuchsia.systemmonitor/Harvester.ConnectGrpc(zx/handle:SOCKET socket) -> (fuchsia.systemmonitor/Harvester_ConnectGrpc_Result result)
+protocol fuchsia.systemmonitor/Harvester
+struct fuchsia.systemmonitor/Harvester_ConnectGrpc_Response
+union/member fuchsia.systemmonitor/Harvester_ConnectGrpc_Result.err int32
+union/member fuchsia.systemmonitor/Harvester_ConnectGrpc_Result.response fuchsia.systemmonitor/Harvester_ConnectGrpc_Response
+strict union fuchsia.systemmonitor/Harvester_ConnectGrpc_Result
+library fuchsia.systemmonitor

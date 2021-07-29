@@ -1,0 +1,28 @@
+enum/member fuchsia.tracing.provider/BufferDisposition.CLEAR_ENTIRE 1
+enum/member fuchsia.tracing.provider/BufferDisposition.CLEAR_NONDURABLE 2
+enum/member fuchsia.tracing.provider/BufferDisposition.RETAIN 3
+strict enum fuchsia.tracing.provider/BufferDisposition uint8
+enum/member fuchsia.tracing.provider/BufferingMode.CIRCULAR 2
+enum/member fuchsia.tracing.provider/BufferingMode.ONESHOT 1
+enum/member fuchsia.tracing.provider/BufferingMode.STREAMING 3
+strict enum fuchsia.tracing.provider/BufferingMode uint8
+const fuchsia.tracing.provider/MAX_CATEGORY_NAME_LENGTH uint32 100
+const fuchsia.tracing.provider/MAX_NUM_CATEGORIES uint32 100
+const fuchsia.tracing.provider/MAX_PROVIDER_NAME_LENGTH uint32 100
+protocol/member fuchsia.tracing.provider/Provider.Initialize(fuchsia.tracing.provider/ProviderConfig config)
+protocol/member fuchsia.tracing.provider/Provider.Start(fuchsia.tracing.provider/StartOptions options)
+protocol/member fuchsia.tracing.provider/Provider.Stop()
+protocol/member fuchsia.tracing.provider/Provider.Terminate()
+protocol fuchsia.tracing.provider/Provider
+struct/member fuchsia.tracing.provider/ProviderConfig.buffer zx/handle:VMO
+struct/member fuchsia.tracing.provider/ProviderConfig.buffering_mode fuchsia.tracing.provider/BufferingMode
+struct/member fuchsia.tracing.provider/ProviderConfig.categories vector<string:100>:100
+struct/member fuchsia.tracing.provider/ProviderConfig.fifo zx/handle:FIFO
+resource struct fuchsia.tracing.provider/ProviderConfig
+protocol/member fuchsia.tracing.provider/Registry.RegisterProvider(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name)
+protocol/member fuchsia.tracing.provider/Registry.RegisterProviderSynchronously(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name) -> (int32 s,bool started)
+protocol fuchsia.tracing.provider/Registry
+struct/member fuchsia.tracing.provider/StartOptions.additional_categories vector<string:100>:100
+struct/member fuchsia.tracing.provider/StartOptions.buffer_disposition fuchsia.tracing.provider/BufferDisposition
+struct fuchsia.tracing.provider/StartOptions
+library fuchsia.tracing.provider

@@ -1,0 +1,9 @@
+protocol/member fuchsia.hardware.vreg/Vreg.GetRegulatorParams() -> (fuchsia.hardware.vreg/VregParams params)
+protocol/member fuchsia.hardware.vreg/Vreg.GetVoltageStep() -> (uint32 result)
+protocol/member fuchsia.hardware.vreg/Vreg.SetVoltageStep(uint32 step) -> (int32 st)
+protocol fuchsia.hardware.vreg/Vreg
+struct/member fuchsia.hardware.vreg/VregParams.min_uv uint32
+struct/member fuchsia.hardware.vreg/VregParams.num_steps uint32
+struct/member fuchsia.hardware.vreg/VregParams.step_size_uv uint32
+struct fuchsia.hardware.vreg/VregParams
+library fuchsia.hardware.vreg

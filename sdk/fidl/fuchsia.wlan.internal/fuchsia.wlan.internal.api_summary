@@ -1,0 +1,43 @@
+struct/member fuchsia.wlan.internal/BssDescription.beacon_period uint16
+struct/member fuchsia.wlan.internal/BssDescription.bss_type fuchsia.wlan.internal/BssTypes
+struct/member fuchsia.wlan.internal/BssDescription.bssid array<uint8,6>
+struct/member fuchsia.wlan.internal/BssDescription.cap uint16
+struct/member fuchsia.wlan.internal/BssDescription.chan fuchsia.wlan.common/WlanChan
+struct/member fuchsia.wlan.internal/BssDescription.ies vector<uint8>
+struct/member fuchsia.wlan.internal/BssDescription.local_time uint64
+struct/member fuchsia.wlan.internal/BssDescription.rssi_dbm int8
+struct/member fuchsia.wlan.internal/BssDescription.snr_db int8
+struct/member fuchsia.wlan.internal/BssDescription.timestamp uint64
+struct fuchsia.wlan.internal/BssDescription
+enum/member fuchsia.wlan.internal/BssTypes.ANY_BSS 5
+enum/member fuchsia.wlan.internal/BssTypes.INDEPENDENT 3
+enum/member fuchsia.wlan.internal/BssTypes.INFRASTRUCTURE 1
+enum/member fuchsia.wlan.internal/BssTypes.MESH 4
+enum/member fuchsia.wlan.internal/BssTypes.PERSONAL 2
+strict enum fuchsia.wlan.internal/BssTypes uint32
+const fuchsia.wlan.internal/HT_CAP_LEN uint8 26
+const fuchsia.wlan.internal/HT_OP_LEN uint8 22
+struct/member fuchsia.wlan.internal/HtCapabilities.bytes array<uint8,26>
+struct fuchsia.wlan.internal/HtCapabilities
+struct/member fuchsia.wlan.internal/HtOperation.bytes array<uint8,22>
+struct fuchsia.wlan.internal/HtOperation
+const fuchsia.wlan.internal/RATES_MAX_LEN uint8 22
+const fuchsia.wlan.internal/VHT_CAP_LEN uint8 12
+const fuchsia.wlan.internal/VHT_OP_LEN uint8 5
+struct/member fuchsia.wlan.internal/VhtCapabilities.bytes array<uint8,12>
+struct fuchsia.wlan.internal/VhtCapabilities
+struct/member fuchsia.wlan.internal/VhtOperation.bytes array<uint8,5>
+struct fuchsia.wlan.internal/VhtOperation
+struct/member fuchsia.wlan.internal/WmmAcParams.acm bool
+struct/member fuchsia.wlan.internal/WmmAcParams.aifsn uint8
+struct/member fuchsia.wlan.internal/WmmAcParams.ecw_max uint8
+struct/member fuchsia.wlan.internal/WmmAcParams.ecw_min uint8
+struct/member fuchsia.wlan.internal/WmmAcParams.txop_limit uint16
+struct fuchsia.wlan.internal/WmmAcParams
+struct/member fuchsia.wlan.internal/WmmStatusResponse.ac_be_params fuchsia.wlan.internal/WmmAcParams
+struct/member fuchsia.wlan.internal/WmmStatusResponse.ac_bk_params fuchsia.wlan.internal/WmmAcParams
+struct/member fuchsia.wlan.internal/WmmStatusResponse.ac_vi_params fuchsia.wlan.internal/WmmAcParams
+struct/member fuchsia.wlan.internal/WmmStatusResponse.ac_vo_params fuchsia.wlan.internal/WmmAcParams
+struct/member fuchsia.wlan.internal/WmmStatusResponse.apsd bool
+struct fuchsia.wlan.internal/WmmStatusResponse
+library fuchsia.wlan.internal

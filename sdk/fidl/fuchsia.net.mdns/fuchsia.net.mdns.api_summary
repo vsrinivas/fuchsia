@@ -1,0 +1,81 @@
+const fuchsia.net.mdns/DEFAULT_PTR_TTL int64 120000000000
+const fuchsia.net.mdns/DEFAULT_SRV_PRIORITY uint16 0
+const fuchsia.net.mdns/DEFAULT_SRV_TTL int64 120000000000
+const fuchsia.net.mdns/DEFAULT_SRV_WEIGHT uint16 0
+const fuchsia.net.mdns/DEFAULT_TXT_TTL int64 4500000000000
+enum/member fuchsia.net.mdns/Error.ALREADY_PUBLISHED_ON_SUBNET 4
+enum/member fuchsia.net.mdns/Error.INVALID_INSTANCE_NAME 2
+enum/member fuchsia.net.mdns/Error.INVALID_MEDIA 5
+enum/member fuchsia.net.mdns/Error.INVALID_SERVICE_NAME 1
+strict enum fuchsia.net.mdns/Error int32
+const fuchsia.net.mdns/MAX_SUBTYPES uint32 256
+const fuchsia.net.mdns/MAX_TEXT_STRINGS uint32 256
+bits/member fuchsia.net.mdns/Media.WIRED 1
+bits/member fuchsia.net.mdns/Media.WIRELESS 2
+strict bits fuchsia.net.mdns/Media uint32
+struct/member fuchsia.net.mdns/Publication.port uint16
+struct/member fuchsia.net.mdns/Publication.ptr_ttl int64 120000000000
+struct/member fuchsia.net.mdns/Publication.srv_priority uint16 0
+struct/member fuchsia.net.mdns/Publication.srv_ttl int64 120000000000
+struct/member fuchsia.net.mdns/Publication.srv_weight uint16 0
+struct/member fuchsia.net.mdns/Publication.text vector<string:255>:256
+struct/member fuchsia.net.mdns/Publication.txt_ttl int64 4500000000000
+struct fuchsia.net.mdns/Publication
+enum/member fuchsia.net.mdns/PublicationCause.ANNOUNCEMENT 1
+enum/member fuchsia.net.mdns/PublicationCause.QUERY_MULTICAST_RESPONSE 2
+enum/member fuchsia.net.mdns/PublicationCause.QUERY_UNICAST_RESPONSE 3
+strict enum fuchsia.net.mdns/PublicationCause int32
+protocol/member fuchsia.net.mdns/PublicationResponder.OnPublication(fuchsia.net.mdns/PublicationCause publication_cause,string:<63,optional> subtype,vector<fuchsia.net/IpAddress>:64 source_addresses) -> (box<fuchsia.net.mdns/Publication> publication)
+protocol/member fuchsia.net.mdns/PublicationResponder.Reannounce -> ()
+protocol/member fuchsia.net.mdns/PublicationResponder.SetSubtypes -> (vector<string:63>:256 subtypes)
+protocol fuchsia.net.mdns/PublicationResponder
+protocol/member fuchsia.net.mdns/PublicationResponder2.OnPublication(bool query,string:<63,optional> subtype,vector<fuchsia.net/IpAddress>:64 source_addresses) -> (box<fuchsia.net.mdns/Publication> publication)
+protocol/member fuchsia.net.mdns/PublicationResponder2.Reannounce -> ()
+protocol/member fuchsia.net.mdns/PublicationResponder2.SetSubtypes -> (vector<string:63>:256 subtypes)
+protocol fuchsia.net.mdns/PublicationResponder2
+protocol/member fuchsia.net.mdns/Publisher.PublishServiceInstance(string:22 service,string:63 instance,fuchsia.net.mdns/Media media,bool perform_probe,client_end:fuchsia.net.mdns/PublicationResponder publication_responder) -> (fuchsia.net.mdns/Publisher_PublishServiceInstance_Result result)
+protocol/member fuchsia.net.mdns/Publisher.PublishServiceInstance2(string:22 service,string:63 instance,bool perform_probe,client_end:fuchsia.net.mdns/PublicationResponder2 publication_responder) -> (fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result result)
+protocol fuchsia.net.mdns/Publisher
+struct fuchsia.net.mdns/Publisher_PublishServiceInstance2_Response
+union/member fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result.err fuchsia.net.mdns/Error
+union/member fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result.response fuchsia.net.mdns/Publisher_PublishServiceInstance2_Response
+strict union fuchsia.net.mdns/Publisher_PublishServiceInstance2_Result
+struct fuchsia.net.mdns/Publisher_PublishServiceInstance_Response
+union/member fuchsia.net.mdns/Publisher_PublishServiceInstance_Result.err fuchsia.net.mdns/Error
+union/member fuchsia.net.mdns/Publisher_PublishServiceInstance_Result.response fuchsia.net.mdns/Publisher_PublishServiceInstance_Response
+strict union fuchsia.net.mdns/Publisher_PublishServiceInstance_Result
+protocol/member fuchsia.net.mdns/Resolver.ResolveHostName(string:255 host,int64 timeout) -> (fuchsia.net/Ipv4Address:optional v4_address,fuchsia.net/Ipv6Address:optional v6_address)
+protocol fuchsia.net.mdns/Resolver
+enum/member fuchsia.net.mdns/ResourceType.ANY 255
+enum/member fuchsia.net.mdns/ResourceType.PTR 12
+strict enum fuchsia.net.mdns/ResourceType uint32
+table/member fuchsia.net.mdns/ServiceInstance.instance string:63
+table/member fuchsia.net.mdns/ServiceInstance.ipv4_endpoint fuchsia.net/Ipv4SocketAddress
+table/member fuchsia.net.mdns/ServiceInstance.ipv6_endpoint fuchsia.net/Ipv6SocketAddress
+table/member fuchsia.net.mdns/ServiceInstance.service string:22
+table/member fuchsia.net.mdns/ServiceInstance.srv_priority uint16
+table/member fuchsia.net.mdns/ServiceInstance.srv_weight uint16
+table/member fuchsia.net.mdns/ServiceInstance.text vector<string:255>:256
+table fuchsia.net.mdns/ServiceInstance
+table/member fuchsia.net.mdns/ServiceInstance2.instance string:63
+table/member fuchsia.net.mdns/ServiceInstance2.ipv4_endpoint fuchsia.net/Ipv4SocketAddress
+table/member fuchsia.net.mdns/ServiceInstance2.ipv6_endpoint fuchsia.net/Ipv6SocketAddress
+table/member fuchsia.net.mdns/ServiceInstance2.service string:22
+table/member fuchsia.net.mdns/ServiceInstance2.srv_priority uint16
+table/member fuchsia.net.mdns/ServiceInstance2.srv_weight uint16
+table/member fuchsia.net.mdns/ServiceInstance2.text vector<string:255>:256
+table fuchsia.net.mdns/ServiceInstance2
+protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceLost(string:22 service,string:63 instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
+protocol fuchsia.net.mdns/ServiceSubscriber
+protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance2 instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance2 instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnInstanceLost(string:22 service,string:63 instance) -> ()
+protocol/member fuchsia.net.mdns/ServiceSubscriber2.OnQuery(fuchsia.net.mdns/ResourceType resource_type) -> ()
+protocol fuchsia.net.mdns/ServiceSubscriber2
+protocol/member fuchsia.net.mdns/Subscriber.SubscribeToService(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber subscriber)
+protocol/member fuchsia.net.mdns/Subscriber.SubscribeToService2(string:22 service,client_end:fuchsia.net.mdns/ServiceSubscriber2 subscriber)
+protocol fuchsia.net.mdns/Subscriber
+library fuchsia.net.mdns

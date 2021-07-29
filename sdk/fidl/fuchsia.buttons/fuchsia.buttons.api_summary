@@ -1,0 +1,19 @@
+enum/member fuchsia.buttons/ButtonType.CAM_MUTE 7
+enum/member fuchsia.buttons/ButtonType.KEY_A 5
+enum/member fuchsia.buttons/ButtonType.KEY_M 6
+enum/member fuchsia.buttons/ButtonType.MAX 8
+enum/member fuchsia.buttons/ButtonType.MUTE 3
+enum/member fuchsia.buttons/ButtonType.PLAY_PAUSE 4
+enum/member fuchsia.buttons/ButtonType.RESET 2
+enum/member fuchsia.buttons/ButtonType.VOLUME_DOWN 1
+enum/member fuchsia.buttons/ButtonType.VOLUME_UP 0
+strict enum fuchsia.buttons/ButtonType uint8
+protocol/member fuchsia.buttons/Buttons.GetState(fuchsia.buttons/ButtonType type) -> (bool pressed)
+protocol/member fuchsia.buttons/Buttons.OnNotify -> (fuchsia.buttons/ButtonType type,bool pressed)
+protocol/member fuchsia.buttons/Buttons.RegisterNotify(uint8 types) -> (fuchsia.buttons/Buttons_RegisterNotify_Result result)
+protocol fuchsia.buttons/Buttons
+struct fuchsia.buttons/Buttons_RegisterNotify_Response
+union/member fuchsia.buttons/Buttons_RegisterNotify_Result.err int32
+union/member fuchsia.buttons/Buttons_RegisterNotify_Result.response fuchsia.buttons/Buttons_RegisterNotify_Response
+strict union fuchsia.buttons/Buttons_RegisterNotify_Result
+library fuchsia.buttons

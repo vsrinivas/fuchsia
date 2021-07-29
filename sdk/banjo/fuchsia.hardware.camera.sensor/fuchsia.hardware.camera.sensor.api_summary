@@ -1,0 +1,70 @@
+enum/member fuchsia.hardware.camera.sensor/BinningMode.ADDITIVE 2
+enum/member fuchsia.hardware.camera.sensor/BinningMode.AVERAGE 3
+enum/member fuchsia.hardware.camera.sensor/BinningMode.NONE 1
+strict enum fuchsia.hardware.camera.sensor/BinningMode uint8
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.DeInit() -> ()
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetAnalogGain() -> (int32 s,float32 gain)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetAvailableModes() -> (int32 s,vector<fuchsia.hardware.camera.sensor/OperatingMode> modes)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetDigitalGain() -> (int32 s,float32 gain)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetExtensionValue(uint64 id) -> (int32 s,fuchsia.hardware.camera.sensor/ExtensionValueDataType value)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetIntegrationTime() -> (int32 s,float32 int_time)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetOtpData(uint32 byte_count,uint32 offset) -> (int32 s,zx/handle:VMO otp_data)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetOtpSize() -> (int32 s,uint32 size)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetSensorId() -> (int32 s,uint32 id)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetTestCursorData() -> (int32 s,fuchsia.hardware.camera/Rect data)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetTestPatternData() -> (int32 s,fuchsia.hardware.camera/ColorVal data)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.GetTestPatternMode() -> (int32 s,uint16 value)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.Init() -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetAnalogGain(float32 gain) -> (int32 s,float32 gain)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetDigitalGain(float32 gain) -> (int32 s,float32 gain)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetExtensionValue(uint64 id,fuchsia.hardware.camera.sensor/ExtensionValueDataType value) -> (int32 s,fuchsia.hardware.camera.sensor/ExtensionValueDataType value)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetIntegrationTime(float32 int_time) -> (int32 s,float32 int_time)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetMode(uint32 mode) -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetTestCursorData(fuchsia.hardware.camera/Rect data) -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetTestPatternData(fuchsia.hardware.camera/ColorVal data) -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.SetTestPatternMode(uint16 mode) -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.StartStreaming() -> (int32 s)
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.StopStreaming() -> ()
+protocol/member fuchsia.hardware.camera.sensor/CameraSensor2.Update() -> (int32 s)
+protocol fuchsia.hardware.camera.sensor/CameraSensor2
+enum/member fuchsia.hardware.camera.sensor/DynamicRangeMode.LINEAR 1
+enum/member fuchsia.hardware.camera.sensor/DynamicRangeMode.WIDE 2
+strict enum fuchsia.hardware.camera.sensor/DynamicRangeMode uint8
+const fuchsia.hardware.camera.sensor/EXTENSION_VALUE_ARRAY_LEN uint32 32
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.byte_array_value array<uint8,32>
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.constraints_value fuchsia.hardware.camera/MinMaxConstraints
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.dimension_value fuchsia.hardware.camera/Dimensions
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.frame_rate_info_value array<fuchsia.hardware.camera.sensor/FrameRateInfo,32>
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.int_value int32
+union/member fuchsia.hardware.camera.sensor/ExtensionValueDataType.uint_value uint32
+strict union fuchsia.hardware.camera.sensor/ExtensionValueDataType
+struct/member fuchsia.hardware.camera.sensor/FrameRateInfo.frame_rate fuchsia.hardware.camera/FrameRate
+struct/member fuchsia.hardware.camera.sensor/FrameRateInfo.max_coarse_integration_time uint32
+struct fuchsia.hardware.camera.sensor/FrameRateInfo
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.dr_mode fuchsia.hardware.camera.sensor/DynamicRangeMode
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.exposures uint8
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.fps uint32
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.frame_time float32
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.identifier string
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.idx uint8
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.lanes uint8
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.line_time float32
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.mbps uint32
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.pixel_type fuchsia.hardware.camera.sensor/PixelType
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.readout fuchsia.hardware.camera.sensor/ReadoutConfig
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.resolution_in fuchsia.hardware.camera/Dimensions
+struct/member fuchsia.hardware.camera.sensor/OperatingMode.resolution_out fuchsia.hardware.camera/Dimensions
+struct fuchsia.hardware.camera.sensor/OperatingMode
+enum/member fuchsia.hardware.camera.sensor/PixelType.RAW10 2
+enum/member fuchsia.hardware.camera.sensor/PixelType.RAW12 3
+enum/member fuchsia.hardware.camera.sensor/PixelType.RAW8 1
+strict enum fuchsia.hardware.camera.sensor/PixelType uint8
+struct/member fuchsia.hardware.camera.sensor/ReadoutConfig.sampling_x fuchsia.hardware.camera.sensor/SamplingParams
+struct/member fuchsia.hardware.camera.sensor/ReadoutConfig.sampling_y fuchsia.hardware.camera.sensor/SamplingParams
+struct/member fuchsia.hardware.camera.sensor/ReadoutConfig.scaler_crop fuchsia.hardware.camera/Rect
+struct fuchsia.hardware.camera.sensor/ReadoutConfig
+struct/member fuchsia.hardware.camera.sensor/SamplingParams.bin_amount uint32
+struct/member fuchsia.hardware.camera.sensor/SamplingParams.mode fuchsia.hardware.camera.sensor/BinningMode
+struct/member fuchsia.hardware.camera.sensor/SamplingParams.skip_amount uint32
+struct fuchsia.hardware.camera.sensor/SamplingParams
+library fuchsia.hardware.camera.sensor

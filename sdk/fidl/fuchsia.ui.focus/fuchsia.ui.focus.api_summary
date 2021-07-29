@@ -1,0 +1,7 @@
+table/member fuchsia.ui.focus/FocusChain.focus_chain vector<fuchsia.ui.views/ViewRef>
+resource table fuchsia.ui.focus/FocusChain
+protocol/member fuchsia.ui.focus/FocusChainListener.OnFocusChange(fuchsia.ui.focus/FocusChain focus_chain) -> ()
+protocol fuchsia.ui.focus/FocusChainListener
+protocol/member fuchsia.ui.focus/FocusChainListenerRegistry.Register(client_end:fuchsia.ui.focus/FocusChainListener listener)
+protocol fuchsia.ui.focus/FocusChainListenerRegistry
+library fuchsia.ui.focus

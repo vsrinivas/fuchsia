@@ -1,0 +1,35 @@
+protocol/member fuchsia.accessibility.tts/Engine.Cancel() -> ()
+protocol/member fuchsia.accessibility.tts/Engine.Enqueue(fuchsia.accessibility.tts/Utterance utterance) -> (fuchsia.accessibility.tts/Engine_Enqueue_Result result)
+protocol/member fuchsia.accessibility.tts/Engine.Speak() -> (fuchsia.accessibility.tts/Engine_Speak_Result result)
+protocol fuchsia.accessibility.tts/Engine
+protocol/member fuchsia.accessibility.tts/EngineRegistry.RegisterEngine(client_end:fuchsia.accessibility.tts/Engine engine) -> (fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Result result)
+protocol fuchsia.accessibility.tts/EngineRegistry
+struct fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Response
+union/member fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Result.err fuchsia.accessibility.tts/Error
+union/member fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Result.response fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Response
+strict union fuchsia.accessibility.tts/EngineRegistry_RegisterEngine_Result
+struct fuchsia.accessibility.tts/Engine_Enqueue_Response
+union/member fuchsia.accessibility.tts/Engine_Enqueue_Result.err fuchsia.accessibility.tts/Error
+union/member fuchsia.accessibility.tts/Engine_Enqueue_Result.response fuchsia.accessibility.tts/Engine_Enqueue_Response
+strict union fuchsia.accessibility.tts/Engine_Enqueue_Result
+struct fuchsia.accessibility.tts/Engine_Speak_Response
+union/member fuchsia.accessibility.tts/Engine_Speak_Result.err fuchsia.accessibility.tts/Error
+union/member fuchsia.accessibility.tts/Engine_Speak_Result.response fuchsia.accessibility.tts/Engine_Speak_Response
+strict union fuchsia.accessibility.tts/Engine_Speak_Result
+enum/member fuchsia.accessibility.tts/Error.BAD_STATE 3
+enum/member fuchsia.accessibility.tts/Error.BUSY 4
+enum/member fuchsia.accessibility.tts/Error.NOT_IMPLEMENTED 1
+enum/member fuchsia.accessibility.tts/Error.OUT_OF_RANGE 2
+strict enum fuchsia.accessibility.tts/Error uint32
+protocol/member fuchsia.accessibility.tts/TtsManager.OpenEngine(server_end:fuchsia.accessibility.tts/Engine engine_request) -> (fuchsia.accessibility.tts/TtsManager_OpenEngine_Result result)
+protocol fuchsia.accessibility.tts/TtsManager
+struct fuchsia.accessibility.tts/TtsManager_OpenEngine_Response
+union/member fuchsia.accessibility.tts/TtsManager_OpenEngine_Result.err fuchsia.accessibility.tts/Error
+union/member fuchsia.accessibility.tts/TtsManager_OpenEngine_Result.response fuchsia.accessibility.tts/TtsManager_OpenEngine_Response
+strict union fuchsia.accessibility.tts/TtsManager_OpenEngine_Result
+table/member fuchsia.accessibility.tts/Utterance.message string
+table/member fuchsia.accessibility.tts/Utterance.params fuchsia.accessibility.tts/VoiceParameters
+table fuchsia.accessibility.tts/Utterance
+table/member fuchsia.accessibility.tts/VoiceParameters.language fuchsia.intl/LocaleId
+table fuchsia.accessibility.tts/VoiceParameters
+library fuchsia.accessibility.tts

@@ -1,0 +1,371 @@
+struct/member fuchsia.wlan.mlme/AssociateConfirm.association_id uint16
+struct/member fuchsia.wlan.mlme/AssociateConfirm.cap_info uint16
+struct/member fuchsia.wlan.mlme/AssociateConfirm.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.mlme/AssociateConfirm.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateConfirm.result_code fuchsia.wlan.mlme/AssociateResultCode
+struct/member fuchsia.wlan.mlme/AssociateConfirm.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
+struct/member fuchsia.wlan.mlme/AssociateConfirm.wmm_param box<fuchsia.wlan.mlme/WmmParameter>
+struct fuchsia.wlan.mlme/AssociateConfirm
+struct/member fuchsia.wlan.mlme/AssociateIndication.cap uint16
+struct/member fuchsia.wlan.mlme/AssociateIndication.listen_interval uint16
+struct/member fuchsia.wlan.mlme/AssociateIndication.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AssociateIndication.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateIndication.rsne vector<uint8>:optional
+struct/member fuchsia.wlan.mlme/AssociateIndication.ssid vector<uint8>:optional
+struct fuchsia.wlan.mlme/AssociateIndication
+struct/member fuchsia.wlan.mlme/AssociateRequest.cap_info uint16
+struct/member fuchsia.wlan.mlme/AssociateRequest.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.mlme/AssociateRequest.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AssociateRequest.qos_capable bool
+struct/member fuchsia.wlan.mlme/AssociateRequest.qos_info uint8
+struct/member fuchsia.wlan.mlme/AssociateRequest.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateRequest.rsne vector<uint8>:optional
+struct/member fuchsia.wlan.mlme/AssociateRequest.vendor_ies vector<uint8>:optional
+struct/member fuchsia.wlan.mlme/AssociateRequest.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
+struct fuchsia.wlan.mlme/AssociateRequest
+struct/member fuchsia.wlan.mlme/AssociateResponse.association_id uint16
+struct/member fuchsia.wlan.mlme/AssociateResponse.cap uint16
+struct/member fuchsia.wlan.mlme/AssociateResponse.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AssociateResponse.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/AssociateResponse.result_code fuchsia.wlan.mlme/AssociateResultCode
+struct fuchsia.wlan.mlme/AssociateResponse
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_AP_OUT_OF_MEMORY 5
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_BASIC_RATES_MISMATCH 6
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_CAPABILITIES_MISMATCH 3
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_EXTERNAL_REASON 4
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_NOT_AUTHENTICATED 2
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_REASON_UNSPECIFIED 1
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REFUSED_TEMPORARILY 8
+enum/member fuchsia.wlan.mlme/AssociateResultCode.REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED 7
+enum/member fuchsia.wlan.mlme/AssociateResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/AssociateResultCode uint32
+struct/member fuchsia.wlan.mlme/AuthenticateConfirm.auth_type fuchsia.wlan.mlme/AuthenticationTypes
+struct/member fuchsia.wlan.mlme/AuthenticateConfirm.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AuthenticateConfirm.result_code fuchsia.wlan.mlme/AuthenticateResultCode
+struct fuchsia.wlan.mlme/AuthenticateConfirm
+struct/member fuchsia.wlan.mlme/AuthenticateIndication.auth_type fuchsia.wlan.mlme/AuthenticationTypes
+struct/member fuchsia.wlan.mlme/AuthenticateIndication.peer_sta_address array<uint8,6>
+struct fuchsia.wlan.mlme/AuthenticateIndication
+struct/member fuchsia.wlan.mlme/AuthenticateRequest.auth_failure_timeout uint32
+struct/member fuchsia.wlan.mlme/AuthenticateRequest.auth_type fuchsia.wlan.mlme/AuthenticationTypes
+struct/member fuchsia.wlan.mlme/AuthenticateRequest.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AuthenticateRequest.sae_password vector<uint8>:optional
+struct fuchsia.wlan.mlme/AuthenticateRequest
+struct/member fuchsia.wlan.mlme/AuthenticateResponse.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/AuthenticateResponse.result_code fuchsia.wlan.mlme/AuthenticateResultCode
+struct fuchsia.wlan.mlme/AuthenticateResponse
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.ANTI_CLOGGING_TOKEN_REQUIRED 2
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.AUTHENTICATION_REJECTED 4
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.AUTH_FAILURE_TIMEOUT 5
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.FINITE_CYCLIC_GROUP_NOT_SUPPORTED 3
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.REFUSED 1
+enum/member fuchsia.wlan.mlme/AuthenticateResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/AuthenticateResultCode uint32
+enum/member fuchsia.wlan.mlme/AuthenticationTypes.FAST_BSS_TRANSITION 3
+enum/member fuchsia.wlan.mlme/AuthenticationTypes.OPEN_SYSTEM 1
+enum/member fuchsia.wlan.mlme/AuthenticationTypes.SAE 4
+enum/member fuchsia.wlan.mlme/AuthenticationTypes.SHARED_KEY 2
+strict enum fuchsia.wlan.mlme/AuthenticationTypes uint32
+struct/member fuchsia.wlan.mlme/BandCapabilities.band_id fuchsia.wlan.common/Band
+struct/member fuchsia.wlan.mlme/BandCapabilities.base_frequency uint16
+struct/member fuchsia.wlan.mlme/BandCapabilities.cap uint16
+struct/member fuchsia.wlan.mlme/BandCapabilities.channels vector<uint8>
+struct/member fuchsia.wlan.mlme/BandCapabilities.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.mlme/BandCapabilities.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/BandCapabilities.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
+struct fuchsia.wlan.mlme/BandCapabilities
+struct/member fuchsia.wlan.mlme/CapturedFrameResult.frame vector<uint8>
+struct fuchsia.wlan.mlme/CapturedFrameResult
+struct/member fuchsia.wlan.mlme/ChannelSwitchInfo.new_channel uint8
+struct fuchsia.wlan.mlme/ChannelSwitchInfo
+protocol/member fuchsia.wlan.mlme/Connector.Connect(server_end:fuchsia.wlan.mlme/MLME request)
+protocol fuchsia.wlan.mlme/Connector
+enum/member fuchsia.wlan.mlme/ControlledPortState.CLOSED 0
+enum/member fuchsia.wlan.mlme/ControlledPortState.OPEN 1
+strict enum fuchsia.wlan.mlme/ControlledPortState uint32
+struct/member fuchsia.wlan.mlme/Country.alpha2 array<uint8,2>
+struct/member fuchsia.wlan.mlme/Country.suffix uint8
+struct fuchsia.wlan.mlme/Country
+struct/member fuchsia.wlan.mlme/DeauthenticateConfirm.peer_sta_address array<uint8,6>
+struct fuchsia.wlan.mlme/DeauthenticateConfirm
+struct/member fuchsia.wlan.mlme/DeauthenticateIndication.locally_initiated bool
+struct/member fuchsia.wlan.mlme/DeauthenticateIndication.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/DeauthenticateIndication.reason_code fuchsia.wlan.ieee80211/ReasonCode
+struct fuchsia.wlan.mlme/DeauthenticateIndication
+struct/member fuchsia.wlan.mlme/DeauthenticateRequest.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/DeauthenticateRequest.reason_code fuchsia.wlan.ieee80211/ReasonCode
+struct fuchsia.wlan.mlme/DeauthenticateRequest
+struct/member fuchsia.wlan.mlme/DeleteKeyDescriptor.address array<uint8,6>
+struct/member fuchsia.wlan.mlme/DeleteKeyDescriptor.key_id uint16
+struct/member fuchsia.wlan.mlme/DeleteKeyDescriptor.key_type fuchsia.wlan.mlme/KeyType
+struct fuchsia.wlan.mlme/DeleteKeyDescriptor
+struct/member fuchsia.wlan.mlme/DeleteKeysRequest.keylist vector<fuchsia.wlan.mlme/DeleteKeyDescriptor>
+struct fuchsia.wlan.mlme/DeleteKeysRequest
+struct/member fuchsia.wlan.mlme/DeviceInfo.bands vector<fuchsia.wlan.mlme/BandCapabilities>
+struct/member fuchsia.wlan.mlme/DeviceInfo.driver_features vector<fuchsia.wlan.common/DriverFeature>:32
+struct/member fuchsia.wlan.mlme/DeviceInfo.mac_addr array<uint8,6>
+struct/member fuchsia.wlan.mlme/DeviceInfo.qos_capable bool
+struct/member fuchsia.wlan.mlme/DeviceInfo.role fuchsia.wlan.mlme/MacRole
+struct fuchsia.wlan.mlme/DeviceInfo
+struct/member fuchsia.wlan.mlme/DisassociateConfirm.status int32
+struct fuchsia.wlan.mlme/DisassociateConfirm
+struct/member fuchsia.wlan.mlme/DisassociateIndication.locally_initiated bool
+struct/member fuchsia.wlan.mlme/DisassociateIndication.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/DisassociateIndication.reason_code fuchsia.wlan.ieee80211/ReasonCode
+struct fuchsia.wlan.mlme/DisassociateIndication
+struct/member fuchsia.wlan.mlme/DisassociateRequest.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/DisassociateRequest.reason_code fuchsia.wlan.ieee80211/ReasonCode
+struct fuchsia.wlan.mlme/DisassociateRequest
+struct/member fuchsia.wlan.mlme/EapolConfirm.dst_addr array<uint8,6>
+struct/member fuchsia.wlan.mlme/EapolConfirm.result_code fuchsia.wlan.mlme/EapolResultCode
+struct fuchsia.wlan.mlme/EapolConfirm
+struct/member fuchsia.wlan.mlme/EapolIndication.data vector<uint8>
+struct/member fuchsia.wlan.mlme/EapolIndication.dst_addr array<uint8,6>
+struct/member fuchsia.wlan.mlme/EapolIndication.src_addr array<uint8,6>
+struct fuchsia.wlan.mlme/EapolIndication
+struct/member fuchsia.wlan.mlme/EapolRequest.data vector<uint8>
+struct/member fuchsia.wlan.mlme/EapolRequest.dst_addr array<uint8,6>
+struct/member fuchsia.wlan.mlme/EapolRequest.src_addr array<uint8,6>
+struct fuchsia.wlan.mlme/EapolRequest
+enum/member fuchsia.wlan.mlme/EapolResultCode.SUCCESS 0
+enum/member fuchsia.wlan.mlme/EapolResultCode.TRANSMISSION_FAILURE 1
+strict enum fuchsia.wlan.mlme/EapolResultCode uint32
+struct/member fuchsia.wlan.mlme/GetMeshPathTableRequest.dummy uint8
+struct fuchsia.wlan.mlme/GetMeshPathTableRequest
+struct/member fuchsia.wlan.mlme/JoinConfirm.result_code fuchsia.wlan.mlme/JoinResultCode
+struct fuchsia.wlan.mlme/JoinConfirm
+struct/member fuchsia.wlan.mlme/JoinRequest.cbw fuchsia.wlan.common/CBW
+struct/member fuchsia.wlan.mlme/JoinRequest.join_failure_timeout uint32
+struct/member fuchsia.wlan.mlme/JoinRequest.nav_sync_delay uint32
+struct/member fuchsia.wlan.mlme/JoinRequest.op_rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/JoinRequest.phy fuchsia.wlan.common/PHY
+struct/member fuchsia.wlan.mlme/JoinRequest.selected_bss fuchsia.wlan.internal/BssDescription
+struct fuchsia.wlan.mlme/JoinRequest
+enum/member fuchsia.wlan.mlme/JoinResultCode.JOIN_FAILURE_TIMEOUT 1
+enum/member fuchsia.wlan.mlme/JoinResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/JoinResultCode uint32
+enum/member fuchsia.wlan.mlme/KeyType.GROUP 1
+enum/member fuchsia.wlan.mlme/KeyType.IGTK 4
+enum/member fuchsia.wlan.mlme/KeyType.PAIRWISE 2
+enum/member fuchsia.wlan.mlme/KeyType.PEER_KEY 3
+strict enum fuchsia.wlan.mlme/KeyType uint32
+const fuchsia.wlan.mlme/MAX_SSIDS_PER_SCAN_REQUEST uint32 32
+protocol/member fuchsia.wlan.mlme/MLME.AssociateConf -> (fuchsia.wlan.mlme/AssociateConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.AssociateInd -> (fuchsia.wlan.mlme/AssociateIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.AssociateReq(fuchsia.wlan.mlme/AssociateRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.AssociateResp(fuchsia.wlan.mlme/AssociateResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.AuthenticateConf -> (fuchsia.wlan.mlme/AuthenticateConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.AuthenticateInd -> (fuchsia.wlan.mlme/AuthenticateIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.AuthenticateReq(fuchsia.wlan.mlme/AuthenticateRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.AuthenticateResp(fuchsia.wlan.mlme/AuthenticateResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.DeauthenticateConf -> (fuchsia.wlan.mlme/DeauthenticateConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.DeauthenticateInd -> (fuchsia.wlan.mlme/DeauthenticateIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.DeauthenticateReq(fuchsia.wlan.mlme/DeauthenticateRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.DeleteKeysReq(fuchsia.wlan.mlme/DeleteKeysRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.DisassociateConf -> (fuchsia.wlan.mlme/DisassociateConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.DisassociateInd -> (fuchsia.wlan.mlme/DisassociateIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.DisassociateReq(fuchsia.wlan.mlme/DisassociateRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.EapolConf -> (fuchsia.wlan.mlme/EapolConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.EapolInd -> (fuchsia.wlan.mlme/EapolIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.EapolReq(fuchsia.wlan.mlme/EapolRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.FinalizeAssociationReq(fuchsia.wlan.mlme/NegotiatedCapabilities cap)
+protocol/member fuchsia.wlan.mlme/MLME.GetMeshPathTableReq(fuchsia.wlan.mlme/GetMeshPathTableRequest req) -> (fuchsia.wlan.mesh/MeshPathTable table)
+protocol/member fuchsia.wlan.mlme/MLME.GetMinstrelStats(fuchsia.wlan.mlme/MinstrelStatsRequest req) -> (fuchsia.wlan.mlme/MinstrelStatsResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.IncomingMpConfirmAction -> (fuchsia.wlan.mlme/MeshPeeringConfirmAction action)
+protocol/member fuchsia.wlan.mlme/MLME.IncomingMpOpenAction -> (fuchsia.wlan.mlme/MeshPeeringOpenAction action)
+protocol/member fuchsia.wlan.mlme/MLME.JoinConf -> (fuchsia.wlan.mlme/JoinConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.JoinReq(fuchsia.wlan.mlme/JoinRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.ListMinstrelPeers() -> (fuchsia.wlan.mlme/MinstrelListResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.MeshPeeringEstablished(fuchsia.wlan.mlme/MeshPeeringParams peering)
+protocol/member fuchsia.wlan.mlme/MLME.OnChannelSwitched -> (fuchsia.wlan.mlme/ChannelSwitchInfo info)
+protocol/member fuchsia.wlan.mlme/MLME.OnPmkAvailable -> (fuchsia.wlan.mlme/PmkInfo info)
+protocol/member fuchsia.wlan.mlme/MLME.OnSaeFrameRx -> (fuchsia.wlan.mlme/SaeFrame frame)
+protocol/member fuchsia.wlan.mlme/MLME.OnSaeHandshakeInd -> (fuchsia.wlan.mlme/SaeHandshakeIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.OnScanEnd -> (fuchsia.wlan.mlme/ScanEnd end)
+protocol/member fuchsia.wlan.mlme/MLME.OnScanResult -> (fuchsia.wlan.mlme/ScanResult result)
+protocol/member fuchsia.wlan.mlme/MLME.OnWmmStatusResp -> (int32 status,fuchsia.wlan.internal/WmmStatusResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.QueryDeviceInfo() -> (fuchsia.wlan.mlme/DeviceInfo info)
+protocol/member fuchsia.wlan.mlme/MLME.RelayCapturedFrame -> (fuchsia.wlan.mlme/CapturedFrameResult result)
+protocol/member fuchsia.wlan.mlme/MLME.ResetReq(fuchsia.wlan.mlme/ResetRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.SaeFrameTx(fuchsia.wlan.mlme/SaeFrame frame)
+protocol/member fuchsia.wlan.mlme/MLME.SaeHandshakeResp(fuchsia.wlan.mlme/SaeHandshakeResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.SendMpConfirmAction(fuchsia.wlan.mlme/MeshPeeringConfirmAction action)
+protocol/member fuchsia.wlan.mlme/MLME.SendMpOpenAction(fuchsia.wlan.mlme/MeshPeeringOpenAction action)
+protocol/member fuchsia.wlan.mlme/MLME.SetControlledPort(fuchsia.wlan.mlme/SetControlledPortRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.SetKeysReq(fuchsia.wlan.mlme/SetKeysRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.SignalReport -> (fuchsia.wlan.mlme/SignalReportIndication ind)
+protocol/member fuchsia.wlan.mlme/MLME.StartCaptureFrames(fuchsia.wlan.mlme/StartCaptureFramesRequest req) -> (fuchsia.wlan.mlme/StartCaptureFramesResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.StartConf -> (fuchsia.wlan.mlme/StartConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.StartReq(fuchsia.wlan.mlme/StartRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.StartScan(fuchsia.wlan.mlme/ScanRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.StatsQueryReq()
+protocol/member fuchsia.wlan.mlme/MLME.StatsQueryResp -> (fuchsia.wlan.mlme/StatsQueryResponse resp)
+protocol/member fuchsia.wlan.mlme/MLME.StopCaptureFrames()
+protocol/member fuchsia.wlan.mlme/MLME.StopConf -> (fuchsia.wlan.mlme/StopConfirm resp)
+protocol/member fuchsia.wlan.mlme/MLME.StopReq(fuchsia.wlan.mlme/StopRequest req)
+protocol/member fuchsia.wlan.mlme/MLME.WmmStatusReq()
+protocol fuchsia.wlan.mlme/MLME
+enum/member fuchsia.wlan.mlme/MacRole.AP 2
+enum/member fuchsia.wlan.mlme/MacRole.CLIENT 1
+enum/member fuchsia.wlan.mlme/MacRole.MESH 3
+strict enum fuchsia.wlan.mlme/MacRole uint32
+struct/member fuchsia.wlan.mlme/MeshConfiguration.active_path_sel_metric_id uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.active_path_sel_proto_id uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.auth_proto_id uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.congest_ctrl_method_id uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.mesh_capability uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.mesh_formation_info uint8
+struct/member fuchsia.wlan.mlme/MeshConfiguration.sync_method_id uint8
+struct fuchsia.wlan.mlme/MeshConfiguration
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.ht_op fuchsia.wlan.internal/HtOperation:optional
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.local_link_id uint16
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.mesh_config fuchsia.wlan.mlme/MeshConfiguration
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.mesh_id vector<uint8>:32
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.protocol_id uint16
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.rates vector<uint8>
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
+struct/member fuchsia.wlan.mlme/MeshPeeringCommon.vht_op fuchsia.wlan.internal/VhtOperation:optional
+struct fuchsia.wlan.mlme/MeshPeeringCommon
+struct/member fuchsia.wlan.mlme/MeshPeeringConfirmAction.aid uint16
+struct/member fuchsia.wlan.mlme/MeshPeeringConfirmAction.common fuchsia.wlan.mlme/MeshPeeringCommon
+struct/member fuchsia.wlan.mlme/MeshPeeringConfirmAction.peer_link_id uint16
+struct fuchsia.wlan.mlme/MeshPeeringConfirmAction
+struct/member fuchsia.wlan.mlme/MeshPeeringOpenAction.common fuchsia.wlan.mlme/MeshPeeringCommon
+struct fuchsia.wlan.mlme/MeshPeeringOpenAction
+struct/member fuchsia.wlan.mlme/MeshPeeringParams.local_aid uint16
+struct/member fuchsia.wlan.mlme/MeshPeeringParams.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/MeshPeeringParams.rates vector<uint8>
+struct fuchsia.wlan.mlme/MeshPeeringParams
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.ACTION 8192
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.ACTION_NO_ACK 16384
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.ASSOC_REQ 1
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.ASSOC_RESP 2
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.ATIM 512
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.AUTH 2048
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.BEACON 256
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.DEAUTH 4096
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.DISASSOC 1024
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.PROBE_REQ 16
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.PROBE_RESP 32
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.REASSOC_REQ 4
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.REASSOC_RESP 8
+bits/member fuchsia.wlan.mlme/MgmtFrameCaptureFlags.TIMING_AD 64
+strict bits fuchsia.wlan.mlme/MgmtFrameCaptureFlags uint32
+struct/member fuchsia.wlan.mlme/MinstrelListResponse.peers fuchsia.wlan.minstrel/Peers
+struct fuchsia.wlan.mlme/MinstrelListResponse
+struct/member fuchsia.wlan.mlme/MinstrelStatsRequest.mac_addr array<uint8,6>
+struct fuchsia.wlan.mlme/MinstrelStatsRequest
+struct/member fuchsia.wlan.mlme/MinstrelStatsResponse.peer fuchsia.wlan.minstrel/Peer:optional
+struct fuchsia.wlan.mlme/MinstrelStatsResponse
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.cap_info uint16
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.channel fuchsia.wlan.common/WlanChan
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.ht_cap fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.vht_cap fuchsia.wlan.internal/VhtCapabilities:optional
+struct/member fuchsia.wlan.mlme/NegotiatedCapabilities.wmm_param box<fuchsia.wlan.mlme/WmmParameter>
+struct fuchsia.wlan.mlme/NegotiatedCapabilities
+struct/member fuchsia.wlan.mlme/PmkInfo.pmk vector<uint8>
+struct/member fuchsia.wlan.mlme/PmkInfo.pmkid vector<uint8>
+struct fuchsia.wlan.mlme/PmkInfo
+struct/member fuchsia.wlan.mlme/ResetRequest.set_default_mib bool
+struct/member fuchsia.wlan.mlme/ResetRequest.sta_address array<uint8,6>
+struct fuchsia.wlan.mlme/ResetRequest
+struct/member fuchsia.wlan.mlme/SaeFrame.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/SaeFrame.sae_fields vector<uint8>
+struct/member fuchsia.wlan.mlme/SaeFrame.seq_num uint16
+struct/member fuchsia.wlan.mlme/SaeFrame.status_code fuchsia.wlan.ieee80211/StatusCode
+struct fuchsia.wlan.mlme/SaeFrame
+struct/member fuchsia.wlan.mlme/SaeHandshakeIndication.peer_sta_address array<uint8,6>
+struct fuchsia.wlan.mlme/SaeHandshakeIndication
+struct/member fuchsia.wlan.mlme/SaeHandshakeResponse.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/SaeHandshakeResponse.status_code fuchsia.wlan.ieee80211/StatusCode
+struct fuchsia.wlan.mlme/SaeHandshakeResponse
+struct/member fuchsia.wlan.mlme/ScanEnd.code fuchsia.wlan.mlme/ScanResultCode
+struct/member fuchsia.wlan.mlme/ScanEnd.txn_id uint64
+struct fuchsia.wlan.mlme/ScanEnd
+struct/member fuchsia.wlan.mlme/ScanRequest.bss_type fuchsia.wlan.internal/BssTypes
+struct/member fuchsia.wlan.mlme/ScanRequest.bssid array<uint8,6>
+struct/member fuchsia.wlan.mlme/ScanRequest.channel_list vector<uint8>:optional
+struct/member fuchsia.wlan.mlme/ScanRequest.max_channel_time uint32
+struct/member fuchsia.wlan.mlme/ScanRequest.min_channel_time uint32
+struct/member fuchsia.wlan.mlme/ScanRequest.probe_delay uint32
+struct/member fuchsia.wlan.mlme/ScanRequest.scan_type fuchsia.wlan.mlme/ScanTypes
+struct/member fuchsia.wlan.mlme/ScanRequest.ssid vector<uint8>:32
+struct/member fuchsia.wlan.mlme/ScanRequest.ssid_list vector<vector<uint8>:32>:<32,optional>
+struct/member fuchsia.wlan.mlme/ScanRequest.txn_id uint64
+struct fuchsia.wlan.mlme/ScanRequest
+struct/member fuchsia.wlan.mlme/ScanResult.bss fuchsia.wlan.internal/BssDescription
+struct/member fuchsia.wlan.mlme/ScanResult.txn_id uint64
+struct fuchsia.wlan.mlme/ScanResult
+enum/member fuchsia.wlan.mlme/ScanResultCode.CANCELED_BY_DRIVER_OR_FIRMWARE 5
+enum/member fuchsia.wlan.mlme/ScanResultCode.INTERNAL_ERROR 3
+enum/member fuchsia.wlan.mlme/ScanResultCode.INVALID_ARGS 2
+enum/member fuchsia.wlan.mlme/ScanResultCode.NOT_SUPPORTED 1
+enum/member fuchsia.wlan.mlme/ScanResultCode.SHOULD_WAIT 4
+enum/member fuchsia.wlan.mlme/ScanResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/ScanResultCode uint32
+enum/member fuchsia.wlan.mlme/ScanTypes.ACTIVE 1
+enum/member fuchsia.wlan.mlme/ScanTypes.PASSIVE 2
+strict enum fuchsia.wlan.mlme/ScanTypes uint32
+struct/member fuchsia.wlan.mlme/SetControlledPortRequest.peer_sta_address array<uint8,6>
+struct/member fuchsia.wlan.mlme/SetControlledPortRequest.state fuchsia.wlan.mlme/ControlledPortState
+struct fuchsia.wlan.mlme/SetControlledPortRequest
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.address array<uint8,6>
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.cipher_suite_oui array<uint8,3>
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.cipher_suite_type uint8
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.key vector<uint8>
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.key_id uint16
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.key_type fuchsia.wlan.mlme/KeyType
+struct/member fuchsia.wlan.mlme/SetKeyDescriptor.rsc uint64
+struct fuchsia.wlan.mlme/SetKeyDescriptor
+struct/member fuchsia.wlan.mlme/SetKeysRequest.keylist vector<fuchsia.wlan.mlme/SetKeyDescriptor>
+struct fuchsia.wlan.mlme/SetKeysRequest
+struct/member fuchsia.wlan.mlme/SignalReportIndication.rssi_dbm int8
+struct/member fuchsia.wlan.mlme/SignalReportIndication.snr_db int8
+struct fuchsia.wlan.mlme/SignalReportIndication
+struct/member fuchsia.wlan.mlme/StartCaptureFramesRequest.mgmt_frame_flags fuchsia.wlan.mlme/MgmtFrameCaptureFlags
+struct fuchsia.wlan.mlme/StartCaptureFramesRequest
+struct/member fuchsia.wlan.mlme/StartCaptureFramesResponse.status int32
+struct/member fuchsia.wlan.mlme/StartCaptureFramesResponse.supported_mgmt_frames fuchsia.wlan.mlme/MgmtFrameCaptureFlags
+struct fuchsia.wlan.mlme/StartCaptureFramesResponse
+struct/member fuchsia.wlan.mlme/StartConfirm.result_code fuchsia.wlan.mlme/StartResultCode
+struct fuchsia.wlan.mlme/StartConfirm
+struct/member fuchsia.wlan.mlme/StartRequest.beacon_period uint16
+struct/member fuchsia.wlan.mlme/StartRequest.bss_type fuchsia.wlan.internal/BssTypes
+struct/member fuchsia.wlan.mlme/StartRequest.cap uint16
+struct/member fuchsia.wlan.mlme/StartRequest.cbw fuchsia.wlan.common/CBW
+struct/member fuchsia.wlan.mlme/StartRequest.channel uint8
+struct/member fuchsia.wlan.mlme/StartRequest.country fuchsia.wlan.mlme/Country
+struct/member fuchsia.wlan.mlme/StartRequest.dtim_period uint8
+struct/member fuchsia.wlan.mlme/StartRequest.mesh_id vector<uint8>:32
+struct/member fuchsia.wlan.mlme/StartRequest.phy fuchsia.wlan.common/PHY
+struct/member fuchsia.wlan.mlme/StartRequest.rates vector<uint8>:22
+struct/member fuchsia.wlan.mlme/StartRequest.rsne vector<uint8>:optional
+struct/member fuchsia.wlan.mlme/StartRequest.ssid vector<uint8>:32
+struct fuchsia.wlan.mlme/StartRequest
+enum/member fuchsia.wlan.mlme/StartResultCode.BSS_ALREADY_STARTED_OR_JOINED 1
+enum/member fuchsia.wlan.mlme/StartResultCode.INTERNAL_ERROR 4
+enum/member fuchsia.wlan.mlme/StartResultCode.NOT_SUPPORTED 3
+enum/member fuchsia.wlan.mlme/StartResultCode.RESET_REQUIRED_BEFORE_START 2
+enum/member fuchsia.wlan.mlme/StartResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/StartResultCode uint32
+struct/member fuchsia.wlan.mlme/StatsQueryResponse.stats fuchsia.wlan.stats/IfaceStats
+struct fuchsia.wlan.mlme/StatsQueryResponse
+struct/member fuchsia.wlan.mlme/StopConfirm.result_code fuchsia.wlan.mlme/StopResultCode
+struct fuchsia.wlan.mlme/StopConfirm
+struct/member fuchsia.wlan.mlme/StopRequest.ssid vector<uint8>:32
+struct fuchsia.wlan.mlme/StopRequest
+enum/member fuchsia.wlan.mlme/StopResultCode.BSS_ALREADY_STOPPED 1
+enum/member fuchsia.wlan.mlme/StopResultCode.INTERNAL_ERROR 2
+enum/member fuchsia.wlan.mlme/StopResultCode.SUCCESS 0
+strict enum fuchsia.wlan.mlme/StopResultCode uint32
+const fuchsia.wlan.mlme/WMM_PARAM_LEN uint8 18
+struct/member fuchsia.wlan.mlme/WmmParameter.bytes array<uint8,18>
+struct fuchsia.wlan.mlme/WmmParameter
+const fuchsia.wlan.mlme/countryEnvironAll uint8 32
+const fuchsia.wlan.mlme/countryEnvironIndoor uint8 73
+const fuchsia.wlan.mlme/countryEnvironNonCountry uint8 88
+const fuchsia.wlan.mlme/countryEnvironOutdoor uint8 79
+library fuchsia.wlan.mlme

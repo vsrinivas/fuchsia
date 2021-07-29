@@ -1,0 +1,37 @@
+table/member fuchsia.media.tuning/AudioDeviceTuningProfile.pipeline fuchsia.media.tuning/AudioMixGroup
+table/member fuchsia.media.tuning/AudioDeviceTuningProfile.volume_curve vector<fuchsia.media.tuning/Volume>:16
+table fuchsia.media.tuning/AudioDeviceTuningProfile
+table/member fuchsia.media.tuning/AudioEffectConfig.configuration string:4096
+table/member fuchsia.media.tuning/AudioEffectConfig.instance_name string:64
+table/member fuchsia.media.tuning/AudioEffectConfig.output_channels uint16
+table/member fuchsia.media.tuning/AudioEffectConfig.type fuchsia.media.tuning/AudioEffectType
+table fuchsia.media.tuning/AudioEffectConfig
+table/member fuchsia.media.tuning/AudioEffectType.effect_name string:255
+table/member fuchsia.media.tuning/AudioEffectType.module_name string:64
+table fuchsia.media.tuning/AudioEffectType
+struct/member fuchsia.media.tuning/AudioMixGroup.effects vector<fuchsia.media.tuning/AudioEffectConfig>:16
+struct/member fuchsia.media.tuning/AudioMixGroup.inputs vector<box<fuchsia.media.tuning/AudioMixGroup>>:16
+struct/member fuchsia.media.tuning/AudioMixGroup.loopback bool
+struct/member fuchsia.media.tuning/AudioMixGroup.name string:32
+struct/member fuchsia.media.tuning/AudioMixGroup.output_channels uint16
+struct/member fuchsia.media.tuning/AudioMixGroup.output_rate uint32
+struct/member fuchsia.media.tuning/AudioMixGroup.streams vector<fuchsia.media.tuning/StreamType>:8
+struct fuchsia.media.tuning/AudioMixGroup
+protocol/member fuchsia.media.tuning/AudioTuner.DeleteAudioDeviceProfile(string:32 device_id) -> (int32 status)
+protocol/member fuchsia.media.tuning/AudioTuner.GetAudioDeviceProfile(string:32 device_id) -> (fuchsia.media.tuning/AudioDeviceTuningProfile profile)
+protocol/member fuchsia.media.tuning/AudioTuner.GetAvailableAudioEffects() -> (vector<fuchsia.media.tuning/AudioEffectType>:16 effects)
+protocol/member fuchsia.media.tuning/AudioTuner.GetDefaultAudioDeviceProfile(string:32 device_id) -> (fuchsia.media.tuning/AudioDeviceTuningProfile profile)
+protocol/member fuchsia.media.tuning/AudioTuner.SetAudioDeviceProfile(string:32 device_id,fuchsia.media.tuning/AudioDeviceTuningProfile profile) -> (int32 status)
+protocol/member fuchsia.media.tuning/AudioTuner.SetAudioEffectConfig(string:32 device_id,fuchsia.media.tuning/AudioEffectConfig effect) -> (int32 status)
+protocol fuchsia.media.tuning/AudioTuner
+enum/member fuchsia.media.tuning/StreamType.RENDER_BACKGROUND 0
+enum/member fuchsia.media.tuning/StreamType.RENDER_COMMUNICATION 4
+enum/member fuchsia.media.tuning/StreamType.RENDER_INTERRUPTION 2
+enum/member fuchsia.media.tuning/StreamType.RENDER_MEDIA 1
+enum/member fuchsia.media.tuning/StreamType.RENDER_SYSTEM_AGENT 3
+enum/member fuchsia.media.tuning/StreamType.RENDER_ULTRASOUND 5
+strict enum fuchsia.media.tuning/StreamType uint32
+struct/member fuchsia.media.tuning/Volume.decibel float32
+struct/member fuchsia.media.tuning/Volume.level float32
+struct fuchsia.media.tuning/Volume
+library fuchsia.media.tuning

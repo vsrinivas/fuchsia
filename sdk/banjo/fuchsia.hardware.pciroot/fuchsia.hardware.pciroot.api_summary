@@ -1,0 +1,42 @@
+const fuchsia.hardware.pciroot/DEVICES_PER_BUS uint8 64
+const fuchsia.hardware.pciroot/FUNCTIONS_PER_DEVICE uint8 8
+const fuchsia.hardware.pciroot/PCI_IRQ_ROUTING_ALL_FUNCTIONS uint8 15
+const fuchsia.hardware.pciroot/PCI_IRQ_ROUTING_NO_PARENT uint8 255
+const fuchsia.hardware.pciroot/PINS_PER_FUNCTION uint8 4
+enum/member fuchsia.hardware.pciroot/PciAddressSpace.IO 1
+enum/member fuchsia.hardware.pciroot/PciAddressSpace.MEMORY 0
+strict enum fuchsia.hardware.pciroot/PciAddressSpace uint8
+struct/member fuchsia.hardware.pciroot/PciBdf.bus_id uint8
+struct/member fuchsia.hardware.pciroot/PciBdf.device_id uint8
+struct/member fuchsia.hardware.pciroot/PciBdf.function_id uint8
+struct fuchsia.hardware.pciroot/PciBdf
+struct/member fuchsia.hardware.pciroot/PciIrqRoutingEntry.device_id uint8
+struct/member fuchsia.hardware.pciroot/PciIrqRoutingEntry.pins array<uint8,4>
+struct/member fuchsia.hardware.pciroot/PciIrqRoutingEntry.port_device_id uint8
+struct/member fuchsia.hardware.pciroot/PciIrqRoutingEntry.port_function_id uint8
+struct fuchsia.hardware.pciroot/PciIrqRoutingEntry
+struct/member fuchsia.hardware.pciroot/PciLegacyIrq.interrupt zx/handle:INTERRUPT
+struct/member fuchsia.hardware.pciroot/PciLegacyIrq.vector uint32
+resource struct fuchsia.hardware.pciroot/PciLegacyIrq
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.ecam_vmo zx/handle:VMO
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.end_bus_num uint8
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.irq_routing vector<fuchsia.hardware.pciroot/PciIrqRoutingEntry>
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.legacy_irqs vector<fuchsia.hardware.pciroot/PciLegacyIrq>
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.name string:8
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.segment_group uint16
+struct/member fuchsia.hardware.pciroot/PciPlatformInfo.start_bus_num uint8
+resource struct fuchsia.hardware.pciroot/PciPlatformInfo
+protocol/member fuchsia.hardware.pciroot/Pciroot.AllocateMsi(uint32 msi_count,bool can_target_64bit) -> (int32 s,zx/handle:MSI allocation)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigRead16(fuchsia.hardware.pciroot/PciBdf address,uint16 offset) -> (int32 s,uint16 value)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigRead32(fuchsia.hardware.pciroot/PciBdf address,uint16 offset) -> (int32 s,uint32 value)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigRead8(fuchsia.hardware.pciroot/PciBdf address,uint16 offset) -> (int32 s,uint8 value)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigWrite16(fuchsia.hardware.pciroot/PciBdf address,uint16 offset,uint16 value) -> (int32 s)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigWrite32(fuchsia.hardware.pciroot/PciBdf address,uint16 offset,uint32 value) -> (int32 s)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConfigWrite8(fuchsia.hardware.pciroot/PciBdf address,uint16 offset,uint8 value) -> (int32 s)
+protocol/member fuchsia.hardware.pciroot/Pciroot.ConnectSysmem(zx/handle:CHANNEL connection) -> (int32 s)
+protocol/member fuchsia.hardware.pciroot/Pciroot.DriverShouldProxyConfig() -> (bool use_proxy)
+protocol/member fuchsia.hardware.pciroot/Pciroot.GetAddressSpace(uint64 in_base,uint64 size,fuchsia.hardware.pciroot/PciAddressSpace type,bool low) -> (int32 s,uint64 base,zx/handle:RESOURCE resource,zx/handle:EVENTPAIR token)
+protocol/member fuchsia.hardware.pciroot/Pciroot.GetBti(uint32 bdf,uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.pciroot/Pciroot.GetPciPlatformInfo() -> (int32 s,fuchsia.hardware.pciroot/PciPlatformInfo info)
+protocol fuchsia.hardware.pciroot/Pciroot
+library fuchsia.hardware.pciroot

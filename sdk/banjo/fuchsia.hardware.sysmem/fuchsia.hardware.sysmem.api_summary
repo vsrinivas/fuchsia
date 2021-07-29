@@ -1,0 +1,6 @@
+protocol/member fuchsia.hardware.sysmem/Sysmem.Connect(zx/handle:CHANNEL allocator_request) -> (int32 s)
+protocol/member fuchsia.hardware.sysmem/Sysmem.RegisterHeap(uint64 heap,zx/handle:CHANNEL heap_connection) -> (int32 s)
+protocol/member fuchsia.hardware.sysmem/Sysmem.RegisterSecureMem(zx/handle:CHANNEL secure_mem_connection) -> (int32 s)
+protocol/member fuchsia.hardware.sysmem/Sysmem.UnregisterSecureMem() -> (int32 s)
+protocol fuchsia.hardware.sysmem/Sysmem
+library fuchsia.hardware.sysmem

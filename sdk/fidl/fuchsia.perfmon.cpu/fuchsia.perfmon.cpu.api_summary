@@ -1,0 +1,53 @@
+const fuchsia.perfmon.cpu/API_VERSION uint16 0
+struct/member fuchsia.perfmon.cpu/Allocation.buffer_size_in_pages uint32
+struct/member fuchsia.perfmon.cpu/Allocation.num_buffers uint32
+struct fuchsia.perfmon.cpu/Allocation
+struct/member fuchsia.perfmon.cpu/Config.events array<fuchsia.perfmon.cpu/EventConfig,32>
+struct fuchsia.perfmon.cpu/Config
+protocol/member fuchsia.perfmon.cpu/Controller.GetAllocation() -> (box<fuchsia.perfmon.cpu/Allocation> allocation)
+protocol/member fuchsia.perfmon.cpu/Controller.GetBufferHandle(uint32 descriptor) -> (zx/handle:<VMO,optional> vmo)
+protocol/member fuchsia.perfmon.cpu/Controller.GetConfig() -> (box<fuchsia.perfmon.cpu/Config> config)
+protocol/member fuchsia.perfmon.cpu/Controller.GetProperties() -> (fuchsia.perfmon.cpu/Properties properties)
+protocol/member fuchsia.perfmon.cpu/Controller.Initialize(fuchsia.perfmon.cpu/Allocation allocation) -> (fuchsia.perfmon.cpu/Controller_Initialize_Result result)
+protocol/member fuchsia.perfmon.cpu/Controller.StageConfig(fuchsia.perfmon.cpu/Config config) -> (fuchsia.perfmon.cpu/Controller_StageConfig_Result result)
+protocol/member fuchsia.perfmon.cpu/Controller.Start() -> (fuchsia.perfmon.cpu/Controller_Start_Result result)
+protocol/member fuchsia.perfmon.cpu/Controller.Stop() -> ()
+protocol/member fuchsia.perfmon.cpu/Controller.Terminate() -> ()
+protocol fuchsia.perfmon.cpu/Controller
+struct fuchsia.perfmon.cpu/Controller_Initialize_Response
+union/member fuchsia.perfmon.cpu/Controller_Initialize_Result.err int32
+union/member fuchsia.perfmon.cpu/Controller_Initialize_Result.response fuchsia.perfmon.cpu/Controller_Initialize_Response
+strict union fuchsia.perfmon.cpu/Controller_Initialize_Result
+struct fuchsia.perfmon.cpu/Controller_StageConfig_Response
+union/member fuchsia.perfmon.cpu/Controller_StageConfig_Result.err int32
+union/member fuchsia.perfmon.cpu/Controller_StageConfig_Result.response fuchsia.perfmon.cpu/Controller_StageConfig_Response
+strict union fuchsia.perfmon.cpu/Controller_StageConfig_Result
+struct fuchsia.perfmon.cpu/Controller_Start_Response
+union/member fuchsia.perfmon.cpu/Controller_Start_Result.err int32
+union/member fuchsia.perfmon.cpu/Controller_Start_Result.response fuchsia.perfmon.cpu/Controller_Start_Response
+strict union fuchsia.perfmon.cpu/Controller_Start_Result
+struct/member fuchsia.perfmon.cpu/EventConfig.event uint16
+struct/member fuchsia.perfmon.cpu/EventConfig.flags fuchsia.perfmon.cpu/EventConfigFlags
+struct/member fuchsia.perfmon.cpu/EventConfig.rate uint32
+struct fuchsia.perfmon.cpu/EventConfig
+bits/member fuchsia.perfmon.cpu/EventConfigFlags.COLLECT_LAST_BRANCH 16
+bits/member fuchsia.perfmon.cpu/EventConfigFlags.COLLECT_OS 1
+bits/member fuchsia.perfmon.cpu/EventConfigFlags.COLLECT_PC 4
+bits/member fuchsia.perfmon.cpu/EventConfigFlags.COLLECT_USER 2
+bits/member fuchsia.perfmon.cpu/EventConfigFlags.IS_TIMEBASE 8
+strict bits fuchsia.perfmon.cpu/EventConfigFlags uint32
+const fuchsia.perfmon.cpu/MAX_NUM_EVENTS uint16 32
+struct/member fuchsia.perfmon.cpu/Properties.api_version uint16
+struct/member fuchsia.perfmon.cpu/Properties.flags fuchsia.perfmon.cpu/PropertyFlags
+struct/member fuchsia.perfmon.cpu/Properties.max_fixed_counter_width uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_misc_counter_width uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_num_events uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_num_fixed_events uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_num_misc_events uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_num_programmable_events uint16
+struct/member fuchsia.perfmon.cpu/Properties.max_programmable_counter_width uint16
+struct/member fuchsia.perfmon.cpu/Properties.pm_version uint16
+struct fuchsia.perfmon.cpu/Properties
+bits/member fuchsia.perfmon.cpu/PropertyFlags.HAS_LAST_BRANCH 1
+strict bits fuchsia.perfmon.cpu/PropertyFlags uint64
+library fuchsia.perfmon.cpu

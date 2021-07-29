@@ -1,0 +1,35 @@
+enum/member fuchsia.settings.policy/Error.FAILED 1
+enum/member fuchsia.settings.policy/Error.INVALID_POLICY 3
+enum/member fuchsia.settings.policy/Error.UNKNOWN_POLICY 2
+strict enum fuchsia.settings.policy/Error uint32
+table/member fuchsia.settings.policy/Policy.parameters fuchsia.settings.policy/PolicyParameters
+table/member fuchsia.settings.policy/Policy.policy_id uint32
+table fuchsia.settings.policy/Policy
+union/member fuchsia.settings.policy/PolicyParameters.max fuchsia.settings.policy/Volume
+union/member fuchsia.settings.policy/PolicyParameters.min fuchsia.settings.policy/Volume
+strict union fuchsia.settings.policy/PolicyParameters
+table/member fuchsia.settings.policy/Property.active_policies vector<fuchsia.settings.policy/Policy>
+table/member fuchsia.settings.policy/Property.available_transforms vector<fuchsia.settings.policy/Transform>
+table/member fuchsia.settings.policy/Property.target fuchsia.settings.policy/Target
+table fuchsia.settings.policy/Property
+union/member fuchsia.settings.policy/Target.stream fuchsia.media/AudioRenderUsage
+strict union fuchsia.settings.policy/Target
+enum/member fuchsia.settings.policy/Transform.MAX 1
+enum/member fuchsia.settings.policy/Transform.MIN 2
+strict enum fuchsia.settings.policy/Transform uint8
+table/member fuchsia.settings.policy/Volume.volume float32
+table fuchsia.settings.policy/Volume
+protocol/member fuchsia.settings.policy/VolumePolicyController.AddPolicy(fuchsia.settings.policy/Target target,fuchsia.settings.policy/PolicyParameters parameters) -> (fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result result)
+protocol/member fuchsia.settings.policy/VolumePolicyController.GetProperties() -> (vector<fuchsia.settings.policy/Property> properties)
+protocol/member fuchsia.settings.policy/VolumePolicyController.RemovePolicy(uint32 policy_id) -> (fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result result)
+protocol fuchsia.settings.policy/VolumePolicyController
+struct/member fuchsia.settings.policy/VolumePolicyController_AddPolicy_Response.policy_id uint32
+struct fuchsia.settings.policy/VolumePolicyController_AddPolicy_Response
+union/member fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result.err fuchsia.settings.policy/Error
+union/member fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result.response fuchsia.settings.policy/VolumePolicyController_AddPolicy_Response
+strict union fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result
+struct fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Response
+union/member fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result.err fuchsia.settings.policy/Error
+union/member fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result.response fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Response
+strict union fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result
+library fuchsia.settings.policy

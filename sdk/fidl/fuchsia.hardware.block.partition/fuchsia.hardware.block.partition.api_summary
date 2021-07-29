@@ -1,0 +1,15 @@
+struct/member fuchsia.hardware.block.partition/GUID.value array<uint8,16>
+struct fuchsia.hardware.block.partition/GUID
+const fuchsia.hardware.block.partition/GUID_LENGTH uint32 16
+const fuchsia.hardware.block.partition/NAME_LENGTH uint32 128
+protocol/member fuchsia.hardware.block.partition/Partition.AttachVmo(zx/handle:VMO vmo) -> (int32 status,fuchsia.hardware.block/VmoId:optional vmoid)
+protocol/member fuchsia.hardware.block.partition/Partition.CloseFifo() -> (int32 status)
+protocol/member fuchsia.hardware.block.partition/Partition.GetFifo() -> (int32 status,zx/handle:<FIFO,optional> fifo)
+protocol/member fuchsia.hardware.block.partition/Partition.GetInfo() -> (int32 status,fuchsia.hardware.block/BlockInfo:optional info)
+protocol/member fuchsia.hardware.block.partition/Partition.GetInstanceGuid() -> (int32 status,box<fuchsia.hardware.block.partition/GUID> guid)
+protocol/member fuchsia.hardware.block.partition/Partition.GetName() -> (int32 status,string:<128,optional> name)
+protocol/member fuchsia.hardware.block.partition/Partition.GetStats(bool clear) -> (int32 status,fuchsia.hardware.block/BlockStats:optional stats)
+protocol/member fuchsia.hardware.block.partition/Partition.GetTypeGuid() -> (int32 status,box<fuchsia.hardware.block.partition/GUID> guid)
+protocol/member fuchsia.hardware.block.partition/Partition.RebindDevice() -> (int32 status)
+protocol fuchsia.hardware.block.partition/Partition
+library fuchsia.hardware.block.partition

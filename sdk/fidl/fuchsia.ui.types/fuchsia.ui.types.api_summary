@@ -1,0 +1,10 @@
+struct/member fuchsia.ui.types/ColorRgb.blue float32
+struct/member fuchsia.ui.types/ColorRgb.green float32
+struct/member fuchsia.ui.types/ColorRgb.red float32
+struct fuchsia.ui.types/ColorRgb
+struct/member fuchsia.ui.types/ColorRgba.alpha float32
+struct/member fuchsia.ui.types/ColorRgba.blue float32
+struct/member fuchsia.ui.types/ColorRgba.green float32
+struct/member fuchsia.ui.types/ColorRgba.red float32
+struct fuchsia.ui.types/ColorRgba
+library fuchsia.ui.types

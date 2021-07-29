@@ -1,0 +1,14 @@
+protocol/member fuchsia.nand/Broker.Erase(fuchsia.nand/BrokerRequest request) -> (int32 status)
+protocol/member fuchsia.nand/Broker.GetInfo() -> (int32 status,fuchsia.hardware.nand/Info:optional info)
+protocol/member fuchsia.nand/Broker.Read(fuchsia.nand/BrokerRequest request) -> (int32 status,uint32 corrected_bit_flips)
+protocol/member fuchsia.nand/Broker.Write(fuchsia.nand/BrokerRequest request) -> (int32 status)
+protocol fuchsia.nand/Broker
+struct/member fuchsia.nand/BrokerRequest.data_vmo bool
+struct/member fuchsia.nand/BrokerRequest.length uint32
+struct/member fuchsia.nand/BrokerRequest.offset_data_vmo uint64
+struct/member fuchsia.nand/BrokerRequest.offset_nand uint32
+struct/member fuchsia.nand/BrokerRequest.offset_oob_vmo uint64
+struct/member fuchsia.nand/BrokerRequest.oob_vmo bool
+struct/member fuchsia.nand/BrokerRequest.vmo zx/handle:<VMO,optional>
+resource struct fuchsia.nand/BrokerRequest
+library fuchsia.nand

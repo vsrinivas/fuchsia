@@ -1,0 +1,28 @@
+protocol/member fuchsia.hardware.platform.device/PDev.GetBoardInfo() -> (int32 s,fuchsia.hardware.platform.device/PdevBoardInfo info)
+protocol/member fuchsia.hardware.platform.device/PDev.GetBti(uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.platform.device/PDev.GetDeviceInfo() -> (int32 s,fuchsia.hardware.platform.device/PdevDeviceInfo info)
+protocol/member fuchsia.hardware.platform.device/PDev.GetInterrupt(uint32 index,uint32 flags) -> (int32 s,zx/handle:INTERRUPT irq)
+protocol/member fuchsia.hardware.platform.device/PDev.GetMmio(uint32 index) -> (int32 s,fuchsia.hardware.platform.device/PdevMmio mmio)
+protocol/member fuchsia.hardware.platform.device/PDev.GetSmc(uint32 index) -> (int32 s,zx/handle:RESOURCE smc)
+protocol fuchsia.hardware.platform.device/PDev
+struct/member fuchsia.hardware.platform.device/PdevBoardInfo.board_name string:32
+struct/member fuchsia.hardware.platform.device/PdevBoardInfo.board_revision uint32
+struct/member fuchsia.hardware.platform.device/PdevBoardInfo.pid uint32
+struct/member fuchsia.hardware.platform.device/PdevBoardInfo.vid uint32
+struct fuchsia.hardware.platform.device/PdevBoardInfo
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.bti_count uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.did uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.irq_count uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.metadata_count uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.mmio_count uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.name string:32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.pid uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.reserved array<uint32,8>
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.smc_count uint32
+struct/member fuchsia.hardware.platform.device/PdevDeviceInfo.vid uint32
+struct fuchsia.hardware.platform.device/PdevDeviceInfo
+struct/member fuchsia.hardware.platform.device/PdevMmio.offset uint64
+struct/member fuchsia.hardware.platform.device/PdevMmio.size uint64
+struct/member fuchsia.hardware.platform.device/PdevMmio.vmo zx/handle:VMO
+resource struct fuchsia.hardware.platform.device/PdevMmio
+library fuchsia.hardware.platform.device

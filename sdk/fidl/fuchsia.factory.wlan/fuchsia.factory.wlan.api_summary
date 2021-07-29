@@ -1,0 +1,14 @@
+protocol/member fuchsia.factory.wlan/Iovar.Get(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Get_Result result)
+protocol/member fuchsia.factory.wlan/Iovar.Set(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Set_Result result)
+protocol fuchsia.factory.wlan/Iovar
+struct/member fuchsia.factory.wlan/Iovar_Get_Response.result vector<uint8>:16384
+struct fuchsia.factory.wlan/Iovar_Get_Response
+union/member fuchsia.factory.wlan/Iovar_Get_Result.err int32
+union/member fuchsia.factory.wlan/Iovar_Get_Result.response fuchsia.factory.wlan/Iovar_Get_Response
+strict union fuchsia.factory.wlan/Iovar_Get_Result
+struct fuchsia.factory.wlan/Iovar_Set_Response
+union/member fuchsia.factory.wlan/Iovar_Set_Result.err int32
+union/member fuchsia.factory.wlan/Iovar_Set_Result.response fuchsia.factory.wlan/Iovar_Set_Response
+strict union fuchsia.factory.wlan/Iovar_Set_Result
+const fuchsia.factory.wlan/MAX_BUFFER_SIZE uint64 16384
+library fuchsia.factory.wlan

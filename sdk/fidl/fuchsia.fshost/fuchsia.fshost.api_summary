@@ -1,0 +1,6 @@
+protocol/member fuchsia.fshost/Admin.Shutdown() -> ()
+protocol fuchsia.fshost/Admin
+protocol/member fuchsia.fshost/BlockWatcher.Pause() -> (int32 status)
+protocol/member fuchsia.fshost/BlockWatcher.Resume() -> (int32 status)
+protocol fuchsia.fshost/BlockWatcher
+library fuchsia.fshost

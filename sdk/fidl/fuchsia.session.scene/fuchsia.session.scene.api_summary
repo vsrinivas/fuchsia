@@ -1,0 +1,9 @@
+protocol/member fuchsia.session.scene/Manager.CapturePointerEvents(fuchsia.ui.policy/PointerCaptureListenerHACK listener)
+protocol/member fuchsia.session.scene/Manager.RequestFocus(fuchsia.ui.views/ViewRef view_ref) -> (fuchsia.session.scene/Manager_RequestFocus_Result result)
+protocol/member fuchsia.session.scene/Manager.SetRootView(fuchsia.ui.app/ViewProvider view_provider) -> (fuchsia.ui.views/ViewRef view_ref)
+protocol fuchsia.session.scene/Manager
+struct fuchsia.session.scene/Manager_RequestFocus_Response
+union/member fuchsia.session.scene/Manager_RequestFocus_Result.err fuchsia.ui.views/Error
+union/member fuchsia.session.scene/Manager_RequestFocus_Result.response fuchsia.session.scene/Manager_RequestFocus_Response
+strict union fuchsia.session.scene/Manager_RequestFocus_Result
+library fuchsia.session.scene

@@ -1,0 +1,20 @@
+protocol/member fuchsia.scenic.allocation/Allocator.RegisterBufferCollection(fuchsia.scenic.allocation/RegisterBufferCollectionArgs args) -> (fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Result result)
+protocol fuchsia.scenic.allocation/Allocator
+struct fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Response
+union/member fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Result.err fuchsia.scenic.allocation/RegisterBufferCollectionError
+union/member fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Result.response fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Response
+strict union fuchsia.scenic.allocation/Allocator_RegisterBufferCollection_Result
+struct/member fuchsia.scenic.allocation/BufferCollectionExportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.scenic.allocation/BufferCollectionExportToken
+struct/member fuchsia.scenic.allocation/BufferCollectionImportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.scenic.allocation/BufferCollectionImportToken
+table/member fuchsia.scenic.allocation/RegisterBufferCollectionArgs.buffer_collection_token fuchsia.sysmem/BufferCollectionToken
+table/member fuchsia.scenic.allocation/RegisterBufferCollectionArgs.export_token fuchsia.scenic.allocation/BufferCollectionExportToken
+table/member fuchsia.scenic.allocation/RegisterBufferCollectionArgs.usage fuchsia.scenic.allocation/RegisterBufferCollectionUsage
+resource table fuchsia.scenic.allocation/RegisterBufferCollectionArgs
+enum/member fuchsia.scenic.allocation/RegisterBufferCollectionError.BAD_OPERATION 1
+strict enum fuchsia.scenic.allocation/RegisterBufferCollectionError uint32
+enum/member fuchsia.scenic.allocation/RegisterBufferCollectionUsage.DEFAULT 0
+enum/member fuchsia.scenic.allocation/RegisterBufferCollectionUsage.SCREENSHOT 1
+strict enum fuchsia.scenic.allocation/RegisterBufferCollectionUsage uint32
+library fuchsia.scenic.allocation

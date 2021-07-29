@@ -1,0 +1,11 @@
+const fuchsia.inspect/MAX_TREE_NAME_LENGTH uint64 2040
+const fuchsia.inspect/MAX_TREE_NAME_LIST_SIZE uint64 64
+protocol/member fuchsia.inspect/Tree.GetContent() -> (fuchsia.inspect/TreeContent content)
+protocol/member fuchsia.inspect/Tree.ListChildNames(server_end:fuchsia.inspect/TreeNameIterator tree_iterator)
+protocol/member fuchsia.inspect/Tree.OpenChild(string:2040 child_name,server_end:fuchsia.inspect/Tree tree)
+protocol fuchsia.inspect/Tree
+table/member fuchsia.inspect/TreeContent.buffer fuchsia.mem/Buffer
+resource table fuchsia.inspect/TreeContent
+protocol/member fuchsia.inspect/TreeNameIterator.GetNext() -> (vector<string:2040>:64 name)
+protocol fuchsia.inspect/TreeNameIterator
+library fuchsia.inspect

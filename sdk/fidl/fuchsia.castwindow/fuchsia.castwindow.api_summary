@@ -1,0 +1,5 @@
+enum/member fuchsia.castwindow/Interaction.GO_BACK 1
+strict enum fuchsia.castwindow/Interaction uint32
+protocol/member fuchsia.castwindow/InteractionHandler.SendInteraction(string session_id,fuchsia.castwindow/Interaction interaction)
+protocol fuchsia.castwindow/InteractionHandler
+library fuchsia.castwindow

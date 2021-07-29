@@ -1,0 +1,26 @@
+protocol/member fuchsia.ssh/AuthorizedKeys.AddKey(fuchsia.ssh/SshAuthorizedKeyEntry key) -> (fuchsia.ssh/AuthorizedKeys_AddKey_Result result)
+protocol/member fuchsia.ssh/AuthorizedKeys.RemoveKey(fuchsia.ssh/SshAuthorizedKeyEntry key) -> (fuchsia.ssh/AuthorizedKeys_RemoveKey_Result result)
+protocol/member fuchsia.ssh/AuthorizedKeys.WatchKeys(server_end:fuchsia.ssh/KeyWatcher watcher)
+protocol fuchsia.ssh/AuthorizedKeys
+struct fuchsia.ssh/AuthorizedKeys_AddKey_Response
+union/member fuchsia.ssh/AuthorizedKeys_AddKey_Result.err int32
+union/member fuchsia.ssh/AuthorizedKeys_AddKey_Result.response fuchsia.ssh/AuthorizedKeys_AddKey_Response
+strict union fuchsia.ssh/AuthorizedKeys_AddKey_Result
+struct fuchsia.ssh/AuthorizedKeys_RemoveKey_Response
+union/member fuchsia.ssh/AuthorizedKeys_RemoveKey_Result.err int32
+union/member fuchsia.ssh/AuthorizedKeys_RemoveKey_Result.response fuchsia.ssh/AuthorizedKeys_RemoveKey_Response
+strict union fuchsia.ssh/AuthorizedKeys_RemoveKey_Result
+struct/member fuchsia.ssh/KeyEvent.event fuchsia.ssh/KeyEventType
+struct/member fuchsia.ssh/KeyEvent.key box<fuchsia.ssh/SshAuthorizedKeyEntry>
+struct fuchsia.ssh/KeyEvent
+enum/member fuchsia.ssh/KeyEventType.ADDED 2
+enum/member fuchsia.ssh/KeyEventType.EXISTING 1
+enum/member fuchsia.ssh/KeyEventType.FINISHED_EXISTING 4
+enum/member fuchsia.ssh/KeyEventType.REMOVED 3
+strict enum fuchsia.ssh/KeyEventType uint32
+protocol/member fuchsia.ssh/KeyWatcher.Next() -> (fuchsia.ssh/KeyEvent event)
+protocol fuchsia.ssh/KeyWatcher
+const fuchsia.ssh/MAX_SSH_KEY_LENGTH uint32 8192
+struct/member fuchsia.ssh/SshAuthorizedKeyEntry.key string:8192
+struct fuchsia.ssh/SshAuthorizedKeyEntry
+library fuchsia.ssh

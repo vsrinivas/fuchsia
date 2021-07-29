@@ -1,0 +1,51 @@
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_descriptor_type uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_device_class uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_device_protocol uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_device_sub_class uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_length uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_max_packet_size0 uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.b_num_configurations uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.bcd_device uint16
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.bcd_usb uint16
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.i_manufacturer uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.i_product uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.i_serial_number uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.id_product uint16
+struct/member fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor.id_vendor uint16
+struct fuchsia.hardware.usb.descriptor/UsbDeviceDescriptor
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.b_descriptor_type uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.b_endpoint_address uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.b_interval uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.b_length uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.bm_attributes uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor.w_max_packet_size uint16
+struct fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_alternate_setting uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_descriptor_type uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_interface_class uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_interface_number uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_interface_protocol uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_interface_sub_class uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_length uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.b_num_endpoints uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor.i_interface uint8
+struct fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor
+struct/member fuchsia.hardware.usb.descriptor/UsbSetup.b_request uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSetup.bm_request_type uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_index uint16
+struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_length uint16
+struct/member fuchsia.hardware.usb.descriptor/UsbSetup.w_value uint16
+struct fuchsia.hardware.usb.descriptor/UsbSetup
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.FULL 1
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.HIGH 3
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.LOW 2
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.SUPER 4
+enum/member fuchsia.hardware.usb.descriptor/UsbSpeed.UNDEFINED 0
+strict enum fuchsia.hardware.usb.descriptor/UsbSpeed uint32
+struct/member fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor.b_descriptor_type uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor.b_length uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor.b_max_burst uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor.bm_attributes uint8
+struct/member fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor.w_bytes_per_interval uint16
+struct fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor
+library fuchsia.hardware.usb.descriptor

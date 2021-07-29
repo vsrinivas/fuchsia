@@ -1,0 +1,175 @@
+struct/member fuchsia.bluetooth.control/AdapterInfo.address string
+struct/member fuchsia.bluetooth.control/AdapterInfo.identifier string
+struct/member fuchsia.bluetooth.control/AdapterInfo.state box<fuchsia.bluetooth.control/AdapterState>
+struct/member fuchsia.bluetooth.control/AdapterInfo.technology fuchsia.bluetooth.control/TechnologyType
+struct fuchsia.bluetooth.control/AdapterInfo
+struct/member fuchsia.bluetooth.control/AdapterState.discoverable fuchsia.bluetooth/Bool:optional
+struct/member fuchsia.bluetooth.control/AdapterState.discovering fuchsia.bluetooth/Bool:optional
+struct/member fuchsia.bluetooth.control/AdapterState.local_name string:optional
+struct/member fuchsia.bluetooth.control/AdapterState.local_service_uuids vector<string>:optional
+struct fuchsia.bluetooth.control/AdapterState
+enum/member fuchsia.bluetooth.control/AddressType.BREDR 2
+enum/member fuchsia.bluetooth.control/AddressType.LE_PUBLIC 0
+enum/member fuchsia.bluetooth.control/AddressType.LE_RANDOM 1
+strict enum fuchsia.bluetooth.control/AddressType uint8
+enum/member fuchsia.bluetooth.control/Appearance.BARCODE_SCANNER 704
+enum/member fuchsia.bluetooth.control/Appearance.BLOOD_PRESSURE 896
+enum/member fuchsia.bluetooth.control/Appearance.BLOOD_PRESSURE_ARM 897
+enum/member fuchsia.bluetooth.control/Appearance.BLOOD_PRESSURE_WRIST 898
+enum/member fuchsia.bluetooth.control/Appearance.CLOCK 256
+enum/member fuchsia.bluetooth.control/Appearance.COMPUTER 128
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING 1152
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING_CADENCE_SENSOR 1155
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING_COMPUTER 1153
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING_POWER_SENSOR 1156
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING_SPEED_AND_CADENCE_SENSOR 1157
+enum/member fuchsia.bluetooth.control/Appearance.CYCLING_SPEED_SENSOR 1154
+enum/member fuchsia.bluetooth.control/Appearance.DISPLAY 320
+enum/member fuchsia.bluetooth.control/Appearance.EYE_GLASSES 448
+enum/member fuchsia.bluetooth.control/Appearance.GLUCOSE_METER 1024
+enum/member fuchsia.bluetooth.control/Appearance.GLUCOSE_MONITOR 3328
+enum/member fuchsia.bluetooth.control/Appearance.HEART_RATE_SENSOR 832
+enum/member fuchsia.bluetooth.control/Appearance.HEART_RATE_SENSOR_BELT 833
+enum/member fuchsia.bluetooth.control/Appearance.HID 960
+enum/member fuchsia.bluetooth.control/Appearance.HID_BARCODE_SCANNER 968
+enum/member fuchsia.bluetooth.control/Appearance.HID_CARD_READER 966
+enum/member fuchsia.bluetooth.control/Appearance.HID_DIGITAL_PEN 967
+enum/member fuchsia.bluetooth.control/Appearance.HID_DIGITIZER_TABLET 965
+enum/member fuchsia.bluetooth.control/Appearance.HID_GAMEPAD 964
+enum/member fuchsia.bluetooth.control/Appearance.HID_JOYSTICK 963
+enum/member fuchsia.bluetooth.control/Appearance.HID_KEYBOARD 961
+enum/member fuchsia.bluetooth.control/Appearance.HID_MOUSE 962
+enum/member fuchsia.bluetooth.control/Appearance.KEYRING 576
+enum/member fuchsia.bluetooth.control/Appearance.MEDIA_PLAYER 640
+enum/member fuchsia.bluetooth.control/Appearance.PERSONAL_MOBILITY 3264
+enum/member fuchsia.bluetooth.control/Appearance.PERSONAL_MOBILITY_SCOOTER 3266
+enum/member fuchsia.bluetooth.control/Appearance.PERSONAL_MOBILITY_WHEELCHAIR 3265
+enum/member fuchsia.bluetooth.control/Appearance.PHONE 64
+enum/member fuchsia.bluetooth.control/Appearance.PULSE_OXIMETER 3136
+enum/member fuchsia.bluetooth.control/Appearance.PULSE_OXIMETER_FINGERTIP 3137
+enum/member fuchsia.bluetooth.control/Appearance.PULSE_OXIMETER_WRIST 3138
+enum/member fuchsia.bluetooth.control/Appearance.REMOTE_CONTROL 384
+enum/member fuchsia.bluetooth.control/Appearance.RUNNING_WALKING_SENSOR 1088
+enum/member fuchsia.bluetooth.control/Appearance.RUNNING_WALKING_SENSOR_IN_SHOE 1089
+enum/member fuchsia.bluetooth.control/Appearance.RUNNING_WALKING_SENSOR_ON_HIP 1091
+enum/member fuchsia.bluetooth.control/Appearance.RUNNING_WALKING_SENSOR_ON_SHOE 1090
+enum/member fuchsia.bluetooth.control/Appearance.SPORTS_ACTIVITY 5184
+enum/member fuchsia.bluetooth.control/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY 5186
+enum/member fuchsia.bluetooth.control/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_POD 5188
+enum/member fuchsia.bluetooth.control/Appearance.SPORTS_ACTIVITY_LOCATION_DISPLAY 5185
+enum/member fuchsia.bluetooth.control/Appearance.SPORTS_ACTIVITY_LOCATION_POD 5187
+enum/member fuchsia.bluetooth.control/Appearance.TAG 512
+enum/member fuchsia.bluetooth.control/Appearance.THERMOMETER 768
+enum/member fuchsia.bluetooth.control/Appearance.THERMOMETER_EAR 769
+enum/member fuchsia.bluetooth.control/Appearance.UNKNOWN 0
+enum/member fuchsia.bluetooth.control/Appearance.WATCH 192
+enum/member fuchsia.bluetooth.control/Appearance.WATCH_SPORTS 193
+enum/member fuchsia.bluetooth.control/Appearance.WEIGHT_SCALE 3200
+strict enum fuchsia.bluetooth.control/Appearance uint16
+struct/member fuchsia.bluetooth.control/BREDRData.address string
+struct/member fuchsia.bluetooth.control/BREDRData.link_key box<fuchsia.bluetooth.control/LTK>
+struct/member fuchsia.bluetooth.control/BREDRData.piconet_leader bool
+struct/member fuchsia.bluetooth.control/BREDRData.services vector<string:36>
+struct fuchsia.bluetooth.control/BREDRData
+struct/member fuchsia.bluetooth.control/BondingData.bredr box<fuchsia.bluetooth.control/BREDRData>
+struct/member fuchsia.bluetooth.control/BondingData.identifier string
+struct/member fuchsia.bluetooth.control/BondingData.le box<fuchsia.bluetooth.control/LEData>
+struct/member fuchsia.bluetooth.control/BondingData.local_address string
+struct/member fuchsia.bluetooth.control/BondingData.name string:optional
+struct fuchsia.bluetooth.control/BondingData
+protocol/member fuchsia.bluetooth.control/Control.Connect(string device_id) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.Disconnect(string device_id) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.Forget(string device_id) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.GetActiveAdapterInfo() -> (box<fuchsia.bluetooth.control/AdapterInfo> adapter)
+protocol/member fuchsia.bluetooth.control/Control.GetAdapters() -> (vector<fuchsia.bluetooth.control/AdapterInfo>:optional adapters)
+protocol/member fuchsia.bluetooth.control/Control.GetKnownRemoteDevices() -> (vector<fuchsia.bluetooth.control/RemoteDevice> devices)
+protocol/member fuchsia.bluetooth.control/Control.IsBluetoothAvailable() -> (bool available)
+protocol/member fuchsia.bluetooth.control/Control.OnActiveAdapterChanged -> (box<fuchsia.bluetooth.control/AdapterInfo> adapter)
+protocol/member fuchsia.bluetooth.control/Control.OnAdapterRemoved -> (string identifier)
+protocol/member fuchsia.bluetooth.control/Control.OnAdapterUpdated -> (fuchsia.bluetooth.control/AdapterInfo adapter)
+protocol/member fuchsia.bluetooth.control/Control.OnDeviceRemoved -> (string identifier)
+protocol/member fuchsia.bluetooth.control/Control.OnDeviceUpdated -> (fuchsia.bluetooth.control/RemoteDevice device)
+protocol/member fuchsia.bluetooth.control/Control.Pair(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.control/PairingOptions options) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.RequestDiscovery(bool discovery) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.SetActiveAdapter(string identifier) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.SetDeviceClass(fuchsia.bluetooth.control/DeviceClass device_class) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.SetDiscoverable(bool discoverable) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.SetIOCapabilities(fuchsia.bluetooth.control/InputCapabilityType input,fuchsia.bluetooth.control/OutputCapabilityType output)
+protocol/member fuchsia.bluetooth.control/Control.SetName(string:optional name) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/Control.SetPairingDelegate(client_end:<fuchsia.bluetooth.control/PairingDelegate,optional> delegate) -> (bool success)
+protocol fuchsia.bluetooth.control/Control
+struct/member fuchsia.bluetooth.control/DeviceClass.value uint32
+struct fuchsia.bluetooth.control/DeviceClass
+struct/member fuchsia.bluetooth.control/HostData.irk box<fuchsia.bluetooth.control/LocalKey>
+struct fuchsia.bluetooth.control/HostData
+enum/member fuchsia.bluetooth.control/InputCapabilityType.CONFIRMATION 1
+enum/member fuchsia.bluetooth.control/InputCapabilityType.KEYBOARD 2
+enum/member fuchsia.bluetooth.control/InputCapabilityType.NONE 0
+strict enum fuchsia.bluetooth.control/InputCapabilityType uint32
+struct/member fuchsia.bluetooth.control/LEConnectionParameters.connection_interval uint16
+struct/member fuchsia.bluetooth.control/LEConnectionParameters.connection_latency uint16
+struct/member fuchsia.bluetooth.control/LEConnectionParameters.supervision_timeout uint16
+struct fuchsia.bluetooth.control/LEConnectionParameters
+struct/member fuchsia.bluetooth.control/LEData.address string
+struct/member fuchsia.bluetooth.control/LEData.address_type fuchsia.bluetooth.control/AddressType
+struct/member fuchsia.bluetooth.control/LEData.connection_parameters box<fuchsia.bluetooth.control/LEConnectionParameters>
+struct/member fuchsia.bluetooth.control/LEData.csrk box<fuchsia.bluetooth.control/RemoteKey>
+struct/member fuchsia.bluetooth.control/LEData.irk box<fuchsia.bluetooth.control/RemoteKey>
+struct/member fuchsia.bluetooth.control/LEData.ltk box<fuchsia.bluetooth.control/LTK>
+struct/member fuchsia.bluetooth.control/LEData.services vector<string:36>
+struct fuchsia.bluetooth.control/LEData
+struct/member fuchsia.bluetooth.control/LTK.ediv uint16
+struct/member fuchsia.bluetooth.control/LTK.key fuchsia.bluetooth.control/RemoteKey
+struct/member fuchsia.bluetooth.control/LTK.key_size uint8
+struct/member fuchsia.bluetooth.control/LTK.rand uint64
+struct fuchsia.bluetooth.control/LTK
+struct/member fuchsia.bluetooth.control/LocalKey.value array<uint8,16>
+struct fuchsia.bluetooth.control/LocalKey
+enum/member fuchsia.bluetooth.control/OutputCapabilityType.DISPLAY 1
+enum/member fuchsia.bluetooth.control/OutputCapabilityType.NONE 0
+strict enum fuchsia.bluetooth.control/OutputCapabilityType uint32
+protocol/member fuchsia.bluetooth.control/PairingDelegate.OnLocalKeypress -> (string device_id,fuchsia.bluetooth.control/PairingKeypressType keypress)
+protocol/member fuchsia.bluetooth.control/PairingDelegate.OnPairingComplete(string device_id,fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.control/PairingDelegate.OnPairingRequest(fuchsia.bluetooth.control/RemoteDevice device,fuchsia.bluetooth.control/PairingMethod method,string:optional displayed_passkey) -> (bool accept,string:optional entered_passkey)
+protocol/member fuchsia.bluetooth.control/PairingDelegate.OnRemoteKeypress(string device_id,fuchsia.bluetooth.control/PairingKeypressType keypress)
+protocol fuchsia.bluetooth.control/PairingDelegate
+enum/member fuchsia.bluetooth.control/PairingKeypressType.DIGIT_ENTERED 0
+enum/member fuchsia.bluetooth.control/PairingKeypressType.DIGIT_ERASED 1
+enum/member fuchsia.bluetooth.control/PairingKeypressType.PASSKEY_CLEARED 2
+enum/member fuchsia.bluetooth.control/PairingKeypressType.PASSKEY_ENTERED 3
+strict enum fuchsia.bluetooth.control/PairingKeypressType uint32
+enum/member fuchsia.bluetooth.control/PairingMethod.CONSENT 0
+enum/member fuchsia.bluetooth.control/PairingMethod.PASSKEY_COMPARISON 2
+enum/member fuchsia.bluetooth.control/PairingMethod.PASSKEY_DISPLAY 1
+enum/member fuchsia.bluetooth.control/PairingMethod.PASSKEY_ENTRY 3
+strict enum fuchsia.bluetooth.control/PairingMethod uint32
+table/member fuchsia.bluetooth.control/PairingOptions.le_security_level fuchsia.bluetooth.control/PairingSecurityLevel
+table/member fuchsia.bluetooth.control/PairingOptions.non_bondable bool
+table/member fuchsia.bluetooth.control/PairingOptions.transport fuchsia.bluetooth.control/TechnologyType
+table fuchsia.bluetooth.control/PairingOptions
+enum/member fuchsia.bluetooth.control/PairingSecurityLevel.AUTHENTICATED 2
+enum/member fuchsia.bluetooth.control/PairingSecurityLevel.ENCRYPTED 1
+strict enum fuchsia.bluetooth.control/PairingSecurityLevel uint32
+struct/member fuchsia.bluetooth.control/RemoteDevice.address string
+struct/member fuchsia.bluetooth.control/RemoteDevice.appearance fuchsia.bluetooth.control/Appearance
+struct/member fuchsia.bluetooth.control/RemoteDevice.bonded bool
+struct/member fuchsia.bluetooth.control/RemoteDevice.connected bool
+struct/member fuchsia.bluetooth.control/RemoteDevice.identifier string
+struct/member fuchsia.bluetooth.control/RemoteDevice.name string:optional
+struct/member fuchsia.bluetooth.control/RemoteDevice.rssi fuchsia.bluetooth/Int8:optional
+struct/member fuchsia.bluetooth.control/RemoteDevice.service_uuids vector<string>
+struct/member fuchsia.bluetooth.control/RemoteDevice.technology fuchsia.bluetooth.control/TechnologyType
+struct/member fuchsia.bluetooth.control/RemoteDevice.tx_power fuchsia.bluetooth/Int8:optional
+struct fuchsia.bluetooth.control/RemoteDevice
+struct/member fuchsia.bluetooth.control/RemoteKey.security_properties fuchsia.bluetooth.control/SecurityProperties
+struct/member fuchsia.bluetooth.control/RemoteKey.value array<uint8,16>
+struct fuchsia.bluetooth.control/RemoteKey
+struct/member fuchsia.bluetooth.control/SecurityProperties.authenticated bool
+struct/member fuchsia.bluetooth.control/SecurityProperties.encryption_key_size uint8
+struct/member fuchsia.bluetooth.control/SecurityProperties.secure_connections bool
+struct fuchsia.bluetooth.control/SecurityProperties
+enum/member fuchsia.bluetooth.control/TechnologyType.CLASSIC 1
+enum/member fuchsia.bluetooth.control/TechnologyType.DUAL_MODE 2
+enum/member fuchsia.bluetooth.control/TechnologyType.LOW_ENERGY 0
+strict enum fuchsia.bluetooth.control/TechnologyType uint32
+library fuchsia.bluetooth.control

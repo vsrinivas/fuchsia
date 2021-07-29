@@ -1,0 +1,50 @@
+enum/member fuchsia.images/AlphaFormat.NON_PREMULTIPLIED 2
+enum/member fuchsia.images/AlphaFormat.OPAQUE 0
+enum/member fuchsia.images/AlphaFormat.PREMULTIPLIED 1
+strict enum fuchsia.images/AlphaFormat uint32
+enum/member fuchsia.images/ColorSpace.SRGB 0
+strict enum fuchsia.images/ColorSpace uint32
+struct/member fuchsia.images/EncodedImage.size uint64
+struct/member fuchsia.images/EncodedImage.vmo zx/handle:VMO
+resource struct fuchsia.images/EncodedImage
+struct/member fuchsia.images/ImageInfo.alpha_format fuchsia.images/AlphaFormat 0
+struct/member fuchsia.images/ImageInfo.color_space fuchsia.images/ColorSpace 0
+struct/member fuchsia.images/ImageInfo.height uint32
+struct/member fuchsia.images/ImageInfo.pixel_format fuchsia.images/PixelFormat 0
+struct/member fuchsia.images/ImageInfo.stride uint32
+struct/member fuchsia.images/ImageInfo.tiling fuchsia.images/Tiling 0
+struct/member fuchsia.images/ImageInfo.transform fuchsia.images/Transform 0
+struct/member fuchsia.images/ImageInfo.width uint32
+struct fuchsia.images/ImageInfo
+protocol/member fuchsia.images/ImagePipe.AddImage(uint32 image_id,fuchsia.images/ImageInfo image_info,zx/handle:VMO memory,uint64 offset_bytes,uint64 size_bytes,fuchsia.images/MemoryType memory_type)
+protocol/member fuchsia.images/ImagePipe.PresentImage(uint32 image_id,uint64 presentation_time,vector<zx/handle:EVENT> acquire_fences,vector<zx/handle:EVENT> release_fences) -> (fuchsia.images/PresentationInfo presentation_info)
+protocol/member fuchsia.images/ImagePipe.RemoveImage(uint32 image_id)
+protocol fuchsia.images/ImagePipe
+protocol/member fuchsia.images/ImagePipe2.AddBufferCollection(uint32 buffer_collection_id,fuchsia.sysmem/BufferCollectionToken buffer_collection_token)
+protocol/member fuchsia.images/ImagePipe2.AddImage(uint32 image_id,uint32 buffer_collection_id,uint32 buffer_collection_index,fuchsia.sysmem/ImageFormat_2 image_format)
+protocol/member fuchsia.images/ImagePipe2.PresentImage(uint32 image_id,uint64 presentation_time,vector<zx/handle:EVENT>:16 acquire_fences,vector<zx/handle:EVENT>:16 release_fences) -> (fuchsia.images/PresentationInfo presentation_info)
+protocol/member fuchsia.images/ImagePipe2.RemoveBufferCollection(uint32 buffer_collection_id)
+protocol/member fuchsia.images/ImagePipe2.RemoveImage(uint32 image_id)
+protocol fuchsia.images/ImagePipe2
+const fuchsia.images/MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 16
+enum/member fuchsia.images/MemoryType.HOST_MEMORY 0
+enum/member fuchsia.images/MemoryType.VK_DEVICE_MEMORY 1
+strict enum fuchsia.images/MemoryType uint32
+enum/member fuchsia.images/PixelFormat.BGRA_8 0
+enum/member fuchsia.images/PixelFormat.NV12 2
+enum/member fuchsia.images/PixelFormat.R8G8B8A8 4
+enum/member fuchsia.images/PixelFormat.YUY2 1
+enum/member fuchsia.images/PixelFormat.YV12 3
+strict enum fuchsia.images/PixelFormat uint32
+struct/member fuchsia.images/PresentationInfo.presentation_interval uint64
+struct/member fuchsia.images/PresentationInfo.presentation_time uint64
+struct fuchsia.images/PresentationInfo
+enum/member fuchsia.images/Tiling.GPU_OPTIMAL 1
+enum/member fuchsia.images/Tiling.LINEAR 0
+strict enum fuchsia.images/Tiling uint32
+enum/member fuchsia.images/Transform.FLIP_HORIZONTAL 1
+enum/member fuchsia.images/Transform.FLIP_VERTICAL 2
+enum/member fuchsia.images/Transform.FLIP_VERTICAL_AND_HORIZONTAL 3
+enum/member fuchsia.images/Transform.NORMAL 0
+strict enum fuchsia.images/Transform uint32
+library fuchsia.images

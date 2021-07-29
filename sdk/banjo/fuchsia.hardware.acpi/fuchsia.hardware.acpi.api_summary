@@ -1,0 +1,14 @@
+protocol/member fuchsia.hardware.acpi/Acpi.ConnectSysmem(zx/handle:CHANNEL connection) -> (int32 s)
+protocol/member fuchsia.hardware.acpi/Acpi.GetBti(uint32 bdf,uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.acpi/Acpi.GetMmio(uint32 index) -> (int32 s,fuchsia.hardware.acpi/AcpiMmio mmio)
+protocol/member fuchsia.hardware.acpi/Acpi.GetPio(uint32 index) -> (int32 s,zx/handle:RESOURCE pio)
+protocol/member fuchsia.hardware.acpi/Acpi.MapInterrupt(int64 index) -> (int32 s,zx/handle:INTERRUPT handle)
+protocol/member fuchsia.hardware.acpi/Acpi.RegisterSysmemHeap(uint64 heap,zx/handle:CHANNEL connection) -> (int32 s)
+protocol fuchsia.hardware.acpi/Acpi
+protocol/member fuchsia.hardware.acpi/AcpiDevice.Stub() -> ()
+protocol fuchsia.hardware.acpi/AcpiDevice
+struct/member fuchsia.hardware.acpi/AcpiMmio.offset uint64
+struct/member fuchsia.hardware.acpi/AcpiMmio.size uint64
+struct/member fuchsia.hardware.acpi/AcpiMmio.vmo zx/handle:VMO
+resource struct fuchsia.hardware.acpi/AcpiMmio
+library fuchsia.hardware.acpi

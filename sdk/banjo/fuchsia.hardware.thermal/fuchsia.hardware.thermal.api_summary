@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.thermal/Thermal.Connect(zx/handle:CHANNEL chan) -> (int32 status)
+protocol fuchsia.hardware.thermal/Thermal
+library fuchsia.hardware.thermal

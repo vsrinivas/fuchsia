@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.keyboard.focus/Controller.Notify(fuchsia.ui.views/ViewRef view_ref) -> ()
+protocol fuchsia.ui.keyboard.focus/Controller
+library fuchsia.ui.keyboard.focus

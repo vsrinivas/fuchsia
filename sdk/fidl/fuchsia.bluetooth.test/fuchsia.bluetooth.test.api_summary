@@ -1,0 +1,157 @@
+struct/member fuchsia.bluetooth.test/AclBufferSettings.data_packet_length uint16
+struct/member fuchsia.bluetooth.test/AclBufferSettings.total_num_data_packets uint8
+struct fuchsia.bluetooth.test/AclBufferSettings
+struct/member fuchsia.bluetooth.test/AdvertisingData.data vector<uint8>:31
+struct fuchsia.bluetooth.test/AdvertisingData
+table/member fuchsia.bluetooth.test/BredrPeerParameters.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.test/BredrPeerParameters.connectable bool
+table/member fuchsia.bluetooth.test/BredrPeerParameters.device_class fuchsia.bluetooth/DeviceClass
+table/member fuchsia.bluetooth.test/BredrPeerParameters.service_definition vector<fuchsia.bluetooth.bredr/ServiceDefinition>:32
+table fuchsia.bluetooth.test/BredrPeerParameters
+enum/member fuchsia.bluetooth.test/ConnectionState.CONNECTED 1
+enum/member fuchsia.bluetooth.test/ConnectionState.DISCONNECTED 2
+strict enum fuchsia.bluetooth.test/ConnectionState uint32
+table/member fuchsia.bluetooth.test/ControllerParameters.device_class fuchsia.bluetooth/DeviceClass
+table/member fuchsia.bluetooth.test/ControllerParameters.local_name string:248
+table fuchsia.bluetooth.test/ControllerParameters
+enum/member fuchsia.bluetooth.test/EmulatorError.FAILED 1
+enum/member fuchsia.bluetooth.test/EmulatorError.HCI_ALREADY_PUBLISHED 2
+strict enum fuchsia.bluetooth.test/EmulatorError uint32
+enum/member fuchsia.bluetooth.test/EmulatorPeerError.ADDRESS_REPEATED 1
+enum/member fuchsia.bluetooth.test/EmulatorPeerError.NOT_FOUND 3
+enum/member fuchsia.bluetooth.test/EmulatorPeerError.PARAMETERS_INVALID 2
+strict enum fuchsia.bluetooth.test/EmulatorPeerError uint32
+table/member fuchsia.bluetooth.test/EmulatorSettings.acl_buffer_settings fuchsia.bluetooth.test/AclBufferSettings
+table/member fuchsia.bluetooth.test/EmulatorSettings.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.test/EmulatorSettings.extended_advertising bool
+table/member fuchsia.bluetooth.test/EmulatorSettings.hci_config fuchsia.bluetooth.test/HciConfig
+table/member fuchsia.bluetooth.test/EmulatorSettings.le_acl_buffer_settings fuchsia.bluetooth.test/AclBufferSettings
+table fuchsia.bluetooth.test/EmulatorSettings
+enum/member fuchsia.bluetooth.test/HciConfig.DUAL_MODE 1
+enum/member fuchsia.bluetooth.test/HciConfig.LE_ONLY 2
+strict enum fuchsia.bluetooth.test/HciConfig uint32
+protocol/member fuchsia.bluetooth.test/HciEmulator.AddBredrPeer(fuchsia.bluetooth.test/BredrPeerParameters parameters,server_end:fuchsia.bluetooth.test/Peer peer) -> (fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Result result)
+protocol/member fuchsia.bluetooth.test/HciEmulator.AddLowEnergyPeer(fuchsia.bluetooth.test/LowEnergyPeerParameters parameters,server_end:fuchsia.bluetooth.test/Peer peer) -> (fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Result result)
+protocol/member fuchsia.bluetooth.test/HciEmulator.Publish(fuchsia.bluetooth.test/EmulatorSettings settings) -> (fuchsia.bluetooth.test/HciEmulator_Publish_Result result)
+protocol/member fuchsia.bluetooth.test/HciEmulator.WatchControllerParameters() -> (fuchsia.bluetooth.test/ControllerParameters parameters)
+protocol/member fuchsia.bluetooth.test/HciEmulator.WatchLeScanStates() -> (vector<fuchsia.bluetooth.test/LeScanState> states)
+protocol/member fuchsia.bluetooth.test/HciEmulator.WatchLegacyAdvertisingStates() -> (vector<fuchsia.bluetooth.test/LegacyAdvertisingState> states)
+protocol fuchsia.bluetooth.test/HciEmulator
+struct fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Response
+union/member fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Result.err fuchsia.bluetooth.test/EmulatorPeerError
+union/member fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Result.response fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Response
+strict union fuchsia.bluetooth.test/HciEmulator_AddBredrPeer_Result
+struct fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Response
+union/member fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Result.err fuchsia.bluetooth.test/EmulatorPeerError
+union/member fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Result.response fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Response
+strict union fuchsia.bluetooth.test/HciEmulator_AddLowEnergyPeer_Result
+struct fuchsia.bluetooth.test/HciEmulator_Publish_Response
+union/member fuchsia.bluetooth.test/HciEmulator_Publish_Result.err fuchsia.bluetooth.test/EmulatorError
+union/member fuchsia.bluetooth.test/HciEmulator_Publish_Result.response fuchsia.bluetooth.test/HciEmulator_Publish_Response
+strict union fuchsia.bluetooth.test/HciEmulator_Publish_Result
+enum/member fuchsia.bluetooth.test/HciError.AUTHENTICATION_FAILURE 5
+enum/member fuchsia.bluetooth.test/HciError.CHANNEL_CLASSIFICATION_NOT_SUPPORTED 46
+enum/member fuchsia.bluetooth.test/HciError.COARSE_CLOCK_ADJUSTMENT_REJECTED 64
+enum/member fuchsia.bluetooth.test/HciError.COMMAND_DISALLOWED 12
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_ACCEPT_TIMEOUT_EXCEEDED 16
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_ALREADY_EXISTS 11
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_FAILED_TO_BE_ESTABLISHED 62
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_LIMIT_EXCEEDED 9
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_REJECTED_BAD_BD_ADDR 15
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_REJECTED_LIMITED_RESOURCES 13
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_REJECTED_NO_SUITABLE_CHANNEL_FOUND 57
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_REJECTED_SECURITY 14
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_TERMINATED_BY_LOCAL_HOST 22
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_TERMINATED_MIC_FAILURE 61
+enum/member fuchsia.bluetooth.test/HciError.CONNECTION_TIMEOUT 8
+enum/member fuchsia.bluetooth.test/HciError.CONTROLLER_BUSY 58
+enum/member fuchsia.bluetooth.test/HciError.DIFFERENT_TRANSACTION_COLLISION 42
+enum/member fuchsia.bluetooth.test/HciError.DIRECTED_ADVERTISING_TIMEOUT 60
+enum/member fuchsia.bluetooth.test/HciError.ENCRYPTION_MODE_NOT_ACCEPTABLE 37
+enum/member fuchsia.bluetooth.test/HciError.EXTENDED_INQUIRY_RESPONSE_TOO_LARGE 54
+enum/member fuchsia.bluetooth.test/HciError.HARDWARE_FAILURE 3
+enum/member fuchsia.bluetooth.test/HciError.HOST_BUSY_PAIRING 56
+enum/member fuchsia.bluetooth.test/HciError.INSTANT_PASSED 40
+enum/member fuchsia.bluetooth.test/HciError.INSUFFICIENT_SECURITY 47
+enum/member fuchsia.bluetooth.test/HciError.INVALID_HCICOMMAND_PARAMETERS 18
+enum/member fuchsia.bluetooth.test/HciError.INVALID_LMP_OR_LL_PARAMETERS 30
+enum/member fuchsia.bluetooth.test/HciError.LIMIT_REACHED 67
+enum/member fuchsia.bluetooth.test/HciError.LINK_KEY_CANNOT_BE_CHANGED 38
+enum/member fuchsia.bluetooth.test/HciError.LMP_ERROR_TRANSACTION_COLLISION 35
+enum/member fuchsia.bluetooth.test/HciError.LMP_OR_LL_RESPONSE_TIMEOUT 34
+enum/member fuchsia.bluetooth.test/HciError.LMP_PDU_NOT_ALLOWED 36
+enum/member fuchsia.bluetooth.test/HciError.MAC_CONNECTION_FAILED 63
+enum/member fuchsia.bluetooth.test/HciError.MEMORY_CAPACITY_EXCEEDED 7
+enum/member fuchsia.bluetooth.test/HciError.OPERATION_CANCELLED_BY_HOST 68
+enum/member fuchsia.bluetooth.test/HciError.PAGE_TIMEOUT 4
+enum/member fuchsia.bluetooth.test/HciError.PAIRING_NOT_ALLOWED 24
+enum/member fuchsia.bluetooth.test/HciError.PAIRING_WITH_UNIT_KEY_NOT_SUPPORTED 41
+enum/member fuchsia.bluetooth.test/HciError.PARAMETER_OUT_OF_MANDATORY_RANGE 48
+enum/member fuchsia.bluetooth.test/HciError.PIN_OR_KEY_MISSING 6
+enum/member fuchsia.bluetooth.test/HciError.QOS_REJECTED 45
+enum/member fuchsia.bluetooth.test/HciError.QOS_UNACCEPTABLE_PARAMETER 44
+enum/member fuchsia.bluetooth.test/HciError.REMOTE_DEVICE_TERMINATED_CONNECTION_LOW_RESOURCES 20
+enum/member fuchsia.bluetooth.test/HciError.REMOTE_DEVICE_TERMINATED_CONNECTION_POWER_OFF 21
+enum/member fuchsia.bluetooth.test/HciError.REMOTE_USER_TERMINATED_CONNECTION 19
+enum/member fuchsia.bluetooth.test/HciError.REPEATED_ATTEMPTS 23
+enum/member fuchsia.bluetooth.test/HciError.REQUESTED_QOS_NOT_SUPPORTED 39
+enum/member fuchsia.bluetooth.test/HciError.RESERVED0 43
+enum/member fuchsia.bluetooth.test/HciError.RESERVED1 49
+enum/member fuchsia.bluetooth.test/HciError.RESERVED2 51
+enum/member fuchsia.bluetooth.test/HciError.RESERVED_SLOT_VIOLATION 52
+enum/member fuchsia.bluetooth.test/HciError.ROLE_CHANGE_NOT_ALLOWED 33
+enum/member fuchsia.bluetooth.test/HciError.ROLE_SWITCH_FAILED 53
+enum/member fuchsia.bluetooth.test/HciError.ROLE_SWITCH_PENDING 50
+enum/member fuchsia.bluetooth.test/HciError.SCO_AIR_MODE_REJECTED 29
+enum/member fuchsia.bluetooth.test/HciError.SCO_INTERVAL_REJECTED 28
+enum/member fuchsia.bluetooth.test/HciError.SCO_OFFSET_REJECTED 27
+enum/member fuchsia.bluetooth.test/HciError.SECURE_SIMPLE_PAIRING_NOT_SUPPORTED_BY_HOST 55
+enum/member fuchsia.bluetooth.test/HciError.SUCCESS 0
+enum/member fuchsia.bluetooth.test/HciError.SYNCHRONOUS_CONNECTION_LIMIT_EXCEEDED 10
+enum/member fuchsia.bluetooth.test/HciError.TYPE0_SUBMAP_NOT_DEFINED 65
+enum/member fuchsia.bluetooth.test/HciError.UNACCEPTABLE_CONNECTION_PARAMETERS 59
+enum/member fuchsia.bluetooth.test/HciError.UNKNOWN_ADVERTISING_IDENTIFIER 66
+enum/member fuchsia.bluetooth.test/HciError.UNKNOWN_COMMAND 1
+enum/member fuchsia.bluetooth.test/HciError.UNKNOWN_CONNECTION_ID 2
+enum/member fuchsia.bluetooth.test/HciError.UNKNOWN_LMP_PDU 25
+enum/member fuchsia.bluetooth.test/HciError.UNSPECIFIED_ERROR 31
+enum/member fuchsia.bluetooth.test/HciError.UNSUPPORTED_FEATURE_OR_PARAMETER 17
+enum/member fuchsia.bluetooth.test/HciError.UNSUPPORTED_LMP_OR_LL_PARAMETER_VALUE 32
+enum/member fuchsia.bluetooth.test/HciError.UNSUPPORTED_REMOTE_FEATURE 26
+strict enum fuchsia.bluetooth.test/HciError uint8
+table/member fuchsia.bluetooth.test/LeScanState.active bool
+table/member fuchsia.bluetooth.test/LeScanState.address_type fuchsia.bluetooth/AddressType
+table/member fuchsia.bluetooth.test/LeScanState.enabled bool
+table/member fuchsia.bluetooth.test/LeScanState.filter_duplicates bool
+table/member fuchsia.bluetooth.test/LeScanState.interval uint16
+table/member fuchsia.bluetooth.test/LeScanState.window uint16
+table fuchsia.bluetooth.test/LeScanState
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.address_type fuchsia.bluetooth/AddressType
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.advertising_data vector<uint8>:31
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.enabled bool
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.interval_max uint16
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.interval_min uint16
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.scan_response vector<uint8>:31
+table/member fuchsia.bluetooth.test/LegacyAdvertisingState.type fuchsia.bluetooth.test/LegacyAdvertisingType
+table fuchsia.bluetooth.test/LegacyAdvertisingState
+enum/member fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_DIRECT_IND 1
+enum/member fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_IND 0
+enum/member fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_NONCONN_IND 3
+enum/member fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_SCAN_IND 2
+enum/member fuchsia.bluetooth.test/LegacyAdvertisingType.SCAN_RSP 4
+strict enum fuchsia.bluetooth.test/LegacyAdvertisingType uint8
+table/member fuchsia.bluetooth.test/LowEnergyPeerParameters.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.test/LowEnergyPeerParameters.advertisement fuchsia.bluetooth.test/AdvertisingData
+table/member fuchsia.bluetooth.test/LowEnergyPeerParameters.connectable bool
+table/member fuchsia.bluetooth.test/LowEnergyPeerParameters.scan_response fuchsia.bluetooth.test/AdvertisingData
+table fuchsia.bluetooth.test/LowEnergyPeerParameters
+const fuchsia.bluetooth.test/MAX_EXTENDED_ADVERTISING_DATA_LENGTH uint8 251
+const fuchsia.bluetooth.test/MAX_LEGACY_ADVERTISING_DATA_LENGTH uint8 31
+const fuchsia.bluetooth.test/MAX_LOCAL_NAME_LENGTH uint8 248
+const fuchsia.bluetooth.test/MAX_PEER_SERVICES uint8 32
+protocol/member fuchsia.bluetooth.test/Peer.AssignConnectionStatus(fuchsia.bluetooth.test/HciError status) -> ()
+protocol/member fuchsia.bluetooth.test/Peer.EmulateDisconnectionComplete()
+protocol/member fuchsia.bluetooth.test/Peer.EmulateLeConnectionComplete(fuchsia.bluetooth/ConnectionRole role)
+protocol/member fuchsia.bluetooth.test/Peer.WatchConnectionStates() -> (vector<fuchsia.bluetooth.test/ConnectionState> states)
+protocol fuchsia.bluetooth.test/Peer
+library fuchsia.bluetooth.test

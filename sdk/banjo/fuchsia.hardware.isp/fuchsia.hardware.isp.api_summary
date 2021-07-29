@@ -1,0 +1,17 @@
+protocol/member fuchsia.hardware.isp/Isp.CreateOutputStream(fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection,fuchsia.sysmem/ImageFormat_2 image_format,fuchsia.hardware.camera/FrameRate rate,fuchsia.hardware.isp/StreamType type,fuchsia.hardware.camerahwaccel/HwAccelFrameCallback frame_callback) -> (int32 s,client_end:fuchsia.hardware.isp/OutputStream st)
+protocol/member fuchsia.hardware.isp/Isp.SetFrameRateRange(fuchsia.hardware.camera/FrameRate min_frame_rate,fuchsia.hardware.camera/FrameRate max_frame_rate) -> (int32 s)
+protocol/member fuchsia.hardware.isp/Isp.SetTestPattern(uint8 mode,vector<uint8> data) -> (int32 s)
+protocol fuchsia.hardware.isp/Isp
+protocol/member fuchsia.hardware.isp/IspStreamShutdownCallback.ShutdownComplete(int32 status)
+protocol fuchsia.hardware.isp/IspStreamShutdownCallback
+protocol/member fuchsia.hardware.isp/OutputStream.ReleaseFrame(uint32 buffer_id) -> (int32 s)
+protocol/member fuchsia.hardware.isp/OutputStream.Shutdown(client_end:fuchsia.hardware.isp/IspStreamShutdownCallback shutdown_callback) -> (int32 s)
+protocol/member fuchsia.hardware.isp/OutputStream.Start() -> (int32 s)
+protocol/member fuchsia.hardware.isp/OutputStream.Stop() -> (int32 s)
+protocol fuchsia.hardware.isp/OutputStream
+enum/member fuchsia.hardware.isp/StreamType.DOWNSCALED 2
+enum/member fuchsia.hardware.isp/StreamType.FULL_RESOLUTION 1
+enum/member fuchsia.hardware.isp/StreamType.INVALID 0
+enum/member fuchsia.hardware.isp/StreamType.SCALAR 3
+strict enum fuchsia.hardware.isp/StreamType uint8
+library fuchsia.hardware.isp

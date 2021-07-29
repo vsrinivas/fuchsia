@@ -1,0 +1,88 @@
+protocol/member fuchsia.developer.remotecontrol/ArchiveIterator.GetNext() -> (fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Result result)
+protocol fuchsia.developer.remotecontrol/ArchiveIterator
+table/member fuchsia.developer.remotecontrol/ArchiveIteratorEntry.data string:32768
+table/member fuchsia.developer.remotecontrol/ArchiveIteratorEntry.truncated_chars uint32
+resource table fuchsia.developer.remotecontrol/ArchiveIteratorEntry
+enum/member fuchsia.developer.remotecontrol/ArchiveIteratorError.DATA_READ_FAILED 2
+enum/member fuchsia.developer.remotecontrol/ArchiveIteratorError.GENERIC_ERROR 1
+enum/member fuchsia.developer.remotecontrol/ArchiveIteratorError.TRUNCATION_FAILED 3
+strict enum fuchsia.developer.remotecontrol/ArchiveIteratorError uint32
+struct/member fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Response.entry vector<fuchsia.developer.remotecontrol/ArchiveIteratorEntry>:1
+resource struct fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Response
+union/member fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Result.err fuchsia.developer.remotecontrol/ArchiveIteratorError
+union/member fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Result.response fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Response
+resource strict union fuchsia.developer.remotecontrol/ArchiveIterator_GetNext_Result
+table/member fuchsia.developer.remotecontrol/BridgeStreamParameters.data_type fuchsia.diagnostics/DataType
+table/member fuchsia.developer.remotecontrol/BridgeStreamParameters.stream_mode fuchsia.diagnostics/StreamMode
+table fuchsia.developer.remotecontrol/BridgeStreamParameters
+enum/member fuchsia.developer.remotecontrol/ConnectError.MULTIPLE_MATCHING_SERVICES 2
+enum/member fuchsia.developer.remotecontrol/ConnectError.NO_MATCHING_SERVICES 1
+enum/member fuchsia.developer.remotecontrol/ConnectError.SERVICE_CONNECT_FAILED 4
+enum/member fuchsia.developer.remotecontrol/ConnectError.SERVICE_DISCOVERY_FAILED 3
+strict enum fuchsia.developer.remotecontrol/ConnectError uint32
+enum/member fuchsia.developer.remotecontrol/IdentifyHostError.GET_DEVICE_NAME_FAILED 2
+enum/member fuchsia.developer.remotecontrol/IdentifyHostError.LIST_INTERFACES_FAILED 1
+enum/member fuchsia.developer.remotecontrol/IdentifyHostError.PROXY_CONNECTION_FAILED 3
+strict enum fuchsia.developer.remotecontrol/IdentifyHostError uint32
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.addresses vector<fuchsia.net/Subnet>
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.board_config string:100
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.boot_timestamp_nanos uint64
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.ids vector<uint64>
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.nodename string:255
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.product_config string:100
+table/member fuchsia.developer.remotecontrol/IdentifyHostResponse.serial_number string:255
+table fuchsia.developer.remotecontrol/IdentifyHostResponse
+const fuchsia.developer.remotecontrol/MAX_COMPONENT_SUBDIR_LEN uint16 10
+const fuchsia.developer.remotecontrol/MAX_CONNECT_MATCHES uint16 5
+const fuchsia.developer.remotecontrol/MAX_ENTRIES int32 1
+const fuchsia.developer.remotecontrol/MAX_MONIKER_SEGMENT_LENGTH uint16 100
+const fuchsia.developer.remotecontrol/MAX_NUM_MATCHES uint16 250
+const fuchsia.developer.remotecontrol/MAX_SERVICE_NAME_LEN uint16 150
+enum/member fuchsia.developer.remotecontrol/RebootType.BOOTLOADER 3
+enum/member fuchsia.developer.remotecontrol/RebootType.REBOOT 1
+enum/member fuchsia.developer.remotecontrol/RebootType.RECOVERY 2
+strict enum fuchsia.developer.remotecontrol/RebootType uint32
+protocol/member fuchsia.developer.remotecontrol/RemoteControl.AddId(uint64 id) -> ()
+protocol/member fuchsia.developer.remotecontrol/RemoteControl.Connect(fuchsia.diagnostics/Selector selector,zx/handle:CHANNEL service_chan) -> (fuchsia.developer.remotecontrol/RemoteControl_Connect_Result result)
+protocol/member fuchsia.developer.remotecontrol/RemoteControl.IdentifyHost() -> (fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Result result)
+protocol/member fuchsia.developer.remotecontrol/RemoteControl.OpenHub(server_end:fuchsia.io/Directory server) -> (fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Result result)
+protocol/member fuchsia.developer.remotecontrol/RemoteControl.Select(fuchsia.diagnostics/Selector selector) -> (fuchsia.developer.remotecontrol/RemoteControl_Select_Result result)
+protocol fuchsia.developer.remotecontrol/RemoteControl
+struct/member fuchsia.developer.remotecontrol/RemoteControl_Connect_Response.match fuchsia.developer.remotecontrol/ServiceMatch
+struct fuchsia.developer.remotecontrol/RemoteControl_Connect_Response
+union/member fuchsia.developer.remotecontrol/RemoteControl_Connect_Result.err fuchsia.developer.remotecontrol/ConnectError
+union/member fuchsia.developer.remotecontrol/RemoteControl_Connect_Result.response fuchsia.developer.remotecontrol/RemoteControl_Connect_Response
+strict union fuchsia.developer.remotecontrol/RemoteControl_Connect_Result
+struct/member fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Response.response fuchsia.developer.remotecontrol/IdentifyHostResponse
+struct fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Response
+union/member fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Result.err fuchsia.developer.remotecontrol/IdentifyHostError
+union/member fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Result.response fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Response
+strict union fuchsia.developer.remotecontrol/RemoteControl_IdentifyHost_Result
+struct fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Response
+union/member fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Result.err int32
+union/member fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Result.response fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Response
+strict union fuchsia.developer.remotecontrol/RemoteControl_OpenHub_Result
+struct/member fuchsia.developer.remotecontrol/RemoteControl_Select_Response.matches vector<fuchsia.developer.remotecontrol/ServiceMatch>:250
+struct fuchsia.developer.remotecontrol/RemoteControl_Select_Response
+union/member fuchsia.developer.remotecontrol/RemoteControl_Select_Result.err fuchsia.developer.remotecontrol/SelectError
+union/member fuchsia.developer.remotecontrol/RemoteControl_Select_Result.response fuchsia.developer.remotecontrol/RemoteControl_Select_Response
+strict union fuchsia.developer.remotecontrol/RemoteControl_Select_Result
+protocol/member fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge.Hello() -> ()
+protocol/member fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge.StreamDiagnostics(fuchsia.developer.remotecontrol/BridgeStreamParameters parameters,server_end:fuchsia.developer.remotecontrol/ArchiveIterator iterator) -> (fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Result result)
+protocol fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge
+struct fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Response
+union/member fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Result.err fuchsia.developer.remotecontrol/StreamError
+union/member fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Result.response fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Response
+strict union fuchsia.developer.remotecontrol/RemoteDiagnosticsBridge_StreamDiagnostics_Result
+enum/member fuchsia.developer.remotecontrol/SelectError.SERVICE_DISCOVERY_FAILED 1
+strict enum fuchsia.developer.remotecontrol/SelectError uint32
+struct/member fuchsia.developer.remotecontrol/ServiceMatch.moniker vector<string:100>:25
+struct/member fuchsia.developer.remotecontrol/ServiceMatch.service string:150
+struct/member fuchsia.developer.remotecontrol/ServiceMatch.subdir string:10
+struct fuchsia.developer.remotecontrol/ServiceMatch
+enum/member fuchsia.developer.remotecontrol/StreamError.GENERIC_ERROR 1
+enum/member fuchsia.developer.remotecontrol/StreamError.MISSING_PARAMETER 2
+enum/member fuchsia.developer.remotecontrol/StreamError.SETUP_SUBSCRIPTION_FAILED 4
+enum/member fuchsia.developer.remotecontrol/StreamError.UNSUPPORTED_PARAMETER 3
+strict enum fuchsia.developer.remotecontrol/StreamError uint32
+library fuchsia.developer.remotecontrol

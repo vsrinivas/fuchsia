@@ -1,0 +1,9 @@
+protocol/member fuchsia.hardware.gpu.mali/ArmMali.EnterProtectedMode() -> (int32 status)
+protocol/member fuchsia.hardware.gpu.mali/ArmMali.FinishExitProtectedMode() -> (int32 status)
+protocol/member fuchsia.hardware.gpu.mali/ArmMali.GetProperties() -> (fuchsia.hardware.gpu.mali/MaliProperties properties)
+protocol/member fuchsia.hardware.gpu.mali/ArmMali.StartExitProtectedMode() -> (int32 status)
+protocol fuchsia.hardware.gpu.mali/ArmMali
+struct/member fuchsia.hardware.gpu.mali/MaliProperties.supports_protected_mode bool
+struct/member fuchsia.hardware.gpu.mali/MaliProperties.use_protected_mode_callbacks bool
+struct fuchsia.hardware.gpu.mali/MaliProperties
+library fuchsia.hardware.gpu.mali

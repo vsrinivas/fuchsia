@@ -1,0 +1,3 @@
+protocol/member fuchsia.tee.manager/Provider.RequestPersistentStorage(server_end:fuchsia.io/Directory dir)
+protocol fuchsia.tee.manager/Provider
+library fuchsia.tee.manager

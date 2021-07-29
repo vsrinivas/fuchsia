@@ -1,0 +1,76 @@
+protocol/member fuchsia.net.neighbor/Controller.AddEntry(uint64 interface,fuchsia.net/IpAddress neighbor,fuchsia.net/MacAddress mac) -> (fuchsia.net.neighbor/Controller_AddEntry_Result result)
+protocol/member fuchsia.net.neighbor/Controller.ClearEntries(uint64 interface,fuchsia.net/IpVersion ip_version) -> (fuchsia.net.neighbor/Controller_ClearEntries_Result result)
+protocol/member fuchsia.net.neighbor/Controller.RemoveEntry(uint64 interface,fuchsia.net/IpAddress neighbor) -> (fuchsia.net.neighbor/Controller_RemoveEntry_Result result)
+protocol/member fuchsia.net.neighbor/Controller.UpdateUnreachabilityConfig(uint64 interface,fuchsia.net/IpVersion ip_version,fuchsia.net.neighbor/UnreachabilityConfig config) -> (fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Result result)
+protocol fuchsia.net.neighbor/Controller
+struct fuchsia.net.neighbor/Controller_AddEntry_Response
+union/member fuchsia.net.neighbor/Controller_AddEntry_Result.err int32
+union/member fuchsia.net.neighbor/Controller_AddEntry_Result.response fuchsia.net.neighbor/Controller_AddEntry_Response
+strict union fuchsia.net.neighbor/Controller_AddEntry_Result
+struct fuchsia.net.neighbor/Controller_ClearEntries_Response
+union/member fuchsia.net.neighbor/Controller_ClearEntries_Result.err int32
+union/member fuchsia.net.neighbor/Controller_ClearEntries_Result.response fuchsia.net.neighbor/Controller_ClearEntries_Response
+strict union fuchsia.net.neighbor/Controller_ClearEntries_Result
+struct fuchsia.net.neighbor/Controller_RemoveEntry_Response
+union/member fuchsia.net.neighbor/Controller_RemoveEntry_Result.err int32
+union/member fuchsia.net.neighbor/Controller_RemoveEntry_Result.response fuchsia.net.neighbor/Controller_RemoveEntry_Response
+strict union fuchsia.net.neighbor/Controller_RemoveEntry_Result
+struct fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Response
+union/member fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Result.err int32
+union/member fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Result.response fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Response
+strict union fuchsia.net.neighbor/Controller_UpdateUnreachabilityConfig_Result
+const fuchsia.net.neighbor/DEFAULT_BASE_REACHABLE_TIME int64 30000000000
+const fuchsia.net.neighbor/DEFAULT_DELAY_FIRST_PROBE_TIME int64 5000000000
+const fuchsia.net.neighbor/DEFAULT_MAX_ANYCAST_DELAY_TIME int64 1000000000
+const fuchsia.net.neighbor/DEFAULT_MAX_MULTICAST_PROBES uint32 3
+const fuchsia.net.neighbor/DEFAULT_MAX_RANDOM_FACTOR float32 1.5
+const fuchsia.net.neighbor/DEFAULT_MAX_REACHABILITY_CONFIRMATIONS uint32 3
+const fuchsia.net.neighbor/DEFAULT_MAX_UNICAST_PROBES uint32 3
+const fuchsia.net.neighbor/DEFAULT_MIN_RANDOM_FACTOR float32 0.5
+const fuchsia.net.neighbor/DEFAULT_RETRANSMIT_TIMER int64 1000000000
+table/member fuchsia.net.neighbor/Entry.interface uint64
+table/member fuchsia.net.neighbor/Entry.mac fuchsia.net/MacAddress
+table/member fuchsia.net.neighbor/Entry.neighbor fuchsia.net/IpAddress
+table/member fuchsia.net.neighbor/Entry.state fuchsia.net.neighbor/EntryState
+table/member fuchsia.net.neighbor/Entry.updated_at int64
+table fuchsia.net.neighbor/Entry
+protocol/member fuchsia.net.neighbor/EntryIterator.GetNext() -> (vector<fuchsia.net.neighbor/EntryIteratorItem>:256 events)
+protocol fuchsia.net.neighbor/EntryIterator
+union/member fuchsia.net.neighbor/EntryIteratorItem.added fuchsia.net.neighbor/Entry
+union/member fuchsia.net.neighbor/EntryIteratorItem.changed fuchsia.net.neighbor/Entry
+union/member fuchsia.net.neighbor/EntryIteratorItem.existing fuchsia.net.neighbor/Entry
+union/member fuchsia.net.neighbor/EntryIteratorItem.idle fuchsia.net.neighbor/IdleEvent
+union/member fuchsia.net.neighbor/EntryIteratorItem.removed fuchsia.net.neighbor/Entry
+strict union fuchsia.net.neighbor/EntryIteratorItem
+table fuchsia.net.neighbor/EntryIteratorOptions
+enum/member fuchsia.net.neighbor/EntryState.DELAY 4
+enum/member fuchsia.net.neighbor/EntryState.INCOMPLETE 1
+enum/member fuchsia.net.neighbor/EntryState.PROBE 5
+enum/member fuchsia.net.neighbor/EntryState.REACHABLE 2
+enum/member fuchsia.net.neighbor/EntryState.STALE 3
+enum/member fuchsia.net.neighbor/EntryState.STATIC 6
+enum/member fuchsia.net.neighbor/EntryState.UNREACHABLE 7
+strict enum fuchsia.net.neighbor/EntryState uint8
+struct fuchsia.net.neighbor/IdleEvent
+const fuchsia.net.neighbor/MAX_ITEM_BATCH_SIZE uint64 256
+table/member fuchsia.net.neighbor/UnreachabilityConfig.base_reachable_time int64
+table/member fuchsia.net.neighbor/UnreachabilityConfig.delay_first_probe_time int64
+table/member fuchsia.net.neighbor/UnreachabilityConfig.learn_base_reachable_time bool
+table/member fuchsia.net.neighbor/UnreachabilityConfig.learn_retransmit_timer bool
+table/member fuchsia.net.neighbor/UnreachabilityConfig.max_anycast_delay_time int64
+table/member fuchsia.net.neighbor/UnreachabilityConfig.max_multicast_probes uint32
+table/member fuchsia.net.neighbor/UnreachabilityConfig.max_random_factor float32
+table/member fuchsia.net.neighbor/UnreachabilityConfig.max_reachability_confirmations uint32
+table/member fuchsia.net.neighbor/UnreachabilityConfig.max_unicast_probes uint32
+table/member fuchsia.net.neighbor/UnreachabilityConfig.min_random_factor float32
+table/member fuchsia.net.neighbor/UnreachabilityConfig.retransmit_timer int64
+table fuchsia.net.neighbor/UnreachabilityConfig
+protocol/member fuchsia.net.neighbor/View.GetUnreachabilityConfig(uint64 interface,fuchsia.net/IpVersion ip_version) -> (fuchsia.net.neighbor/View_GetUnreachabilityConfig_Result result)
+protocol/member fuchsia.net.neighbor/View.OpenEntryIterator(server_end:fuchsia.net.neighbor/EntryIterator it,fuchsia.net.neighbor/EntryIteratorOptions options)
+protocol fuchsia.net.neighbor/View
+struct/member fuchsia.net.neighbor/View_GetUnreachabilityConfig_Response.config fuchsia.net.neighbor/UnreachabilityConfig
+struct fuchsia.net.neighbor/View_GetUnreachabilityConfig_Response
+union/member fuchsia.net.neighbor/View_GetUnreachabilityConfig_Result.err int32
+union/member fuchsia.net.neighbor/View_GetUnreachabilityConfig_Result.response fuchsia.net.neighbor/View_GetUnreachabilityConfig_Response
+strict union fuchsia.net.neighbor/View_GetUnreachabilityConfig_Result
+library fuchsia.net.neighbor

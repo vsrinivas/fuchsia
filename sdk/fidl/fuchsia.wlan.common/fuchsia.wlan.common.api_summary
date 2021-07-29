@@ -1,0 +1,45 @@
+enum/member fuchsia.wlan.common/Band.WLAN_BAND_2GHZ 0
+enum/member fuchsia.wlan.common/Band.WLAN_BAND_5GHZ 1
+enum/member fuchsia.wlan.common/Band.WLAN_BAND_COUNT 2
+strict enum fuchsia.wlan.common/Band uint8
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW160 4
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW20 0
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW40 1
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW40BELOW 2
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW80 3
+enum/member fuchsia.wlan.common/ChannelBandwidth.CBW80P80 5
+strict enum fuchsia.wlan.common/ChannelBandwidth uint32
+enum/member fuchsia.wlan.common/DriverFeature.DFS 4
+enum/member fuchsia.wlan.common/DriverFeature.MFP 8
+enum/member fuchsia.wlan.common/DriverFeature.PROBE_RESP_OFFLOAD 5
+enum/member fuchsia.wlan.common/DriverFeature.RATE_SELECTION 1
+enum/member fuchsia.wlan.common/DriverFeature.SAE_DRIVER_AUTH 7
+enum/member fuchsia.wlan.common/DriverFeature.SAE_SME_AUTH 6
+enum/member fuchsia.wlan.common/DriverFeature.SCAN_OFFLOAD 0
+enum/member fuchsia.wlan.common/DriverFeature.SYNTH 2
+enum/member fuchsia.wlan.common/DriverFeature.TEMP_SOFTMAC 2718281828
+enum/member fuchsia.wlan.common/DriverFeature.TX_STATUS_REPORT 3
+strict enum fuchsia.wlan.common/DriverFeature uint32
+enum/member fuchsia.wlan.common/GuardInterval.LONG_GI 1
+enum/member fuchsia.wlan.common/GuardInterval.SHORT_GI 2
+strict enum fuchsia.wlan.common/GuardInterval uint8
+enum/member fuchsia.wlan.common/PHY.ERP 2
+enum/member fuchsia.wlan.common/PHY.HEW 5
+enum/member fuchsia.wlan.common/PHY.HR 1
+enum/member fuchsia.wlan.common/PHY.HT 3
+enum/member fuchsia.wlan.common/PHY.VHT 4
+strict enum fuchsia.wlan.common/PHY uint32
+enum/member fuchsia.wlan.common/RequestStatus.ACKNOWLEDGED 0
+enum/member fuchsia.wlan.common/RequestStatus.REJECTED_ALREADY_IN_USE 3
+enum/member fuchsia.wlan.common/RequestStatus.REJECTED_DUPLICATE_REQUEST 4
+enum/member fuchsia.wlan.common/RequestStatus.REJECTED_INCOMPATIBLE_MODE 2
+enum/member fuchsia.wlan.common/RequestStatus.REJECTED_NOT_SUPPORTED 1
+strict enum fuchsia.wlan.common/RequestStatus uint32
+enum/member fuchsia.wlan.common/ScanType.ACTIVE 1
+enum/member fuchsia.wlan.common/ScanType.PASSIVE 2
+strict enum fuchsia.wlan.common/ScanType uint32
+struct/member fuchsia.wlan.common/WlanChannel.cbw fuchsia.wlan.common/ChannelBandwidth
+struct/member fuchsia.wlan.common/WlanChannel.primary uint8
+struct/member fuchsia.wlan.common/WlanChannel.secondary80 uint8
+struct fuchsia.wlan.common/WlanChannel
+library fuchsia.wlan.common

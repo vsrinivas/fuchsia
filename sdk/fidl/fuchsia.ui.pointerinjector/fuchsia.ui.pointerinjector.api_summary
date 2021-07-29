@@ -1,0 +1,49 @@
+table/member fuchsia.ui.pointerinjector/Config.buttons vector<uint8>:32
+table/member fuchsia.ui.pointerinjector/Config.context fuchsia.ui.pointerinjector/Context
+table/member fuchsia.ui.pointerinjector/Config.device_id uint32
+table/member fuchsia.ui.pointerinjector/Config.device_type fuchsia.ui.pointerinjector/DeviceType
+table/member fuchsia.ui.pointerinjector/Config.dispatch_policy fuchsia.ui.pointerinjector/DispatchPolicy
+table/member fuchsia.ui.pointerinjector/Config.scroll_h_range fuchsia.input.report/Axis
+table/member fuchsia.ui.pointerinjector/Config.scroll_v_range fuchsia.input.report/Axis
+table/member fuchsia.ui.pointerinjector/Config.target fuchsia.ui.pointerinjector/Target
+table/member fuchsia.ui.pointerinjector/Config.viewport fuchsia.ui.pointerinjector/Viewport
+resource table fuchsia.ui.pointerinjector/Config
+union/member fuchsia.ui.pointerinjector/Context.view fuchsia.ui.views/ViewRef
+resource strict union fuchsia.ui.pointerinjector/Context
+union/member fuchsia.ui.pointerinjector/Data.pointer_sample fuchsia.ui.pointerinjector/PointerSample
+union/member fuchsia.ui.pointerinjector/Data.viewport fuchsia.ui.pointerinjector/Viewport
+flexible union fuchsia.ui.pointerinjector/Data
+protocol/member fuchsia.ui.pointerinjector/Device.Inject(vector<fuchsia.ui.pointerinjector/Event>:128 events) -> ()
+protocol fuchsia.ui.pointerinjector/Device
+enum/member fuchsia.ui.pointerinjector/DeviceType.MOUSE 2
+enum/member fuchsia.ui.pointerinjector/DeviceType.TOUCH 1
+strict enum fuchsia.ui.pointerinjector/DeviceType uint32
+enum/member fuchsia.ui.pointerinjector/DispatchPolicy.EXCLUSIVE_TARGET 1
+enum/member fuchsia.ui.pointerinjector/DispatchPolicy.MOUSE_HOVER_AND_LATCH_IN_TARGET 3
+enum/member fuchsia.ui.pointerinjector/DispatchPolicy.TOP_HIT_AND_ANCESTORS_IN_TARGET 2
+strict enum fuchsia.ui.pointerinjector/DispatchPolicy uint32
+table/member fuchsia.ui.pointerinjector/Event.data fuchsia.ui.pointerinjector/Data
+table/member fuchsia.ui.pointerinjector/Event.timestamp int64
+table/member fuchsia.ui.pointerinjector/Event.trace_flow_id uint64
+table fuchsia.ui.pointerinjector/Event
+enum/member fuchsia.ui.pointerinjector/EventPhase.ADD 1
+enum/member fuchsia.ui.pointerinjector/EventPhase.CANCEL 4
+enum/member fuchsia.ui.pointerinjector/EventPhase.CHANGE 2
+enum/member fuchsia.ui.pointerinjector/EventPhase.REMOVE 3
+strict enum fuchsia.ui.pointerinjector/EventPhase uint32
+const fuchsia.ui.pointerinjector/MAX_INJECT uint32 128
+table/member fuchsia.ui.pointerinjector/PointerSample.phase fuchsia.ui.pointerinjector/EventPhase
+table/member fuchsia.ui.pointerinjector/PointerSample.pointer_id uint32
+table/member fuchsia.ui.pointerinjector/PointerSample.position_in_viewport array<float32,2>
+table/member fuchsia.ui.pointerinjector/PointerSample.pressed_buttons vector<uint8>:32
+table/member fuchsia.ui.pointerinjector/PointerSample.scroll_h int64
+table/member fuchsia.ui.pointerinjector/PointerSample.scroll_v int64
+table fuchsia.ui.pointerinjector/PointerSample
+protocol/member fuchsia.ui.pointerinjector/Registry.Register(fuchsia.ui.pointerinjector/Config config,server_end:fuchsia.ui.pointerinjector/Device injector) -> ()
+protocol fuchsia.ui.pointerinjector/Registry
+union/member fuchsia.ui.pointerinjector/Target.view fuchsia.ui.views/ViewRef
+resource strict union fuchsia.ui.pointerinjector/Target
+table/member fuchsia.ui.pointerinjector/Viewport.extents array<array<float32,2>,2>
+table/member fuchsia.ui.pointerinjector/Viewport.viewport_to_context_transform array<float32,9>
+table fuchsia.ui.pointerinjector/Viewport
+library fuchsia.ui.pointerinjector

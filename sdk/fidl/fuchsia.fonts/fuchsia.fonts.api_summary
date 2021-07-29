@@ -1,0 +1,109 @@
+enum/member fuchsia.fonts/CacheMissPolicy.BLOCK_UNTIL_DOWNLOADED 1
+enum/member fuchsia.fonts/CacheMissPolicy.RETURN_EMPTY_RESPONSE 2
+enum/member fuchsia.fonts/CacheMissPolicy.RETURN_FALLBACK 3
+strict enum fuchsia.fonts/CacheMissPolicy uint32
+const fuchsia.fonts/DEFAULT_SLANT fuchsia.fonts/Slant 1
+const fuchsia.fonts/DEFAULT_WEIGHT uint16 400
+const fuchsia.fonts/DEFAULT_WIDTH fuchsia.fonts/Width 5
+enum/member fuchsia.fonts/FallbackGroup.CURSIVE 4
+enum/member fuchsia.fonts/FallbackGroup.FANTASY 5
+enum/member fuchsia.fonts/FallbackGroup.MONOSPACE 3
+enum/member fuchsia.fonts/FallbackGroup.NONE 0
+enum/member fuchsia.fonts/FallbackGroup.SANS_SERIF 2
+enum/member fuchsia.fonts/FallbackGroup.SERIF 1
+strict enum fuchsia.fonts/FallbackGroup uint32
+struct/member fuchsia.fonts/FamilyInfo.name string:128
+struct/member fuchsia.fonts/FamilyInfo.styles vector<fuchsia.fonts/Style>:300
+struct fuchsia.fonts/FamilyInfo
+struct/member fuchsia.fonts/FamilyName.name string:128
+struct fuchsia.fonts/FamilyName
+table/member fuchsia.fonts/FontFamilyInfo.name fuchsia.fonts/FamilyName
+table/member fuchsia.fonts/FontFamilyInfo.styles vector<fuchsia.fonts/Style2>:300
+table fuchsia.fonts/FontFamilyInfo
+protocol/member fuchsia.fonts/FontSetEventListener.OnFontSetUpdated(fuchsia.fonts/FontSetUpdatedEvent event) -> ()
+protocol fuchsia.fonts/FontSetEventListener
+table fuchsia.fonts/FontSetUpdatedEvent
+enum/member fuchsia.fonts/GenericFontFamily.CURSIVE 4
+enum/member fuchsia.fonts/GenericFontFamily.EMOJI 7
+enum/member fuchsia.fonts/GenericFontFamily.FANGSONG 9
+enum/member fuchsia.fonts/GenericFontFamily.FANTASY 5
+enum/member fuchsia.fonts/GenericFontFamily.MATH 8
+enum/member fuchsia.fonts/GenericFontFamily.MONOSPACE 3
+enum/member fuchsia.fonts/GenericFontFamily.SANS_SERIF 2
+enum/member fuchsia.fonts/GenericFontFamily.SERIF 1
+enum/member fuchsia.fonts/GenericFontFamily.SYSTEM_UI 6
+strict enum fuchsia.fonts/GenericFontFamily uint32
+const fuchsia.fonts/MAX_FACE_QUERY_CODE_POINTS uint32 128
+const fuchsia.fonts/MAX_FACE_QUERY_LANGUAGES uint32 8
+const fuchsia.fonts/MAX_FAMILY_NAME_LENGTH uint32 128
+const fuchsia.fonts/MAX_FAMILY_STYLES uint32 300
+protocol/member fuchsia.fonts/Provider.GetFamilyInfo(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)
+protocol/member fuchsia.fonts/Provider.GetFont(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)
+protocol/member fuchsia.fonts/Provider.GetFontFamilyInfo(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)
+protocol/member fuchsia.fonts/Provider.GetTypeface(fuchsia.fonts/TypefaceRequest request) -> (fuchsia.fonts/TypefaceResponse response)
+protocol/member fuchsia.fonts/Provider.RegisterFontSetEventListener(client_end:fuchsia.fonts/FontSetEventListener listener) -> ()
+protocol fuchsia.fonts/Provider
+const fuchsia.fonts/REQUEST_FLAG_EXACT_MATCH uint32 2
+const fuchsia.fonts/REQUEST_FLAG_NO_FALLBACK uint32 1
+struct/member fuchsia.fonts/Request.character uint32 0
+struct/member fuchsia.fonts/Request.fallback_group fuchsia.fonts/FallbackGroup 0
+struct/member fuchsia.fonts/Request.family string:<128,optional>
+struct/member fuchsia.fonts/Request.flags uint32 0
+struct/member fuchsia.fonts/Request.language vector<string:35>:<8,optional>
+struct/member fuchsia.fonts/Request.slant fuchsia.fonts/Slant 1
+struct/member fuchsia.fonts/Request.weight uint32 400
+struct/member fuchsia.fonts/Request.width uint32 5
+struct fuchsia.fonts/Request
+struct/member fuchsia.fonts/Response.buffer fuchsia.mem/Buffer
+struct/member fuchsia.fonts/Response.buffer_id uint32
+struct/member fuchsia.fonts/Response.font_index uint32
+resource struct fuchsia.fonts/Response
+enum/member fuchsia.fonts/Slant.ITALIC 2
+enum/member fuchsia.fonts/Slant.OBLIQUE 3
+enum/member fuchsia.fonts/Slant.UPRIGHT 1
+strict enum fuchsia.fonts/Slant uint32
+struct/member fuchsia.fonts/Style.slant fuchsia.fonts/Slant
+struct/member fuchsia.fonts/Style.weight uint32
+struct/member fuchsia.fonts/Style.width uint32
+struct fuchsia.fonts/Style
+table/member fuchsia.fonts/Style2.slant fuchsia.fonts/Slant
+table/member fuchsia.fonts/Style2.weight uint16
+table/member fuchsia.fonts/Style2.width fuchsia.fonts/Width
+table fuchsia.fonts/Style2
+table/member fuchsia.fonts/TypefaceQuery.code_points vector<uint32>:128
+table/member fuchsia.fonts/TypefaceQuery.fallback_family fuchsia.fonts/GenericFontFamily
+table/member fuchsia.fonts/TypefaceQuery.family fuchsia.fonts/FamilyName
+table/member fuchsia.fonts/TypefaceQuery.languages vector<fuchsia.intl/LocaleId>:8
+table/member fuchsia.fonts/TypefaceQuery.style fuchsia.fonts/Style2
+table fuchsia.fonts/TypefaceQuery
+table/member fuchsia.fonts/TypefaceRequest.cache_miss_policy fuchsia.fonts/CacheMissPolicy
+table/member fuchsia.fonts/TypefaceRequest.flags fuchsia.fonts/TypefaceRequestFlags
+table/member fuchsia.fonts/TypefaceRequest.query fuchsia.fonts/TypefaceQuery
+table fuchsia.fonts/TypefaceRequest
+bits/member fuchsia.fonts/TypefaceRequestFlags.EXACT_FAMILY 1
+bits/member fuchsia.fonts/TypefaceRequestFlags.EXACT_STYLE 2
+strict bits fuchsia.fonts/TypefaceRequestFlags uint32
+table/member fuchsia.fonts/TypefaceResponse.buffer fuchsia.mem/Buffer
+table/member fuchsia.fonts/TypefaceResponse.buffer_id uint32
+table/member fuchsia.fonts/TypefaceResponse.font_index uint32
+resource table fuchsia.fonts/TypefaceResponse
+const fuchsia.fonts/WEIGHT_BLACK uint16 900
+const fuchsia.fonts/WEIGHT_BOLD uint16 700
+const fuchsia.fonts/WEIGHT_EXTRA_BOLD uint16 800
+const fuchsia.fonts/WEIGHT_EXTRA_LIGHT uint16 200
+const fuchsia.fonts/WEIGHT_LIGHT uint16 300
+const fuchsia.fonts/WEIGHT_MEDIUM uint16 500
+const fuchsia.fonts/WEIGHT_NORMAL uint16 400
+const fuchsia.fonts/WEIGHT_SEMI_BOLD uint16 600
+const fuchsia.fonts/WEIGHT_THIN uint16 100
+enum/member fuchsia.fonts/Width.CONDENSED 3
+enum/member fuchsia.fonts/Width.EXPANDED 7
+enum/member fuchsia.fonts/Width.EXTRA_CONDENSED 2
+enum/member fuchsia.fonts/Width.EXTRA_EXPANDED 8
+enum/member fuchsia.fonts/Width.NORMAL 5
+enum/member fuchsia.fonts/Width.SEMI_CONDENSED 4
+enum/member fuchsia.fonts/Width.SEMI_EXPANDED 6
+enum/member fuchsia.fonts/Width.ULTRA_CONDENSED 1
+enum/member fuchsia.fonts/Width.ULTRA_EXPANDED 9
+strict enum fuchsia.fonts/Width uint32
+library fuchsia.fonts

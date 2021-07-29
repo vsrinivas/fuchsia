@@ -1,0 +1,18 @@
+enum/member fuchsia.ui.input.accessibility/EventHandling.CONSUMED 1
+enum/member fuchsia.ui.input.accessibility/EventHandling.REJECTED 2
+strict enum fuchsia.ui.input.accessibility/EventHandling uint32
+table/member fuchsia.ui.input.accessibility/PointerEvent.device_id uint32
+table/member fuchsia.ui.input.accessibility/PointerEvent.event_time uint64
+table/member fuchsia.ui.input.accessibility/PointerEvent.local_point fuchsia.math/PointF
+table/member fuchsia.ui.input.accessibility/PointerEvent.ndc_point fuchsia.math/PointF
+table/member fuchsia.ui.input.accessibility/PointerEvent.phase fuchsia.ui.input/PointerEventPhase
+table/member fuchsia.ui.input.accessibility/PointerEvent.pointer_id uint32
+table/member fuchsia.ui.input.accessibility/PointerEvent.type fuchsia.ui.input/PointerEventType
+table/member fuchsia.ui.input.accessibility/PointerEvent.viewref_koid uint64
+table fuchsia.ui.input.accessibility/PointerEvent
+protocol/member fuchsia.ui.input.accessibility/PointerEventListener.OnEvent(fuchsia.ui.input.accessibility/PointerEvent pointer_event)
+protocol/member fuchsia.ui.input.accessibility/PointerEventListener.OnStreamHandled -> (uint32 device_id,uint32 pointer_id,fuchsia.ui.input.accessibility/EventHandling handled)
+protocol fuchsia.ui.input.accessibility/PointerEventListener
+protocol/member fuchsia.ui.input.accessibility/PointerEventRegistry.Register(client_end:fuchsia.ui.input.accessibility/PointerEventListener pointer_event_listener)
+protocol fuchsia.ui.input.accessibility/PointerEventRegistry
+library fuchsia.ui.input.accessibility

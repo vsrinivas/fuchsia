@@ -1,0 +1,11 @@
+protocol/member fuchsia.ui.app/TemporaryFlatlandViewProvider.CreateView(fuchsia.ui.composition/GraphLinkToken graph_link_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
+protocol fuchsia.ui.app/TemporaryFlatlandViewProvider
+protocol/member fuchsia.ui.app/View.Attach(zx/handle:EVENTPAIR view_token)
+protocol/member fuchsia.ui.app/View.SetConfig(fuchsia.ui.app/ViewConfig config)
+protocol fuchsia.ui.app/View
+struct/member fuchsia.ui.app/ViewConfig.intl_profile fuchsia.intl/Profile
+struct fuchsia.ui.app/ViewConfig
+protocol/member fuchsia.ui.app/ViewProvider.CreateView(zx/handle:EVENTPAIR token,server_end:<fuchsia.sys/ServiceProvider,optional> incoming_services,fuchsia.sys/ServiceProvider:optional outgoing_services)
+protocol/member fuchsia.ui.app/ViewProvider.CreateViewWithViewRef(zx/handle:EVENTPAIR token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
+protocol fuchsia.ui.app/ViewProvider
+library fuchsia.ui.app

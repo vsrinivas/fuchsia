@@ -1,0 +1,18 @@
+union/member fuchsia.hardware.rpmb/DeviceInfo.emmc_info fuchsia.hardware.rpmb/EmmcDeviceInfo
+flexible union fuchsia.hardware.rpmb/DeviceInfo
+struct/member fuchsia.hardware.rpmb/EmmcDeviceInfo.cid array<uint8,16>
+struct/member fuchsia.hardware.rpmb/EmmcDeviceInfo.reliable_write_sector_count uint8
+struct/member fuchsia.hardware.rpmb/EmmcDeviceInfo.rpmb_size uint8
+struct fuchsia.hardware.rpmb/EmmcDeviceInfo
+const fuchsia.hardware.rpmb/FRAME_SIZE uint32 512
+struct/member fuchsia.hardware.rpmb/Request.rx_frames fuchsia.mem/Range:optional
+struct/member fuchsia.hardware.rpmb/Request.tx_frames fuchsia.mem/Range
+resource struct fuchsia.hardware.rpmb/Request
+protocol/member fuchsia.hardware.rpmb/Rpmb.GetDeviceInfo() -> (fuchsia.hardware.rpmb/DeviceInfo info)
+protocol/member fuchsia.hardware.rpmb/Rpmb.Request(fuchsia.hardware.rpmb/Request request) -> (fuchsia.hardware.rpmb/Rpmb_Request_Result result)
+protocol fuchsia.hardware.rpmb/Rpmb
+struct fuchsia.hardware.rpmb/Rpmb_Request_Response
+union/member fuchsia.hardware.rpmb/Rpmb_Request_Result.err int32
+union/member fuchsia.hardware.rpmb/Rpmb_Request_Result.response fuchsia.hardware.rpmb/Rpmb_Request_Response
+strict union fuchsia.hardware.rpmb/Rpmb_Request_Result
+library fuchsia.hardware.rpmb

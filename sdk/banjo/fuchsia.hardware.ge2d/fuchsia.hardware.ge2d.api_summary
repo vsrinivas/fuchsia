@@ -1,0 +1,26 @@
+protocol/member fuchsia.hardware.ge2d/Ge2d.InitTaskInPlaceWaterMark(fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection,vector<fuchsia.hardware.ge2d/WaterMarkInfo> info,vector<fuchsia.sysmem/ImageFormat_2> image_format_table,uint32 image_format_index,fuchsia.hardware.camerahwaccel/HwAccelFrameCallback frame_callback,fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback res_callback,fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback task_remove_callback) -> (int32 s,uint32 task_index)
+protocol/member fuchsia.hardware.ge2d/Ge2d.InitTaskResize(fuchsia.sysmem/BufferCollectionInfo_2 input_buffer_collection,fuchsia.sysmem/BufferCollectionInfo_2 output_buffer_collection,fuchsia.hardware.ge2d/ResizeInfo info,fuchsia.sysmem/ImageFormat_2 image_format,vector<fuchsia.sysmem/ImageFormat_2> output_image_format_table,uint32 output_image_format_index,fuchsia.hardware.camerahwaccel/HwAccelFrameCallback frame_callback,fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback res_callback,fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback task_remove_callback) -> (int32 s,uint32 task_index)
+protocol/member fuchsia.hardware.ge2d/Ge2d.InitTaskWaterMark(fuchsia.sysmem/BufferCollectionInfo_2 input_buffer_collection,fuchsia.sysmem/BufferCollectionInfo_2 output_buffer_collection,vector<fuchsia.hardware.ge2d/WaterMarkInfo> info,vector<fuchsia.sysmem/ImageFormat_2> image_format_table,uint32 image_format_index,fuchsia.hardware.camerahwaccel/HwAccelFrameCallback frame_callback,fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback res_callback,fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback task_remove_callback) -> (int32 s,uint32 task_index)
+protocol/member fuchsia.hardware.ge2d/Ge2d.ProcessFrame(uint32 task_index,uint32 input_buffer_index,uint64 capture_timestamp) -> (int32 s)
+protocol/member fuchsia.hardware.ge2d/Ge2d.ReleaseFrame(uint32 task_index,uint32 buffer_index)
+protocol/member fuchsia.hardware.ge2d/Ge2d.RemoveTask(uint32 task_index)
+protocol/member fuchsia.hardware.ge2d/Ge2d.SetCropRect(uint32 task_index,fuchsia.hardware.camera/Rect crop)
+protocol/member fuchsia.hardware.ge2d/Ge2d.SetInputAndOutputResolution(uint32 task_index,uint32 new_image_format_index) -> (int32 s)
+protocol/member fuchsia.hardware.ge2d/Ge2d.SetOutputResolution(uint32 task_index,uint32 new_output_image_format_index) -> (int32 s)
+protocol fuchsia.hardware.ge2d/Ge2d
+enum/member fuchsia.hardware.ge2d/Ge2dRotation.MAX 4
+enum/member fuchsia.hardware.ge2d/Ge2dRotation.ROTATION_0 0
+enum/member fuchsia.hardware.ge2d/Ge2dRotation.ROTATION_180 2
+enum/member fuchsia.hardware.ge2d/Ge2dRotation.ROTATION_270 3
+enum/member fuchsia.hardware.ge2d/Ge2dRotation.ROTATION_90 1
+strict enum fuchsia.hardware.ge2d/Ge2dRotation uint8
+struct/member fuchsia.hardware.ge2d/ResizeInfo.crop fuchsia.hardware.camera/Rect
+struct/member fuchsia.hardware.ge2d/ResizeInfo.output_rotation fuchsia.hardware.ge2d/Ge2dRotation
+struct fuchsia.hardware.ge2d/ResizeInfo
+struct/member fuchsia.hardware.ge2d/WaterMarkInfo.global_alpha float32
+struct/member fuchsia.hardware.ge2d/WaterMarkInfo.loc_x uint32
+struct/member fuchsia.hardware.ge2d/WaterMarkInfo.loc_y uint32
+struct/member fuchsia.hardware.ge2d/WaterMarkInfo.watermark_vmo zx/handle:VMO
+struct/member fuchsia.hardware.ge2d/WaterMarkInfo.wm_image_format fuchsia.sysmem/ImageFormat_2
+resource struct fuchsia.hardware.ge2d/WaterMarkInfo
+library fuchsia.hardware.ge2d

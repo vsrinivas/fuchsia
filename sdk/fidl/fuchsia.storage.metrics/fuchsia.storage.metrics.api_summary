@@ -1,0 +1,19 @@
+struct/member fuchsia.storage.metrics/CallStat.failure fuchsia.storage.metrics/CallStatRaw
+struct/member fuchsia.storage.metrics/CallStat.success fuchsia.storage.metrics/CallStatRaw
+struct fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/CallStatRaw.bytes_transferred uint64
+struct/member fuchsia.storage.metrics/CallStatRaw.maximum_latency uint64
+struct/member fuchsia.storage.metrics/CallStatRaw.minimum_latency uint64
+struct/member fuchsia.storage.metrics/CallStatRaw.total_calls uint64
+struct/member fuchsia.storage.metrics/CallStatRaw.total_time_spent uint64
+struct fuchsia.storage.metrics/CallStatRaw
+struct/member fuchsia.storage.metrics/FsMetrics.create fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.lookup fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.open fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.read fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.rename fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.truncate fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.unlink fuchsia.storage.metrics/CallStat
+struct/member fuchsia.storage.metrics/FsMetrics.write fuchsia.storage.metrics/CallStat
+struct fuchsia.storage.metrics/FsMetrics
+library fuchsia.storage.metrics

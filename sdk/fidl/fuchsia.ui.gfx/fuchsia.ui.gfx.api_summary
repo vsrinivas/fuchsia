@@ -1,0 +1,542 @@
+struct/member fuchsia.ui.gfx/AddChildCmd.child_id uint32
+struct/member fuchsia.ui.gfx/AddChildCmd.node_id uint32
+struct fuchsia.ui.gfx/AddChildCmd
+struct/member fuchsia.ui.gfx/AddLayerCmd.layer_id uint32
+struct/member fuchsia.ui.gfx/AddLayerCmd.layer_stack_id uint32
+struct fuchsia.ui.gfx/AddLayerCmd
+struct/member fuchsia.ui.gfx/AddLightCmd.light_id uint32
+struct/member fuchsia.ui.gfx/AddLightCmd.scene_id uint32
+struct fuchsia.ui.gfx/AddLightCmd
+struct/member fuchsia.ui.gfx/AddPartCmd.node_id uint32
+struct/member fuchsia.ui.gfx/AddPartCmd.part_id uint32
+struct fuchsia.ui.gfx/AddPartCmd
+struct/member fuchsia.ui.gfx/AmbientLightArgs.dummy uint32 0
+struct fuchsia.ui.gfx/AmbientLightArgs
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.bounding_box fuchsia.ui.gfx/BoundingBox
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.index_buffer_id uint32
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.index_count uint32
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.index_format fuchsia.ui.gfx/MeshIndexFormat
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.index_offset uint64
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.mesh_id uint32
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_buffer_id uint32
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_count uint32
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_format fuchsia.ui.gfx/MeshVertexFormat
+struct/member fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_offset uint64
+struct fuchsia.ui.gfx/BindMeshBuffersCmd
+struct/member fuchsia.ui.gfx/BoundingBox.max fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/BoundingBox.min fuchsia.ui.gfx/vec3
+struct fuchsia.ui.gfx/BoundingBox
+struct/member fuchsia.ui.gfx/BufferArgs.memory_id uint32
+struct/member fuchsia.ui.gfx/BufferArgs.memory_offset uint32
+struct/member fuchsia.ui.gfx/BufferArgs.num_bytes uint32
+struct fuchsia.ui.gfx/BufferArgs
+struct/member fuchsia.ui.gfx/CameraArgs.scene_id uint32
+struct fuchsia.ui.gfx/CameraArgs
+struct/member fuchsia.ui.gfx/CircleArgs.radius fuchsia.ui.gfx/Value
+struct fuchsia.ui.gfx/CircleArgs
+struct/member fuchsia.ui.gfx/ClipNodeArgs.unused uint32 0
+struct fuchsia.ui.gfx/ClipNodeArgs
+struct/member fuchsia.ui.gfx/ColorRgb.blue float32
+struct/member fuchsia.ui.gfx/ColorRgb.green float32
+struct/member fuchsia.ui.gfx/ColorRgb.red float32
+struct fuchsia.ui.gfx/ColorRgb
+struct/member fuchsia.ui.gfx/ColorRgbValue.value fuchsia.ui.gfx/ColorRgb
+struct/member fuchsia.ui.gfx/ColorRgbValue.variable_id uint32
+struct fuchsia.ui.gfx/ColorRgbValue
+struct/member fuchsia.ui.gfx/ColorRgba.alpha uint8
+struct/member fuchsia.ui.gfx/ColorRgba.blue uint8
+struct/member fuchsia.ui.gfx/ColorRgba.green uint8
+struct/member fuchsia.ui.gfx/ColorRgba.red uint8
+struct fuchsia.ui.gfx/ColorRgba
+struct/member fuchsia.ui.gfx/ColorRgbaValue.value fuchsia.ui.gfx/ColorRgba
+struct/member fuchsia.ui.gfx/ColorRgbaValue.variable_id uint32
+struct fuchsia.ui.gfx/ColorRgbaValue
+union/member fuchsia.ui.gfx/Command.add_child fuchsia.ui.gfx/AddChildCmd
+union/member fuchsia.ui.gfx/Command.add_layer fuchsia.ui.gfx/AddLayerCmd
+union/member fuchsia.ui.gfx/Command.add_light fuchsia.ui.gfx/AddLightCmd
+union/member fuchsia.ui.gfx/Command.add_part fuchsia.ui.gfx/AddPartCmd
+union/member fuchsia.ui.gfx/Command.bind_mesh_buffers fuchsia.ui.gfx/BindMeshBuffersCmd
+union/member fuchsia.ui.gfx/Command.create_resource fuchsia.ui.gfx/CreateResourceCmd
+union/member fuchsia.ui.gfx/Command.detach fuchsia.ui.gfx/DetachCmd
+union/member fuchsia.ui.gfx/Command.detach_children fuchsia.ui.gfx/DetachChildrenCmd
+union/member fuchsia.ui.gfx/Command.detach_light fuchsia.ui.gfx/DetachLightCmd
+union/member fuchsia.ui.gfx/Command.detach_lights fuchsia.ui.gfx/DetachLightsCmd
+union/member fuchsia.ui.gfx/Command.export_resource fuchsia.ui.gfx/ExportResourceCmdDeprecated
+union/member fuchsia.ui.gfx/Command.import_resource fuchsia.ui.gfx/ImportResourceCmdDeprecated
+union/member fuchsia.ui.gfx/Command.release_resource fuchsia.ui.gfx/ReleaseResourceCmd
+union/member fuchsia.ui.gfx/Command.remove_all_layers fuchsia.ui.gfx/RemoveAllLayersCmd
+union/member fuchsia.ui.gfx/Command.remove_layer fuchsia.ui.gfx/RemoveLayerCmd
+union/member fuchsia.ui.gfx/Command.scene__add_ambient_light fuchsia.ui.gfx/SceneAddAmbientLightCmd
+union/member fuchsia.ui.gfx/Command.scene__add_directional_light fuchsia.ui.gfx/SceneAddDirectionalLightCmd
+union/member fuchsia.ui.gfx/Command.scene__add_point_light fuchsia.ui.gfx/SceneAddPointLightCmd
+union/member fuchsia.ui.gfx/Command.send_size_change_hint_hack fuchsia.ui.gfx/SendSizeChangeHintCmdHACK
+union/member fuchsia.ui.gfx/Command.set_anchor fuchsia.ui.gfx/SetAnchorCmd
+union/member fuchsia.ui.gfx/Command.set_camera fuchsia.ui.gfx/SetCameraCmd
+union/member fuchsia.ui.gfx/Command.set_camera_clip_space_transform fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd
+union/member fuchsia.ui.gfx/Command.set_camera_pose_buffer fuchsia.ui.gfx/SetCameraPoseBufferCmd
+union/member fuchsia.ui.gfx/Command.set_camera_projection fuchsia.ui.gfx/SetCameraProjectionCmd
+union/member fuchsia.ui.gfx/Command.set_camera_transform fuchsia.ui.gfx/SetCameraTransformCmd
+union/member fuchsia.ui.gfx/Command.set_clip fuchsia.ui.gfx/SetClipCmd
+union/member fuchsia.ui.gfx/Command.set_clip_planes fuchsia.ui.gfx/SetClipPlanesCmd
+union/member fuchsia.ui.gfx/Command.set_color fuchsia.ui.gfx/SetColorCmd
+union/member fuchsia.ui.gfx/Command.set_disable_clipping fuchsia.ui.gfx/SetDisableClippingCmd
+union/member fuchsia.ui.gfx/Command.set_display_color_conversion fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK
+union/member fuchsia.ui.gfx/Command.set_display_minimum_rgb fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK
+union/member fuchsia.ui.gfx/Command.set_display_rotation fuchsia.ui.gfx/SetDisplayRotationCmdHACK
+union/member fuchsia.ui.gfx/Command.set_enable_view_debug_bounds fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd
+union/member fuchsia.ui.gfx/Command.set_event_mask fuchsia.ui.gfx/SetEventMaskCmd
+union/member fuchsia.ui.gfx/Command.set_hit_test_behavior fuchsia.ui.gfx/SetHitTestBehaviorCmd
+union/member fuchsia.ui.gfx/Command.set_import_focus fuchsia.ui.gfx/SetImportFocusCmdDEPRECATED
+union/member fuchsia.ui.gfx/Command.set_label fuchsia.ui.gfx/SetLabelCmd
+union/member fuchsia.ui.gfx/Command.set_layer_stack fuchsia.ui.gfx/SetLayerStackCmd
+union/member fuchsia.ui.gfx/Command.set_light_color fuchsia.ui.gfx/SetLightColorCmd
+union/member fuchsia.ui.gfx/Command.set_light_direction fuchsia.ui.gfx/SetLightDirectionCmd
+union/member fuchsia.ui.gfx/Command.set_material fuchsia.ui.gfx/SetMaterialCmd
+union/member fuchsia.ui.gfx/Command.set_opacity fuchsia.ui.gfx/SetOpacityCmd
+union/member fuchsia.ui.gfx/Command.set_point_light_falloff fuchsia.ui.gfx/SetPointLightFalloffCmd
+union/member fuchsia.ui.gfx/Command.set_point_light_position fuchsia.ui.gfx/SetPointLightPositionCmd
+union/member fuchsia.ui.gfx/Command.set_renderer fuchsia.ui.gfx/SetRendererCmd
+union/member fuchsia.ui.gfx/Command.set_renderer_param fuchsia.ui.gfx/SetRendererParamCmd
+union/member fuchsia.ui.gfx/Command.set_rotation fuchsia.ui.gfx/SetRotationCmd
+union/member fuchsia.ui.gfx/Command.set_scale fuchsia.ui.gfx/SetScaleCmd
+union/member fuchsia.ui.gfx/Command.set_semantic_visibility fuchsia.ui.gfx/SetSemanticVisibilityCmd
+union/member fuchsia.ui.gfx/Command.set_shape fuchsia.ui.gfx/SetShapeCmd
+union/member fuchsia.ui.gfx/Command.set_size fuchsia.ui.gfx/SetSizeCmd
+union/member fuchsia.ui.gfx/Command.set_stereo_camera_projection fuchsia.ui.gfx/SetStereoCameraProjectionCmd
+union/member fuchsia.ui.gfx/Command.set_tag fuchsia.ui.gfx/SetTagCmd
+union/member fuchsia.ui.gfx/Command.set_texture fuchsia.ui.gfx/SetTextureCmd
+union/member fuchsia.ui.gfx/Command.set_translation fuchsia.ui.gfx/SetTranslationCmd
+union/member fuchsia.ui.gfx/Command.set_view_holder_bounds_color fuchsia.ui.gfx/SetViewHolderBoundsColorCmd
+union/member fuchsia.ui.gfx/Command.set_view_properties fuchsia.ui.gfx/SetViewPropertiesCmd
+union/member fuchsia.ui.gfx/Command.take_snapshot_cmd fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED
+resource strict union fuchsia.ui.gfx/Command
+struct/member fuchsia.ui.gfx/CompositorArgs.dummy uint32 0
+struct fuchsia.ui.gfx/CompositorArgs
+struct/member fuchsia.ui.gfx/CreateResourceCmd.id uint32
+struct/member fuchsia.ui.gfx/CreateResourceCmd.resource fuchsia.ui.gfx/ResourceArgs
+resource struct fuchsia.ui.gfx/CreateResourceCmd
+struct/member fuchsia.ui.gfx/DetachChildrenCmd.node_id uint32
+struct fuchsia.ui.gfx/DetachChildrenCmd
+struct/member fuchsia.ui.gfx/DetachCmd.id uint32
+struct fuchsia.ui.gfx/DetachCmd
+struct/member fuchsia.ui.gfx/DetachLightCmd.light_id uint32
+struct fuchsia.ui.gfx/DetachLightCmd
+struct/member fuchsia.ui.gfx/DetachLightsCmd.scene_id uint32
+struct fuchsia.ui.gfx/DetachLightsCmd
+struct/member fuchsia.ui.gfx/DirectionalLightArgs.dummy uint32 0
+struct fuchsia.ui.gfx/DirectionalLightArgs
+struct/member fuchsia.ui.gfx/DisplayCompositorArgs.dummy uint32 0
+struct fuchsia.ui.gfx/DisplayCompositorArgs
+struct/member fuchsia.ui.gfx/DisplayInfo.height_in_px uint32
+struct/member fuchsia.ui.gfx/DisplayInfo.width_in_px uint32
+struct fuchsia.ui.gfx/DisplayInfo
+struct/member fuchsia.ui.gfx/EntityNodeArgs.unused uint32 0
+struct fuchsia.ui.gfx/EntityNodeArgs
+union/member fuchsia.ui.gfx/Event.import_unbound fuchsia.ui.gfx/ImportUnboundEvent
+union/member fuchsia.ui.gfx/Event.metrics fuchsia.ui.gfx/MetricsEvent
+union/member fuchsia.ui.gfx/Event.size_change_hint fuchsia.ui.gfx/SizeChangeHintEvent
+union/member fuchsia.ui.gfx/Event.view_attached_to_scene fuchsia.ui.gfx/ViewAttachedToSceneEvent
+union/member fuchsia.ui.gfx/Event.view_connected fuchsia.ui.gfx/ViewConnectedEvent
+union/member fuchsia.ui.gfx/Event.view_detached_from_scene fuchsia.ui.gfx/ViewDetachedFromSceneEvent
+union/member fuchsia.ui.gfx/Event.view_disconnected fuchsia.ui.gfx/ViewDisconnectedEvent
+union/member fuchsia.ui.gfx/Event.view_holder_connected fuchsia.ui.gfx/ViewHolderConnectedEvent
+union/member fuchsia.ui.gfx/Event.view_holder_disconnected fuchsia.ui.gfx/ViewHolderDisconnectedEvent
+union/member fuchsia.ui.gfx/Event.view_properties_changed fuchsia.ui.gfx/ViewPropertiesChangedEvent
+union/member fuchsia.ui.gfx/Event.view_state_changed fuchsia.ui.gfx/ViewStateChangedEvent
+strict union fuchsia.ui.gfx/Event
+struct/member fuchsia.ui.gfx/ExportResourceCmdDeprecated.id uint32
+struct/member fuchsia.ui.gfx/ExportResourceCmdDeprecated.token zx/handle:EVENTPAIR
+resource struct fuchsia.ui.gfx/ExportResourceCmdDeprecated
+struct/member fuchsia.ui.gfx/ExportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.gfx/ExportToken
+struct/member fuchsia.ui.gfx/FactoredTransform.anchor fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/FactoredTransform.rotation fuchsia.ui.gfx/Quaternion
+struct/member fuchsia.ui.gfx/FactoredTransform.scale fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/FactoredTransform.translation fuchsia.ui.gfx/vec3
+struct fuchsia.ui.gfx/FactoredTransform
+struct/member fuchsia.ui.gfx/FloatValue.value float32
+struct/member fuchsia.ui.gfx/FloatValue.variable_id uint32
+struct fuchsia.ui.gfx/FloatValue
+enum/member fuchsia.ui.gfx/HitTestBehavior.kDefault 0
+enum/member fuchsia.ui.gfx/HitTestBehavior.kSuppress 1
+strict enum fuchsia.ui.gfx/HitTestBehavior uint32
+struct/member fuchsia.ui.gfx/ImageArgs.info fuchsia.images/ImageInfo
+struct/member fuchsia.ui.gfx/ImageArgs.memory_id uint32
+struct/member fuchsia.ui.gfx/ImageArgs.memory_offset uint32
+struct fuchsia.ui.gfx/ImageArgs
+struct/member fuchsia.ui.gfx/ImageArgs2.buffer_collection_id uint32
+struct/member fuchsia.ui.gfx/ImageArgs2.buffer_collection_index uint32
+struct/member fuchsia.ui.gfx/ImageArgs2.height uint32
+struct/member fuchsia.ui.gfx/ImageArgs2.width uint32
+struct fuchsia.ui.gfx/ImageArgs2
+struct/member fuchsia.ui.gfx/ImageArgs3.buffer_collection_index uint32
+struct/member fuchsia.ui.gfx/ImageArgs3.height uint32
+struct/member fuchsia.ui.gfx/ImageArgs3.import_token fuchsia.ui.composition/BufferCollectionImportToken
+struct/member fuchsia.ui.gfx/ImageArgs3.width uint32
+resource struct fuchsia.ui.gfx/ImageArgs3
+struct/member fuchsia.ui.gfx/ImagePipe2Args.image_pipe_request server_end:fuchsia.images/ImagePipe2
+resource struct fuchsia.ui.gfx/ImagePipe2Args
+struct/member fuchsia.ui.gfx/ImagePipeArgs.image_pipe_request server_end:fuchsia.images/ImagePipe
+resource struct fuchsia.ui.gfx/ImagePipeArgs
+struct/member fuchsia.ui.gfx/ImagePipeCompositorArgs.target fuchsia.images/ImagePipe
+resource struct fuchsia.ui.gfx/ImagePipeCompositorArgs
+struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.id uint32
+struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.spec fuchsia.ui.gfx/ImportSpec
+struct/member fuchsia.ui.gfx/ImportResourceCmdDeprecated.token zx/handle:EVENTPAIR
+resource struct fuchsia.ui.gfx/ImportResourceCmdDeprecated
+enum/member fuchsia.ui.gfx/ImportSpec.NODE 0
+strict enum fuchsia.ui.gfx/ImportSpec uint32
+struct/member fuchsia.ui.gfx/ImportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.gfx/ImportToken
+struct/member fuchsia.ui.gfx/ImportUnboundEvent.resource_id uint32
+struct fuchsia.ui.gfx/ImportUnboundEvent
+struct/member fuchsia.ui.gfx/LayerArgs.dummy uint32 0
+struct fuchsia.ui.gfx/LayerArgs
+struct/member fuchsia.ui.gfx/LayerStackArgs.dummy uint32 0
+struct fuchsia.ui.gfx/LayerStackArgs
+struct/member fuchsia.ui.gfx/MaterialArgs.dummy uint32 0
+struct fuchsia.ui.gfx/MaterialArgs
+struct/member fuchsia.ui.gfx/Matrix4Value.value fuchsia.ui.gfx/mat4
+struct/member fuchsia.ui.gfx/Matrix4Value.variable_id uint32
+struct fuchsia.ui.gfx/Matrix4Value
+struct/member fuchsia.ui.gfx/MemoryArgs.allocation_size uint64
+struct/member fuchsia.ui.gfx/MemoryArgs.memory_type fuchsia.images/MemoryType
+struct/member fuchsia.ui.gfx/MemoryArgs.vmo zx/handle:VMO
+resource struct fuchsia.ui.gfx/MemoryArgs
+struct fuchsia.ui.gfx/MeshArgs
+enum/member fuchsia.ui.gfx/MeshIndexFormat.kUint16 1
+enum/member fuchsia.ui.gfx/MeshIndexFormat.kUint32 2
+strict enum fuchsia.ui.gfx/MeshIndexFormat uint32
+struct/member fuchsia.ui.gfx/MeshVertexFormat.normal_type fuchsia.ui.gfx/ValueType
+struct/member fuchsia.ui.gfx/MeshVertexFormat.position_type fuchsia.ui.gfx/ValueType
+struct/member fuchsia.ui.gfx/MeshVertexFormat.tex_coord_type fuchsia.ui.gfx/ValueType
+struct fuchsia.ui.gfx/MeshVertexFormat
+struct/member fuchsia.ui.gfx/Metrics.scale_x float32
+struct/member fuchsia.ui.gfx/Metrics.scale_y float32
+struct/member fuchsia.ui.gfx/Metrics.scale_z float32
+struct fuchsia.ui.gfx/Metrics
+struct/member fuchsia.ui.gfx/MetricsEvent.metrics fuchsia.ui.gfx/Metrics
+struct/member fuchsia.ui.gfx/MetricsEvent.node_id uint32
+struct fuchsia.ui.gfx/MetricsEvent
+struct/member fuchsia.ui.gfx/OpacityNodeArgsHACK.unused uint32 0
+struct fuchsia.ui.gfx/OpacityNodeArgsHACK
+struct/member fuchsia.ui.gfx/Plane3.dir fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/Plane3.dist float32
+struct fuchsia.ui.gfx/Plane3
+struct/member fuchsia.ui.gfx/PointLightArgs.dummy uint32 0
+struct fuchsia.ui.gfx/PointLightArgs
+protocol/member fuchsia.ui.gfx/PoseBufferProvider.SetPoseBuffer(zx/handle:VMO buffer,uint32 num_entries,int64 base_time,uint64 time_interval)
+protocol fuchsia.ui.gfx/PoseBufferProvider
+struct/member fuchsia.ui.gfx/Quaternion.w float32
+struct/member fuchsia.ui.gfx/Quaternion.x float32
+struct/member fuchsia.ui.gfx/Quaternion.y float32
+struct/member fuchsia.ui.gfx/Quaternion.z float32
+struct fuchsia.ui.gfx/Quaternion
+struct/member fuchsia.ui.gfx/QuaternionValue.value fuchsia.ui.gfx/Quaternion
+struct/member fuchsia.ui.gfx/QuaternionValue.variable_id uint32
+struct fuchsia.ui.gfx/QuaternionValue
+struct/member fuchsia.ui.gfx/RectangleArgs.height fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RectangleArgs.width fuchsia.ui.gfx/Value
+struct fuchsia.ui.gfx/RectangleArgs
+struct/member fuchsia.ui.gfx/ReleaseResourceCmd.id uint32
+struct fuchsia.ui.gfx/ReleaseResourceCmd
+struct/member fuchsia.ui.gfx/RemoveAllLayersCmd.layer_stack_id uint32
+struct fuchsia.ui.gfx/RemoveAllLayersCmd
+struct/member fuchsia.ui.gfx/RemoveLayerCmd.layer_id uint32
+struct/member fuchsia.ui.gfx/RemoveLayerCmd.layer_stack_id uint32
+struct fuchsia.ui.gfx/RemoveLayerCmd
+enum/member fuchsia.ui.gfx/RenderFrequency.CONTINUOUSLY 1
+enum/member fuchsia.ui.gfx/RenderFrequency.WHEN_REQUESTED 0
+strict enum fuchsia.ui.gfx/RenderFrequency uint32
+struct/member fuchsia.ui.gfx/RendererArgs.dummy uint32 0
+struct fuchsia.ui.gfx/RendererArgs
+union/member fuchsia.ui.gfx/RendererParam.enable_debugging bool
+union/member fuchsia.ui.gfx/RendererParam.reserved fuchsia.ui.gfx/RenderFrequency
+union/member fuchsia.ui.gfx/RendererParam.shadow_technique fuchsia.ui.gfx/ShadowTechnique
+strict union fuchsia.ui.gfx/RendererParam
+union/member fuchsia.ui.gfx/ResourceArgs.ambient_light fuchsia.ui.gfx/AmbientLightArgs
+union/member fuchsia.ui.gfx/ResourceArgs.buffer fuchsia.ui.gfx/BufferArgs
+union/member fuchsia.ui.gfx/ResourceArgs.camera fuchsia.ui.gfx/CameraArgs
+union/member fuchsia.ui.gfx/ResourceArgs.circle fuchsia.ui.gfx/CircleArgs
+union/member fuchsia.ui.gfx/ResourceArgs.clip_node fuchsia.ui.gfx/ClipNodeArgs
+union/member fuchsia.ui.gfx/ResourceArgs.compositor fuchsia.ui.gfx/CompositorArgs
+union/member fuchsia.ui.gfx/ResourceArgs.directional_light fuchsia.ui.gfx/DirectionalLightArgs
+union/member fuchsia.ui.gfx/ResourceArgs.display_compositor fuchsia.ui.gfx/DisplayCompositorArgs
+union/member fuchsia.ui.gfx/ResourceArgs.entity_node fuchsia.ui.gfx/EntityNodeArgs
+union/member fuchsia.ui.gfx/ResourceArgs.image fuchsia.ui.gfx/ImageArgs
+union/member fuchsia.ui.gfx/ResourceArgs.image2 fuchsia.ui.gfx/ImageArgs2
+union/member fuchsia.ui.gfx/ResourceArgs.image3 fuchsia.ui.gfx/ImageArgs3
+union/member fuchsia.ui.gfx/ResourceArgs.image_pipe fuchsia.ui.gfx/ImagePipeArgs
+union/member fuchsia.ui.gfx/ResourceArgs.image_pipe2 fuchsia.ui.gfx/ImagePipe2Args
+union/member fuchsia.ui.gfx/ResourceArgs.image_pipe_compositor fuchsia.ui.gfx/ImagePipeCompositorArgs
+union/member fuchsia.ui.gfx/ResourceArgs.layer fuchsia.ui.gfx/LayerArgs
+union/member fuchsia.ui.gfx/ResourceArgs.layer_stack fuchsia.ui.gfx/LayerStackArgs
+union/member fuchsia.ui.gfx/ResourceArgs.material fuchsia.ui.gfx/MaterialArgs
+union/member fuchsia.ui.gfx/ResourceArgs.memory fuchsia.ui.gfx/MemoryArgs
+union/member fuchsia.ui.gfx/ResourceArgs.mesh fuchsia.ui.gfx/MeshArgs
+union/member fuchsia.ui.gfx/ResourceArgs.opacity_node fuchsia.ui.gfx/OpacityNodeArgsHACK
+union/member fuchsia.ui.gfx/ResourceArgs.point_light fuchsia.ui.gfx/PointLightArgs
+union/member fuchsia.ui.gfx/ResourceArgs.rectangle fuchsia.ui.gfx/RectangleArgs
+union/member fuchsia.ui.gfx/ResourceArgs.renderer fuchsia.ui.gfx/RendererArgs
+union/member fuchsia.ui.gfx/ResourceArgs.rounded_rectangle fuchsia.ui.gfx/RoundedRectangleArgs
+union/member fuchsia.ui.gfx/ResourceArgs.scene fuchsia.ui.gfx/SceneArgs
+union/member fuchsia.ui.gfx/ResourceArgs.shape_node fuchsia.ui.gfx/ShapeNodeArgs
+union/member fuchsia.ui.gfx/ResourceArgs.stereo_camera fuchsia.ui.gfx/StereoCameraArgs
+union/member fuchsia.ui.gfx/ResourceArgs.variable fuchsia.ui.gfx/VariableArgs
+union/member fuchsia.ui.gfx/ResourceArgs.view fuchsia.ui.gfx/ViewArgs
+union/member fuchsia.ui.gfx/ResourceArgs.view3 fuchsia.ui.gfx/ViewArgs3
+union/member fuchsia.ui.gfx/ResourceArgs.view_holder fuchsia.ui.gfx/ViewHolderArgs
+resource strict union fuchsia.ui.gfx/ResourceArgs
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.bottom_left_radius fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.bottom_right_radius fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.height fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.top_left_radius fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.top_right_radius fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/RoundedRectangleArgs.width fuchsia.ui.gfx/Value
+struct fuchsia.ui.gfx/RoundedRectangleArgs
+struct/member fuchsia.ui.gfx/SceneAddAmbientLightCmd.light_id uint32
+struct/member fuchsia.ui.gfx/SceneAddAmbientLightCmd.scene_id uint32
+struct fuchsia.ui.gfx/SceneAddAmbientLightCmd
+struct/member fuchsia.ui.gfx/SceneAddDirectionalLightCmd.light_id uint32
+struct/member fuchsia.ui.gfx/SceneAddDirectionalLightCmd.scene_id uint32
+struct fuchsia.ui.gfx/SceneAddDirectionalLightCmd
+struct/member fuchsia.ui.gfx/SceneAddPointLightCmd.light_id uint32
+struct/member fuchsia.ui.gfx/SceneAddPointLightCmd.scene_id uint32
+struct fuchsia.ui.gfx/SceneAddPointLightCmd
+struct/member fuchsia.ui.gfx/SceneArgs.dummy uint32 0
+struct fuchsia.ui.gfx/SceneArgs
+struct/member fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.height_change_factor float32
+struct/member fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.node_id uint32
+struct/member fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.width_change_factor float32
+struct fuchsia.ui.gfx/SendSizeChangeHintCmdHACK
+struct/member fuchsia.ui.gfx/SetAnchorCmd.id uint32
+struct/member fuchsia.ui.gfx/SetAnchorCmd.value fuchsia.ui.gfx/Vector3Value
+struct fuchsia.ui.gfx/SetAnchorCmd
+struct/member fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.scale float32
+struct/member fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.translation fuchsia.ui.gfx/vec2
+struct fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd
+struct/member fuchsia.ui.gfx/SetCameraCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetCameraCmd.renderer_id uint32
+struct fuchsia.ui.gfx/SetCameraCmd
+struct/member fuchsia.ui.gfx/SetCameraPoseBufferCmd.base_time int64
+struct/member fuchsia.ui.gfx/SetCameraPoseBufferCmd.buffer_id uint32
+struct/member fuchsia.ui.gfx/SetCameraPoseBufferCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetCameraPoseBufferCmd.num_entries uint32
+struct/member fuchsia.ui.gfx/SetCameraPoseBufferCmd.time_interval uint64
+struct fuchsia.ui.gfx/SetCameraPoseBufferCmd
+struct/member fuchsia.ui.gfx/SetCameraProjectionCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetCameraProjectionCmd.fovy fuchsia.ui.gfx/FloatValue
+struct fuchsia.ui.gfx/SetCameraProjectionCmd
+struct/member fuchsia.ui.gfx/SetCameraTransformCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetCameraTransformCmd.eye_look_at fuchsia.ui.gfx/Vector3Value
+struct/member fuchsia.ui.gfx/SetCameraTransformCmd.eye_position fuchsia.ui.gfx/Vector3Value
+struct/member fuchsia.ui.gfx/SetCameraTransformCmd.eye_up fuchsia.ui.gfx/Vector3Value
+struct fuchsia.ui.gfx/SetCameraTransformCmd
+struct/member fuchsia.ui.gfx/SetClipCmd.clip_id uint32
+struct/member fuchsia.ui.gfx/SetClipCmd.clip_to_self bool
+struct/member fuchsia.ui.gfx/SetClipCmd.node_id uint32
+struct fuchsia.ui.gfx/SetClipCmd
+struct/member fuchsia.ui.gfx/SetClipPlanesCmd.clip_planes vector<fuchsia.ui.gfx/Plane3>
+struct/member fuchsia.ui.gfx/SetClipPlanesCmd.node_id uint32
+struct fuchsia.ui.gfx/SetClipPlanesCmd
+struct/member fuchsia.ui.gfx/SetColorCmd.color fuchsia.ui.gfx/ColorRgbaValue
+struct/member fuchsia.ui.gfx/SetColorCmd.material_id uint32
+struct fuchsia.ui.gfx/SetColorCmd
+struct/member fuchsia.ui.gfx/SetDisableClippingCmd.disable_clipping bool
+struct/member fuchsia.ui.gfx/SetDisableClippingCmd.renderer_id uint32
+struct fuchsia.ui.gfx/SetDisableClippingCmd
+struct/member fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.compositor_id uint32
+struct/member fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.matrix array<float32,9>
+struct/member fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.postoffsets array<float32,3>
+struct/member fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.preoffsets array<float32,3>
+struct fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK
+struct/member fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK.min_value uint8
+struct fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK
+struct/member fuchsia.ui.gfx/SetDisplayRotationCmdHACK.compositor_id uint32
+struct/member fuchsia.ui.gfx/SetDisplayRotationCmdHACK.rotation_degrees uint32
+struct fuchsia.ui.gfx/SetDisplayRotationCmdHACK
+struct/member fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd.enable bool
+struct/member fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd.view_id uint32
+struct fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd
+struct/member fuchsia.ui.gfx/SetEventMaskCmd.event_mask uint32
+struct/member fuchsia.ui.gfx/SetEventMaskCmd.id uint32
+struct fuchsia.ui.gfx/SetEventMaskCmd
+struct/member fuchsia.ui.gfx/SetHitTestBehaviorCmd.hit_test_behavior fuchsia.ui.gfx/HitTestBehavior
+struct/member fuchsia.ui.gfx/SetHitTestBehaviorCmd.node_id uint32
+struct fuchsia.ui.gfx/SetHitTestBehaviorCmd
+struct fuchsia.ui.gfx/SetImportFocusCmdDEPRECATED
+struct/member fuchsia.ui.gfx/SetLabelCmd.id uint32
+struct/member fuchsia.ui.gfx/SetLabelCmd.label string
+struct fuchsia.ui.gfx/SetLabelCmd
+struct/member fuchsia.ui.gfx/SetLayerStackCmd.compositor_id uint32
+struct/member fuchsia.ui.gfx/SetLayerStackCmd.layer_stack_id uint32
+struct fuchsia.ui.gfx/SetLayerStackCmd
+struct/member fuchsia.ui.gfx/SetLightColorCmd.color fuchsia.ui.gfx/ColorRgbValue
+struct/member fuchsia.ui.gfx/SetLightColorCmd.light_id uint32
+struct fuchsia.ui.gfx/SetLightColorCmd
+struct/member fuchsia.ui.gfx/SetLightDirectionCmd.direction fuchsia.ui.gfx/Vector3Value
+struct/member fuchsia.ui.gfx/SetLightDirectionCmd.light_id uint32
+struct fuchsia.ui.gfx/SetLightDirectionCmd
+struct/member fuchsia.ui.gfx/SetMaterialCmd.material_id uint32
+struct/member fuchsia.ui.gfx/SetMaterialCmd.node_id uint32
+struct fuchsia.ui.gfx/SetMaterialCmd
+struct/member fuchsia.ui.gfx/SetOpacityCmd.node_id uint32
+struct/member fuchsia.ui.gfx/SetOpacityCmd.opacity float32
+struct fuchsia.ui.gfx/SetOpacityCmd
+struct/member fuchsia.ui.gfx/SetPointLightFalloffCmd.falloff fuchsia.ui.gfx/FloatValue
+struct/member fuchsia.ui.gfx/SetPointLightFalloffCmd.light_id uint32
+struct fuchsia.ui.gfx/SetPointLightFalloffCmd
+struct/member fuchsia.ui.gfx/SetPointLightPositionCmd.light_id uint32
+struct/member fuchsia.ui.gfx/SetPointLightPositionCmd.position fuchsia.ui.gfx/Vector3Value
+struct fuchsia.ui.gfx/SetPointLightPositionCmd
+struct/member fuchsia.ui.gfx/SetRendererCmd.layer_id uint32
+struct/member fuchsia.ui.gfx/SetRendererCmd.renderer_id uint32
+struct fuchsia.ui.gfx/SetRendererCmd
+struct/member fuchsia.ui.gfx/SetRendererParamCmd.param fuchsia.ui.gfx/RendererParam
+struct/member fuchsia.ui.gfx/SetRendererParamCmd.renderer_id uint32
+struct fuchsia.ui.gfx/SetRendererParamCmd
+struct/member fuchsia.ui.gfx/SetRotationCmd.id uint32
+struct/member fuchsia.ui.gfx/SetRotationCmd.value fuchsia.ui.gfx/QuaternionValue
+struct fuchsia.ui.gfx/SetRotationCmd
+struct/member fuchsia.ui.gfx/SetScaleCmd.id uint32
+struct/member fuchsia.ui.gfx/SetScaleCmd.value fuchsia.ui.gfx/Vector3Value
+struct fuchsia.ui.gfx/SetScaleCmd
+struct/member fuchsia.ui.gfx/SetSemanticVisibilityCmd.node_id uint32
+struct/member fuchsia.ui.gfx/SetSemanticVisibilityCmd.visible bool true
+struct fuchsia.ui.gfx/SetSemanticVisibilityCmd
+struct/member fuchsia.ui.gfx/SetShapeCmd.node_id uint32
+struct/member fuchsia.ui.gfx/SetShapeCmd.shape_id uint32
+struct fuchsia.ui.gfx/SetShapeCmd
+struct/member fuchsia.ui.gfx/SetSizeCmd.id uint32
+struct/member fuchsia.ui.gfx/SetSizeCmd.value fuchsia.ui.gfx/Vector2Value
+struct fuchsia.ui.gfx/SetSizeCmd
+struct/member fuchsia.ui.gfx/SetStereoCameraProjectionCmd.camera_id uint32
+struct/member fuchsia.ui.gfx/SetStereoCameraProjectionCmd.left_projection fuchsia.ui.gfx/Matrix4Value
+struct/member fuchsia.ui.gfx/SetStereoCameraProjectionCmd.right_projection fuchsia.ui.gfx/Matrix4Value
+struct fuchsia.ui.gfx/SetStereoCameraProjectionCmd
+struct/member fuchsia.ui.gfx/SetTagCmd.node_id uint32
+struct/member fuchsia.ui.gfx/SetTagCmd.tag_value uint32
+struct fuchsia.ui.gfx/SetTagCmd
+struct/member fuchsia.ui.gfx/SetTextureCmd.material_id uint32
+struct/member fuchsia.ui.gfx/SetTextureCmd.texture_id uint32
+struct fuchsia.ui.gfx/SetTextureCmd
+struct/member fuchsia.ui.gfx/SetTranslationCmd.id uint32
+struct/member fuchsia.ui.gfx/SetTranslationCmd.value fuchsia.ui.gfx/Vector3Value
+struct fuchsia.ui.gfx/SetTranslationCmd
+struct/member fuchsia.ui.gfx/SetViewHolderBoundsColorCmd.color fuchsia.ui.gfx/ColorRgbValue
+struct/member fuchsia.ui.gfx/SetViewHolderBoundsColorCmd.view_holder_id uint32
+struct fuchsia.ui.gfx/SetViewHolderBoundsColorCmd
+struct/member fuchsia.ui.gfx/SetViewPropertiesCmd.properties fuchsia.ui.gfx/ViewProperties
+struct/member fuchsia.ui.gfx/SetViewPropertiesCmd.view_holder_id uint32
+struct fuchsia.ui.gfx/SetViewPropertiesCmd
+enum/member fuchsia.ui.gfx/ShadowTechnique.MOMENT_SHADOW_MAP 3
+enum/member fuchsia.ui.gfx/ShadowTechnique.SCREEN_SPACE 1
+enum/member fuchsia.ui.gfx/ShadowTechnique.SHADOW_MAP 2
+enum/member fuchsia.ui.gfx/ShadowTechnique.STENCIL_SHADOW_VOLUME 4
+enum/member fuchsia.ui.gfx/ShadowTechnique.UNSHADOWED 0
+strict enum fuchsia.ui.gfx/ShadowTechnique uint32
+struct/member fuchsia.ui.gfx/ShapeNodeArgs.unused uint32 0
+struct fuchsia.ui.gfx/ShapeNodeArgs
+struct/member fuchsia.ui.gfx/SizeChangeHintEvent.height_change_factor float32
+struct/member fuchsia.ui.gfx/SizeChangeHintEvent.node_id uint32
+struct/member fuchsia.ui.gfx/SizeChangeHintEvent.width_change_factor float32
+struct fuchsia.ui.gfx/SizeChangeHintEvent
+protocol/member fuchsia.ui.gfx/SnapshotCallbackDEPRECATED.OnData(fuchsia.mem/Buffer data)
+protocol fuchsia.ui.gfx/SnapshotCallbackDEPRECATED
+struct/member fuchsia.ui.gfx/StereoCameraArgs.scene_id uint32
+struct fuchsia.ui.gfx/StereoCameraArgs
+struct/member fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED.callback client_end:fuchsia.ui.gfx/SnapshotCallbackDEPRECATED
+struct/member fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED.node_id uint32
+resource struct fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED
+union/member fuchsia.ui.gfx/Value.color_rgb fuchsia.ui.gfx/ColorRgb
+union/member fuchsia.ui.gfx/Value.color_rgba fuchsia.ui.gfx/ColorRgba
+union/member fuchsia.ui.gfx/Value.degrees float32
+union/member fuchsia.ui.gfx/Value.matrix4x4 fuchsia.ui.gfx/mat4
+union/member fuchsia.ui.gfx/Value.quaternion fuchsia.ui.gfx/Quaternion
+union/member fuchsia.ui.gfx/Value.transform fuchsia.ui.gfx/FactoredTransform
+union/member fuchsia.ui.gfx/Value.variable_id uint32
+union/member fuchsia.ui.gfx/Value.vector1 float32
+union/member fuchsia.ui.gfx/Value.vector2 fuchsia.ui.gfx/vec2
+union/member fuchsia.ui.gfx/Value.vector3 fuchsia.ui.gfx/vec3
+union/member fuchsia.ui.gfx/Value.vector4 fuchsia.ui.gfx/vec4
+strict union fuchsia.ui.gfx/Value
+enum/member fuchsia.ui.gfx/ValueType.kColorRgb 6
+enum/member fuchsia.ui.gfx/ValueType.kColorRgba 7
+enum/member fuchsia.ui.gfx/ValueType.kFactoredTransform 9
+enum/member fuchsia.ui.gfx/ValueType.kMatrix4 5
+enum/member fuchsia.ui.gfx/ValueType.kNone 0
+enum/member fuchsia.ui.gfx/ValueType.kQuaternion 8
+enum/member fuchsia.ui.gfx/ValueType.kVector1 1
+enum/member fuchsia.ui.gfx/ValueType.kVector2 2
+enum/member fuchsia.ui.gfx/ValueType.kVector3 3
+enum/member fuchsia.ui.gfx/ValueType.kVector4 4
+strict enum fuchsia.ui.gfx/ValueType uint32
+struct/member fuchsia.ui.gfx/VariableArgs.initial_value fuchsia.ui.gfx/Value
+struct/member fuchsia.ui.gfx/VariableArgs.type fuchsia.ui.gfx/ValueType
+struct fuchsia.ui.gfx/VariableArgs
+struct/member fuchsia.ui.gfx/Vector2Value.value fuchsia.ui.gfx/vec2
+struct/member fuchsia.ui.gfx/Vector2Value.variable_id uint32
+struct fuchsia.ui.gfx/Vector2Value
+struct/member fuchsia.ui.gfx/Vector3Value.value fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/Vector3Value.variable_id uint32
+struct fuchsia.ui.gfx/Vector3Value
+struct/member fuchsia.ui.gfx/Vector4Value.value fuchsia.ui.gfx/vec4
+struct/member fuchsia.ui.gfx/Vector4Value.variable_id uint32
+struct fuchsia.ui.gfx/Vector4Value
+struct/member fuchsia.ui.gfx/ViewArgs.debug_name string:optional
+struct/member fuchsia.ui.gfx/ViewArgs.token fuchsia.ui.views/ViewToken
+resource struct fuchsia.ui.gfx/ViewArgs
+struct/member fuchsia.ui.gfx/ViewArgs3.control_ref fuchsia.ui.views/ViewRefControl
+struct/member fuchsia.ui.gfx/ViewArgs3.debug_name string:optional
+struct/member fuchsia.ui.gfx/ViewArgs3.token fuchsia.ui.views/ViewToken
+struct/member fuchsia.ui.gfx/ViewArgs3.view_ref fuchsia.ui.views/ViewRef
+resource struct fuchsia.ui.gfx/ViewArgs3
+struct/member fuchsia.ui.gfx/ViewAttachedToSceneEvent.properties fuchsia.ui.gfx/ViewProperties
+struct/member fuchsia.ui.gfx/ViewAttachedToSceneEvent.view_id uint32
+struct fuchsia.ui.gfx/ViewAttachedToSceneEvent
+struct/member fuchsia.ui.gfx/ViewConnectedEvent.view_holder_id uint32
+struct fuchsia.ui.gfx/ViewConnectedEvent
+struct/member fuchsia.ui.gfx/ViewDetachedFromSceneEvent.view_id uint32
+struct fuchsia.ui.gfx/ViewDetachedFromSceneEvent
+struct/member fuchsia.ui.gfx/ViewDisconnectedEvent.view_holder_id uint32
+struct fuchsia.ui.gfx/ViewDisconnectedEvent
+struct/member fuchsia.ui.gfx/ViewHolderArgs.debug_name string:optional
+struct/member fuchsia.ui.gfx/ViewHolderArgs.token fuchsia.ui.views/ViewHolderToken
+resource struct fuchsia.ui.gfx/ViewHolderArgs
+struct/member fuchsia.ui.gfx/ViewHolderConnectedEvent.view_id uint32
+struct fuchsia.ui.gfx/ViewHolderConnectedEvent
+struct/member fuchsia.ui.gfx/ViewHolderDisconnectedEvent.view_id uint32
+struct fuchsia.ui.gfx/ViewHolderDisconnectedEvent
+struct/member fuchsia.ui.gfx/ViewProperties.bounding_box fuchsia.ui.gfx/BoundingBox
+struct/member fuchsia.ui.gfx/ViewProperties.downward_input bool true
+struct/member fuchsia.ui.gfx/ViewProperties.focus_change bool true
+struct/member fuchsia.ui.gfx/ViewProperties.inset_from_max fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/ViewProperties.inset_from_min fuchsia.ui.gfx/vec3
+struct fuchsia.ui.gfx/ViewProperties
+struct/member fuchsia.ui.gfx/ViewPropertiesChangedEvent.properties fuchsia.ui.gfx/ViewProperties
+struct/member fuchsia.ui.gfx/ViewPropertiesChangedEvent.view_id uint32
+struct fuchsia.ui.gfx/ViewPropertiesChangedEvent
+struct/member fuchsia.ui.gfx/ViewState.is_rendering bool
+struct fuchsia.ui.gfx/ViewState
+struct/member fuchsia.ui.gfx/ViewStateChangedEvent.state fuchsia.ui.gfx/ViewState
+struct/member fuchsia.ui.gfx/ViewStateChangedEvent.view_holder_id uint32
+struct fuchsia.ui.gfx/ViewStateChangedEvent
+const fuchsia.ui.gfx/kLabelMaxLength uint32 32
+const fuchsia.ui.gfx/kMetricsEventMask uint32 1
+const fuchsia.ui.gfx/kSizeChangeHintEventMask uint32 2
+struct/member fuchsia.ui.gfx/mat4.matrix array<float32,16>
+struct fuchsia.ui.gfx/mat4
+struct/member fuchsia.ui.gfx/vec2.x float32
+struct/member fuchsia.ui.gfx/vec2.y float32
+struct fuchsia.ui.gfx/vec2
+struct/member fuchsia.ui.gfx/vec3.x float32
+struct/member fuchsia.ui.gfx/vec3.y float32
+struct/member fuchsia.ui.gfx/vec3.z float32
+struct fuchsia.ui.gfx/vec3
+struct/member fuchsia.ui.gfx/vec4.w float32
+struct/member fuchsia.ui.gfx/vec4.x float32
+struct/member fuchsia.ui.gfx/vec4.y float32
+struct/member fuchsia.ui.gfx/vec4.z float32
+struct fuchsia.ui.gfx/vec4
+library fuchsia.ui.gfx

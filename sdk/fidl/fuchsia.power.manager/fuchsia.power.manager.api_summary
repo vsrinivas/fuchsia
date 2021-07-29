@@ -1,0 +1,10 @@
+protocol/member fuchsia.power.manager/DriverManagerRegistration.Register(fuchsia.device.manager/SystemStateTransition system_state_transition,fuchsia.io/Directory dir) -> (fuchsia.power.manager/DriverManagerRegistration_Register_Result result)
+protocol fuchsia.power.manager/DriverManagerRegistration
+struct fuchsia.power.manager/DriverManagerRegistration_Register_Response
+union/member fuchsia.power.manager/DriverManagerRegistration_Register_Result.err fuchsia.power.manager/RegistrationError
+union/member fuchsia.power.manager/DriverManagerRegistration_Register_Result.response fuchsia.power.manager/DriverManagerRegistration_Register_Response
+strict union fuchsia.power.manager/DriverManagerRegistration_Register_Result
+enum/member fuchsia.power.manager/RegistrationError.INTERNAL 0
+enum/member fuchsia.power.manager/RegistrationError.INVALID_HANDLE 1
+strict enum fuchsia.power.manager/RegistrationError uint32
+library fuchsia.power.manager

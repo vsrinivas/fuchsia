@@ -1,0 +1,7 @@
+enum/member fuchsia.power.profile/Profile.BACKGROUND_ACTIVE 2
+enum/member fuchsia.power.profile/Profile.IDLE 1
+enum/member fuchsia.power.profile/Profile.USER_ACTIVE 3
+strict enum fuchsia.power.profile/Profile uint32
+protocol/member fuchsia.power.profile/Watcher.Watch() -> (fuchsia.power.profile/Profile profile)
+protocol fuchsia.power.profile/Watcher
+library fuchsia.power.profile

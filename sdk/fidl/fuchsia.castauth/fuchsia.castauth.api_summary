@@ -1,0 +1,20 @@
+union/member fuchsia.castauth/Asn1EncodedHash.sha1 array<uint8,35>
+union/member fuchsia.castauth/Asn1EncodedHash.sha256 array<uint8,51>
+strict union fuchsia.castauth/Asn1EncodedHash
+protocol/member fuchsia.castauth/CastKeySigner.GetCertificateChain() -> (fuchsia.castauth/CastKeySigner_GetCertificateChain_Result result)
+protocol/member fuchsia.castauth/CastKeySigner.SignHash(fuchsia.castauth/Asn1EncodedHash hash) -> (fuchsia.castauth/CastKeySigner_SignHash_Result result)
+protocol fuchsia.castauth/CastKeySigner
+struct/member fuchsia.castauth/CastKeySigner_GetCertificateChain_Response.cert_chain vector<vector<uint8>:2048>:16
+struct fuchsia.castauth/CastKeySigner_GetCertificateChain_Response
+union/member fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.err fuchsia.castauth/ErrorCode
+union/member fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.response fuchsia.castauth/CastKeySigner_GetCertificateChain_Response
+strict union fuchsia.castauth/CastKeySigner_GetCertificateChain_Result
+struct/member fuchsia.castauth/CastKeySigner_SignHash_Response.signature array<uint8,256>
+struct fuchsia.castauth/CastKeySigner_SignHash_Response
+union/member fuchsia.castauth/CastKeySigner_SignHash_Result.err fuchsia.castauth/ErrorCode
+union/member fuchsia.castauth/CastKeySigner_SignHash_Result.response fuchsia.castauth/CastKeySigner_SignHash_Response
+strict union fuchsia.castauth/CastKeySigner_SignHash_Result
+enum/member fuchsia.castauth/ErrorCode.CRYPTO_ERROR 2
+enum/member fuchsia.castauth/ErrorCode.FILE_NOT_FOUND 1
+strict enum fuchsia.castauth/ErrorCode uint32
+library fuchsia.castauth

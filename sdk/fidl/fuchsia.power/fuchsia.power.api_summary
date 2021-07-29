@@ -1,0 +1,53 @@
+table/member fuchsia.power/BatteryInfo.charge_source fuchsia.power/ChargeSource
+table/member fuchsia.power/BatteryInfo.charge_status fuchsia.power/ChargeStatus
+table/member fuchsia.power/BatteryInfo.health fuchsia.power/HealthStatus
+table/member fuchsia.power/BatteryInfo.level_percent float32
+table/member fuchsia.power/BatteryInfo.level_status fuchsia.power/LevelStatus
+table/member fuchsia.power/BatteryInfo.status fuchsia.power/BatteryStatus
+table/member fuchsia.power/BatteryInfo.time_remaining fuchsia.power/TimeRemaining
+table/member fuchsia.power/BatteryInfo.timestamp int64
+table fuchsia.power/BatteryInfo
+protocol/member fuchsia.power/BatteryInfoProvider.GetBatteryInfo() -> (fuchsia.power/BatteryInfo info)
+protocol/member fuchsia.power/BatteryInfoProvider.Watch(client_end:fuchsia.power/BatteryInfoWatcher watcher)
+protocol fuchsia.power/BatteryInfoProvider
+protocol/member fuchsia.power/BatteryInfoWatcher.OnChangeBatteryInfo(fuchsia.power/BatteryInfo info) -> ()
+protocol fuchsia.power/BatteryInfoWatcher
+protocol/member fuchsia.power/BatteryManager.GetBatteryInfo() -> (fuchsia.power/BatteryInfo info)
+protocol/member fuchsia.power/BatteryManager.Watch(client_end:fuchsia.power/BatteryInfoWatcher watcher)
+protocol fuchsia.power/BatteryManager
+enum/member fuchsia.power/BatteryStatus.NOT_AVAILABLE 2
+enum/member fuchsia.power/BatteryStatus.NOT_PRESENT 3
+enum/member fuchsia.power/BatteryStatus.OK 1
+enum/member fuchsia.power/BatteryStatus.UNKNOWN 0
+strict enum fuchsia.power/BatteryStatus uint32
+enum/member fuchsia.power/ChargeSource.AC_ADAPTER 2
+enum/member fuchsia.power/ChargeSource.NONE 1
+enum/member fuchsia.power/ChargeSource.UNKNOWN 0
+enum/member fuchsia.power/ChargeSource.USB 3
+enum/member fuchsia.power/ChargeSource.WIRELESS 4
+strict enum fuchsia.power/ChargeSource uint32
+enum/member fuchsia.power/ChargeStatus.CHARGING 2
+enum/member fuchsia.power/ChargeStatus.DISCHARGING 3
+enum/member fuchsia.power/ChargeStatus.FULL 4
+enum/member fuchsia.power/ChargeStatus.NOT_CHARGING 1
+enum/member fuchsia.power/ChargeStatus.UNKNOWN 0
+strict enum fuchsia.power/ChargeStatus uint32
+enum/member fuchsia.power/HealthStatus.COLD 2
+enum/member fuchsia.power/HealthStatus.DEAD 4
+enum/member fuchsia.power/HealthStatus.GOOD 1
+enum/member fuchsia.power/HealthStatus.HOT 3
+enum/member fuchsia.power/HealthStatus.OVER_VOLTAGE 5
+enum/member fuchsia.power/HealthStatus.UNKNOWN 0
+enum/member fuchsia.power/HealthStatus.UNSPECIFIED_FAILURE 6
+strict enum fuchsia.power/HealthStatus uint32
+enum/member fuchsia.power/LevelStatus.CRITICAL 4
+enum/member fuchsia.power/LevelStatus.LOW 3
+enum/member fuchsia.power/LevelStatus.OK 1
+enum/member fuchsia.power/LevelStatus.UNKNOWN 0
+enum/member fuchsia.power/LevelStatus.WARNING 2
+strict enum fuchsia.power/LevelStatus uint32
+union/member fuchsia.power/TimeRemaining.battery_life int64
+union/member fuchsia.power/TimeRemaining.full_charge int64
+union/member fuchsia.power/TimeRemaining.indeterminate int64
+flexible union fuchsia.power/TimeRemaining
+library fuchsia.power

@@ -1,0 +1,48 @@
+protocol/member fuchsia.hardware.platform.bus/PBus.CompositeDeviceAdd(fuchsia.hardware.platform.bus/PbusDev dev,uint64 fragments,uint64 fragments_count,uint32 coresident_device_index) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.DeviceAdd(fuchsia.hardware.platform.bus/PbusDev dev) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.GetBoardInfo() -> (int32 s,fuchsia.hardware.platform.device/PdevBoardInfo info)
+protocol/member fuchsia.hardware.platform.bus/PBus.ProtocolDeviceAdd(uint32 proto_id,fuchsia.hardware.platform.bus/PbusDev dev) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.RegisterProtocol(uint32 proto_id,vector<uint8> protocol) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.RegisterSysSuspendCallback(client_end:fuchsia.hardware.platform.bus/PbusSysSuspend suspend_cb) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.SetBoardInfo(fuchsia.hardware.platform.bus/PbusBoardInfo info) -> (int32 s)
+protocol/member fuchsia.hardware.platform.bus/PBus.SetBootloaderInfo(fuchsia.hardware.platform.bus/PbusBootloaderInfo info) -> (int32 s)
+protocol fuchsia.hardware.platform.bus/PBus
+struct/member fuchsia.hardware.platform.bus/PbusBoardInfo.board_name string:32
+struct/member fuchsia.hardware.platform.bus/PbusBoardInfo.board_revision uint32
+struct fuchsia.hardware.platform.bus/PbusBoardInfo
+struct/member fuchsia.hardware.platform.bus/PbusBootMetadata.zbi_extra uint32
+struct/member fuchsia.hardware.platform.bus/PbusBootMetadata.zbi_type uint32
+struct fuchsia.hardware.platform.bus/PbusBootMetadata
+struct/member fuchsia.hardware.platform.bus/PbusBootloaderInfo.vendor string:32
+struct fuchsia.hardware.platform.bus/PbusBootloaderInfo
+struct/member fuchsia.hardware.platform.bus/PbusBti.bti_id uint32
+struct/member fuchsia.hardware.platform.bus/PbusBti.iommu_index uint32
+struct fuchsia.hardware.platform.bus/PbusBti
+struct/member fuchsia.hardware.platform.bus/PbusDev.boot_metadata vector<fuchsia.hardware.platform.bus/PbusBootMetadata>
+struct/member fuchsia.hardware.platform.bus/PbusDev.bti vector<fuchsia.hardware.platform.bus/PbusBti>
+struct/member fuchsia.hardware.platform.bus/PbusDev.did uint32
+struct/member fuchsia.hardware.platform.bus/PbusDev.instance_id uint32
+struct/member fuchsia.hardware.platform.bus/PbusDev.irq vector<fuchsia.hardware.platform.bus/PbusIrq>
+struct/member fuchsia.hardware.platform.bus/PbusDev.metadata vector<fuchsia.hardware.platform.bus/PbusMetadata>
+struct/member fuchsia.hardware.platform.bus/PbusDev.mmio vector<fuchsia.hardware.platform.bus/PbusMmio>
+struct/member fuchsia.hardware.platform.bus/PbusDev.name string
+struct/member fuchsia.hardware.platform.bus/PbusDev.pid uint32
+struct/member fuchsia.hardware.platform.bus/PbusDev.smc vector<fuchsia.hardware.platform.bus/PbusSmc>
+struct/member fuchsia.hardware.platform.bus/PbusDev.vid uint32
+struct fuchsia.hardware.platform.bus/PbusDev
+struct/member fuchsia.hardware.platform.bus/PbusIrq.irq uint32
+struct/member fuchsia.hardware.platform.bus/PbusIrq.mode uint32
+struct fuchsia.hardware.platform.bus/PbusIrq
+struct/member fuchsia.hardware.platform.bus/PbusMetadata.data vector<uint8>
+struct/member fuchsia.hardware.platform.bus/PbusMetadata.type uint32
+struct fuchsia.hardware.platform.bus/PbusMetadata
+struct/member fuchsia.hardware.platform.bus/PbusMmio.base uint64
+struct/member fuchsia.hardware.platform.bus/PbusMmio.length uint64
+struct fuchsia.hardware.platform.bus/PbusMmio
+struct/member fuchsia.hardware.platform.bus/PbusSmc.count uint32
+struct/member fuchsia.hardware.platform.bus/PbusSmc.exclusive bool
+struct/member fuchsia.hardware.platform.bus/PbusSmc.service_call_num_base uint32
+struct fuchsia.hardware.platform.bus/PbusSmc
+protocol/member fuchsia.hardware.platform.bus/PbusSysSuspend.Callback(uint8 requested_state,bool enable_wake,uint8 suspend_reason) -> (int32 out_status,uint8 out_state)
+protocol fuchsia.hardware.platform.bus/PbusSysSuspend
+library fuchsia.hardware.platform.bus

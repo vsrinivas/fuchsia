@@ -1,0 +1,18 @@
+protocol/member fuchsia.hardware.acpi/Acpi.ListTableEntries() -> (fuchsia.hardware.acpi/Acpi_ListTableEntries_Result result)
+protocol/member fuchsia.hardware.acpi/Acpi.ReadNamedTable(array<uint8,4> name,uint32 instance,zx/handle:VMO result) -> (fuchsia.hardware.acpi/Acpi_ReadNamedTable_Result result)
+protocol fuchsia.hardware.acpi/Acpi
+struct/member fuchsia.hardware.acpi/Acpi_ListTableEntries_Response.entries vector<fuchsia.hardware.acpi/TableInfo>:512
+struct fuchsia.hardware.acpi/Acpi_ListTableEntries_Response
+union/member fuchsia.hardware.acpi/Acpi_ListTableEntries_Result.err int32
+union/member fuchsia.hardware.acpi/Acpi_ListTableEntries_Result.response fuchsia.hardware.acpi/Acpi_ListTableEntries_Response
+strict union fuchsia.hardware.acpi/Acpi_ListTableEntries_Result
+struct/member fuchsia.hardware.acpi/Acpi_ReadNamedTable_Response.size uint32
+struct fuchsia.hardware.acpi/Acpi_ReadNamedTable_Response
+union/member fuchsia.hardware.acpi/Acpi_ReadNamedTable_Result.err int32
+union/member fuchsia.hardware.acpi/Acpi_ReadNamedTable_Result.response fuchsia.hardware.acpi/Acpi_ReadNamedTable_Response
+strict union fuchsia.hardware.acpi/Acpi_ReadNamedTable_Result
+const fuchsia.hardware.acpi/MAX_ACPI_TABLE_ENTRIES uint32 512
+struct/member fuchsia.hardware.acpi/TableInfo.name array<uint8,4>
+struct/member fuchsia.hardware.acpi/TableInfo.size uint32
+struct fuchsia.hardware.acpi/TableInfo
+library fuchsia.hardware.acpi

@@ -1,0 +1,9 @@
+protocol/member fuchsia.tracing.kernel/Controller.Rewind() -> (int32 status)
+protocol/member fuchsia.tracing.kernel/Controller.Start(uint32 group_mask) -> (int32 status)
+protocol/member fuchsia.tracing.kernel/Controller.Stop() -> (int32 status)
+protocol fuchsia.tracing.kernel/Controller
+const fuchsia.tracing.kernel/MAX_BUF uint32 8192
+protocol/member fuchsia.tracing.kernel/Reader.GetBytesWritten() -> (int32 status,uint64 size)
+protocol/member fuchsia.tracing.kernel/Reader.ReadAt(uint64 count,uint64 offset) -> (int32 status,vector<uint8>:8192 data)
+protocol fuchsia.tracing.kernel/Reader
+library fuchsia.tracing.kernel

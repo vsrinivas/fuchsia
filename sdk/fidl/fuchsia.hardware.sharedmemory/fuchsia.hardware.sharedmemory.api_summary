@@ -1,0 +1,36 @@
+struct/member fuchsia.hardware.sharedmemory/SharedVmoBuffer.offset uint64
+struct/member fuchsia.hardware.sharedmemory/SharedVmoBuffer.size uint64
+struct/member fuchsia.hardware.sharedmemory/SharedVmoBuffer.vmo_id uint32
+struct fuchsia.hardware.sharedmemory/SharedVmoBuffer
+protocol/member fuchsia.hardware.sharedmemory/SharedVmoIo.Exchange(fuchsia.hardware.sharedmemory/SharedVmoBuffer tx_buffer,fuchsia.hardware.sharedmemory/SharedVmoBuffer rx_buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Result result)
+protocol/member fuchsia.hardware.sharedmemory/SharedVmoIo.Receive(fuchsia.hardware.sharedmemory/SharedVmoBuffer buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Result result)
+protocol/member fuchsia.hardware.sharedmemory/SharedVmoIo.Transmit(fuchsia.hardware.sharedmemory/SharedVmoBuffer buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Result result)
+protocol fuchsia.hardware.sharedmemory/SharedVmoIo
+struct fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Response
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Result.err int32
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Result.response fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Response
+strict union fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Result
+struct fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Response
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Result.err int32
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Result.response fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Response
+strict union fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Result
+struct fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Response
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Result.err int32
+union/member fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Result.response fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Response
+strict union fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Result
+protocol/member fuchsia.hardware.sharedmemory/SharedVmoRegister.RegisterVmo(uint32 vmo_id,fuchsia.mem/Range vmo,fuchsia.hardware.sharedmemory/SharedVmoRight rights) -> (fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Result result)
+protocol/member fuchsia.hardware.sharedmemory/SharedVmoRegister.UnregisterVmo(uint32 vmo_id) -> (fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Result result)
+protocol fuchsia.hardware.sharedmemory/SharedVmoRegister
+struct fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Response
+union/member fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Result.err int32
+union/member fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Result.response fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Response
+strict union fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Result
+struct/member fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Response.vmo zx/handle:VMO
+resource struct fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Response
+union/member fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Result.err int32
+union/member fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Result.response fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Response
+resource strict union fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Result
+bits/member fuchsia.hardware.sharedmemory/SharedVmoRight.READ 1
+bits/member fuchsia.hardware.sharedmemory/SharedVmoRight.WRITE 2
+flexible bits fuchsia.hardware.sharedmemory/SharedVmoRight uint32
+library fuchsia.hardware.sharedmemory

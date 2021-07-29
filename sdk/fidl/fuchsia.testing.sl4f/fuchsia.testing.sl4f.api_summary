@@ -1,0 +1,8 @@
+protocol/member fuchsia.testing.sl4f/FacadeIterator.GetNext() -> (vector<string> facades)
+protocol fuchsia.testing.sl4f/FacadeIterator
+protocol/member fuchsia.testing.sl4f/FacadeProvider.Cleanup() -> ()
+protocol/member fuchsia.testing.sl4f/FacadeProvider.Execute(string facade,string command,zx/handle:VMO params_blob) -> (zx/handle:<VMO,optional> result_blob,string:optional error)
+protocol/member fuchsia.testing.sl4f/FacadeProvider.GetFacades(server_end:fuchsia.testing.sl4f/FacadeIterator iterator)
+protocol/member fuchsia.testing.sl4f/FacadeProvider.Print() -> ()
+protocol fuchsia.testing.sl4f/FacadeProvider
+library fuchsia.testing.sl4f

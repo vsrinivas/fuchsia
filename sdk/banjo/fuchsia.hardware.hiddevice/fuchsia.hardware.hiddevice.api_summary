@@ -1,0 +1,21 @@
+const fuchsia.hardware.hiddevice/HID_MAX_DESC_LEN uint16 8192
+const fuchsia.hardware.hiddevice/HID_MAX_REPORT_IDS uint16 256
+const fuchsia.hardware.hiddevice/HID_MAX_REPORT_LEN uint16 8192
+protocol/member fuchsia.hardware.hiddevice/HidDevice.GetDescriptor() -> (int32 s,vector<uint8>:8192 descriptor)
+protocol/member fuchsia.hardware.hiddevice/HidDevice.GetHidDeviceInfo() -> (fuchsia.hardware.hiddevice/HidDeviceInfo info)
+protocol/member fuchsia.hardware.hiddevice/HidDevice.GetReport(fuchsia.hardware.hiddevice/HidReportType rpt_type,uint8 rpt_id) -> (int32 s,vector<uint8>:8192 report)
+protocol/member fuchsia.hardware.hiddevice/HidDevice.RegisterListener(client_end:fuchsia.hardware.hiddevice/HidReportListener listener) -> (int32 s)
+protocol/member fuchsia.hardware.hiddevice/HidDevice.SetReport(fuchsia.hardware.hiddevice/HidReportType rpt_type,uint8 rpt_id,vector<uint8>:8192 report) -> (int32 s)
+protocol/member fuchsia.hardware.hiddevice/HidDevice.UnregisterListener()
+protocol fuchsia.hardware.hiddevice/HidDevice
+struct/member fuchsia.hardware.hiddevice/HidDeviceInfo.product_id uint32
+struct/member fuchsia.hardware.hiddevice/HidDeviceInfo.vendor_id uint32
+struct/member fuchsia.hardware.hiddevice/HidDeviceInfo.version uint32
+struct fuchsia.hardware.hiddevice/HidDeviceInfo
+protocol/member fuchsia.hardware.hiddevice/HidReportListener.ReceiveReport(vector<uint8>:8192 report,int64 report_time)
+protocol fuchsia.hardware.hiddevice/HidReportListener
+enum/member fuchsia.hardware.hiddevice/HidReportType.FEATURE 3
+enum/member fuchsia.hardware.hiddevice/HidReportType.INPUT 1
+enum/member fuchsia.hardware.hiddevice/HidReportType.OUTPUT 2
+strict enum fuchsia.hardware.hiddevice/HidReportType uint8
+library fuchsia.hardware.hiddevice

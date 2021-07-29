@@ -1,0 +1,85 @@
+enum/member fuchsia.identity.tokens/Error.ABORTED 13
+enum/member fuchsia.identity.tokens/Error.INTERNAL 2
+enum/member fuchsia.identity.tokens/Error.INVALID_ACCOUNT 8
+enum/member fuchsia.identity.tokens/Error.INVALID_REQUEST 4
+enum/member fuchsia.identity.tokens/Error.INVALID_SERVICE_PROVIDER 7
+enum/member fuchsia.identity.tokens/Error.NETWORK 6
+enum/member fuchsia.identity.tokens/Error.RESOURCE 5
+enum/member fuchsia.identity.tokens/Error.SERVICE_PROVIDER_DENIED 11
+enum/member fuchsia.identity.tokens/Error.SERVICE_PROVIDER_ERROR 10
+enum/member fuchsia.identity.tokens/Error.SERVICE_PROVIDER_REAUTHORIZE 12
+enum/member fuchsia.identity.tokens/Error.UNKNOWN 1
+enum/member fuchsia.identity.tokens/Error.UNSUPPORTED_OPERATION 3
+strict enum fuchsia.identity.tokens/Error uint32
+const fuchsia.identity.tokens/MAX_ACCOUNT_COUNT uint32 128
+const fuchsia.identity.tokens/MAX_ACCOUNT_ID_SIZE uint32 256
+const fuchsia.identity.tokens/MAX_AUDIENCE_COUNT uint32 16
+const fuchsia.identity.tokens/MAX_AUDIENCE_SIZE uint32 256
+const fuchsia.identity.tokens/MAX_CLIENT_ID_SIZE uint32 256
+const fuchsia.identity.tokens/MAX_SCOPE_COUNT uint32 64
+const fuchsia.identity.tokens/MAX_SCOPE_SIZE uint32 256
+const fuchsia.identity.tokens/MAX_SERVICE_PROVIDER_COUNT uint32 128
+table/member fuchsia.identity.tokens/OauthAccessToken.content string
+table/member fuchsia.identity.tokens/OauthAccessToken.expiry_time int64
+table fuchsia.identity.tokens/OauthAccessToken
+table/member fuchsia.identity.tokens/OauthRefreshToken.account_id string:256
+table/member fuchsia.identity.tokens/OauthRefreshToken.content string
+table fuchsia.identity.tokens/OauthRefreshToken
+table/member fuchsia.identity.tokens/OpenIdToken.content string
+table/member fuchsia.identity.tokens/OpenIdToken.expiry_time int64
+table fuchsia.identity.tokens/OpenIdToken
+table/member fuchsia.identity.tokens/OpenIdUserInfo.email string
+table/member fuchsia.identity.tokens/OpenIdUserInfo.name string
+table/member fuchsia.identity.tokens/OpenIdUserInfo.picture string
+table/member fuchsia.identity.tokens/OpenIdUserInfo.subject string:255
+table fuchsia.identity.tokens/OpenIdUserInfo
+protocol/member fuchsia.identity.tokens/TokenManager.AddAccount(string:256 service_provider,vector<string:256>:64 scopes) -> (fuchsia.identity.tokens/TokenManager_AddAccount_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.DeleteAccount(string:256 service_provider,string:256 account_id,bool force) -> (fuchsia.identity.tokens/TokenManager_DeleteAccount_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.GetOauthAccessToken(string:256 service_provider,string:256 account_id,string:<256,optional> client_id,vector<string:256>:64 scopes) -> (fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.GetOpenIdToken(string:256 service_provider,string:256 account_id,string:<256,optional> audience) -> (fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.GetOpenIdUserInfo(string:256 service_provider,string:256 account_id) -> (fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.ListAccounts(string:256 service_provider) -> (fuchsia.identity.tokens/TokenManager_ListAccounts_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.ListServiceProviders() -> (fuchsia.identity.tokens/TokenManager_ListServiceProviders_Result result)
+protocol/member fuchsia.identity.tokens/TokenManager.ReauthorizeAccount(string:256 service_provider,string:256 account_id,vector<string:256>:64 scopes) -> (fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Result result)
+protocol fuchsia.identity.tokens/TokenManager
+protocol/member fuchsia.identity.tokens/TokenManagerFactory.GetTokenManager(fuchsia.auth/AuthenticationContextProvider ui_context_provider,server_end:fuchsia.identity.tokens/TokenManager token_manager)
+protocol fuchsia.identity.tokens/TokenManagerFactory
+struct/member fuchsia.identity.tokens/TokenManager_AddAccount_Response.account_id string:256
+struct fuchsia.identity.tokens/TokenManager_AddAccount_Response
+union/member fuchsia.identity.tokens/TokenManager_AddAccount_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_AddAccount_Result.response fuchsia.identity.tokens/TokenManager_AddAccount_Response
+strict union fuchsia.identity.tokens/TokenManager_AddAccount_Result
+struct fuchsia.identity.tokens/TokenManager_DeleteAccount_Response
+union/member fuchsia.identity.tokens/TokenManager_DeleteAccount_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_DeleteAccount_Result.response fuchsia.identity.tokens/TokenManager_DeleteAccount_Response
+strict union fuchsia.identity.tokens/TokenManager_DeleteAccount_Result
+struct/member fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Response.access_token fuchsia.identity.tokens/OauthAccessToken
+struct fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Response
+union/member fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Result.response fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Response
+strict union fuchsia.identity.tokens/TokenManager_GetOauthAccessToken_Result
+struct/member fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Response.id_token fuchsia.identity.tokens/OpenIdToken
+struct fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Response
+union/member fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Result.response fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Response
+strict union fuchsia.identity.tokens/TokenManager_GetOpenIdToken_Result
+struct/member fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Response.user_info fuchsia.identity.tokens/OpenIdUserInfo
+struct fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Response
+union/member fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Result.response fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Response
+strict union fuchsia.identity.tokens/TokenManager_GetOpenIdUserInfo_Result
+struct/member fuchsia.identity.tokens/TokenManager_ListAccounts_Response.account_ids vector<string:256>:128
+struct fuchsia.identity.tokens/TokenManager_ListAccounts_Response
+union/member fuchsia.identity.tokens/TokenManager_ListAccounts_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_ListAccounts_Result.response fuchsia.identity.tokens/TokenManager_ListAccounts_Response
+strict union fuchsia.identity.tokens/TokenManager_ListAccounts_Result
+struct/member fuchsia.identity.tokens/TokenManager_ListServiceProviders_Response.service_providers vector<string:256>:128
+struct fuchsia.identity.tokens/TokenManager_ListServiceProviders_Response
+union/member fuchsia.identity.tokens/TokenManager_ListServiceProviders_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_ListServiceProviders_Result.response fuchsia.identity.tokens/TokenManager_ListServiceProviders_Response
+strict union fuchsia.identity.tokens/TokenManager_ListServiceProviders_Result
+struct fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Response
+union/member fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Result.err fuchsia.identity.tokens/Error
+union/member fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Result.response fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Response
+strict union fuchsia.identity.tokens/TokenManager_ReauthorizeAccount_Result
+library fuchsia.identity.tokens

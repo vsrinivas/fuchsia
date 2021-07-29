@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.rtc/Device.Get() -> (fuchsia.hardware.rtc/Time rtc)
+protocol/member fuchsia.hardware.rtc/Device.Set(fuchsia.hardware.rtc/Time rtc) -> (int32 status)
+protocol fuchsia.hardware.rtc/Device
+struct/member fuchsia.hardware.rtc/Time.day uint8
+struct/member fuchsia.hardware.rtc/Time.hours uint8
+struct/member fuchsia.hardware.rtc/Time.minutes uint8
+struct/member fuchsia.hardware.rtc/Time.month uint8
+struct/member fuchsia.hardware.rtc/Time.seconds uint8
+struct/member fuchsia.hardware.rtc/Time.year uint16
+struct fuchsia.hardware.rtc/Time
+library fuchsia.hardware.rtc

@@ -1,0 +1,43 @@
+enum/member fuchsia.hardware.nand/Class.BBS 3
+enum/member fuchsia.hardware.nand/Class.FTL 2
+enum/member fuchsia.hardware.nand/Class.PARTMAP 1
+enum/member fuchsia.hardware.nand/Class.TEST 4
+enum/member fuchsia.hardware.nand/Class.UNKNOWN 0
+strict enum fuchsia.hardware.nand/Class uint32
+const fuchsia.hardware.nand/GUID_LEN uint32 16
+struct/member fuchsia.hardware.nand/Info.ecc_bits uint32
+struct/member fuchsia.hardware.nand/Info.nand_class fuchsia.hardware.nand/Class
+struct/member fuchsia.hardware.nand/Info.num_blocks uint32
+struct/member fuchsia.hardware.nand/Info.oob_size uint32
+struct/member fuchsia.hardware.nand/Info.page_size uint32
+struct/member fuchsia.hardware.nand/Info.pages_per_block uint32
+struct/member fuchsia.hardware.nand/Info.partition_guid array<uint8,16>
+struct fuchsia.hardware.nand/Info
+const fuchsia.hardware.nand/MAX_PARTITIONS uint32 10
+const fuchsia.hardware.nand/NAME_LEN uint32 32
+struct/member fuchsia.hardware.nand/Partition.bbt bool
+struct/member fuchsia.hardware.nand/Partition.copy_byte_offset uint32
+struct/member fuchsia.hardware.nand/Partition.copy_count uint32
+struct/member fuchsia.hardware.nand/Partition.first_block uint32
+struct/member fuchsia.hardware.nand/Partition.hidden bool
+struct/member fuchsia.hardware.nand/Partition.last_block uint32
+struct/member fuchsia.hardware.nand/Partition.name array<uint8,32>
+struct/member fuchsia.hardware.nand/Partition.type_guid array<uint8,16>
+struct/member fuchsia.hardware.nand/Partition.unique_guid array<uint8,16>
+struct fuchsia.hardware.nand/Partition
+struct/member fuchsia.hardware.nand/PartitionMap.device_guid array<uint8,16>
+struct/member fuchsia.hardware.nand/PartitionMap.partition_count uint32
+struct/member fuchsia.hardware.nand/PartitionMap.partitions array<fuchsia.hardware.nand/Partition,10>
+struct fuchsia.hardware.nand/PartitionMap
+protocol/member fuchsia.hardware.nand/RamNand.Unlink() -> (int32 status)
+protocol fuchsia.hardware.nand/RamNand
+protocol/member fuchsia.hardware.nand/RamNandCtl.CreateDevice(fuchsia.hardware.nand/RamNandInfo info) -> (int32 status,string:32 name)
+protocol fuchsia.hardware.nand/RamNandCtl
+struct/member fuchsia.hardware.nand/RamNandInfo.export_nand_config bool
+struct/member fuchsia.hardware.nand/RamNandInfo.export_partition_map bool
+struct/member fuchsia.hardware.nand/RamNandInfo.fail_after uint32
+struct/member fuchsia.hardware.nand/RamNandInfo.nand_info fuchsia.hardware.nand/Info
+struct/member fuchsia.hardware.nand/RamNandInfo.partition_map fuchsia.hardware.nand/PartitionMap
+struct/member fuchsia.hardware.nand/RamNandInfo.vmo zx/handle:<VMO,optional>
+resource struct fuchsia.hardware.nand/RamNandInfo
+library fuchsia.hardware.nand

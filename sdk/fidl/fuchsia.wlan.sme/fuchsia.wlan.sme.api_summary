@@ -1,0 +1,143 @@
+struct/member fuchsia.wlan.sme/ActiveScanRequest.channels vector<uint8>:500
+struct/member fuchsia.wlan.sme/ActiveScanRequest.ssids vector<vector<uint8>:32>:16
+struct fuchsia.wlan.sme/ActiveScanRequest
+struct/member fuchsia.wlan.sme/Ap.channel uint8
+struct/member fuchsia.wlan.sme/Ap.num_clients uint16
+struct/member fuchsia.wlan.sme/Ap.ssid vector<uint8>:32
+struct fuchsia.wlan.sme/Ap
+struct/member fuchsia.wlan.sme/ApConfig.password vector<uint8>:64
+struct/member fuchsia.wlan.sme/ApConfig.radio_cfg fuchsia.wlan.sme/RadioConfig
+struct/member fuchsia.wlan.sme/ApConfig.ssid vector<uint8>:32
+struct fuchsia.wlan.sme/ApConfig
+protocol/member fuchsia.wlan.sme/ApSme.Start(fuchsia.wlan.sme/ApConfig config) -> (fuchsia.wlan.sme/StartApResultCode code)
+protocol/member fuchsia.wlan.sme/ApSme.Status() -> (fuchsia.wlan.sme/ApStatusResponse resp)
+protocol/member fuchsia.wlan.sme/ApSme.Stop() -> (fuchsia.wlan.sme/StopApResultCode code)
+protocol fuchsia.wlan.sme/ApSme
+struct/member fuchsia.wlan.sme/ApStatusResponse.running_ap box<fuchsia.wlan.sme/Ap>
+struct fuchsia.wlan.sme/ApStatusResponse
+struct/member fuchsia.wlan.sme/BssInfo.bss_desc fuchsia.wlan.internal/BssDescription:optional
+struct/member fuchsia.wlan.sme/BssInfo.bssid array<uint8,6>
+struct/member fuchsia.wlan.sme/BssInfo.channel fuchsia.wlan.common/WlanChan
+struct/member fuchsia.wlan.sme/BssInfo.compatible bool
+struct/member fuchsia.wlan.sme/BssInfo.protection fuchsia.wlan.sme/Protection
+struct/member fuchsia.wlan.sme/BssInfo.rssi_dbm int8
+struct/member fuchsia.wlan.sme/BssInfo.snr_db int8
+struct/member fuchsia.wlan.sme/BssInfo.ssid vector<uint8>:32
+struct fuchsia.wlan.sme/BssInfo
+protocol/member fuchsia.wlan.sme/ClientSme.Connect(fuchsia.wlan.sme/ConnectRequest req,server_end:<fuchsia.wlan.sme/ConnectTransaction,optional> txn)
+protocol/member fuchsia.wlan.sme/ClientSme.Disconnect(fuchsia.wlan.sme/UserDisconnectReason reason) -> ()
+protocol/member fuchsia.wlan.sme/ClientSme.Scan(fuchsia.wlan.sme/ScanRequest req,server_end:fuchsia.wlan.sme/ScanTransaction txn)
+protocol/member fuchsia.wlan.sme/ClientSme.Status() -> (fuchsia.wlan.sme/ClientStatusResponse resp)
+protocol/member fuchsia.wlan.sme/ClientSme.WmmStatus() -> (fuchsia.wlan.sme/ClientSme_WmmStatus_Result result)
+protocol fuchsia.wlan.sme/ClientSme
+struct/member fuchsia.wlan.sme/ClientSme_WmmStatus_Response.resp fuchsia.wlan.internal/WmmStatusResponse
+struct fuchsia.wlan.sme/ClientSme_WmmStatus_Response
+union/member fuchsia.wlan.sme/ClientSme_WmmStatus_Result.err int32
+union/member fuchsia.wlan.sme/ClientSme_WmmStatus_Result.response fuchsia.wlan.sme/ClientSme_WmmStatus_Response
+strict union fuchsia.wlan.sme/ClientSme_WmmStatus_Result
+struct/member fuchsia.wlan.sme/ClientStatusResponse.connected_to box<fuchsia.wlan.sme/BssInfo>
+struct/member fuchsia.wlan.sme/ClientStatusResponse.connecting_to_ssid vector<uint8>:32
+struct fuchsia.wlan.sme/ClientStatusResponse
+struct/member fuchsia.wlan.sme/ConnectRequest.bss_desc fuchsia.wlan.internal/BssDescription:optional
+struct/member fuchsia.wlan.sme/ConnectRequest.credential fuchsia.wlan.sme/Credential
+struct/member fuchsia.wlan.sme/ConnectRequest.deprecated_scan_type fuchsia.wlan.common/ScanType
+struct/member fuchsia.wlan.sme/ConnectRequest.multiple_bss_candidates bool
+struct/member fuchsia.wlan.sme/ConnectRequest.radio_cfg fuchsia.wlan.sme/RadioConfig
+struct/member fuchsia.wlan.sme/ConnectRequest.ssid vector<uint8>:32
+struct fuchsia.wlan.sme/ConnectRequest
+enum/member fuchsia.wlan.sme/ConnectResultCode.CANCELED 1
+enum/member fuchsia.wlan.sme/ConnectResultCode.CREDENTIAL_REJECTED 3
+enum/member fuchsia.wlan.sme/ConnectResultCode.FAILED 2
+enum/member fuchsia.wlan.sme/ConnectResultCode.SUCCESS 0
+strict enum fuchsia.wlan.sme/ConnectResultCode uint32
+protocol/member fuchsia.wlan.sme/ConnectTransaction.OnFinished -> (fuchsia.wlan.sme/ConnectResultCode code)
+protocol fuchsia.wlan.sme/ConnectTransaction
+union/member fuchsia.wlan.sme/Credential.none fuchsia.wlan.sme/Empty
+union/member fuchsia.wlan.sme/Credential.password vector<uint8>
+union/member fuchsia.wlan.sme/Credential.psk vector<uint8>
+flexible union fuchsia.wlan.sme/Credential
+struct fuchsia.wlan.sme/Empty
+enum/member fuchsia.wlan.sme/GetMeshPathTableResultCode.INTERNAL_ERROR 1
+enum/member fuchsia.wlan.sme/GetMeshPathTableResultCode.SUCCESS 0
+strict enum fuchsia.wlan.sme/GetMeshPathTableResultCode uint32
+enum/member fuchsia.wlan.sme/JoinMeshResultCode.CANCELED 1
+enum/member fuchsia.wlan.sme/JoinMeshResultCode.DFS_UNSUPPORTED 4
+enum/member fuchsia.wlan.sme/JoinMeshResultCode.INTERNAL_ERROR 2
+enum/member fuchsia.wlan.sme/JoinMeshResultCode.INVALID_ARGUMENTS 3
+enum/member fuchsia.wlan.sme/JoinMeshResultCode.SUCCESS 0
+strict enum fuchsia.wlan.sme/JoinMeshResultCode uint32
+enum/member fuchsia.wlan.sme/LeaveMeshResultCode.INTERNAL_ERROR 1
+enum/member fuchsia.wlan.sme/LeaveMeshResultCode.SUCCESS 0
+strict enum fuchsia.wlan.sme/LeaveMeshResultCode uint32
+struct/member fuchsia.wlan.sme/MeshConfig.channel uint8
+struct/member fuchsia.wlan.sme/MeshConfig.mesh_id vector<uint8>:32
+struct fuchsia.wlan.sme/MeshConfig
+protocol/member fuchsia.wlan.sme/MeshSme.GetMeshPathTable() -> (fuchsia.wlan.sme/GetMeshPathTableResultCode code,fuchsia.wlan.mesh/MeshPathTable path)
+protocol/member fuchsia.wlan.sme/MeshSme.Join(fuchsia.wlan.sme/MeshConfig config) -> (fuchsia.wlan.sme/JoinMeshResultCode code)
+protocol/member fuchsia.wlan.sme/MeshSme.Leave() -> (fuchsia.wlan.sme/LeaveMeshResultCode code)
+protocol fuchsia.wlan.sme/MeshSme
+struct fuchsia.wlan.sme/PassiveScanRequest
+enum/member fuchsia.wlan.sme/Protection.OPEN 1
+enum/member fuchsia.wlan.sme/Protection.UNKNOWN 0
+enum/member fuchsia.wlan.sme/Protection.WEP 2
+enum/member fuchsia.wlan.sme/Protection.WPA1 3
+enum/member fuchsia.wlan.sme/Protection.WPA1_WPA2_PERSONAL 6
+enum/member fuchsia.wlan.sme/Protection.WPA1_WPA2_PERSONAL_TKIP_ONLY 4
+enum/member fuchsia.wlan.sme/Protection.WPA2_ENTERPRISE 10
+enum/member fuchsia.wlan.sme/Protection.WPA2_PERSONAL 7
+enum/member fuchsia.wlan.sme/Protection.WPA2_PERSONAL_TKIP_ONLY 5
+enum/member fuchsia.wlan.sme/Protection.WPA2_WPA3_PERSONAL 8
+enum/member fuchsia.wlan.sme/Protection.WPA3_ENTERPRISE 11
+enum/member fuchsia.wlan.sme/Protection.WPA3_PERSONAL 9
+strict enum fuchsia.wlan.sme/Protection uint32
+struct/member fuchsia.wlan.sme/RadioConfig.cbw fuchsia.wlan.common/CBW
+struct/member fuchsia.wlan.sme/RadioConfig.override_cbw bool
+struct/member fuchsia.wlan.sme/RadioConfig.override_phy bool
+struct/member fuchsia.wlan.sme/RadioConfig.override_primary_chan bool
+struct/member fuchsia.wlan.sme/RadioConfig.phy fuchsia.wlan.common/PHY
+struct/member fuchsia.wlan.sme/RadioConfig.primary_chan uint8
+struct fuchsia.wlan.sme/RadioConfig
+struct/member fuchsia.wlan.sme/ScanError.code fuchsia.wlan.sme/ScanErrorCode
+struct/member fuchsia.wlan.sme/ScanError.message string
+struct fuchsia.wlan.sme/ScanError
+enum/member fuchsia.wlan.sme/ScanErrorCode.CANCELED_BY_DRIVER_OR_FIRMWARE 4
+enum/member fuchsia.wlan.sme/ScanErrorCode.INTERNAL_ERROR 2
+enum/member fuchsia.wlan.sme/ScanErrorCode.NOT_SUPPORTED 1
+enum/member fuchsia.wlan.sme/ScanErrorCode.SHOULD_WAIT 3
+strict enum fuchsia.wlan.sme/ScanErrorCode uint32
+union/member fuchsia.wlan.sme/ScanRequest.active fuchsia.wlan.sme/ActiveScanRequest
+union/member fuchsia.wlan.sme/ScanRequest.passive fuchsia.wlan.sme/PassiveScanRequest
+strict union fuchsia.wlan.sme/ScanRequest
+protocol/member fuchsia.wlan.sme/ScanTransaction.OnError -> (fuchsia.wlan.sme/ScanError error)
+protocol/member fuchsia.wlan.sme/ScanTransaction.OnFinished -> ()
+protocol/member fuchsia.wlan.sme/ScanTransaction.OnResult -> (vector<fuchsia.wlan.sme/BssInfo> aps)
+protocol fuchsia.wlan.sme/ScanTransaction
+enum/member fuchsia.wlan.sme/StartApResultCode.ALREADY_STARTED 1
+enum/member fuchsia.wlan.sme/StartApResultCode.CANCELED 3
+enum/member fuchsia.wlan.sme/StartApResultCode.DFS_UNSUPPORTED 7
+enum/member fuchsia.wlan.sme/StartApResultCode.INTERNAL_ERROR 2
+enum/member fuchsia.wlan.sme/StartApResultCode.INVALID_ARGUMENTS 6
+enum/member fuchsia.wlan.sme/StartApResultCode.PREVIOUS_START_IN_PROGRESS 5
+enum/member fuchsia.wlan.sme/StartApResultCode.SUCCESS 0
+enum/member fuchsia.wlan.sme/StartApResultCode.TIMED_OUT 4
+strict enum fuchsia.wlan.sme/StartApResultCode uint32
+enum/member fuchsia.wlan.sme/StopApResultCode.INTERNAL_ERROR 1
+enum/member fuchsia.wlan.sme/StopApResultCode.SUCCESS 0
+enum/member fuchsia.wlan.sme/StopApResultCode.TIMED_OUT 2
+strict enum fuchsia.wlan.sme/StopApResultCode uint32
+enum/member fuchsia.wlan.sme/UserDisconnectReason.DISCONNECT_DETECTED_FROM_SME 5
+enum/member fuchsia.wlan.sme/UserDisconnectReason.FAILED_TO_CONNECT 1
+enum/member fuchsia.wlan.sme/UserDisconnectReason.FIDL_CONNECT_REQUEST 2
+enum/member fuchsia.wlan.sme/UserDisconnectReason.FIDL_STOP_CLIENT_CONNECTIONS_REQUEST 3
+enum/member fuchsia.wlan.sme/UserDisconnectReason.NETWORK_CONFIG_UPDATED 9
+enum/member fuchsia.wlan.sme/UserDisconnectReason.NETWORK_UNSAVED 8
+enum/member fuchsia.wlan.sme/UserDisconnectReason.PROACTIVE_NETWORK_SWITCH 4
+enum/member fuchsia.wlan.sme/UserDisconnectReason.REGULATORY_REGION_CHANGE 6
+enum/member fuchsia.wlan.sme/UserDisconnectReason.STARTUP 7
+enum/member fuchsia.wlan.sme/UserDisconnectReason.UNKNOWN 0
+enum/member fuchsia.wlan.sme/UserDisconnectReason.WLANSTACK_UNIT_TESTING 124
+enum/member fuchsia.wlan.sme/UserDisconnectReason.WLAN_DEV_TOOL 127
+enum/member fuchsia.wlan.sme/UserDisconnectReason.WLAN_SERVICE_UTIL_TESTING 126
+enum/member fuchsia.wlan.sme/UserDisconnectReason.WLAN_SME_UNIT_TESTING 125
+strict enum fuchsia.wlan.sme/UserDisconnectReason uint32
+library fuchsia.wlan.sme

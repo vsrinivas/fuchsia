@@ -1,0 +1,77 @@
+protocol/member fuchsia.kernel/Counter.GetInspectVmo() -> (int32 status,fuchsia.mem/Buffer buffer)
+protocol/member fuchsia.kernel/Counter.UpdateInspectVmo() -> (int32 status)
+protocol fuchsia.kernel/Counter
+struct/member fuchsia.kernel/CpuStats.actual_num_cpus uint64
+struct/member fuchsia.kernel/CpuStats.per_cpu_stats vector<fuchsia.kernel/PerCpuStats>:<512,optional>
+struct fuchsia.kernel/CpuStats
+const fuchsia.kernel/DEBUG_COMMAND_MAX uint32 1024
+protocol/member fuchsia.kernel/DebugBroker.SendDebugCommand(string:1024 command) -> (int32 status)
+protocol/member fuchsia.kernel/DebugBroker.SetTracingEnabled(bool enabled) -> (int32 status)
+protocol fuchsia.kernel/DebugBroker
+protocol/member fuchsia.kernel/DebugResource.Get() -> (zx/handle:RESOURCE debug_resource)
+protocol fuchsia.kernel/DebugResource
+protocol/member fuchsia.kernel/HypervisorResource.Get() -> (zx/handle:RESOURCE hypervisor_resource)
+protocol fuchsia.kernel/HypervisorResource
+protocol/member fuchsia.kernel/InfoResource.Get() -> (zx/handle:RESOURCE info_resource)
+protocol fuchsia.kernel/InfoResource
+protocol/member fuchsia.kernel/IoportResource.Get() -> (zx/handle:RESOURCE ioport_resource)
+protocol fuchsia.kernel/IoportResource
+protocol/member fuchsia.kernel/IrqResource.Get() -> (zx/handle:RESOURCE irq_resource)
+protocol fuchsia.kernel/IrqResource
+table/member fuchsia.kernel/MemoryStats.free_bytes uint64
+table/member fuchsia.kernel/MemoryStats.free_heap_bytes uint64
+table/member fuchsia.kernel/MemoryStats.ipc_bytes uint64
+table/member fuchsia.kernel/MemoryStats.mmu_overhead_bytes uint64
+table/member fuchsia.kernel/MemoryStats.other_bytes uint64
+table/member fuchsia.kernel/MemoryStats.total_bytes uint64
+table/member fuchsia.kernel/MemoryStats.total_heap_bytes uint64
+table/member fuchsia.kernel/MemoryStats.vmo_bytes uint64
+table/member fuchsia.kernel/MemoryStats.wired_bytes uint64
+table fuchsia.kernel/MemoryStats
+table/member fuchsia.kernel/MemoryStatsExtended.free_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.free_heap_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.ipc_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.mmu_overhead_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.other_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.total_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.total_heap_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_discardable_locked_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_discardable_unlocked_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_pager_newest_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_pager_oldest_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.vmo_pager_total_bytes uint64
+table/member fuchsia.kernel/MemoryStatsExtended.wired_bytes uint64
+table fuchsia.kernel/MemoryStatsExtended
+protocol/member fuchsia.kernel/MmioResource.Get() -> (zx/handle:RESOURCE mmio_resource)
+protocol fuchsia.kernel/MmioResource
+table/member fuchsia.kernel/PerCpuStats.context_switches uint64
+table/member fuchsia.kernel/PerCpuStats.cpu_number uint32
+table/member fuchsia.kernel/PerCpuStats.exceptions uint64
+table/member fuchsia.kernel/PerCpuStats.flags uint32
+table/member fuchsia.kernel/PerCpuStats.generic_ipis uint64
+table/member fuchsia.kernel/PerCpuStats.idle_time int64
+table/member fuchsia.kernel/PerCpuStats.ints uint64
+table/member fuchsia.kernel/PerCpuStats.irq_preempts uint64
+table/member fuchsia.kernel/PerCpuStats.page_faults uint64
+table/member fuchsia.kernel/PerCpuStats.reschedule_ipis uint64
+table/member fuchsia.kernel/PerCpuStats.reschedules uint64
+table/member fuchsia.kernel/PerCpuStats.syscalls uint64
+table/member fuchsia.kernel/PerCpuStats.timer_ints uint64
+table/member fuchsia.kernel/PerCpuStats.timers uint64
+table/member fuchsia.kernel/PerCpuStats.yields uint64
+table fuchsia.kernel/PerCpuStats
+protocol/member fuchsia.kernel/RootJob.Get() -> (zx/handle:JOB job)
+protocol fuchsia.kernel/RootJob
+protocol/member fuchsia.kernel/RootJobForInspect.Get() -> (zx/handle:JOB job)
+protocol fuchsia.kernel/RootJobForInspect
+protocol/member fuchsia.kernel/SmcResource.Get() -> (zx/handle:RESOURCE smc_resource)
+protocol fuchsia.kernel/SmcResource
+protocol/member fuchsia.kernel/Stats.GetCpuLoad(int64 duration) -> (vector<float32>:512 per_cpu_load)
+protocol/member fuchsia.kernel/Stats.GetCpuStats() -> (fuchsia.kernel/CpuStats stats)
+protocol/member fuchsia.kernel/Stats.GetMemoryStats() -> (fuchsia.kernel/MemoryStats stats)
+protocol/member fuchsia.kernel/Stats.GetMemoryStatsExtended() -> (fuchsia.kernel/MemoryStatsExtended stats)
+protocol fuchsia.kernel/Stats
+protocol/member fuchsia.kernel/VmexResource.Get() -> (zx/handle:RESOURCE vmex_resource)
+protocol fuchsia.kernel/VmexResource
+library fuchsia.kernel

@@ -1,0 +1,15 @@
+const fuchsia.hardware.scpi/MAX_DVFS_OPPS uint32 16
+protocol/member fuchsia.hardware.scpi/Scpi.GetDvfsIdx(uint8 power_domain) -> (int32 s,uint16 index)
+protocol/member fuchsia.hardware.scpi/Scpi.GetDvfsInfo(uint8 power_domain) -> (int32 s,fuchsia.hardware.scpi/ScpiOpp opps)
+protocol/member fuchsia.hardware.scpi/Scpi.GetSensor(string name) -> (int32 s,uint32 sensor_id)
+protocol/member fuchsia.hardware.scpi/Scpi.GetSensorValue(uint32 sensor_id) -> (int32 s,uint32 sensor_value)
+protocol/member fuchsia.hardware.scpi/Scpi.SetDvfsIdx(uint8 power_domain,uint16 index) -> (int32 s)
+protocol fuchsia.hardware.scpi/Scpi
+struct/member fuchsia.hardware.scpi/ScpiOpp.count uint32
+struct/member fuchsia.hardware.scpi/ScpiOpp.latency uint32
+struct/member fuchsia.hardware.scpi/ScpiOpp.opp array<fuchsia.hardware.scpi/ScpiOppEntry,16>
+struct fuchsia.hardware.scpi/ScpiOpp
+struct/member fuchsia.hardware.scpi/ScpiOppEntry.freq_hz uint32
+struct/member fuchsia.hardware.scpi/ScpiOppEntry.volt_uv uint32
+struct fuchsia.hardware.scpi/ScpiOppEntry
+library fuchsia.hardware.scpi

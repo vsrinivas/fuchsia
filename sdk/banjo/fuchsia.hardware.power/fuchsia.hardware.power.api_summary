@@ -1,0 +1,13 @@
+protocol/member fuchsia.hardware.power/Power.GetCurrentVoltage(uint32 index) -> (int32 s,uint32 current_voltage)
+protocol/member fuchsia.hardware.power/Power.GetPowerDomainStatus() -> (int32 s,fuchsia.hardware.power/PowerDomainStatus status)
+protocol/member fuchsia.hardware.power/Power.GetSupportedVoltageRange() -> (int32 s,uint32 min,uint32 max)
+protocol/member fuchsia.hardware.power/Power.ReadPmicCtrlReg(uint32 reg_addr) -> (int32 s,uint32 value)
+protocol/member fuchsia.hardware.power/Power.RegisterPowerDomain(uint32 min_needed_voltage,uint32 max_supported_voltage) -> (int32 s)
+protocol/member fuchsia.hardware.power/Power.RequestVoltage(uint32 voltage) -> (int32 s,uint32 actual_voltage)
+protocol/member fuchsia.hardware.power/Power.UnregisterPowerDomain() -> (int32 s)
+protocol/member fuchsia.hardware.power/Power.WritePmicCtrlReg(uint32 reg_addr,uint32 value) -> (int32 s)
+protocol fuchsia.hardware.power/Power
+enum/member fuchsia.hardware.power/PowerDomainStatus.DISABLED 1
+enum/member fuchsia.hardware.power/PowerDomainStatus.ENABLED 2
+strict enum fuchsia.hardware.power/PowerDomainStatus uint8
+library fuchsia.hardware.power

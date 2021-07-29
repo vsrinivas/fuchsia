@@ -1,0 +1,24 @@
+protocol/member fuchsia.ui.policy/DeviceListenerRegistry.RegisterListener(client_end:fuchsia.ui.policy/MediaButtonsListener listener) -> ()
+protocol/member fuchsia.ui.policy/DeviceListenerRegistry.RegisterMediaButtonsListener(client_end:fuchsia.ui.policy/MediaButtonsListener listener)
+protocol fuchsia.ui.policy/DeviceListenerRegistry
+protocol/member fuchsia.ui.policy/DisplayBacklight.SetMinimumRgb(uint8 minimum_rgb) -> ()
+protocol fuchsia.ui.policy/DisplayBacklight
+enum/member fuchsia.ui.policy/DisplayUsage.kClose 2
+enum/member fuchsia.ui.policy/DisplayUsage.kFar 5
+enum/member fuchsia.ui.policy/DisplayUsage.kHandheld 1
+enum/member fuchsia.ui.policy/DisplayUsage.kMidrange 4
+enum/member fuchsia.ui.policy/DisplayUsage.kNear 3
+enum/member fuchsia.ui.policy/DisplayUsage.kUnknown 0
+strict enum fuchsia.ui.policy/DisplayUsage uint32
+protocol/member fuchsia.ui.policy/MediaButtonsListener.OnEvent(fuchsia.ui.input/MediaButtonsEvent event) -> ()
+protocol/member fuchsia.ui.policy/MediaButtonsListener.OnMediaButtonsEvent(fuchsia.ui.input/MediaButtonsEvent event)
+protocol fuchsia.ui.policy/MediaButtonsListener
+protocol/member fuchsia.ui.policy/PointerCaptureListenerHACK.OnPointerEvent(fuchsia.ui.input/PointerEvent event)
+protocol fuchsia.ui.policy/PointerCaptureListenerHACK
+protocol/member fuchsia.ui.policy/Presentation.CapturePointerEventsHACK(client_end:fuchsia.ui.policy/PointerCaptureListenerHACK listener)
+protocol fuchsia.ui.policy/Presentation
+protocol/member fuchsia.ui.policy/Presenter.PresentOrReplaceView(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)
+protocol/member fuchsia.ui.policy/Presenter.PresentOrReplaceView2(fuchsia.ui.views/ViewHolderToken view_holder_token,fuchsia.ui.views/ViewRef view_ref,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)
+protocol/member fuchsia.ui.policy/Presenter.PresentView(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)
+protocol fuchsia.ui.policy/Presenter
+library fuchsia.ui.policy

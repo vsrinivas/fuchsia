@@ -1,0 +1,14 @@
+protocol/member fuchsia.hardware.usb.dci/UsbDci.CancelAll(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.ConfigEp(fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor ep_desc,fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor ss_comp_desc) -> (int32 s)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.DisableEp(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.EpClearStall(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.EpSetStall(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.GetRequestSize() -> (uint64 size)
+protocol/member fuchsia.hardware.usb.dci/UsbDci.RequestQueue(fuchsia.hardware.usb.request/UsbRequest usb_request,fuchsia.hardware.usb.request/UsbRequestCompleteCallback complete_cb) -> ()
+protocol/member fuchsia.hardware.usb.dci/UsbDci.SetInterface(client_end:fuchsia.hardware.usb.dci/UsbDciInterface interface) -> (int32 s)
+protocol fuchsia.hardware.usb.dci/UsbDci
+protocol/member fuchsia.hardware.usb.dci/UsbDciInterface.Control(fuchsia.hardware.usb.descriptor/UsbSetup setup,vector<uint8> write) -> (int32 status,vector<uint8> read)
+protocol/member fuchsia.hardware.usb.dci/UsbDciInterface.SetConnected(bool connected) -> ()
+protocol/member fuchsia.hardware.usb.dci/UsbDciInterface.SetSpeed(fuchsia.hardware.usb.descriptor/UsbSpeed speed) -> ()
+protocol fuchsia.hardware.usb.dci/UsbDciInterface
+library fuchsia.hardware.usb.dci

@@ -1,0 +1,38 @@
+const fuchsia.hardware.hidbus/HID_DEVICE_CLASS_FIRST uint8 0
+const fuchsia.hardware.hidbus/HID_DEVICE_CLASS_LAS uint8 3
+const fuchsia.hardware.hidbus/HID_MAX_DESC_LEN uint16 8192
+enum/member fuchsia.hardware.hidbus/HidDescriptionType.REPORT 34
+strict enum fuchsia.hardware.hidbus/HidDescriptionType uint8
+enum/member fuchsia.hardware.hidbus/HidDeviceClass.KBD 1
+enum/member fuchsia.hardware.hidbus/HidDeviceClass.KBD_POINTER 3
+enum/member fuchsia.hardware.hidbus/HidDeviceClass.OTHER 0
+enum/member fuchsia.hardware.hidbus/HidDeviceClass.POINTER 2
+strict enum fuchsia.hardware.hidbus/HidDeviceClass uint8
+struct/member fuchsia.hardware.hidbus/HidInfo.boot_device bool
+struct/member fuchsia.hardware.hidbus/HidInfo.dev_num uint8
+struct/member fuchsia.hardware.hidbus/HidInfo.device_class fuchsia.hardware.hidbus/HidDeviceClass
+struct/member fuchsia.hardware.hidbus/HidInfo.product_id uint32
+struct/member fuchsia.hardware.hidbus/HidInfo.vendor_id uint32
+struct/member fuchsia.hardware.hidbus/HidInfo.version uint32
+struct fuchsia.hardware.hidbus/HidInfo
+enum/member fuchsia.hardware.hidbus/HidProtocol.BOOT 0
+enum/member fuchsia.hardware.hidbus/HidProtocol.REPORT 1
+strict enum fuchsia.hardware.hidbus/HidProtocol uint8
+enum/member fuchsia.hardware.hidbus/HidReportType.FEATURE 3
+enum/member fuchsia.hardware.hidbus/HidReportType.INPUT 1
+enum/member fuchsia.hardware.hidbus/HidReportType.OUTPUT 2
+strict enum fuchsia.hardware.hidbus/HidReportType uint8
+protocol/member fuchsia.hardware.hidbus/Hidbus.GetDescriptor(fuchsia.hardware.hidbus/HidDescriptionType desc_type) -> (int32 s,vector<uint8> data)
+protocol/member fuchsia.hardware.hidbus/Hidbus.GetIdle(uint8 rpt_id) -> (int32 s,uint8 duration)
+protocol/member fuchsia.hardware.hidbus/Hidbus.GetProtocol() -> (int32 s,fuchsia.hardware.hidbus/HidProtocol protocol)
+protocol/member fuchsia.hardware.hidbus/Hidbus.GetReport(fuchsia.hardware.hidbus/HidReportType rpt_type,uint8 rpt_id) -> (int32 s,vector<uint8> data)
+protocol/member fuchsia.hardware.hidbus/Hidbus.Query(uint32 options) -> (int32 s,fuchsia.hardware.hidbus/HidInfo info)
+protocol/member fuchsia.hardware.hidbus/Hidbus.SetIdle(uint8 rpt_id,uint8 duration) -> (int32 s)
+protocol/member fuchsia.hardware.hidbus/Hidbus.SetProtocol(fuchsia.hardware.hidbus/HidProtocol protocol) -> (int32 s)
+protocol/member fuchsia.hardware.hidbus/Hidbus.SetReport(fuchsia.hardware.hidbus/HidReportType rpt_type,uint8 rpt_id,vector<uint8> data) -> (int32 s)
+protocol/member fuchsia.hardware.hidbus/Hidbus.Start(client_end:fuchsia.hardware.hidbus/HidbusIfc ifc) -> (int32 s)
+protocol/member fuchsia.hardware.hidbus/Hidbus.Stop() -> ()
+protocol fuchsia.hardware.hidbus/Hidbus
+protocol/member fuchsia.hardware.hidbus/HidbusIfc.IoQueue(vector<uint8> buf,int64 timestamp) -> ()
+protocol fuchsia.hardware.hidbus/HidbusIfc
+library fuchsia.hardware.hidbus

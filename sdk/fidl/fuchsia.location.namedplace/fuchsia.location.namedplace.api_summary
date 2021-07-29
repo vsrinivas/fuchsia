@@ -1,0 +1,6 @@
+protocol/member fuchsia.location.namedplace/RegulatoryRegionConfigurator.SetRegion(string:2 region)
+protocol fuchsia.location.namedplace/RegulatoryRegionConfigurator
+protocol/member fuchsia.location.namedplace/RegulatoryRegionWatcher.GetRegionUpdate() -> (string:<2,optional> new_region)
+protocol/member fuchsia.location.namedplace/RegulatoryRegionWatcher.GetUpdate() -> (string:2 new_region)
+protocol fuchsia.location.namedplace/RegulatoryRegionWatcher
+library fuchsia.location.namedplace

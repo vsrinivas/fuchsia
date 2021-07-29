@@ -1,0 +1,3 @@
+protocol/member fuchsia.update.channel/Provider.GetCurrent() -> (string:128 channel)
+protocol fuchsia.update.channel/Provider
+library fuchsia.update.channel

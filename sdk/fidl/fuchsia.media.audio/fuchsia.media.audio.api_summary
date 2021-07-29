@@ -1,0 +1,26 @@
+protocol/member fuchsia.media.audio/EffectsController.UpdateEffect(string:128 effect_name,string config) -> (fuchsia.media.audio/EffectsController_UpdateEffect_Result result)
+protocol fuchsia.media.audio/EffectsController
+struct fuchsia.media.audio/EffectsController_UpdateEffect_Response
+union/member fuchsia.media.audio/EffectsController_UpdateEffect_Result.err fuchsia.media.audio/UpdateEffectError
+union/member fuchsia.media.audio/EffectsController_UpdateEffect_Result.response fuchsia.media.audio/EffectsController_UpdateEffect_Response
+strict union fuchsia.media.audio/EffectsController_UpdateEffect_Result
+protocol/member fuchsia.media.audio/GainControl.OnGainMuteChanged -> (float32 gain_db,bool muted)
+protocol/member fuchsia.media.audio/GainControl.SetGain(float32 gain_db)
+protocol/member fuchsia.media.audio/GainControl.SetGainWithRamp(float32 gain_db,int64 duration,fuchsia.media.audio/RampType rampType)
+protocol/member fuchsia.media.audio/GainControl.SetMute(bool muted)
+protocol fuchsia.media.audio/GainControl
+const fuchsia.media.audio/MAX_EFFECT_NAME_LENGTH uint32 128
+const fuchsia.media.audio/MAX_GAIN_DB float32 24
+const fuchsia.media.audio/MAX_VOLUME float32 1
+const fuchsia.media.audio/MIN_VOLUME float32 0
+const fuchsia.media.audio/MUTED_GAIN_DB float32 -160
+enum/member fuchsia.media.audio/RampType.SCALE_LINEAR 1
+strict enum fuchsia.media.audio/RampType uint16
+enum/member fuchsia.media.audio/UpdateEffectError.INVALID_CONFIG 1
+enum/member fuchsia.media.audio/UpdateEffectError.NOT_FOUND 2
+strict enum fuchsia.media.audio/UpdateEffectError uint32
+protocol/member fuchsia.media.audio/VolumeControl.OnVolumeMuteChanged -> (float32 new_volume,bool new_muted)
+protocol/member fuchsia.media.audio/VolumeControl.SetMute(bool mute)
+protocol/member fuchsia.media.audio/VolumeControl.SetVolume(float32 volume)
+protocol fuchsia.media.audio/VolumeControl
+library fuchsia.media.audio

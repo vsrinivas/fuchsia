@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.policy.accessibility/PointerEventRegistry.Register(fuchsia.ui.input.accessibility/PointerEventListener pointer_event_listener) -> (bool success)
+protocol fuchsia.ui.policy.accessibility/PointerEventRegistry
+library fuchsia.ui.policy.accessibility

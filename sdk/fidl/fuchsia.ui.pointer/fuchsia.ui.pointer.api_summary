@@ -1,0 +1,80 @@
+enum/member fuchsia.ui.pointer/EventPhase.ADD 1
+enum/member fuchsia.ui.pointer/EventPhase.CANCEL 4
+enum/member fuchsia.ui.pointer/EventPhase.CHANGE 2
+enum/member fuchsia.ui.pointer/EventPhase.REMOVE 3
+strict enum fuchsia.ui.pointer/EventPhase uint32
+const fuchsia.ui.pointer/MOUSE_MAX_EVENT uint32 128
+table/member fuchsia.ui.pointer/MouseDeviceInfo.buttons vector<uint8>:32
+table/member fuchsia.ui.pointer/MouseDeviceInfo.id uint32
+table/member fuchsia.ui.pointer/MouseDeviceInfo.scroll_h_range fuchsia.input.report/Axis
+table/member fuchsia.ui.pointer/MouseDeviceInfo.scroll_v_range fuchsia.input.report/Axis
+table fuchsia.ui.pointer/MouseDeviceInfo
+table/member fuchsia.ui.pointer/MouseEvent.device_info fuchsia.ui.pointer/MouseDeviceInfo
+table/member fuchsia.ui.pointer/MouseEvent.pointer_sample fuchsia.ui.pointer/MousePointerSample
+table/member fuchsia.ui.pointer/MouseEvent.stream_info fuchsia.ui.pointer/MouseEventStreamInfo
+table/member fuchsia.ui.pointer/MouseEvent.timestamp int64
+table/member fuchsia.ui.pointer/MouseEvent.trace_flow_id uint64
+table/member fuchsia.ui.pointer/MouseEvent.view_parameters fuchsia.ui.pointer/ViewParameters
+table fuchsia.ui.pointer/MouseEvent
+struct/member fuchsia.ui.pointer/MouseEventStreamInfo.device_id uint32
+struct/member fuchsia.ui.pointer/MouseEventStreamInfo.status fuchsia.ui.pointer/MouseViewStatus
+struct fuchsia.ui.pointer/MouseEventStreamInfo
+table/member fuchsia.ui.pointer/MousePointerSample.device_id uint32
+table/member fuchsia.ui.pointer/MousePointerSample.position_in_viewport array<float32,2>
+table/member fuchsia.ui.pointer/MousePointerSample.pressed_buttons vector<uint8>:32
+table/member fuchsia.ui.pointer/MousePointerSample.scroll_h int64
+table/member fuchsia.ui.pointer/MousePointerSample.scroll_v int64
+table fuchsia.ui.pointer/MousePointerSample
+protocol/member fuchsia.ui.pointer/MouseSource.Watch() -> (vector<fuchsia.ui.pointer/MouseEvent>:128 events)
+protocol fuchsia.ui.pointer/MouseSource
+enum/member fuchsia.ui.pointer/MouseViewStatus.ENTERED 1
+enum/member fuchsia.ui.pointer/MouseViewStatus.EXITED 2
+strict enum fuchsia.ui.pointer/MouseViewStatus uint32
+struct/member fuchsia.ui.pointer/Rectangle.max array<float32,2>
+struct/member fuchsia.ui.pointer/Rectangle.min array<float32,2>
+struct fuchsia.ui.pointer/Rectangle
+const fuchsia.ui.pointer/TOUCH_MAX_EVENT uint32 128
+table/member fuchsia.ui.pointer/TouchDeviceInfo.id uint32
+table fuchsia.ui.pointer/TouchDeviceInfo
+table/member fuchsia.ui.pointer/TouchEvent.device_info fuchsia.ui.pointer/TouchDeviceInfo
+table/member fuchsia.ui.pointer/TouchEvent.interaction_result fuchsia.ui.pointer/TouchInteractionResult
+table/member fuchsia.ui.pointer/TouchEvent.pointer_sample fuchsia.ui.pointer/TouchPointerSample
+table/member fuchsia.ui.pointer/TouchEvent.timestamp int64
+table/member fuchsia.ui.pointer/TouchEvent.trace_flow_id uint64
+table/member fuchsia.ui.pointer/TouchEvent.view_parameters fuchsia.ui.pointer/ViewParameters
+table fuchsia.ui.pointer/TouchEvent
+struct/member fuchsia.ui.pointer/TouchInteractionId.device_id uint32
+struct/member fuchsia.ui.pointer/TouchInteractionId.interaction_id uint32
+struct/member fuchsia.ui.pointer/TouchInteractionId.pointer_id uint32
+struct fuchsia.ui.pointer/TouchInteractionId
+struct/member fuchsia.ui.pointer/TouchInteractionResult.interaction fuchsia.ui.pointer/TouchInteractionId
+struct/member fuchsia.ui.pointer/TouchInteractionResult.status fuchsia.ui.pointer/TouchInteractionStatus
+struct fuchsia.ui.pointer/TouchInteractionResult
+enum/member fuchsia.ui.pointer/TouchInteractionStatus.DENIED 1
+enum/member fuchsia.ui.pointer/TouchInteractionStatus.GRANTED 2
+strict enum fuchsia.ui.pointer/TouchInteractionStatus uint32
+table/member fuchsia.ui.pointer/TouchPointerSample.interaction fuchsia.ui.pointer/TouchInteractionId
+table/member fuchsia.ui.pointer/TouchPointerSample.phase fuchsia.ui.pointer/EventPhase
+table/member fuchsia.ui.pointer/TouchPointerSample.position_in_viewport array<float32,2>
+table fuchsia.ui.pointer/TouchPointerSample
+table/member fuchsia.ui.pointer/TouchResponse.response_type fuchsia.ui.pointer/TouchResponseType
+table/member fuchsia.ui.pointer/TouchResponse.trace_flow_id uint64
+table fuchsia.ui.pointer/TouchResponse
+enum/member fuchsia.ui.pointer/TouchResponseType.HOLD 6
+enum/member fuchsia.ui.pointer/TouchResponseType.HOLD_SUPPRESS 7
+enum/member fuchsia.ui.pointer/TouchResponseType.MAYBE 2
+enum/member fuchsia.ui.pointer/TouchResponseType.MAYBE_PRIORITIZE 3
+enum/member fuchsia.ui.pointer/TouchResponseType.MAYBE_PRIORITIZE_SUPPRESS 5
+enum/member fuchsia.ui.pointer/TouchResponseType.MAYBE_SUPPRESS 4
+enum/member fuchsia.ui.pointer/TouchResponseType.NO 1
+enum/member fuchsia.ui.pointer/TouchResponseType.YES 8
+enum/member fuchsia.ui.pointer/TouchResponseType.YES_PRIORITIZE 9
+strict enum fuchsia.ui.pointer/TouchResponseType uint32
+protocol/member fuchsia.ui.pointer/TouchSource.UpdateResponse(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()
+protocol/member fuchsia.ui.pointer/TouchSource.Watch(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer/TouchEvent>:128 events)
+protocol fuchsia.ui.pointer/TouchSource
+struct/member fuchsia.ui.pointer/ViewParameters.view fuchsia.ui.pointer/Rectangle
+struct/member fuchsia.ui.pointer/ViewParameters.viewport fuchsia.ui.pointer/Rectangle
+struct/member fuchsia.ui.pointer/ViewParameters.viewport_to_view_transform array<float32,9>
+struct fuchsia.ui.pointer/ViewParameters
+library fuchsia.ui.pointer

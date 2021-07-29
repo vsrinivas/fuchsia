@@ -1,0 +1,8 @@
+struct/member fuchsia.scheduler/CpuSet.mask array<uint64,8>
+struct fuchsia.scheduler/CpuSet
+protocol/member fuchsia.scheduler/ProfileProvider.GetCpuAffinityProfile(fuchsia.scheduler/CpuSet cpu_mask) -> (int32 status,zx/handle:<PROFILE,optional> profile)
+protocol/member fuchsia.scheduler/ProfileProvider.GetDeadlineProfile(uint64 capacity,uint64 deadline,uint64 period,string:64 name) -> (int32 status,zx/handle:<PROFILE,optional> profile)
+protocol/member fuchsia.scheduler/ProfileProvider.GetProfile(uint32 priority,string:64 name) -> (int32 status,zx/handle:<PROFILE,optional> profile)
+protocol/member fuchsia.scheduler/ProfileProvider.SetProfileByRole(zx/handle:THREAD thread,string:2048 role) -> (int32 status)
+protocol fuchsia.scheduler/ProfileProvider
+library fuchsia.scheduler

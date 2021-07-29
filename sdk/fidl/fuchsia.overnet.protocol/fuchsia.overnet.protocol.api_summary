@@ -1,0 +1,176 @@
+table/member fuchsia.overnet.protocol/AscenddLinkConfig.connection_label string:32
+table/member fuchsia.overnet.protocol/AscenddLinkConfig.path string:1024
+table fuchsia.overnet.protocol/AscenddLinkConfig
+struct/member fuchsia.overnet.protocol/BeginTransfer.new_destination_node fuchsia.overnet.protocol/NodeId
+struct/member fuchsia.overnet.protocol/BeginTransfer.transfer_key array<uint8,16>
+struct fuchsia.overnet.protocol/BeginTransfer
+struct/member fuchsia.overnet.protocol/ChannelHandle.rights fuchsia.overnet.protocol/ChannelRights
+struct/member fuchsia.overnet.protocol/ChannelHandle.stream_ref fuchsia.overnet.protocol/StreamRef
+struct fuchsia.overnet.protocol/ChannelHandle
+bits/member fuchsia.overnet.protocol/ChannelRights.READ 1
+bits/member fuchsia.overnet.protocol/ChannelRights.WRITE 2
+strict bits fuchsia.overnet.protocol/ChannelRights uint32
+table fuchsia.overnet.protocol/ConfigRequest
+table fuchsia.overnet.protocol/ConfigResponse
+struct/member fuchsia.overnet.protocol/ConnectToService.options fuchsia.overnet.protocol/ConnectToServiceOptions
+struct/member fuchsia.overnet.protocol/ConnectToService.rights fuchsia.overnet.protocol/ChannelRights
+struct/member fuchsia.overnet.protocol/ConnectToService.service_name string:255
+struct/member fuchsia.overnet.protocol/ConnectToService.stream_ref fuchsia.overnet.protocol/StreamRef
+struct fuchsia.overnet.protocol/ConnectToService
+table fuchsia.overnet.protocol/ConnectToServiceOptions
+protocol/member fuchsia.overnet.protocol/Diagnostic.Probe(fuchsia.overnet.protocol/ProbeSelector selector) -> (fuchsia.overnet.protocol/ProbeResult result)
+protocol fuchsia.overnet.protocol/Diagnostic
+struct fuchsia.overnet.protocol/Empty
+struct/member fuchsia.overnet.protocol/EventPairHandle.rights fuchsia.overnet.protocol/EventPairRights
+struct/member fuchsia.overnet.protocol/EventPairHandle.stream_ref fuchsia.overnet.protocol/StreamRef
+struct fuchsia.overnet.protocol/EventPairHandle
+bits/member fuchsia.overnet.protocol/EventPairRights.DO_NOT_USE 2147483648
+strict bits fuchsia.overnet.protocol/EventPairRights uint32
+enum/member fuchsia.overnet.protocol/Implementation.ASCENDD 2
+enum/member fuchsia.overnet.protocol/Implementation.HOIST_RUST_CRATE 3
+enum/member fuchsia.overnet.protocol/Implementation.OVERNET_STACK 1
+enum/member fuchsia.overnet.protocol/Implementation.UNIT_TEST 0
+enum/member fuchsia.overnet.protocol/Implementation.UNKNOWN 4
+strict enum fuchsia.overnet.protocol/Implementation uint32
+union/member fuchsia.overnet.protocol/LinkConfig.ascendd_client fuchsia.overnet.protocol/AscenddLinkConfig
+union/member fuchsia.overnet.protocol/LinkConfig.ascendd_server fuchsia.overnet.protocol/AscenddLinkConfig
+union/member fuchsia.overnet.protocol/LinkConfig.serial_client string:256
+union/member fuchsia.overnet.protocol/LinkConfig.serial_server string:256
+union/member fuchsia.overnet.protocol/LinkConfig.socket fuchsia.overnet.protocol/Empty
+union/member fuchsia.overnet.protocol/LinkConfig.udp fuchsia.net/Ipv6SocketAddress
+strict union fuchsia.overnet.protocol/LinkConfig
+union/member fuchsia.overnet.protocol/LinkControlFrame.ack uint64
+union/member fuchsia.overnet.protocol/LinkControlFrame.message fuchsia.overnet.protocol/LinkControlMessage
+strict union fuchsia.overnet.protocol/LinkControlFrame
+struct/member fuchsia.overnet.protocol/LinkControlMessage.payload fuchsia.overnet.protocol/LinkControlPayload
+struct/member fuchsia.overnet.protocol/LinkControlMessage.seq uint64
+struct fuchsia.overnet.protocol/LinkControlMessage
+union/member fuchsia.overnet.protocol/LinkControlPayload.introduction fuchsia.overnet.protocol/LinkIntroduction
+union/member fuchsia.overnet.protocol/LinkControlPayload.set_route fuchsia.overnet.protocol/SetRoute
+strict union fuchsia.overnet.protocol/LinkControlPayload
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.config fuchsia.overnet.protocol/LinkConfig
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.destination fuchsia.overnet.protocol/NodeId
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.packets_forwarded uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.pings_sent uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.received_bytes uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.received_packets uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.round_trip_time_microseconds uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.sent_bytes uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.sent_packets uint64
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.source fuchsia.overnet.protocol/NodeId
+table/member fuchsia.overnet.protocol/LinkDiagnosticInfo.source_local_id uint64
+table fuchsia.overnet.protocol/LinkDiagnosticInfo
+table/member fuchsia.overnet.protocol/LinkIntroduction.you_are fuchsia.net/SocketAddress
+table fuchsia.overnet.protocol/LinkIntroduction
+const fuchsia.overnet.protocol/MAX_SERVICE_NAME_LENGTH uint64 255
+table/member fuchsia.overnet.protocol/NodeDescription.binary string:32
+table/member fuchsia.overnet.protocol/NodeDescription.hostname string:32
+table/member fuchsia.overnet.protocol/NodeDescription.implementation fuchsia.overnet.protocol/Implementation
+table/member fuchsia.overnet.protocol/NodeDescription.operating_system fuchsia.overnet.protocol/OperatingSystem
+table fuchsia.overnet.protocol/NodeDescription
+struct/member fuchsia.overnet.protocol/NodeId.id uint64
+struct fuchsia.overnet.protocol/NodeId
+struct/member fuchsia.overnet.protocol/OpenTransfer.stream_id fuchsia.overnet.protocol/StreamId
+struct/member fuchsia.overnet.protocol/OpenTransfer.transfer_key array<uint8,16>
+struct fuchsia.overnet.protocol/OpenTransfer
+enum/member fuchsia.overnet.protocol/OperatingSystem.FUCHSIA 0
+enum/member fuchsia.overnet.protocol/OperatingSystem.LINUX 1
+enum/member fuchsia.overnet.protocol/OperatingSystem.MAC 2
+strict enum fuchsia.overnet.protocol/OperatingSystem uint32
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.bytes_sent uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.congestion_window_bytes uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.connect_to_service_send_bytes uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.connect_to_service_sends uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.destination fuchsia.overnet.protocol/NodeId
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.is_client bool
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.is_established bool
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.lost_packets uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.messages_sent uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.received_packets uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.round_trip_time_microseconds uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.sent_packets uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.source fuchsia.overnet.protocol/NodeId
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_link_status_ack_send_bytes uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_link_status_ack_sends uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_link_status_send_bytes uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_link_status_sends uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_node_description_send_bytes uint64
+table/member fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo.update_node_description_sends uint64
+table fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo
+table/member fuchsia.overnet.protocol/PeerDescription.services vector<string:255>
+table fuchsia.overnet.protocol/PeerDescription
+union/member fuchsia.overnet.protocol/PeerMessage.connect_to_service fuchsia.overnet.protocol/ConnectToService
+union/member fuchsia.overnet.protocol/PeerMessage.open_transfer fuchsia.overnet.protocol/OpenTransfer
+union/member fuchsia.overnet.protocol/PeerMessage.update_node_description fuchsia.overnet.protocol/PeerDescription
+strict union fuchsia.overnet.protocol/PeerMessage
+union/member fuchsia.overnet.protocol/PeerReply.update_link_status_ack fuchsia.overnet.protocol/Empty
+strict union fuchsia.overnet.protocol/PeerReply
+table/member fuchsia.overnet.protocol/ProbeResult.connecting_link_count uint64
+table/member fuchsia.overnet.protocol/ProbeResult.links vector<fuchsia.overnet.protocol/LinkDiagnosticInfo>
+table/member fuchsia.overnet.protocol/ProbeResult.node_description fuchsia.overnet.protocol/NodeDescription
+table/member fuchsia.overnet.protocol/ProbeResult.peer_connections vector<fuchsia.overnet.protocol/PeerConnectionDiagnosticInfo>
+table fuchsia.overnet.protocol/ProbeResult
+bits/member fuchsia.overnet.protocol/ProbeSelector.CONNECTING_LINK_COUNT 8
+bits/member fuchsia.overnet.protocol/ProbeSelector.LINKS 4
+bits/member fuchsia.overnet.protocol/ProbeSelector.NODE_DESCRIPTION 1
+bits/member fuchsia.overnet.protocol/ProbeSelector.PEER_CONNECTIONS 2
+strict bits fuchsia.overnet.protocol/ProbeSelector uint64
+struct/member fuchsia.overnet.protocol/Route.destination fuchsia.overnet.protocol/NodeId
+struct/member fuchsia.overnet.protocol/Route.route_metrics fuchsia.overnet.protocol/RouteMetrics
+struct fuchsia.overnet.protocol/Route
+table/member fuchsia.overnet.protocol/RouteMetrics.intermediate_hops vector<fuchsia.overnet.protocol/NodeId>
+table/member fuchsia.overnet.protocol/RouteMetrics.round_trip_time_us uint64
+table fuchsia.overnet.protocol/RouteMetrics
+struct/member fuchsia.overnet.protocol/SetRoute.is_end bool
+struct/member fuchsia.overnet.protocol/SetRoute.routes vector<fuchsia.overnet.protocol/Route>
+struct fuchsia.overnet.protocol/SetRoute
+table/member fuchsia.overnet.protocol/SignalUpdate.assert_signals fuchsia.overnet.protocol/Signals
+table fuchsia.overnet.protocol/SignalUpdate
+bits/member fuchsia.overnet.protocol/Signals.USER_0 1
+bits/member fuchsia.overnet.protocol/Signals.USER_1 2
+bits/member fuchsia.overnet.protocol/Signals.USER_2 4
+bits/member fuchsia.overnet.protocol/Signals.USER_3 8
+bits/member fuchsia.overnet.protocol/Signals.USER_4 16
+bits/member fuchsia.overnet.protocol/Signals.USER_5 32
+bits/member fuchsia.overnet.protocol/Signals.USER_6 64
+bits/member fuchsia.overnet.protocol/Signals.USER_7 128
+strict bits fuchsia.overnet.protocol/Signals uint32
+struct/member fuchsia.overnet.protocol/SocketHandle.rights fuchsia.overnet.protocol/SocketRights
+struct/member fuchsia.overnet.protocol/SocketHandle.socket_type fuchsia.overnet.protocol/SocketType
+struct/member fuchsia.overnet.protocol/SocketHandle.stream_ref fuchsia.overnet.protocol/StreamRef
+struct fuchsia.overnet.protocol/SocketHandle
+bits/member fuchsia.overnet.protocol/SocketRights.READ 1
+bits/member fuchsia.overnet.protocol/SocketRights.WRITE 2
+strict bits fuchsia.overnet.protocol/SocketRights uint32
+enum/member fuchsia.overnet.protocol/SocketType.DATAGRAM 0
+enum/member fuchsia.overnet.protocol/SocketType.STREAM 1
+strict enum fuchsia.overnet.protocol/SocketType uint32
+union/member fuchsia.overnet.protocol/StreamControl.ack_transfer fuchsia.overnet.protocol/Empty
+union/member fuchsia.overnet.protocol/StreamControl.begin_transfer fuchsia.overnet.protocol/BeginTransfer
+union/member fuchsia.overnet.protocol/StreamControl.end_transfer fuchsia.overnet.protocol/Empty
+union/member fuchsia.overnet.protocol/StreamControl.shutdown int32
+strict union fuchsia.overnet.protocol/StreamControl
+struct/member fuchsia.overnet.protocol/StreamId.id uint64
+struct fuchsia.overnet.protocol/StreamId
+union/member fuchsia.overnet.protocol/StreamRef.creating fuchsia.overnet.protocol/StreamId
+union/member fuchsia.overnet.protocol/StreamRef.transfer_initiator fuchsia.overnet.protocol/TransferInitiator
+union/member fuchsia.overnet.protocol/StreamRef.transfer_waiter fuchsia.overnet.protocol/TransferWaiter
+strict union fuchsia.overnet.protocol/StreamRef
+const fuchsia.overnet.protocol/TRANSFER_KEY_LENGTH uint32 16
+struct/member fuchsia.overnet.protocol/TransferInitiator.new_destination_node fuchsia.overnet.protocol/NodeId
+struct/member fuchsia.overnet.protocol/TransferInitiator.stream_id fuchsia.overnet.protocol/StreamId
+struct/member fuchsia.overnet.protocol/TransferInitiator.transfer_key array<uint8,16>
+struct fuchsia.overnet.protocol/TransferInitiator
+struct/member fuchsia.overnet.protocol/TransferWaiter.stream_id fuchsia.overnet.protocol/StreamId
+struct/member fuchsia.overnet.protocol/TransferWaiter.transfer_key array<uint8,16>
+struct fuchsia.overnet.protocol/TransferWaiter
+protocol/member fuchsia.overnet.protocol/UdpReachable.GetPossibleAddressList() -> (vector<fuchsia.net/SocketAddress> address)
+protocol fuchsia.overnet.protocol/UdpReachable
+struct/member fuchsia.overnet.protocol/ZirconChannelMessage.bytes vector<uint8>:65536
+struct/member fuchsia.overnet.protocol/ZirconChannelMessage.handles vector<fuchsia.overnet.protocol/ZirconHandle>:64
+struct fuchsia.overnet.protocol/ZirconChannelMessage
+union/member fuchsia.overnet.protocol/ZirconHandle.channel fuchsia.overnet.protocol/ChannelHandle
+union/member fuchsia.overnet.protocol/ZirconHandle.event_pair fuchsia.overnet.protocol/EventPairHandle
+union/member fuchsia.overnet.protocol/ZirconHandle.socket fuchsia.overnet.protocol/SocketHandle
+strict union fuchsia.overnet.protocol/ZirconHandle
+library fuchsia.overnet.protocol

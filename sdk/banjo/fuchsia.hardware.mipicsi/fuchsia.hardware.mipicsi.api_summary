@@ -1,0 +1,28 @@
+struct/member fuchsia.hardware.mipicsi/MipiAdapInfo.format fuchsia.hardware.mipicsi/MipiImageFormat
+struct/member fuchsia.hardware.mipicsi/MipiAdapInfo.mode fuchsia.hardware.mipicsi/MipiModes
+struct/member fuchsia.hardware.mipicsi/MipiAdapInfo.path fuchsia.hardware.mipicsi/MipiPath
+struct/member fuchsia.hardware.mipicsi/MipiAdapInfo.resolution fuchsia.hardware.camera/Dimensions
+struct fuchsia.hardware.mipicsi/MipiAdapInfo
+protocol/member fuchsia.hardware.mipicsi/MipiCsi.DeInit() -> (int32 s)
+protocol/member fuchsia.hardware.mipicsi/MipiCsi.Init(fuchsia.hardware.mipicsi/MipiInfo mipi_info,fuchsia.hardware.mipicsi/MipiAdapInfo adap_info) -> (int32 s)
+protocol fuchsia.hardware.mipicsi/MipiCsi
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW10 4
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW12 5
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW14 6
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW6 1
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW7 2
+enum/member fuchsia.hardware.mipicsi/MipiImageFormat.AM_RAW8 3
+strict enum fuchsia.hardware.mipicsi/MipiImageFormat uint32
+struct/member fuchsia.hardware.mipicsi/MipiInfo.channel uint32
+struct/member fuchsia.hardware.mipicsi/MipiInfo.csi_version uint32
+struct/member fuchsia.hardware.mipicsi/MipiInfo.lanes uint32
+struct/member fuchsia.hardware.mipicsi/MipiInfo.ui_value uint32
+struct fuchsia.hardware.mipicsi/MipiInfo
+enum/member fuchsia.hardware.mipicsi/MipiModes.DDR_MODE 0
+enum/member fuchsia.hardware.mipicsi/MipiModes.DIR_MODE 1
+enum/member fuchsia.hardware.mipicsi/MipiModes.DOL_MODE 2
+strict enum fuchsia.hardware.mipicsi/MipiModes uint32
+enum/member fuchsia.hardware.mipicsi/MipiPath.PATH0 0
+enum/member fuchsia.hardware.mipicsi/MipiPath.PATH1 1
+strict enum fuchsia.hardware.mipicsi/MipiPath uint32
+library fuchsia.hardware.mipicsi

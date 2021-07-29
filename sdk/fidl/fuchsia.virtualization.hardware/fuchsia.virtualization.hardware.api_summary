@@ -1,0 +1,78 @@
+const fuchsia.virtualization.hardware/EVENT_SET_CONFIG uint32 1
+const fuchsia.virtualization.hardware/EVENT_SET_INTERRUPT uint32 2
+const fuchsia.virtualization.hardware/EVENT_SET_QUEUE uint32 0
+protocol/member fuchsia.virtualization.hardware/KeyboardListener.OnKeyboardEvent(fuchsia.ui.input/KeyboardEvent event)
+protocol fuchsia.virtualization.hardware/KeyboardListener
+protocol/member fuchsia.virtualization.hardware/PointerListener.OnPointerEvent(fuchsia.ui.input/PointerEvent event)
+protocol/member fuchsia.virtualization.hardware/PointerListener.OnSizeChanged(fuchsia.ui.gfx/vec3 size)
+protocol fuchsia.virtualization.hardware/PointerListener
+struct/member fuchsia.virtualization.hardware/StartInfo.event zx/handle:EVENT
+struct/member fuchsia.virtualization.hardware/StartInfo.guest zx/handle:<GUEST,optional>
+struct/member fuchsia.virtualization.hardware/StartInfo.trap fuchsia.virtualization.hardware/Trap
+struct/member fuchsia.virtualization.hardware/StartInfo.vmo zx/handle:VMO
+resource struct fuchsia.virtualization.hardware/StartInfo
+struct/member fuchsia.virtualization.hardware/Trap.addr uint64
+struct/member fuchsia.virtualization.hardware/Trap.size uint64
+struct fuchsia.virtualization.hardware/Trap
+const fuchsia.virtualization.hardware/VIRTIO_WAYLAND_INVALID_VFD_ID uint32 0
+const fuchsia.virtualization.hardware/VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE uint32 128
+protocol/member fuchsia.virtualization.hardware/VirtioBalloon.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioBalloon.GetMemStats() -> (int32 status,vector<fuchsia.virtualization/MemStat>:optional mem_stats)
+protocol/member fuchsia.virtualization.hardware/VirtioBalloon.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioBalloon.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioBalloon.Start(fuchsia.virtualization.hardware/StartInfo start_info) -> ()
+protocol fuchsia.virtualization.hardware/VirtioBalloon
+protocol/member fuchsia.virtualization.hardware/VirtioBlock.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioBlock.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioBlock.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioBlock.Start(fuchsia.virtualization.hardware/StartInfo start_info,string:20 id,fuchsia.virtualization/BlockMode mode,fuchsia.virtualization/BlockFormat format,fuchsia.io/File file) -> (uint64 size)
+protocol fuchsia.virtualization.hardware/VirtioBlock
+protocol/member fuchsia.virtualization.hardware/VirtioConsole.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioConsole.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioConsole.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioConsole.Start(fuchsia.virtualization.hardware/StartInfo start_info,zx/handle:SOCKET socket) -> ()
+protocol fuchsia.virtualization.hardware/VirtioConsole
+protocol/member fuchsia.virtualization.hardware/VirtioDevice.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioDevice.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioDevice.Ready(uint32 negotiated_features) -> ()
+protocol fuchsia.virtualization.hardware/VirtioDevice
+protocol/member fuchsia.virtualization.hardware/VirtioGpu.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioGpu.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioGpu.OnConfigChanged -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioGpu.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioGpu.Start(fuchsia.virtualization.hardware/StartInfo start_info,client_end:<fuchsia.virtualization.hardware/KeyboardListener,optional> keyboard_listener,client_end:<fuchsia.virtualization.hardware/PointerListener,optional> pointer_listener) -> ()
+protocol fuchsia.virtualization.hardware/VirtioGpu
+struct/member fuchsia.virtualization.hardware/VirtioImage.info vector<uint8>:128
+struct/member fuchsia.virtualization.hardware/VirtioImage.token zx/handle:<EVENTPAIR,optional>
+struct/member fuchsia.virtualization.hardware/VirtioImage.vmo zx/handle:VMO
+resource struct fuchsia.virtualization.hardware/VirtioImage
+protocol/member fuchsia.virtualization.hardware/VirtioInput.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioInput.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioInput.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioInput.Start(fuchsia.virtualization.hardware/StartInfo start_info) -> ()
+protocol fuchsia.virtualization.hardware/VirtioInput
+protocol/member fuchsia.virtualization.hardware/VirtioMagma.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioMagma.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioMagma.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioMagma.Start(fuchsia.virtualization.hardware/StartInfo start_info,zx/handle:VMAR vmar,client_end:<fuchsia.virtualization.hardware/VirtioWaylandImporter,optional> wayland_importer) -> (int32 status)
+protocol fuchsia.virtualization.hardware/VirtioMagma
+protocol/member fuchsia.virtualization.hardware/VirtioNet.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioNet.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioNet.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioNet.Start(fuchsia.virtualization.hardware/StartInfo start_info,fuchsia.hardware.ethernet/MacAddress mac_address,bool enable_bridge) -> ()
+protocol fuchsia.virtualization.hardware/VirtioNet
+protocol/member fuchsia.virtualization.hardware/VirtioRng.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioRng.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioRng.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioRng.Start(fuchsia.virtualization.hardware/StartInfo start_info) -> ()
+protocol fuchsia.virtualization.hardware/VirtioRng
+protocol/member fuchsia.virtualization.hardware/VirtioWayland.ConfigureQueue(uint16 queue,uint16 size,uint64 desc,uint64 avail,uint64 used) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioWayland.GetImporter(server_end:fuchsia.virtualization.hardware/VirtioWaylandImporter importer)
+protocol/member fuchsia.virtualization.hardware/VirtioWayland.NotifyQueue(uint16 queue)
+protocol/member fuchsia.virtualization.hardware/VirtioWayland.Ready(uint32 negotiated_features) -> ()
+protocol/member fuchsia.virtualization.hardware/VirtioWayland.Start(fuchsia.virtualization.hardware/StartInfo start_info,zx/handle:VMAR vmar,fuchsia.virtualization/WaylandDispatcher dispatcher,fuchsia.sysmem/Allocator sysmem_allocator,fuchsia.scenic.allocation/Allocator scenic_allocator) -> ()
+protocol fuchsia.virtualization.hardware/VirtioWayland
+protocol/member fuchsia.virtualization.hardware/VirtioWaylandImporter.ExportImage(uint32 vfd_id) -> (int32 status,box<fuchsia.virtualization.hardware/VirtioImage> image)
+protocol/member fuchsia.virtualization.hardware/VirtioWaylandImporter.ImportImage(fuchsia.virtualization.hardware/VirtioImage image) -> (uint32 vfd_id)
+protocol fuchsia.virtualization.hardware/VirtioWaylandImporter
+library fuchsia.virtualization.hardware

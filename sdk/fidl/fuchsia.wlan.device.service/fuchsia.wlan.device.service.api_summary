@@ -1,0 +1,78 @@
+struct/member fuchsia.wlan.device.service/ClearCountryRequest.phy_id uint16
+struct fuchsia.wlan.device.service/ClearCountryRequest
+struct/member fuchsia.wlan.device.service/CreateIfaceRequest.mac_addr vector<uint8>:<6,optional>
+struct/member fuchsia.wlan.device.service/CreateIfaceRequest.phy_id uint16
+struct/member fuchsia.wlan.device.service/CreateIfaceRequest.role fuchsia.wlan.device/MacRole
+struct fuchsia.wlan.device.service/CreateIfaceRequest
+struct/member fuchsia.wlan.device.service/CreateIfaceResponse.iface_id uint16
+struct fuchsia.wlan.device.service/CreateIfaceResponse
+struct/member fuchsia.wlan.device.service/DestroyIfaceRequest.iface_id uint16
+struct fuchsia.wlan.device.service/DestroyIfaceRequest
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.ClearCountry(fuchsia.wlan.device.service/ClearCountryRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.CreateIface(fuchsia.wlan.device.service/CreateIfaceRequest req) -> (int32 status,box<fuchsia.wlan.device.service/CreateIfaceResponse> resp)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.DestroyIface(fuchsia.wlan.device.service/DestroyIfaceRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.GetCountry(uint16 phy_id) -> (fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Result result)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.GetDevPath(uint16 phy_id) -> (string:optional dev_path)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.GetSupportedMacRoles(uint16 phy_id) -> (vector<fuchsia.wlan.device/MacRole>:<8,optional> supported_mac_roles)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.ListPhys() -> (vector<uint16> phy_list)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.SetCountry(fuchsia.wlan.device.service/SetCountryRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceMonitor.WatchDevices(server_end:fuchsia.wlan.device.service/DeviceWatcher watcher)
+protocol fuchsia.wlan.device.service/DeviceMonitor
+struct/member fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Response.resp fuchsia.wlan.device.service/GetCountryResponse
+struct fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Response
+union/member fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Result.err int32
+union/member fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Result.response fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Response
+strict union fuchsia.wlan.device.service/DeviceMonitor_GetCountry_Result
+protocol/member fuchsia.wlan.device.service/DeviceService.ClearCountry(fuchsia.wlan.device.service/ClearCountryRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.CreateIface(fuchsia.wlan.device.service/CreateIfaceRequest req) -> (int32 status,box<fuchsia.wlan.device.service/CreateIfaceResponse> resp)
+protocol/member fuchsia.wlan.device.service/DeviceService.DestroyIface(fuchsia.wlan.device.service/DestroyIfaceRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetApSme(uint16 iface_id,server_end:fuchsia.wlan.sme/ApSme sme) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetClientSme(uint16 iface_id,server_end:fuchsia.wlan.sme/ClientSme sme) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetCountry(uint16 phy_id) -> (fuchsia.wlan.device.service/DeviceService_GetCountry_Result result)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetIfaceStats(uint16 iface_id) -> (int32 status,fuchsia.wlan.stats/IfaceStats:optional stats)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetMeshSme(uint16 iface_id,server_end:fuchsia.wlan.sme/MeshSme sme) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetMinstrelList(uint16 iface_id) -> (int32 status,fuchsia.wlan.minstrel/Peers peers)
+protocol/member fuchsia.wlan.device.service/DeviceService.GetMinstrelStats(uint16 iface_id,array<uint8,6> peer_addr) -> (int32 status,fuchsia.wlan.minstrel/Peer:optional peer)
+protocol/member fuchsia.wlan.device.service/DeviceService.ListIfaces() -> (fuchsia.wlan.device.service/ListIfacesResponse resp)
+protocol/member fuchsia.wlan.device.service/DeviceService.ListPhys() -> (fuchsia.wlan.device.service/ListPhysResponse resp)
+protocol/member fuchsia.wlan.device.service/DeviceService.QueryIface(uint16 iface_id) -> (int32 status,box<fuchsia.wlan.device.service/QueryIfaceResponse> resp)
+protocol/member fuchsia.wlan.device.service/DeviceService.QueryPhy(fuchsia.wlan.device.service/QueryPhyRequest req) -> (int32 status,box<fuchsia.wlan.device.service/QueryPhyResponse> resp)
+protocol/member fuchsia.wlan.device.service/DeviceService.SetCountry(fuchsia.wlan.device.service/SetCountryRequest req) -> (int32 status)
+protocol/member fuchsia.wlan.device.service/DeviceService.WatchDevices(server_end:fuchsia.wlan.device.service/DeviceWatcher watcher)
+protocol fuchsia.wlan.device.service/DeviceService
+struct/member fuchsia.wlan.device.service/DeviceService_GetCountry_Response.resp fuchsia.wlan.device.service/GetCountryResponse
+struct fuchsia.wlan.device.service/DeviceService_GetCountry_Response
+union/member fuchsia.wlan.device.service/DeviceService_GetCountry_Result.err int32
+union/member fuchsia.wlan.device.service/DeviceService_GetCountry_Result.response fuchsia.wlan.device.service/DeviceService_GetCountry_Response
+strict union fuchsia.wlan.device.service/DeviceService_GetCountry_Result
+protocol/member fuchsia.wlan.device.service/DeviceWatcher.OnIfaceAdded -> (uint16 iface_id)
+protocol/member fuchsia.wlan.device.service/DeviceWatcher.OnIfaceRemoved -> (uint16 iface_id)
+protocol/member fuchsia.wlan.device.service/DeviceWatcher.OnPhyAdded -> (uint16 phy_id)
+protocol/member fuchsia.wlan.device.service/DeviceWatcher.OnPhyRemoved -> (uint16 phy_id)
+protocol fuchsia.wlan.device.service/DeviceWatcher
+struct/member fuchsia.wlan.device.service/GetCountryResponse.alpha2 array<uint8,2>
+struct fuchsia.wlan.device.service/GetCountryResponse
+struct/member fuchsia.wlan.device.service/IfaceListItem.iface_id uint16
+struct fuchsia.wlan.device.service/IfaceListItem
+struct/member fuchsia.wlan.device.service/ListIfacesResponse.ifaces vector<fuchsia.wlan.device.service/IfaceListItem>
+struct fuchsia.wlan.device.service/ListIfacesResponse
+struct/member fuchsia.wlan.device.service/ListPhysResponse.phys vector<fuchsia.wlan.device.service/PhyListItem>
+struct fuchsia.wlan.device.service/ListPhysResponse
+struct/member fuchsia.wlan.device.service/PhyListItem.path string
+struct/member fuchsia.wlan.device.service/PhyListItem.phy_id uint16
+struct fuchsia.wlan.device.service/PhyListItem
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.driver_features vector<fuchsia.wlan.common/DriverFeature>:32
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.id uint16
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.mac_addr array<uint8,6>
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.phy_assigned_id uint16
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.phy_id uint16
+struct/member fuchsia.wlan.device.service/QueryIfaceResponse.role fuchsia.wlan.device/MacRole
+struct fuchsia.wlan.device.service/QueryIfaceResponse
+struct/member fuchsia.wlan.device.service/QueryPhyRequest.phy_id uint16
+struct fuchsia.wlan.device.service/QueryPhyRequest
+struct/member fuchsia.wlan.device.service/QueryPhyResponse.info fuchsia.wlan.device/PhyInfo
+struct fuchsia.wlan.device.service/QueryPhyResponse
+struct/member fuchsia.wlan.device.service/SetCountryRequest.alpha2 array<uint8,2>
+struct/member fuchsia.wlan.device.service/SetCountryRequest.phy_id uint16
+struct fuchsia.wlan.device.service/SetCountryRequest
+library fuchsia.wlan.device.service

@@ -1,0 +1,20 @@
+struct/member fuchsia.diagnostics.stream/Argument.name string:256
+struct/member fuchsia.diagnostics.stream/Argument.value fuchsia.diagnostics.stream/Value
+struct fuchsia.diagnostics.stream/Argument
+const fuchsia.diagnostics.stream/MAX_ARGS uint32 15
+const fuchsia.diagnostics.stream/MAX_ARG_NAME_LENGTH uint32 256
+const fuchsia.diagnostics.stream/MAX_TEXT_ARG_LENGTH uint32 32768
+struct/member fuchsia.diagnostics.stream/Record.arguments vector<fuchsia.diagnostics.stream/Argument>:15
+struct/member fuchsia.diagnostics.stream/Record.severity fuchsia.diagnostics/Severity
+struct/member fuchsia.diagnostics.stream/Record.timestamp int64
+struct fuchsia.diagnostics.stream/Record
+protocol/member fuchsia.diagnostics.stream/Source.OnBufferDone -> (uint64 buffer)
+protocol/member fuchsia.diagnostics.stream/Source.OnBufferInit -> (zx/handle:VMO latest)
+protocol/member fuchsia.diagnostics.stream/Source.RetireBuffer(uint64 buffer)
+protocol fuchsia.diagnostics.stream/Source
+union/member fuchsia.diagnostics.stream/Value.floating float64
+union/member fuchsia.diagnostics.stream/Value.signed_int int64
+union/member fuchsia.diagnostics.stream/Value.text string:32768
+union/member fuchsia.diagnostics.stream/Value.unsigned_int uint64
+flexible union fuchsia.diagnostics.stream/Value
+library fuchsia.diagnostics.stream

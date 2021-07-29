@@ -1,0 +1,17 @@
+protocol/member fuchsia.memory/Debugger.SignalMemoryPressure(fuchsia.memorypressure/Level level)
+protocol fuchsia.memory/Debugger
+protocol/member fuchsia.memory/Monitor.Watch(client_end:fuchsia.memory/Watcher watcher)
+protocol fuchsia.memory/Monitor
+struct/member fuchsia.memory/Stats.free_bytes uint64
+struct/member fuchsia.memory/Stats.free_heap_bytes uint64
+struct/member fuchsia.memory/Stats.ipc_bytes uint64
+struct/member fuchsia.memory/Stats.mmu_overhead_bytes uint64
+struct/member fuchsia.memory/Stats.other_bytes uint64
+struct/member fuchsia.memory/Stats.total_bytes uint64
+struct/member fuchsia.memory/Stats.total_heap_bytes uint64
+struct/member fuchsia.memory/Stats.vmo_bytes uint64
+struct/member fuchsia.memory/Stats.wired_bytes uint64
+struct fuchsia.memory/Stats
+protocol/member fuchsia.memory/Watcher.OnChange(fuchsia.memory/Stats stats)
+protocol fuchsia.memory/Watcher
+library fuchsia.memory

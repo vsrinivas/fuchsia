@@ -1,0 +1,124 @@
+protocol/member fuchsia.wlan.policy/AccessPointController.StartAccessPoint(fuchsia.wlan.policy/NetworkConfig config,fuchsia.wlan.policy/ConnectivityMode mode,fuchsia.wlan.policy/OperatingBand band) -> (fuchsia.wlan.common/RequestStatus status)
+protocol/member fuchsia.wlan.policy/AccessPointController.StopAccessPoint(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.common/RequestStatus status)
+protocol/member fuchsia.wlan.policy/AccessPointController.StopAllAccessPoints()
+protocol fuchsia.wlan.policy/AccessPointController
+protocol/member fuchsia.wlan.policy/AccessPointListener.GetListener(client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)
+protocol fuchsia.wlan.policy/AccessPointListener
+protocol/member fuchsia.wlan.policy/AccessPointProvider.GetController(server_end:fuchsia.wlan.policy/AccessPointController requests,client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)
+protocol fuchsia.wlan.policy/AccessPointProvider
+table/member fuchsia.wlan.policy/AccessPointState.band fuchsia.wlan.policy/OperatingBand
+table/member fuchsia.wlan.policy/AccessPointState.clients fuchsia.wlan.policy/ConnectedClientInformation
+table/member fuchsia.wlan.policy/AccessPointState.frequency uint32
+table/member fuchsia.wlan.policy/AccessPointState.id fuchsia.wlan.policy/NetworkIdentifier
+table/member fuchsia.wlan.policy/AccessPointState.mode fuchsia.wlan.policy/ConnectivityMode
+table/member fuchsia.wlan.policy/AccessPointState.state fuchsia.wlan.policy/OperatingState
+table fuchsia.wlan.policy/AccessPointState
+protocol/member fuchsia.wlan.policy/AccessPointStateUpdates.OnAccessPointStateUpdate(vector<fuchsia.wlan.policy/AccessPointState> access_points) -> ()
+protocol fuchsia.wlan.policy/AccessPointStateUpdates
+table/member fuchsia.wlan.policy/Bss.bssid array<uint8,6>
+table/member fuchsia.wlan.policy/Bss.frequency uint32
+table/member fuchsia.wlan.policy/Bss.rssi int8
+table/member fuchsia.wlan.policy/Bss.timestamp_nanos int64
+table fuchsia.wlan.policy/Bss
+protocol/member fuchsia.wlan.policy/ClientController.Connect(fuchsia.wlan.policy/NetworkIdentifier id) -> (fuchsia.wlan.common/RequestStatus status)
+protocol/member fuchsia.wlan.policy/ClientController.GetSavedNetworks(server_end:fuchsia.wlan.policy/NetworkConfigIterator iterator)
+protocol/member fuchsia.wlan.policy/ClientController.RemoveNetwork(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_RemoveNetwork_Result result)
+protocol/member fuchsia.wlan.policy/ClientController.SaveNetwork(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_SaveNetwork_Result result)
+protocol/member fuchsia.wlan.policy/ClientController.ScanForNetworks(server_end:fuchsia.wlan.policy/ScanResultIterator iterator)
+protocol/member fuchsia.wlan.policy/ClientController.StartClientConnections() -> (fuchsia.wlan.common/RequestStatus status)
+protocol/member fuchsia.wlan.policy/ClientController.StopClientConnections() -> (fuchsia.wlan.common/RequestStatus status)
+protocol fuchsia.wlan.policy/ClientController
+struct fuchsia.wlan.policy/ClientController_RemoveNetwork_Response
+union/member fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.err fuchsia.wlan.policy/NetworkConfigChangeError
+union/member fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.response fuchsia.wlan.policy/ClientController_RemoveNetwork_Response
+strict union fuchsia.wlan.policy/ClientController_RemoveNetwork_Result
+struct fuchsia.wlan.policy/ClientController_SaveNetwork_Response
+union/member fuchsia.wlan.policy/ClientController_SaveNetwork_Result.err fuchsia.wlan.policy/NetworkConfigChangeError
+union/member fuchsia.wlan.policy/ClientController_SaveNetwork_Result.response fuchsia.wlan.policy/ClientController_SaveNetwork_Response
+strict union fuchsia.wlan.policy/ClientController_SaveNetwork_Result
+protocol/member fuchsia.wlan.policy/ClientListener.GetListener(client_end:fuchsia.wlan.policy/ClientStateUpdates updates)
+protocol fuchsia.wlan.policy/ClientListener
+protocol/member fuchsia.wlan.policy/ClientProvider.GetController(server_end:fuchsia.wlan.policy/ClientController requests,client_end:fuchsia.wlan.policy/ClientStateUpdates updates)
+protocol fuchsia.wlan.policy/ClientProvider
+table/member fuchsia.wlan.policy/ClientStateSummary.networks vector<fuchsia.wlan.policy/NetworkState>
+table/member fuchsia.wlan.policy/ClientStateSummary.state fuchsia.wlan.policy/WlanClientState
+table fuchsia.wlan.policy/ClientStateSummary
+protocol/member fuchsia.wlan.policy/ClientStateUpdates.OnClientStateUpdate(fuchsia.wlan.policy/ClientStateSummary summary) -> ()
+protocol fuchsia.wlan.policy/ClientStateUpdates
+enum/member fuchsia.wlan.policy/Compatibility.DISALLOWED_INSECURE 2
+enum/member fuchsia.wlan.policy/Compatibility.DISALLOWED_NOT_SUPPORTED 3
+enum/member fuchsia.wlan.policy/Compatibility.SUPPORTED 1
+strict enum fuchsia.wlan.policy/Compatibility uint32
+table/member fuchsia.wlan.policy/ConnectedClientInformation.count uint8
+table fuchsia.wlan.policy/ConnectedClientInformation
+enum/member fuchsia.wlan.policy/ConnectionState.CONNECTED 4
+enum/member fuchsia.wlan.policy/ConnectionState.CONNECTING 3
+enum/member fuchsia.wlan.policy/ConnectionState.DISCONNECTED 2
+enum/member fuchsia.wlan.policy/ConnectionState.FAILED 1
+strict enum fuchsia.wlan.policy/ConnectionState uint32
+enum/member fuchsia.wlan.policy/ConnectivityMode.LOCAL_ONLY 1
+enum/member fuchsia.wlan.policy/ConnectivityMode.UNRESTRICTED 2
+strict enum fuchsia.wlan.policy/ConnectivityMode uint32
+union/member fuchsia.wlan.policy/Credential.none fuchsia.wlan.policy/Empty
+union/member fuchsia.wlan.policy/Credential.password vector<uint8>
+union/member fuchsia.wlan.policy/Credential.psk vector<uint8>
+flexible union fuchsia.wlan.policy/Credential
+enum/member fuchsia.wlan.policy/DisconnectStatus.CONNECTION_FAILED 4
+enum/member fuchsia.wlan.policy/DisconnectStatus.CONNECTION_STOPPED 3
+enum/member fuchsia.wlan.policy/DisconnectStatus.CREDENTIALS_FAILED 2
+enum/member fuchsia.wlan.policy/DisconnectStatus.TIMED_OUT 1
+strict enum fuchsia.wlan.policy/DisconnectStatus uint32
+struct fuchsia.wlan.policy/Empty
+table/member fuchsia.wlan.policy/NetworkConfig.credential fuchsia.wlan.policy/Credential
+table/member fuchsia.wlan.policy/NetworkConfig.id fuchsia.wlan.policy/NetworkIdentifier
+table fuchsia.wlan.policy/NetworkConfig
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.CREDENTIAL_LEN_ERROR 6
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.GENERAL_ERROR 1
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.INVALID_SECURITY_CREDENTIAL_ERROR 7
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.NETWORK_CONFIG_MISSING_FIELD_ERROR 2
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.NETWORK_CONFIG_WRITE_ERROR 3
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.SSID_EMPTY_ERROR 4
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.SSID_EXCEEDS_MAX_LEN_ERROR 5
+enum/member fuchsia.wlan.policy/NetworkConfigChangeError.UNSUPPORTED_CREDENTIAL_ERROR 8
+strict enum fuchsia.wlan.policy/NetworkConfigChangeError uint32
+protocol/member fuchsia.wlan.policy/NetworkConfigIterator.GetNext() -> (vector<fuchsia.wlan.policy/NetworkConfig> configs)
+protocol fuchsia.wlan.policy/NetworkConfigIterator
+struct/member fuchsia.wlan.policy/NetworkIdentifier.ssid vector<uint8>:32
+struct/member fuchsia.wlan.policy/NetworkIdentifier.type fuchsia.wlan.policy/SecurityType
+struct fuchsia.wlan.policy/NetworkIdentifier
+table/member fuchsia.wlan.policy/NetworkState.id fuchsia.wlan.policy/NetworkIdentifier
+table/member fuchsia.wlan.policy/NetworkState.state fuchsia.wlan.policy/ConnectionState
+table/member fuchsia.wlan.policy/NetworkState.status fuchsia.wlan.policy/DisconnectStatus
+table fuchsia.wlan.policy/NetworkState
+enum/member fuchsia.wlan.policy/OperatingBand.ANY 1
+enum/member fuchsia.wlan.policy/OperatingBand.ONLY_2_4GHZ 2
+enum/member fuchsia.wlan.policy/OperatingBand.ONLY_5GHZ 3
+strict enum fuchsia.wlan.policy/OperatingBand uint32
+enum/member fuchsia.wlan.policy/OperatingState.ACTIVE 3
+enum/member fuchsia.wlan.policy/OperatingState.FAILED 1
+enum/member fuchsia.wlan.policy/OperatingState.STARTING 2
+strict enum fuchsia.wlan.policy/OperatingState uint32
+enum/member fuchsia.wlan.policy/ScanErrorCode.CANCELLED 2
+enum/member fuchsia.wlan.policy/ScanErrorCode.GENERAL_ERROR 1
+strict enum fuchsia.wlan.policy/ScanErrorCode uint32
+table/member fuchsia.wlan.policy/ScanResult.compatibility fuchsia.wlan.policy/Compatibility
+table/member fuchsia.wlan.policy/ScanResult.entries vector<fuchsia.wlan.policy/Bss>
+table/member fuchsia.wlan.policy/ScanResult.id fuchsia.wlan.policy/NetworkIdentifier
+table fuchsia.wlan.policy/ScanResult
+protocol/member fuchsia.wlan.policy/ScanResultIterator.GetNext() -> (fuchsia.wlan.policy/ScanResultIterator_GetNext_Result result)
+protocol fuchsia.wlan.policy/ScanResultIterator
+struct/member fuchsia.wlan.policy/ScanResultIterator_GetNext_Response.scan_results vector<fuchsia.wlan.policy/ScanResult>
+struct fuchsia.wlan.policy/ScanResultIterator_GetNext_Response
+union/member fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.err fuchsia.wlan.policy/ScanErrorCode
+union/member fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.response fuchsia.wlan.policy/ScanResultIterator_GetNext_Response
+strict union fuchsia.wlan.policy/ScanResultIterator_GetNext_Result
+enum/member fuchsia.wlan.policy/SecurityType.NONE 1
+enum/member fuchsia.wlan.policy/SecurityType.WEP 2
+enum/member fuchsia.wlan.policy/SecurityType.WPA 3
+enum/member fuchsia.wlan.policy/SecurityType.WPA2 4
+enum/member fuchsia.wlan.policy/SecurityType.WPA3 5
+strict enum fuchsia.wlan.policy/SecurityType uint32
+enum/member fuchsia.wlan.policy/WlanClientState.CONNECTIONS_DISABLED 1
+enum/member fuchsia.wlan.policy/WlanClientState.CONNECTIONS_ENABLED 2
+strict enum fuchsia.wlan.policy/WlanClientState uint32
+library fuchsia.wlan.policy

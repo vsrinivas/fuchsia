@@ -1,0 +1,9 @@
+protocol/member fuchsia.bluetooth.rfcomm.test/RfcommTest.Disconnect(fuchsia.bluetooth/PeerId id)
+protocol/member fuchsia.bluetooth.rfcomm.test/RfcommTest.RemoteLineStatus(fuchsia.bluetooth/PeerId id,uint8 channel_number,fuchsia.bluetooth.rfcomm.test/Status status)
+protocol fuchsia.bluetooth.rfcomm.test/RfcommTest
+enum/member fuchsia.bluetooth.rfcomm.test/Status.FRAMING_ERROR 3
+enum/member fuchsia.bluetooth.rfcomm.test/Status.OK 0
+enum/member fuchsia.bluetooth.rfcomm.test/Status.OVERRUN_ERROR 1
+enum/member fuchsia.bluetooth.rfcomm.test/Status.PARITY_ERROR 2
+strict enum fuchsia.bluetooth.rfcomm.test/Status uint32
+library fuchsia.bluetooth.rfcomm.test

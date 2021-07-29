@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.virtioconsole/Device.GetChannel(server_end:fuchsia.hardware.pty/Device req)
+protocol fuchsia.hardware.virtioconsole/Device
+library fuchsia.hardware.virtioconsole

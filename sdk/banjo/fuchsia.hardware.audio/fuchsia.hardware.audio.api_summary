@@ -1,0 +1,5 @@
+protocol/member fuchsia.hardware.audio/Codec.Connect(zx/handle:CHANNEL channel) -> (int32 status)
+protocol fuchsia.hardware.audio/Codec
+protocol/member fuchsia.hardware.audio/Dai.Connect(zx/handle:CHANNEL channel) -> (int32 status)
+protocol fuchsia.hardware.audio/Dai
+library fuchsia.hardware.audio

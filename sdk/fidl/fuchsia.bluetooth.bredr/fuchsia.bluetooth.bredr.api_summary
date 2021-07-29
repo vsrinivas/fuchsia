@@ -1,0 +1,233 @@
+enum/member fuchsia.bluetooth.bredr/A2dpDirectionPriority.NORMAL 1
+enum/member fuchsia.bluetooth.bredr/A2dpDirectionPriority.SINK 3
+enum/member fuchsia.bluetooth.bredr/A2dpDirectionPriority.SOURCE 2
+strict enum fuchsia.bluetooth.bredr/A2dpDirectionPriority uint32
+const fuchsia.bluetooth.bredr/ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST uint16 13
+const fuchsia.bluetooth.bredr/ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST uint16 9
+const fuchsia.bluetooth.bredr/ATTR_BROWSE_GROUP_LIST uint16 5
+const fuchsia.bluetooth.bredr/ATTR_LANGUAGE_BASE_ATTRIBUTE_ID_LIST uint16 6
+const fuchsia.bluetooth.bredr/ATTR_PROTOCOL_DESCRIPTOR_LIST uint16 4
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_AVAILABILITY uint16 8
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_CLASS_ID_LIST uint16 1
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_ID uint16 3
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_INFO_TIME_TO_LIVE uint16 7
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_RECORD_HANDLE uint16 0
+const fuchsia.bluetooth.bredr/ATTR_SERVICE_RECORD_STATE uint16 2
+struct/member fuchsia.bluetooth.bredr/Attribute.element fuchsia.bluetooth.bredr/DataElement
+struct/member fuchsia.bluetooth.bredr/Attribute.id uint16
+struct fuchsia.bluetooth.bredr/Attribute
+protocol/member fuchsia.bluetooth.bredr/AudioDirectionExt.SetPriority(fuchsia.bluetooth.bredr/A2dpDirectionPriority priority) -> (fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Result result)
+protocol fuchsia.bluetooth.bredr/AudioDirectionExt
+struct fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Response
+union/member fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Result.err fuchsia.bluetooth/ErrorCode
+union/member fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Result.response fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Response
+strict union fuchsia.bluetooth.bredr/AudioDirectionExt_SetPriority_Result
+table/member fuchsia.bluetooth.bredr/Channel.channel_mode fuchsia.bluetooth.bredr/ChannelMode
+table/member fuchsia.bluetooth.bredr/Channel.ext_direction client_end:fuchsia.bluetooth.bredr/AudioDirectionExt
+table/member fuchsia.bluetooth.bredr/Channel.ext_l2cap client_end:fuchsia.bluetooth.bredr/L2capParametersExt
+table/member fuchsia.bluetooth.bredr/Channel.flush_timeout int64
+table/member fuchsia.bluetooth.bredr/Channel.max_tx_sdu_size uint16
+table/member fuchsia.bluetooth.bredr/Channel.socket zx/handle:SOCKET
+resource table fuchsia.bluetooth.bredr/Channel
+enum/member fuchsia.bluetooth.bredr/ChannelMode.BASIC 1
+enum/member fuchsia.bluetooth.bredr/ChannelMode.ENHANCED_RETRANSMISSION 2
+strict enum fuchsia.bluetooth.bredr/ChannelMode uint32
+table/member fuchsia.bluetooth.bredr/ChannelParameters.channel_mode fuchsia.bluetooth.bredr/ChannelMode
+table/member fuchsia.bluetooth.bredr/ChannelParameters.flush_timeout int64
+table/member fuchsia.bluetooth.bredr/ChannelParameters.max_rx_sdu_size uint16
+table/member fuchsia.bluetooth.bredr/ChannelParameters.security_requirements fuchsia.bluetooth.bredr/SecurityRequirements
+table fuchsia.bluetooth.bredr/ChannelParameters
+enum/member fuchsia.bluetooth.bredr/CodingFormat.ALAW 2
+enum/member fuchsia.bluetooth.bredr/CodingFormat.CVSD 3
+enum/member fuchsia.bluetooth.bredr/CodingFormat.LINEAR_PCM 5
+enum/member fuchsia.bluetooth.bredr/CodingFormat.MSBC 6
+enum/member fuchsia.bluetooth.bredr/CodingFormat.MULAW 1
+enum/member fuchsia.bluetooth.bredr/CodingFormat.TRANSPARENT 4
+strict enum fuchsia.bluetooth.bredr/CodingFormat uint8
+union/member fuchsia.bluetooth.bredr/ConnectParameters.l2cap fuchsia.bluetooth.bredr/L2capParameters
+union/member fuchsia.bluetooth.bredr/ConnectParameters.rfcomm fuchsia.bluetooth.bredr/RfcommParameters
+strict union fuchsia.bluetooth.bredr/ConnectParameters
+protocol/member fuchsia.bluetooth.bredr/ConnectionReceiver.Connected(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.bredr/Channel channel,vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:255 protocol)
+protocol fuchsia.bluetooth.bredr/ConnectionReceiver
+union/member fuchsia.bluetooth.bredr/DataElement.alternatives vector<fuchsia.bluetooth.bredr/DataElement:optional>:255
+union/member fuchsia.bluetooth.bredr/DataElement.b bool
+union/member fuchsia.bluetooth.bredr/DataElement.int16 int16
+union/member fuchsia.bluetooth.bredr/DataElement.int32 int32
+union/member fuchsia.bluetooth.bredr/DataElement.int64 int64
+union/member fuchsia.bluetooth.bredr/DataElement.int8 int8
+union/member fuchsia.bluetooth.bredr/DataElement.sequence vector<fuchsia.bluetooth.bredr/DataElement:optional>:255
+union/member fuchsia.bluetooth.bredr/DataElement.str string:1024
+union/member fuchsia.bluetooth.bredr/DataElement.uint16 uint16
+union/member fuchsia.bluetooth.bredr/DataElement.uint32 uint32
+union/member fuchsia.bluetooth.bredr/DataElement.uint64 uint64
+union/member fuchsia.bluetooth.bredr/DataElement.uint8 uint8
+union/member fuchsia.bluetooth.bredr/DataElement.url string:4096
+union/member fuchsia.bluetooth.bredr/DataElement.uuid fuchsia.bluetooth/Uuid
+strict union fuchsia.bluetooth.bredr/DataElement
+enum/member fuchsia.bluetooth.bredr/DataPath.HOST 1
+enum/member fuchsia.bluetooth.bredr/DataPath.OFFLOAD 2
+enum/member fuchsia.bluetooth.bredr/DataPath.TEST 3
+strict enum fuchsia.bluetooth.bredr/DataPath uint8
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_D0 7
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_D1 8
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_S1 3
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_S2 4
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_S3 5
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.CVSD_S4 6
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.MSBC_T1 1
+enum/member fuchsia.bluetooth.bredr/HfpParameterSet.MSBC_T2 2
+strict enum fuchsia.bluetooth.bredr/HfpParameterSet uint8
+table/member fuchsia.bluetooth.bredr/Information.description string:1024
+table/member fuchsia.bluetooth.bredr/Information.language string:2
+table/member fuchsia.bluetooth.bredr/Information.name string:1024
+table/member fuchsia.bluetooth.bredr/Information.provider string:1024
+table fuchsia.bluetooth.bredr/Information
+table/member fuchsia.bluetooth.bredr/L2capParameters.parameters fuchsia.bluetooth.bredr/ChannelParameters
+table/member fuchsia.bluetooth.bredr/L2capParameters.psm uint16
+table fuchsia.bluetooth.bredr/L2capParameters
+protocol/member fuchsia.bluetooth.bredr/L2capParametersExt.RequestParameters(fuchsia.bluetooth.bredr/ChannelParameters request) -> (fuchsia.bluetooth.bredr/ChannelParameters new)
+protocol fuchsia.bluetooth.bredr/L2capParametersExt
+table/member fuchsia.bluetooth.bredr/LaunchInfo.arguments vector<string>
+table/member fuchsia.bluetooth.bredr/LaunchInfo.component_url string:2083
+table fuchsia.bluetooth.bredr/LaunchInfo
+const fuchsia.bluetooth.bredr/MAX_ADDITIONAL_ATTRIBUTES uint16 65023
+const fuchsia.bluetooth.bredr/MAX_ATTRIBUTES uint16 512
+const fuchsia.bluetooth.bredr/MAX_INFORMATION_COUNT uint8 85
+const fuchsia.bluetooth.bredr/MAX_SEQUENCE_LENGTH uint8 255
+const fuchsia.bluetooth.bredr/MAX_SERVICES_PER_ADVERTISEMENT uint8 32
+const fuchsia.bluetooth.bredr/MAX_STRING_LENGTH uint16 1024
+protocol/member fuchsia.bluetooth.bredr/MockPeer.ConnectProxy(server_end:fuchsia.bluetooth.bredr/Profile interface) -> ()
+protocol/member fuchsia.bluetooth.bredr/MockPeer.LaunchProfile(fuchsia.bluetooth.bredr/LaunchInfo launch_info) -> (fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Result result)
+protocol fuchsia.bluetooth.bredr/MockPeer
+struct fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Response
+union/member fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Result.err fuchsia.bluetooth/ErrorCode
+union/member fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Result.response fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Response
+strict union fuchsia.bluetooth.bredr/MockPeer_LaunchProfile_Result
+const fuchsia.bluetooth.bredr/PSM_3DSP uint16 33
+const fuchsia.bluetooth.bredr/PSM_ATT uint16 31
+const fuchsia.bluetooth.bredr/PSM_AVCTP uint16 23
+const fuchsia.bluetooth.bredr/PSM_AVCTP_BROWSE uint16 27
+const fuchsia.bluetooth.bredr/PSM_AVDTP uint16 25
+const fuchsia.bluetooth.bredr/PSM_BNEP uint16 15
+const fuchsia.bluetooth.bredr/PSM_HID_CONTROL uint16 17
+const fuchsia.bluetooth.bredr/PSM_HID_INTERRUPT uint16 19
+const fuchsia.bluetooth.bredr/PSM_LE_IPSP uint16 35
+const fuchsia.bluetooth.bredr/PSM_OTS uint16 37
+const fuchsia.bluetooth.bredr/PSM_RFCOMM uint16 3
+const fuchsia.bluetooth.bredr/PSM_SDP uint16 1
+const fuchsia.bluetooth.bredr/PSM_TCSBIN uint16 5
+const fuchsia.bluetooth.bredr/PSM_TCSBIN_CORDLESS uint16 7
+protocol/member fuchsia.bluetooth.bredr/PeerObserver.ComponentTerminated(string:2083 component_url) -> ()
+protocol/member fuchsia.bluetooth.bredr/PeerObserver.PeerConnected(fuchsia.bluetooth/PeerId peer_id,vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:255 protocol) -> ()
+protocol/member fuchsia.bluetooth.bredr/PeerObserver.ServiceFound(fuchsia.bluetooth/PeerId peer_id,vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:<255,optional> protocol,vector<fuchsia.bluetooth.bredr/Attribute>:512 attributes) -> ()
+protocol fuchsia.bluetooth.bredr/PeerObserver
+protocol/member fuchsia.bluetooth.bredr/Profile.Advertise(vector<fuchsia.bluetooth.bredr/ServiceDefinition>:32 services,fuchsia.bluetooth.bredr/ChannelParameters parameters,client_end:fuchsia.bluetooth.bredr/ConnectionReceiver receiver) -> (fuchsia.bluetooth.bredr/Profile_Advertise_Result result)
+protocol/member fuchsia.bluetooth.bredr/Profile.Connect(fuchsia.bluetooth/PeerId peer_id,fuchsia.bluetooth.bredr/ConnectParameters connection) -> (fuchsia.bluetooth.bredr/Profile_Connect_Result result)
+protocol/member fuchsia.bluetooth.bredr/Profile.ConnectSco(fuchsia.bluetooth/PeerId peer_id,bool initiator,fuchsia.bluetooth.bredr/ScoConnectionParameters params,client_end:fuchsia.bluetooth.bredr/ScoConnectionReceiver receiver)
+protocol/member fuchsia.bluetooth.bredr/Profile.Search(fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier service_uuid,vector<uint16>:512 attr_ids,client_end:fuchsia.bluetooth.bredr/SearchResults results)
+protocol fuchsia.bluetooth.bredr/Profile
+struct/member fuchsia.bluetooth.bredr/ProfileDescriptor.major_version uint8
+struct/member fuchsia.bluetooth.bredr/ProfileDescriptor.minor_version uint8
+struct/member fuchsia.bluetooth.bredr/ProfileDescriptor.profile_id fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier
+struct fuchsia.bluetooth.bredr/ProfileDescriptor
+protocol/member fuchsia.bluetooth.bredr/ProfileTest.RegisterPeer(fuchsia.bluetooth/PeerId peer_id,server_end:fuchsia.bluetooth.bredr/MockPeer peer,client_end:fuchsia.bluetooth.bredr/PeerObserver observer) -> ()
+protocol fuchsia.bluetooth.bredr/ProfileTest
+struct fuchsia.bluetooth.bredr/Profile_Advertise_Response
+union/member fuchsia.bluetooth.bredr/Profile_Advertise_Result.err fuchsia.bluetooth/ErrorCode
+union/member fuchsia.bluetooth.bredr/Profile_Advertise_Result.response fuchsia.bluetooth.bredr/Profile_Advertise_Response
+strict union fuchsia.bluetooth.bredr/Profile_Advertise_Result
+struct/member fuchsia.bluetooth.bredr/Profile_Connect_Response.channel fuchsia.bluetooth.bredr/Channel
+resource struct fuchsia.bluetooth.bredr/Profile_Connect_Response
+union/member fuchsia.bluetooth.bredr/Profile_Connect_Result.err fuchsia.bluetooth/ErrorCode
+union/member fuchsia.bluetooth.bredr/Profile_Connect_Result.response fuchsia.bluetooth.bredr/Profile_Connect_Response
+resource strict union fuchsia.bluetooth.bredr/Profile_Connect_Result
+struct/member fuchsia.bluetooth.bredr/ProtocolDescriptor.params vector<fuchsia.bluetooth.bredr/DataElement>:255
+struct/member fuchsia.bluetooth.bredr/ProtocolDescriptor.protocol fuchsia.bluetooth.bredr/ProtocolIdentifier
+struct fuchsia.bluetooth.bredr/ProtocolDescriptor
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.ATT 7
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.AVCTP 23
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.AVDTP 25
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.BNEP 15
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.HARDCOPY_CONTROL_CHANNEL 18
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.HARDCOPY_DATA_CHANNEL 20
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.HARDCOPY_NOTIFICATION 22
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.HIDP 17
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.L2CAP 256
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.MCAP_CONTROL_CHANNEL 30
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.MCAP_DATA_CHANNEL 31
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.OBEX 8
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.RFCOMM 3
+enum/member fuchsia.bluetooth.bredr/ProtocolIdentifier.SDP 1
+strict enum fuchsia.bluetooth.bredr/ProtocolIdentifier uint16
+table/member fuchsia.bluetooth.bredr/RfcommParameters.channel uint8
+table fuchsia.bluetooth.bredr/RfcommParameters
+table/member fuchsia.bluetooth.bredr/ScoConnection.socket zx/handle:SOCKET
+resource table fuchsia.bluetooth.bredr/ScoConnection
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.air_coding_format fuchsia.bluetooth.bredr/CodingFormat
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.air_frame_size uint16
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.io_bandwidth uint32
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.io_coding_format fuchsia.bluetooth.bredr/CodingFormat
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.io_frame_size uint16
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.io_pcm_data_format fuchsia.hardware.audio/SampleFormat
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.io_pcm_sample_payload_msb_position uint8
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.parameter_set fuchsia.bluetooth.bredr/HfpParameterSet
+table/member fuchsia.bluetooth.bredr/ScoConnectionParameters.path fuchsia.bluetooth.bredr/DataPath
+table fuchsia.bluetooth.bredr/ScoConnectionParameters
+protocol/member fuchsia.bluetooth.bredr/ScoConnectionReceiver.Connected(fuchsia.bluetooth.bredr/ScoConnection connection)
+protocol/member fuchsia.bluetooth.bredr/ScoConnectionReceiver.Error(fuchsia.bluetooth.bredr/ScoErrorCode error)
+protocol fuchsia.bluetooth.bredr/ScoConnectionReceiver
+enum/member fuchsia.bluetooth.bredr/ScoErrorCode.CANCELLED 2
+enum/member fuchsia.bluetooth.bredr/ScoErrorCode.FAILURE 1
+enum/member fuchsia.bluetooth.bredr/ScoErrorCode.INVALID_ARGUMENTS 3
+strict enum fuchsia.bluetooth.bredr/ScoErrorCode uint32
+protocol/member fuchsia.bluetooth.bredr/SearchResults.ServiceFound(fuchsia.bluetooth/PeerId peer_id,vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:<255,optional> protocol,vector<fuchsia.bluetooth.bredr/Attribute>:512 attributes) -> ()
+protocol fuchsia.bluetooth.bredr/SearchResults
+table/member fuchsia.bluetooth.bredr/SecurityRequirements.authentication_required bool
+table/member fuchsia.bluetooth.bredr/SecurityRequirements.secure_connections_required bool
+table fuchsia.bluetooth.bredr/SecurityRequirements
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.ADVANCED_AUDIO_DISTRIBUTION 4365
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.AUDIO_SINK 4363
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.AUDIO_SOURCE 4362
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.AV_REMOTE_CONTROL 4366
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.AV_REMOTE_CONTROL_CONTROLLER 4367
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.AV_REMOTE_CONTROL_TARGET 4364
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.DIALUP_NETWORKING 4355
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.GENERIC_AUDIO 4611
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.GENERIC_FILE_TRANSFER 4610
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.GENERIC_NETWORKING 4609
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.GENERIC_TELEPHONY 4612
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.GN 4375
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HANDSFREE 4382
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HANDSFREE_AUDIO_GATEWAY 4383
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HDP 5120
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HDP_SINK 5122
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HDP_SOURCE 5121
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HEADSET 4360
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HEADSET_AUDIO_GATEWAY 4370
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.HEADSET_HS 4401
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.MESSAGE_ACCESS_PROFILE 4404
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.MESSAGE_ACCESS_SERVER 4402
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.MESSAGE_NOTIFICATION_SERVER 4403
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.MPS_CLASS 4411
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.MPS_PROFILE 4410
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.NAP 4374
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.OBEX_OBJECT_PUSH 4357
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.OPEX_FILE_TRANSFER 4358
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.PANU 4373
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.PHONEBOOK 4400
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.PHONEBOOK_PCE 4398
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.PHONEBOOK_PSE 4399
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.SERIAL_PORT 4353
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.SIM_ACCESS 4397
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.VIDEO_DISTRIBUTION 4869
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.VIDEO_SINK 4868
+enum/member fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier.VIDEO_SOURCE 4867
+strict enum fuchsia.bluetooth.bredr/ServiceClassProfileIdentifier uint16
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.additional_attributes vector<fuchsia.bluetooth.bredr/Attribute>:65023
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.additional_protocol_descriptor_lists vector<vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:255>:255
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.information vector<fuchsia.bluetooth.bredr/Information>:85
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.profile_descriptors vector<fuchsia.bluetooth.bredr/ProfileDescriptor>:255
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.protocol_descriptor_list vector<fuchsia.bluetooth.bredr/ProtocolDescriptor>:255
+table/member fuchsia.bluetooth.bredr/ServiceDefinition.service_class_uuids vector<fuchsia.bluetooth/Uuid>:255
+table fuchsia.bluetooth.bredr/ServiceDefinition
+library fuchsia.bluetooth.bredr

@@ -1,0 +1,20 @@
+protocol/member fuchsia.test.manager/Harness.LaunchSuite(string:4096 test_url,fuchsia.test.manager/LaunchOptions options,server_end:fuchsia.test/Suite suite,server_end:fuchsia.test.manager/SuiteController controller) -> (fuchsia.test.manager/Harness_LaunchSuite_Result result)
+protocol fuchsia.test.manager/Harness
+struct fuchsia.test.manager/Harness_LaunchSuite_Response
+union/member fuchsia.test.manager/Harness_LaunchSuite_Result.err fuchsia.test.manager/LaunchError
+union/member fuchsia.test.manager/Harness_LaunchSuite_Result.response fuchsia.test.manager/Harness_LaunchSuite_Response
+strict union fuchsia.test.manager/Harness_LaunchSuite_Result
+enum/member fuchsia.test.manager/LaunchError.FAILED_TO_CONNECT_TO_TEST_SUITE 4
+enum/member fuchsia.test.manager/LaunchError.INSTANCE_CANNOT_RESOLVE 2
+enum/member fuchsia.test.manager/LaunchError.INTERNAL_ERROR 5
+enum/member fuchsia.test.manager/LaunchError.INVALID_ARGS 3
+enum/member fuchsia.test.manager/LaunchError.RESOURCE_UNAVAILABLE 1
+strict enum fuchsia.test.manager/LaunchError uint32
+table/member fuchsia.test.manager/LaunchOptions.logs_iterator fuchsia.test.manager/LogsIterator
+resource table fuchsia.test.manager/LaunchOptions
+union/member fuchsia.test.manager/LogsIterator.archive server_end:fuchsia.developer.remotecontrol/ArchiveIterator
+union/member fuchsia.test.manager/LogsIterator.batch server_end:fuchsia.diagnostics/BatchIterator
+resource flexible union fuchsia.test.manager/LogsIterator
+protocol/member fuchsia.test.manager/SuiteController.Kill()
+protocol fuchsia.test.manager/SuiteController
+library fuchsia.test.manager

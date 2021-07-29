@@ -1,0 +1,23 @@
+protocol/member fuchsia.power.test/BatterySimulator.DisconnectRealBattery()
+protocol/member fuchsia.power.test/BatterySimulator.GetBatteryInfo() -> (fuchsia.power/BatteryInfo info)
+protocol/member fuchsia.power.test/BatterySimulator.IsSimulating() -> (bool simulation_state)
+protocol/member fuchsia.power.test/BatterySimulator.ReconnectRealBattery()
+protocol/member fuchsia.power.test/BatterySimulator.SetBatteryPercentage(float32 percent)
+protocol/member fuchsia.power.test/BatterySimulator.SetBatteryStatus(fuchsia.power/BatteryStatus battery_status)
+protocol/member fuchsia.power.test/BatterySimulator.SetChargeSource(fuchsia.power/ChargeSource charge_source)
+protocol/member fuchsia.power.test/BatterySimulator.SetChargeStatus(fuchsia.power/ChargeStatus charge_status)
+protocol/member fuchsia.power.test/BatterySimulator.SetLevelStatus(fuchsia.power/LevelStatus level_status)
+protocol/member fuchsia.power.test/BatterySimulator.SetTimeRemaining(int64 duration)
+protocol fuchsia.power.test/BatterySimulator
+protocol/member fuchsia.power.test/BatterySimulatorController.DisconnectRealBattery()
+protocol/member fuchsia.power.test/BatterySimulatorController.GetBatteryInfo() -> (fuchsia.power/BatteryInfo info)
+protocol/member fuchsia.power.test/BatterySimulatorController.IsSimulating() -> (bool simulation_state)
+protocol/member fuchsia.power.test/BatterySimulatorController.ReconnectRealBattery()
+protocol/member fuchsia.power.test/BatterySimulatorController.SetBatteryPercentage(float32 percent)
+protocol/member fuchsia.power.test/BatterySimulatorController.SetBatteryStatus(fuchsia.power/BatteryStatus battery_status)
+protocol/member fuchsia.power.test/BatterySimulatorController.SetChargeSource(fuchsia.power/ChargeSource charge_source)
+protocol/member fuchsia.power.test/BatterySimulatorController.SetChargeStatus(fuchsia.power/ChargeStatus charge_status)
+protocol/member fuchsia.power.test/BatterySimulatorController.SetLevelStatus(fuchsia.power/LevelStatus level_status)
+protocol/member fuchsia.power.test/BatterySimulatorController.SetTimeRemaining(int64 duration)
+protocol fuchsia.power.test/BatterySimulatorController
+library fuchsia.power.test

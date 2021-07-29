@@ -1,0 +1,13 @@
+table/member fuchsia.data/Dictionary.entries vector<fuchsia.data/DictionaryEntry>:1024
+table fuchsia.data/Dictionary
+struct/member fuchsia.data/DictionaryEntry.key string:1024
+struct/member fuchsia.data/DictionaryEntry.value fuchsia.data/DictionaryValue:optional
+struct fuchsia.data/DictionaryEntry
+union/member fuchsia.data/DictionaryValue.str string:1024
+union/member fuchsia.data/DictionaryValue.str_vec vector<string:1024>:1024
+strict union fuchsia.data/DictionaryValue
+const fuchsia.data/MAX_KEY_LENGTH uint32 1024
+const fuchsia.data/MAX_NUM_ENTRIES uint32 1024
+const fuchsia.data/MAX_NUM_VALUE_ITEMS uint32 1024
+const fuchsia.data/MAX_VALUE_LENGTH uint32 1024
+library fuchsia.data

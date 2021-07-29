@@ -1,0 +1,17 @@
+enum/member fuchsia.bluetooth.snoop/PacketType.CMD 0
+enum/member fuchsia.bluetooth.snoop/PacketType.DATA 2
+enum/member fuchsia.bluetooth.snoop/PacketType.EVENT 1
+strict enum fuchsia.bluetooth.snoop/PacketType uint32
+protocol/member fuchsia.bluetooth.snoop/Snoop.OnPacket -> (string:255 host_device,fuchsia.bluetooth.snoop/SnoopPacket packet)
+protocol/member fuchsia.bluetooth.snoop/Snoop.Start(bool follow,string:<255,optional> host_device) -> (fuchsia.bluetooth/Status status)
+protocol fuchsia.bluetooth.snoop/Snoop
+struct/member fuchsia.bluetooth.snoop/SnoopPacket.is_received bool
+struct/member fuchsia.bluetooth.snoop/SnoopPacket.original_len uint32
+struct/member fuchsia.bluetooth.snoop/SnoopPacket.payload vector<uint8>
+struct/member fuchsia.bluetooth.snoop/SnoopPacket.timestamp fuchsia.bluetooth.snoop/Timestamp
+struct/member fuchsia.bluetooth.snoop/SnoopPacket.type fuchsia.bluetooth.snoop/PacketType
+struct fuchsia.bluetooth.snoop/SnoopPacket
+struct/member fuchsia.bluetooth.snoop/Timestamp.seconds uint64
+struct/member fuchsia.bluetooth.snoop/Timestamp.subsec_nanos uint32
+struct fuchsia.bluetooth.snoop/Timestamp
+library fuchsia.bluetooth.snoop

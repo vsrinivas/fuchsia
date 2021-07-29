@@ -1,0 +1,86 @@
+struct/member fuchsia.hardware.network.device/BufferMetadata.flags uint32
+struct/member fuchsia.hardware.network.device/BufferMetadata.frame_type uint8
+struct/member fuchsia.hardware.network.device/BufferMetadata.info fuchsia.hardware.network.device/FrameInfo
+struct/member fuchsia.hardware.network.device/BufferMetadata.info_type uint32
+struct/member fuchsia.hardware.network.device/BufferMetadata.port uint8
+struct fuchsia.hardware.network.device/BufferMetadata
+struct/member fuchsia.hardware.network.device/BufferRegion.length uint64
+struct/member fuchsia.hardware.network.device/BufferRegion.offset uint64
+struct/member fuchsia.hardware.network.device/BufferRegion.vmo uint8
+struct fuchsia.hardware.network.device/BufferRegion
+struct/member fuchsia.hardware.network.device/DeviceInfo.buffer_alignment uint32
+struct/member fuchsia.hardware.network.device/DeviceInfo.device_features uint32
+struct/member fuchsia.hardware.network.device/DeviceInfo.max_buffer_length uint32
+struct/member fuchsia.hardware.network.device/DeviceInfo.max_buffer_parts uint8
+struct/member fuchsia.hardware.network.device/DeviceInfo.min_rx_buffer_length uint32
+struct/member fuchsia.hardware.network.device/DeviceInfo.min_tx_buffer_length uint32
+struct/member fuchsia.hardware.network.device/DeviceInfo.rx_accel vector<uint8>
+struct/member fuchsia.hardware.network.device/DeviceInfo.rx_depth uint16
+struct/member fuchsia.hardware.network.device/DeviceInfo.rx_threshold uint16
+struct/member fuchsia.hardware.network.device/DeviceInfo.tx_accel vector<uint8>
+struct/member fuchsia.hardware.network.device/DeviceInfo.tx_depth uint16
+struct/member fuchsia.hardware.network.device/DeviceInfo.tx_head_length uint16
+struct/member fuchsia.hardware.network.device/DeviceInfo.tx_tail_length uint16
+struct fuchsia.hardware.network.device/DeviceInfo
+const fuchsia.hardware.network.device/FEATURE_NO_AUTO_SNOOP uint32 1
+union/member fuchsia.hardware.network.device/FrameInfo.no_info fuchsia.hardware.network.device/NoInfo
+strict union fuchsia.hardware.network.device/FrameInfo
+const fuchsia.hardware.network.device/MAX_BUFFER_PARTS uint32 4
+const fuchsia.hardware.network.device/MAX_PORTS uint8 32
+const fuchsia.hardware.network.device/MAX_VMOS uint8 32
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.AddPort(uint8 id,client_end:fuchsia.hardware.network.device/NetworkPort port)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx(vector<fuchsia.hardware.network.device/RxBuffer> rx)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx(vector<fuchsia.hardware.network.device/TxResult> tx)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.PortStatusChanged(uint8 id,fuchsia.hardware.network.device/PortStatus new_status)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.RemovePort(uint8 id)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceIfc.Snoop(vector<fuchsia.hardware.network.device/RxBuffer> rx)
+protocol fuchsia.hardware.network.device/NetworkDeviceIfc
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.GetInfo() -> (fuchsia.hardware.network.device/DeviceInfo info)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.Init(client_end:fuchsia.hardware.network.device/NetworkDeviceIfc iface) -> (int32 s)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.PrepareVmo(uint8 id,zx/handle:VMO vmo)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.QueueRxSpace(vector<fuchsia.hardware.network.device/RxSpaceBuffer> buffers)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.QueueTx(vector<fuchsia.hardware.network.device/TxBuffer> buffers)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.ReleaseVmo(uint8 id)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.SetSnoop(bool snoop)
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.Start() -> ()
+protocol/member fuchsia.hardware.network.device/NetworkDeviceImpl.Stop() -> ()
+protocol fuchsia.hardware.network.device/NetworkDeviceImpl
+protocol/member fuchsia.hardware.network.device/NetworkPort.GetInfo() -> (fuchsia.hardware.network.device/PortInfo info)
+protocol/member fuchsia.hardware.network.device/NetworkPort.GetMac() -> (fuchsia.hardware.network.mac/MacAddr mac_ifc)
+protocol/member fuchsia.hardware.network.device/NetworkPort.GetStatus() -> (fuchsia.hardware.network.device/PortStatus status)
+protocol/member fuchsia.hardware.network.device/NetworkPort.Removed()
+protocol/member fuchsia.hardware.network.device/NetworkPort.SetActive(bool active)
+protocol fuchsia.hardware.network.device/NetworkPort
+struct/member fuchsia.hardware.network.device/NoInfo.nothing uint8
+struct fuchsia.hardware.network.device/NoInfo
+struct/member fuchsia.hardware.network.device/PortInfo.port_class uint8
+struct/member fuchsia.hardware.network.device/PortInfo.rx_types vector<uint8>
+struct/member fuchsia.hardware.network.device/PortInfo.tx_types vector<fuchsia.hardware.network.device/TxSupport>
+struct fuchsia.hardware.network.device/PortInfo
+struct/member fuchsia.hardware.network.device/PortStatus.flags uint32
+struct/member fuchsia.hardware.network.device/PortStatus.mtu uint32
+struct fuchsia.hardware.network.device/PortStatus
+struct/member fuchsia.hardware.network.device/RxBuffer.data vector<fuchsia.hardware.network.device/RxBufferPart>:4
+struct/member fuchsia.hardware.network.device/RxBuffer.meta fuchsia.hardware.network.device/BufferMetadata
+struct fuchsia.hardware.network.device/RxBuffer
+struct/member fuchsia.hardware.network.device/RxBufferPart.id uint32
+struct/member fuchsia.hardware.network.device/RxBufferPart.length uint32
+struct/member fuchsia.hardware.network.device/RxBufferPart.offset uint32
+struct fuchsia.hardware.network.device/RxBufferPart
+struct/member fuchsia.hardware.network.device/RxSpaceBuffer.id uint32
+struct/member fuchsia.hardware.network.device/RxSpaceBuffer.region fuchsia.hardware.network.device/BufferRegion
+struct fuchsia.hardware.network.device/RxSpaceBuffer
+struct/member fuchsia.hardware.network.device/TxBuffer.data vector<fuchsia.hardware.network.device/BufferRegion>:4
+struct/member fuchsia.hardware.network.device/TxBuffer.head_length uint16
+struct/member fuchsia.hardware.network.device/TxBuffer.id uint32
+struct/member fuchsia.hardware.network.device/TxBuffer.meta fuchsia.hardware.network.device/BufferMetadata
+struct/member fuchsia.hardware.network.device/TxBuffer.tail_length uint16
+struct fuchsia.hardware.network.device/TxBuffer
+struct/member fuchsia.hardware.network.device/TxResult.id uint32
+struct/member fuchsia.hardware.network.device/TxResult.status int32
+struct fuchsia.hardware.network.device/TxResult
+struct/member fuchsia.hardware.network.device/TxSupport.features uint32
+struct/member fuchsia.hardware.network.device/TxSupport.supported_flags uint32
+struct/member fuchsia.hardware.network.device/TxSupport.type uint8
+struct fuchsia.hardware.network.device/TxSupport
+library fuchsia.hardware.network.device

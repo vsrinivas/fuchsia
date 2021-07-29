@@ -1,0 +1,99 @@
+struct/member fuchsia.cobalt/CobaltEvent.component string:<64,optional>
+struct/member fuchsia.cobalt/CobaltEvent.event_codes vector<uint32>:5
+struct/member fuchsia.cobalt/CobaltEvent.metric_id uint32
+struct/member fuchsia.cobalt/CobaltEvent.payload fuchsia.cobalt/EventPayload
+struct fuchsia.cobalt/CobaltEvent
+protocol/member fuchsia.cobalt/Controller.BlockUntilEmpty(uint32 max_wait_seconds) -> ()
+protocol/member fuchsia.cobalt/Controller.GenerateAggregatedObservations(uint32 day_index,vector<fuchsia.cobalt/ReportSpec> report_specs) -> (vector<uint64> num_obs)
+protocol/member fuchsia.cobalt/Controller.GetFailedSendAttempts() -> (uint32 num)
+protocol/member fuchsia.cobalt/Controller.GetNumEventAggregatorRuns() -> (uint64 num_runs)
+protocol/member fuchsia.cobalt/Controller.GetNumObservationsAdded() -> (uint64 num_obs)
+protocol/member fuchsia.cobalt/Controller.GetNumSendAttempts() -> (uint32 num)
+protocol/member fuchsia.cobalt/Controller.ListenForInitialized() -> ()
+protocol/member fuchsia.cobalt/Controller.RequestSendSoon() -> (bool success)
+protocol fuchsia.cobalt/Controller
+struct/member fuchsia.cobalt/CountEvent.count int64
+struct/member fuchsia.cobalt/CountEvent.period_duration_micros int64
+struct fuchsia.cobalt/CountEvent
+struct/member fuchsia.cobalt/CustomEventValue.dimension_name string
+struct/member fuchsia.cobalt/CustomEventValue.value fuchsia.cobalt/Value
+struct fuchsia.cobalt/CustomEventValue
+struct fuchsia.cobalt/Event
+union/member fuchsia.cobalt/EventPayload.elapsed_micros int64
+union/member fuchsia.cobalt/EventPayload.event fuchsia.cobalt/Event
+union/member fuchsia.cobalt/EventPayload.event_count fuchsia.cobalt/CountEvent
+union/member fuchsia.cobalt/EventPayload.fps float32
+union/member fuchsia.cobalt/EventPayload.int_histogram vector<fuchsia.cobalt/HistogramBucket>:500
+union/member fuchsia.cobalt/EventPayload.memory_bytes_used int64
+strict union fuchsia.cobalt/EventPayload
+struct/member fuchsia.cobalt/Experiment.arm_id uint32
+struct/member fuchsia.cobalt/Experiment.experiment_id uint64
+struct fuchsia.cobalt/Experiment
+struct/member fuchsia.cobalt/HistogramBucket.count uint64
+struct/member fuchsia.cobalt/HistogramBucket.index uint32
+struct fuchsia.cobalt/HistogramBucket
+protocol/member fuchsia.cobalt/Logger.EndTimer(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogCobaltEvent(fuchsia.cobalt/CobaltEvent event) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogCobaltEvents(vector<fuchsia.cobalt/CobaltEvent>:500 events) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogCustomEvent(uint32 metric_id,vector<fuchsia.cobalt/CustomEventValue> event_values) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogElapsedTime(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogEvent(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogEventCount(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogFrameRate(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogIntHistogram(uint32 metric_id,uint32 event_code,string:64 component,vector<fuchsia.cobalt/HistogramBucket>:500 histogram) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.LogMemoryUsage(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/Logger.StartTimer(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol fuchsia.cobalt/Logger
+protocol/member fuchsia.cobalt/LoggerBase.EndTimer(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.LogElapsedTime(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.LogEvent(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.LogEventCount(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.LogFrameRate(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.LogMemoryUsage(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerBase.StartTimer(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol fuchsia.cobalt/LoggerBase
+protocol/member fuchsia.cobalt/LoggerFactory.CreateLoggerFromProjectId(uint32 project_id,server_end:fuchsia.cobalt/Logger logger) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerFactory.CreateLoggerFromProjectSpec(uint32 customer_id,uint32 project_id,server_end:fuchsia.cobalt/Logger logger) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerFactory.CreateLoggerSimpleFromProjectId(uint32 project_id,server_end:fuchsia.cobalt/LoggerSimple logger) -> (fuchsia.cobalt/Status status)
+protocol fuchsia.cobalt/LoggerFactory
+protocol/member fuchsia.cobalt/LoggerSimple.EndTimer(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogElapsedTime(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogEvent(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogEventCount(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogFrameRate(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogIntHistogram(uint32 metric_id,uint32 event_code,string:64 component,vector<uint32>:500 bucket_indices,vector<uint64>:500 bucket_counts) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.LogMemoryUsage(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/LoggerSimple.StartTimer(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)
+protocol fuchsia.cobalt/LoggerSimple
+const fuchsia.cobalt/MAX_BATCHED_EVENTS uint32 500
+const fuchsia.cobalt/MAX_BYTES_PER_EVENT int64 102400
+const fuchsia.cobalt/MAX_CHANNEL_NAME_LENGTH uint32 256
+const fuchsia.cobalt/MAX_COMPONENT_LENGTH uint32 64
+const fuchsia.cobalt/MAX_EVENT_CODE_COUNT uint32 5
+const fuchsia.cobalt/MAX_HISTOGRAM_BUCKETS uint32 500
+const fuchsia.cobalt/MAX_REALM_NAME_LENGTH uint32 256
+const fuchsia.cobalt/MAX_TIMER_ID_LENGTH uint32 64
+table/member fuchsia.cobalt/ReportSpec.customer_id uint32
+table/member fuchsia.cobalt/ReportSpec.metric_id uint32
+table/member fuchsia.cobalt/ReportSpec.project_id uint32
+table/member fuchsia.cobalt/ReportSpec.report_id uint32
+table fuchsia.cobalt/ReportSpec
+table/member fuchsia.cobalt/SoftwareDistributionInfo.current_channel string:256
+table/member fuchsia.cobalt/SoftwareDistributionInfo.current_realm string:256
+table fuchsia.cobalt/SoftwareDistributionInfo
+enum/member fuchsia.cobalt/Status.BUFFER_FULL 3
+enum/member fuchsia.cobalt/Status.EVENT_TOO_BIG 2
+enum/member fuchsia.cobalt/Status.INTERNAL_ERROR -1
+enum/member fuchsia.cobalt/Status.INVALID_ARGUMENTS 1
+enum/member fuchsia.cobalt/Status.OK 0
+enum/member fuchsia.cobalt/Status.SHUT_DOWN 4
+strict enum fuchsia.cobalt/Status int32
+protocol/member fuchsia.cobalt/SystemDataUpdater.SetExperimentState(vector<fuchsia.cobalt/Experiment> experiments) -> (fuchsia.cobalt/Status status)
+protocol/member fuchsia.cobalt/SystemDataUpdater.SetSoftwareDistributionInfo(fuchsia.cobalt/SoftwareDistributionInfo info) -> (fuchsia.cobalt/Status status)
+protocol fuchsia.cobalt/SystemDataUpdater
+union/member fuchsia.cobalt/Value.double_value float64
+union/member fuchsia.cobalt/Value.index_value uint32
+union/member fuchsia.cobalt/Value.int_value int64
+union/member fuchsia.cobalt/Value.string_value string
+strict union fuchsia.cobalt/Value
+library fuchsia.cobalt

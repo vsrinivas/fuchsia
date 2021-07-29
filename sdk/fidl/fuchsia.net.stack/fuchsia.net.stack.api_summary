@@ -1,0 +1,127 @@
+enum/member fuchsia.net.stack/AdministrativeStatus.DISABLED 1
+enum/member fuchsia.net.stack/AdministrativeStatus.ENABLED 2
+strict enum fuchsia.net.stack/AdministrativeStatus uint32
+union/member fuchsia.net.stack/DeviceDefinition.ethernet fuchsia.net.stack/EthernetDeviceDefinition
+union/member fuchsia.net.stack/DeviceDefinition.ip fuchsia.hardware.network/Device
+resource strict union fuchsia.net.stack/DeviceDefinition
+enum/member fuchsia.net.stack/Error.ALREADY_EXISTS 7
+enum/member fuchsia.net.stack/Error.BAD_STATE 4
+enum/member fuchsia.net.stack/Error.INTERNAL 1
+enum/member fuchsia.net.stack/Error.INVALID_ARGS 3
+enum/member fuchsia.net.stack/Error.IO 8
+enum/member fuchsia.net.stack/Error.NOT_FOUND 6
+enum/member fuchsia.net.stack/Error.NOT_SUPPORTED 2
+enum/member fuchsia.net.stack/Error.TIME_OUT 5
+strict enum fuchsia.net.stack/Error uint32
+struct/member fuchsia.net.stack/EthernetDeviceDefinition.mac fuchsia.hardware.network/MacAddressing
+struct/member fuchsia.net.stack/EthernetDeviceDefinition.network_device fuchsia.hardware.network/Device
+resource struct fuchsia.net.stack/EthernetDeviceDefinition
+union/member fuchsia.net.stack/ForwardingDestination.device_id uint64
+union/member fuchsia.net.stack/ForwardingDestination.next_hop fuchsia.net/IpAddress
+strict union fuchsia.net.stack/ForwardingDestination
+struct/member fuchsia.net.stack/ForwardingEntry.destination fuchsia.net.stack/ForwardingDestination
+struct/member fuchsia.net.stack/ForwardingEntry.subnet fuchsia.net/Subnet
+struct fuchsia.net.stack/ForwardingEntry
+table/member fuchsia.net.stack/InterfaceConfig.metric uint32
+table/member fuchsia.net.stack/InterfaceConfig.name string:15
+table/member fuchsia.net.stack/InterfaceConfig.topopath string:255
+table fuchsia.net.stack/InterfaceConfig
+struct/member fuchsia.net.stack/InterfaceInfo.id uint64
+struct/member fuchsia.net.stack/InterfaceInfo.properties fuchsia.net.stack/InterfaceProperties
+struct fuchsia.net.stack/InterfaceInfo
+struct/member fuchsia.net.stack/InterfaceProperties.addresses vector<fuchsia.net/Subnet>
+struct/member fuchsia.net.stack/InterfaceProperties.administrative_status fuchsia.net.stack/AdministrativeStatus
+struct/member fuchsia.net.stack/InterfaceProperties.features fuchsia.hardware.ethernet/Features
+struct/member fuchsia.net.stack/InterfaceProperties.filepath string:255
+struct/member fuchsia.net.stack/InterfaceProperties.mac fuchsia.hardware.ethernet/MacAddress:optional
+struct/member fuchsia.net.stack/InterfaceProperties.mtu uint32
+struct/member fuchsia.net.stack/InterfaceProperties.name string:15
+struct/member fuchsia.net.stack/InterfaceProperties.physical_status fuchsia.net.stack/PhysicalStatus
+struct/member fuchsia.net.stack/InterfaceProperties.topopath string:255
+struct fuchsia.net.stack/InterfaceProperties
+protocol/member fuchsia.net.stack/Log.SetLogPackets(bool enabled) -> ()
+protocol fuchsia.net.stack/Log
+enum/member fuchsia.net.stack/PhysicalStatus.DOWN 1
+enum/member fuchsia.net.stack/PhysicalStatus.UP 2
+strict enum fuchsia.net.stack/PhysicalStatus uint32
+protocol/member fuchsia.net.stack/Stack.AddEthernetInterface(string:255 topological_path,fuchsia.hardware.ethernet/Device device) -> (fuchsia.net.stack/Stack_AddEthernetInterface_Result result)
+protocol/member fuchsia.net.stack/Stack.AddForwardingEntry(fuchsia.net.stack/ForwardingEntry entry) -> (fuchsia.net.stack/Stack_AddForwardingEntry_Result result)
+protocol/member fuchsia.net.stack/Stack.AddInterface(fuchsia.net.stack/InterfaceConfig config,fuchsia.net.stack/DeviceDefinition device) -> (fuchsia.net.stack/Stack_AddInterface_Result result)
+protocol/member fuchsia.net.stack/Stack.AddInterfaceAddress(uint64 id,fuchsia.net/Subnet addr) -> (fuchsia.net.stack/Stack_AddInterfaceAddress_Result result)
+protocol/member fuchsia.net.stack/Stack.DelEthernetInterface(uint64 id) -> (fuchsia.net.stack/Stack_DelEthernetInterface_Result result)
+protocol/member fuchsia.net.stack/Stack.DelForwardingEntry(fuchsia.net/Subnet subnet) -> (fuchsia.net.stack/Stack_DelForwardingEntry_Result result)
+protocol/member fuchsia.net.stack/Stack.DelInterfaceAddress(uint64 id,fuchsia.net/Subnet addr) -> (fuchsia.net.stack/Stack_DelInterfaceAddress_Result result)
+protocol/member fuchsia.net.stack/Stack.DisableInterface(uint64 id) -> (fuchsia.net.stack/Stack_DisableInterface_Result result)
+protocol/member fuchsia.net.stack/Stack.DisableIpForwarding() -> ()
+protocol/member fuchsia.net.stack/Stack.DisablePacketFilter(uint64 id) -> (fuchsia.net.stack/Stack_DisablePacketFilter_Result result)
+protocol/member fuchsia.net.stack/Stack.EnableInterface(uint64 id) -> (fuchsia.net.stack/Stack_EnableInterface_Result result)
+protocol/member fuchsia.net.stack/Stack.EnableIpForwarding() -> ()
+protocol/member fuchsia.net.stack/Stack.EnablePacketFilter(uint64 id) -> (fuchsia.net.stack/Stack_EnablePacketFilter_Result result)
+protocol/member fuchsia.net.stack/Stack.GetDnsServerWatcher(server_end:fuchsia.net.name/DnsServerWatcher watcher)
+protocol/member fuchsia.net.stack/Stack.GetForwardingTable() -> (vector<fuchsia.net.stack/ForwardingEntry> table)
+protocol/member fuchsia.net.stack/Stack.GetInterfaceInfo(uint64 id) -> (fuchsia.net.stack/Stack_GetInterfaceInfo_Result result)
+protocol/member fuchsia.net.stack/Stack.GetInterfaceIpForwarding(uint64 id,fuchsia.net/IpVersion ip_version) -> (fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Result result)
+protocol/member fuchsia.net.stack/Stack.ListInterfaces() -> (vector<fuchsia.net.stack/InterfaceInfo>:255 ifs)
+protocol/member fuchsia.net.stack/Stack.SetInterfaceIpForwarding(uint64 id,fuchsia.net/IpVersion ip_version,bool enabled) -> (fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Result result)
+protocol fuchsia.net.stack/Stack
+struct/member fuchsia.net.stack/Stack_AddEthernetInterface_Response.id uint64
+struct fuchsia.net.stack/Stack_AddEthernetInterface_Response
+union/member fuchsia.net.stack/Stack_AddEthernetInterface_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_AddEthernetInterface_Result.response fuchsia.net.stack/Stack_AddEthernetInterface_Response
+strict union fuchsia.net.stack/Stack_AddEthernetInterface_Result
+struct fuchsia.net.stack/Stack_AddForwardingEntry_Response
+union/member fuchsia.net.stack/Stack_AddForwardingEntry_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_AddForwardingEntry_Result.response fuchsia.net.stack/Stack_AddForwardingEntry_Response
+strict union fuchsia.net.stack/Stack_AddForwardingEntry_Result
+struct fuchsia.net.stack/Stack_AddInterfaceAddress_Response
+union/member fuchsia.net.stack/Stack_AddInterfaceAddress_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_AddInterfaceAddress_Result.response fuchsia.net.stack/Stack_AddInterfaceAddress_Response
+strict union fuchsia.net.stack/Stack_AddInterfaceAddress_Result
+struct/member fuchsia.net.stack/Stack_AddInterface_Response.id uint64
+struct fuchsia.net.stack/Stack_AddInterface_Response
+union/member fuchsia.net.stack/Stack_AddInterface_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_AddInterface_Result.response fuchsia.net.stack/Stack_AddInterface_Response
+strict union fuchsia.net.stack/Stack_AddInterface_Result
+struct fuchsia.net.stack/Stack_DelEthernetInterface_Response
+union/member fuchsia.net.stack/Stack_DelEthernetInterface_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_DelEthernetInterface_Result.response fuchsia.net.stack/Stack_DelEthernetInterface_Response
+strict union fuchsia.net.stack/Stack_DelEthernetInterface_Result
+struct fuchsia.net.stack/Stack_DelForwardingEntry_Response
+union/member fuchsia.net.stack/Stack_DelForwardingEntry_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_DelForwardingEntry_Result.response fuchsia.net.stack/Stack_DelForwardingEntry_Response
+strict union fuchsia.net.stack/Stack_DelForwardingEntry_Result
+struct fuchsia.net.stack/Stack_DelInterfaceAddress_Response
+union/member fuchsia.net.stack/Stack_DelInterfaceAddress_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_DelInterfaceAddress_Result.response fuchsia.net.stack/Stack_DelInterfaceAddress_Response
+strict union fuchsia.net.stack/Stack_DelInterfaceAddress_Result
+struct fuchsia.net.stack/Stack_DisableInterface_Response
+union/member fuchsia.net.stack/Stack_DisableInterface_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_DisableInterface_Result.response fuchsia.net.stack/Stack_DisableInterface_Response
+strict union fuchsia.net.stack/Stack_DisableInterface_Result
+struct fuchsia.net.stack/Stack_DisablePacketFilter_Response
+union/member fuchsia.net.stack/Stack_DisablePacketFilter_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_DisablePacketFilter_Result.response fuchsia.net.stack/Stack_DisablePacketFilter_Response
+strict union fuchsia.net.stack/Stack_DisablePacketFilter_Result
+struct fuchsia.net.stack/Stack_EnableInterface_Response
+union/member fuchsia.net.stack/Stack_EnableInterface_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_EnableInterface_Result.response fuchsia.net.stack/Stack_EnableInterface_Response
+strict union fuchsia.net.stack/Stack_EnableInterface_Result
+struct fuchsia.net.stack/Stack_EnablePacketFilter_Response
+union/member fuchsia.net.stack/Stack_EnablePacketFilter_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_EnablePacketFilter_Result.response fuchsia.net.stack/Stack_EnablePacketFilter_Response
+strict union fuchsia.net.stack/Stack_EnablePacketFilter_Result
+struct/member fuchsia.net.stack/Stack_GetInterfaceInfo_Response.info fuchsia.net.stack/InterfaceInfo
+struct fuchsia.net.stack/Stack_GetInterfaceInfo_Response
+union/member fuchsia.net.stack/Stack_GetInterfaceInfo_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_GetInterfaceInfo_Result.response fuchsia.net.stack/Stack_GetInterfaceInfo_Response
+strict union fuchsia.net.stack/Stack_GetInterfaceInfo_Result
+struct/member fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Response.enabled bool
+struct fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Response
+union/member fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Result.response fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Response
+strict union fuchsia.net.stack/Stack_GetInterfaceIpForwarding_Result
+struct fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Response
+union/member fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Result.err fuchsia.net.stack/Error
+union/member fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Result.response fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Response
+strict union fuchsia.net.stack/Stack_SetInterfaceIpForwarding_Result
+library fuchsia.net.stack

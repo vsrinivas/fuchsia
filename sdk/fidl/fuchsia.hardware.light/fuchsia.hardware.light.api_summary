@@ -1,0 +1,103 @@
+enum/member fuchsia.hardware.light/Capability.BRIGHTNESS 1
+enum/member fuchsia.hardware.light/Capability.RGB 2
+enum/member fuchsia.hardware.light/Capability.SIMPLE 3
+strict enum fuchsia.hardware.light/Capability uint32
+struct/member fuchsia.hardware.light/GroupInfo.capability fuchsia.hardware.light/Capability
+struct/member fuchsia.hardware.light/GroupInfo.count uint32
+struct/member fuchsia.hardware.light/GroupInfo.name string:32
+struct fuchsia.hardware.light/GroupInfo
+struct/member fuchsia.hardware.light/Info.capability fuchsia.hardware.light/Capability
+struct/member fuchsia.hardware.light/Info.name string:32
+struct fuchsia.hardware.light/Info
+const fuchsia.hardware.light/LIGHT_NAME_LEN uint8 32
+protocol/member fuchsia.hardware.light/Light.GetCurrentBrightnessValue(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetCurrentRgbValue(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentRgbValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetCurrentSimpleValue(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetGroupCurrentBrightnessValue(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetGroupCurrentRgbValue(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetGroupCurrentSimpleValue(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result result)
+protocol/member fuchsia.hardware.light/Light.GetGroupInfo(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupInfo_Result result)
+protocol/member fuchsia.hardware.light/Light.GetInfo(uint32 index) -> (fuchsia.hardware.light/Light_GetInfo_Result result)
+protocol/member fuchsia.hardware.light/Light.GetNumLightGroups() -> (uint32 count)
+protocol/member fuchsia.hardware.light/Light.GetNumLights() -> (uint32 count)
+protocol/member fuchsia.hardware.light/Light.SetBrightnessValue(uint32 index,float64 value) -> (fuchsia.hardware.light/Light_SetBrightnessValue_Result result)
+protocol/member fuchsia.hardware.light/Light.SetGroupBrightnessValue(uint32 group_id,vector<float64> values) -> (fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result result)
+protocol/member fuchsia.hardware.light/Light.SetGroupRgbValue(uint32 group_id,vector<fuchsia.hardware.light/Rgb> values) -> (fuchsia.hardware.light/Light_SetGroupRgbValue_Result result)
+protocol/member fuchsia.hardware.light/Light.SetGroupSimpleValue(uint32 group_id,vector<bool> values) -> (fuchsia.hardware.light/Light_SetGroupSimpleValue_Result result)
+protocol/member fuchsia.hardware.light/Light.SetRgbValue(uint32 index,fuchsia.hardware.light/Rgb value) -> (fuchsia.hardware.light/Light_SetRgbValue_Result result)
+protocol/member fuchsia.hardware.light/Light.SetSimpleValue(uint32 index,bool value) -> (fuchsia.hardware.light/Light_SetSimpleValue_Result result)
+protocol fuchsia.hardware.light/Light
+enum/member fuchsia.hardware.light/LightError.FAILED 3
+enum/member fuchsia.hardware.light/LightError.INVALID_INDEX 2
+enum/member fuchsia.hardware.light/LightError.NOT_SUPPORTED 1
+enum/member fuchsia.hardware.light/LightError.OK 0
+strict enum fuchsia.hardware.light/LightError uint32
+struct/member fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response.value float64
+struct fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response
+union/member fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.response fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response
+strict union fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result
+struct/member fuchsia.hardware.light/Light_GetCurrentRgbValue_Response.value fuchsia.hardware.light/Rgb
+struct fuchsia.hardware.light/Light_GetCurrentRgbValue_Response
+union/member fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.response fuchsia.hardware.light/Light_GetCurrentRgbValue_Response
+strict union fuchsia.hardware.light/Light_GetCurrentRgbValue_Result
+struct/member fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response.value bool
+struct fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response
+union/member fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.response fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response
+strict union fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result
+struct/member fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response.values vector<float64>:optional
+struct fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response
+union/member fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.response fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response
+strict union fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result
+struct/member fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response.values vector<fuchsia.hardware.light/Rgb>:optional
+struct fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response
+union/member fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.response fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response
+strict union fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result
+struct/member fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response.values vector<bool>:optional
+struct fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response
+union/member fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.response fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response
+strict union fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result
+struct/member fuchsia.hardware.light/Light_GetGroupInfo_Response.info fuchsia.hardware.light/GroupInfo
+struct fuchsia.hardware.light/Light_GetGroupInfo_Response
+union/member fuchsia.hardware.light/Light_GetGroupInfo_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetGroupInfo_Result.response fuchsia.hardware.light/Light_GetGroupInfo_Response
+strict union fuchsia.hardware.light/Light_GetGroupInfo_Result
+struct/member fuchsia.hardware.light/Light_GetInfo_Response.info fuchsia.hardware.light/Info
+struct fuchsia.hardware.light/Light_GetInfo_Response
+union/member fuchsia.hardware.light/Light_GetInfo_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_GetInfo_Result.response fuchsia.hardware.light/Light_GetInfo_Response
+strict union fuchsia.hardware.light/Light_GetInfo_Result
+struct fuchsia.hardware.light/Light_SetBrightnessValue_Response
+union/member fuchsia.hardware.light/Light_SetBrightnessValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetBrightnessValue_Result.response fuchsia.hardware.light/Light_SetBrightnessValue_Response
+strict union fuchsia.hardware.light/Light_SetBrightnessValue_Result
+struct fuchsia.hardware.light/Light_SetGroupBrightnessValue_Response
+union/member fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.response fuchsia.hardware.light/Light_SetGroupBrightnessValue_Response
+strict union fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result
+struct fuchsia.hardware.light/Light_SetGroupRgbValue_Response
+union/member fuchsia.hardware.light/Light_SetGroupRgbValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetGroupRgbValue_Result.response fuchsia.hardware.light/Light_SetGroupRgbValue_Response
+strict union fuchsia.hardware.light/Light_SetGroupRgbValue_Result
+struct fuchsia.hardware.light/Light_SetGroupSimpleValue_Response
+union/member fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.response fuchsia.hardware.light/Light_SetGroupSimpleValue_Response
+strict union fuchsia.hardware.light/Light_SetGroupSimpleValue_Result
+struct fuchsia.hardware.light/Light_SetRgbValue_Response
+union/member fuchsia.hardware.light/Light_SetRgbValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetRgbValue_Result.response fuchsia.hardware.light/Light_SetRgbValue_Response
+strict union fuchsia.hardware.light/Light_SetRgbValue_Result
+struct fuchsia.hardware.light/Light_SetSimpleValue_Response
+union/member fuchsia.hardware.light/Light_SetSimpleValue_Result.err fuchsia.hardware.light/LightError
+union/member fuchsia.hardware.light/Light_SetSimpleValue_Result.response fuchsia.hardware.light/Light_SetSimpleValue_Response
+strict union fuchsia.hardware.light/Light_SetSimpleValue_Result
+struct/member fuchsia.hardware.light/Rgb.blue float64
+struct/member fuchsia.hardware.light/Rgb.green float64
+struct/member fuchsia.hardware.light/Rgb.red float64
+struct fuchsia.hardware.light/Rgb
+library fuchsia.hardware.light

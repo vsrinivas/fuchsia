@@ -1,0 +1,36 @@
+union/member fuchsia.net.http/Body.buffer fuchsia.mem/Buffer
+union/member fuchsia.net.http/Body.stream zx/handle:SOCKET
+resource strict union fuchsia.net.http/Body
+enum/member fuchsia.net.http/Error.CHANNEL_CLOSED 3
+enum/member fuchsia.net.http/Error.CONNECT 4
+enum/member fuchsia.net.http/Error.DEADLINE_EXCEEDED 5
+enum/member fuchsia.net.http/Error.INTERNAL 1
+enum/member fuchsia.net.http/Error.UNABLE_TO_PARSE 2
+strict enum fuchsia.net.http/Error uint32
+struct/member fuchsia.net.http/Header.name vector<uint8>
+struct/member fuchsia.net.http/Header.value vector<uint8>
+struct fuchsia.net.http/Header
+protocol/member fuchsia.net.http/Loader.Fetch(fuchsia.net.http/Request request) -> (fuchsia.net.http/Response response)
+protocol/member fuchsia.net.http/Loader.Start(fuchsia.net.http/Request request,client_end:fuchsia.net.http/LoaderClient client)
+protocol fuchsia.net.http/Loader
+protocol/member fuchsia.net.http/LoaderClient.OnResponse(fuchsia.net.http/Response response) -> ()
+protocol fuchsia.net.http/LoaderClient
+table/member fuchsia.net.http/RedirectTarget.method string:1024
+table/member fuchsia.net.http/RedirectTarget.referrer string:4096
+table/member fuchsia.net.http/RedirectTarget.url string:4096
+table fuchsia.net.http/RedirectTarget
+table/member fuchsia.net.http/Request.body fuchsia.net.http/Body
+table/member fuchsia.net.http/Request.deadline int64
+table/member fuchsia.net.http/Request.headers vector<fuchsia.net.http/Header>
+table/member fuchsia.net.http/Request.method string:1024
+table/member fuchsia.net.http/Request.url string:4096
+resource table fuchsia.net.http/Request
+table/member fuchsia.net.http/Response.body zx/handle:SOCKET
+table/member fuchsia.net.http/Response.error fuchsia.net.http/Error
+table/member fuchsia.net.http/Response.final_url string:4096
+table/member fuchsia.net.http/Response.headers vector<fuchsia.net.http/Header>
+table/member fuchsia.net.http/Response.redirect fuchsia.net.http/RedirectTarget
+table/member fuchsia.net.http/Response.status_code uint32
+table/member fuchsia.net.http/Response.status_line vector<uint8>
+resource table fuchsia.net.http/Response
+library fuchsia.net.http

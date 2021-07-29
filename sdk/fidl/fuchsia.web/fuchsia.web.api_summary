@@ -1,0 +1,268 @@
+enum/member fuchsia.web/AllowInputState.ALLOW 1
+enum/member fuchsia.web/AllowInputState.DENY 2
+strict enum fuchsia.web/AllowInputState int32
+enum/member fuchsia.web/AutoplayPolicy.ALLOW 1
+enum/member fuchsia.web/AutoplayPolicy.REQUIRE_USER_ACTIVATION 2
+strict enum fuchsia.web/AutoplayPolicy int32
+enum/member fuchsia.web/ConsoleLogLevel.DEBUG -1
+enum/member fuchsia.web/ConsoleLogLevel.ERROR 2
+enum/member fuchsia.web/ConsoleLogLevel.INFO 0
+enum/member fuchsia.web/ConsoleLogLevel.NONE 100
+enum/member fuchsia.web/ConsoleLogLevel.WARN 1
+strict enum fuchsia.web/ConsoleLogLevel int32
+table/member fuchsia.web/ContentDirectoryProvider.directory fuchsia.io/Directory
+table/member fuchsia.web/ContentDirectoryProvider.name string:255
+resource table fuchsia.web/ContentDirectoryProvider
+protocol/member fuchsia.web/Context.CreateFrame(server_end:fuchsia.web/Frame frame)
+protocol/member fuchsia.web/Context.CreateFrameWithParams(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)
+protocol/member fuchsia.web/Context.GetCookieManager(server_end:fuchsia.web/CookieManager manager)
+protocol/member fuchsia.web/Context.GetRemoteDebuggingPort() -> (fuchsia.web/Context_GetRemoteDebuggingPort_Result result)
+protocol fuchsia.web/Context
+enum/member fuchsia.web/ContextError.REMOTE_DEBUGGING_PORT_NOT_OPENED 1
+strict enum fuchsia.web/ContextError int32
+bits/member fuchsia.web/ContextFeatureFlags.AUDIO 2
+bits/member fuchsia.web/ContextFeatureFlags.HARDWARE_VIDEO_DECODER 8
+bits/member fuchsia.web/ContextFeatureFlags.HARDWARE_VIDEO_DECODER_ONLY 16
+bits/member fuchsia.web/ContextFeatureFlags.HEADLESS 64
+bits/member fuchsia.web/ContextFeatureFlags.KEYBOARD 256
+bits/member fuchsia.web/ContextFeatureFlags.LEGACYMETRICS 128
+bits/member fuchsia.web/ContextFeatureFlags.NETWORK 1
+bits/member fuchsia.web/ContextFeatureFlags.VIRTUAL_KEYBOARD 512
+bits/member fuchsia.web/ContextFeatureFlags.VULKAN 4
+bits/member fuchsia.web/ContextFeatureFlags.WIDEVINE_CDM 32
+strict bits fuchsia.web/ContextFeatureFlags uint64
+protocol/member fuchsia.web/ContextProvider.Create(fuchsia.web/CreateContextParams params,server_end:fuchsia.web/Context context)
+protocol fuchsia.web/ContextProvider
+struct/member fuchsia.web/Context_GetRemoteDebuggingPort_Response.port uint16
+struct fuchsia.web/Context_GetRemoteDebuggingPort_Response
+union/member fuchsia.web/Context_GetRemoteDebuggingPort_Result.err fuchsia.web/ContextError
+union/member fuchsia.web/Context_GetRemoteDebuggingPort_Result.response fuchsia.web/Context_GetRemoteDebuggingPort_Response
+strict union fuchsia.web/Context_GetRemoteDebuggingPort_Result
+table/member fuchsia.web/Cookie.id fuchsia.web/CookieId
+table/member fuchsia.web/Cookie.value string
+resource table fuchsia.web/Cookie
+table/member fuchsia.web/CookieId.domain string:255
+table/member fuchsia.web/CookieId.name string
+table/member fuchsia.web/CookieId.path string:65536
+table fuchsia.web/CookieId
+protocol/member fuchsia.web/CookieManager.GetCookieList(string:<65536,optional> url,string:optional name,server_end:fuchsia.web/CookiesIterator cookies)
+protocol/member fuchsia.web/CookieManager.ObserveCookieChanges(string:<65536,optional> url,string:optional name,server_end:fuchsia.web/CookiesIterator changes)
+protocol fuchsia.web/CookieManager
+protocol/member fuchsia.web/CookiesIterator.GetNext() -> (vector<fuchsia.web/Cookie> changed_cookies)
+protocol fuchsia.web/CookiesIterator
+table/member fuchsia.web/CreateContextParams.cdm_data_directory fuchsia.io/Directory
+table/member fuchsia.web/CreateContextParams.cdm_data_quota_bytes uint64
+table/member fuchsia.web/CreateContextParams.content_directories vector<fuchsia.web/ContentDirectoryProvider>:100
+table/member fuchsia.web/CreateContextParams.cors_exempt_headers vector<vector<uint8>>
+table/member fuchsia.web/CreateContextParams.data_directory fuchsia.io/Directory
+table/member fuchsia.web/CreateContextParams.data_quota_bytes uint64
+table/member fuchsia.web/CreateContextParams.features fuchsia.web/ContextFeatureFlags
+table/member fuchsia.web/CreateContextParams.playready_key_system string:128
+table/member fuchsia.web/CreateContextParams.remote_debugging_port uint16
+table/member fuchsia.web/CreateContextParams.service_directory fuchsia.io/Directory
+table/member fuchsia.web/CreateContextParams.unsafely_treat_insecure_origins_as_secure vector<string:513>:100
+table/member fuchsia.web/CreateContextParams.user_agent_product string:128
+table/member fuchsia.web/CreateContextParams.user_agent_version string:128
+resource table fuchsia.web/CreateContextParams
+table/member fuchsia.web/CreateFrameParams.autoplay_policy fuchsia.web/AutoplayPolicy
+table/member fuchsia.web/CreateFrameParams.debug_name string
+table/member fuchsia.web/CreateFrameParams.enable_remote_debugging bool
+table/member fuchsia.web/CreateFrameParams.explicit_sites_filter_error_page fuchsia.mem/Data
+resource table fuchsia.web/CreateFrameParams
+protocol/member fuchsia.web/Debug.EnableDevTools(client_end:fuchsia.web/DevToolsListener listener) -> ()
+protocol fuchsia.web/Debug
+protocol/member fuchsia.web/DevToolsListener.OnContextDevToolsAvailable(server_end:fuchsia.web/DevToolsPerContextListener listener)
+protocol fuchsia.web/DevToolsListener
+protocol/member fuchsia.web/DevToolsPerContextListener.OnHttpPortOpen(uint16 port)
+protocol fuchsia.web/DevToolsPerContextListener
+table/member fuchsia.web/Favicon.data fuchsia.mem/Buffer
+table/member fuchsia.web/Favicon.height uint32
+table/member fuchsia.web/Favicon.width uint32
+resource table fuchsia.web/Favicon
+protocol/member fuchsia.web/Frame.AddBeforeLoadJavaScript(uint64 id,vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_AddBeforeLoadJavaScript_Result result)
+protocol/member fuchsia.web/Frame.ConfigureInputTypes(fuchsia.web/InputTypes types,fuchsia.web/AllowInputState allow)
+protocol/member fuchsia.web/Frame.CreateView(fuchsia.ui.views/ViewToken view_token)
+protocol/member fuchsia.web/Frame.CreateViewWithViewRef(fuchsia.ui.views/ViewToken view_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
+protocol/member fuchsia.web/Frame.DisableHeadlessRendering()
+protocol/member fuchsia.web/Frame.EnableHeadlessRendering()
+protocol/member fuchsia.web/Frame.ExecuteJavaScript(vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_ExecuteJavaScript_Result result)
+protocol/member fuchsia.web/Frame.ExecuteJavaScriptNoResult(vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result result)
+protocol/member fuchsia.web/Frame.ForceContentDimensions(fuchsia.ui.gfx/vec2:optional web_dips)
+protocol/member fuchsia.web/Frame.GetMediaPlayer(server_end:fuchsia.media.sessions2/Player player)
+protocol/member fuchsia.web/Frame.GetNavigationController(server_end:fuchsia.web/NavigationController controller)
+protocol/member fuchsia.web/Frame.GetPrivateMemorySize() -> (uint64 size_bytes)
+protocol/member fuchsia.web/Frame.PostMessage(string:65536 target_origin,fuchsia.web/WebMessage message) -> (fuchsia.web/Frame_PostMessage_Result result)
+protocol/member fuchsia.web/Frame.RemoveBeforeLoadJavaScript(uint64 id)
+protocol/member fuchsia.web/Frame.SetBlockMediaLoading(bool blocked)
+protocol/member fuchsia.web/Frame.SetConsoleLogSink(fuchsia.logger/LogSink:optional sink)
+protocol/member fuchsia.web/Frame.SetJavaScriptLogLevel(fuchsia.web/ConsoleLogLevel level)
+protocol/member fuchsia.web/Frame.SetMediaSessionId(uint64 session_id)
+protocol/member fuchsia.web/Frame.SetNavigationEventListener(client_end:<fuchsia.web/NavigationEventListener,optional> listener)
+protocol/member fuchsia.web/Frame.SetNavigationEventListener2(client_end:<fuchsia.web/NavigationEventListener,optional> listener,fuchsia.web/NavigationEventListenerFlags flags)
+protocol/member fuchsia.web/Frame.SetNavigationPolicyProvider(fuchsia.web/NavigationPolicyProviderParams params,client_end:fuchsia.web/NavigationPolicyProvider provider)
+protocol/member fuchsia.web/Frame.SetPageScale(float32 scale)
+protocol/member fuchsia.web/Frame.SetPermissionState(fuchsia.web/PermissionDescriptor permission,string:65536 web_origin,fuchsia.web/PermissionState state)
+protocol/member fuchsia.web/Frame.SetPopupFrameCreationListener(client_end:<fuchsia.web/PopupFrameCreationListener,optional> listener)
+protocol/member fuchsia.web/Frame.SetPreferredTheme(fuchsia.settings/ThemeType theme)
+protocol/member fuchsia.web/Frame.SetUrlRequestRewriteRules(vector<fuchsia.web/UrlRequestRewriteRule>:4096 rules) -> ()
+protocol fuchsia.web/Frame
+enum/member fuchsia.web/FrameError.BUFFER_NOT_UTF8 2
+enum/member fuchsia.web/FrameError.INTERNAL_ERROR 1
+enum/member fuchsia.web/FrameError.INVALID_ORIGIN 3
+enum/member fuchsia.web/FrameError.NO_DATA_IN_MESSAGE 4
+strict enum fuchsia.web/FrameError int32
+protocol/member fuchsia.web/FrameHost.CreateFrameWithParams(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)
+protocol fuchsia.web/FrameHost
+struct fuchsia.web/Frame_AddBeforeLoadJavaScript_Response
+union/member fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.err fuchsia.web/FrameError
+union/member fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.response fuchsia.web/Frame_AddBeforeLoadJavaScript_Response
+strict union fuchsia.web/Frame_AddBeforeLoadJavaScript_Result
+struct fuchsia.web/Frame_ExecuteJavaScriptNoResult_Response
+union/member fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result.err fuchsia.web/FrameError
+union/member fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result.response fuchsia.web/Frame_ExecuteJavaScriptNoResult_Response
+strict union fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result
+struct/member fuchsia.web/Frame_ExecuteJavaScript_Response.result fuchsia.mem/Buffer
+resource struct fuchsia.web/Frame_ExecuteJavaScript_Response
+union/member fuchsia.web/Frame_ExecuteJavaScript_Result.err fuchsia.web/FrameError
+union/member fuchsia.web/Frame_ExecuteJavaScript_Result.response fuchsia.web/Frame_ExecuteJavaScript_Response
+resource strict union fuchsia.web/Frame_ExecuteJavaScript_Result
+struct fuchsia.web/Frame_PostMessage_Response
+union/member fuchsia.web/Frame_PostMessage_Result.err fuchsia.web/FrameError
+union/member fuchsia.web/Frame_PostMessage_Result.response fuchsia.web/Frame_PostMessage_Response
+strict union fuchsia.web/Frame_PostMessage_Result
+union/member fuchsia.web/IncomingTransferable.message_port client_end:fuchsia.web/MessagePort
+resource flexible union fuchsia.web/IncomingTransferable
+bits/member fuchsia.web/InputTypes.ALL 9223372036854775808
+bits/member fuchsia.web/InputTypes.GESTURE_DRAG 64
+bits/member fuchsia.web/InputTypes.GESTURE_PINCH 32
+bits/member fuchsia.web/InputTypes.GESTURE_TAP 16
+bits/member fuchsia.web/InputTypes.KEY 1
+bits/member fuchsia.web/InputTypes.MOUSE_CLICK 2
+bits/member fuchsia.web/InputTypes.MOUSE_MOVE 8
+bits/member fuchsia.web/InputTypes.MOUSE_WHEEL 4
+strict bits fuchsia.web/InputTypes uint64
+table/member fuchsia.web/LoadUrlParams.headers vector<fuchsia.net.http/Header>
+table/member fuchsia.web/LoadUrlParams.referrer_url string:65536
+table/member fuchsia.web/LoadUrlParams.type fuchsia.web/LoadUrlReason
+table/member fuchsia.web/LoadUrlParams.was_user_activated bool
+resource table fuchsia.web/LoadUrlParams
+enum/member fuchsia.web/LoadUrlReason.LINK 0
+enum/member fuchsia.web/LoadUrlReason.TYPED 1
+strict enum fuchsia.web/LoadUrlReason uint32
+const fuchsia.web/MAX_HEADERS_COUNT int32 4096
+const fuchsia.web/MAX_HOST_LENGTH int32 255
+const fuchsia.web/MAX_RULE_COUNT int32 4096
+const fuchsia.web/MAX_SCHEME_AND_HOST_LENGTH int32 513
+const fuchsia.web/MAX_URL_LENGTH int32 65536
+const fuchsia.web/MAX_URL_SCHEME_NAME_LENGTH int32 255
+protocol/member fuchsia.web/MessagePort.PostMessage(fuchsia.web/WebMessage message) -> (fuchsia.web/MessagePort_PostMessage_Result result)
+protocol/member fuchsia.web/MessagePort.ReceiveMessage() -> (fuchsia.web/WebMessage message)
+protocol fuchsia.web/MessagePort
+struct fuchsia.web/MessagePort_PostMessage_Response
+union/member fuchsia.web/MessagePort_PostMessage_Result.err fuchsia.web/FrameError
+union/member fuchsia.web/MessagePort_PostMessage_Result.response fuchsia.web/MessagePort_PostMessage_Response
+strict union fuchsia.web/MessagePort_PostMessage_Result
+protocol/member fuchsia.web/NavigationController.GetVisibleEntry() -> (fuchsia.web/NavigationState entry)
+protocol/member fuchsia.web/NavigationController.GoBack()
+protocol/member fuchsia.web/NavigationController.GoForward()
+protocol/member fuchsia.web/NavigationController.LoadUrl(string:65536 url,fuchsia.web/LoadUrlParams params) -> (fuchsia.web/NavigationController_LoadUrl_Result result)
+protocol/member fuchsia.web/NavigationController.Reload(fuchsia.web/ReloadType type)
+protocol/member fuchsia.web/NavigationController.Stop()
+protocol fuchsia.web/NavigationController
+enum/member fuchsia.web/NavigationControllerError.INVALID_HEADER 2
+enum/member fuchsia.web/NavigationControllerError.INVALID_URL 1
+strict enum fuchsia.web/NavigationControllerError int32
+struct fuchsia.web/NavigationController_LoadUrl_Response
+union/member fuchsia.web/NavigationController_LoadUrl_Result.err fuchsia.web/NavigationControllerError
+union/member fuchsia.web/NavigationController_LoadUrl_Result.response fuchsia.web/NavigationController_LoadUrl_Response
+strict union fuchsia.web/NavigationController_LoadUrl_Result
+union/member fuchsia.web/NavigationDecision.abort fuchsia.web/NoArgumentsAction
+union/member fuchsia.web/NavigationDecision.proceed fuchsia.web/NoArgumentsAction
+resource strict union fuchsia.web/NavigationDecision
+protocol/member fuchsia.web/NavigationEventListener.OnNavigationStateChanged(fuchsia.web/NavigationState change) -> ()
+protocol fuchsia.web/NavigationEventListener
+bits/member fuchsia.web/NavigationEventListenerFlags.FAVICON 1
+strict bits fuchsia.web/NavigationEventListenerFlags uint64
+bits/member fuchsia.web/NavigationPhase.FAIL 8
+bits/member fuchsia.web/NavigationPhase.PROCESS_RESPONSE 4
+bits/member fuchsia.web/NavigationPhase.REDIRECT 2
+bits/member fuchsia.web/NavigationPhase.START 1
+strict bits fuchsia.web/NavigationPhase uint32
+protocol/member fuchsia.web/NavigationPolicyProvider.EvaluateRequestedNavigation(fuchsia.web/RequestedNavigation requested_navigation) -> (fuchsia.web/NavigationDecision decision)
+protocol fuchsia.web/NavigationPolicyProvider
+table/member fuchsia.web/NavigationPolicyProviderParams.main_frame_phases fuchsia.web/NavigationPhase
+table/member fuchsia.web/NavigationPolicyProviderParams.subframe_phases fuchsia.web/NavigationPhase
+table fuchsia.web/NavigationPolicyProviderParams
+table/member fuchsia.web/NavigationState.can_go_back bool
+table/member fuchsia.web/NavigationState.can_go_forward bool
+table/member fuchsia.web/NavigationState.favicon fuchsia.web/Favicon
+table/member fuchsia.web/NavigationState.is_main_document_loaded bool
+table/member fuchsia.web/NavigationState.page_type fuchsia.web/PageType
+table/member fuchsia.web/NavigationState.title string
+table/member fuchsia.web/NavigationState.url string:65536
+resource table fuchsia.web/NavigationState
+struct fuchsia.web/NoArgumentsAction
+union/member fuchsia.web/OutgoingTransferable.message_port server_end:fuchsia.web/MessagePort
+resource flexible union fuchsia.web/OutgoingTransferable
+enum/member fuchsia.web/PageType.ERROR 1
+enum/member fuchsia.web/PageType.NORMAL 0
+strict enum fuchsia.web/PageType uint32
+table/member fuchsia.web/PermissionDescriptor.type fuchsia.web/PermissionType
+table fuchsia.web/PermissionDescriptor
+enum/member fuchsia.web/PermissionState.DENIED 1
+enum/member fuchsia.web/PermissionState.GRANTED 2
+strict enum fuchsia.web/PermissionState uint8
+enum/member fuchsia.web/PermissionType.CAMERA 2
+enum/member fuchsia.web/PermissionType.MICROPHONE 1
+enum/member fuchsia.web/PermissionType.PERSISTENT_STORAGE 4
+enum/member fuchsia.web/PermissionType.PROTECTED_MEDIA_IDENTIFIER 3
+strict enum fuchsia.web/PermissionType uint16
+table/member fuchsia.web/PopupFrameCreationInfo.initial_url string:65536
+table/member fuchsia.web/PopupFrameCreationInfo.initiated_by_user bool
+resource table fuchsia.web/PopupFrameCreationInfo
+protocol/member fuchsia.web/PopupFrameCreationListener.OnPopupFrameCreated(client_end:fuchsia.web/Frame frame,fuchsia.web/PopupFrameCreationInfo info) -> ()
+protocol fuchsia.web/PopupFrameCreationListener
+enum/member fuchsia.web/ReloadType.NO_CACHE 1
+enum/member fuchsia.web/ReloadType.PARTIAL_CACHE 0
+strict enum fuchsia.web/ReloadType uint32
+table/member fuchsia.web/RequestedNavigation.has_gesture bool
+table/member fuchsia.web/RequestedNavigation.id uint64
+table/member fuchsia.web/RequestedNavigation.is_http_post bool
+table/member fuchsia.web/RequestedNavigation.is_main_frame bool
+table/member fuchsia.web/RequestedNavigation.is_same_document bool
+table/member fuchsia.web/RequestedNavigation.phase fuchsia.web/NavigationPhase
+table/member fuchsia.web/RequestedNavigation.url string:65536
+table/member fuchsia.web/RequestedNavigation.was_server_redirect bool
+table fuchsia.web/RequestedNavigation
+enum/member fuchsia.web/UrlRequestAction.ALLOW 1
+enum/member fuchsia.web/UrlRequestAction.DENY 2
+strict enum fuchsia.web/UrlRequestAction int32
+union/member fuchsia.web/UrlRequestRewrite.add_headers fuchsia.web/UrlRequestRewriteAddHeaders
+union/member fuchsia.web/UrlRequestRewrite.append_to_query fuchsia.web/UrlRequestRewriteAppendToQuery
+union/member fuchsia.web/UrlRequestRewrite.remove_header fuchsia.web/UrlRequestRewriteRemoveHeader
+union/member fuchsia.web/UrlRequestRewrite.replace_url fuchsia.web/UrlRequestRewriteReplaceUrl
+union/member fuchsia.web/UrlRequestRewrite.substitute_query_pattern fuchsia.web/UrlRequestRewriteSubstituteQueryPattern
+flexible union fuchsia.web/UrlRequestRewrite
+table/member fuchsia.web/UrlRequestRewriteAddHeaders.headers vector<fuchsia.net.http/Header>:4096
+table fuchsia.web/UrlRequestRewriteAddHeaders
+table/member fuchsia.web/UrlRequestRewriteAppendToQuery.query string:65536
+table fuchsia.web/UrlRequestRewriteAppendToQuery
+table/member fuchsia.web/UrlRequestRewriteRemoveHeader.header_name vector<uint8>:4096
+table/member fuchsia.web/UrlRequestRewriteRemoveHeader.query_pattern string:65536
+table fuchsia.web/UrlRequestRewriteRemoveHeader
+table/member fuchsia.web/UrlRequestRewriteReplaceUrl.new_url string:65536
+table/member fuchsia.web/UrlRequestRewriteReplaceUrl.url_ends_with string:65536
+table fuchsia.web/UrlRequestRewriteReplaceUrl
+table/member fuchsia.web/UrlRequestRewriteRule.action fuchsia.web/UrlRequestAction
+table/member fuchsia.web/UrlRequestRewriteRule.hosts_filter vector<string:255>:4096
+table/member fuchsia.web/UrlRequestRewriteRule.rewrites vector<fuchsia.web/UrlRequestRewrite>:4096
+table/member fuchsia.web/UrlRequestRewriteRule.schemes_filter vector<string:255>:4096
+table fuchsia.web/UrlRequestRewriteRule
+table/member fuchsia.web/UrlRequestRewriteSubstituteQueryPattern.pattern string:65536
+table/member fuchsia.web/UrlRequestRewriteSubstituteQueryPattern.substitution string:65536
+table fuchsia.web/UrlRequestRewriteSubstituteQueryPattern
+table/member fuchsia.web/WebMessage.data fuchsia.mem/Buffer
+table/member fuchsia.web/WebMessage.incoming_transfer vector<fuchsia.web/IncomingTransferable>
+table/member fuchsia.web/WebMessage.outgoing_transfer vector<fuchsia.web/OutgoingTransferable>
+resource table fuchsia.web/WebMessage
+library fuchsia.web

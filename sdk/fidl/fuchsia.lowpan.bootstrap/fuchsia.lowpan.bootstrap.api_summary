@@ -1,0 +1,3 @@
+protocol/member fuchsia.lowpan.bootstrap/Thread.ImportSettings(fuchsia.mem/Buffer thread_settings_json) -> ()
+protocol fuchsia.lowpan.bootstrap/Thread
+library fuchsia.lowpan.bootstrap

@@ -1,0 +1,37 @@
+protocol/member fuchsia.lowpan.test/DeviceTest.GetCurrentChannel() -> (uint16 channel_index)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetCurrentMacAddress() -> (vector<uint8>:8 address)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetCurrentRssi() -> (int32 rssi)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetFactoryMacAddress() -> (vector<uint8>:8 address)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetMacAddressFilterSettings() -> (fuchsia.lowpan.test/MacAddressFilterSettings settings)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetNcpVersion() -> (string:256 version)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetNeighborTable() -> (vector<fuchsia.lowpan.test/NeighborInfo>:1024 neighbor_table)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetPartitionId() -> (uint32 pid)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetThreadRloc16() -> (uint16 rloc)
+protocol/member fuchsia.lowpan.test/DeviceTest.GetThreadRouterId() -> (uint8 router_id)
+protocol/member fuchsia.lowpan.test/DeviceTest.ReplaceMacAddressFilterSettings(fuchsia.lowpan.test/MacAddressFilterSettings settings) -> ()
+protocol/member fuchsia.lowpan.test/DeviceTest.Reset() -> ()
+protocol fuchsia.lowpan.test/DeviceTest
+const fuchsia.lowpan.test/MAX_FILTERED uint16 100
+const fuchsia.lowpan.test/MAX_NEIGHBORS uint32 1024
+table/member fuchsia.lowpan.test/MacAddressFilterItem.mac_address vector<uint8>:8
+table/member fuchsia.lowpan.test/MacAddressFilterItem.rssi int8
+table fuchsia.lowpan.test/MacAddressFilterItem
+enum/member fuchsia.lowpan.test/MacAddressFilterMode.ALLOW 1
+enum/member fuchsia.lowpan.test/MacAddressFilterMode.DENY 2
+enum/member fuchsia.lowpan.test/MacAddressFilterMode.DISABLED 0
+strict enum fuchsia.lowpan.test/MacAddressFilterMode int32
+table/member fuchsia.lowpan.test/MacAddressFilterSettings.items vector<fuchsia.lowpan.test/MacAddressFilterItem>:100
+table/member fuchsia.lowpan.test/MacAddressFilterSettings.mode fuchsia.lowpan.test/MacAddressFilterMode
+table fuchsia.lowpan.test/MacAddressFilterSettings
+table/member fuchsia.lowpan.test/NeighborInfo.age int64
+table/member fuchsia.lowpan.test/NeighborInfo.avg_rssi_in int8
+table/member fuchsia.lowpan.test/NeighborInfo.is_child bool
+table/member fuchsia.lowpan.test/NeighborInfo.last_rssi_in int32
+table/member fuchsia.lowpan.test/NeighborInfo.link_frame_count uint32
+table/member fuchsia.lowpan.test/NeighborInfo.lqi_in uint8
+table/member fuchsia.lowpan.test/NeighborInfo.mac_address vector<uint8>:8
+table/member fuchsia.lowpan.test/NeighborInfo.mgmt_frame_count uint32
+table/member fuchsia.lowpan.test/NeighborInfo.short_address uint16
+table/member fuchsia.lowpan.test/NeighborInfo.thread_mode uint8
+table fuchsia.lowpan.test/NeighborInfo
+library fuchsia.lowpan.test

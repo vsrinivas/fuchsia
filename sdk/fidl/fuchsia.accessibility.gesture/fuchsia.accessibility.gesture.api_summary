@@ -1,0 +1,11 @@
+protocol/member fuchsia.accessibility.gesture/Listener.OnGesture(fuchsia.accessibility.gesture/Type gesture_type) -> (bool handled,string:<16384,optional> utterance)
+protocol fuchsia.accessibility.gesture/Listener
+protocol/member fuchsia.accessibility.gesture/ListenerRegistry.Register(client_end:fuchsia.accessibility.gesture/Listener listener) -> ()
+protocol fuchsia.accessibility.gesture/ListenerRegistry
+const fuchsia.accessibility.gesture/MAX_UTTERANCE_SIZE uint64 16384
+enum/member fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_DOWN 2
+enum/member fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_LEFT 4
+enum/member fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_RIGHT 3
+enum/member fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_UP 1
+strict enum fuchsia.accessibility.gesture/Type uint32
+library fuchsia.accessibility.gesture

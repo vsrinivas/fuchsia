@@ -1,0 +1,6 @@
+protocol/member fuchsia.bluetooth.a2dp/AudioMode.SetRole(fuchsia.bluetooth.a2dp/Role role) -> ()
+protocol fuchsia.bluetooth.a2dp/AudioMode
+enum/member fuchsia.bluetooth.a2dp/Role.SINK 2
+enum/member fuchsia.bluetooth.a2dp/Role.SOURCE 1
+strict enum fuchsia.bluetooth.a2dp/Role uint32
+library fuchsia.bluetooth.a2dp

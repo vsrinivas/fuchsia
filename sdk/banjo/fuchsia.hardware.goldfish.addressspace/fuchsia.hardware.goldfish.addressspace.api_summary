@@ -1,0 +1,5 @@
+enum/member fuchsia.hardware.goldfish.addressspace/AddressSpaceChildDriverType.DEFAULT 0
+strict enum fuchsia.hardware.goldfish.addressspace/AddressSpaceChildDriverType uint32
+protocol/member fuchsia.hardware.goldfish.addressspace/GoldfishAddressSpace.OpenChildDriver(fuchsia.hardware.goldfish.addressspace/AddressSpaceChildDriverType type,zx/handle:CHANNEL req) -> (int32 status)
+protocol fuchsia.hardware.goldfish.addressspace/GoldfishAddressSpace
+library fuchsia.hardware.goldfish.addressspace

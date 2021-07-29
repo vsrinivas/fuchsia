@@ -1,0 +1,244 @@
+table/member fuchsia.modular/ActionDisplay.display_info fuchsia.modular/DisplayInfo
+table/member fuchsia.modular/ActionDisplay.parameter_mapping vector<fuchsia.modular/ParameterMapping>
+table fuchsia.modular/ActionDisplay
+struct/member fuchsia.modular/AddMod.intent fuchsia.modular/Intent
+struct/member fuchsia.modular/AddMod.mod_name vector<string>
+struct/member fuchsia.modular/AddMod.mod_name_transitional string:optional
+struct/member fuchsia.modular/AddMod.surface_parent_mod_name vector<string>:optional
+struct/member fuchsia.modular/AddMod.surface_relation fuchsia.modular/SurfaceRelation
+resource struct fuchsia.modular/AddMod
+protocol/member fuchsia.modular/Agent.Connect(string requestor_url,server_end:fuchsia.sys/ServiceProvider services)
+protocol fuchsia.modular/Agent
+protocol fuchsia.modular/AgentController
+table/member fuchsia.modular/AgentServiceRequest.agent_controller server_end:fuchsia.modular/AgentController
+table/member fuchsia.modular/AgentServiceRequest.channel zx/handle:CHANNEL
+table/member fuchsia.modular/AgentServiceRequest.handler string:2083
+table/member fuchsia.modular/AgentServiceRequest.service_name string
+resource table fuchsia.modular/AgentServiceRequest
+struct/member fuchsia.modular/Annotation.key string:256
+struct/member fuchsia.modular/Annotation.value fuchsia.modular/AnnotationValue:optional
+resource struct fuchsia.modular/Annotation
+enum/member fuchsia.modular/AnnotationError.NOT_FOUND 3
+enum/member fuchsia.modular/AnnotationError.TOO_MANY_ANNOTATIONS 2
+enum/member fuchsia.modular/AnnotationError.VALUE_TOO_BIG 1
+strict enum fuchsia.modular/AnnotationError uint32
+union/member fuchsia.modular/AnnotationValue.buffer fuchsia.mem/Buffer
+union/member fuchsia.modular/AnnotationValue.bytes vector<uint8>:1024
+union/member fuchsia.modular/AnnotationValue.text string:1024
+resource flexible union fuchsia.modular/AnnotationValue
+protocol/member fuchsia.modular/ComponentContext.DeprecatedConnectToAgent(string url,server_end:fuchsia.sys/ServiceProvider incoming_services,server_end:fuchsia.modular/AgentController controller)
+protocol/member fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService(fuchsia.modular/AgentServiceRequest request)
+protocol fuchsia.modular/ComponentContext
+enum/member fuchsia.modular/ConfigureStoryError.ERR_STORY_ALREADY_CREATED 1
+strict enum fuchsia.modular/ConfigureStoryError int32
+table/member fuchsia.modular/DisplayInfo.icon string
+table/member fuchsia.modular/DisplayInfo.subtitle string
+table/member fuchsia.modular/DisplayInfo.title string
+table fuchsia.modular/DisplayInfo
+struct/member fuchsia.modular/ExecuteResult.error_message string:optional
+struct/member fuchsia.modular/ExecuteResult.status fuchsia.modular/ExecuteStatus
+struct/member fuchsia.modular/ExecuteResult.story_id string:optional
+struct fuchsia.modular/ExecuteResult
+enum/member fuchsia.modular/ExecuteStatus.INTERNAL_ERROR 6
+enum/member fuchsia.modular/ExecuteStatus.INVALID_COMMAND 1
+enum/member fuchsia.modular/ExecuteStatus.INVALID_MOD 4
+enum/member fuchsia.modular/ExecuteStatus.INVALID_STORY_ID 2
+enum/member fuchsia.modular/ExecuteStatus.NO_MODULES_FOUND 5
+enum/member fuchsia.modular/ExecuteStatus.OK 0
+enum/member fuchsia.modular/ExecuteStatus.STORY_MUST_HAVE_MODS 3
+strict enum fuchsia.modular/ExecuteStatus uint32
+struct/member fuchsia.modular/Intent.action string:optional
+struct/member fuchsia.modular/Intent.handler string:optional
+struct/member fuchsia.modular/Intent.parameters vector<fuchsia.modular/IntentParameter>:optional
+resource struct fuchsia.modular/Intent
+struct/member fuchsia.modular/IntentFilter.action string
+struct/member fuchsia.modular/IntentFilter.action_display fuchsia.modular/ActionDisplay
+struct/member fuchsia.modular/IntentFilter.parameter_constraints vector<fuchsia.modular/ParameterConstraint>
+struct fuchsia.modular/IntentFilter
+struct/member fuchsia.modular/IntentParameter.data fuchsia.modular/IntentParameterData
+struct/member fuchsia.modular/IntentParameter.name string:optional
+resource struct fuchsia.modular/IntentParameter
+union/member fuchsia.modular/IntentParameterData.entity_reference string
+union/member fuchsia.modular/IntentParameterData.entity_type vector<string>
+union/member fuchsia.modular/IntentParameterData.json fuchsia.mem/Buffer
+resource strict union fuchsia.modular/IntentParameterData
+protocol/member fuchsia.modular/Lifecycle.Terminate()
+protocol fuchsia.modular/Lifecycle
+const fuchsia.modular/MAX_ANNOTATIONS_PER_MODULE uint32 100
+const fuchsia.modular/MAX_ANNOTATIONS_PER_STORY uint32 100
+const fuchsia.modular/MAX_ANNOTATIONS_PER_UPDATE uint32 50
+const fuchsia.modular/MAX_ANNOTATION_KEY_LENGTH uint32 256
+const fuchsia.modular/MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES uint32 102400
+const fuchsia.modular/MAX_ANNOTATION_VALUE_LENGTH uint32 1024
+protocol/member fuchsia.modular/ModuleContext.RemoveSelfFromStory()
+protocol fuchsia.modular/ModuleContext
+table/member fuchsia.modular/ModuleData.additional_services fuchsia.sys/ServiceList
+table/member fuchsia.modular/ModuleData.annotations vector<fuchsia.modular/Annotation>:100
+table/member fuchsia.modular/ModuleData.intent fuchsia.modular/Intent
+table/member fuchsia.modular/ModuleData.is_embedded bool
+table/member fuchsia.modular/ModuleData.module_deleted bool
+table/member fuchsia.modular/ModuleData.module_path vector<string>
+table/member fuchsia.modular/ModuleData.module_source fuchsia.modular/ModuleSource
+table/member fuchsia.modular/ModuleData.module_url string
+table/member fuchsia.modular/ModuleData.surface_relation fuchsia.modular/SurfaceRelation
+resource table fuchsia.modular/ModuleData
+struct/member fuchsia.modular/ModuleManifest.binary string
+struct/member fuchsia.modular/ModuleManifest.composition_pattern string:optional
+struct/member fuchsia.modular/ModuleManifest.intent_filters vector<fuchsia.modular/IntentFilter>:optional
+struct/member fuchsia.modular/ModuleManifest.placeholder_color string:optional
+struct/member fuchsia.modular/ModuleManifest.suggestion_headline string:optional
+struct fuchsia.modular/ModuleManifest
+enum/member fuchsia.modular/ModuleSource.EXTERNAL 1
+enum/member fuchsia.modular/ModuleSource.INTERNAL 0
+strict enum fuchsia.modular/ModuleSource uint32
+enum/member fuchsia.modular/ModuleState.ERROR 5
+enum/member fuchsia.modular/ModuleState.RUNNING 2
+enum/member fuchsia.modular/ModuleState.STOPPED 4
+strict enum fuchsia.modular/ModuleState uint32
+protocol fuchsia.modular/OngoingActivity
+enum/member fuchsia.modular/OngoingActivityType.AUDIO 2
+enum/member fuchsia.modular/OngoingActivityType.UNSPECIFIED 0
+enum/member fuchsia.modular/OngoingActivityType.VIDEO 1
+strict enum fuchsia.modular/OngoingActivityType uint32
+struct/member fuchsia.modular/ParameterConstraint.name string
+struct/member fuchsia.modular/ParameterConstraint.type string
+struct fuchsia.modular/ParameterConstraint
+table/member fuchsia.modular/ParameterMapping.name string
+table/member fuchsia.modular/ParameterMapping.parameter_property string
+table fuchsia.modular/ParameterMapping
+protocol/member fuchsia.modular/PuppetMaster.ControlStory(string story_name,server_end:fuchsia.modular/StoryPuppetMaster request)
+protocol/member fuchsia.modular/PuppetMaster.DeleteStory(string story_name) -> ()
+protocol/member fuchsia.modular/PuppetMaster.GetStories() -> (vector<string> story_names)
+protocol fuchsia.modular/PuppetMaster
+struct/member fuchsia.modular/RemoveMod.mod_name vector<string>
+struct/member fuchsia.modular/RemoveMod.mod_name_transitional string:optional
+struct fuchsia.modular/RemoveMod
+protocol/member fuchsia.modular/SessionRestartController.Restart()
+protocol fuchsia.modular/SessionRestartController
+protocol/member fuchsia.modular/SessionShell.AttachView(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)
+protocol/member fuchsia.modular/SessionShell.AttachView2(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)
+protocol/member fuchsia.modular/SessionShell.DetachView(fuchsia.modular/ViewIdentifier view_id) -> ()
+protocol fuchsia.modular/SessionShell
+protocol/member fuchsia.modular/SessionShellContext.GetComponentContext(server_end:fuchsia.modular/ComponentContext request)
+protocol/member fuchsia.modular/SessionShellContext.GetPresentation(server_end:fuchsia.ui.policy/Presentation request)
+protocol/member fuchsia.modular/SessionShellContext.GetStoryProvider(server_end:fuchsia.modular/StoryProvider request)
+protocol/member fuchsia.modular/SessionShellContext.Logout()
+protocol/member fuchsia.modular/SessionShellContext.Restart()
+protocol fuchsia.modular/SessionShellContext
+union/member fuchsia.modular/StoryCommand.add_mod fuchsia.modular/AddMod
+union/member fuchsia.modular/StoryCommand.remove_mod fuchsia.modular/RemoveMod
+resource strict union fuchsia.modular/StoryCommand
+protocol/member fuchsia.modular/StoryController.Annotate(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryController_Annotate_Result result)
+protocol/member fuchsia.modular/StoryController.GetInfo() -> (fuchsia.modular/StoryInfo info,fuchsia.modular/StoryState state)
+protocol/member fuchsia.modular/StoryController.GetInfo2() -> (fuchsia.modular/StoryInfo2 info,fuchsia.modular/StoryState state)
+protocol/member fuchsia.modular/StoryController.RequestStart()
+protocol/member fuchsia.modular/StoryController.Stop() -> ()
+protocol/member fuchsia.modular/StoryController.Watch(client_end:fuchsia.modular/StoryWatcher watcher)
+protocol fuchsia.modular/StoryController
+struct fuchsia.modular/StoryController_Annotate_Response
+union/member fuchsia.modular/StoryController_Annotate_Result.err fuchsia.modular/AnnotationError
+union/member fuchsia.modular/StoryController_Annotate_Result.response fuchsia.modular/StoryController_Annotate_Response
+strict union fuchsia.modular/StoryController_Annotate_Result
+struct/member fuchsia.modular/StoryInfo.extra vector<fuchsia.modular/StoryInfoExtraEntry>:optional
+struct/member fuchsia.modular/StoryInfo.id string
+struct/member fuchsia.modular/StoryInfo.last_focus_time int64
+struct/member fuchsia.modular/StoryInfo.url string:optional
+struct fuchsia.modular/StoryInfo
+table/member fuchsia.modular/StoryInfo2.annotations vector<fuchsia.modular/Annotation>:100
+table/member fuchsia.modular/StoryInfo2.id string
+table/member fuchsia.modular/StoryInfo2.last_focus_time int64
+resource table fuchsia.modular/StoryInfo2
+struct/member fuchsia.modular/StoryInfoExtraEntry.key string
+struct/member fuchsia.modular/StoryInfoExtraEntry.value string
+struct fuchsia.modular/StoryInfoExtraEntry
+struct/member fuchsia.modular/StoryOptions.kind_of_proto_story bool
+struct fuchsia.modular/StoryOptions
+protocol/member fuchsia.modular/StoryProvider.GetController(string story_id,server_end:fuchsia.modular/StoryController request)
+protocol/member fuchsia.modular/StoryProvider.GetStories(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo> story_infos)
+protocol/member fuchsia.modular/StoryProvider.GetStories2(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo2> story_infos)
+protocol/member fuchsia.modular/StoryProvider.GetStoryInfo(string story_id) -> (box<fuchsia.modular/StoryInfo> story_info)
+protocol/member fuchsia.modular/StoryProvider.GetStoryInfo2(string story_id) -> (fuchsia.modular/StoryInfo2 story_info)
+protocol/member fuchsia.modular/StoryProvider.Watch(client_end:fuchsia.modular/StoryProviderWatcher watcher)
+protocol fuchsia.modular/StoryProvider
+protocol/member fuchsia.modular/StoryProviderWatcher.OnChange(fuchsia.modular/StoryInfo story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)
+protocol/member fuchsia.modular/StoryProviderWatcher.OnChange2(fuchsia.modular/StoryInfo2 story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)
+protocol/member fuchsia.modular/StoryProviderWatcher.OnDelete(string story_id)
+protocol fuchsia.modular/StoryProviderWatcher
+protocol/member fuchsia.modular/StoryPuppetMaster.Annotate(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryPuppetMaster_Annotate_Result result)
+protocol/member fuchsia.modular/StoryPuppetMaster.Enqueue(vector<fuchsia.modular/StoryCommand> commands)
+protocol/member fuchsia.modular/StoryPuppetMaster.Execute() -> (fuchsia.modular/ExecuteResult result)
+protocol/member fuchsia.modular/StoryPuppetMaster.WatchAnnotations() -> (fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result result)
+protocol fuchsia.modular/StoryPuppetMaster
+struct fuchsia.modular/StoryPuppetMaster_Annotate_Response
+union/member fuchsia.modular/StoryPuppetMaster_Annotate_Result.err fuchsia.modular/AnnotationError
+union/member fuchsia.modular/StoryPuppetMaster_Annotate_Result.response fuchsia.modular/StoryPuppetMaster_Annotate_Response
+strict union fuchsia.modular/StoryPuppetMaster_Annotate_Result
+struct/member fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response.annotations vector<fuchsia.modular/Annotation>:100
+resource struct fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response
+union/member fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.err fuchsia.modular/AnnotationError
+union/member fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.response fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response
+resource strict union fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result
+protocol/member fuchsia.modular/StoryShell.AddSurface(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)
+protocol/member fuchsia.modular/StoryShell.AddSurface2(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)
+protocol/member fuchsia.modular/StoryShell.AddSurface3(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)
+protocol/member fuchsia.modular/StoryShell.DefocusSurface(string surface_id) -> ()
+protocol/member fuchsia.modular/StoryShell.FocusSurface(string surface_id)
+protocol/member fuchsia.modular/StoryShell.Initialize(client_end:fuchsia.modular/StoryShellContext story_shell_context)
+protocol/member fuchsia.modular/StoryShell.OnSurfaceFocused -> (string surface_id)
+protocol/member fuchsia.modular/StoryShell.RemoveSurface(string surface_id)
+protocol/member fuchsia.modular/StoryShell.UpdateSurface(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)
+protocol/member fuchsia.modular/StoryShell.UpdateSurface2(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)
+protocol/member fuchsia.modular/StoryShell.UpdateSurface3(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)
+protocol fuchsia.modular/StoryShell
+protocol fuchsia.modular/StoryShellContext
+protocol/member fuchsia.modular/StoryShellFactory.AttachStory(string story_id,server_end:fuchsia.modular/StoryShell story_shell)
+protocol/member fuchsia.modular/StoryShellFactory.DetachStory(string story_id) -> ()
+protocol fuchsia.modular/StoryShellFactory
+enum/member fuchsia.modular/StoryState.RUNNING 1
+enum/member fuchsia.modular/StoryState.STOPPED 3
+enum/member fuchsia.modular/StoryState.STOPPING 2
+strict enum fuchsia.modular/StoryState uint32
+enum/member fuchsia.modular/StoryVisibilityState.DEFAULT 1
+enum/member fuchsia.modular/StoryVisibilityState.IMMERSIVE 2
+strict enum fuchsia.modular/StoryVisibilityState uint32
+enum/member fuchsia.modular/StoryVisualState.MAXIMIZED 1
+enum/member fuchsia.modular/StoryVisualState.MAXIMIZED_OVERLAYED 2
+enum/member fuchsia.modular/StoryVisualState.MINIMIZED 0
+strict enum fuchsia.modular/StoryVisualState uint32
+protocol/member fuchsia.modular/StoryWatcher.OnModuleAdded(fuchsia.modular/ModuleData module_data)
+protocol/member fuchsia.modular/StoryWatcher.OnModuleFocused(vector<string> module_path)
+protocol/member fuchsia.modular/StoryWatcher.OnStateChange(fuchsia.modular/StoryState new_state)
+protocol fuchsia.modular/StoryWatcher
+enum/member fuchsia.modular/SurfaceArrangement.COPRESENT 1
+enum/member fuchsia.modular/SurfaceArrangement.NONE 0
+enum/member fuchsia.modular/SurfaceArrangement.ONTOP 3
+enum/member fuchsia.modular/SurfaceArrangement.SEQUENTIAL 2
+strict enum fuchsia.modular/SurfaceArrangement uint32
+enum/member fuchsia.modular/SurfaceDependency.DEPENDENT 1
+enum/member fuchsia.modular/SurfaceDependency.NONE 0
+strict enum fuchsia.modular/SurfaceDependency uint32
+struct/member fuchsia.modular/SurfaceInfo.module_manifest box<fuchsia.modular/ModuleManifest>
+struct/member fuchsia.modular/SurfaceInfo.module_source fuchsia.modular/ModuleSource
+struct/member fuchsia.modular/SurfaceInfo.parent_id string
+struct/member fuchsia.modular/SurfaceInfo.surface_relation box<fuchsia.modular/SurfaceRelation>
+struct fuchsia.modular/SurfaceInfo
+table/member fuchsia.modular/SurfaceInfo2.annotations vector<fuchsia.modular/Annotation>:100
+table/member fuchsia.modular/SurfaceInfo2.module_manifest fuchsia.modular/ModuleManifest
+table/member fuchsia.modular/SurfaceInfo2.module_source fuchsia.modular/ModuleSource
+table/member fuchsia.modular/SurfaceInfo2.parent_id string
+table/member fuchsia.modular/SurfaceInfo2.surface_relation fuchsia.modular/SurfaceRelation
+table/member fuchsia.modular/SurfaceInfo2.view_ref fuchsia.ui.views/ViewRef
+resource table fuchsia.modular/SurfaceInfo2
+struct/member fuchsia.modular/SurfaceRelation.arrangement fuchsia.modular/SurfaceArrangement 0
+struct/member fuchsia.modular/SurfaceRelation.dependency fuchsia.modular/SurfaceDependency 0
+struct/member fuchsia.modular/SurfaceRelation.emphasis float32 1
+struct fuchsia.modular/SurfaceRelation
+struct/member fuchsia.modular/ViewConnection.surface_id string
+struct/member fuchsia.modular/ViewConnection.view_holder_token fuchsia.ui.views/ViewHolderToken
+resource struct fuchsia.modular/ViewConnection
+struct/member fuchsia.modular/ViewConnection2.surface_id string
+struct/member fuchsia.modular/ViewConnection2.view_holder_token fuchsia.ui.views/ViewHolderToken
+resource struct fuchsia.modular/ViewConnection2
+struct/member fuchsia.modular/ViewIdentifier.story_id string
+struct fuchsia.modular/ViewIdentifier
+library fuchsia.modular

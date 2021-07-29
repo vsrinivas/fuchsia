@@ -1,0 +1,256 @@
+struct/member fuchsia.ui.input/Axis.range fuchsia.ui.input/Range
+struct/member fuchsia.ui.input/Axis.resolution int32 1
+struct/member fuchsia.ui.input/Axis.scale fuchsia.ui.input/AxisScale 0
+struct fuchsia.ui.input/Axis
+struct/member fuchsia.ui.input/AxisF.range fuchsia.ui.input/RangeF
+struct/member fuchsia.ui.input/AxisF.resolution float32 1
+struct/member fuchsia.ui.input/AxisF.scale fuchsia.ui.input/AxisScale 0
+struct fuchsia.ui.input/AxisF
+enum/member fuchsia.ui.input/AxisScale.LINEAR 0
+enum/member fuchsia.ui.input/AxisScale.LOGARITHMIC 1
+strict enum fuchsia.ui.input/AxisScale uint32
+union/member fuchsia.ui.input/Command.send_keyboard_input fuchsia.ui.input/SendKeyboardInputCmd
+union/member fuchsia.ui.input/Command.send_pointer_input fuchsia.ui.input/SendPointerInputCmd
+union/member fuchsia.ui.input/Command.set_hard_keyboard_delivery fuchsia.ui.input/SetHardKeyboardDeliveryCmd
+union/member fuchsia.ui.input/Command.set_parallel_dispatch fuchsia.ui.input/SetParallelDispatchCmd
+strict union fuchsia.ui.input/Command
+struct/member fuchsia.ui.input/DeviceDescriptor.device_info box<fuchsia.ui.input/DeviceInfo>
+struct/member fuchsia.ui.input/DeviceDescriptor.keyboard box<fuchsia.ui.input/KeyboardDescriptor>
+struct/member fuchsia.ui.input/DeviceDescriptor.media_buttons box<fuchsia.ui.input/MediaButtonsDescriptor>
+struct/member fuchsia.ui.input/DeviceDescriptor.mouse box<fuchsia.ui.input/MouseDescriptor>
+struct/member fuchsia.ui.input/DeviceDescriptor.sensor box<fuchsia.ui.input/SensorDescriptor>
+struct/member fuchsia.ui.input/DeviceDescriptor.stylus box<fuchsia.ui.input/StylusDescriptor>
+struct/member fuchsia.ui.input/DeviceDescriptor.touchscreen box<fuchsia.ui.input/TouchscreenDescriptor>
+struct fuchsia.ui.input/DeviceDescriptor
+struct/member fuchsia.ui.input/DeviceInfo.name string
+struct/member fuchsia.ui.input/DeviceInfo.product_id uint32
+struct/member fuchsia.ui.input/DeviceInfo.vendor_id uint32
+struct/member fuchsia.ui.input/DeviceInfo.version uint32
+struct fuchsia.ui.input/DeviceInfo
+struct/member fuchsia.ui.input/FocusEvent.event_time uint64
+struct/member fuchsia.ui.input/FocusEvent.focused bool
+struct fuchsia.ui.input/FocusEvent
+protocol/member fuchsia.ui.input/ImeService.GetInputMethodEditor(fuchsia.ui.input/KeyboardType keyboard_type,fuchsia.ui.input/InputMethodAction action,fuchsia.ui.input/TextInputState initial_state,client_end:fuchsia.ui.input/InputMethodEditorClient client,server_end:fuchsia.ui.input/InputMethodEditor editor)
+protocol/member fuchsia.ui.input/ImeService.HideKeyboard()
+protocol/member fuchsia.ui.input/ImeService.ShowKeyboard()
+protocol fuchsia.ui.input/ImeService
+protocol/member fuchsia.ui.input/ImeVisibilityService.OnKeyboardVisibilityChanged -> (bool visible)
+protocol fuchsia.ui.input/ImeVisibilityService
+protocol/member fuchsia.ui.input/InputDevice.DispatchReport(fuchsia.ui.input/InputReport report)
+protocol fuchsia.ui.input/InputDevice
+protocol/member fuchsia.ui.input/InputDeviceRegistry.RegisterDevice(fuchsia.ui.input/DeviceDescriptor descriptor,server_end:fuchsia.ui.input/InputDevice input_device)
+protocol fuchsia.ui.input/InputDeviceRegistry
+union/member fuchsia.ui.input/InputEvent.focus fuchsia.ui.input/FocusEvent
+union/member fuchsia.ui.input/InputEvent.keyboard fuchsia.ui.input/KeyboardEvent
+union/member fuchsia.ui.input/InputEvent.pointer fuchsia.ui.input/PointerEvent
+strict union fuchsia.ui.input/InputEvent
+enum/member fuchsia.ui.input/InputMethodAction.DONE 6
+enum/member fuchsia.ui.input/InputMethodAction.GO 2
+enum/member fuchsia.ui.input/InputMethodAction.NEXT 5
+enum/member fuchsia.ui.input/InputMethodAction.NONE 1
+enum/member fuchsia.ui.input/InputMethodAction.PREVIOUS 7
+enum/member fuchsia.ui.input/InputMethodAction.SEARCH 3
+enum/member fuchsia.ui.input/InputMethodAction.SEND 4
+enum/member fuchsia.ui.input/InputMethodAction.UNSPECIFIED 0
+strict enum fuchsia.ui.input/InputMethodAction uint32
+protocol/member fuchsia.ui.input/InputMethodEditor.DispatchKey3(fuchsia.ui.input3/KeyEvent event) -> (bool handled)
+protocol/member fuchsia.ui.input/InputMethodEditor.Hide()
+protocol/member fuchsia.ui.input/InputMethodEditor.InjectInput(fuchsia.ui.input/InputEvent event)
+protocol/member fuchsia.ui.input/InputMethodEditor.SetKeyboardType(fuchsia.ui.input/KeyboardType keyboard_type)
+protocol/member fuchsia.ui.input/InputMethodEditor.SetState(fuchsia.ui.input/TextInputState state)
+protocol/member fuchsia.ui.input/InputMethodEditor.Show()
+protocol fuchsia.ui.input/InputMethodEditor
+protocol/member fuchsia.ui.input/InputMethodEditorClient.DidUpdateState(fuchsia.ui.input/TextInputState state,fuchsia.ui.input/InputEvent:optional event)
+protocol/member fuchsia.ui.input/InputMethodEditorClient.OnAction(fuchsia.ui.input/InputMethodAction action)
+protocol fuchsia.ui.input/InputMethodEditorClient
+struct/member fuchsia.ui.input/InputReport.event_time uint64
+struct/member fuchsia.ui.input/InputReport.keyboard box<fuchsia.ui.input/KeyboardReport>
+struct/member fuchsia.ui.input/InputReport.media_buttons box<fuchsia.ui.input/MediaButtonsReport>
+struct/member fuchsia.ui.input/InputReport.mouse box<fuchsia.ui.input/MouseReport>
+struct/member fuchsia.ui.input/InputReport.sensor fuchsia.ui.input/SensorReport:optional
+struct/member fuchsia.ui.input/InputReport.stylus box<fuchsia.ui.input/StylusReport>
+struct/member fuchsia.ui.input/InputReport.touchscreen box<fuchsia.ui.input/TouchscreenReport>
+struct/member fuchsia.ui.input/InputReport.trace_id uint64 0
+struct fuchsia.ui.input/InputReport
+struct/member fuchsia.ui.input/KeyboardDescriptor.keys vector<uint32>
+struct fuchsia.ui.input/KeyboardDescriptor
+struct/member fuchsia.ui.input/KeyboardEvent.code_point uint32
+struct/member fuchsia.ui.input/KeyboardEvent.device_id uint32
+struct/member fuchsia.ui.input/KeyboardEvent.event_time uint64
+struct/member fuchsia.ui.input/KeyboardEvent.hid_usage uint32
+struct/member fuchsia.ui.input/KeyboardEvent.modifiers uint32
+struct/member fuchsia.ui.input/KeyboardEvent.phase fuchsia.ui.input/KeyboardEventPhase
+struct fuchsia.ui.input/KeyboardEvent
+enum/member fuchsia.ui.input/KeyboardEventPhase.CANCELLED 2
+enum/member fuchsia.ui.input/KeyboardEventPhase.PRESSED 0
+enum/member fuchsia.ui.input/KeyboardEventPhase.RELEASED 1
+enum/member fuchsia.ui.input/KeyboardEventPhase.REPEAT 3
+strict enum fuchsia.ui.input/KeyboardEventPhase uint32
+struct/member fuchsia.ui.input/KeyboardReport.pressed_keys vector<uint32>
+struct fuchsia.ui.input/KeyboardReport
+enum/member fuchsia.ui.input/KeyboardType.DATETIME 3
+enum/member fuchsia.ui.input/KeyboardType.NUMBER 1
+enum/member fuchsia.ui.input/KeyboardType.PHONE 2
+enum/member fuchsia.ui.input/KeyboardType.TEXT 0
+strict enum fuchsia.ui.input/KeyboardType uint32
+struct/member fuchsia.ui.input/MediaButtonsDescriptor.buttons uint32
+struct fuchsia.ui.input/MediaButtonsDescriptor
+table/member fuchsia.ui.input/MediaButtonsEvent.camera_disable bool
+table/member fuchsia.ui.input/MediaButtonsEvent.mic_mute bool
+table/member fuchsia.ui.input/MediaButtonsEvent.pause bool
+table/member fuchsia.ui.input/MediaButtonsEvent.volume int8
+table fuchsia.ui.input/MediaButtonsEvent
+struct/member fuchsia.ui.input/MediaButtonsReport.camera_disable bool
+struct/member fuchsia.ui.input/MediaButtonsReport.mic_mute bool
+struct/member fuchsia.ui.input/MediaButtonsReport.pause bool
+struct/member fuchsia.ui.input/MediaButtonsReport.reset bool
+struct/member fuchsia.ui.input/MediaButtonsReport.volume_down bool
+struct/member fuchsia.ui.input/MediaButtonsReport.volume_up bool
+struct fuchsia.ui.input/MediaButtonsReport
+struct/member fuchsia.ui.input/MouseDescriptor.buttons uint32
+struct/member fuchsia.ui.input/MouseDescriptor.hscroll box<fuchsia.ui.input/Axis>
+struct/member fuchsia.ui.input/MouseDescriptor.rel_x fuchsia.ui.input/Axis
+struct/member fuchsia.ui.input/MouseDescriptor.rel_y fuchsia.ui.input/Axis
+struct/member fuchsia.ui.input/MouseDescriptor.vscroll box<fuchsia.ui.input/Axis>
+struct fuchsia.ui.input/MouseDescriptor
+struct/member fuchsia.ui.input/MouseReport.pressed_buttons uint32
+struct/member fuchsia.ui.input/MouseReport.rel_hscroll int32
+struct/member fuchsia.ui.input/MouseReport.rel_vscroll int32
+struct/member fuchsia.ui.input/MouseReport.rel_x int32
+struct/member fuchsia.ui.input/MouseReport.rel_y int32
+struct fuchsia.ui.input/MouseReport
+protocol/member fuchsia.ui.input/PointerCaptureListener.OnPointerEvent(fuchsia.ui.input/PointerEvent event) -> ()
+protocol fuchsia.ui.input/PointerCaptureListener
+protocol/member fuchsia.ui.input/PointerCaptureListenerRegistry.RegisterListener(client_end:fuchsia.ui.input/PointerCaptureListener listener,fuchsia.ui.views/ViewRef view_ref) -> (bool success)
+protocol fuchsia.ui.input/PointerCaptureListenerRegistry
+struct/member fuchsia.ui.input/PointerEvent.buttons uint32
+struct/member fuchsia.ui.input/PointerEvent.device_id uint32
+struct/member fuchsia.ui.input/PointerEvent.event_time uint64
+struct/member fuchsia.ui.input/PointerEvent.phase fuchsia.ui.input/PointerEventPhase
+struct/member fuchsia.ui.input/PointerEvent.pointer_id uint32
+struct/member fuchsia.ui.input/PointerEvent.radius_major float32 0
+struct/member fuchsia.ui.input/PointerEvent.radius_minor float32 0
+struct/member fuchsia.ui.input/PointerEvent.type fuchsia.ui.input/PointerEventType
+struct/member fuchsia.ui.input/PointerEvent.x float32
+struct/member fuchsia.ui.input/PointerEvent.y float32
+struct fuchsia.ui.input/PointerEvent
+enum/member fuchsia.ui.input/PointerEventPhase.ADD 0
+enum/member fuchsia.ui.input/PointerEventPhase.CANCEL 6
+enum/member fuchsia.ui.input/PointerEventPhase.DOWN 2
+enum/member fuchsia.ui.input/PointerEventPhase.HOVER 1
+enum/member fuchsia.ui.input/PointerEventPhase.MOVE 3
+enum/member fuchsia.ui.input/PointerEventPhase.REMOVE 5
+enum/member fuchsia.ui.input/PointerEventPhase.UP 4
+strict enum fuchsia.ui.input/PointerEventPhase uint32
+enum/member fuchsia.ui.input/PointerEventType.INVERTED_STYLUS 2
+enum/member fuchsia.ui.input/PointerEventType.MOUSE 3
+enum/member fuchsia.ui.input/PointerEventType.STYLUS 1
+enum/member fuchsia.ui.input/PointerEventType.TOUCH 0
+strict enum fuchsia.ui.input/PointerEventType uint32
+struct/member fuchsia.ui.input/Range.max int32
+struct/member fuchsia.ui.input/Range.min int32
+struct fuchsia.ui.input/Range
+struct/member fuchsia.ui.input/RangeF.max float32
+struct/member fuchsia.ui.input/RangeF.min float32
+struct fuchsia.ui.input/RangeF
+struct/member fuchsia.ui.input/SendKeyboardInputCmd.compositor_id uint32
+struct/member fuchsia.ui.input/SendKeyboardInputCmd.keyboard_event fuchsia.ui.input/KeyboardEvent
+struct fuchsia.ui.input/SendKeyboardInputCmd
+struct/member fuchsia.ui.input/SendPointerInputCmd.compositor_id uint32
+struct/member fuchsia.ui.input/SendPointerInputCmd.pointer_event fuchsia.ui.input/PointerEvent
+struct fuchsia.ui.input/SendPointerInputCmd
+struct/member fuchsia.ui.input/SensorDescriptor.fifo_max_event_count uint32
+struct/member fuchsia.ui.input/SensorDescriptor.loc fuchsia.ui.input/SensorLocation
+struct/member fuchsia.ui.input/SensorDescriptor.max_sampling_freq uint32
+struct/member fuchsia.ui.input/SensorDescriptor.min_sampling_freq uint32
+struct/member fuchsia.ui.input/SensorDescriptor.phys_max int32
+struct/member fuchsia.ui.input/SensorDescriptor.phys_min int32
+struct/member fuchsia.ui.input/SensorDescriptor.type fuchsia.ui.input/SensorType
+struct fuchsia.ui.input/SensorDescriptor
+enum/member fuchsia.ui.input/SensorLocation.BASE 1
+enum/member fuchsia.ui.input/SensorLocation.LID 2
+enum/member fuchsia.ui.input/SensorLocation.UNKNOWN 0
+strict enum fuchsia.ui.input/SensorLocation uint32
+union/member fuchsia.ui.input/SensorReport.scalar uint16
+union/member fuchsia.ui.input/SensorReport.vector array<int16,3>
+strict union fuchsia.ui.input/SensorReport
+enum/member fuchsia.ui.input/SensorType.ACCELEROMETER 0
+enum/member fuchsia.ui.input/SensorType.GYROSCOPE 1
+enum/member fuchsia.ui.input/SensorType.LIGHTMETER 3
+enum/member fuchsia.ui.input/SensorType.MAGNETOMETER 2
+strict enum fuchsia.ui.input/SensorType uint32
+struct/member fuchsia.ui.input/SetHardKeyboardDeliveryCmd.delivery_request bool
+struct fuchsia.ui.input/SetHardKeyboardDeliveryCmd
+struct/member fuchsia.ui.input/SetParallelDispatchCmd.parallel_dispatch bool
+struct fuchsia.ui.input/SetParallelDispatchCmd
+struct/member fuchsia.ui.input/StylusDescriptor.buttons uint32
+struct/member fuchsia.ui.input/StylusDescriptor.is_invertible bool false
+struct/member fuchsia.ui.input/StylusDescriptor.pressure box<fuchsia.ui.input/Axis>
+struct/member fuchsia.ui.input/StylusDescriptor.x fuchsia.ui.input/Axis
+struct/member fuchsia.ui.input/StylusDescriptor.y fuchsia.ui.input/Axis
+struct fuchsia.ui.input/StylusDescriptor
+struct/member fuchsia.ui.input/StylusReport.in_range bool
+struct/member fuchsia.ui.input/StylusReport.is_in_contact bool
+struct/member fuchsia.ui.input/StylusReport.is_inverted bool
+struct/member fuchsia.ui.input/StylusReport.pressed_buttons uint32
+struct/member fuchsia.ui.input/StylusReport.pressure uint32
+struct/member fuchsia.ui.input/StylusReport.x int32
+struct/member fuchsia.ui.input/StylusReport.y int32
+struct fuchsia.ui.input/StylusReport
+enum/member fuchsia.ui.input/TextAffinity.DOWNSTREAM 1
+enum/member fuchsia.ui.input/TextAffinity.UPSTREAM 0
+strict enum fuchsia.ui.input/TextAffinity uint32
+struct/member fuchsia.ui.input/TextInputState.composing fuchsia.ui.input/TextRange
+struct/member fuchsia.ui.input/TextInputState.revision uint32
+struct/member fuchsia.ui.input/TextInputState.selection fuchsia.ui.input/TextSelection
+struct/member fuchsia.ui.input/TextInputState.text string
+struct fuchsia.ui.input/TextInputState
+struct/member fuchsia.ui.input/TextRange.end int64 -1
+struct/member fuchsia.ui.input/TextRange.start int64 -1
+struct fuchsia.ui.input/TextRange
+struct/member fuchsia.ui.input/TextSelection.affinity fuchsia.ui.input/TextAffinity
+struct/member fuchsia.ui.input/TextSelection.base int64
+struct/member fuchsia.ui.input/TextSelection.extent int64
+struct fuchsia.ui.input/TextSelection
+struct/member fuchsia.ui.input/Touch.finger_id uint32
+struct/member fuchsia.ui.input/Touch.height uint32
+struct/member fuchsia.ui.input/Touch.width uint32
+struct/member fuchsia.ui.input/Touch.x int32
+struct/member fuchsia.ui.input/Touch.y int32
+struct fuchsia.ui.input/Touch
+struct/member fuchsia.ui.input/TouchscreenDescriptor.max_finger_id uint32
+struct/member fuchsia.ui.input/TouchscreenDescriptor.x fuchsia.ui.input/Axis
+struct/member fuchsia.ui.input/TouchscreenDescriptor.y fuchsia.ui.input/Axis
+struct fuchsia.ui.input/TouchscreenDescriptor
+struct/member fuchsia.ui.input/TouchscreenReport.touches vector<fuchsia.ui.input/Touch>
+struct fuchsia.ui.input/TouchscreenReport
+const fuchsia.ui.input/kCameraDisable uint32 32
+const fuchsia.ui.input/kMicMute uint32 4
+const fuchsia.ui.input/kModifierAlt uint32 96
+const fuchsia.ui.input/kModifierCapsLock uint32 1
+const fuchsia.ui.input/kModifierControl uint32 24
+const fuchsia.ui.input/kModifierLeftAlt uint32 32
+const fuchsia.ui.input/kModifierLeftControl uint32 8
+const fuchsia.ui.input/kModifierLeftShift uint32 2
+const fuchsia.ui.input/kModifierLeftSuper uint32 128
+const fuchsia.ui.input/kModifierNone uint32 0
+const fuchsia.ui.input/kModifierRightAlt uint32 64
+const fuchsia.ui.input/kModifierRightControl uint32 16
+const fuchsia.ui.input/kModifierRightShift uint32 4
+const fuchsia.ui.input/kModifierRightSuper uint32 256
+const fuchsia.ui.input/kModifierShift uint32 6
+const fuchsia.ui.input/kModifierSuper uint32 384
+const fuchsia.ui.input/kMouseButtonPrimary uint32 1
+const fuchsia.ui.input/kMouseButtonSecondary uint32 2
+const fuchsia.ui.input/kMouseButtonTertiary uint32 4
+const fuchsia.ui.input/kMousePrimaryButton uint32 1
+const fuchsia.ui.input/kMouseSecondaryButton uint32 2
+const fuchsia.ui.input/kMouseTertiaryButton uint32 4
+const fuchsia.ui.input/kPause uint32 16
+const fuchsia.ui.input/kReset uint32 8
+const fuchsia.ui.input/kStylusBarrel uint32 1
+const fuchsia.ui.input/kStylusPrimaryButton uint32 1
+const fuchsia.ui.input/kStylusSecondaryButton uint32 2
+const fuchsia.ui.input/kVolumeDown uint32 2
+const fuchsia.ui.input/kVolumeUp uint32 1
+library fuchsia.ui.input

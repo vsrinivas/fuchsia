@@ -1,0 +1,12 @@
+protocol/member fuchsia.hardware.i2cimpl/I2cImpl.GetBusBase() -> (uint32 base)
+protocol/member fuchsia.hardware.i2cimpl/I2cImpl.GetBusCount() -> (uint32 count)
+protocol/member fuchsia.hardware.i2cimpl/I2cImpl.GetMaxTransferSize(uint32 bus_id) -> (int32 s,uint64 size)
+protocol/member fuchsia.hardware.i2cimpl/I2cImpl.SetBitrate(uint32 bus_id,uint32 bitrate) -> (int32 s)
+protocol/member fuchsia.hardware.i2cimpl/I2cImpl.Transact(uint32 bus_id,vector<fuchsia.hardware.i2cimpl/I2cImplOp> op) -> (int32 status)
+protocol fuchsia.hardware.i2cimpl/I2cImpl
+struct/member fuchsia.hardware.i2cimpl/I2cImplOp.address uint16
+struct/member fuchsia.hardware.i2cimpl/I2cImplOp.data vector<uint8>
+struct/member fuchsia.hardware.i2cimpl/I2cImplOp.is_read bool
+struct/member fuchsia.hardware.i2cimpl/I2cImplOp.stop bool
+struct fuchsia.hardware.i2cimpl/I2cImplOp
+library fuchsia.hardware.i2cimpl

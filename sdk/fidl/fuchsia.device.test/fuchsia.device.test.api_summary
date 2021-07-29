@@ -1,0 +1,17 @@
+const fuchsia.device.test/CONTROL_DEVICE string "/dev/test/test"
+protocol/member fuchsia.device.test/Device.Destroy()
+protocol/member fuchsia.device.test/Device.RunTests() -> (int32 status,fuchsia.device.test/TestReport report)
+protocol/member fuchsia.device.test/Device.SetChannel(zx/handle:CHANNEL chan)
+protocol/member fuchsia.device.test/Device.SetOutputSocket(zx/handle:SOCKET sock)
+protocol fuchsia.device.test/Device
+const fuchsia.device.test/MAX_DEVICE_NAME_LEN uint32 31
+const fuchsia.device.test/MAX_DEVICE_PATH_LEN uint32 1024
+protocol/member fuchsia.device.test/RootDevice.CreateDevice(string:31 name,zx/handle:<CHANNEL,optional> device_request) -> (int32 status,string:<1024,optional> path)
+protocol fuchsia.device.test/RootDevice
+protocol/member fuchsia.device.test/Test.RunTests() -> (int32 status,fuchsia.device.test/TestReport report)
+protocol fuchsia.device.test/Test
+struct/member fuchsia.device.test/TestReport.failure_count uint32
+struct/member fuchsia.device.test/TestReport.success_count uint32
+struct/member fuchsia.device.test/TestReport.test_count uint32
+struct fuchsia.device.test/TestReport
+library fuchsia.device.test

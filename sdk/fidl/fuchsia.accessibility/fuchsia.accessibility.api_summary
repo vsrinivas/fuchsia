@@ -1,0 +1,20 @@
+enum/member fuchsia.accessibility/ColorCorrectionMode.CORRECT_DEUTERANOMALY 2
+enum/member fuchsia.accessibility/ColorCorrectionMode.CORRECT_PROTANOMALY 1
+enum/member fuchsia.accessibility/ColorCorrectionMode.CORRECT_TRITANOMALY 3
+enum/member fuchsia.accessibility/ColorCorrectionMode.DISABLED 0
+strict enum fuchsia.accessibility/ColorCorrectionMode uint32
+protocol/member fuchsia.accessibility/ColorTransform.RegisterColorTransformHandler(client_end:fuchsia.accessibility/ColorTransformHandler handler)
+protocol fuchsia.accessibility/ColorTransform
+table/member fuchsia.accessibility/ColorTransformConfiguration.color_adjustment_matrix array<float32,9>
+table/member fuchsia.accessibility/ColorTransformConfiguration.color_adjustment_post_offset array<float32,3>
+table/member fuchsia.accessibility/ColorTransformConfiguration.color_adjustment_pre_offset array<float32,3>
+table/member fuchsia.accessibility/ColorTransformConfiguration.color_correction fuchsia.accessibility/ColorCorrectionMode
+table/member fuchsia.accessibility/ColorTransformConfiguration.color_inversion_enabled bool
+table fuchsia.accessibility/ColorTransformConfiguration
+protocol/member fuchsia.accessibility/ColorTransformHandler.SetColorTransformConfiguration(fuchsia.accessibility/ColorTransformConfiguration configuration) -> ()
+protocol fuchsia.accessibility/ColorTransformHandler
+protocol/member fuchsia.accessibility/MagnificationHandler.SetClipSpaceTransform(float32 x,float32 y,float32 scale) -> ()
+protocol fuchsia.accessibility/MagnificationHandler
+protocol/member fuchsia.accessibility/Magnifier.RegisterHandler(client_end:fuchsia.accessibility/MagnificationHandler handler)
+protocol fuchsia.accessibility/Magnifier
+library fuchsia.accessibility

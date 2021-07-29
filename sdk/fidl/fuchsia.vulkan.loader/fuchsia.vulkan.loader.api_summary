@@ -1,0 +1,8 @@
+bits/member fuchsia.vulkan.loader/Features.CONNECT_TO_DEVICE_FS 2
+bits/member fuchsia.vulkan.loader/Features.GET 1
+flexible bits fuchsia.vulkan.loader/Features uint32
+protocol/member fuchsia.vulkan.loader/Loader.ConnectToDeviceFs(zx/handle:CHANNEL channel)
+protocol/member fuchsia.vulkan.loader/Loader.Get(string:64 name) -> (zx/handle:<VMO,optional> lib)
+protocol/member fuchsia.vulkan.loader/Loader.GetSupportedFeatures() -> (fuchsia.vulkan.loader/Features features)
+protocol fuchsia.vulkan.loader/Loader
+library fuchsia.vulkan.loader

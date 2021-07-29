@@ -1,0 +1,8 @@
+const fuchsia.component.types/MAX_CHILD_NAME_LENGTH uint32 100
+const fuchsia.component.types/MAX_COLLECTION_NAME_LENGTH uint32 100
+const fuchsia.component.types/MAX_FACET_NAME_LENGTH uint32 100
+const fuchsia.component.types/MAX_PATH_LENGTH uint32 1024
+const fuchsia.component.types/MAX_RUNNER_NAME_LENGTH uint32 100
+const fuchsia.component.types/MAX_STORAGE_NAME_LENGTH uint32 100
+const fuchsia.component.types/MAX_URL_LENGTH uint32 4096
+library fuchsia.component.types

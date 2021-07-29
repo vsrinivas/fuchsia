@@ -1,0 +1,22 @@
+struct/member fuchsia.hardware.ramdisk/BlockWriteCounts.failed uint64
+struct/member fuchsia.hardware.ramdisk/BlockWriteCounts.received uint64
+struct/member fuchsia.hardware.ramdisk/BlockWriteCounts.successful uint64
+struct fuchsia.hardware.ramdisk/BlockWriteCounts
+struct/member fuchsia.hardware.ramdisk/GUID.value array<uint8,16>
+struct fuchsia.hardware.ramdisk/GUID
+const fuchsia.hardware.ramdisk/GUID_LEN uint32 16
+const fuchsia.hardware.ramdisk/MAX_NAME_LENGTH uint32 32
+const fuchsia.hardware.ramdisk/RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE uint32 2
+const fuchsia.hardware.ramdisk/RAMDISK_FLAG_DISCARD_RANDOM uint32 4
+const fuchsia.hardware.ramdisk/RAMDISK_FLAG_RESUME_ON_WAKE uint32 1
+protocol/member fuchsia.hardware.ramdisk/Ramdisk.GetBlockCounts() -> (int32 s,box<fuchsia.hardware.ramdisk/BlockWriteCounts> counts)
+protocol/member fuchsia.hardware.ramdisk/Ramdisk.Grow(uint64 new_size) -> (int32 s)
+protocol/member fuchsia.hardware.ramdisk/Ramdisk.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.ramdisk/Ramdisk.SleepAfter(uint64 count) -> (int32 s)
+protocol/member fuchsia.hardware.ramdisk/Ramdisk.Wake() -> (int32 s)
+protocol fuchsia.hardware.ramdisk/Ramdisk
+protocol/member fuchsia.hardware.ramdisk/RamdiskController.Create(uint64 block_size,uint64 block_count,box<fuchsia.hardware.ramdisk/GUID> type_guid) -> (int32 s,string:<32,optional> name)
+protocol/member fuchsia.hardware.ramdisk/RamdiskController.CreateFromVmo(zx/handle:VMO vmo) -> (int32 s,string:<32,optional> name)
+protocol/member fuchsia.hardware.ramdisk/RamdiskController.CreateFromVmoWithBlockSize(zx/handle:VMO vmo,uint64 block_size) -> (int32 s,string:<32,optional> name)
+protocol fuchsia.hardware.ramdisk/RamdiskController
+library fuchsia.hardware.ramdisk

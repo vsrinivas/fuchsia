@@ -1,0 +1,50 @@
+protocol/member fuchsia.hardware.thermal/Device.GetDeviceInfo() -> (int32 status,box<fuchsia.hardware.thermal/ThermalDeviceInfo> info)
+protocol/member fuchsia.hardware.thermal/Device.GetDvfsInfo(fuchsia.hardware.thermal/PowerDomain power_domain) -> (int32 status,box<fuchsia.hardware.thermal/OperatingPoint> info)
+protocol/member fuchsia.hardware.thermal/Device.GetDvfsOperatingPoint(fuchsia.hardware.thermal/PowerDomain power_domain) -> (int32 status,uint16 op_idx)
+protocol/member fuchsia.hardware.thermal/Device.GetFanLevel() -> (int32 status,uint32 fan_level)
+protocol/member fuchsia.hardware.thermal/Device.GetInfo() -> (int32 status,box<fuchsia.hardware.thermal/ThermalInfo> info)
+protocol/member fuchsia.hardware.thermal/Device.GetStateChangeEvent() -> (int32 status,zx/handle:<EVENT,optional> handle)
+protocol/member fuchsia.hardware.thermal/Device.GetStateChangePort() -> (int32 status,zx/handle:<PORT,optional> handle)
+protocol/member fuchsia.hardware.thermal/Device.GetTemperatureCelsius() -> (int32 status,float32 temp)
+protocol/member fuchsia.hardware.thermal/Device.SetDvfsOperatingPoint(uint16 op_idx,fuchsia.hardware.thermal/PowerDomain power_domain) -> (int32 status)
+protocol/member fuchsia.hardware.thermal/Device.SetFanLevel(uint32 fan_level) -> (int32 status)
+protocol/member fuchsia.hardware.thermal/Device.SetTripCelsius(uint32 id,float32 temp) -> (int32 status)
+protocol fuchsia.hardware.thermal/Device
+const fuchsia.hardware.thermal/MAX_DVFS_DOMAINS uint32 2
+const fuchsia.hardware.thermal/MAX_DVFS_OPPS uint32 16
+const fuchsia.hardware.thermal/MAX_TRIP_POINTS uint32 16
+struct/member fuchsia.hardware.thermal/OperatingPoint.count uint32
+struct/member fuchsia.hardware.thermal/OperatingPoint.latency uint32
+struct/member fuchsia.hardware.thermal/OperatingPoint.opp array<fuchsia.hardware.thermal/OperatingPointEntry,16>
+struct fuchsia.hardware.thermal/OperatingPoint
+struct/member fuchsia.hardware.thermal/OperatingPointEntry.freq_hz uint32
+struct/member fuchsia.hardware.thermal/OperatingPointEntry.volt_uv uint32
+struct fuchsia.hardware.thermal/OperatingPointEntry
+enum/member fuchsia.hardware.thermal/PowerDomain.BIG_CLUSTER_POWER_DOMAIN 0
+enum/member fuchsia.hardware.thermal/PowerDomain.LITTLE_CLUSTER_POWER_DOMAIN 1
+strict enum fuchsia.hardware.thermal/PowerDomain uint32
+const fuchsia.hardware.thermal/THERMAL_STATE_NORMAL uint32 0
+const fuchsia.hardware.thermal/THERMAL_STATE_TRIP_VIOLATION uint32 1
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.active_cooling bool
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.big_little bool
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.critical_temp_celsius float32
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.gpu_throttling bool
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.num_trip_points uint32
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.opps array<fuchsia.hardware.thermal/OperatingPoint,2>
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.passive_cooling bool
+struct/member fuchsia.hardware.thermal/ThermalDeviceInfo.trip_point_info array<fuchsia.hardware.thermal/ThermalTemperatureInfo,16>
+struct fuchsia.hardware.thermal/ThermalDeviceInfo
+struct/member fuchsia.hardware.thermal/ThermalInfo.active_trip array<float32,16>
+struct/member fuchsia.hardware.thermal/ThermalInfo.critical_temp_celsius float32
+struct/member fuchsia.hardware.thermal/ThermalInfo.max_trip_count uint32
+struct/member fuchsia.hardware.thermal/ThermalInfo.passive_temp_celsius float32
+struct/member fuchsia.hardware.thermal/ThermalInfo.state uint32
+struct fuchsia.hardware.thermal/ThermalInfo
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.big_cluster_dvfs_opp uint16
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.down_temp_celsius float32
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.fan_level uint32
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.gpu_clk_freq_source uint32
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.little_cluster_dvfs_opp uint16
+struct/member fuchsia.hardware.thermal/ThermalTemperatureInfo.up_temp_celsius float32
+struct fuchsia.hardware.thermal/ThermalTemperatureInfo
+library fuchsia.hardware.thermal

@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.activity.control/Control.SetState(fuchsia.ui.activity/State state)
+protocol fuchsia.ui.activity.control/Control
+library fuchsia.ui.activity.control

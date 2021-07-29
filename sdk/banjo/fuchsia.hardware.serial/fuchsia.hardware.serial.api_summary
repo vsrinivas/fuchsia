@@ -1,0 +1,25 @@
+const fuchsia.hardware.serial/SERIAL_DATA_BITS_5 uint32 0
+const fuchsia.hardware.serial/SERIAL_DATA_BITS_6 uint32 1
+const fuchsia.hardware.serial/SERIAL_DATA_BITS_7 uint32 2
+const fuchsia.hardware.serial/SERIAL_DATA_BITS_8 uint32 3
+const fuchsia.hardware.serial/SERIAL_DATA_BITS_MASK uint32 3
+const fuchsia.hardware.serial/SERIAL_FLOW_CTRL_CTS_RTS uint32 32
+const fuchsia.hardware.serial/SERIAL_FLOW_CTRL_MASK uint32 32
+const fuchsia.hardware.serial/SERIAL_FLOW_CTRL_NONE uint32 0
+const fuchsia.hardware.serial/SERIAL_PARITY_EVEN uint32 8
+const fuchsia.hardware.serial/SERIAL_PARITY_MASK uint32 24
+const fuchsia.hardware.serial/SERIAL_PARITY_NONE uint32 0
+const fuchsia.hardware.serial/SERIAL_PARITY_ODD uint32 16
+const fuchsia.hardware.serial/SERIAL_SET_BAUD_RATE_ONLY uint32 2147483648
+const fuchsia.hardware.serial/SERIAL_STOP_BITS_1 uint32 0
+const fuchsia.hardware.serial/SERIAL_STOP_BITS_2 uint32 4
+const fuchsia.hardware.serial/SERIAL_STOP_BITS_MASK uint32 4
+protocol/member fuchsia.hardware.serial/Serial.Config(uint32 baud_rate,uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.serial/Serial.GetInfo() -> (int32 s,fuchsia.hardware.serial/SerialPortInfo info)
+protocol/member fuchsia.hardware.serial/Serial.OpenSocket() -> (int32 s,zx/handle:SOCKET handle)
+protocol fuchsia.hardware.serial/Serial
+struct/member fuchsia.hardware.serial/SerialPortInfo.serial_class uint32
+struct/member fuchsia.hardware.serial/SerialPortInfo.serial_pid uint32
+struct/member fuchsia.hardware.serial/SerialPortInfo.serial_vid uint32
+struct fuchsia.hardware.serial/SerialPortInfo
+library fuchsia.hardware.serial

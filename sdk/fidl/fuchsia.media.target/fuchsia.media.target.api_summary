@@ -1,0 +1,72 @@
+bits/member fuchsia.media.target/CapabilityFlags.MULTI_TARGET_PLAYBACK 4
+bits/member fuchsia.media.target/CapabilityFlags.TRANSFER_FROM 2
+bits/member fuchsia.media.target/CapabilityFlags.TRANSFER_TO 1
+bits/member fuchsia.media.target/CapabilityFlags.VIDEO 8
+strict bits fuchsia.media.target/CapabilityFlags uint64
+table/member fuchsia.media.target/Description.capability_flags fuchsia.media.target/CapabilityFlags
+table/member fuchsia.media.target/Description.display_name string:200
+table/member fuchsia.media.target/Description.metadata fuchsia.media/Metadata
+table/member fuchsia.media.target/Description.target_id uint64
+table fuchsia.media.target/Description
+protocol/member fuchsia.media.target/Discovery.BindGroupTarget(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)
+protocol/member fuchsia.media.target/Discovery.BindTarget(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)
+protocol/member fuchsia.media.target/Discovery.ConnectToTarget(uint64 target_id,server_end:fuchsia.media.target/Target target_request)
+protocol/member fuchsia.media.target/Discovery.WatchSessionBindings() -> (fuchsia.media.target/SessionBindingsWatchEvent event)
+protocol/member fuchsia.media.target/Discovery.WatchTargets() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)
+protocol fuchsia.media.target/Discovery
+enum/member fuchsia.media.target/Error.CANNOT_BE_GROUPED 2
+enum/member fuchsia.media.target/Error.MULTI_TARGET_PLAYBACK_UNSUPPORTED 6
+enum/member fuchsia.media.target/Error.NOT_A_GROUP 0
+enum/member fuchsia.media.target/Error.NOT_MEMBER_OF_GROUP 3
+enum/member fuchsia.media.target/Error.TRANSFER_FROM_TARGET_UNSUPPORTED 4
+enum/member fuchsia.media.target/Error.TRANSFER_TO_TARGET_UNSUPPORTED 5
+enum/member fuchsia.media.target/Error.UNKNOWN_ON_DOMAIN 1
+strict enum fuchsia.media.target/Error uint32
+protocol/member fuchsia.media.target/Group.WatchTargets() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)
+protocol fuchsia.media.target/Group
+protocol/member fuchsia.media.target/GroupEditor.AddTarget(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)
+protocol/member fuchsia.media.target/GroupEditor.RemoveTarget(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)
+protocol fuchsia.media.target/GroupEditor
+struct/member fuchsia.media.target/GroupEditor_AddTarget_Response.target_change box<fuchsia.media.target/TargetChange>
+struct fuchsia.media.target/GroupEditor_AddTarget_Response
+union/member fuchsia.media.target/GroupEditor_AddTarget_Result.err fuchsia.media.target/Error
+union/member fuchsia.media.target/GroupEditor_AddTarget_Result.response fuchsia.media.target/GroupEditor_AddTarget_Response
+strict union fuchsia.media.target/GroupEditor_AddTarget_Result
+struct/member fuchsia.media.target/GroupEditor_RemoveTarget_Response.target_change box<fuchsia.media.target/TargetChange>
+struct fuchsia.media.target/GroupEditor_RemoveTarget_Response
+union/member fuchsia.media.target/GroupEditor_RemoveTarget_Result.err fuchsia.media.target/Error
+union/member fuchsia.media.target/GroupEditor_RemoveTarget_Result.response fuchsia.media.target/GroupEditor_RemoveTarget_Response
+strict union fuchsia.media.target/GroupEditor_RemoveTarget_Result
+protocol/member fuchsia.media.target/Selector.BindGroupTarget(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)
+protocol/member fuchsia.media.target/Selector.BindTarget(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)
+protocol fuchsia.media.target/Selector
+struct/member fuchsia.media.target/Selector_BindGroupTarget_Response.target_id uint64
+struct fuchsia.media.target/Selector_BindGroupTarget_Response
+union/member fuchsia.media.target/Selector_BindGroupTarget_Result.err fuchsia.media.target/Error
+union/member fuchsia.media.target/Selector_BindGroupTarget_Result.response fuchsia.media.target/Selector_BindGroupTarget_Response
+strict union fuchsia.media.target/Selector_BindGroupTarget_Result
+struct fuchsia.media.target/Selector_BindTarget_Response
+union/member fuchsia.media.target/Selector_BindTarget_Result.err fuchsia.media.target/Error
+union/member fuchsia.media.target/Selector_BindTarget_Result.response fuchsia.media.target/Selector_BindTarget_Response
+strict union fuchsia.media.target/Selector_BindTarget_Result
+struct/member fuchsia.media.target/SessionBinding.session_id uint64
+struct/member fuchsia.media.target/SessionBinding.target_id uint64
+struct fuchsia.media.target/SessionBinding
+table/member fuchsia.media.target/SessionBindingsWatchEvent.removed vector<fuchsia.media.target/SessionBinding>
+table/member fuchsia.media.target/SessionBindingsWatchEvent.updated vector<fuchsia.media.target/SessionBinding>
+table fuchsia.media.target/SessionBindingsWatchEvent
+protocol/member fuchsia.media.target/Target.AddTarget(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)
+protocol/member fuchsia.media.target/Target.BindMemberVolumeControl(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.target/Target.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.target/Target.RemoveTarget(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)
+protocol/member fuchsia.media.target/Target.WatchTargets() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)
+protocol fuchsia.media.target/Target
+struct/member fuchsia.media.target/TargetChange.new_target_id uint64
+struct fuchsia.media.target/TargetChange
+table/member fuchsia.media.target/TargetsWatchEvent.removed vector<uint64>
+table/member fuchsia.media.target/TargetsWatchEvent.updated vector<fuchsia.media.target/Description>
+table fuchsia.media.target/TargetsWatchEvent
+protocol/member fuchsia.media.target/VolumeControl.BindMemberVolumeControl(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media.target/VolumeControl.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol fuchsia.media.target/VolumeControl
+library fuchsia.media.target

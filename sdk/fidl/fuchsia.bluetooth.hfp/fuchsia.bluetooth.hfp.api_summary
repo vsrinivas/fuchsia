@@ -1,0 +1,91 @@
+protocol/member fuchsia.bluetooth.hfp/Call.RequestActive()
+protocol/member fuchsia.bluetooth.hfp/Call.RequestHold()
+protocol/member fuchsia.bluetooth.hfp/Call.RequestTerminate()
+protocol/member fuchsia.bluetooth.hfp/Call.RequestTransferAudio()
+protocol/member fuchsia.bluetooth.hfp/Call.SendDtmfCode(fuchsia.bluetooth.hfp/DtmfCode code) -> (fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result result)
+protocol/member fuchsia.bluetooth.hfp/Call.WatchState() -> (fuchsia.bluetooth.hfp/CallState state)
+protocol fuchsia.bluetooth.hfp/Call
+union/member fuchsia.bluetooth.hfp/CallAction.dial_from_location string:256
+union/member fuchsia.bluetooth.hfp/CallAction.dial_from_number string:256
+union/member fuchsia.bluetooth.hfp/CallAction.redial_last fuchsia.bluetooth.hfp/RedialLast
+union/member fuchsia.bluetooth.hfp/CallAction.transfer_active fuchsia.bluetooth.hfp/TransferActive
+strict union fuchsia.bluetooth.hfp/CallAction
+enum/member fuchsia.bluetooth.hfp/CallDirection.MOBILE_ORIGINATED 1
+enum/member fuchsia.bluetooth.hfp/CallDirection.MOBILE_TERMINATED 2
+strict enum fuchsia.bluetooth.hfp/CallDirection uint32
+protocol/member fuchsia.bluetooth.hfp/CallManager.PeerConnected(fuchsia.bluetooth/PeerId id,server_end:fuchsia.bluetooth.hfp/PeerHandler handle) -> ()
+protocol fuchsia.bluetooth.hfp/CallManager
+enum/member fuchsia.bluetooth.hfp/CallState.INCOMING_RINGING 3
+enum/member fuchsia.bluetooth.hfp/CallState.INCOMING_WAITING 4
+enum/member fuchsia.bluetooth.hfp/CallState.ONGOING_ACTIVE 6
+enum/member fuchsia.bluetooth.hfp/CallState.ONGOING_HELD 5
+enum/member fuchsia.bluetooth.hfp/CallState.OUTGOING_ALERTING 2
+enum/member fuchsia.bluetooth.hfp/CallState.OUTGOING_DIALING 1
+enum/member fuchsia.bluetooth.hfp/CallState.TERMINATED 7
+enum/member fuchsia.bluetooth.hfp/CallState.TRANSFERRED_TO_AG 8
+flexible enum fuchsia.bluetooth.hfp/CallState uint32
+struct fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response
+union/member fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.err int32
+union/member fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.response fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response
+strict union fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result
+enum/member fuchsia.bluetooth.hfp/DtmfCode.A 65
+enum/member fuchsia.bluetooth.hfp/DtmfCode.ASTERISK 42
+enum/member fuchsia.bluetooth.hfp/DtmfCode.B 66
+enum/member fuchsia.bluetooth.hfp/DtmfCode.C 67
+enum/member fuchsia.bluetooth.hfp/DtmfCode.D 68
+enum/member fuchsia.bluetooth.hfp/DtmfCode.EIGHT 56
+enum/member fuchsia.bluetooth.hfp/DtmfCode.FIVE 53
+enum/member fuchsia.bluetooth.hfp/DtmfCode.FOUR 52
+enum/member fuchsia.bluetooth.hfp/DtmfCode.NINE 57
+enum/member fuchsia.bluetooth.hfp/DtmfCode.NUMBER_SIGN 35
+enum/member fuchsia.bluetooth.hfp/DtmfCode.ONE 49
+enum/member fuchsia.bluetooth.hfp/DtmfCode.SEVEN 55
+enum/member fuchsia.bluetooth.hfp/DtmfCode.SIX 54
+enum/member fuchsia.bluetooth.hfp/DtmfCode.THREE 51
+enum/member fuchsia.bluetooth.hfp/DtmfCode.TWO 50
+enum/member fuchsia.bluetooth.hfp/DtmfCode.ZERO 48
+strict enum fuchsia.bluetooth.hfp/DtmfCode uint8
+protocol/member fuchsia.bluetooth.hfp/HeadsetGain.SetMicrophoneGain(uint8 requested)
+protocol/member fuchsia.bluetooth.hfp/HeadsetGain.SetSpeakerGain(uint8 requested)
+protocol/member fuchsia.bluetooth.hfp/HeadsetGain.WatchMicrophoneGain() -> (uint8 gain)
+protocol/member fuchsia.bluetooth.hfp/HeadsetGain.WatchSpeakerGain() -> (uint8 gain)
+protocol fuchsia.bluetooth.hfp/HeadsetGain
+protocol/member fuchsia.bluetooth.hfp/Hfp.Register(client_end:fuchsia.bluetooth.hfp/CallManager manager)
+protocol fuchsia.bluetooth.hfp/Hfp
+const fuchsia.bluetooth.hfp/MAX_PICONET_SIZE uint64 8
+table/member fuchsia.bluetooth.hfp/NetworkInformation.roaming bool
+table/member fuchsia.bluetooth.hfp/NetworkInformation.service_available bool
+table/member fuchsia.bluetooth.hfp/NetworkInformation.signal_strength fuchsia.bluetooth.hfp/SignalStrength
+table fuchsia.bluetooth.hfp/NetworkInformation
+table/member fuchsia.bluetooth.hfp/NextCall.call client_end:fuchsia.bluetooth.hfp/Call
+table/member fuchsia.bluetooth.hfp/NextCall.direction fuchsia.bluetooth.hfp/CallDirection
+table/member fuchsia.bluetooth.hfp/NextCall.remote string:256
+table/member fuchsia.bluetooth.hfp/NextCall.state fuchsia.bluetooth.hfp/CallState
+resource table fuchsia.bluetooth.hfp/NextCall
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.GainControl(client_end:fuchsia.bluetooth.hfp/HeadsetGain control)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.QueryOperator() -> (string:<16,optional> operator)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.ReportHeadsetBatteryLevel(uint8 level)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.RequestOutgoingCall(fuchsia.bluetooth.hfp/CallAction action) -> (fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result result)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.SetNrecMode(bool enabled) -> (fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result result)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.SubscriberNumberInformation() -> (vector<string:256>:128 numbers)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.WatchNetworkInformation() -> (fuchsia.bluetooth.hfp/NetworkInformation update)
+protocol/member fuchsia.bluetooth.hfp/PeerHandler.WatchNextCall() -> (fuchsia.bluetooth.hfp/NextCall call)
+protocol fuchsia.bluetooth.hfp/PeerHandler
+struct fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response
+union/member fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.err int32
+union/member fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.response fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response
+strict union fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result
+struct fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response
+union/member fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.err int32
+union/member fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.response fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response
+strict union fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result
+struct fuchsia.bluetooth.hfp/RedialLast
+enum/member fuchsia.bluetooth.hfp/SignalStrength.HIGH 5
+enum/member fuchsia.bluetooth.hfp/SignalStrength.LOW 3
+enum/member fuchsia.bluetooth.hfp/SignalStrength.MEDIUM 4
+enum/member fuchsia.bluetooth.hfp/SignalStrength.NONE 1
+enum/member fuchsia.bluetooth.hfp/SignalStrength.VERY_HIGH 6
+enum/member fuchsia.bluetooth.hfp/SignalStrength.VERY_LOW 2
+strict enum fuchsia.bluetooth.hfp/SignalStrength int8
+struct fuchsia.bluetooth.hfp/TransferActive
+library fuchsia.bluetooth.hfp

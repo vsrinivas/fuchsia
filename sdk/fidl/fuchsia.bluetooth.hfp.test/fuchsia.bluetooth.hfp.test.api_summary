@@ -1,0 +1,6 @@
+table/member fuchsia.bluetooth.hfp.test/ConnectionBehavior.autoconnect bool
+table fuchsia.bluetooth.hfp.test/ConnectionBehavior
+protocol/member fuchsia.bluetooth.hfp.test/HfpTest.BatteryIndicator(uint8 level)
+protocol/member fuchsia.bluetooth.hfp.test/HfpTest.SetConnectionBehavior(fuchsia.bluetooth.hfp.test/ConnectionBehavior behavior)
+protocol fuchsia.bluetooth.hfp.test/HfpTest
+library fuchsia.bluetooth.hfp.test

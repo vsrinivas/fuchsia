@@ -1,0 +1,30 @@
+struct/member fuchsia.modular.testing/ComponentService.name string
+struct/member fuchsia.modular.testing/ComponentService.url string:2083
+struct fuchsia.modular.testing/ComponentService
+table/member fuchsia.modular.testing/EnvironmentServicesSpec.service_dir zx/handle:CHANNEL
+table/member fuchsia.modular.testing/EnvironmentServicesSpec.services_from_components vector<fuchsia.modular.testing/ComponentService>
+resource table fuchsia.modular.testing/EnvironmentServicesSpec
+table/member fuchsia.modular.testing/InterceptSpec.component_url string:2083
+table/member fuchsia.modular.testing/InterceptSpec.extra_cmx_contents fuchsia.mem/Buffer
+resource table fuchsia.modular.testing/InterceptSpec
+protocol/member fuchsia.modular.testing/InterceptedComponent.Exit(int64 exit_code,fuchsia.sys/TerminationReason reason)
+protocol/member fuchsia.modular.testing/InterceptedComponent.OnKill -> ()
+protocol fuchsia.modular.testing/InterceptedComponent
+union/member fuchsia.modular.testing/ModularService.component_context server_end:fuchsia.modular/ComponentContext
+union/member fuchsia.modular.testing/ModularService.element_manager server_end:fuchsia.element/Manager
+union/member fuchsia.modular.testing/ModularService.puppet_master server_end:fuchsia.modular/PuppetMaster
+resource strict union fuchsia.modular.testing/ModularService
+protocol/member fuchsia.modular.testing/TestHarness.ConnectToEnvironmentService(string service_name,zx/handle:CHANNEL request)
+protocol/member fuchsia.modular.testing/TestHarness.ConnectToModularService(fuchsia.modular.testing/ModularService service)
+protocol/member fuchsia.modular.testing/TestHarness.OnNewComponent -> (fuchsia.sys/StartupInfo startup_info,client_end:fuchsia.modular.testing/InterceptedComponent intercepted_component)
+protocol/member fuchsia.modular.testing/TestHarness.ParseConfig(string config) -> (fuchsia.modular.session/BasemgrConfig basemgr_config,fuchsia.modular.session/SessionmgrConfig sessionmgr_config)
+protocol/member fuchsia.modular.testing/TestHarness.Run(fuchsia.modular.testing/TestHarnessSpec spec)
+protocol fuchsia.modular.testing/TestHarness
+table/member fuchsia.modular.testing/TestHarnessSpec.basemgr_config fuchsia.modular.session/BasemgrConfig
+table/member fuchsia.modular.testing/TestHarnessSpec.components_to_intercept vector<fuchsia.modular.testing/InterceptSpec>
+table/member fuchsia.modular.testing/TestHarnessSpec.env_services fuchsia.modular.testing/EnvironmentServicesSpec
+table/member fuchsia.modular.testing/TestHarnessSpec.env_services_to_inherit vector<string>
+table/member fuchsia.modular.testing/TestHarnessSpec.environment_suffix string
+table/member fuchsia.modular.testing/TestHarnessSpec.sessionmgr_config fuchsia.modular.session/SessionmgrConfig
+resource table fuchsia.modular.testing/TestHarnessSpec
+library fuchsia.modular.testing

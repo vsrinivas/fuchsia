@@ -1,0 +1,34 @@
+const fuchsia.hardware.pci/BASE_ADDRESS_COUNT uint32 6
+const fuchsia.hardware.pci/BASE_CONFIG_SIZE uint32 256
+struct/member fuchsia.hardware.pci/BaseAddress.address uint64
+struct/member fuchsia.hardware.pci/BaseAddress.id uint8
+struct/member fuchsia.hardware.pci/BaseAddress.is_64bit bool
+struct/member fuchsia.hardware.pci/BaseAddress.is_memory bool
+struct/member fuchsia.hardware.pci/BaseAddress.is_prefetchable bool
+struct/member fuchsia.hardware.pci/BaseAddress.size uint64
+struct fuchsia.hardware.pci/BaseAddress
+protocol/member fuchsia.hardware.pci/Bus.GetDevices() -> (vector<fuchsia.hardware.pci/Device>:64 devices)
+protocol/member fuchsia.hardware.pci/Bus.GetHostBridgeInfo() -> (fuchsia.hardware.pci/HostBridgeInfo info)
+protocol fuchsia.hardware.pci/Bus
+struct/member fuchsia.hardware.pci/Capability.id uint8
+struct/member fuchsia.hardware.pci/Capability.offset uint8
+struct fuchsia.hardware.pci/Capability
+struct/member fuchsia.hardware.pci/Device.base_addresses vector<fuchsia.hardware.pci/BaseAddress>:6
+struct/member fuchsia.hardware.pci/Device.bus_id uint8
+struct/member fuchsia.hardware.pci/Device.capabilities vector<fuchsia.hardware.pci/Capability>:32
+struct/member fuchsia.hardware.pci/Device.config vector<uint8>:256
+struct/member fuchsia.hardware.pci/Device.device_id uint8
+struct/member fuchsia.hardware.pci/Device.ext_capabilities vector<fuchsia.hardware.pci/ExtendedCapability>:32
+struct/member fuchsia.hardware.pci/Device.function_id uint8
+struct fuchsia.hardware.pci/Device
+struct/member fuchsia.hardware.pci/ExtendedCapability.id uint16
+struct/member fuchsia.hardware.pci/ExtendedCapability.offset uint16
+struct fuchsia.hardware.pci/ExtendedCapability
+struct/member fuchsia.hardware.pci/HostBridgeInfo.end_bus_number uint8
+struct/member fuchsia.hardware.pci/HostBridgeInfo.segment_group uint16
+struct/member fuchsia.hardware.pci/HostBridgeInfo.start_bus_number uint8
+struct fuchsia.hardware.pci/HostBridgeInfo
+const fuchsia.hardware.pci/MAX_CAPABILITIES uint32 32
+const fuchsia.hardware.pci/MAX_DEVICES uint32 64
+const fuchsia.hardware.pci/MAX_EXT_CAPABILITIES uint32 32
+library fuchsia.hardware.pci

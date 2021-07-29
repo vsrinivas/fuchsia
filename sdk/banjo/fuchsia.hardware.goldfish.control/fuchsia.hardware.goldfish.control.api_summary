@@ -1,0 +1,4 @@
+protocol/member fuchsia.hardware.goldfish.control/GoldfishControl.CreateSyncFence(zx/handle:EVENTPAIR event) -> (int32 ret)
+protocol/member fuchsia.hardware.goldfish.control/GoldfishControl.GetColorBuffer(zx/handle:VMO vmo) -> (int32 ret,uint32 cb)
+protocol fuchsia.hardware.goldfish.control/GoldfishControl
+library fuchsia.hardware.goldfish.control

@@ -1,0 +1,16 @@
+protocol/member fuchsia.hardware.usb.hci/UsbHci.CancelAll(uint32 device_id,uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.ConfigureHub(uint32 device_id,fuchsia.hardware.usb.descriptor/UsbSpeed speed,fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor desc,bool multi_tt) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.EnableEndpoint(uint32 device_id,fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor ep_desc,fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor ss_com_desc,bool enable) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.GetCurrentFrame() -> (uint64 frame)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.GetMaxDeviceCount() -> (uint64 count)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.GetMaxTransferSize(uint32 device_id,uint8 ep_address) -> (uint64 size)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.GetRequestSize() -> (uint64 size)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.HubDeviceAdded(uint32 device_id,uint32 port,fuchsia.hardware.usb.descriptor/UsbSpeed speed) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.HubDeviceRemoved(uint32 device_id,uint32 port) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.HubDeviceReset(uint32 device_id,uint32 port) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.RequestQueue(fuchsia.hardware.usb.request/UsbRequest usb_request,fuchsia.hardware.usb.request/UsbRequestCompleteCallback complete_cb) -> ()
+protocol/member fuchsia.hardware.usb.hci/UsbHci.ResetDevice(uint32 hub_address,uint32 device_id) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.ResetEndpoint(uint32 device_id,uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.hci/UsbHci.SetBusInterface(fuchsia.hardware.usb.bus/UsbBusInterface bus_intf) -> ()
+protocol fuchsia.hardware.usb.hci/UsbHci
+library fuchsia.hardware.usb.hci

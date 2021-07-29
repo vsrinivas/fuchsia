@@ -1,0 +1,125 @@
+protocol/member fuchsia.media.drm/ClearKey.AddDataStore(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)
+protocol/member fuchsia.media.drm/ClearKey.CreateContentDecryptionModule2(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)
+protocol/member fuchsia.media.drm/ClearKey.DestroyDataStoreAndConfirm(uint32 data_store_id) -> ()
+protocol/member fuchsia.media.drm/ClearKey.GetProperties() -> (fuchsia.media.drm/KeySystemProperties properties)
+protocol fuchsia.media.drm/ClearKey
+protocol/member fuchsia.media.drm/ContentDecryptionModule.CreateDecryptor(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)
+protocol/member fuchsia.media.drm/ContentDecryptionModule.CreateLicenseSession(fuchsia.media.drm/LicenseSessionType session_type,server_end:fuchsia.media.drm/LicenseSession license_session) -> (string:512 session_id)
+protocol/member fuchsia.media.drm/ContentDecryptionModule.GetKeyStatusForHdcpVersion(string:16 hdcp_version) -> (fuchsia.media.drm/KeyStatus key_status)
+protocol/member fuchsia.media.drm/ContentDecryptionModule.GetSupportedEncryptionSchemes() -> (vector<string:100> encryption_schemes)
+protocol/member fuchsia.media.drm/ContentDecryptionModule.LoadLicenseSession(string:512 session_id,server_end:fuchsia.media.drm/LicenseSession license_session)
+protocol/member fuchsia.media.drm/ContentDecryptionModule.OnProvisioned -> ()
+protocol/member fuchsia.media.drm/ContentDecryptionModule.SetServerCertificate(vector<uint8> certificate) -> (fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result result)
+protocol fuchsia.media.drm/ContentDecryptionModule
+struct fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response
+union/member fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.err fuchsia.media.drm/Error
+union/member fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.response fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response
+strict union fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result
+table/member fuchsia.media.drm/DataStoreParams.data_directory fuchsia.io/Directory
+table/member fuchsia.media.drm/DataStoreParams.provision_server_certificate vector<uint8>
+table/member fuchsia.media.drm/DataStoreParams.provisioning_fetcher client_end:fuchsia.media.drm/ProvisioningFetcher
+resource table fuchsia.media.drm/DataStoreParams
+table/member fuchsia.media.drm/DecryptorParams.input_details fuchsia.media/FormatDetails
+table/member fuchsia.media.drm/DecryptorParams.require_secure_mode bool
+table fuchsia.media.drm/DecryptorParams
+enum/member fuchsia.media.drm/Error.INTERNAL 100
+enum/member fuchsia.media.drm/Error.INVALID_STATE 3
+enum/member fuchsia.media.drm/Error.NOT_PROVISIONED 101
+enum/member fuchsia.media.drm/Error.NOT_SUPPORTED 2
+enum/member fuchsia.media.drm/Error.QUOTA_EXCEEDED 4
+enum/member fuchsia.media.drm/Error.TYPE 1
+strict enum fuchsia.media.drm/Error uint32
+bits/member fuchsia.media.drm/Features.HARDWARE_CRYPTO 1
+bits/member fuchsia.media.drm/Features.SECURE_OUTPUT 2
+strict bits fuchsia.media.drm/Features uint32
+table/member fuchsia.media.drm/KeyState.key_id vector<uint8>:16
+table/member fuchsia.media.drm/KeyState.status fuchsia.media.drm/KeyStatus
+table fuchsia.media.drm/KeyState
+enum/member fuchsia.media.drm/KeyStatus.EXPIRED 1
+enum/member fuchsia.media.drm/KeyStatus.INTERNAL_ERROR 6
+enum/member fuchsia.media.drm/KeyStatus.OUTPUT_DOWNSCALED 4
+enum/member fuchsia.media.drm/KeyStatus.OUTPUT_RESTRICTED 3
+enum/member fuchsia.media.drm/KeyStatus.RELEASED 2
+enum/member fuchsia.media.drm/KeyStatus.STATUS_PENDING 5
+enum/member fuchsia.media.drm/KeyStatus.USABLE 0
+strict enum fuchsia.media.drm/KeyStatus uint32
+protocol/member fuchsia.media.drm/KeySystem.AddDataStore(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)
+protocol/member fuchsia.media.drm/KeySystem.CreateContentDecryptionModule2(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)
+protocol/member fuchsia.media.drm/KeySystem.DestroyDataStoreAndConfirm(uint32 data_store_id) -> ()
+protocol/member fuchsia.media.drm/KeySystem.GetProperties() -> (fuchsia.media.drm/KeySystemProperties properties)
+protocol fuchsia.media.drm/KeySystem
+table/member fuchsia.media.drm/KeySystemProperties.data_store_requirement fuchsia.media.drm/Requirement
+table/member fuchsia.media.drm/KeySystemProperties.encryption_schemes vector<string:100>
+table/member fuchsia.media.drm/KeySystemProperties.features fuchsia.media.drm/Features
+table/member fuchsia.media.drm/KeySystemProperties.init_data_types vector<string:100>
+table/member fuchsia.media.drm/KeySystemProperties.license_session_types vector<fuchsia.media.drm/LicenseSessionType>
+table fuchsia.media.drm/KeySystemProperties
+struct fuchsia.media.drm/KeySystem_AddDataStore_Response
+union/member fuchsia.media.drm/KeySystem_AddDataStore_Result.err fuchsia.media.drm/Error
+union/member fuchsia.media.drm/KeySystem_AddDataStore_Result.response fuchsia.media.drm/KeySystem_AddDataStore_Response
+strict union fuchsia.media.drm/KeySystem_AddDataStore_Result
+const fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_CENC string:100 cenc
+const fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_HLS string:100 hls
+const fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_KEYIDS string:100 keyids
+const fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_WEBM string:100 webm
+struct/member fuchsia.media.drm/LicenseInitData.data vector<uint8>
+struct/member fuchsia.media.drm/LicenseInitData.type string:100
+struct fuchsia.media.drm/LicenseInitData
+struct/member fuchsia.media.drm/LicenseMessage.message fuchsia.mem/Buffer
+struct/member fuchsia.media.drm/LicenseMessage.type fuchsia.media.drm/LicenseMessageType
+resource struct fuchsia.media.drm/LicenseMessage
+enum/member fuchsia.media.drm/LicenseMessageType.RELEASE 3
+enum/member fuchsia.media.drm/LicenseMessageType.RENEWAL 2
+enum/member fuchsia.media.drm/LicenseMessageType.REQUEST 1
+strict enum fuchsia.media.drm/LicenseMessageType uint32
+struct/member fuchsia.media.drm/LicenseServerMessage.message fuchsia.mem/Buffer
+resource struct fuchsia.media.drm/LicenseServerMessage
+protocol/member fuchsia.media.drm/LicenseSession.CreateDecryptor(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)
+protocol/member fuchsia.media.drm/LicenseSession.GenerateLicenseRelease() -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result result)
+protocol/member fuchsia.media.drm/LicenseSession.GenerateLicenseRequest(fuchsia.media.drm/LicenseInitData init_data) -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result result)
+protocol/member fuchsia.media.drm/LicenseSession.OnKeyStatesChanged -> (vector<fuchsia.media.drm/KeyState> key_states)
+protocol/member fuchsia.media.drm/LicenseSession.OnLicenseMessageGenerated -> (fuchsia.media.drm/LicenseMessage request)
+protocol/member fuchsia.media.drm/LicenseSession.OnReady -> ()
+protocol/member fuchsia.media.drm/LicenseSession.ProcessLicenseResponse(fuchsia.media.drm/LicenseServerMessage response) -> (fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result result)
+protocol fuchsia.media.drm/LicenseSession
+enum/member fuchsia.media.drm/LicenseSessionType.PERSISTENT_LICENSE 2
+enum/member fuchsia.media.drm/LicenseSessionType.TEMPORARY 1
+strict enum fuchsia.media.drm/LicenseSessionType uint32
+struct fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response
+union/member fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.err fuchsia.media.drm/Error
+union/member fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.response fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response
+strict union fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result
+struct fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response
+union/member fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.err fuchsia.media.drm/Error
+union/member fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.response fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response
+strict union fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result
+struct fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response
+union/member fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.err fuchsia.media.drm/Error
+union/member fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.response fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response
+strict union fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result
+const fuchsia.media.drm/MAX_HDCP_VERSION_SIZE uint32 16
+const fuchsia.media.drm/MAX_LICENSE_INIT_DATA_TYPE_SIZE uint32 100
+const fuchsia.media.drm/MAX_SESSION_ID_SIZE uint32 512
+const fuchsia.media.drm/NO_DATA_STORE uint32 0
+protocol/member fuchsia.media.drm/PlayReady.AddDataStore(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)
+protocol/member fuchsia.media.drm/PlayReady.CreateContentDecryptionModule2(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)
+protocol/member fuchsia.media.drm/PlayReady.DestroyDataStoreAndConfirm(uint32 data_store_id) -> ()
+protocol/member fuchsia.media.drm/PlayReady.GetProperties() -> (fuchsia.media.drm/KeySystemProperties properties)
+protocol fuchsia.media.drm/PlayReady
+protocol/member fuchsia.media.drm/ProvisioningFetcher.Fetch(fuchsia.media.drm/ProvisioningRequest request) -> (fuchsia.media.drm/ProvisioningResponse response)
+protocol fuchsia.media.drm/ProvisioningFetcher
+struct/member fuchsia.media.drm/ProvisioningRequest.default_provisioning_server_url string:<4096,optional>
+struct/member fuchsia.media.drm/ProvisioningRequest.message fuchsia.mem/Buffer
+resource struct fuchsia.media.drm/ProvisioningRequest
+struct/member fuchsia.media.drm/ProvisioningResponse.message fuchsia.mem/Buffer
+resource struct fuchsia.media.drm/ProvisioningResponse
+enum/member fuchsia.media.drm/Requirement.NOT_SUPPORTED 1
+enum/member fuchsia.media.drm/Requirement.OPTIONAL 2
+enum/member fuchsia.media.drm/Requirement.REQUIRED 3
+strict enum fuchsia.media.drm/Requirement uint32
+protocol/member fuchsia.media.drm/Widevine.AddDataStore(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)
+protocol/member fuchsia.media.drm/Widevine.CreateContentDecryptionModule2(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)
+protocol/member fuchsia.media.drm/Widevine.DestroyDataStoreAndConfirm(uint32 data_store_id) -> ()
+protocol/member fuchsia.media.drm/Widevine.GetProperties() -> (fuchsia.media.drm/KeySystemProperties properties)
+protocol fuchsia.media.drm/Widevine
+library fuchsia.media.drm

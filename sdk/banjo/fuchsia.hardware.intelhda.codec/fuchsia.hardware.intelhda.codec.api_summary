@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.intelhda.codec/IhdaCodec.GetDriverChannel() -> (int32 s,zx/handle:CHANNEL channel)
+protocol fuchsia.hardware.intelhda.codec/IhdaCodec
+library fuchsia.hardware.intelhda.codec

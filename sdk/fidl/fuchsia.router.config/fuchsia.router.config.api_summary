@@ -1,0 +1,347 @@
+enum/member fuchsia.router.config/AclAction.DENY 2
+enum/member fuchsia.router.config/AclAction.PERMIT 1
+enum/member fuchsia.router.config/AclAction.REDIRECT 3
+strict enum fuchsia.router.config/AclAction uint32
+enum/member fuchsia.router.config/AclType.EGRESS 2
+enum/member fuchsia.router.config/AclType.INGRESS 1
+strict enum fuchsia.router.config/AclType uint32
+struct/member fuchsia.router.config/AddressPool.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/AddressPool.from fuchsia.net/Ipv4Address
+struct/member fuchsia.router.config/AddressPool.to fuchsia.net/Ipv4Address
+struct fuchsia.router.config/AddressPool
+bits/member fuchsia.router.config/Band.BAND_2400_MHZ 1
+bits/member fuchsia.router.config/Band.BAND_5000_MHZ 2
+strict bits fuchsia.router.config/Band uint8
+struct/member fuchsia.router.config/Channel.ch vector<fuchsia.router.config/ChannelNumber>:2
+struct/member fuchsia.router.config/Channel.width fuchsia.router.config/ChannelWidth
+struct fuchsia.router.config/Channel
+union/member fuchsia.router.config/ChannelNumber.auto_band fuchsia.router.config/Band
+union/member fuchsia.router.config/ChannelNumber.number uint32
+flexible union fuchsia.router.config/ChannelNumber
+enum/member fuchsia.router.config/ChannelWidth.AUTO 0
+enum/member fuchsia.router.config/ChannelWidth.WIDTH_160_MHZ 4
+enum/member fuchsia.router.config/ChannelWidth.WIDTH_20_MHZ 1
+enum/member fuchsia.router.config/ChannelWidth.WIDTH_40_MHZ 2
+enum/member fuchsia.router.config/ChannelWidth.WIDTH_80_MHZ 3
+strict enum fuchsia.router.config/ChannelWidth uint32
+table/member fuchsia.router.config/CidrAddress.address fuchsia.net/IpAddress
+table/member fuchsia.router.config/CidrAddress.prefix_length uint8
+table fuchsia.router.config/CidrAddress
+union/member fuchsia.router.config/ConnectionParameters.l2tp fuchsia.router.config/L2tp
+union/member fuchsia.router.config/ConnectionParameters.pppoe fuchsia.router.config/Pppoe
+union/member fuchsia.router.config/ConnectionParameters.pptp fuchsia.router.config/Pptp
+flexible union fuchsia.router.config/ConnectionParameters
+table/member fuchsia.router.config/Credentials.password string
+table/member fuchsia.router.config/Credentials.user string
+table fuchsia.router.config/Credentials
+table/member fuchsia.router.config/Device.config fuchsia.router.config/DeviceConfig
+table/member fuchsia.router.config/Device.topology fuchsia.router.config/Topology
+table/member fuchsia.router.config/Device.version uint64
+table fuchsia.router.config/Device
+table/member fuchsia.router.config/DeviceConfig.dmz_host fuchsia.router.config/DmzHost
+table/member fuchsia.router.config/DeviceConfig.dns_forwarder fuchsia.router.config/DnsForwarder
+table/member fuchsia.router.config/DeviceConfig.dns_resolver fuchsia.router.config/DnsResolverConfig
+table/member fuchsia.router.config/DeviceConfig.filtering_rules vector<fuchsia.router.config/FilterRule>
+table/member fuchsia.router.config/DeviceConfig.pin_hole_rules vector<fuchsia.router.config/Ipv6PinHoleRule>
+table/member fuchsia.router.config/DeviceConfig.port_forwarding_rules vector<fuchsia.router.config/PortForwardingRule>
+table/member fuchsia.router.config/DeviceConfig.port_trigger_rulesr vector<fuchsia.router.config/PortTriggerRule>
+table/member fuchsia.router.config/DeviceConfig.routes vector<fuchsia.router.config/Route>
+table/member fuchsia.router.config/DeviceConfig.routing_features fuchsia.router.config/RoutingFeatures
+table/member fuchsia.router.config/DeviceConfig.security_features fuchsia.router.config/SecurityFeatures
+table/member fuchsia.router.config/DeviceConfig.system fuchsia.router.config/SystemConfig
+table fuchsia.router.config/DeviceConfig
+struct/member fuchsia.router.config/DhcpReservation.address fuchsia.net/Ipv4Address
+struct/member fuchsia.router.config/DhcpReservation.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/DhcpReservation.mac fuchsia.net/MacAddress
+struct/member fuchsia.router.config/DhcpReservation.name string
+struct fuchsia.router.config/DhcpReservation
+struct/member fuchsia.router.config/DhcpServerConfig.options fuchsia.router.config/DhcpServerOptions
+struct/member fuchsia.router.config/DhcpServerConfig.pool fuchsia.router.config/AddressPool
+struct/member fuchsia.router.config/DhcpServerConfig.reservations vector<fuchsia.router.config/DhcpReservation>
+struct fuchsia.router.config/DhcpServerConfig
+table/member fuchsia.router.config/DhcpServerOptions.default_gateway fuchsia.net/Ipv4Address
+table/member fuchsia.router.config/DhcpServerOptions.dns_server fuchsia.router.config/DnsSearch
+table/member fuchsia.router.config/DhcpServerOptions.element fuchsia.router.config/Id
+table/member fuchsia.router.config/DhcpServerOptions.enable bool
+table/member fuchsia.router.config/DhcpServerOptions.lease_time_sec uint32
+table fuchsia.router.config/DhcpServerOptions
+struct/member fuchsia.router.config/DmzHost.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/DmzHost.enabled bool
+struct/member fuchsia.router.config/DmzHost.lan_addr fuchsia.net/Ipv4Address
+struct/member fuchsia.router.config/DmzHost.wan_addr fuchsia.net/Ipv4Address
+struct fuchsia.router.config/DmzHost
+struct/member fuchsia.router.config/DnsForwarder.config fuchsia.router.config/DnsForwarderConfig
+struct/member fuchsia.router.config/DnsForwarder.interfaces vector<fuchsia.router.config/Id>
+struct/member fuchsia.router.config/DnsForwarder.resolver vector<fuchsia.router.config/DnsForwarderEntry>
+struct fuchsia.router.config/DnsForwarder
+struct/member fuchsia.router.config/DnsForwarderConfig.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/DnsForwarderConfig.search fuchsia.router.config/DnsSearch
+struct fuchsia.router.config/DnsForwarderConfig
+struct/member fuchsia.router.config/DnsForwarderEntry.address fuchsia.net/Ipv4Address
+struct/member fuchsia.router.config/DnsForwarderEntry.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/DnsForwarderEntry.names vector<string>
+struct fuchsia.router.config/DnsForwarderEntry
+enum/member fuchsia.router.config/DnsPolicy.MERGE 3
+enum/member fuchsia.router.config/DnsPolicy.NOT_SET 0
+enum/member fuchsia.router.config/DnsPolicy.REPLACEABLE 2
+enum/member fuchsia.router.config/DnsPolicy.STATIC 1
+strict enum fuchsia.router.config/DnsPolicy uint32
+struct/member fuchsia.router.config/DnsResolverConfig.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/DnsResolverConfig.policy fuchsia.router.config/DnsPolicy
+struct/member fuchsia.router.config/DnsResolverConfig.search fuchsia.router.config/DnsSearch
+struct fuchsia.router.config/DnsResolverConfig
+struct/member fuchsia.router.config/DnsSearch.domain_name string:optional
+struct/member fuchsia.router.config/DnsSearch.servers vector<fuchsia.net/IpAddress>
+struct fuchsia.router.config/DnsSearch
+struct/member fuchsia.router.config/Error.code fuchsia.router.config/ErrorCode
+struct/member fuchsia.router.config/Error.description string:optional
+struct fuchsia.router.config/Error
+enum/member fuchsia.router.config/ErrorCode.ALREADY_EXISTS 5
+enum/member fuchsia.router.config/ErrorCode.INTERNAL 1
+enum/member fuchsia.router.config/ErrorCode.INVALID_ARGS 4
+enum/member fuchsia.router.config/ErrorCode.NOT_FOUND 2
+enum/member fuchsia.router.config/ErrorCode.NOT_SUPPORTED 3
+strict enum fuchsia.router.config/ErrorCode uint32
+union/member fuchsia.router.config/Event.deleted_element fuchsia.router.config/Id
+union/member fuchsia.router.config/Event.dhcp_options fuchsia.router.config/DhcpServerOptions
+union/member fuchsia.router.config/Event.dhcp_reservation fuchsia.router.config/DhcpReservation
+union/member fuchsia.router.config/Event.dhz_host fuchsia.router.config/DmzHost
+union/member fuchsia.router.config/Event.dns_forwarder fuchsia.router.config/DnsForwarder
+union/member fuchsia.router.config/Event.dns_resolver fuchsia.router.config/DnsResolverConfig
+union/member fuchsia.router.config/Event.filter_rule fuchsia.router.config/FilterRule
+union/member fuchsia.router.config/Event.forwarding_rule fuchsia.router.config/PortForwardingRule
+union/member fuchsia.router.config/Event.ipv6_pin_hole fuchsia.router.config/Ipv6PinHoleRule
+union/member fuchsia.router.config/Event.lif fuchsia.router.config/Lif
+union/member fuchsia.router.config/Event.port fuchsia.router.config/Port
+union/member fuchsia.router.config/Event.route fuchsia.router.config/Route
+union/member fuchsia.router.config/Event.security_features fuchsia.router.config/SecurityFeatures
+union/member fuchsia.router.config/Event.system_config fuchsia.router.config/SystemConfig
+union/member fuchsia.router.config/Event.trigger_rule fuchsia.router.config/PortTriggerRule
+flexible union fuchsia.router.config/Event
+enum/member fuchsia.router.config/FilterAction.ALLOW 1
+enum/member fuchsia.router.config/FilterAction.DROP 0
+strict enum fuchsia.router.config/FilterAction uint32
+struct/member fuchsia.router.config/FilterRule.action fuchsia.router.config/FilterAction
+struct/member fuchsia.router.config/FilterRule.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/FilterRule.selector fuchsia.router.config/FlowSelector
+struct fuchsia.router.config/FilterRule
+table/member fuchsia.router.config/FlowSelector.dst_address fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/FlowSelector.dst_ports vector<fuchsia.router.config/PortRange>
+table/member fuchsia.router.config/FlowSelector.protocol fuchsia.router.config/Protocol
+table/member fuchsia.router.config/FlowSelector.src_address fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/FlowSelector.src_ports vector<fuchsia.router.config/PortRange>
+table fuchsia.router.config/FlowSelector
+struct/member fuchsia.router.config/Id.uuid array<uint8,16>
+struct/member fuchsia.router.config/Id.version uint64
+struct fuchsia.router.config/Id
+struct/member fuchsia.router.config/Ipv6PinHoleRule.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/Ipv6PinHoleRule.enabled bool
+struct/member fuchsia.router.config/Ipv6PinHoleRule.nickname string
+struct/member fuchsia.router.config/Ipv6PinHoleRule.ports vector<fuchsia.router.config/PortRange>
+struct/member fuchsia.router.config/Ipv6PinHoleRule.protocol fuchsia.router.config/Protocol
+struct/member fuchsia.router.config/Ipv6PinHoleRule.source_address fuchsia.net/Ipv6Address
+struct fuchsia.router.config/Ipv6PinHoleRule
+table/member fuchsia.router.config/L2tp.credentials fuchsia.router.config/Credentials
+table/member fuchsia.router.config/L2tp.server fuchsia.net/IpAddress
+table fuchsia.router.config/L2tp
+table/member fuchsia.router.config/LanProperties.address_v4 fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/LanProperties.address_v6 fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/LanProperties.dhcp_config fuchsia.router.config/DhcpServerConfig
+table/member fuchsia.router.config/LanProperties.enable bool
+table/member fuchsia.router.config/LanProperties.enable_dhcp_server bool
+table/member fuchsia.router.config/LanProperties.enable_dns_forwarder bool
+table fuchsia.router.config/LanProperties
+table/member fuchsia.router.config/Lif.element fuchsia.router.config/Id
+table/member fuchsia.router.config/Lif.name string
+table/member fuchsia.router.config/Lif.port_ids vector<uint32>
+table/member fuchsia.router.config/Lif.properties fuchsia.router.config/LifProperties
+table/member fuchsia.router.config/Lif.type fuchsia.router.config/LifType
+table/member fuchsia.router.config/Lif.vlan uint16
+table fuchsia.router.config/Lif
+union/member fuchsia.router.config/LifProperties.lan fuchsia.router.config/LanProperties
+union/member fuchsia.router.config/LifProperties.wan fuchsia.router.config/WanProperties
+strict union fuchsia.router.config/LifProperties
+enum/member fuchsia.router.config/LifType.INVALID 0
+enum/member fuchsia.router.config/LifType.LAG 3
+enum/member fuchsia.router.config/LifType.LAN 2
+enum/member fuchsia.router.config/LifType.WAN 1
+strict enum fuchsia.router.config/LifType uint32
+struct/member fuchsia.router.config/Port.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/Port.id uint32
+struct/member fuchsia.router.config/Port.path string
+struct fuchsia.router.config/Port
+struct/member fuchsia.router.config/PortForwardingRule.destination_ports vector<fuchsia.router.config/PortRange>
+struct/member fuchsia.router.config/PortForwardingRule.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/PortForwardingRule.enabled bool
+struct/member fuchsia.router.config/PortForwardingRule.name string:optional
+struct/member fuchsia.router.config/PortForwardingRule.protocol fuchsia.router.config/Protocol
+struct/member fuchsia.router.config/PortForwardingRule.source_address fuchsia.router.config/CidrAddress
+struct/member fuchsia.router.config/PortForwardingRule.target_address fuchsia.net/IpAddress
+struct/member fuchsia.router.config/PortForwardingRule.target_port uint16
+struct fuchsia.router.config/PortForwardingRule
+struct/member fuchsia.router.config/PortRange.from uint16
+struct/member fuchsia.router.config/PortRange.to uint16
+struct fuchsia.router.config/PortRange
+struct/member fuchsia.router.config/PortTriggerRule.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/PortTriggerRule.enabled bool
+struct/member fuchsia.router.config/PortTriggerRule.incoming_ports vector<fuchsia.router.config/PortRange>
+struct/member fuchsia.router.config/PortTriggerRule.name string:optional
+struct/member fuchsia.router.config/PortTriggerRule.protocol fuchsia.router.config/Protocol
+struct/member fuchsia.router.config/PortTriggerRule.trigger_port uint16
+struct fuchsia.router.config/PortTriggerRule
+table/member fuchsia.router.config/Pppoe.credentials fuchsia.router.config/Credentials
+table fuchsia.router.config/Pppoe
+table/member fuchsia.router.config/Pptp.credentials fuchsia.router.config/Credentials
+table/member fuchsia.router.config/Pptp.server fuchsia.net/IpAddress
+table fuchsia.router.config/Pptp
+enum/member fuchsia.router.config/Protocol.BOTH 0
+enum/member fuchsia.router.config/Protocol.TCP 1
+enum/member fuchsia.router.config/Protocol.UDP 2
+strict enum fuchsia.router.config/Protocol uint32
+struct/member fuchsia.router.config/Radio.channel fuchsia.router.config/Channel
+struct/member fuchsia.router.config/Radio.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/Radio.phy uint32
+struct fuchsia.router.config/Radio
+struct/member fuchsia.router.config/Regulatory.county_code string
+struct/member fuchsia.router.config/Regulatory.element fuchsia.router.config/Id
+struct fuchsia.router.config/Regulatory
+struct/member fuchsia.router.config/Route.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/Route.gateway fuchsia.net/IpAddress:optional
+struct/member fuchsia.router.config/Route.if_id box<fuchsia.router.config/Id>
+struct/member fuchsia.router.config/Route.metric uint32
+struct/member fuchsia.router.config/Route.name string
+struct/member fuchsia.router.config/Route.subnet fuchsia.net/Subnet
+struct fuchsia.router.config/Route
+protocol/member fuchsia.router.config/RouterAdmin.AddDnsEntry(fuchsia.router.config/DnsForwarderEntry entry) -> (box<fuchsia.router.config/Id> entry_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.CreateLan(string name,uint16 vlan,vector<uint32> ports) -> (box<fuchsia.router.config/Id> id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.CreateWan(string name,uint16 vlan,vector<uint32> ports) -> (box<fuchsia.router.config/Id> id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.CreateWlanNetwork(fuchsia.router.config/WlanNetwork network) -> (box<fuchsia.router.config/Id> iface,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteDhcpReservation(fuchsia.router.config/Id reservation_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteDmzHost(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteDnsEntry(fuchsia.router.config/Id entry_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteFilter(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteIpv6PinHole(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeletePortForward(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeletePortTrigger(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteRoute(fuchsia.router.config/Id route_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.DeleteWlanNetwork(fuchsia.router.config/Id network_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.RemoveLan(fuchsia.router.config/Id lan_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.RemoveWan(fuchsia.router.config/Id wan_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDhcpAddressPool(fuchsia.router.config/Id lan_id,fuchsia.router.config/AddressPool pool) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDhcpReservation(fuchsia.router.config/Id lan_id,fuchsia.router.config/DhcpReservation reservation) -> (box<fuchsia.router.config/Id> reservation_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDhcpServerOptions(fuchsia.router.config/Id lan_id,fuchsia.router.config/DhcpServerOptions options) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDmzHost(fuchsia.router.config/DmzHost rule) -> (box<fuchsia.router.config/Id> rule_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDnsForwarder(fuchsia.router.config/DnsForwarderConfig config) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetDnsResolver(fuchsia.router.config/DnsResolverConfig config) -> (box<fuchsia.router.config/Id> id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetFilter(fuchsia.router.config/FilterRule rule) -> (box<fuchsia.router.config/Id> rule_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetIpv6PinHole(fuchsia.router.config/Ipv6PinHoleRule rule) -> (box<fuchsia.router.config/Id> rule_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetLanProperties(fuchsia.router.config/Id lan_id,fuchsia.router.config/LanProperties properties) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetPortForward(fuchsia.router.config/PortForwardingRule rule) -> (box<fuchsia.router.config/Id> rule_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetPortTrigger(fuchsia.router.config/PortTriggerRule rule) -> (box<fuchsia.router.config/Id> rule_id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetRoute(fuchsia.router.config/Route route) -> (box<fuchsia.router.config/Id> id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetSecurityFeatures(fuchsia.router.config/SecurityFeatures features) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetSystemConfig(fuchsia.router.config/SystemConfig config) -> (box<fuchsia.router.config/Id> id,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.SetWanProperties(fuchsia.router.config/Id wan_id,fuchsia.router.config/WanProperties properties) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterAdmin.UpdateRouteMetric(fuchsia.router.config/Id route_id,uint32 metric) -> (box<fuchsia.router.config/Error> error)
+protocol fuchsia.router.config/RouterAdmin
+protocol/member fuchsia.router.config/RouterState.GetDevice() -> (fuchsia.router.config/Device device)
+protocol/member fuchsia.router.config/RouterState.GetDhcpConfig(fuchsia.router.config/Id lan_id) -> (box<fuchsia.router.config/DhcpServerConfig> dhcp_config,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetDmzHost(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/DmzHost> rule,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetDnsForwarder() -> (fuchsia.router.config/DnsForwarder dns_forwarder)
+protocol/member fuchsia.router.config/RouterState.GetDnsResolver() -> (fuchsia.router.config/DnsResolverConfig dns_resolver)
+protocol/member fuchsia.router.config/RouterState.GetFilter(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/FilterRule> rule,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetFilters() -> (vector<fuchsia.router.config/FilterRule> port_filter_rules)
+protocol/member fuchsia.router.config/RouterState.GetIpv6PinHole(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/Ipv6PinHoleRule> rule,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetIpv6PinHoles() -> (vector<fuchsia.router.config/Ipv6PinHoleRule> pinhole_rules)
+protocol/member fuchsia.router.config/RouterState.GetLan(fuchsia.router.config/Id lan_id) -> (fuchsia.router.config/Lif lan_lif,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetLanPorts(fuchsia.router.config/Id lan_id) -> (vector<uint32> port_ids,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetLanProperties(fuchsia.router.config/Id lan_id) -> (fuchsia.router.config/LanProperties properties,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetLans() -> (vector<fuchsia.router.config/Lif> lans)
+protocol/member fuchsia.router.config/RouterState.GetPort(uint32 port_id) -> (box<fuchsia.router.config/Port> port,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetPortForward(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/PortForwardingRule> rule,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetPortForwards() -> (vector<fuchsia.router.config/PortForwardingRule> port_forward_rules)
+protocol/member fuchsia.router.config/RouterState.GetPortTrigger(fuchsia.router.config/Id rule_id) -> (box<fuchsia.router.config/PortTriggerRule> rule,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetPortTriggers() -> (vector<fuchsia.router.config/PortTriggerRule> port_trigger_rules)
+protocol/member fuchsia.router.config/RouterState.GetPorts() -> (vector<fuchsia.router.config/Port> ports)
+protocol/member fuchsia.router.config/RouterState.GetRadios() -> (vector<fuchsia.router.config/Radio> radios)
+protocol/member fuchsia.router.config/RouterState.GetRoute(fuchsia.router.config/Id route_id) -> (box<fuchsia.router.config/Route> route,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetRoutes() -> (vector<fuchsia.router.config/Route> routes)
+protocol/member fuchsia.router.config/RouterState.GetSecurityFeatures() -> (fuchsia.router.config/SecurityFeatures features)
+protocol/member fuchsia.router.config/RouterState.GetSystemConfig() -> (fuchsia.router.config/SystemConfig config)
+protocol/member fuchsia.router.config/RouterState.GetWan(fuchsia.router.config/Id wan_id) -> (fuchsia.router.config/Lif wan_lif,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetWanPorts(fuchsia.router.config/Id wan_id) -> (vector<uint32> port_ids,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetWanProperties(fuchsia.router.config/Id wan_id) -> (fuchsia.router.config/WanProperties properties,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterState.GetWans() -> (vector<fuchsia.router.config/Lif> wans)
+protocol/member fuchsia.router.config/RouterState.GetWlanNetworks() -> (vector<fuchsia.router.config/WlanNetwork> networks)
+protocol/member fuchsia.router.config/RouterState.OnChange -> (vector<fuchsia.router.config/Event> events)
+protocol fuchsia.router.config/RouterState
+protocol/member fuchsia.router.config/RouterSystem.DeleteAcl(fuchsia.router.config/Id acl_id) -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterSystem.GetAcl(fuchsia.router.config/Id acl_id) -> (fuchsia.router.config/SystemAcl acl,box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterSystem.GetAcls() -> (box<fuchsia.router.config/Error> error)
+protocol/member fuchsia.router.config/RouterSystem.SetAcl(fuchsia.router.config/SystemAcl rule) -> (box<fuchsia.router.config/Id> acl_id,box<fuchsia.router.config/Error> error)
+protocol fuchsia.router.config/RouterSystem
+table/member fuchsia.router.config/RoutingFeatures.ospf bool
+table/member fuchsia.router.config/RoutingFeatures.rip bool
+table fuchsia.router.config/RoutingFeatures
+table/member fuchsia.router.config/SecurityFeatures.ALLOW_MULTICAST bool
+table/member fuchsia.router.config/SecurityFeatures.DROP_ICMP_ECHO bool
+table/member fuchsia.router.config/SecurityFeatures.FIREWALL bool
+table/member fuchsia.router.config/SecurityFeatures.H323_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.IPSEC_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.L2TP_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.NAT bool
+table/member fuchsia.router.config/SecurityFeatures.PPTP_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.RTSP_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.SIP_PASSTHRU bool
+table/member fuchsia.router.config/SecurityFeatures.UPNP bool
+table/member fuchsia.router.config/SecurityFeatures.V6_FIREWALL bool
+table fuchsia.router.config/SecurityFeatures
+table/member fuchsia.router.config/SystemAcl.acl_action fuchsia.router.config/AclAction
+table/member fuchsia.router.config/SystemAcl.acl_type fuchsia.router.config/AclType
+table/member fuchsia.router.config/SystemAcl.egress_port uint16
+table/member fuchsia.router.config/SystemAcl.element fuchsia.router.config/Id
+table/member fuchsia.router.config/SystemAcl.ingress_port uint16
+table/member fuchsia.router.config/SystemAcl.selector fuchsia.router.config/FlowSelector
+table fuchsia.router.config/SystemAcl
+table/member fuchsia.router.config/SystemConfig.daylight_savings_time_enabled bool
+table/member fuchsia.router.config/SystemConfig.element fuchsia.router.config/Id
+table/member fuchsia.router.config/SystemConfig.hostname string
+table/member fuchsia.router.config/SystemConfig.leds_enabled bool
+table/member fuchsia.router.config/SystemConfig.timezone string
+table fuchsia.router.config/SystemConfig
+table/member fuchsia.router.config/Topology.element fuchsia.router.config/Id
+table/member fuchsia.router.config/Topology.lifs vector<fuchsia.router.config/Lif>
+table fuchsia.router.config/Topology
+enum/member fuchsia.router.config/WanAddressMethod.AUTOMATIC 1
+enum/member fuchsia.router.config/WanAddressMethod.MANUAL 2
+strict enum fuchsia.router.config/WanAddressMethod uint32
+enum/member fuchsia.router.config/WanConnection.DIRECT 1
+enum/member fuchsia.router.config/WanConnection.L2TP 4
+enum/member fuchsia.router.config/WanConnection.PPPoE 2
+enum/member fuchsia.router.config/WanConnection.PPTP 3
+strict enum fuchsia.router.config/WanConnection uint32
+enum/member fuchsia.router.config/WanIpV6ConnectionMode.DELEGATION 3
+enum/member fuchsia.router.config/WanIpV6ConnectionMode.PASSTHROUGH 2
+enum/member fuchsia.router.config/WanIpV6ConnectionMode.STATIC 1
+strict enum fuchsia.router.config/WanIpV6ConnectionMode uint32
+table/member fuchsia.router.config/WanProperties.address_method fuchsia.router.config/WanAddressMethod
+table/member fuchsia.router.config/WanProperties.address_v4 fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/WanProperties.address_v6 fuchsia.router.config/CidrAddress
+table/member fuchsia.router.config/WanProperties.clone_mac fuchsia.net/MacAddress
+table/member fuchsia.router.config/WanProperties.connection_parameters fuchsia.router.config/ConnectionParameters
+table/member fuchsia.router.config/WanProperties.connection_type fuchsia.router.config/WanConnection
+table/member fuchsia.router.config/WanProperties.connection_v6_mode fuchsia.router.config/WanIpV6ConnectionMode
+table/member fuchsia.router.config/WanProperties.enable bool
+table/member fuchsia.router.config/WanProperties.gateway_v4 fuchsia.net/IpAddress
+table/member fuchsia.router.config/WanProperties.gateway_v6 fuchsia.net/IpAddress
+table/member fuchsia.router.config/WanProperties.hostname string
+table/member fuchsia.router.config/WanProperties.metric uint32
+table/member fuchsia.router.config/WanProperties.mtu uint32
+table fuchsia.router.config/WanProperties
+struct/member fuchsia.router.config/WlanNetwork.element fuchsia.router.config/Id
+struct/member fuchsia.router.config/WlanNetwork.enable_band_steering bool
+struct/member fuchsia.router.config/WlanNetwork.name string
+struct/member fuchsia.router.config/WlanNetwork.psk string
+struct/member fuchsia.router.config/WlanNetwork.radio_phys vector<fuchsia.router.config/Id>
+struct fuchsia.router.config/WlanNetwork
+library fuchsia.router.config

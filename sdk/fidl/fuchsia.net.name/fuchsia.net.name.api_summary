@@ -1,0 +1,25 @@
+table/member fuchsia.net.name/DhcpDnsServerSource.source_interface uint64
+table fuchsia.net.name/DhcpDnsServerSource
+table/member fuchsia.net.name/Dhcpv6DnsServerSource.source_interface uint64
+table fuchsia.net.name/Dhcpv6DnsServerSource
+table/member fuchsia.net.name/DnsServer.address fuchsia.net/SocketAddress
+table/member fuchsia.net.name/DnsServer.source fuchsia.net.name/DnsServerSource
+table fuchsia.net.name/DnsServer
+union/member fuchsia.net.name/DnsServerSource.dhcp fuchsia.net.name/DhcpDnsServerSource
+union/member fuchsia.net.name/DnsServerSource.dhcpv6 fuchsia.net.name/Dhcpv6DnsServerSource
+union/member fuchsia.net.name/DnsServerSource.ndp fuchsia.net.name/NdpDnsServerSource
+union/member fuchsia.net.name/DnsServerSource.static_source fuchsia.net.name/StaticDnsServerSource
+strict union fuchsia.net.name/DnsServerSource
+protocol/member fuchsia.net.name/DnsServerWatcher.WatchServers() -> (vector<fuchsia.net.name/DnsServer> servers)
+protocol fuchsia.net.name/DnsServerWatcher
+protocol/member fuchsia.net.name/LookupAdmin.GetDnsServers() -> (vector<fuchsia.net/SocketAddress> servers)
+protocol/member fuchsia.net.name/LookupAdmin.SetDnsServers(vector<fuchsia.net/SocketAddress> servers) -> (fuchsia.net.name/LookupAdmin_SetDnsServers_Result result)
+protocol fuchsia.net.name/LookupAdmin
+struct fuchsia.net.name/LookupAdmin_SetDnsServers_Response
+union/member fuchsia.net.name/LookupAdmin_SetDnsServers_Result.err int32
+union/member fuchsia.net.name/LookupAdmin_SetDnsServers_Result.response fuchsia.net.name/LookupAdmin_SetDnsServers_Response
+strict union fuchsia.net.name/LookupAdmin_SetDnsServers_Result
+table/member fuchsia.net.name/NdpDnsServerSource.source_interface uint64
+table fuchsia.net.name/NdpDnsServerSource
+table fuchsia.net.name/StaticDnsServerSource
+library fuchsia.net.name

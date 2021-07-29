@@ -1,0 +1,5 @@
+protocol/member fuchsia.debugdata/DebugData.LoadConfig(string:1024 config_name) -> (zx/handle:<VMO,optional> config)
+protocol/member fuchsia.debugdata/DebugData.Publish(string:1024 data_sink,zx/handle:VMO data)
+protocol fuchsia.debugdata/DebugData
+const fuchsia.debugdata/MAX_NAME uint64 1024
+library fuchsia.debugdata

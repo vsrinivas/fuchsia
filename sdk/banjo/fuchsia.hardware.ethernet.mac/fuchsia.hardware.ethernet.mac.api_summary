@@ -1,0 +1,8 @@
+protocol/member fuchsia.hardware.ethernet.mac/EthMac.MdioRead(uint32 reg) -> (int32 s,uint32 val)
+protocol/member fuchsia.hardware.ethernet.mac/EthMac.MdioWrite(uint32 reg,uint32 val) -> (int32 s)
+protocol/member fuchsia.hardware.ethernet.mac/EthMac.RegisterCallbacks(client_end:fuchsia.hardware.ethernet.mac/EthMacCallbacks cb) -> (int32 s)
+protocol fuchsia.hardware.ethernet.mac/EthMac
+protocol/member fuchsia.hardware.ethernet.mac/EthMacCallbacks.ConfigPhy(array<uint8,6> mac) -> (int32 s)
+protocol fuchsia.hardware.ethernet.mac/EthMacCallbacks
+const fuchsia.hardware.ethernet.mac/MAC_ARRAY_LENGTH uint32 6
+library fuchsia.hardware.ethernet.mac

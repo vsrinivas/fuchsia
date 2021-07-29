@@ -1,0 +1,7 @@
+struct/member fuchsia.wlan.mesh/MeshPath.dest_address array<uint8,6>
+struct/member fuchsia.wlan.mesh/MeshPath.metric uint32
+struct/member fuchsia.wlan.mesh/MeshPath.next_hop array<uint8,6>
+struct fuchsia.wlan.mesh/MeshPath
+struct/member fuchsia.wlan.mesh/MeshPathTable.paths vector<fuchsia.wlan.mesh/MeshPath>
+struct fuchsia.wlan.mesh/MeshPathTable
+library fuchsia.wlan.mesh

@@ -1,0 +1,105 @@
+protocol/member fuchsia.ui.composition/Allocator.RegisterBufferCollection(fuchsia.ui.composition/RegisterBufferCollectionArgs args) -> (fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result result)
+protocol fuchsia.ui.composition/Allocator
+struct fuchsia.ui.composition/Allocator_RegisterBufferCollection_Response
+union/member fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result.err fuchsia.ui.composition/RegisterBufferCollectionError
+union/member fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result.response fuchsia.ui.composition/Allocator_RegisterBufferCollection_Response
+strict union fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result
+struct/member fuchsia.ui.composition/BufferCollectionExportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.composition/BufferCollectionExportToken
+struct/member fuchsia.ui.composition/BufferCollectionImportToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.composition/BufferCollectionImportToken
+struct/member fuchsia.ui.composition/ContentId.value uint64
+struct fuchsia.ui.composition/ContentId
+protocol/member fuchsia.ui.composition/ContentLink.GetStatus() -> (fuchsia.ui.composition/ContentLinkStatus status)
+protocol fuchsia.ui.composition/ContentLink
+enum/member fuchsia.ui.composition/ContentLinkStatus.CONTENT_HAS_PRESENTED 1
+strict enum fuchsia.ui.composition/ContentLinkStatus uint32
+struct/member fuchsia.ui.composition/ContentLinkToken.value zx/handle:CHANNEL
+resource struct fuchsia.ui.composition/ContentLinkToken
+table/member fuchsia.ui.composition/CreateImageArgs.image_height uint32
+table/member fuchsia.ui.composition/CreateImageArgs.image_id uint64
+table/member fuchsia.ui.composition/CreateImageArgs.image_width uint32
+table/member fuchsia.ui.composition/CreateImageArgs.import_token fuchsia.ui.composition/BufferCollectionImportToken
+table/member fuchsia.ui.composition/CreateImageArgs.vmo_index uint32
+resource table fuchsia.ui.composition/CreateImageArgs
+enum/member fuchsia.ui.composition/CreateImageError.BAD_OPERATION 2
+enum/member fuchsia.ui.composition/CreateImageError.MISSING_ARGS 1
+strict enum fuchsia.ui.composition/CreateImageError uint32
+protocol/member fuchsia.ui.composition/Flatland.AddChild(fuchsia.ui.composition/TransformId parent_transform_id,fuchsia.ui.composition/TransformId child_transform_id)
+protocol/member fuchsia.ui.composition/Flatland.ClearGraph()
+protocol/member fuchsia.ui.composition/Flatland.CreateImage(fuchsia.ui.composition/ContentId image_id,fuchsia.ui.composition/BufferCollectionImportToken import_token,uint32 vmo_index,fuchsia.ui.composition/ImageProperties properties)
+protocol/member fuchsia.ui.composition/Flatland.CreateLink(fuchsia.ui.composition/ContentId link_id,fuchsia.ui.composition/ContentLinkToken token,fuchsia.ui.composition/LinkProperties properties,server_end:fuchsia.ui.composition/ContentLink content_link)
+protocol/member fuchsia.ui.composition/Flatland.CreateTransform(fuchsia.ui.composition/TransformId transform_id)
+protocol/member fuchsia.ui.composition/Flatland.LinkToParent(fuchsia.ui.composition/GraphLinkToken token,server_end:fuchsia.ui.composition/GraphLink graph_link)
+protocol/member fuchsia.ui.composition/Flatland.OnError -> (fuchsia.ui.composition/FlatlandError error)
+protocol/member fuchsia.ui.composition/Flatland.OnFramePresented -> (fuchsia.scenic.scheduling/FramePresentedInfo frame_presented_info)
+protocol/member fuchsia.ui.composition/Flatland.OnNextFrameBegin -> (fuchsia.ui.composition/OnNextFrameBeginValues values)
+protocol/member fuchsia.ui.composition/Flatland.Present(fuchsia.ui.composition/PresentArgs args)
+protocol/member fuchsia.ui.composition/Flatland.ReleaseImage(fuchsia.ui.composition/ContentId image_id)
+protocol/member fuchsia.ui.composition/Flatland.ReleaseLink(fuchsia.ui.composition/ContentId link_id) -> (fuchsia.ui.composition/ContentLinkToken tokid)
+protocol/member fuchsia.ui.composition/Flatland.ReleaseTransform(fuchsia.ui.composition/TransformId transform_id)
+protocol/member fuchsia.ui.composition/Flatland.RemoveChild(fuchsia.ui.composition/TransformId parent_transform_id,fuchsia.ui.composition/TransformId child_transform_id)
+protocol/member fuchsia.ui.composition/Flatland.SetContent(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/ContentId content_id)
+protocol/member fuchsia.ui.composition/Flatland.SetDebugName(string:64 name)
+protocol/member fuchsia.ui.composition/Flatland.SetImageDestinationSize(fuchsia.ui.composition/ContentId image_id,fuchsia.math/SizeU size)
+protocol/member fuchsia.ui.composition/Flatland.SetImageSampleRegion(fuchsia.ui.composition/ContentId image_id,fuchsia.math/RectF rect)
+protocol/member fuchsia.ui.composition/Flatland.SetLinkProperties(fuchsia.ui.composition/ContentId link_id,fuchsia.ui.composition/LinkProperties properties)
+protocol/member fuchsia.ui.composition/Flatland.SetOpacity(fuchsia.ui.composition/TransformId transform_id,float32 val)
+protocol/member fuchsia.ui.composition/Flatland.SetOrientation(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/Orientation orientation)
+protocol/member fuchsia.ui.composition/Flatland.SetRootTransform(fuchsia.ui.composition/TransformId transform_id)
+protocol/member fuchsia.ui.composition/Flatland.SetTranslation(fuchsia.ui.composition/TransformId transform_id,fuchsia.math/Vec translation)
+protocol/member fuchsia.ui.composition/Flatland.UnlinkFromParent() -> (fuchsia.ui.composition/GraphLinkToken token)
+protocol fuchsia.ui.composition/Flatland
+protocol/member fuchsia.ui.composition/FlatlandDisplay.SetContent(fuchsia.ui.composition/ContentLinkToken token,server_end:fuchsia.ui.composition/ContentLink content_link)
+protocol fuchsia.ui.composition/FlatlandDisplay
+enum/member fuchsia.ui.composition/FlatlandError.BAD_HANGING_GET 3
+enum/member fuchsia.ui.composition/FlatlandError.BAD_OPERATION 1
+enum/member fuchsia.ui.composition/FlatlandError.NO_PRESENTS_REMAINING 2
+strict enum fuchsia.ui.composition/FlatlandError uint32
+protocol/member fuchsia.ui.composition/GraphLink.GetLayout() -> (fuchsia.ui.composition/LayoutInfo info)
+protocol/member fuchsia.ui.composition/GraphLink.GetStatus() -> (fuchsia.ui.composition/GraphLinkStatus status)
+protocol fuchsia.ui.composition/GraphLink
+enum/member fuchsia.ui.composition/GraphLinkStatus.CONNECTED_TO_DISPLAY 1
+enum/member fuchsia.ui.composition/GraphLinkStatus.DISCONNECTED_FROM_DISPLAY 2
+strict enum fuchsia.ui.composition/GraphLinkStatus uint32
+struct/member fuchsia.ui.composition/GraphLinkToken.value zx/handle:CHANNEL
+resource struct fuchsia.ui.composition/GraphLinkToken
+table/member fuchsia.ui.composition/ImageProperties.size fuchsia.math/SizeU
+table fuchsia.ui.composition/ImageProperties
+table/member fuchsia.ui.composition/LayoutInfo.logical_size fuchsia.math/SizeU
+table/member fuchsia.ui.composition/LayoutInfo.pixel_scale fuchsia.math/SizeU
+table fuchsia.ui.composition/LayoutInfo
+table/member fuchsia.ui.composition/LinkProperties.logical_size fuchsia.math/SizeU
+table fuchsia.ui.composition/LinkProperties
+const fuchsia.ui.composition/MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 16
+table/member fuchsia.ui.composition/OnNextFrameBeginValues.additional_present_credits uint32
+table/member fuchsia.ui.composition/OnNextFrameBeginValues.future_presentation_infos vector<fuchsia.scenic.scheduling/PresentationInfo>:8
+table fuchsia.ui.composition/OnNextFrameBeginValues
+enum/member fuchsia.ui.composition/Orientation.CCW_0_DEGREES 1
+enum/member fuchsia.ui.composition/Orientation.CCW_180_DEGREES 3
+enum/member fuchsia.ui.composition/Orientation.CCW_270_DEGREES 4
+enum/member fuchsia.ui.composition/Orientation.CCW_90_DEGREES 2
+strict enum fuchsia.ui.composition/Orientation uint32
+table/member fuchsia.ui.composition/PresentArgs.acquire_fences vector<zx/handle:EVENT>:16
+table/member fuchsia.ui.composition/PresentArgs.release_fences vector<zx/handle:EVENT>:16
+table/member fuchsia.ui.composition/PresentArgs.requested_presentation_time int64
+table/member fuchsia.ui.composition/PresentArgs.unsquashable bool
+resource table fuchsia.ui.composition/PresentArgs
+table/member fuchsia.ui.composition/RegisterBufferCollectionArgs.buffer_collection_token fuchsia.sysmem/BufferCollectionToken
+table/member fuchsia.ui.composition/RegisterBufferCollectionArgs.export_token fuchsia.ui.composition/BufferCollectionExportToken
+table/member fuchsia.ui.composition/RegisterBufferCollectionArgs.usage fuchsia.ui.composition/RegisterBufferCollectionUsage
+resource table fuchsia.ui.composition/RegisterBufferCollectionArgs
+enum/member fuchsia.ui.composition/RegisterBufferCollectionError.BAD_OPERATION 1
+strict enum fuchsia.ui.composition/RegisterBufferCollectionError uint32
+enum/member fuchsia.ui.composition/RegisterBufferCollectionUsage.DEFAULT 0
+enum/member fuchsia.ui.composition/RegisterBufferCollectionUsage.SCREENSHOT 1
+strict enum fuchsia.ui.composition/RegisterBufferCollectionUsage uint32
+protocol/member fuchsia.ui.composition/Screenshot.CreateImage(fuchsia.ui.composition/CreateImageArgs args) -> (fuchsia.ui.composition/Screenshot_CreateImage_Result result)
+protocol fuchsia.ui.composition/Screenshot
+struct fuchsia.ui.composition/Screenshot_CreateImage_Response
+union/member fuchsia.ui.composition/Screenshot_CreateImage_Result.err fuchsia.ui.composition/CreateImageError
+union/member fuchsia.ui.composition/Screenshot_CreateImage_Result.response fuchsia.ui.composition/Screenshot_CreateImage_Response
+strict union fuchsia.ui.composition/Screenshot_CreateImage_Result
+struct/member fuchsia.ui.composition/TransformId.value uint64
+struct fuchsia.ui.composition/TransformId
+library fuchsia.ui.composition

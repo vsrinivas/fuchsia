@@ -1,0 +1,3 @@
+protocol/member fuchsia.ui.views.accessibility/FocuserRegistry.RegisterFocuser(server_end:fuchsia.ui.views/Focuser view_focuser)
+protocol fuchsia.ui.views.accessibility/FocuserRegistry
+library fuchsia.ui.views.accessibility

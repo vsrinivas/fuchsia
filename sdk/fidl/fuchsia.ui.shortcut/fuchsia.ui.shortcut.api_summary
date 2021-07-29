@@ -1,0 +1,19 @@
+protocol/member fuchsia.ui.shortcut/Listener.OnShortcut(uint32 id) -> (bool handled)
+protocol fuchsia.ui.shortcut/Listener
+const fuchsia.ui.shortcut/MAX_REQUIRED_KEYS uint64 2
+protocol/member fuchsia.ui.shortcut/Manager.HandleFocusChange(fuchsia.ui.focus/FocusChain focus_chain) -> ()
+protocol/member fuchsia.ui.shortcut/Manager.HandleKey3Event(fuchsia.ui.input3/KeyEvent event) -> (bool was_handled)
+protocol fuchsia.ui.shortcut/Manager
+protocol/member fuchsia.ui.shortcut/Registry.RegisterShortcut(fuchsia.ui.shortcut/Shortcut shortcut) -> ()
+protocol/member fuchsia.ui.shortcut/Registry.SetView(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.ui.shortcut/Listener listener)
+protocol fuchsia.ui.shortcut/Registry
+table/member fuchsia.ui.shortcut/Shortcut.id uint32
+table/member fuchsia.ui.shortcut/Shortcut.key3 fuchsia.input/Key
+table/member fuchsia.ui.shortcut/Shortcut.keys_required vector<fuchsia.input/Key>:2
+table/member fuchsia.ui.shortcut/Shortcut.trigger fuchsia.ui.shortcut/Trigger
+table/member fuchsia.ui.shortcut/Shortcut.use_priority bool
+table fuchsia.ui.shortcut/Shortcut
+enum/member fuchsia.ui.shortcut/Trigger.KEY_PRESSED 1
+enum/member fuchsia.ui.shortcut/Trigger.KEY_PRESSED_AND_RELEASED 2
+strict enum fuchsia.ui.shortcut/Trigger uint32
+library fuchsia.ui.shortcut

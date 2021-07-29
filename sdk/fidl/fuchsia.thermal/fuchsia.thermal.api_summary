@@ -1,0 +1,20 @@
+protocol/member fuchsia.thermal/Actor.SetThermalState(uint32 state) -> ()
+protocol fuchsia.thermal/Actor
+enum/member fuchsia.thermal/ActorType.AUDIO 2
+enum/member fuchsia.thermal/ActorType.UNSPECIFIED 1
+strict enum fuchsia.thermal/ActorType uint32
+protocol/member fuchsia.thermal/Controller.Subscribe(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)
+protocol fuchsia.thermal/Controller
+struct fuchsia.thermal/Controller_Subscribe_Response
+union/member fuchsia.thermal/Controller_Subscribe_Result.err fuchsia.thermal/Error
+union/member fuchsia.thermal/Controller_Subscribe_Result.response fuchsia.thermal/Controller_Subscribe_Response
+strict union fuchsia.thermal/Controller_Subscribe_Result
+enum/member fuchsia.thermal/Error.INTERNAL 1
+enum/member fuchsia.thermal/Error.INVALID_ARGUMENTS 2
+strict enum fuchsia.thermal/Error uint32
+const fuchsia.thermal/MAX_THERMAL_LOAD uint32 100
+const fuchsia.thermal/MAX_TRIP_POINT_COUNT uint32 100
+struct/member fuchsia.thermal/TripPoint.activate_at uint32
+struct/member fuchsia.thermal/TripPoint.deactivate_below uint32
+struct fuchsia.thermal/TripPoint
+library fuchsia.thermal

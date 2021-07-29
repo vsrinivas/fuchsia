@@ -1,0 +1,12 @@
+enum/member fuchsia.castconfig/ErrorCode.INTERNAL 2
+enum/member fuchsia.castconfig/ErrorCode.NO_CAST_CONFIG 1
+strict enum fuchsia.castconfig/ErrorCode uint32
+protocol/member fuchsia.castconfig/Provider.Notify(bool processed) -> (bool retry)
+protocol/member fuchsia.castconfig/Provider.Watch() -> (fuchsia.castconfig/Provider_Watch_Result result)
+protocol fuchsia.castconfig/Provider
+struct/member fuchsia.castconfig/Provider_Watch_Response.config fuchsia.mem/Buffer
+resource struct fuchsia.castconfig/Provider_Watch_Response
+union/member fuchsia.castconfig/Provider_Watch_Result.err fuchsia.castconfig/ErrorCode
+union/member fuchsia.castconfig/Provider_Watch_Result.response fuchsia.castconfig/Provider_Watch_Response
+resource strict union fuchsia.castconfig/Provider_Watch_Result
+library fuchsia.castconfig

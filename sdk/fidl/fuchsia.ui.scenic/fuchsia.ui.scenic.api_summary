@@ -1,0 +1,46 @@
+union/member fuchsia.ui.scenic/Command.gfx fuchsia.ui.gfx/Command
+union/member fuchsia.ui.scenic/Command.input fuchsia.ui.input/Command
+union/member fuchsia.ui.scenic/Command.views fuchsia.ui.views/Command
+resource strict union fuchsia.ui.scenic/Command
+union/member fuchsia.ui.scenic/Event.gfx fuchsia.ui.gfx/Event
+union/member fuchsia.ui.scenic/Event.input fuchsia.ui.input/InputEvent
+union/member fuchsia.ui.scenic/Event.unhandled fuchsia.ui.scenic/Command
+resource strict union fuchsia.ui.scenic/Event
+table/member fuchsia.ui.scenic/Present2Args.acquire_fences vector<zx/handle:EVENT>
+table/member fuchsia.ui.scenic/Present2Args.release_fences vector<zx/handle:EVENT>
+table/member fuchsia.ui.scenic/Present2Args.requested_prediction_span int64
+table/member fuchsia.ui.scenic/Present2Args.requested_presentation_time int64
+resource table fuchsia.ui.scenic/Present2Args
+protocol/member fuchsia.ui.scenic/Scenic.CreateSession(server_end:fuchsia.ui.scenic/Session session,client_end:<fuchsia.ui.scenic/SessionListener,optional> listener)
+protocol/member fuchsia.ui.scenic/Scenic.CreateSession2(server_end:fuchsia.ui.scenic/Session session,client_end:<fuchsia.ui.scenic/SessionListener,optional> listener,server_end:<fuchsia.ui.views/Focuser,optional> view_focuser)
+protocol/member fuchsia.ui.scenic/Scenic.CreateSessionT(fuchsia.ui.scenic/SessionEndpoints endpoints) -> ()
+protocol/member fuchsia.ui.scenic/Scenic.GetDisplayInfo() -> (fuchsia.ui.gfx/DisplayInfo info)
+protocol/member fuchsia.ui.scenic/Scenic.GetDisplayOwnershipEvent() -> (zx/handle:EVENT ownership_event)
+protocol/member fuchsia.ui.scenic/Scenic.TakeScreenshot() -> (fuchsia.ui.scenic/ScreenshotData img_data,bool success)
+protocol fuchsia.ui.scenic/Scenic
+struct/member fuchsia.ui.scenic/ScreenshotData.data fuchsia.mem/Buffer
+struct/member fuchsia.ui.scenic/ScreenshotData.info fuchsia.images/ImageInfo
+resource struct fuchsia.ui.scenic/ScreenshotData
+protocol/member fuchsia.ui.scenic/Session.DeregisterBufferCollection(uint32 buffer_id)
+protocol/member fuchsia.ui.scenic/Session.Enqueue(vector<fuchsia.ui.scenic/Command> cmds)
+protocol/member fuchsia.ui.scenic/Session.OnFramePresented -> (fuchsia.scenic.scheduling/FramePresentedInfo frame_presented_info)
+protocol/member fuchsia.ui.scenic/Session.Present(uint64 presentation_time,vector<zx/handle:EVENT> acquire_fences,vector<zx/handle:EVENT> release_fences) -> (fuchsia.images/PresentationInfo presentation_info)
+protocol/member fuchsia.ui.scenic/Session.Present2(fuchsia.ui.scenic/Present2Args args) -> (fuchsia.scenic.scheduling/FuturePresentationTimes request_presentation_times_info)
+protocol/member fuchsia.ui.scenic/Session.RegisterBufferCollection(uint32 buffer_id,fuchsia.sysmem/BufferCollectionToken token)
+protocol/member fuchsia.ui.scenic/Session.RequestPresentationTimes(int64 requested_prediction_span) -> (fuchsia.scenic.scheduling/FuturePresentationTimes request_presentation_times_info)
+protocol/member fuchsia.ui.scenic/Session.SetDebugName(string debug_name)
+protocol fuchsia.ui.scenic/Session
+table/member fuchsia.ui.scenic/SessionEndpoints.mouse_source server_end:fuchsia.ui.pointer/MouseSource
+table/member fuchsia.ui.scenic/SessionEndpoints.session server_end:fuchsia.ui.scenic/Session
+table/member fuchsia.ui.scenic/SessionEndpoints.session_listener client_end:fuchsia.ui.scenic/SessionListener
+table/member fuchsia.ui.scenic/SessionEndpoints.touch_source server_end:fuchsia.ui.pointer/TouchSource
+table/member fuchsia.ui.scenic/SessionEndpoints.view_focuser server_end:fuchsia.ui.views/Focuser
+table/member fuchsia.ui.scenic/SessionEndpoints.view_ref_focused server_end:fuchsia.ui.views/ViewRefFocused
+resource table fuchsia.ui.scenic/SessionEndpoints
+protocol/member fuchsia.ui.scenic/SessionListener.OnScenicError(string error)
+protocol/member fuchsia.ui.scenic/SessionListener.OnScenicEvent(vector<fuchsia.ui.scenic/Event> events)
+protocol fuchsia.ui.scenic/SessionListener
+protocol fuchsia.ui.scenic/Snapshot
+const fuchsia.ui.scenic/displayNotOwnedSignal uint32 16777216
+const fuchsia.ui.scenic/displayOwnedSignal uint32 33554432
+library fuchsia.ui.scenic

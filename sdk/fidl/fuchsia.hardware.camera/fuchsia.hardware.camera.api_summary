@@ -1,0 +1,4 @@
+protocol/member fuchsia.hardware.camera/Device.GetChannel(zx/handle:CHANNEL ch)
+protocol/member fuchsia.hardware.camera/Device.GetChannel2(server_end:fuchsia.camera2.hal/Controller server_end)
+protocol fuchsia.hardware.camera/Device
+library fuchsia.hardware.camera

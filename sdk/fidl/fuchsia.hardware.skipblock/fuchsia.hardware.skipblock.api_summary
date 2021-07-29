@@ -1,0 +1,26 @@
+const fuchsia.hardware.skipblock/GUID_LEN uint32 16
+struct/member fuchsia.hardware.skipblock/PartitionInfo.block_size_bytes uint64
+struct/member fuchsia.hardware.skipblock/PartitionInfo.partition_block_count uint32
+struct/member fuchsia.hardware.skipblock/PartitionInfo.partition_guid array<uint8,16>
+struct fuchsia.hardware.skipblock/PartitionInfo
+struct/member fuchsia.hardware.skipblock/ReadWriteOperation.block uint32
+struct/member fuchsia.hardware.skipblock/ReadWriteOperation.block_count uint32
+struct/member fuchsia.hardware.skipblock/ReadWriteOperation.vmo zx/handle:VMO
+struct/member fuchsia.hardware.skipblock/ReadWriteOperation.vmo_offset uint64
+resource struct fuchsia.hardware.skipblock/ReadWriteOperation
+protocol/member fuchsia.hardware.skipblock/SkipBlock.GetPartitionInfo() -> (int32 status,fuchsia.hardware.skipblock/PartitionInfo partition_info)
+protocol/member fuchsia.hardware.skipblock/SkipBlock.Read(fuchsia.hardware.skipblock/ReadWriteOperation op) -> (int32 status)
+protocol/member fuchsia.hardware.skipblock/SkipBlock.Write(fuchsia.hardware.skipblock/ReadWriteOperation op) -> (int32 status,bool bad_block_grown)
+protocol/member fuchsia.hardware.skipblock/SkipBlock.WriteBytes(fuchsia.hardware.skipblock/WriteBytesOperation op) -> (int32 status,bool bad_block_grown)
+protocol/member fuchsia.hardware.skipblock/SkipBlock.WriteBytesWithoutErase(fuchsia.hardware.skipblock/WriteBytesOperation op) -> (int32 status)
+protocol fuchsia.hardware.skipblock/SkipBlock
+enum/member fuchsia.hardware.skipblock/WriteBytesMode.ERASE_WRITE 2
+enum/member fuchsia.hardware.skipblock/WriteBytesMode.READ_MODIFY_ERASE_WRITE 1
+strict enum fuchsia.hardware.skipblock/WriteBytesMode uint32
+struct/member fuchsia.hardware.skipblock/WriteBytesOperation.mode fuchsia.hardware.skipblock/WriteBytesMode
+struct/member fuchsia.hardware.skipblock/WriteBytesOperation.offset uint64
+struct/member fuchsia.hardware.skipblock/WriteBytesOperation.size uint64
+struct/member fuchsia.hardware.skipblock/WriteBytesOperation.vmo zx/handle:VMO
+struct/member fuchsia.hardware.skipblock/WriteBytesOperation.vmo_offset uint64
+resource struct fuchsia.hardware.skipblock/WriteBytesOperation
+library fuchsia.hardware.skipblock

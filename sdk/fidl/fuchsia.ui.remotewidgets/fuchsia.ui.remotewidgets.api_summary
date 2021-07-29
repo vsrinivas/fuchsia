@@ -1,0 +1,61 @@
+struct/member fuchsia.ui.remotewidgets/ButtonValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/ButtonValue.label string:64
+struct fuchsia.ui.remotewidgets/ButtonValue
+struct/member fuchsia.ui.remotewidgets/GraphValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/GraphValue.step int32
+struct/member fuchsia.ui.remotewidgets/GraphValue.value float32
+struct fuchsia.ui.remotewidgets/GraphValue
+struct/member fuchsia.ui.remotewidgets/GridValue.columns uint8
+struct/member fuchsia.ui.remotewidgets/GridValue.values vector<fuchsia.ui.remotewidgets/TextValue>:256
+struct fuchsia.ui.remotewidgets/GridValue
+table/member fuchsia.ui.remotewidgets/Group.icon fuchsia.ui.remotewidgets/IconValue
+table/member fuchsia.ui.remotewidgets/Group.title string:128
+table/member fuchsia.ui.remotewidgets/Group.values vector<fuchsia.ui.remotewidgets/Value>:16
+table fuchsia.ui.remotewidgets/Group
+struct/member fuchsia.ui.remotewidgets/IconValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/IconValue.code_point int32
+struct/member fuchsia.ui.remotewidgets/IconValue.font_family fuchsia.fonts/FamilyName:optional
+struct fuchsia.ui.remotewidgets/IconValue
+struct/member fuchsia.ui.remotewidgets/InputValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/InputValue.lines int32 1
+struct/member fuchsia.ui.remotewidgets/InputValue.text string:1024
+struct fuchsia.ui.remotewidgets/InputValue
+struct/member fuchsia.ui.remotewidgets/ListValue.items vector<fuchsia.ui.remotewidgets/TextValue>:1024
+struct/member fuchsia.ui.remotewidgets/ListValue.multiselect bool false
+struct/member fuchsia.ui.remotewidgets/ListValue.popup bool false
+struct/member fuchsia.ui.remotewidgets/ListValue.title string:128
+struct fuchsia.ui.remotewidgets/ListValue
+union/member fuchsia.ui.remotewidgets/Number.double_value float64
+union/member fuchsia.ui.remotewidgets/Number.int_value int64
+union/member fuchsia.ui.remotewidgets/Number.uint_value uint64
+strict union fuchsia.ui.remotewidgets/Number
+struct/member fuchsia.ui.remotewidgets/NumberValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/NumberValue.value fuchsia.ui.remotewidgets/Number
+struct fuchsia.ui.remotewidgets/NumberValue
+struct/member fuchsia.ui.remotewidgets/ProgressValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/ProgressValue.value float32
+struct fuchsia.ui.remotewidgets/ProgressValue
+enum/member fuchsia.ui.remotewidgets/QuickAction.CANCEL 1073741824
+enum/member fuchsia.ui.remotewidgets/QuickAction.DETAILS 2147483648
+enum/member fuchsia.ui.remotewidgets/QuickAction.SELECT 268435456
+enum/member fuchsia.ui.remotewidgets/QuickAction.SUBMIT 536870912
+strict enum fuchsia.ui.remotewidgets/QuickAction uint32
+protocol/member fuchsia.ui.remotewidgets/QuickUi.GetSpec(fuchsia.ui.remotewidgets/Value:optional value) -> (fuchsia.ui.remotewidgets/Spec spec)
+protocol fuchsia.ui.remotewidgets/QuickUi
+table/member fuchsia.ui.remotewidgets/Spec.groups vector<fuchsia.ui.remotewidgets/Group>:8
+table/member fuchsia.ui.remotewidgets/Spec.title string:128
+table fuchsia.ui.remotewidgets/Spec
+struct/member fuchsia.ui.remotewidgets/TextValue.action int32 0
+struct/member fuchsia.ui.remotewidgets/TextValue.text string:64
+struct fuchsia.ui.remotewidgets/TextValue
+union/member fuchsia.ui.remotewidgets/Value.button fuchsia.ui.remotewidgets/ButtonValue
+union/member fuchsia.ui.remotewidgets/Value.graph fuchsia.ui.remotewidgets/GraphValue
+union/member fuchsia.ui.remotewidgets/Value.grid fuchsia.ui.remotewidgets/GridValue
+union/member fuchsia.ui.remotewidgets/Value.icon fuchsia.ui.remotewidgets/IconValue
+union/member fuchsia.ui.remotewidgets/Value.input fuchsia.ui.remotewidgets/InputValue
+union/member fuchsia.ui.remotewidgets/Value.list fuchsia.ui.remotewidgets/ListValue
+union/member fuchsia.ui.remotewidgets/Value.number fuchsia.ui.remotewidgets/NumberValue
+union/member fuchsia.ui.remotewidgets/Value.progress fuchsia.ui.remotewidgets/ProgressValue
+union/member fuchsia.ui.remotewidgets/Value.text fuchsia.ui.remotewidgets/TextValue
+strict union fuchsia.ui.remotewidgets/Value
+library fuchsia.ui.remotewidgets

@@ -1,0 +1,37 @@
+protocol/member fuchsia.hardware.ethernet/Device.ConfigMulticastAddMac(fuchsia.hardware.ethernet/MacAddress addr) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.ConfigMulticastDeleteMac(fuchsia.hardware.ethernet/MacAddress addr) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.ConfigMulticastSetPromiscuousMode(bool enabled) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.ConfigMulticastTestFilter() -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.DumpRegisters() -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.GetFifos() -> (int32 status,box<fuchsia.hardware.ethernet/Fifos> info)
+protocol/member fuchsia.hardware.ethernet/Device.GetInfo() -> (fuchsia.hardware.ethernet/Info info)
+protocol/member fuchsia.hardware.ethernet/Device.GetStatus() -> (fuchsia.hardware.ethernet/DeviceStatus device_status)
+protocol/member fuchsia.hardware.ethernet/Device.ListenStart() -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.ListenStop() -> ()
+protocol/member fuchsia.hardware.ethernet/Device.SetClientName(string:16 name) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.SetIOBuffer(zx/handle:VMO h) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.SetPromiscuousMode(bool enabled) -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.Start() -> (int32 status)
+protocol/member fuchsia.hardware.ethernet/Device.Stop() -> ()
+protocol fuchsia.hardware.ethernet/Device
+bits/member fuchsia.hardware.ethernet/DeviceStatus.ONLINE 1
+strict bits fuchsia.hardware.ethernet/DeviceStatus uint32
+bits/member fuchsia.hardware.ethernet/Features.LOOPBACK 4
+bits/member fuchsia.hardware.ethernet/Features.SYNTHETIC 2
+bits/member fuchsia.hardware.ethernet/Features.WLAN 1
+strict bits fuchsia.hardware.ethernet/Features uint32
+struct/member fuchsia.hardware.ethernet/Fifos.rx zx/handle:FIFO
+struct/member fuchsia.hardware.ethernet/Fifos.rx_depth uint32
+struct/member fuchsia.hardware.ethernet/Fifos.tx zx/handle:FIFO
+struct/member fuchsia.hardware.ethernet/Fifos.tx_depth uint32
+resource struct fuchsia.hardware.ethernet/Fifos
+struct/member fuchsia.hardware.ethernet/Info.features fuchsia.hardware.ethernet/Features
+struct/member fuchsia.hardware.ethernet/Info.mac fuchsia.hardware.ethernet/MacAddress
+struct/member fuchsia.hardware.ethernet/Info.mtu uint32
+struct fuchsia.hardware.ethernet/Info
+const fuchsia.hardware.ethernet/MAX_CLIENT_NAME_LEN uint32 15
+struct/member fuchsia.hardware.ethernet/MacAddress.octets array<uint8,6>
+struct fuchsia.hardware.ethernet/MacAddress
+const fuchsia.hardware.ethernet/SET_CLIENT_NAME_MAX_LEN uint32 16
+const fuchsia.hardware.ethernet/SIGNAL_STATUS uint32 16777216
+library fuchsia.hardware.ethernet

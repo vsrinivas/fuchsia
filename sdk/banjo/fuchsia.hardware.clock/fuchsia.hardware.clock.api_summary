@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.clock/Clock.Disable() -> (int32 s)
+protocol/member fuchsia.hardware.clock/Clock.Enable() -> (int32 s)
+protocol/member fuchsia.hardware.clock/Clock.GetInput() -> (int32 s,uint32 index)
+protocol/member fuchsia.hardware.clock/Clock.GetNumInputs() -> (int32 s,uint32 n)
+protocol/member fuchsia.hardware.clock/Clock.GetRate() -> (int32 s,uint64 hz)
+protocol/member fuchsia.hardware.clock/Clock.IsEnabled() -> (int32 s,bool enabled)
+protocol/member fuchsia.hardware.clock/Clock.QuerySupportedRate(uint64 hz_in) -> (int32 s,uint64 hz_out)
+protocol/member fuchsia.hardware.clock/Clock.SetInput(uint32 idx) -> (int32 s)
+protocol/member fuchsia.hardware.clock/Clock.SetRate(uint64 hz) -> (int32 s)
+protocol fuchsia.hardware.clock/Clock
+library fuchsia.hardware.clock

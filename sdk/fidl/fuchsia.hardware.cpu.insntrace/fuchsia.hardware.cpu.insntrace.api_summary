@@ -1,0 +1,57 @@
+const fuchsia.hardware.cpu.insntrace/API_VERSION uint16 0
+struct/member fuchsia.hardware.cpu.insntrace/AddressRange.end uint64
+struct/member fuchsia.hardware.cpu.insntrace/AddressRange.start uint64
+struct fuchsia.hardware.cpu.insntrace/AddressRange
+struct/member fuchsia.hardware.cpu.insntrace/Allocation.mode fuchsia.hardware.cpu.insntrace/Mode
+struct/member fuchsia.hardware.cpu.insntrace/Allocation.num_traces uint16
+struct fuchsia.hardware.cpu.insntrace/Allocation
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.address_range_0 fuchsia.hardware.cpu.insntrace/AddressRange
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.address_range_1 fuchsia.hardware.cpu.insntrace/AddressRange
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.address_space_match uint64
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.chunk_order uint32
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.ctl uint64
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.is_circular bool
+struct/member fuchsia.hardware.cpu.insntrace/BufferConfig.num_chunks uint32
+struct fuchsia.hardware.cpu.insntrace/BufferConfig
+struct/member fuchsia.hardware.cpu.insntrace/BufferState.capture_end uint64
+struct fuchsia.hardware.cpu.insntrace/BufferState
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.AllocateBuffer(fuchsia.hardware.cpu.insntrace/BufferConfig config) -> (fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Result result)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.AssignThreadBuffer(uint32 descriptor,zx/handle:THREAD thread) -> (fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Result result)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.FreeBuffer(uint32 descriptor) -> ()
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.GetAllocation() -> (box<fuchsia.hardware.cpu.insntrace/Allocation> allocation)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.GetBufferConfig(uint32 descriptor) -> (box<fuchsia.hardware.cpu.insntrace/BufferConfig> config)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.GetBufferState(uint32 descriptor) -> (box<fuchsia.hardware.cpu.insntrace/BufferState> state)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.GetChunkHandle(uint32 descriptor,uint32 chunk_num) -> (zx/handle:<VMO,optional> buffer)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.Initialize(fuchsia.hardware.cpu.insntrace/Allocation allocation) -> (fuchsia.hardware.cpu.insntrace/Controller_Initialize_Result result)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.ReleaseThreadBuffer(uint32 descriptor,zx/handle:THREAD thread) -> (fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Result result)
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.Start() -> ()
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.Stop() -> ()
+protocol/member fuchsia.hardware.cpu.insntrace/Controller.Terminate() -> (fuchsia.hardware.cpu.insntrace/Controller_Terminate_Result result)
+protocol fuchsia.hardware.cpu.insntrace/Controller
+struct/member fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Response.descriptor uint32
+struct fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Response
+union/member fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Result.err int32
+union/member fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Result.response fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Response
+strict union fuchsia.hardware.cpu.insntrace/Controller_AllocateBuffer_Result
+struct fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Response
+union/member fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Result.err int32
+union/member fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Result.response fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Response
+strict union fuchsia.hardware.cpu.insntrace/Controller_AssignThreadBuffer_Result
+struct fuchsia.hardware.cpu.insntrace/Controller_Initialize_Response
+union/member fuchsia.hardware.cpu.insntrace/Controller_Initialize_Result.err int32
+union/member fuchsia.hardware.cpu.insntrace/Controller_Initialize_Result.response fuchsia.hardware.cpu.insntrace/Controller_Initialize_Response
+strict union fuchsia.hardware.cpu.insntrace/Controller_Initialize_Result
+struct fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Response
+union/member fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Result.err int32
+union/member fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Result.response fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Response
+strict union fuchsia.hardware.cpu.insntrace/Controller_ReleaseThreadBuffer_Result
+struct fuchsia.hardware.cpu.insntrace/Controller_Terminate_Response
+union/member fuchsia.hardware.cpu.insntrace/Controller_Terminate_Result.err int32
+union/member fuchsia.hardware.cpu.insntrace/Controller_Terminate_Result.response fuchsia.hardware.cpu.insntrace/Controller_Terminate_Response
+strict union fuchsia.hardware.cpu.insntrace/Controller_Terminate_Result
+const fuchsia.hardware.cpu.insntrace/MAX_NUM_ADDR_RANGES uint16 2
+const fuchsia.hardware.cpu.insntrace/MAX_NUM_TRACES uint16 64
+enum/member fuchsia.hardware.cpu.insntrace/Mode.CPU 0
+enum/member fuchsia.hardware.cpu.insntrace/Mode.THREAD 1
+strict enum fuchsia.hardware.cpu.insntrace/Mode uint8
+library fuchsia.hardware.cpu.insntrace

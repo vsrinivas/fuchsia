@@ -1,0 +1,15 @@
+struct/member fuchsia.hardware.cpu.ctrl/CpuPerformanceStateInfo.frequency_hz int64
+struct/member fuchsia.hardware.cpu.ctrl/CpuPerformanceStateInfo.voltage_uv int64
+struct fuchsia.hardware.cpu.ctrl/CpuPerformanceStateInfo
+protocol/member fuchsia.hardware.cpu.ctrl/Device.GetLogicalCoreId(uint64 index) -> (uint64 id)
+protocol/member fuchsia.hardware.cpu.ctrl/Device.GetNumLogicalCores() -> (uint64 count)
+protocol/member fuchsia.hardware.cpu.ctrl/Device.GetPerformanceStateInfo(uint32 state) -> (fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Result result)
+protocol fuchsia.hardware.cpu.ctrl/Device
+struct/member fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Response.info fuchsia.hardware.cpu.ctrl/CpuPerformanceStateInfo
+struct fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Response
+union/member fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Result.err int32
+union/member fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Result.response fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Response
+strict union fuchsia.hardware.cpu.ctrl/Device_GetPerformanceStateInfo_Result
+const fuchsia.hardware.cpu.ctrl/FREQUENCY_UNKNOWN int64 -1
+const fuchsia.hardware.cpu.ctrl/VOLTAGE_UNKNOWN int64 -1
+library fuchsia.hardware.cpu.ctrl

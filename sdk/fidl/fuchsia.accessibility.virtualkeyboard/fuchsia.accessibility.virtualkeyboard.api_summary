@@ -1,0 +1,5 @@
+protocol/member fuchsia.accessibility.virtualkeyboard/Listener.OnVisibilityChanged(bool updated_visibility) -> ()
+protocol fuchsia.accessibility.virtualkeyboard/Listener
+protocol/member fuchsia.accessibility.virtualkeyboard/Registry.Register(fuchsia.ui.views/ViewRef view_ref,bool is_visible,server_end:fuchsia.accessibility.virtualkeyboard/Listener listener)
+protocol fuchsia.accessibility.virtualkeyboard/Registry
+library fuchsia.accessibility.virtualkeyboard

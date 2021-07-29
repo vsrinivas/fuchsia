@@ -1,0 +1,16 @@
+const fuchsia.hardware.nandinfo/NAND_GUID_LEN uint32 16
+enum/member fuchsia.hardware.nandinfo/NandClass.BBS 3
+enum/member fuchsia.hardware.nandinfo/NandClass.FTL 2
+enum/member fuchsia.hardware.nandinfo/NandClass.PARTMAP 1
+enum/member fuchsia.hardware.nandinfo/NandClass.TEST 4
+enum/member fuchsia.hardware.nandinfo/NandClass.UNKNOWN 0
+strict enum fuchsia.hardware.nandinfo/NandClass uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.ecc_bits uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.nand_class fuchsia.hardware.nandinfo/NandClass
+struct/member fuchsia.hardware.nandinfo/NandInfo.num_blocks uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.oob_size uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.page_size uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.pages_per_block uint32
+struct/member fuchsia.hardware.nandinfo/NandInfo.partition_guid array<uint8,16>
+struct fuchsia.hardware.nandinfo/NandInfo
+library fuchsia.hardware.nandinfo

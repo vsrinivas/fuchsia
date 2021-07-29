@@ -1,0 +1,46 @@
+enum/member fuchsia.hardware.serial/CharacterWidth.BITS_5 1
+enum/member fuchsia.hardware.serial/CharacterWidth.BITS_6 2
+enum/member fuchsia.hardware.serial/CharacterWidth.BITS_7 3
+enum/member fuchsia.hardware.serial/CharacterWidth.BITS_8 4
+strict enum fuchsia.hardware.serial/CharacterWidth uint8
+enum/member fuchsia.hardware.serial/Class.BLUETOOTH_HCI 2
+enum/member fuchsia.hardware.serial/Class.CONSOLE 3
+enum/member fuchsia.hardware.serial/Class.GENERIC 1
+enum/member fuchsia.hardware.serial/Class.KERNEL_DEBUG 4
+strict enum fuchsia.hardware.serial/Class uint8
+struct/member fuchsia.hardware.serial/Config.baud_rate uint32
+struct/member fuchsia.hardware.serial/Config.character_width fuchsia.hardware.serial/CharacterWidth
+struct/member fuchsia.hardware.serial/Config.control_flow fuchsia.hardware.serial/FlowControl
+struct/member fuchsia.hardware.serial/Config.parity fuchsia.hardware.serial/Parity
+struct/member fuchsia.hardware.serial/Config.stop_width fuchsia.hardware.serial/StopWidth
+struct fuchsia.hardware.serial/Config
+protocol/member fuchsia.hardware.serial/Device.GetClass() -> (fuchsia.hardware.serial/Class device_class)
+protocol/member fuchsia.hardware.serial/Device.SetConfig(fuchsia.hardware.serial/Config config) -> (int32 s)
+protocol fuchsia.hardware.serial/Device
+enum/member fuchsia.hardware.serial/FlowControl.CTS_RTS 2
+enum/member fuchsia.hardware.serial/FlowControl.NONE 1
+strict enum fuchsia.hardware.serial/FlowControl uint8
+protocol/member fuchsia.hardware.serial/NewDevice.GetClass() -> (fuchsia.hardware.serial/Class device_class)
+protocol/member fuchsia.hardware.serial/NewDevice.Read() -> (fuchsia.hardware.serial/NewDevice_Read_Result result)
+protocol/member fuchsia.hardware.serial/NewDevice.SetConfig(fuchsia.hardware.serial/Config config) -> (int32 s)
+protocol/member fuchsia.hardware.serial/NewDevice.Write(vector<uint8> data) -> (fuchsia.hardware.serial/NewDevice_Write_Result result)
+protocol fuchsia.hardware.serial/NewDevice
+protocol/member fuchsia.hardware.serial/NewDeviceProxy.GetChannel(server_end:fuchsia.hardware.serial/NewDevice req)
+protocol fuchsia.hardware.serial/NewDeviceProxy
+struct/member fuchsia.hardware.serial/NewDevice_Read_Response.data vector<uint8>
+struct fuchsia.hardware.serial/NewDevice_Read_Response
+union/member fuchsia.hardware.serial/NewDevice_Read_Result.err int32
+union/member fuchsia.hardware.serial/NewDevice_Read_Result.response fuchsia.hardware.serial/NewDevice_Read_Response
+strict union fuchsia.hardware.serial/NewDevice_Read_Result
+struct fuchsia.hardware.serial/NewDevice_Write_Response
+union/member fuchsia.hardware.serial/NewDevice_Write_Result.err int32
+union/member fuchsia.hardware.serial/NewDevice_Write_Result.response fuchsia.hardware.serial/NewDevice_Write_Response
+strict union fuchsia.hardware.serial/NewDevice_Write_Result
+enum/member fuchsia.hardware.serial/Parity.EVEN 2
+enum/member fuchsia.hardware.serial/Parity.NONE 1
+enum/member fuchsia.hardware.serial/Parity.ODD 3
+strict enum fuchsia.hardware.serial/Parity uint8
+enum/member fuchsia.hardware.serial/StopWidth.BITS_1 1
+enum/member fuchsia.hardware.serial/StopWidth.BITS_2 2
+strict enum fuchsia.hardware.serial/StopWidth uint8
+library fuchsia.hardware.serial

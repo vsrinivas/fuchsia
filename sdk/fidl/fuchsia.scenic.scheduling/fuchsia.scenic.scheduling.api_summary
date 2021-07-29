@@ -1,0 +1,14 @@
+struct/member fuchsia.scenic.scheduling/FramePresentedInfo.actual_presentation_time int64
+struct/member fuchsia.scenic.scheduling/FramePresentedInfo.num_presents_allowed uint64
+struct/member fuchsia.scenic.scheduling/FramePresentedInfo.presentation_infos vector<fuchsia.scenic.scheduling/PresentReceivedInfo>:32
+struct fuchsia.scenic.scheduling/FramePresentedInfo
+struct/member fuchsia.scenic.scheduling/FuturePresentationTimes.future_presentations vector<fuchsia.scenic.scheduling/PresentationInfo>:8
+struct/member fuchsia.scenic.scheduling/FuturePresentationTimes.remaining_presents_in_flight_allowed int64
+struct fuchsia.scenic.scheduling/FuturePresentationTimes
+table/member fuchsia.scenic.scheduling/PresentReceivedInfo.latched_time int64
+table/member fuchsia.scenic.scheduling/PresentReceivedInfo.present_received_time int64
+table fuchsia.scenic.scheduling/PresentReceivedInfo
+table/member fuchsia.scenic.scheduling/PresentationInfo.latch_point int64
+table/member fuchsia.scenic.scheduling/PresentationInfo.presentation_time int64
+table fuchsia.scenic.scheduling/PresentationInfo
+library fuchsia.scenic.scheduling

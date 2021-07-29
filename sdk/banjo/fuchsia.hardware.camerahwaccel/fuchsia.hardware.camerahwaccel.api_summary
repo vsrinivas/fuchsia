@@ -1,0 +1,23 @@
+struct/member fuchsia.hardware.camerahwaccel/FrameAvailableInfo.buffer_id uint32
+struct/member fuchsia.hardware.camerahwaccel/FrameAvailableInfo.frame_status fuchsia.hardware.camerahwaccel/FrameStatus
+struct/member fuchsia.hardware.camerahwaccel/FrameAvailableInfo.metadata fuchsia.hardware.camerahwaccel/FrameMetadata
+struct fuchsia.hardware.camerahwaccel/FrameAvailableInfo
+struct/member fuchsia.hardware.camerahwaccel/FrameMetadata.capture_timestamp uint64
+struct/member fuchsia.hardware.camerahwaccel/FrameMetadata.image_format_index uint32
+struct/member fuchsia.hardware.camerahwaccel/FrameMetadata.input_buffer_index uint32
+struct/member fuchsia.hardware.camerahwaccel/FrameMetadata.timestamp uint64
+struct fuchsia.hardware.camerahwaccel/FrameMetadata
+enum/member fuchsia.hardware.camerahwaccel/FrameStatus.ERROR_BUFFER_FULL 2
+enum/member fuchsia.hardware.camerahwaccel/FrameStatus.ERROR_FRAME 1
+enum/member fuchsia.hardware.camerahwaccel/FrameStatus.OK 0
+strict enum fuchsia.hardware.camerahwaccel/FrameStatus uint8
+protocol/member fuchsia.hardware.camerahwaccel/HwAccelFrameCallback.FrameReady(fuchsia.hardware.camerahwaccel/FrameAvailableInfo info)
+protocol fuchsia.hardware.camerahwaccel/HwAccelFrameCallback
+protocol/member fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback.TaskRemoved(fuchsia.hardware.camerahwaccel/TaskRemoveStatus status)
+protocol fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback
+protocol/member fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback.FrameResolutionChanged(fuchsia.hardware.camerahwaccel/FrameAvailableInfo info)
+protocol fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback
+enum/member fuchsia.hardware.camerahwaccel/TaskRemoveStatus.ERROR_INVALID 1
+enum/member fuchsia.hardware.camerahwaccel/TaskRemoveStatus.OK 0
+strict enum fuchsia.hardware.camerahwaccel/TaskRemoveStatus uint8
+library fuchsia.hardware.camerahwaccel

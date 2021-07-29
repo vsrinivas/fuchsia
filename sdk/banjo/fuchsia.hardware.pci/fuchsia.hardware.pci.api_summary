@@ -1,0 +1,121 @@
+protocol/member fuchsia.hardware.pci/Pci.AckInterrupt() -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.ConfigRead16(uint16 offset) -> (int32 s,uint16 value)
+protocol/member fuchsia.hardware.pci/Pci.ConfigRead32(uint16 offset) -> (int32 s,uint32 value)
+protocol/member fuchsia.hardware.pci/Pci.ConfigRead8(uint16 offset) -> (int32 s,uint8 value)
+protocol/member fuchsia.hardware.pci/Pci.ConfigWrite16(uint16 offset,uint16 value) -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.ConfigWrite32(uint16 offset,uint32 value) -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.ConfigWrite8(uint16 offset,uint8 value) -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.ConfigureIrqMode(uint32 requested_irq_count) -> (int32 s,fuchsia.hardware.pci/PciIrqMode mode)
+protocol/member fuchsia.hardware.pci/Pci.EnableBusMaster(bool enable) -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.GetBar(uint32 bar_id) -> (int32 s,fuchsia.hardware.syscalls.pci/PciBar res)
+protocol/member fuchsia.hardware.pci/Pci.GetBti(uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.pci/Pci.GetDeviceInfo() -> (int32 s,fuchsia.hardware.syscalls.pci/PcieDeviceInfo info)
+protocol/member fuchsia.hardware.pci/Pci.GetFirstCapability(uint8 id) -> (int32 s,uint8 offset)
+protocol/member fuchsia.hardware.pci/Pci.GetFirstExtendedCapability(uint16 id) -> (int32 s,uint16 offset)
+protocol/member fuchsia.hardware.pci/Pci.GetNextCapability(uint8 id,uint8 offset) -> (int32 s,uint8 offset)
+protocol/member fuchsia.hardware.pci/Pci.GetNextExtendedCapability(uint16 id,uint16 offset) -> (int32 s,uint16 offset)
+protocol/member fuchsia.hardware.pci/Pci.MapInterrupt(uint32 which_irq) -> (int32 s,zx/handle:INTERRUPT handle)
+protocol/member fuchsia.hardware.pci/Pci.QueryIrqMode(fuchsia.hardware.syscalls.pci/PciIrqMode mode) -> (int32 s,uint32 max_irqs)
+protocol/member fuchsia.hardware.pci/Pci.ResetDevice() -> (int32 s)
+protocol/member fuchsia.hardware.pci/Pci.SetIrqMode(fuchsia.hardware.syscalls.pci/PciIrqMode mode,uint32 requested_irq_count) -> (int32 s)
+protocol fuchsia.hardware.pci/Pci
+enum/member fuchsia.hardware.pci/PciCapId.ADVANCED_FEATURES 19
+enum/member fuchsia.hardware.pci/PciCapId.AGP 2
+enum/member fuchsia.hardware.pci/PciCapId.AGP8X 14
+enum/member fuchsia.hardware.pci/PciCapId.COMPACT_PCI_CRC 11
+enum/member fuchsia.hardware.pci/PciCapId.COMPACT_PCI_HOTSWAP 6
+enum/member fuchsia.hardware.pci/PciCapId.DEBUG_PORT 10
+enum/member fuchsia.hardware.pci/PciCapId.ENHANCED_ALLOCATION 20
+enum/member fuchsia.hardware.pci/PciCapId.FLATTENING_PORTAL_BRIDGE 21
+enum/member fuchsia.hardware.pci/PciCapId.HYPERTRANSPORT 8
+enum/member fuchsia.hardware.pci/PciCapId.MSI 5
+enum/member fuchsia.hardware.pci/PciCapId.MSIX 17
+enum/member fuchsia.hardware.pci/PciCapId.NULL 0
+enum/member fuchsia.hardware.pci/PciCapId.PCIX 7
+enum/member fuchsia.hardware.pci/PciCapId.PCI_BRIDGE_SUBSYSTEM_VID 13
+enum/member fuchsia.hardware.pci/PciCapId.PCI_EXPRESS 16
+enum/member fuchsia.hardware.pci/PciCapId.PCI_HOT_PLUG 12
+enum/member fuchsia.hardware.pci/PciCapId.PCI_PWR_MGMT 1
+enum/member fuchsia.hardware.pci/PciCapId.SATA_DATA_NDX_CFG 18
+enum/member fuchsia.hardware.pci/PciCapId.SECURE_DEVICE 15
+enum/member fuchsia.hardware.pci/PciCapId.SLOT_IDENTIFICATION 4
+enum/member fuchsia.hardware.pci/PciCapId.VENDOR 9
+enum/member fuchsia.hardware.pci/PciCapId.VITAL_PRODUCT_DATA 3
+strict enum fuchsia.hardware.pci/PciCapId uint8
+enum/member fuchsia.hardware.pci/PciCfg.BASE_ADDRESSES 16
+enum/member fuchsia.hardware.pci/PciCfg.BIST 15
+enum/member fuchsia.hardware.pci/PciCfg.CACHE_LINE_SIZE 12
+enum/member fuchsia.hardware.pci/PciCfg.CAPABILITIES_PTR 52
+enum/member fuchsia.hardware.pci/PciCfg.CARDBUS_CIS_PTR 40
+enum/member fuchsia.hardware.pci/PciCfg.CLASS_CODE_BASE 11
+enum/member fuchsia.hardware.pci/PciCfg.CLASS_CODE_INTR 9
+enum/member fuchsia.hardware.pci/PciCfg.CLASS_CODE_SUB 10
+enum/member fuchsia.hardware.pci/PciCfg.COMMAND 4
+enum/member fuchsia.hardware.pci/PciCfg.DEVICE_ID 2
+enum/member fuchsia.hardware.pci/PciCfg.EXP_ROM_ADDRESS 48
+enum/member fuchsia.hardware.pci/PciCfg.HEADER_TYPE 14
+enum/member fuchsia.hardware.pci/PciCfg.INTERRUPT_LINE 60
+enum/member fuchsia.hardware.pci/PciCfg.INTERRUPT_PIN 61
+enum/member fuchsia.hardware.pci/PciCfg.LATENCY_TIMER 13
+enum/member fuchsia.hardware.pci/PciCfg.MAX_LATENCY 63
+enum/member fuchsia.hardware.pci/PciCfg.MIN_GRANT 62
+enum/member fuchsia.hardware.pci/PciCfg.REVISION_ID 8
+enum/member fuchsia.hardware.pci/PciCfg.STATUS 6
+enum/member fuchsia.hardware.pci/PciCfg.SUBSYSTEM_ID 46
+enum/member fuchsia.hardware.pci/PciCfg.SUBSYSTEM_VENDOR_ID 44
+enum/member fuchsia.hardware.pci/PciCfg.VENDOR_ID 0
+strict enum fuchsia.hardware.pci/PciCfg uint16
+enum/member fuchsia.hardware.pci/PciExtCapId.ACS 13
+enum/member fuchsia.hardware.pci/PciExtCapId.ADVANCED_ERROR_REPORTING 1
+enum/member fuchsia.hardware.pci/PciExtCapId.ALTERNATE_PROTOCOL 43
+enum/member fuchsia.hardware.pci/PciExtCapId.ARI 14
+enum/member fuchsia.hardware.pci/PciExtCapId.ATS 15
+enum/member fuchsia.hardware.pci/PciExtCapId.CAC 12
+enum/member fuchsia.hardware.pci/PciExtCapId.DATA_LINK_FEATURE 37
+enum/member fuchsia.hardware.pci/PciExtCapId.DESIGNATED_VENDOR 35
+enum/member fuchsia.hardware.pci/PciExtCapId.DEVICE_SERIAL_NUMBER 3
+enum/member fuchsia.hardware.pci/PciExtCapId.DPC 29
+enum/member fuchsia.hardware.pci/PciExtCapId.DYNAMIC_POWER_ALLOCATION 22
+enum/member fuchsia.hardware.pci/PciExtCapId.ENHANCED_ALLOCATION 20
+enum/member fuchsia.hardware.pci/PciExtCapId.FRS_QUEUEING 33
+enum/member fuchsia.hardware.pci/PciExtCapId.HIERARCHY_ID 40
+enum/member fuchsia.hardware.pci/PciExtCapId.L1PM_SUBSTATES 30
+enum/member fuchsia.hardware.pci/PciExtCapId.LANE_MARGINING_AT_RECEIVER 39
+enum/member fuchsia.hardware.pci/PciExtCapId.LATENCY_TOLERANCE_REPORTING 24
+enum/member fuchsia.hardware.pci/PciExtCapId.LNR 28
+enum/member fuchsia.hardware.pci/PciExtCapId.MPCIE 32
+enum/member fuchsia.hardware.pci/PciExtCapId.MR_IOV 17
+enum/member fuchsia.hardware.pci/PciExtCapId.MULTICAST 18
+enum/member fuchsia.hardware.pci/PciExtCapId.MULTI_FUNCTION_VIRTUAL_CHANNEL 8
+enum/member fuchsia.hardware.pci/PciExtCapId.NATIVE_PCIE_ENCLOSURE 41
+enum/member fuchsia.hardware.pci/PciExtCapId.NULL 0
+enum/member fuchsia.hardware.pci/PciExtCapId.PASID 27
+enum/member fuchsia.hardware.pci/PciExtCapId.PHYSICAL_LAYER_16 38
+enum/member fuchsia.hardware.pci/PciExtCapId.PHYSICAL_LAYER_32 42
+enum/member fuchsia.hardware.pci/PciExtCapId.PMUX 26
+enum/member fuchsia.hardware.pci/PciExtCapId.POWER_BUDGETING 4
+enum/member fuchsia.hardware.pci/PciExtCapId.PRECISION_TIME_MEASUREMENT 31
+enum/member fuchsia.hardware.pci/PciExtCapId.PRI 19
+enum/member fuchsia.hardware.pci/PciExtCapId.RCRB 10
+enum/member fuchsia.hardware.pci/PciExtCapId.READINESS_TIME_REPORTING 34
+enum/member fuchsia.hardware.pci/PciExtCapId.RESIZABLE_BAR 21
+enum/member fuchsia.hardware.pci/PciExtCapId.ROOT_COMPLEX_EVENT_COLLECTOR_ENDPOINT_ASSOCIATION 7
+enum/member fuchsia.hardware.pci/PciExtCapId.ROOT_COMPLEX_INTERNAL_LINK_CONTROL 6
+enum/member fuchsia.hardware.pci/PciExtCapId.ROOT_COMPLEX_LINK_DECLARATION 5
+enum/member fuchsia.hardware.pci/PciExtCapId.SECONDARY_PCI_EXPRESS 25
+enum/member fuchsia.hardware.pci/PciExtCapId.SR_IOV 16
+enum/member fuchsia.hardware.pci/PciExtCapId.SYSTEM_FIRMWARE_INTERMEDIARY 44
+enum/member fuchsia.hardware.pci/PciExtCapId.TPH 23
+enum/member fuchsia.hardware.pci/PciExtCapId.VENDOR 11
+enum/member fuchsia.hardware.pci/PciExtCapId.VF_RESIZABLE_BAR 36
+enum/member fuchsia.hardware.pci/PciExtCapId.VIRTUAL_CHANNEL 9
+enum/member fuchsia.hardware.pci/PciExtCapId.VIRTUAL_CHANNEL_NO_MFVC 2
+strict enum fuchsia.hardware.pci/PciExtCapId uint16
+enum/member fuchsia.hardware.pci/PciIrqMode.COUNT 5
+enum/member fuchsia.hardware.pci/PciIrqMode.DISABLED 0
+enum/member fuchsia.hardware.pci/PciIrqMode.LEGACY 1
+enum/member fuchsia.hardware.pci/PciIrqMode.LEGACY_NOACK 2
+enum/member fuchsia.hardware.pci/PciIrqMode.MSI 3
+enum/member fuchsia.hardware.pci/PciIrqMode.MSI_X 4
+strict enum fuchsia.hardware.pci/PciIrqMode uint8
+library fuchsia.hardware.pci

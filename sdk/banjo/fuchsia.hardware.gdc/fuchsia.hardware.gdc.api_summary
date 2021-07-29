@@ -1,0 +1,10 @@
+protocol/member fuchsia.hardware.gdc/Gdc.InitTask(fuchsia.sysmem/BufferCollectionInfo_2 input_buffer_collection,fuchsia.sysmem/BufferCollectionInfo_2 output_buffer_collection,fuchsia.sysmem/ImageFormat_2 input_image_format,vector<fuchsia.sysmem/ImageFormat_2> output_image_format_table,uint32 output_image_format_index,vector<fuchsia.hardware.gdc/GdcConfigInfo> config_vmos,fuchsia.hardware.camerahwaccel/HwAccelFrameCallback frame_callback,fuchsia.hardware.camerahwaccel/HwAccelResChangeCallback res_callback,fuchsia.hardware.camerahwaccel/HwAccelRemoveTaskCallback task_remove_callback) -> (int32 s,uint32 task_index)
+protocol/member fuchsia.hardware.gdc/Gdc.ProcessFrame(uint32 task_index,uint32 input_buffer_index,uint64 capture_timestamp) -> (int32 s)
+protocol/member fuchsia.hardware.gdc/Gdc.ReleaseFrame(uint32 task_index,uint32 buffer_index)
+protocol/member fuchsia.hardware.gdc/Gdc.RemoveTask(uint32 task_index)
+protocol/member fuchsia.hardware.gdc/Gdc.SetOutputResolution(uint32 task_index,uint32 new_output_image_format_index) -> (int32 s)
+protocol fuchsia.hardware.gdc/Gdc
+struct/member fuchsia.hardware.gdc/GdcConfigInfo.config_vmo zx/handle:VMO
+struct/member fuchsia.hardware.gdc/GdcConfigInfo.size uint32
+resource struct fuchsia.hardware.gdc/GdcConfigInfo
+library fuchsia.hardware.gdc

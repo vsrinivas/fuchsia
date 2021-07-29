@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.spi/Device.Exchange(fuchsia.hardware.sharedmemory/SharedVmoBuffer tx_buffer,fuchsia.hardware.sharedmemory/SharedVmoBuffer rx_buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Exchange_Result result)
+protocol/member fuchsia.hardware.spi/Device.ExchangeVector(vector<uint8>:8196 txdata) -> (int32 status,vector<uint8>:8196 rxdata)
+protocol/member fuchsia.hardware.spi/Device.Receive(fuchsia.hardware.sharedmemory/SharedVmoBuffer buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Receive_Result result)
+protocol/member fuchsia.hardware.spi/Device.ReceiveVector(uint32 size) -> (int32 status,vector<uint8>:8196 data)
+protocol/member fuchsia.hardware.spi/Device.RegisterVmo(uint32 vmo_id,fuchsia.mem/Range vmo,fuchsia.hardware.sharedmemory/SharedVmoRight rights) -> (fuchsia.hardware.sharedmemory/SharedVmoRegister_RegisterVmo_Result result)
+protocol/member fuchsia.hardware.spi/Device.Transmit(fuchsia.hardware.sharedmemory/SharedVmoBuffer buffer) -> (fuchsia.hardware.sharedmemory/SharedVmoIo_Transmit_Result result)
+protocol/member fuchsia.hardware.spi/Device.TransmitVector(vector<uint8>:8196 data) -> (int32 status)
+protocol/member fuchsia.hardware.spi/Device.UnregisterVmo(uint32 vmo_id) -> (fuchsia.hardware.sharedmemory/SharedVmoRegister_UnregisterVmo_Result result)
+protocol fuchsia.hardware.spi/Device
+const fuchsia.hardware.spi/MAX_TRANSFER_SIZE uint32 8196
+library fuchsia.hardware.spi

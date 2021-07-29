@@ -1,0 +1,15 @@
+protocol/member fuchsia.hardware.sdhci/Sdhci.GetBaseClock() -> (uint32 clock)
+protocol/member fuchsia.hardware.sdhci/Sdhci.GetBti(uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.sdhci/Sdhci.GetInterrupt() -> (int32 s,zx/handle:INTERRUPT irq)
+protocol/member fuchsia.hardware.sdhci/Sdhci.GetMmio() -> (int32 s,zx/handle:VMO mmio,uint64 offset)
+protocol/member fuchsia.hardware.sdhci/Sdhci.GetQuirks() -> (uint64 quirks,uint64 dma_boundary_alignment)
+protocol/member fuchsia.hardware.sdhci/Sdhci.HwReset() -> ()
+protocol fuchsia.hardware.sdhci/Sdhci
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.NON_STANDARD_TUNING 8
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.NO_DDR 16
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.NO_DMA 2
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.STRIP_RESPONSE_CRC 1
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.STRIP_RESPONSE_CRC_PRESERVE_ORDER 4
+enum/member fuchsia.hardware.sdhci/SdhciQuirk.USE_DMA_BOUNDARY_ALIGNMENT 32
+strict enum fuchsia.hardware.sdhci/SdhciQuirk uint64
+library fuchsia.hardware.sdhci

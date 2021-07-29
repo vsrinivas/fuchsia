@@ -1,0 +1,50 @@
+enum/member fuchsia.stash/FlushError.COMMIT_FAILED 2
+enum/member fuchsia.stash/FlushError.READ_ONLY 1
+strict enum fuchsia.stash/FlushError uint32
+protocol/member fuchsia.stash/GetIterator.GetNext() -> (vector<fuchsia.stash/KeyValue> kvs)
+protocol fuchsia.stash/GetIterator
+struct/member fuchsia.stash/KeyValue.key string:256
+struct/member fuchsia.stash/KeyValue.val fuchsia.stash/Value
+resource struct fuchsia.stash/KeyValue
+struct/member fuchsia.stash/ListItem.key string:256
+struct/member fuchsia.stash/ListItem.type fuchsia.stash/ValueType
+struct fuchsia.stash/ListItem
+protocol/member fuchsia.stash/ListIterator.GetNext() -> (vector<fuchsia.stash/ListItem> keys)
+protocol fuchsia.stash/ListIterator
+const fuchsia.stash/MAX_KEY_SIZE uint64 256
+const fuchsia.stash/MAX_STRING_SIZE uint64 12000
+protocol/member fuchsia.stash/SecureStore.CreateAccessor(bool read_only,server_end:fuchsia.stash/StoreAccessor accessor_request)
+protocol/member fuchsia.stash/SecureStore.Identify(string:256 name)
+protocol fuchsia.stash/SecureStore
+protocol/member fuchsia.stash/Store.CreateAccessor(bool read_only,server_end:fuchsia.stash/StoreAccessor accessor_request)
+protocol/member fuchsia.stash/Store.Identify(string:256 name)
+protocol fuchsia.stash/Store
+protocol/member fuchsia.stash/Store2.CreateAccessor(bool read_only,server_end:fuchsia.stash/StoreAccessor accessor_request)
+protocol/member fuchsia.stash/Store2.Identify(string:256 name)
+protocol fuchsia.stash/Store2
+protocol/member fuchsia.stash/StoreAccessor.Commit()
+protocol/member fuchsia.stash/StoreAccessor.DeletePrefix(string:256 prefix)
+protocol/member fuchsia.stash/StoreAccessor.DeleteValue(string:256 key)
+protocol/member fuchsia.stash/StoreAccessor.Flush() -> (fuchsia.stash/StoreAccessor_Flush_Result result)
+protocol/member fuchsia.stash/StoreAccessor.GetPrefix(string:256 prefix,server_end:fuchsia.stash/GetIterator it)
+protocol/member fuchsia.stash/StoreAccessor.GetValue(string:256 key) -> (fuchsia.stash/Value:optional val)
+protocol/member fuchsia.stash/StoreAccessor.ListPrefix(string:256 prefix,server_end:fuchsia.stash/ListIterator it)
+protocol/member fuchsia.stash/StoreAccessor.SetValue(string:256 key,fuchsia.stash/Value val)
+protocol fuchsia.stash/StoreAccessor
+struct fuchsia.stash/StoreAccessor_Flush_Response
+union/member fuchsia.stash/StoreAccessor_Flush_Result.err fuchsia.stash/FlushError
+union/member fuchsia.stash/StoreAccessor_Flush_Result.response fuchsia.stash/StoreAccessor_Flush_Response
+strict union fuchsia.stash/StoreAccessor_Flush_Result
+union/member fuchsia.stash/Value.boolval bool
+union/member fuchsia.stash/Value.bytesval fuchsia.mem/Buffer
+union/member fuchsia.stash/Value.floatval float64
+union/member fuchsia.stash/Value.intval int64
+union/member fuchsia.stash/Value.stringval string:12000
+resource strict union fuchsia.stash/Value
+enum/member fuchsia.stash/ValueType.BOOL_VAL 3
+enum/member fuchsia.stash/ValueType.BYTES_VAL 5
+enum/member fuchsia.stash/ValueType.FLOAT_VAL 2
+enum/member fuchsia.stash/ValueType.INT_VAL 1
+enum/member fuchsia.stash/ValueType.STRING_VAL 4
+strict enum fuchsia.stash/ValueType uint8
+library fuchsia.stash

@@ -1,0 +1,80 @@
+protocol/member fuchsia.hardware.goldfish/AddressSpaceChildDriver.AllocateBlock(uint64 size) -> (int32 res,uint64 paddr,zx/handle:<VMO,optional> vmo)
+protocol/member fuchsia.hardware.goldfish/AddressSpaceChildDriver.ClaimSharedBlock(uint64 offset,uint64 size) -> (int32 res,zx/handle:<VMO,optional> vmo)
+protocol/member fuchsia.hardware.goldfish/AddressSpaceChildDriver.DeallocateBlock(uint64 paddr) -> (int32 res)
+protocol/member fuchsia.hardware.goldfish/AddressSpaceChildDriver.Ping(fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping) -> (int32 res,fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping)
+protocol/member fuchsia.hardware.goldfish/AddressSpaceChildDriver.UnclaimSharedBlock(uint64 offset) -> (int32 res)
+protocol fuchsia.hardware.goldfish/AddressSpaceChildDriver
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data0 uint64
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data1 uint64
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data2 uint32
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data3 uint32
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.metadata uint64
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.offset uint64
+struct/member fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.size uint64
+struct fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage
+enum/member fuchsia.hardware.goldfish/AddressSpaceChildDriverType.DEFAULT 0
+strict enum fuchsia.hardware.goldfish/AddressSpaceChildDriverType uint32
+protocol/member fuchsia.hardware.goldfish/AddressSpaceDevice.OpenChildDriver(fuchsia.hardware.goldfish/AddressSpaceChildDriverType type,server_end:fuchsia.hardware.goldfish/AddressSpaceChildDriver req)
+protocol fuchsia.hardware.goldfish/AddressSpaceDevice
+table/member fuchsia.hardware.goldfish/BufferHandleInfo.id uint32
+table/member fuchsia.hardware.goldfish/BufferHandleInfo.memory_property uint32
+table/member fuchsia.hardware.goldfish/BufferHandleInfo.type fuchsia.hardware.goldfish/BufferHandleType
+table fuchsia.hardware.goldfish/BufferHandleInfo
+enum/member fuchsia.hardware.goldfish/BufferHandleType.BUFFER 1
+enum/member fuchsia.hardware.goldfish/BufferHandleType.COLOR_BUFFER 2
+enum/member fuchsia.hardware.goldfish/BufferHandleType.INVALID 0
+strict enum fuchsia.hardware.goldfish/BufferHandleType uint32
+enum/member fuchsia.hardware.goldfish/ColorBufferFormatType.BGRA 32993
+enum/member fuchsia.hardware.goldfish/ColorBufferFormatType.LUMINANCE 6409
+enum/member fuchsia.hardware.goldfish/ColorBufferFormatType.RG 33319
+enum/member fuchsia.hardware.goldfish/ColorBufferFormatType.RGBA 6408
+strict enum fuchsia.hardware.goldfish/ColorBufferFormatType uint32
+protocol/member fuchsia.hardware.goldfish/ControlDevice.CreateBuffer2(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateBuffer2Params create_params) -> (fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result result)
+protocol/member fuchsia.hardware.goldfish/ControlDevice.CreateColorBuffer2(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateColorBuffer2Params create_params) -> (int32 res,int32 hw_address_page_offset)
+protocol/member fuchsia.hardware.goldfish/ControlDevice.CreateSyncFence(zx/handle:EVENTPAIR event) -> (fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result result)
+protocol/member fuchsia.hardware.goldfish/ControlDevice.GetBufferHandle(zx/handle:VMO vmo) -> (int32 res,uint32 id,fuchsia.hardware.goldfish/BufferHandleType type)
+protocol/member fuchsia.hardware.goldfish/ControlDevice.GetBufferHandleInfo(zx/handle:VMO vmo) -> (fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result result)
+protocol fuchsia.hardware.goldfish/ControlDevice
+struct/member fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response.hw_address_page_offset int32
+struct fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response
+union/member fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.err int32
+union/member fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.response fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response
+strict union fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result
+struct fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response
+union/member fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.err int32
+union/member fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.response fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response
+strict union fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result
+struct/member fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response.info fuchsia.hardware.goldfish/BufferHandleInfo
+struct fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response
+union/member fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.err int32
+union/member fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.response fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response
+strict union fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result
+table/member fuchsia.hardware.goldfish/CreateBuffer2Params.memory_property uint32
+table/member fuchsia.hardware.goldfish/CreateBuffer2Params.physical_address uint64
+table/member fuchsia.hardware.goldfish/CreateBuffer2Params.size uint64
+table fuchsia.hardware.goldfish/CreateBuffer2Params
+table/member fuchsia.hardware.goldfish/CreateColorBuffer2Params.format fuchsia.hardware.goldfish/ColorBufferFormatType
+table/member fuchsia.hardware.goldfish/CreateColorBuffer2Params.height uint32
+table/member fuchsia.hardware.goldfish/CreateColorBuffer2Params.memory_property uint32
+table/member fuchsia.hardware.goldfish/CreateColorBuffer2Params.physical_address uint64
+table/member fuchsia.hardware.goldfish/CreateColorBuffer2Params.width uint32
+table fuchsia.hardware.goldfish/CreateColorBuffer2Params
+const fuchsia.hardware.goldfish/MEMORY_PROPERTY_DEVICE_LOCAL uint32 1
+const fuchsia.hardware.goldfish/MEMORY_PROPERTY_HOST_VISIBLE uint32 2
+protocol/member fuchsia.hardware.goldfish/Pipe.DoCall(uint64 count,uint64 offset,uint64 read_count,uint64 read_offset) -> (int32 res,uint64 actual)
+protocol/member fuchsia.hardware.goldfish/Pipe.GetBuffer() -> (int32 res,zx/handle:<VMO,optional> vmo)
+protocol/member fuchsia.hardware.goldfish/Pipe.Read(uint64 count,uint64 offset) -> (int32 res,uint64 actual)
+protocol/member fuchsia.hardware.goldfish/Pipe.SetBufferSize(uint64 size) -> (int32 res)
+protocol/member fuchsia.hardware.goldfish/Pipe.SetEvent(zx/handle:EVENT event)
+protocol/member fuchsia.hardware.goldfish/Pipe.Write(uint64 count,uint64 offset) -> (int32 res,uint64 actual)
+protocol fuchsia.hardware.goldfish/Pipe
+protocol/member fuchsia.hardware.goldfish/PipeDevice.OpenPipe(server_end:fuchsia.hardware.goldfish/Pipe pipe_request)
+protocol fuchsia.hardware.goldfish/PipeDevice
+const fuchsia.hardware.goldfish/SIGNAL_HANGUP uint32 67108864
+const fuchsia.hardware.goldfish/SIGNAL_READABLE uint32 16777216
+const fuchsia.hardware.goldfish/SIGNAL_WRITABLE uint32 33554432
+protocol/member fuchsia.hardware.goldfish/SyncDevice.CreateTimeline(server_end:fuchsia.hardware.goldfish/SyncTimeline timeline_req) -> ()
+protocol fuchsia.hardware.goldfish/SyncDevice
+protocol/member fuchsia.hardware.goldfish/SyncTimeline.TriggerHostWait(uint64 host_glsync_handle,uint64 host_syncthread_handle,zx/handle:EVENTPAIR event)
+protocol fuchsia.hardware.goldfish/SyncTimeline
+library fuchsia.hardware.goldfish

@@ -1,0 +1,67 @@
+protocol/member fuchsia.media.playback/ElementarySource.AddBinding(server_end:fuchsia.media.playback/ElementarySource source_request)
+protocol/member fuchsia.media.playback/ElementarySource.AddStream(fuchsia.media/StreamType type,uint32 ticks_per_second_numerator,uint32 ticks_per_second_denominator,server_end:fuchsia.media/SimpleStreamSink sink_request)
+protocol/member fuchsia.media.playback/ElementarySource.OnStatusChanged -> (fuchsia.media.playback/SourceStatus source_status)
+protocol fuchsia.media.playback/ElementarySource
+const fuchsia.media.playback/PROBLEM_ASSET_NOT_FOUND string "fuchsia.media.playback.AssetNotFound"
+const fuchsia.media.playback/PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED string "fuchsia.media.playback.AudioEncodingNotSupported"
+const fuchsia.media.playback/PROBLEM_CONNECTION_FAILED string "fuchsia.media.playback.ConnectionFailed"
+const fuchsia.media.playback/PROBLEM_CONTAINER_NOT_SUPPORTED string "fuchsia.media.playback.ContainerNotSupported"
+const fuchsia.media.playback/PROBLEM_INTERNAL string "fuchsia.media.playback.Internal"
+const fuchsia.media.playback/PROBLEM_VIDEO_ENCODING_NOT_SUPPORTED string "fuchsia.media.playback.VideoEncodingNotSupported"
+protocol/member fuchsia.media.playback/Player.AddBinding(server_end:fuchsia.media.playback/Player player_request)
+protocol/member fuchsia.media.playback/Player.BindGainControl(server_end:fuchsia.media.audio/GainControl gain_control_request)
+protocol/member fuchsia.media.playback/Player.CancelSourceTransition(server_end:fuchsia.media.playback/Source returned_source_request)
+protocol/member fuchsia.media.playback/Player.CreateElementarySource(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)
+protocol/member fuchsia.media.playback/Player.CreateFileSource(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)
+protocol/member fuchsia.media.playback/Player.CreateReaderSource(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)
+protocol/member fuchsia.media.playback/Player.CreateView(fuchsia.ui.views/ViewToken view_token)
+protocol/member fuchsia.media.playback/Player.OnStatusChanged -> (fuchsia.media.playback/PlayerStatus player_status)
+protocol/member fuchsia.media.playback/Player.Pause()
+protocol/member fuchsia.media.playback/Player.Play()
+protocol/member fuchsia.media.playback/Player.Seek(int64 position)
+protocol/member fuchsia.media.playback/Player.SetFileSource(zx/handle:CHANNEL file_channel)
+protocol/member fuchsia.media.playback/Player.SetPlaybackRate(float32 playback_rate)
+protocol/member fuchsia.media.playback/Player.SetSource(client_end:<fuchsia.media.playback/Source,optional> source)
+protocol/member fuchsia.media.playback/Player.TransitionToSource(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)
+protocol fuchsia.media.playback/Player
+struct/member fuchsia.media.playback/PlayerStatus.audio_connected bool
+struct/member fuchsia.media.playback/PlayerStatus.can_pause bool
+struct/member fuchsia.media.playback/PlayerStatus.can_seek bool
+struct/member fuchsia.media.playback/PlayerStatus.duration int64
+struct/member fuchsia.media.playback/PlayerStatus.end_of_stream bool
+struct/member fuchsia.media.playback/PlayerStatus.has_audio bool
+struct/member fuchsia.media.playback/PlayerStatus.has_video bool
+struct/member fuchsia.media.playback/PlayerStatus.metadata fuchsia.media/Metadata:optional
+struct/member fuchsia.media.playback/PlayerStatus.pixel_aspect_ratio fuchsia.math/Size:optional
+struct/member fuchsia.media.playback/PlayerStatus.problem box<fuchsia.media.playback/Problem>
+struct/member fuchsia.media.playback/PlayerStatus.ready bool
+struct/member fuchsia.media.playback/PlayerStatus.timeline_function fuchsia.media/TimelineFunction:optional
+struct/member fuchsia.media.playback/PlayerStatus.video_connected bool
+struct/member fuchsia.media.playback/PlayerStatus.video_size fuchsia.math/Size:optional
+struct fuchsia.media.playback/PlayerStatus
+struct/member fuchsia.media.playback/Problem.details string:optional
+struct/member fuchsia.media.playback/Problem.type string
+struct fuchsia.media.playback/Problem
+protocol/member fuchsia.media.playback/SeekingReader.Describe() -> (int32 status,uint64 size,bool can_seek)
+protocol/member fuchsia.media.playback/SeekingReader.ReadAt(uint64 position) -> (int32 status,zx/handle:<SOCKET,optional> socket)
+protocol fuchsia.media.playback/SeekingReader
+protocol/member fuchsia.media.playback/Source.OnStatusChanged -> (fuchsia.media.playback/SourceStatus source_status)
+protocol fuchsia.media.playback/Source
+protocol/member fuchsia.media.playback/SourceManager.CancelSourceTransition(server_end:fuchsia.media.playback/Source returned_source_request)
+protocol/member fuchsia.media.playback/SourceManager.CreateElementarySource(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)
+protocol/member fuchsia.media.playback/SourceManager.CreateFileSource(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)
+protocol/member fuchsia.media.playback/SourceManager.CreateReaderSource(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)
+protocol/member fuchsia.media.playback/SourceManager.SetSource(client_end:<fuchsia.media.playback/Source,optional> source)
+protocol/member fuchsia.media.playback/SourceManager.TransitionToSource(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)
+protocol fuchsia.media.playback/SourceManager
+struct/member fuchsia.media.playback/SourceStatus.can_pause bool
+struct/member fuchsia.media.playback/SourceStatus.can_seek bool
+struct/member fuchsia.media.playback/SourceStatus.duration int64
+struct/member fuchsia.media.playback/SourceStatus.has_audio bool
+struct/member fuchsia.media.playback/SourceStatus.has_video bool
+struct/member fuchsia.media.playback/SourceStatus.metadata fuchsia.media/Metadata:optional
+struct/member fuchsia.media.playback/SourceStatus.problem box<fuchsia.media.playback/Problem>
+struct/member fuchsia.media.playback/SourceStatus.ready bool
+struct fuchsia.media.playback/SourceStatus
+const fuchsia.media.playback/UNKNOWN_SIZE uint64 18446744073709551615
+library fuchsia.media.playback

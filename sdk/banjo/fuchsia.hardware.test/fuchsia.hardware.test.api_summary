@@ -1,0 +1,14 @@
+protocol/member fuchsia.hardware.test/Test.Destroy() -> ()
+protocol/member fuchsia.hardware.test/Test.GetChannel() -> (zx/handle:CHANNEL h)
+protocol/member fuchsia.hardware.test/Test.GetOutputSocket() -> (zx/handle:SOCKET h)
+protocol/member fuchsia.hardware.test/Test.RunTests() -> (int32 s,fuchsia.hardware.test/TestReport report)
+protocol/member fuchsia.hardware.test/Test.SetOutputSocket(zx/handle:SOCKET handle) -> ()
+protocol/member fuchsia.hardware.test/Test.SetTestFunc(client_end:fuchsia.hardware.test/TestFuncCallback func) -> ()
+protocol fuchsia.hardware.test/Test
+protocol/member fuchsia.hardware.test/TestFuncCallback.Callback() -> (int32 s,fuchsia.hardware.test/TestReport report)
+protocol fuchsia.hardware.test/TestFuncCallback
+struct/member fuchsia.hardware.test/TestReport.n_failed uint32
+struct/member fuchsia.hardware.test/TestReport.n_success uint32
+struct/member fuchsia.hardware.test/TestReport.n_tests uint32
+struct fuchsia.hardware.test/TestReport
+library fuchsia.hardware.test

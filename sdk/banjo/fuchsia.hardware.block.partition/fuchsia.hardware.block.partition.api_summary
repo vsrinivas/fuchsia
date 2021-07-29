@@ -1,0 +1,14 @@
+protocol/member fuchsia.hardware.block.partition/BlockPartition.GetGuid(fuchsia.hardware.block.partition/GUIDType guid_type) -> (int32 status,fuchsia.hardware.block.partition/GUID guid)
+protocol/member fuchsia.hardware.block.partition/BlockPartition.GetName() -> (int32 status,string:<128,optional> name)
+protocol fuchsia.hardware.block.partition/BlockPartition
+struct/member fuchsia.hardware.block.partition/GUID.data1 uint32
+struct/member fuchsia.hardware.block.partition/GUID.data2 uint16
+struct/member fuchsia.hardware.block.partition/GUID.data3 uint16
+struct/member fuchsia.hardware.block.partition/GUID.data4 array<uint8,8>
+struct fuchsia.hardware.block.partition/GUID
+enum/member fuchsia.hardware.block.partition/GUIDType.INSTANCE 1
+enum/member fuchsia.hardware.block.partition/GUIDType.TYPE 0
+strict enum fuchsia.hardware.block.partition/GUIDType uint8
+const fuchsia.hardware.block.partition/GUID_LENGTH uint32 16
+const fuchsia.hardware.block.partition/MAX_PARTITION_NAME_LENGTH uint32 128
+library fuchsia.hardware.block.partition

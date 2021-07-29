@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.power.sensor/PowerSensor.ConnectServer(zx/handle:CHANNEL server) -> (int32 status)
+protocol fuchsia.hardware.power.sensor/PowerSensor
+library fuchsia.hardware.power.sensor

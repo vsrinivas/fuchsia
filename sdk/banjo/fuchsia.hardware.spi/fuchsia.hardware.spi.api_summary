@@ -1,0 +1,6 @@
+protocol/member fuchsia.hardware.spi/Spi.ConnectServer(zx/handle:CHANNEL server) -> ()
+protocol/member fuchsia.hardware.spi/Spi.Exchange(vector<uint8> txdata) -> (int32 status,vector<uint8> rxdata)
+protocol/member fuchsia.hardware.spi/Spi.Receive(uint32 size) -> (int32 status,vector<uint8> rxdata)
+protocol/member fuchsia.hardware.spi/Spi.Transmit(vector<uint8> txdata) -> (int32 status)
+protocol fuchsia.hardware.spi/Spi
+library fuchsia.hardware.spi

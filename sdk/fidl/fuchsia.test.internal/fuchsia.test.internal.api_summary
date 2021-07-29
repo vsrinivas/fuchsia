@@ -1,0 +1,8 @@
+protocol/member fuchsia.test.internal/Info.GetTestUrl(string:4096 moniker) -> (fuchsia.test.internal/Info_GetTestUrl_Result result)
+protocol fuchsia.test.internal/Info
+struct/member fuchsia.test.internal/Info_GetTestUrl_Response.url string:4096
+struct fuchsia.test.internal/Info_GetTestUrl_Response
+union/member fuchsia.test.internal/Info_GetTestUrl_Result.err int32
+union/member fuchsia.test.internal/Info_GetTestUrl_Result.response fuchsia.test.internal/Info_GetTestUrl_Response
+strict union fuchsia.test.internal/Info_GetTestUrl_Result
+library fuchsia.test.internal

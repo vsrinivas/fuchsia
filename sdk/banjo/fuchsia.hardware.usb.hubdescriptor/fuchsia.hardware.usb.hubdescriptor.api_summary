@@ -1,0 +1,75 @@
+const fuchsia.hardware.usb.hubdescriptor/USB_C_BH_PORT_RESET uint32 32
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_CONFIG_ERROR uint32 128
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_CONNECTION uint32 1
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_ENABLE uint32 2
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_HIGH_SPEED uint32 1024
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_INDICATOR_CONTROL uint32 4096
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_LINK_STATE uint32 64
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_LOW_SPEED uint32 512
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_OVER_CURRENT uint32 8
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_POWER uint32 256
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_RESET uint32 16
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_SUSPEND uint32 4
+const fuchsia.hardware.usb.hubdescriptor/USB_C_PORT_TEST_MODE uint32 2048
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_BH_PORT_RESET uint32 28
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_BH_PORT_RESET uint32 29
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_HUB_LOCAL_POWER uint32 0
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_HUB_OVER_CURRENT uint32 1
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_CONFIG_ERROR uint32 26
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_CONNECTION uint32 16
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_ENABLE uint32 17
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_LINK_STATE uint32 25
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_OVER_CURRENT uint32 19
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_RESET uint32 20
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_C_PORT_SUSPEND uint32 18
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_FORCE_LINKPM_ACCEPT uint32 30
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_CONNECTION uint32 0
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_ENABLE uint32 1
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_INDICATOR uint32 22
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_LINK_STATE uint32 5
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_LOW_SPEED uint32 9
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_OVER_CURRENT uint32 3
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_POWER uint32 8
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_REMOTE_WAKE_MASK uint32 27
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_RESET uint32 4
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_SUSPEND uint32 2
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_TEST uint32 21
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_U1_TIMEOUT uint32 23
+const fuchsia.hardware.usb.hubdescriptor/USB_FEATURE_PORT_U2_TIMEOUT uint32 24
+const fuchsia.hardware.usb.hubdescriptor/USB_HUB_DESC_TYPE uint32 41
+const fuchsia.hardware.usb.hubdescriptor/USB_HUB_DESC_TYPE_SS uint32 42
+const fuchsia.hardware.usb.hubdescriptor/USB_HUB_SET_DEPTH uint32 12
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_CONNECTION uint32 1
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_ENABLE uint32 2
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_HIGH_SPEED uint32 1024
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_INDICATOR_CONTROL uint32 4096
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_LOW_SPEED uint32 512
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_OVER_CURRENT uint32 8
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_POWER uint32 256
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_RESET uint32 16
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_SUSPEND uint32 4
+const fuchsia.hardware.usb.hubdescriptor/USB_PORT_TEST_MODE uint32 2048
+const fuchsia.hardware.usb.hubdescriptor/USB_RECIP_HUB uint32 32
+const fuchsia.hardware.usb.hubdescriptor/USB_RECIP_PORT uint32 35
+struct/member fuchsia.hardware.usb.hubdescriptor/Usb2Payload.device_removable array<uint8,4>
+struct/member fuchsia.hardware.usb.hubdescriptor/Usb2Payload.port_pwr_ctrl_mask array<uint8,4>
+struct fuchsia.hardware.usb.hubdescriptor/Usb2Payload
+struct/member fuchsia.hardware.usb.hubdescriptor/Usb3Payload.b_hub_hdr_dec_lat uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/Usb3Payload.device_removable uint16
+struct/member fuchsia.hardware.usb.hubdescriptor/Usb3Payload.w_hub_delay uint16
+struct fuchsia.hardware.usb.hubdescriptor/Usb3Payload
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.b_desc_length uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.b_descriptor_type uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.b_hub_contr_current uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.b_nbr_ports uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.b_power_on2_pwr_good uint8
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.payload fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptorPayload
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor.w_hub_characteristics uint16
+struct fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor
+union/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptorPayload.hs fuchsia.hardware.usb.hubdescriptor/Usb2Payload
+union/member fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptorPayload.ss fuchsia.hardware.usb.hubdescriptor/Usb3Payload
+strict union fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptorPayload
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbPortStatus.w_port_change uint16
+struct/member fuchsia.hardware.usb.hubdescriptor/UsbPortStatus.w_port_status uint16
+struct fuchsia.hardware.usb.hubdescriptor/UsbPortStatus
+library fuchsia.hardware.usb.hubdescriptor

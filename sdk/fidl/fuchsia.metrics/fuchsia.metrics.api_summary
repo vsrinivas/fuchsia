@@ -1,0 +1,45 @@
+struct/member fuchsia.metrics/CustomEventValue.dimension_name string
+struct/member fuchsia.metrics/CustomEventValue.value fuchsia.metrics/Value
+struct fuchsia.metrics/CustomEventValue
+struct/member fuchsia.metrics/HistogramBucket.count uint64
+struct/member fuchsia.metrics/HistogramBucket.index uint32
+struct fuchsia.metrics/HistogramBucket
+const fuchsia.metrics/MAX_BATCHED_EVENTS uint32 500
+const fuchsia.metrics/MAX_BYTES_PER_EVENT int64 102400
+const fuchsia.metrics/MAX_HISTOGRAM_BUCKETS uint32 500
+const fuchsia.metrics/MAX_METRIC_DIMENSIONS uint32 10
+const fuchsia.metrics/MAX_STRING_EVENT_SIZE uint32 256
+struct/member fuchsia.metrics/MetricEvent.event_codes vector<uint32>:10
+struct/member fuchsia.metrics/MetricEvent.metric_id uint32
+struct/member fuchsia.metrics/MetricEvent.payload fuchsia.metrics/MetricEventPayload
+struct fuchsia.metrics/MetricEvent
+protocol/member fuchsia.metrics/MetricEventLogger.LogCustomEvent(uint32 metric_id,vector<fuchsia.metrics/CustomEventValue> event_values) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLogger.LogInteger(uint32 metric_id,int64 value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLogger.LogIntegerHistogram(uint32 metric_id,vector<fuchsia.metrics/HistogramBucket>:500 histogram,vector<uint32>:10 event_codes) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLogger.LogMetricEvents(vector<fuchsia.metrics/MetricEvent>:500 events) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLogger.LogOccurrence(uint32 metric_id,uint64 count,vector<uint32>:10 event_codes) -> (fuchsia.metrics/Status status)
+protocol/member fuchsia.metrics/MetricEventLogger.LogString(uint32 metric_id,string:256 string_value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/Status status)
+protocol fuchsia.metrics/MetricEventLogger
+protocol/member fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLogger(fuchsia.metrics/ProjectSpec project_spec,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/Status status)
+protocol fuchsia.metrics/MetricEventLoggerFactory
+union/member fuchsia.metrics/MetricEventPayload.count uint64
+union/member fuchsia.metrics/MetricEventPayload.histogram vector<fuchsia.metrics/HistogramBucket>:500
+union/member fuchsia.metrics/MetricEventPayload.integer_value int64
+union/member fuchsia.metrics/MetricEventPayload.string_value string:256
+flexible union fuchsia.metrics/MetricEventPayload
+table/member fuchsia.metrics/ProjectSpec.customer_id uint32
+table/member fuchsia.metrics/ProjectSpec.project_id uint32
+table fuchsia.metrics/ProjectSpec
+enum/member fuchsia.metrics/Status.BUFFER_FULL 3
+enum/member fuchsia.metrics/Status.EVENT_TOO_BIG 2
+enum/member fuchsia.metrics/Status.INTERNAL_ERROR -1
+enum/member fuchsia.metrics/Status.INVALID_ARGUMENTS 1
+enum/member fuchsia.metrics/Status.OK 0
+enum/member fuchsia.metrics/Status.SHUT_DOWN 4
+strict enum fuchsia.metrics/Status int32
+union/member fuchsia.metrics/Value.double_value float64
+union/member fuchsia.metrics/Value.index_value uint32
+union/member fuchsia.metrics/Value.int_value int64
+union/member fuchsia.metrics/Value.string_value string
+strict union fuchsia.metrics/Value
+library fuchsia.metrics

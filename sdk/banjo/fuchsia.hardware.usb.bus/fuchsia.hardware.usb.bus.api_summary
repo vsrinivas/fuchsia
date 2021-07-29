@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.usb.bus/UsbBus.ConfigureHub(uint64 hub_device,uint32 speed,fuchsia.hardware.usb.hubdescriptor/UsbHubDescriptor desc,bool multi_tt) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBus.DeviceAdded(uint64 hub_device,uint32 port,uint32 speed) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBus.DeviceRemoved(uint64 hub_device,uint32 port) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBus.SetHubInterface(uint64 usb_device,fuchsia.hardware.usb.hub/UsbHubInterface hub) -> (int32 s)
+protocol fuchsia.hardware.usb.bus/UsbBus
+protocol/member fuchsia.hardware.usb.bus/UsbBusInterface.AddDevice(uint32 device_id,uint32 hub_id,uint32 speed) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBusInterface.ReinitializeDevice(uint32 device_id) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBusInterface.RemoveDevice(uint32 device_id) -> (int32 s)
+protocol/member fuchsia.hardware.usb.bus/UsbBusInterface.ResetPort(uint32 hub_id,uint32 port,bool enumerating) -> (int32 s)
+protocol fuchsia.hardware.usb.bus/UsbBusInterface
+library fuchsia.hardware.usb.bus

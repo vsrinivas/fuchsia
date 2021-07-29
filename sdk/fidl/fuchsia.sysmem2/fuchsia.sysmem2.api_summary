@@ -1,0 +1,208 @@
+table/member fuchsia.sysmem2/BufferCollectionConstraints.allow_clear_aux_buffers_for_secure bool
+table/member fuchsia.sysmem2/BufferCollectionConstraints.buffer_memory_constraints fuchsia.sysmem2/BufferMemoryConstraints
+table/member fuchsia.sysmem2/BufferCollectionConstraints.image_format_constraints vector<fuchsia.sysmem2/ImageFormatConstraints>:64
+table/member fuchsia.sysmem2/BufferCollectionConstraints.max_buffer_count uint32
+table/member fuchsia.sysmem2/BufferCollectionConstraints.min_buffer_count uint32
+table/member fuchsia.sysmem2/BufferCollectionConstraints.min_buffer_count_for_camping uint32
+table/member fuchsia.sysmem2/BufferCollectionConstraints.min_buffer_count_for_dedicated_slack uint32
+table/member fuchsia.sysmem2/BufferCollectionConstraints.min_buffer_count_for_shared_slack uint32
+table/member fuchsia.sysmem2/BufferCollectionConstraints.need_clear_aux_buffers_for_secure bool
+table/member fuchsia.sysmem2/BufferCollectionConstraints.usage fuchsia.sysmem2/BufferUsage
+table fuchsia.sysmem2/BufferCollectionConstraints
+table/member fuchsia.sysmem2/BufferCollectionInfo.buffers vector<fuchsia.sysmem2/VmoBuffer>:128
+table/member fuchsia.sysmem2/BufferCollectionInfo.settings fuchsia.sysmem2/SingleBufferSettings
+resource table fuchsia.sysmem2/BufferCollectionInfo
+table/member fuchsia.sysmem2/BufferMemoryConstraints.cpu_domain_supported bool
+table/member fuchsia.sysmem2/BufferMemoryConstraints.heap_permitted vector<fuchsia.sysmem2/HeapType>:64
+table/member fuchsia.sysmem2/BufferMemoryConstraints.inaccessible_domain_supported bool
+table/member fuchsia.sysmem2/BufferMemoryConstraints.max_size_bytes uint32
+table/member fuchsia.sysmem2/BufferMemoryConstraints.min_size_bytes uint32
+table/member fuchsia.sysmem2/BufferMemoryConstraints.physically_contiguous_required bool
+table/member fuchsia.sysmem2/BufferMemoryConstraints.ram_domain_supported bool
+table/member fuchsia.sysmem2/BufferMemoryConstraints.secure_required bool
+table fuchsia.sysmem2/BufferMemoryConstraints
+table/member fuchsia.sysmem2/BufferMemorySettings.coherency_domain fuchsia.sysmem2/CoherencyDomain
+table/member fuchsia.sysmem2/BufferMemorySettings.heap fuchsia.sysmem2/HeapType
+table/member fuchsia.sysmem2/BufferMemorySettings.is_physically_contiguous bool
+table/member fuchsia.sysmem2/BufferMemorySettings.is_secure bool
+table/member fuchsia.sysmem2/BufferMemorySettings.size_bytes uint32
+table fuchsia.sysmem2/BufferMemorySettings
+table/member fuchsia.sysmem2/BufferUsage.cpu uint32
+table/member fuchsia.sysmem2/BufferUsage.display uint32
+table/member fuchsia.sysmem2/BufferUsage.none uint32
+table/member fuchsia.sysmem2/BufferUsage.video uint32
+table/member fuchsia.sysmem2/BufferUsage.vulkan uint32
+table fuchsia.sysmem2/BufferUsage
+const fuchsia.sysmem2/CPU_USAGE_READ uint32 1
+const fuchsia.sysmem2/CPU_USAGE_READ_OFTEN uint32 2
+const fuchsia.sysmem2/CPU_USAGE_WRITE uint32 4
+const fuchsia.sysmem2/CPU_USAGE_WRITE_OFTEN uint32 8
+enum/member fuchsia.sysmem2/CoherencyDomain.CPU 0
+enum/member fuchsia.sysmem2/CoherencyDomain.INACCESSIBLE 2
+enum/member fuchsia.sysmem2/CoherencyDomain.RAM 1
+strict enum fuchsia.sysmem2/CoherencyDomain uint32
+table/member fuchsia.sysmem2/CoherencyDomainSupport.cpu_supported bool
+table/member fuchsia.sysmem2/CoherencyDomainSupport.inaccessible_supported bool
+table/member fuchsia.sysmem2/CoherencyDomainSupport.ram_supported bool
+table fuchsia.sysmem2/CoherencyDomainSupport
+table/member fuchsia.sysmem2/ColorSpace.type fuchsia.sysmem2/ColorSpaceType
+table fuchsia.sysmem2/ColorSpace
+enum/member fuchsia.sysmem2/ColorSpaceType.INVALID 0
+enum/member fuchsia.sysmem2/ColorSpaceType.REC2020 7
+enum/member fuchsia.sysmem2/ColorSpaceType.REC2100 8
+enum/member fuchsia.sysmem2/ColorSpaceType.REC601_NTSC 2
+enum/member fuchsia.sysmem2/ColorSpaceType.REC601_NTSC_FULL_RANGE 3
+enum/member fuchsia.sysmem2/ColorSpaceType.REC601_PAL 4
+enum/member fuchsia.sysmem2/ColorSpaceType.REC601_PAL_FULL_RANGE 5
+enum/member fuchsia.sysmem2/ColorSpaceType.REC709 6
+enum/member fuchsia.sysmem2/ColorSpaceType.SRGB 1
+strict enum fuchsia.sysmem2/ColorSpaceType uint32
+const fuchsia.sysmem2/DISPLAY_USAGE_CURSOR uint32 2
+const fuchsia.sysmem2/DISPLAY_USAGE_LAYER uint32 1
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16 uint64 576460752303423489
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV uint64 576460752303423601
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE uint64 576460752303427697
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER uint64 576460752303435889
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER uint64 576460752303431793
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_TE uint64 576460752303427585
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER uint64 576460752303431697
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_32X8 uint64 576460752303423490
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_AFBC_32X8_TE uint64 576460752303427586
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_BCH_BIT uint64 2048
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_LINEAR_TE uint64 576460752303427584
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_SPARSE_BIT uint64 64
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT uint64 32
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_TE_BIT uint64 4096
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_TILED_HEADER_BIT uint64 8192
+const fuchsia.sysmem2/FORMAT_MODIFIER_ARM_YUV_BIT uint64 16
+const fuchsia.sysmem2/FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL uint64 648518346341351425
+const fuchsia.sysmem2/FORMAT_MODIFIER_INTEL_I915_X_TILED uint64 72057594037927937
+const fuchsia.sysmem2/FORMAT_MODIFIER_INTEL_I915_YF_TILED uint64 72057594037927939
+const fuchsia.sysmem2/FORMAT_MODIFIER_INTEL_I915_Y_TILED uint64 72057594037927938
+const fuchsia.sysmem2/FORMAT_MODIFIER_INVALID uint64 72057594037927935
+const fuchsia.sysmem2/FORMAT_MODIFIER_LINEAR uint64 0
+const fuchsia.sysmem2/FORMAT_MODIFIER_NONE uint64 0
+const fuchsia.sysmem2/FORMAT_MODIFIER_VALUE_RESERVED uint64 72057594037927935
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_AMD uint64 144115188075855872
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_ARM uint64 576460752303423488
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_BROADCOM uint64 504403158265495552
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_GOOGLE uint64 648518346341351424
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_INTEL uint64 72057594037927936
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_NONE uint64 0
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_NVIDIA uint64 216172782113783808
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_QCOM uint64 360287970189639680
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_SAMSUNG uint64 288230376151711744
+const fuchsia.sysmem2/FORMAT_MODIFIER_VENDOR_VIVANTE uint64 432345564227567616
+protocol/member fuchsia.sysmem2/Heap.AllocateVmo(uint64 size) -> (int32 s,zx/handle:<VMO,optional> vmo)
+protocol/member fuchsia.sysmem2/Heap.CreateResource(zx/handle:VMO vmo,fuchsia.sysmem2/SingleBufferSettings buffer_settings) -> (int32 s,uint64 id)
+protocol/member fuchsia.sysmem2/Heap.DestroyResource(uint64 id) -> ()
+protocol/member fuchsia.sysmem2/Heap.OnRegister -> (fuchsia.sysmem2/HeapProperties properties)
+protocol fuchsia.sysmem2/Heap
+table/member fuchsia.sysmem2/HeapProperties.coherency_domain_support fuchsia.sysmem2/CoherencyDomainSupport
+table/member fuchsia.sysmem2/HeapProperties.need_clear bool
+table/member fuchsia.sysmem2/HeapProperties.need_flush bool
+table fuchsia.sysmem2/HeapProperties
+enum/member fuchsia.sysmem2/HeapType.AMLOGIC_SECURE 1152921504606912512
+enum/member fuchsia.sysmem2/HeapType.AMLOGIC_SECURE_VDEC 1152921504606912513
+enum/member fuchsia.sysmem2/HeapType.GOLDFISH_DEVICE_LOCAL 1152921504606978048
+enum/member fuchsia.sysmem2/HeapType.GOLDFISH_HOST_VISIBLE 1152921504606978049
+enum/member fuchsia.sysmem2/HeapType.SYSTEM_RAM 0
+strict enum fuchsia.sysmem2/HeapType uint64
+table/member fuchsia.sysmem2/ImageFormat.bytes_per_row uint32
+table/member fuchsia.sysmem2/ImageFormat.coded_height uint32
+table/member fuchsia.sysmem2/ImageFormat.coded_width uint32
+table/member fuchsia.sysmem2/ImageFormat.color_space fuchsia.sysmem2/ColorSpace
+table/member fuchsia.sysmem2/ImageFormat.display_height uint32
+table/member fuchsia.sysmem2/ImageFormat.display_width uint32
+table/member fuchsia.sysmem2/ImageFormat.pixel_aspect_ratio_height uint32
+table/member fuchsia.sysmem2/ImageFormat.pixel_aspect_ratio_width uint32
+table/member fuchsia.sysmem2/ImageFormat.pixel_format fuchsia.sysmem2/PixelFormat
+table fuchsia.sysmem2/ImageFormat
+table/member fuchsia.sysmem2/ImageFormatConstraints.bytes_per_row_divisor uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.coded_height_divisor uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.coded_width_divisor uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.color_spaces vector<fuchsia.sysmem2/ColorSpace>:32
+table/member fuchsia.sysmem2/ImageFormatConstraints.display_height_divisor uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.display_width_divisor uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.max_bytes_per_row uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.max_coded_height uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.max_coded_width uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.max_coded_width_times_coded_height uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.min_bytes_per_row uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.min_coded_height uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.min_coded_width uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.pixel_format fuchsia.sysmem2/PixelFormat
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_max_bytes_per_row uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_max_coded_height uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_max_coded_width uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_min_bytes_per_row uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_min_coded_height uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.required_min_coded_width uint32
+table/member fuchsia.sysmem2/ImageFormatConstraints.start_offset_divisor uint32
+table fuchsia.sysmem2/ImageFormatConstraints
+const fuchsia.sysmem2/MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS uint32 64
+const fuchsia.sysmem2/MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS uint32 128
+const fuchsia.sysmem2/MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED uint32 64
+const fuchsia.sysmem2/MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES uint32 32
+const fuchsia.sysmem2/NONE_USAGE uint32 1
+table/member fuchsia.sysmem2/PixelFormat.format_modifier_value uint64
+table/member fuchsia.sysmem2/PixelFormat.type fuchsia.sysmem2/PixelFormatType
+table fuchsia.sysmem2/PixelFormat
+enum/member fuchsia.sysmem2/PixelFormatType.A2B10G10R10 116
+enum/member fuchsia.sysmem2/PixelFormatType.A2R10G10B10 115
+enum/member fuchsia.sysmem2/PixelFormatType.BGR24 108
+enum/member fuchsia.sysmem2/PixelFormatType.BGRA32 101
+enum/member fuchsia.sysmem2/PixelFormatType.I420 102
+enum/member fuchsia.sysmem2/PixelFormatType.INVALID 0
+enum/member fuchsia.sysmem2/PixelFormatType.L8 112
+enum/member fuchsia.sysmem2/PixelFormatType.M420 103
+enum/member fuchsia.sysmem2/PixelFormatType.MJPEG 106
+enum/member fuchsia.sysmem2/PixelFormatType.NV12 104
+enum/member fuchsia.sysmem2/PixelFormatType.R8 113
+enum/member fuchsia.sysmem2/PixelFormatType.R8G8 114
+enum/member fuchsia.sysmem2/PixelFormatType.R8G8B8A8 1
+enum/member fuchsia.sysmem2/PixelFormatType.RGB2220 111
+enum/member fuchsia.sysmem2/PixelFormatType.RGB332 110
+enum/member fuchsia.sysmem2/PixelFormatType.RGB565 109
+enum/member fuchsia.sysmem2/PixelFormatType.YUY2 105
+enum/member fuchsia.sysmem2/PixelFormatType.YV12 107
+strict enum fuchsia.sysmem2/PixelFormatType uint32
+table/member fuchsia.sysmem2/SingleBufferSettings.buffer_settings fuchsia.sysmem2/BufferMemorySettings
+table/member fuchsia.sysmem2/SingleBufferSettings.image_format_constraints fuchsia.sysmem2/ImageFormatConstraints
+table fuchsia.sysmem2/SingleBufferSettings
+const fuchsia.sysmem2/VIDEO_USAGE_CAPTURE uint32 8
+const fuchsia.sysmem2/VIDEO_USAGE_DECRYPTOR_OUTPUT uint32 16
+const fuchsia.sysmem2/VIDEO_USAGE_HW_DECODER uint32 1
+const fuchsia.sysmem2/VIDEO_USAGE_HW_DECODER_INTERNAL uint32 32
+const fuchsia.sysmem2/VIDEO_USAGE_HW_ENCODER uint32 2
+const fuchsia.sysmem2/VIDEO_USAGE_HW_PROTECTED uint32 4
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_INDEX_BUFFER uint32 4194304
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_INDIRECT_BUFFER uint32 16777216
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_STORAGE_BUFFER uint32 2097152
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER uint32 524288
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_TRANSFER_DST uint32 131072
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_TRANSFER_SRC uint32 65536
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_UNIFORM_BUFFER uint32 1048576
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER uint32 262144
+const fuchsia.sysmem2/VULKAN_BUFFER_USAGE_VERTEX_BUFFER uint32 8388608
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT uint32 16
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_INPUT_ATTACHMENT uint32 128
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_SAMPLED uint32 4
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_STENCIL_ATTACHMENT uint32 32
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_STORAGE uint32 8
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_TRANSFER_DST uint32 2
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_TRANSFER_SRC uint32 1
+const fuchsia.sysmem2/VULKAN_IMAGE_USAGE_TRANSIENT_ATTACHMENT uint32 64
+const fuchsia.sysmem2/VULKAN_USAGE_COLOR_ATTACHMENT uint32 16
+const fuchsia.sysmem2/VULKAN_USAGE_INPUT_ATTACHMENT uint32 128
+const fuchsia.sysmem2/VULKAN_USAGE_SAMPLED uint32 4
+const fuchsia.sysmem2/VULKAN_USAGE_STENCIL_ATTACHMENT uint32 32
+const fuchsia.sysmem2/VULKAN_USAGE_STORAGE uint32 8
+const fuchsia.sysmem2/VULKAN_USAGE_TRANSFER_DST uint32 2
+const fuchsia.sysmem2/VULKAN_USAGE_TRANSFER_SRC uint32 1
+const fuchsia.sysmem2/VULKAN_USAGE_TRANSIENT_ATTACHMENT uint32 64
+table/member fuchsia.sysmem2/VmoBuffer.aux_vmo zx/handle:VMO
+table/member fuchsia.sysmem2/VmoBuffer.vmo zx/handle:VMO
+table/member fuchsia.sysmem2/VmoBuffer.vmo_usable_start uint64
+resource table fuchsia.sysmem2/VmoBuffer
+library fuchsia.sysmem2

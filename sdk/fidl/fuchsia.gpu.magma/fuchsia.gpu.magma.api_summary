@@ -1,0 +1,98 @@
+struct/member fuchsia.gpu.magma/BufferOffset.buffer_id uint64
+struct/member fuchsia.gpu.magma/BufferOffset.offset uint64
+struct/member fuchsia.gpu.magma/BufferOffset.size uint64
+struct fuchsia.gpu.magma/BufferOffset
+enum/member fuchsia.gpu.magma/BufferOp.DEPOPULATE_TABLES 2
+enum/member fuchsia.gpu.magma/BufferOp.POPULATE_TABLES 1
+strict enum fuchsia.gpu.magma/BufferOp uint32
+struct/member fuchsia.gpu.magma/CommandBuffer.batch_buffer_resource_index uint32
+struct/member fuchsia.gpu.magma/CommandBuffer.batch_start_offset uint64
+struct fuchsia.gpu.magma/CommandBuffer
+protocol/member fuchsia.gpu.magma/Device.Connect(uint64 client_id) -> (zx/handle:CHANNEL primary_channel,zx/handle:CHANNEL notification_channel)
+protocol/member fuchsia.gpu.magma/Device.DumpState(uint32 dump_type)
+protocol/member fuchsia.gpu.magma/Device.GetIcdList() -> (vector<fuchsia.gpu.magma/IcdInfo>:8 icd_list)
+protocol/member fuchsia.gpu.magma/Device.GetUnitTestStatus() -> (int32 status)
+protocol/member fuchsia.gpu.magma/Device.Query2(uint64 query_id) -> (fuchsia.gpu.magma/Device_Query2_Result result)
+protocol/member fuchsia.gpu.magma/Device.QueryReturnsBuffer(uint64 query_id) -> (fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result result)
+protocol/member fuchsia.gpu.magma/Device.TestRestart()
+protocol fuchsia.gpu.magma/Device
+struct/member fuchsia.gpu.magma/Device_Query2_Response.result uint64
+struct fuchsia.gpu.magma/Device_Query2_Response
+union/member fuchsia.gpu.magma/Device_Query2_Result.err fuchsia.gpu.magma/Status
+union/member fuchsia.gpu.magma/Device_Query2_Result.response fuchsia.gpu.magma/Device_Query2_Response
+strict union fuchsia.gpu.magma/Device_Query2_Result
+struct/member fuchsia.gpu.magma/Device_QueryReturnsBuffer_Response.buffer zx/handle:VMO
+resource struct fuchsia.gpu.magma/Device_QueryReturnsBuffer_Response
+union/member fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result.err fuchsia.gpu.magma/Status
+union/member fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result.response fuchsia.gpu.magma/Device_QueryReturnsBuffer_Response
+resource strict union fuchsia.gpu.magma/Device_QueryReturnsBuffer_Result
+bits/member fuchsia.gpu.magma/IcdFlags.SUPPORTS_VULKAN 1
+flexible bits fuchsia.gpu.magma/IcdFlags uint32
+table/member fuchsia.gpu.magma/IcdInfo.component_url string:4096
+table/member fuchsia.gpu.magma/IcdInfo.flags fuchsia.gpu.magma/IcdFlags
+table fuchsia.gpu.magma/IcdInfo
+const fuchsia.gpu.magma/MAX_ICD_COUNT uint64 8
+const fuchsia.gpu.magma/MAX_IMMEDIATE_COMMANDS_DATA_SIZE uint32 2048
+bits/member fuchsia.gpu.magma/MapFlags.EXECUTE 4
+bits/member fuchsia.gpu.magma/MapFlags.GROWABLE 8
+bits/member fuchsia.gpu.magma/MapFlags.READ 1
+bits/member fuchsia.gpu.magma/MapFlags.VENDOR_FLAG_0 65536
+bits/member fuchsia.gpu.magma/MapFlags.WRITE 2
+flexible bits fuchsia.gpu.magma/MapFlags uint64
+enum/member fuchsia.gpu.magma/ObjectType.BUFFER 11
+enum/member fuchsia.gpu.magma/ObjectType.SEMAPHORE 10
+strict enum fuchsia.gpu.magma/ObjectType uint32
+protocol/member fuchsia.gpu.magma/PerformanceCounterAccess.GetPerformanceCountToken() -> (zx/handle:EVENT access_token)
+protocol fuchsia.gpu.magma/PerformanceCounterAccess
+protocol/member fuchsia.gpu.magma/PerformanceCounterEvents.OnPerformanceCounterReadCompleted -> (uint32 trigger_id,uint64 buffer_id,uint32 buffer_offset,int64 timestamp,fuchsia.gpu.magma/ResultFlags flags)
+protocol fuchsia.gpu.magma/PerformanceCounterEvents
+protocol/member fuchsia.gpu.magma/Primary.AccessPerformanceCounters(zx/handle:EVENT access_token)
+protocol/member fuchsia.gpu.magma/Primary.AddPerformanceCounterBufferOffsetsToPool(uint64 pool,vector<fuchsia.gpu.magma/BufferOffset>:64 offsets)
+protocol/member fuchsia.gpu.magma/Primary.BufferRangeOp(uint64 buffer_id,fuchsia.gpu.magma/BufferOp op,uint64 start_bytes,uint64 length)
+protocol/member fuchsia.gpu.magma/Primary.ClearPerformanceCounters(vector<uint64>:64 counters)
+protocol/member fuchsia.gpu.magma/Primary.CommitBuffer(uint64 buffer_id,uint64 page_offset,uint64 page_count)
+protocol/member fuchsia.gpu.magma/Primary.CreateContext(uint32 context_id)
+protocol/member fuchsia.gpu.magma/Primary.CreatePerformanceCounterBufferPool(uint64 pool,server_end:fuchsia.gpu.magma/PerformanceCounterEvents event_channel)
+protocol/member fuchsia.gpu.magma/Primary.DestroyContext(uint32 context_id)
+protocol/member fuchsia.gpu.magma/Primary.DumpPerformanceCounters(uint64 pool,uint32 trigger_id)
+protocol/member fuchsia.gpu.magma/Primary.EnableFlowControl()
+protocol/member fuchsia.gpu.magma/Primary.EnablePerformanceCounters(vector<uint64>:64 counters)
+protocol/member fuchsia.gpu.magma/Primary.ExecuteCommandBufferWithResources(uint32 context_id,fuchsia.gpu.magma/CommandBuffer command_buffer,vector<fuchsia.gpu.magma/Resource> resources,vector<uint64> wait_semaphores,vector<uint64> signal_semaphores)
+protocol/member fuchsia.gpu.magma/Primary.ExecuteImmediateCommands(uint32 context_id,vector<uint8>:2048 command_data,vector<uint64> semaphores)
+protocol/member fuchsia.gpu.magma/Primary.ImportBuffer(zx/handle:VMO buffer)
+protocol/member fuchsia.gpu.magma/Primary.ImportObject(zx/handle object,fuchsia.gpu.magma/ObjectType object_type)
+protocol/member fuchsia.gpu.magma/Primary.IsPerformanceCounterAccessEnabled() -> (bool enabled)
+protocol/member fuchsia.gpu.magma/Primary.MapBufferGpu(uint64 buffer_id,uint64 gpu_va,uint64 page_offset,uint64 page_count,fuchsia.gpu.magma/MapFlags flags)
+protocol/member fuchsia.gpu.magma/Primary.OnNotifyMemoryImported -> (uint64 bytes)
+protocol/member fuchsia.gpu.magma/Primary.OnNotifyMessagesConsumed -> (uint64 count)
+protocol/member fuchsia.gpu.magma/Primary.ReleaseBuffer(uint64 buffer_id)
+protocol/member fuchsia.gpu.magma/Primary.ReleaseObject(uint64 object_id,fuchsia.gpu.magma/ObjectType object_type)
+protocol/member fuchsia.gpu.magma/Primary.ReleasePerformanceCounterBufferPool(uint64 pool)
+protocol/member fuchsia.gpu.magma/Primary.RemovePerformanceCounterBufferFromPool(uint64 pool,uint64 buffer_id)
+protocol/member fuchsia.gpu.magma/Primary.Sync() -> ()
+protocol/member fuchsia.gpu.magma/Primary.UnmapBufferGpu(uint64 buffer_id,uint64 gpu_va)
+protocol fuchsia.gpu.magma/Primary
+enum/member fuchsia.gpu.magma/QueryId.DEVICE_ID 1
+enum/member fuchsia.gpu.magma/QueryId.IS_TEST_RESTART_SUPPORTED 2
+enum/member fuchsia.gpu.magma/QueryId.IS_TOTAL_TIME_SUPPORTED 3
+enum/member fuchsia.gpu.magma/QueryId.MAXIMUM_INFLIGHT_PARAMS 5
+enum/member fuchsia.gpu.magma/QueryId.VENDOR_ID 0
+enum/member fuchsia.gpu.magma/QueryId.VENDOR_QUERY_0 10000
+strict enum fuchsia.gpu.magma/QueryId uint32
+struct/member fuchsia.gpu.magma/Resource.buffer uint64
+struct/member fuchsia.gpu.magma/Resource.length uint64
+struct/member fuchsia.gpu.magma/Resource.offset uint64
+struct fuchsia.gpu.magma/Resource
+bits/member fuchsia.gpu.magma/ResultFlags.DISCONTINUITY 1
+strict bits fuchsia.gpu.magma/ResultFlags uint32
+enum/member fuchsia.gpu.magma/Status.ACCESS_DENIED 3
+enum/member fuchsia.gpu.magma/Status.BAD_STATE 9
+enum/member fuchsia.gpu.magma/Status.CONNECTION_LOST 6
+enum/member fuchsia.gpu.magma/Status.CONTEXT_KILLED 5
+enum/member fuchsia.gpu.magma/Status.INTERNAL_ERROR 1
+enum/member fuchsia.gpu.magma/Status.INVALID_ARGS 2
+enum/member fuchsia.gpu.magma/Status.MEMORY_ERROR 4
+enum/member fuchsia.gpu.magma/Status.TIMED_OUT 7
+enum/member fuchsia.gpu.magma/Status.UNIMPLEMENTED 8
+strict enum fuchsia.gpu.magma/Status uint32
+library fuchsia.gpu.magma

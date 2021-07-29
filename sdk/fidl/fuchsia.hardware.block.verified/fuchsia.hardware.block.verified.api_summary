@@ -1,0 +1,34 @@
+enum/member fuchsia.hardware.block.verified/BlockSize.SIZE_4096 1
+strict enum fuchsia.hardware.block.verified/BlockSize uint8
+table/member fuchsia.hardware.block.verified/Config.block_size fuchsia.hardware.block.verified/BlockSize
+table/member fuchsia.hardware.block.verified/Config.hash_function fuchsia.hardware.block.verified/HashFunction
+table fuchsia.hardware.block.verified/Config
+protocol/member fuchsia.hardware.block.verified/DeviceManager.Close() -> (fuchsia.hardware.block.verified/DeviceManager_Close_Result result)
+protocol/member fuchsia.hardware.block.verified/DeviceManager.CloseAndGenerateSeal() -> (fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Result result)
+protocol/member fuchsia.hardware.block.verified/DeviceManager.OpenForVerifiedRead(fuchsia.hardware.block.verified/Config config,fuchsia.hardware.block.verified/Seal seal) -> (fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Result result)
+protocol/member fuchsia.hardware.block.verified/DeviceManager.OpenForWrite(fuchsia.hardware.block.verified/Config config) -> (fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Result result)
+protocol fuchsia.hardware.block.verified/DeviceManager
+struct/member fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Response.seal fuchsia.hardware.block.verified/Seal
+struct fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Response
+union/member fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Result.err int32
+union/member fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Result.response fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Response
+strict union fuchsia.hardware.block.verified/DeviceManager_CloseAndGenerateSeal_Result
+struct fuchsia.hardware.block.verified/DeviceManager_Close_Response
+union/member fuchsia.hardware.block.verified/DeviceManager_Close_Result.err int32
+union/member fuchsia.hardware.block.verified/DeviceManager_Close_Result.response fuchsia.hardware.block.verified/DeviceManager_Close_Response
+strict union fuchsia.hardware.block.verified/DeviceManager_Close_Result
+struct fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Response
+union/member fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Result.err int32
+union/member fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Result.response fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Response
+strict union fuchsia.hardware.block.verified/DeviceManager_OpenForVerifiedRead_Result
+struct fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Response
+union/member fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Result.err int32
+union/member fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Result.response fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Response
+strict union fuchsia.hardware.block.verified/DeviceManager_OpenForWrite_Result
+enum/member fuchsia.hardware.block.verified/HashFunction.SHA256 1
+strict enum fuchsia.hardware.block.verified/HashFunction uint8
+union/member fuchsia.hardware.block.verified/Seal.sha256 fuchsia.hardware.block.verified/Sha256Seal
+strict union fuchsia.hardware.block.verified/Seal
+struct/member fuchsia.hardware.block.verified/Sha256Seal.superblock_hash array<uint8,32>
+struct fuchsia.hardware.block.verified/Sha256Seal
+library fuchsia.hardware.block.verified

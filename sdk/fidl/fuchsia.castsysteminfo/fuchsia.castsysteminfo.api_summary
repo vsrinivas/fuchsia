@@ -1,0 +1,14 @@
+enum/member fuchsia.castsysteminfo/ErrorCode.ERR_INTERNAL 2
+enum/member fuchsia.castsysteminfo/ErrorCode.ERR_NO_SYSTEM_INFO 1
+strict enum fuchsia.castsysteminfo/ErrorCode uint32
+protocol/member fuchsia.castsysteminfo/Provider.GetSystemInfo() -> (fuchsia.castsysteminfo/Provider_GetSystemInfo_Result result)
+protocol fuchsia.castsysteminfo/Provider
+struct/member fuchsia.castsysteminfo/Provider_GetSystemInfo_Response.systemInfo fuchsia.castsysteminfo/SystemInfo
+struct fuchsia.castsysteminfo/Provider_GetSystemInfo_Response
+union/member fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.err fuchsia.castsysteminfo/ErrorCode
+union/member fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.response fuchsia.castsysteminfo/Provider_GetSystemInfo_Response
+strict union fuchsia.castsysteminfo/Provider_GetSystemInfo_Result
+table/member fuchsia.castsysteminfo/SystemInfo.cloud_device_id string
+table/member fuchsia.castsysteminfo/SystemInfo.local_device_id string
+table fuchsia.castsysteminfo/SystemInfo
+library fuchsia.castsysteminfo

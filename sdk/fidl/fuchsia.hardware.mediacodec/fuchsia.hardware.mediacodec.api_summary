@@ -1,0 +1,7 @@
+protocol/member fuchsia.hardware.mediacodec/Device.GetCodecFactory(zx/handle:CHANNEL request)
+protocol/member fuchsia.hardware.mediacodec/Device.SetAuxServiceDirectory(fuchsia.io/Directory service_directory)
+protocol fuchsia.hardware.mediacodec/Device
+protocol/member fuchsia.hardware.mediacodec/Tester.RunTests() -> (int32 result)
+protocol/member fuchsia.hardware.mediacodec/Tester.SetOutputDirectoryHandle(zx/handle:CHANNEL handle)
+protocol fuchsia.hardware.mediacodec/Tester
+library fuchsia.hardware.mediacodec

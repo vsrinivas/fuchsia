@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.ethernet.board/EthBoard.ResetPhy() -> (int32 s)
+protocol fuchsia.hardware.ethernet.board/EthBoard
+library fuchsia.hardware.ethernet.board

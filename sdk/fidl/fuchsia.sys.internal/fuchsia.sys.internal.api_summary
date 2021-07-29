@@ -1,0 +1,29 @@
+const fuchsia.sys.internal/COMPONENT_NAME_MAX_LENGTH uint16 255
+protocol/member fuchsia.sys.internal/ComponentEventListener.OnDiagnosticsDirReady(fuchsia.sys.internal/SourceIdentity component,fuchsia.io/Directory directory)
+protocol/member fuchsia.sys.internal/ComponentEventListener.OnStart(fuchsia.sys.internal/SourceIdentity component)
+protocol/member fuchsia.sys.internal/ComponentEventListener.OnStop(fuchsia.sys.internal/SourceIdentity component)
+protocol fuchsia.sys.internal/ComponentEventListener
+protocol/member fuchsia.sys.internal/ComponentEventProvider.SetListener(client_end:fuchsia.sys.internal/ComponentEventListener listener)
+protocol fuchsia.sys.internal/ComponentEventProvider
+protocol/member fuchsia.sys.internal/CrashIntrospect.FindComponentByThreadKoid(uint64 thread_koid) -> (fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Result result)
+protocol fuchsia.sys.internal/CrashIntrospect
+struct/member fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Response.component_info fuchsia.sys.internal/SourceIdentity
+struct fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Response
+union/member fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Result.err int32
+union/member fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Result.response fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Response
+strict union fuchsia.sys.internal/CrashIntrospect_FindComponentByThreadKoid_Result
+const fuchsia.sys.internal/LABEL_MAX_LENGTH uint32 32
+struct/member fuchsia.sys.internal/LogConnection.log_request server_end:fuchsia.logger/LogSink
+struct/member fuchsia.sys.internal/LogConnection.source_identity fuchsia.sys.internal/SourceIdentity
+resource struct fuchsia.sys.internal/LogConnection
+protocol/member fuchsia.sys.internal/LogConnectionListener.OnNewConnection(fuchsia.sys.internal/LogConnection connection)
+protocol fuchsia.sys.internal/LogConnectionListener
+protocol/member fuchsia.sys.internal/LogConnector.TakeLogConnectionListener() -> (server_end:<fuchsia.sys.internal/LogConnectionListener,optional> consumer)
+protocol fuchsia.sys.internal/LogConnector
+const fuchsia.sys.internal/MAXIMUM_REALM_PATH_SEGMENTS uint16 50
+table/member fuchsia.sys.internal/SourceIdentity.component_name string:255
+table/member fuchsia.sys.internal/SourceIdentity.component_url string:2083
+table/member fuchsia.sys.internal/SourceIdentity.instance_id string:32
+table/member fuchsia.sys.internal/SourceIdentity.realm_path vector<string:32>:50
+table fuchsia.sys.internal/SourceIdentity
+library fuchsia.sys.internal

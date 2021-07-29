@@ -1,0 +1,192 @@
+const fuchsia.hardware.audio/CLOCK_DOMAIN_EXTERNAL uint32 4294967295
+const fuchsia.hardware.audio/CLOCK_DOMAIN_MONOTONIC uint32 0
+protocol/member fuchsia.hardware.audio/Codec.GetDaiFormats() -> (fuchsia.hardware.audio/Codec_GetDaiFormats_Result result)
+protocol/member fuchsia.hardware.audio/Codec.GetGainFormat() -> (fuchsia.hardware.audio/GainFormat gain_format)
+protocol/member fuchsia.hardware.audio/Codec.GetInfo() -> (fuchsia.hardware.audio/CodecInfo info)
+protocol/member fuchsia.hardware.audio/Codec.GetPlugDetectCapabilities() -> (fuchsia.hardware.audio/PlugDetectCapabilities plug_detect_capabilities)
+protocol/member fuchsia.hardware.audio/Codec.IsBridgeable() -> (bool supports_bridged_mode)
+protocol/member fuchsia.hardware.audio/Codec.Reset() -> ()
+protocol/member fuchsia.hardware.audio/Codec.SetBridgedMode(bool enable_bridged_mode)
+protocol/member fuchsia.hardware.audio/Codec.SetDaiFormat(fuchsia.hardware.audio/DaiFormat format) -> (fuchsia.hardware.audio/Codec_SetDaiFormat_Result result)
+protocol/member fuchsia.hardware.audio/Codec.SetGainState(fuchsia.hardware.audio/GainState target_state)
+protocol/member fuchsia.hardware.audio/Codec.Start() -> (int64 start_time)
+protocol/member fuchsia.hardware.audio/Codec.Stop() -> ()
+protocol/member fuchsia.hardware.audio/Codec.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
+protocol/member fuchsia.hardware.audio/Codec.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
+protocol fuchsia.hardware.audio/Codec
+table/member fuchsia.hardware.audio/CodecFormatInfo.external_delay int64
+table/member fuchsia.hardware.audio/CodecFormatInfo.turn_on_delay int64
+table fuchsia.hardware.audio/CodecFormatInfo
+struct/member fuchsia.hardware.audio/CodecInfo.manufacturer string:256
+struct/member fuchsia.hardware.audio/CodecInfo.product_name string:256
+struct/member fuchsia.hardware.audio/CodecInfo.unique_id string:16
+struct fuchsia.hardware.audio/CodecInfo
+struct/member fuchsia.hardware.audio/Codec_GetDaiFormats_Response.formats vector<fuchsia.hardware.audio/DaiSupportedFormats>:64
+struct fuchsia.hardware.audio/Codec_GetDaiFormats_Response
+union/member fuchsia.hardware.audio/Codec_GetDaiFormats_Result.err int32
+union/member fuchsia.hardware.audio/Codec_GetDaiFormats_Result.response fuchsia.hardware.audio/Codec_GetDaiFormats_Response
+strict union fuchsia.hardware.audio/Codec_GetDaiFormats_Result
+struct/member fuchsia.hardware.audio/Codec_SetDaiFormat_Response.state fuchsia.hardware.audio/CodecFormatInfo
+struct fuchsia.hardware.audio/Codec_SetDaiFormat_Response
+union/member fuchsia.hardware.audio/Codec_SetDaiFormat_Result.err int32
+union/member fuchsia.hardware.audio/Codec_SetDaiFormat_Result.response fuchsia.hardware.audio/Codec_SetDaiFormat_Response
+strict union fuchsia.hardware.audio/Codec_SetDaiFormat_Result
+protocol/member fuchsia.hardware.audio/Dai.CreateRingBuffer(fuchsia.hardware.audio/DaiFormat dai_format,fuchsia.hardware.audio/Format ring_buffer_format,server_end:fuchsia.hardware.audio/RingBuffer ring_buffer)
+protocol/member fuchsia.hardware.audio/Dai.GetDaiFormats() -> (fuchsia.hardware.audio/Dai_GetDaiFormats_Result result)
+protocol/member fuchsia.hardware.audio/Dai.GetProperties() -> (fuchsia.hardware.audio/DaiProperties properties)
+protocol/member fuchsia.hardware.audio/Dai.GetRingBufferFormats() -> (fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result result)
+protocol/member fuchsia.hardware.audio/Dai.Reset() -> ()
+protocol fuchsia.hardware.audio/Dai
+protocol/member fuchsia.hardware.audio/DaiConnect.Connect(server_end:fuchsia.hardware.audio/Dai dai_protocol)
+protocol fuchsia.hardware.audio/DaiConnect
+struct/member fuchsia.hardware.audio/DaiFormat.bits_per_sample uint8
+struct/member fuchsia.hardware.audio/DaiFormat.bits_per_slot uint8
+struct/member fuchsia.hardware.audio/DaiFormat.channels_to_use_bitmask uint64
+struct/member fuchsia.hardware.audio/DaiFormat.frame_format fuchsia.hardware.audio/DaiFrameFormat
+struct/member fuchsia.hardware.audio/DaiFormat.frame_rate uint32
+struct/member fuchsia.hardware.audio/DaiFormat.number_of_channels uint32
+struct/member fuchsia.hardware.audio/DaiFormat.sample_format fuchsia.hardware.audio/DaiSampleFormat
+struct fuchsia.hardware.audio/DaiFormat
+union/member fuchsia.hardware.audio/DaiFrameFormat.frame_format_custom fuchsia.hardware.audio/DaiFrameFormatCustom
+union/member fuchsia.hardware.audio/DaiFrameFormat.frame_format_standard fuchsia.hardware.audio/DaiFrameFormatStandard
+strict union fuchsia.hardware.audio/DaiFrameFormat
+struct/member fuchsia.hardware.audio/DaiFrameFormatCustom.frame_sync_sclks_offset int8
+struct/member fuchsia.hardware.audio/DaiFrameFormatCustom.frame_sync_size uint8
+struct/member fuchsia.hardware.audio/DaiFrameFormatCustom.left_justified bool
+struct/member fuchsia.hardware.audio/DaiFrameFormatCustom.sclk_on_raising bool
+struct fuchsia.hardware.audio/DaiFrameFormatCustom
+enum/member fuchsia.hardware.audio/DaiFrameFormatStandard.I2S 2
+enum/member fuchsia.hardware.audio/DaiFrameFormatStandard.NONE 1
+enum/member fuchsia.hardware.audio/DaiFrameFormatStandard.STEREO_LEFT 3
+enum/member fuchsia.hardware.audio/DaiFrameFormatStandard.STEREO_RIGHT 4
+enum/member fuchsia.hardware.audio/DaiFrameFormatStandard.TDM1 5
+strict enum fuchsia.hardware.audio/DaiFrameFormatStandard uint8
+table/member fuchsia.hardware.audio/DaiProperties.is_input bool
+table/member fuchsia.hardware.audio/DaiProperties.manufacturer string:256
+table/member fuchsia.hardware.audio/DaiProperties.product_name string:256
+table fuchsia.hardware.audio/DaiProperties
+enum/member fuchsia.hardware.audio/DaiSampleFormat.PCM_FLOAT 4
+enum/member fuchsia.hardware.audio/DaiSampleFormat.PCM_SIGNED 2
+enum/member fuchsia.hardware.audio/DaiSampleFormat.PCM_UNSIGNED 3
+enum/member fuchsia.hardware.audio/DaiSampleFormat.PDM 1
+strict enum fuchsia.hardware.audio/DaiSampleFormat uint8
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.bits_per_sample vector<uint8>:8
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.bits_per_slot vector<uint8>:8
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.frame_formats vector<fuchsia.hardware.audio/DaiFrameFormat>:64
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.frame_rates vector<uint32>:64
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.number_of_channels vector<uint32>:64
+struct/member fuchsia.hardware.audio/DaiSupportedFormats.sample_formats vector<fuchsia.hardware.audio/DaiSampleFormat>:4
+struct fuchsia.hardware.audio/DaiSupportedFormats
+struct/member fuchsia.hardware.audio/Dai_GetDaiFormats_Response.dai_formats vector<fuchsia.hardware.audio/DaiSupportedFormats>:64
+struct fuchsia.hardware.audio/Dai_GetDaiFormats_Response
+union/member fuchsia.hardware.audio/Dai_GetDaiFormats_Result.err int32
+union/member fuchsia.hardware.audio/Dai_GetDaiFormats_Result.response fuchsia.hardware.audio/Dai_GetDaiFormats_Response
+strict union fuchsia.hardware.audio/Dai_GetDaiFormats_Result
+struct/member fuchsia.hardware.audio/Dai_GetRingBufferFormats_Response.ring_buffer_formats vector<fuchsia.hardware.audio/SupportedFormats>:64
+struct fuchsia.hardware.audio/Dai_GetRingBufferFormats_Response
+union/member fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result.err int32
+union/member fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result.response fuchsia.hardware.audio/Dai_GetRingBufferFormats_Response
+strict union fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result
+protocol/member fuchsia.hardware.audio/Device.GetChannel() -> (client_end:fuchsia.hardware.audio/StreamConfig channel)
+protocol fuchsia.hardware.audio/Device
+table/member fuchsia.hardware.audio/Format.pcm_format fuchsia.hardware.audio/PcmFormat
+table fuchsia.hardware.audio/Format
+table/member fuchsia.hardware.audio/GainFormat.can_agc bool
+table/member fuchsia.hardware.audio/GainFormat.can_mute bool
+table/member fuchsia.hardware.audio/GainFormat.gain_step float32
+table/member fuchsia.hardware.audio/GainFormat.max_gain float32
+table/member fuchsia.hardware.audio/GainFormat.min_gain float32
+table/member fuchsia.hardware.audio/GainFormat.type fuchsia.hardware.audio/GainType
+table fuchsia.hardware.audio/GainFormat
+table/member fuchsia.hardware.audio/GainState.agc_enabled bool
+table/member fuchsia.hardware.audio/GainState.gain_db float32
+table/member fuchsia.hardware.audio/GainState.muted bool
+table fuchsia.hardware.audio/GainState
+enum/member fuchsia.hardware.audio/GainType.DECIBELS 1
+enum/member fuchsia.hardware.audio/GainType.PERCENT 2
+strict enum fuchsia.hardware.audio/GainType uint8
+enum/member fuchsia.hardware.audio/GetVmoError.INTERNAL_ERROR 2
+enum/member fuchsia.hardware.audio/GetVmoError.INVALID_ARGS 1
+strict enum fuchsia.hardware.audio/GetVmoError uint32
+const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_TO_USE uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_DAI_FORMATS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE uint32 8
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT uint32 8
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_RATES uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS uint32 4
+const fuchsia.hardware.audio/MAX_COUNT_FORMATS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE uint32 8
+const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_RATES uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_SAMPLE_FORMATS uint32 3
+const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE uint32 8
+const fuchsia.hardware.audio/MAX_DAI_UI_STRING_SIZE uint32 256
+const fuchsia.hardware.audio/MAX_UI_STRING_SIZE uint32 256
+struct/member fuchsia.hardware.audio/PcmFormat.bytes_per_sample uint8
+struct/member fuchsia.hardware.audio/PcmFormat.channels_to_use_bitmask uint64
+struct/member fuchsia.hardware.audio/PcmFormat.frame_rate uint32
+struct/member fuchsia.hardware.audio/PcmFormat.number_of_channels uint8
+struct/member fuchsia.hardware.audio/PcmFormat.sample_format fuchsia.hardware.audio/SampleFormat
+struct/member fuchsia.hardware.audio/PcmFormat.valid_bits_per_sample uint8
+struct fuchsia.hardware.audio/PcmFormat
+struct/member fuchsia.hardware.audio/PcmSupportedFormats.bytes_per_sample vector<uint8>:8
+struct/member fuchsia.hardware.audio/PcmSupportedFormats.frame_rates vector<uint32>:64
+struct/member fuchsia.hardware.audio/PcmSupportedFormats.number_of_channels vector<uint8>:64
+struct/member fuchsia.hardware.audio/PcmSupportedFormats.sample_formats vector<fuchsia.hardware.audio/SampleFormat>:3
+struct/member fuchsia.hardware.audio/PcmSupportedFormats.valid_bits_per_sample vector<uint8>:8
+struct fuchsia.hardware.audio/PcmSupportedFormats
+enum/member fuchsia.hardware.audio/PlugDetectCapabilities.CAN_ASYNC_NOTIFY 1
+enum/member fuchsia.hardware.audio/PlugDetectCapabilities.HARDWIRED 0
+strict enum fuchsia.hardware.audio/PlugDetectCapabilities uint32
+table/member fuchsia.hardware.audio/PlugState.plug_state_time int64
+table/member fuchsia.hardware.audio/PlugState.plugged bool
+table fuchsia.hardware.audio/PlugState
+protocol/member fuchsia.hardware.audio/RingBuffer.GetProperties() -> (fuchsia.hardware.audio/RingBufferProperties properties)
+protocol/member fuchsia.hardware.audio/RingBuffer.GetVmo(uint32 min_frames,uint32 clock_recovery_notifications_per_ring) -> (fuchsia.hardware.audio/RingBuffer_GetVmo_Result result)
+protocol/member fuchsia.hardware.audio/RingBuffer.Start() -> (int64 start_time)
+protocol/member fuchsia.hardware.audio/RingBuffer.Stop() -> ()
+protocol/member fuchsia.hardware.audio/RingBuffer.WatchClockRecoveryPositionInfo() -> (fuchsia.hardware.audio/RingBufferPositionInfo position_info)
+protocol fuchsia.hardware.audio/RingBuffer
+struct/member fuchsia.hardware.audio/RingBufferPositionInfo.position uint32
+struct/member fuchsia.hardware.audio/RingBufferPositionInfo.timestamp int64
+struct fuchsia.hardware.audio/RingBufferPositionInfo
+table/member fuchsia.hardware.audio/RingBufferProperties.external_delay int64
+table/member fuchsia.hardware.audio/RingBufferProperties.fifo_depth uint32
+table/member fuchsia.hardware.audio/RingBufferProperties.needs_cache_flush_or_invalidate bool
+table/member fuchsia.hardware.audio/RingBufferProperties.turn_on_delay int64
+table fuchsia.hardware.audio/RingBufferProperties
+struct/member fuchsia.hardware.audio/RingBuffer_GetVmo_Response.num_frames uint32
+struct/member fuchsia.hardware.audio/RingBuffer_GetVmo_Response.ring_buffer zx/handle:VMO
+resource struct fuchsia.hardware.audio/RingBuffer_GetVmo_Response
+union/member fuchsia.hardware.audio/RingBuffer_GetVmo_Result.err fuchsia.hardware.audio/GetVmoError
+union/member fuchsia.hardware.audio/RingBuffer_GetVmo_Result.response fuchsia.hardware.audio/RingBuffer_GetVmo_Response
+resource strict union fuchsia.hardware.audio/RingBuffer_GetVmo_Result
+enum/member fuchsia.hardware.audio/SampleFormat.PCM_FLOAT 3
+enum/member fuchsia.hardware.audio/SampleFormat.PCM_SIGNED 1
+enum/member fuchsia.hardware.audio/SampleFormat.PCM_UNSIGNED 2
+strict enum fuchsia.hardware.audio/SampleFormat uint8
+protocol/member fuchsia.hardware.audio/StreamConfig.CreateRingBuffer(fuchsia.hardware.audio/Format format,server_end:fuchsia.hardware.audio/RingBuffer ring_buffer)
+protocol/member fuchsia.hardware.audio/StreamConfig.GetProperties() -> (fuchsia.hardware.audio/StreamProperties properties)
+protocol/member fuchsia.hardware.audio/StreamConfig.GetSupportedFormats() -> (vector<fuchsia.hardware.audio/SupportedFormats>:64 supported_formats)
+protocol/member fuchsia.hardware.audio/StreamConfig.SetGain(fuchsia.hardware.audio/GainState target_state)
+protocol/member fuchsia.hardware.audio/StreamConfig.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
+protocol/member fuchsia.hardware.audio/StreamConfig.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
+protocol fuchsia.hardware.audio/StreamConfig
+table/member fuchsia.hardware.audio/StreamProperties.can_agc bool
+table/member fuchsia.hardware.audio/StreamProperties.can_mute bool
+table/member fuchsia.hardware.audio/StreamProperties.clock_domain uint32
+table/member fuchsia.hardware.audio/StreamProperties.gain_step_db float32
+table/member fuchsia.hardware.audio/StreamProperties.is_input bool
+table/member fuchsia.hardware.audio/StreamProperties.manufacturer string:256
+table/member fuchsia.hardware.audio/StreamProperties.max_gain_db float32
+table/member fuchsia.hardware.audio/StreamProperties.min_gain_db float32
+table/member fuchsia.hardware.audio/StreamProperties.plug_detect_capabilities fuchsia.hardware.audio/PlugDetectCapabilities
+table/member fuchsia.hardware.audio/StreamProperties.product string:256
+table/member fuchsia.hardware.audio/StreamProperties.unique_id array<uint8,16>
+table fuchsia.hardware.audio/StreamProperties
+table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats fuchsia.hardware.audio/PcmSupportedFormats
+table fuchsia.hardware.audio/SupportedFormats
+const fuchsia.hardware.audio/UNIQUE_ID_SIZE uint32 16
+library fuchsia.hardware.audio

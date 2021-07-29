@@ -1,0 +1,18 @@
+const fuchsia.ui.display/DISPLAYS_MAX_LEN int32 1024
+protocol/member fuchsia.ui.display/DisplayListener.OnDisplayAdded(fuchsia.ui.display/Info display)
+protocol/member fuchsia.ui.display/DisplayListener.OnDisplayOwnershipChanged(vector<fuchsia.ui.display/DisplayRef>:1024 displays,bool owned_by_display_controller)
+protocol/member fuchsia.ui.display/DisplayListener.OnDisplayRemoved(fuchsia.ui.display/DisplayRef display)
+protocol fuchsia.ui.display/DisplayListener
+protocol/member fuchsia.ui.display/DisplayManager.AddDisplayListener(client_end:fuchsia.ui.display/DisplayListener listener)
+protocol fuchsia.ui.display/DisplayManager
+struct/member fuchsia.ui.display/DisplayRef.reference zx/handle:EVENT
+resource struct fuchsia.ui.display/DisplayRef
+const fuchsia.ui.display/IDENTIFIER_MAX_LEN uint32 128
+table/member fuchsia.ui.display/Info.display_ref fuchsia.ui.display/DisplayRef
+table/member fuchsia.ui.display/Info.manufacturer_name string:128
+table/member fuchsia.ui.display/Info.modes vector<fuchsia.hardware.display/Mode>:256
+table/member fuchsia.ui.display/Info.monitor_name string:128
+resource table fuchsia.ui.display/Info
+const fuchsia.ui.display/MODES_MAX_LEN int32 256
+const fuchsia.ui.display/MODE_INTERLACED int32 1
+library fuchsia.ui.display

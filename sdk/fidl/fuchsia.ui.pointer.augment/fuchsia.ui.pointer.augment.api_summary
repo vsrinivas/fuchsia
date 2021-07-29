@@ -1,0 +1,26 @@
+struct/member fuchsia.ui.pointer.augment/ErrorForGlobalMouse.error_reason fuchsia.ui.pointer.augment/ErrorReason
+struct/member fuchsia.ui.pointer.augment/ErrorForGlobalMouse.original fuchsia.ui.pointer/MouseSource
+resource struct fuchsia.ui.pointer.augment/ErrorForGlobalMouse
+struct/member fuchsia.ui.pointer.augment/ErrorForLocalHit.error_reason fuchsia.ui.pointer.augment/ErrorReason
+struct/member fuchsia.ui.pointer.augment/ErrorForLocalHit.original fuchsia.ui.pointer/TouchSource
+resource struct fuchsia.ui.pointer.augment/ErrorForLocalHit
+enum/member fuchsia.ui.pointer.augment/ErrorReason.DENIED 1
+strict enum fuchsia.ui.pointer.augment/ErrorReason uint32
+protocol/member fuchsia.ui.pointer.augment/GlobalMouse.Upgrade(fuchsia.ui.pointer/MouseSource original) -> (client_end:<fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse,optional> augmented,box<fuchsia.ui.pointer.augment/ErrorForGlobalMouse> error)
+protocol fuchsia.ui.pointer.augment/GlobalMouse
+protocol/member fuchsia.ui.pointer.augment/LocalHit.Upgrade(fuchsia.ui.pointer/TouchSource original) -> (client_end:<fuchsia.ui.pointer.augment/TouchSourceWithLocalHit,optional> augmented,box<fuchsia.ui.pointer.augment/ErrorForLocalHit> error)
+protocol fuchsia.ui.pointer.augment/LocalHit
+table/member fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.global_position fuchsia.ui.pointer/MousePointerSample
+table/member fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.global_stream_info fuchsia.ui.pointer/MouseEventStreamInfo
+table/member fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.mouse_event fuchsia.ui.pointer/MouseEvent
+table fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse
+protocol/member fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse.Watch() -> (vector<fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse>:128 events)
+protocol fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse
+struct/member fuchsia.ui.pointer.augment/TouchEventWithLocalHit.local_point array<float32,2>
+struct/member fuchsia.ui.pointer.augment/TouchEventWithLocalHit.local_viewref_koid uint64
+struct/member fuchsia.ui.pointer.augment/TouchEventWithLocalHit.touch_event fuchsia.ui.pointer/TouchEvent
+struct fuchsia.ui.pointer.augment/TouchEventWithLocalHit
+protocol/member fuchsia.ui.pointer.augment/TouchSourceWithLocalHit.UpdateResponse(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()
+protocol/member fuchsia.ui.pointer.augment/TouchSourceWithLocalHit.Watch(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer.augment/TouchEventWithLocalHit>:128 events)
+protocol fuchsia.ui.pointer.augment/TouchSourceWithLocalHit
+library fuchsia.ui.pointer.augment

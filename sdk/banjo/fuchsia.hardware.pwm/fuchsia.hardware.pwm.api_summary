@@ -1,0 +1,16 @@
+protocol/member fuchsia.hardware.pwm/Pwm.Disable() -> (int32 s)
+protocol/member fuchsia.hardware.pwm/Pwm.Enable() -> (int32 s)
+protocol/member fuchsia.hardware.pwm/Pwm.GetConfig() -> (int32 s,fuchsia.hardware.pwm/PwmConfig config)
+protocol/member fuchsia.hardware.pwm/Pwm.SetConfig(fuchsia.hardware.pwm/PwmConfig config) -> (int32 s)
+protocol fuchsia.hardware.pwm/Pwm
+struct/member fuchsia.hardware.pwm/PwmConfig.duty_cycle float32
+struct/member fuchsia.hardware.pwm/PwmConfig.mode_config vector<uint8>
+struct/member fuchsia.hardware.pwm/PwmConfig.period_ns uint32
+struct/member fuchsia.hardware.pwm/PwmConfig.polarity bool
+struct fuchsia.hardware.pwm/PwmConfig
+protocol/member fuchsia.hardware.pwm/PwmImpl.Disable(uint32 idx) -> (int32 s)
+protocol/member fuchsia.hardware.pwm/PwmImpl.Enable(uint32 idx) -> (int32 s)
+protocol/member fuchsia.hardware.pwm/PwmImpl.GetConfig(uint32 idx) -> (int32 s,fuchsia.hardware.pwm/PwmConfig config)
+protocol/member fuchsia.hardware.pwm/PwmImpl.SetConfig(uint32 idx,fuchsia.hardware.pwm/PwmConfig config) -> (int32 s)
+protocol fuchsia.hardware.pwm/PwmImpl
+library fuchsia.hardware.pwm

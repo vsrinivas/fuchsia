@@ -1,0 +1,30 @@
+struct/member fuchsia.hardware.power/BatteryInfo.capacity_granularity_low_warning uint32
+struct/member fuchsia.hardware.power/BatteryInfo.capacity_granularity_warning_full uint32
+struct/member fuchsia.hardware.power/BatteryInfo.capacity_low uint32
+struct/member fuchsia.hardware.power/BatteryInfo.capacity_warning uint32
+struct/member fuchsia.hardware.power/BatteryInfo.design_capacity uint32
+struct/member fuchsia.hardware.power/BatteryInfo.design_voltage uint32
+struct/member fuchsia.hardware.power/BatteryInfo.last_full_capacity uint32
+struct/member fuchsia.hardware.power/BatteryInfo.present_rate int32
+struct/member fuchsia.hardware.power/BatteryInfo.present_voltage uint32
+struct/member fuchsia.hardware.power/BatteryInfo.remaining_capacity uint32
+struct/member fuchsia.hardware.power/BatteryInfo.unit fuchsia.hardware.power/BatteryUnit
+struct fuchsia.hardware.power/BatteryInfo
+enum/member fuchsia.hardware.power/BatteryUnit.MA 1
+enum/member fuchsia.hardware.power/BatteryUnit.MW 0
+strict enum fuchsia.hardware.power/BatteryUnit uint32
+const fuchsia.hardware.power/POWER_STATE_CHARGING uint8 4
+const fuchsia.hardware.power/POWER_STATE_CRITICAL uint8 8
+const fuchsia.hardware.power/POWER_STATE_DISCHARGING uint8 2
+const fuchsia.hardware.power/POWER_STATE_ONLINE uint8 1
+enum/member fuchsia.hardware.power/PowerType.AC 0
+enum/member fuchsia.hardware.power/PowerType.BATTERY 1
+strict enum fuchsia.hardware.power/PowerType uint8
+protocol/member fuchsia.hardware.power/Source.GetBatteryInfo() -> (int32 status,fuchsia.hardware.power/BatteryInfo info)
+protocol/member fuchsia.hardware.power/Source.GetPowerInfo() -> (int32 status,fuchsia.hardware.power/SourceInfo info)
+protocol/member fuchsia.hardware.power/Source.GetStateChangeEvent() -> (int32 status,zx/handle:EVENT handle)
+protocol fuchsia.hardware.power/Source
+struct/member fuchsia.hardware.power/SourceInfo.state uint8
+struct/member fuchsia.hardware.power/SourceInfo.type fuchsia.hardware.power/PowerType
+struct fuchsia.hardware.power/SourceInfo
+library fuchsia.hardware.power

@@ -1,0 +1,127 @@
+protocol/member fuchsia.bluetooth.le/AdvertisedPeripheral.OnConnected(fuchsia.bluetooth.le/Peer peer,client_end:fuchsia.bluetooth.le/Connection connection) -> ()
+protocol fuchsia.bluetooth.le/AdvertisedPeripheral
+table/member fuchsia.bluetooth.le/AdvertisingData.appearance fuchsia.bluetooth/Appearance
+table/member fuchsia.bluetooth.le/AdvertisingData.include_tx_power_level bool
+table/member fuchsia.bluetooth.le/AdvertisingData.manufacturer_data vector<fuchsia.bluetooth.le/ManufacturerData>
+table/member fuchsia.bluetooth.le/AdvertisingData.name string:248
+table/member fuchsia.bluetooth.le/AdvertisingData.service_data vector<fuchsia.bluetooth.le/ServiceData>
+table/member fuchsia.bluetooth.le/AdvertisingData.service_uuids vector<fuchsia.bluetooth/Uuid>
+table/member fuchsia.bluetooth.le/AdvertisingData.tx_power_level int8
+table/member fuchsia.bluetooth.le/AdvertisingData.uris vector<string:278>
+table fuchsia.bluetooth.le/AdvertisingData
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.appearance fuchsia.bluetooth/UInt16:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.manufacturer_specific_data vector<fuchsia.bluetooth.le/ManufacturerSpecificDataEntry>:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.name string:<248,optional>
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.service_data vector<fuchsia.bluetooth.le/ServiceDataEntry>:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.service_uuids vector<string:36>:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.solicited_service_uuids vector<string:36>:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.tx_power_level fuchsia.bluetooth/Int8:optional
+struct/member fuchsia.bluetooth.le/AdvertisingDataDeprecated.uris vector<string>:optional
+struct fuchsia.bluetooth.le/AdvertisingDataDeprecated
+protocol fuchsia.bluetooth.le/AdvertisingHandle
+enum/member fuchsia.bluetooth.le/AdvertisingModeHint.FAST 2
+enum/member fuchsia.bluetooth.le/AdvertisingModeHint.SLOW 3
+enum/member fuchsia.bluetooth.le/AdvertisingModeHint.VERY_FAST 1
+strict enum fuchsia.bluetooth.le/AdvertisingModeHint uint8
+table/member fuchsia.bluetooth.le/AdvertisingParameters.connectable bool
+table/member fuchsia.bluetooth.le/AdvertisingParameters.connection_options fuchsia.bluetooth.le/ConnectionOptions
+table/member fuchsia.bluetooth.le/AdvertisingParameters.data fuchsia.bluetooth.le/AdvertisingData
+table/member fuchsia.bluetooth.le/AdvertisingParameters.mode_hint fuchsia.bluetooth.le/AdvertisingModeHint
+table/member fuchsia.bluetooth.le/AdvertisingParameters.scan_response fuchsia.bluetooth.le/AdvertisingData
+table fuchsia.bluetooth.le/AdvertisingParameters
+protocol/member fuchsia.bluetooth.le/Central.Connect(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.le/ConnectionOptions options,server_end:fuchsia.bluetooth.le/Connection handle)
+protocol/member fuchsia.bluetooth.le/Central.ConnectPeripheral(string:16 identifier,fuchsia.bluetooth.le/ConnectionOptions options,server_end:fuchsia.bluetooth.gatt/Client gatt_client) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.le/Central.DisconnectPeripheral(string:16 identifier) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.le/Central.GetPeripheral(string:16 identifier) -> (box<fuchsia.bluetooth.le/RemoteDevice> peripheral)
+protocol/member fuchsia.bluetooth.le/Central.GetPeripherals(vector<string:36>:optional service_uuids) -> (vector<fuchsia.bluetooth.le/RemoteDevice> peripherals)
+protocol/member fuchsia.bluetooth.le/Central.OnDeviceDiscovered -> (fuchsia.bluetooth.le/RemoteDevice device)
+protocol/member fuchsia.bluetooth.le/Central.OnPeripheralDisconnected -> (string:16 identifier)
+protocol/member fuchsia.bluetooth.le/Central.OnScanStateChanged -> (bool scanning)
+protocol/member fuchsia.bluetooth.le/Central.Scan(fuchsia.bluetooth.le/ScanOptions options,server_end:fuchsia.bluetooth.le/ScanResultWatcher result_watcher) -> ()
+protocol/member fuchsia.bluetooth.le/Central.StartScan(box<fuchsia.bluetooth.le/ScanFilter> filter) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.le/Central.StopScan()
+protocol fuchsia.bluetooth.le/Central
+enum/member fuchsia.bluetooth.le/CentralError.ABORTED 1
+enum/member fuchsia.bluetooth.le/CentralError.FAILED 4
+enum/member fuchsia.bluetooth.le/CentralError.INVALID_PARAMETERS 3
+enum/member fuchsia.bluetooth.le/CentralError.IN_PROGRESS 2
+strict enum fuchsia.bluetooth.le/CentralError uint32
+protocol fuchsia.bluetooth.le/Connection
+table/member fuchsia.bluetooth.le/ConnectionOptions.bondable_mode bool
+table/member fuchsia.bluetooth.le/ConnectionOptions.service_filter fuchsia.bluetooth/Uuid
+table fuchsia.bluetooth.le/ConnectionOptions
+table/member fuchsia.bluetooth.le/Filter.connectable bool
+table/member fuchsia.bluetooth.le/Filter.manufacturer_id uint16
+table/member fuchsia.bluetooth.le/Filter.max_path_loss int8
+table/member fuchsia.bluetooth.le/Filter.name string:248
+table/member fuchsia.bluetooth.le/Filter.service_data_uuid fuchsia.bluetooth/Uuid
+table/member fuchsia.bluetooth.le/Filter.service_uuid fuchsia.bluetooth/Uuid
+table fuchsia.bluetooth.le/Filter
+const fuchsia.bluetooth.le/MAX_MANUFACTURER_DATA_LENGTH uint8 252
+const fuchsia.bluetooth.le/MAX_SERVICE_DATA_LENGTH uint8 252
+const fuchsia.bluetooth.le/MAX_URI_LENGTH uint16 278
+struct/member fuchsia.bluetooth.le/ManufacturerData.company_id uint16
+struct/member fuchsia.bluetooth.le/ManufacturerData.data vector<uint8>:252
+struct fuchsia.bluetooth.le/ManufacturerData
+struct/member fuchsia.bluetooth.le/ManufacturerSpecificDataEntry.company_id uint16
+struct/member fuchsia.bluetooth.le/ManufacturerSpecificDataEntry.data vector<uint8>
+struct fuchsia.bluetooth.le/ManufacturerSpecificDataEntry
+table/member fuchsia.bluetooth.le/Peer.advertising_data fuchsia.bluetooth.le/AdvertisingData
+table/member fuchsia.bluetooth.le/Peer.bonded bool
+table/member fuchsia.bluetooth.le/Peer.connectable bool
+table/member fuchsia.bluetooth.le/Peer.data fuchsia.bluetooth.le/ScanData
+table/member fuchsia.bluetooth.le/Peer.id fuchsia.bluetooth/PeerId
+table/member fuchsia.bluetooth.le/Peer.last_updated int64
+table/member fuchsia.bluetooth.le/Peer.name string:248
+table/member fuchsia.bluetooth.le/Peer.rssi int8
+table fuchsia.bluetooth.le/Peer
+protocol/member fuchsia.bluetooth.le/Peripheral.Advertise(fuchsia.bluetooth.le/AdvertisingParameters parameters,client_end:fuchsia.bluetooth.le/AdvertisedPeripheral advertised_peripheral) -> (fuchsia.bluetooth.le/Peripheral_Advertise_Result result)
+protocol/member fuchsia.bluetooth.le/Peripheral.OnPeerConnected -> (fuchsia.bluetooth.le/Peer peer,client_end:fuchsia.bluetooth.le/Connection connection)
+protocol/member fuchsia.bluetooth.le/Peripheral.StartAdvertising(fuchsia.bluetooth.le/AdvertisingParameters parameters,server_end:fuchsia.bluetooth.le/AdvertisingHandle handle) -> (fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result result)
+protocol fuchsia.bluetooth.le/Peripheral
+enum/member fuchsia.bluetooth.le/PeripheralError.ABORTED 5
+enum/member fuchsia.bluetooth.le/PeripheralError.ADVERTISING_DATA_TOO_LONG 2
+enum/member fuchsia.bluetooth.le/PeripheralError.FAILED 6
+enum/member fuchsia.bluetooth.le/PeripheralError.INVALID_PARAMETERS 4
+enum/member fuchsia.bluetooth.le/PeripheralError.NOT_SUPPORTED 1
+enum/member fuchsia.bluetooth.le/PeripheralError.SCAN_RESPONSE_DATA_TOO_LONG 3
+strict enum fuchsia.bluetooth.le/PeripheralError uint32
+struct fuchsia.bluetooth.le/Peripheral_Advertise_Response
+union/member fuchsia.bluetooth.le/Peripheral_Advertise_Result.err fuchsia.bluetooth.le/PeripheralError
+union/member fuchsia.bluetooth.le/Peripheral_Advertise_Result.response fuchsia.bluetooth.le/Peripheral_Advertise_Response
+strict union fuchsia.bluetooth.le/Peripheral_Advertise_Result
+struct fuchsia.bluetooth.le/Peripheral_StartAdvertising_Response
+union/member fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result.err fuchsia.bluetooth.le/PeripheralError
+union/member fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result.response fuchsia.bluetooth.le/Peripheral_StartAdvertising_Response
+strict union fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result
+struct/member fuchsia.bluetooth.le/RemoteDevice.advertising_data box<fuchsia.bluetooth.le/AdvertisingDataDeprecated>
+struct/member fuchsia.bluetooth.le/RemoteDevice.connectable bool
+struct/member fuchsia.bluetooth.le/RemoteDevice.identifier string:16
+struct/member fuchsia.bluetooth.le/RemoteDevice.rssi fuchsia.bluetooth/Int8:optional
+struct fuchsia.bluetooth.le/RemoteDevice
+table/member fuchsia.bluetooth.le/ScanData.appearance fuchsia.bluetooth/Appearance
+table/member fuchsia.bluetooth.le/ScanData.manufacturer_data vector<fuchsia.bluetooth.le/ManufacturerData>
+table/member fuchsia.bluetooth.le/ScanData.service_data vector<fuchsia.bluetooth.le/ServiceData>
+table/member fuchsia.bluetooth.le/ScanData.service_uuids vector<fuchsia.bluetooth/Uuid>
+table/member fuchsia.bluetooth.le/ScanData.timestamp int64
+table/member fuchsia.bluetooth.le/ScanData.tx_power int8
+table/member fuchsia.bluetooth.le/ScanData.uris vector<string:278>
+table fuchsia.bluetooth.le/ScanData
+struct/member fuchsia.bluetooth.le/ScanFilter.connectable fuchsia.bluetooth/Bool:optional
+struct/member fuchsia.bluetooth.le/ScanFilter.manufacturer_identifier fuchsia.bluetooth/UInt16:optional
+struct/member fuchsia.bluetooth.le/ScanFilter.max_path_loss fuchsia.bluetooth/Int8:optional
+struct/member fuchsia.bluetooth.le/ScanFilter.name_substring string:<248,optional>
+struct/member fuchsia.bluetooth.le/ScanFilter.service_data_uuids vector<string:36>:optional
+struct/member fuchsia.bluetooth.le/ScanFilter.service_uuids vector<string:36>:optional
+struct fuchsia.bluetooth.le/ScanFilter
+table/member fuchsia.bluetooth.le/ScanOptions.filters vector<fuchsia.bluetooth.le/Filter>
+table fuchsia.bluetooth.le/ScanOptions
+protocol/member fuchsia.bluetooth.le/ScanResultWatcher.Watch() -> (vector<fuchsia.bluetooth.le/Peer> updated)
+protocol fuchsia.bluetooth.le/ScanResultWatcher
+struct/member fuchsia.bluetooth.le/ServiceData.data vector<uint8>:252
+struct/member fuchsia.bluetooth.le/ServiceData.uuid fuchsia.bluetooth/Uuid
+struct fuchsia.bluetooth.le/ServiceData
+struct/member fuchsia.bluetooth.le/ServiceDataEntry.data vector<uint8>
+struct/member fuchsia.bluetooth.le/ServiceDataEntry.uuid string:36
+struct fuchsia.bluetooth.le/ServiceDataEntry
+library fuchsia.bluetooth.le

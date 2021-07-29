@@ -1,0 +1,149 @@
+struct/member fuchsia.pkg/BlobId.merkle_root array<uint8,32>
+struct fuchsia.pkg/BlobId
+protocol/member fuchsia.pkg/BlobIdIterator.Next() -> (vector<fuchsia.pkg/BlobId> blobs)
+protocol fuchsia.pkg/BlobIdIterator
+struct/member fuchsia.pkg/BlobInfo.blob_id fuchsia.pkg/BlobId
+struct/member fuchsia.pkg/BlobInfo.length uint64
+struct fuchsia.pkg/BlobInfo
+protocol/member fuchsia.pkg/BlobInfoIterator.Next() -> (vector<fuchsia.pkg/BlobInfo> blobs)
+protocol fuchsia.pkg/BlobInfoIterator
+enum/member fuchsia.pkg/ExperimentToggle.LIGHTBULB 0
+strict enum fuchsia.pkg/ExperimentToggle uint64
+protocol/member fuchsia.pkg/FontResolver.Resolve(string package_url,server_end:fuchsia.io/Directory directory_request) -> (fuchsia.pkg/FontResolver_Resolve_Result result)
+protocol fuchsia.pkg/FontResolver
+struct fuchsia.pkg/FontResolver_Resolve_Response
+union/member fuchsia.pkg/FontResolver_Resolve_Result.err int32
+union/member fuchsia.pkg/FontResolver_Resolve_Result.response fuchsia.pkg/FontResolver_Resolve_Response
+strict union fuchsia.pkg/FontResolver_Resolve_Result
+enum/member fuchsia.pkg/GetBlobError.ERROR_OPENING_BLOB 1
+strict enum fuchsia.pkg/GetBlobError uint32
+enum/member fuchsia.pkg/GetMetadataError.ERROR_OPENING_METADATA 1
+strict enum fuchsia.pkg/GetMetadataError uint32
+protocol/member fuchsia.pkg/LocalMirror.GetBlob(fuchsia.pkg/BlobId blob_id,server_end:fuchsia.io/File blob) -> (fuchsia.pkg/LocalMirror_GetBlob_Result result)
+protocol/member fuchsia.pkg/LocalMirror.GetMetadata(fuchsia.pkg/RepositoryUrl repo_url,string:4096 path,server_end:fuchsia.io/File metadata) -> (fuchsia.pkg/LocalMirror_GetMetadata_Result result)
+protocol fuchsia.pkg/LocalMirror
+struct fuchsia.pkg/LocalMirror_GetBlob_Response
+union/member fuchsia.pkg/LocalMirror_GetBlob_Result.err fuchsia.pkg/GetBlobError
+union/member fuchsia.pkg/LocalMirror_GetBlob_Result.response fuchsia.pkg/LocalMirror_GetBlob_Response
+strict union fuchsia.pkg/LocalMirror_GetBlob_Result
+struct fuchsia.pkg/LocalMirror_GetMetadata_Response
+union/member fuchsia.pkg/LocalMirror_GetMetadata_Result.err fuchsia.pkg/GetMetadataError
+union/member fuchsia.pkg/LocalMirror_GetMetadata_Result.response fuchsia.pkg/LocalMirror_GetMetadata_Response
+strict union fuchsia.pkg/LocalMirror_GetMetadata_Result
+table/member fuchsia.pkg/MirrorConfig.blob_mirror_url string
+table/member fuchsia.pkg/MirrorConfig.mirror_url string
+table/member fuchsia.pkg/MirrorConfig.subscribe bool
+table fuchsia.pkg/MirrorConfig
+protocol/member fuchsia.pkg/NeededBlobs.Abort() -> ()
+protocol/member fuchsia.pkg/NeededBlobs.GetMissingBlobs(server_end:fuchsia.pkg/BlobInfoIterator iterator)
+protocol/member fuchsia.pkg/NeededBlobs.OpenBlob(fuchsia.pkg/BlobId blob_id,server_end:fuchsia.io/File file) -> (fuchsia.pkg/NeededBlobs_OpenBlob_Result result)
+protocol/member fuchsia.pkg/NeededBlobs.OpenMetaBlob(server_end:fuchsia.io/File file) -> (fuchsia.pkg/NeededBlobs_OpenMetaBlob_Result result)
+protocol fuchsia.pkg/NeededBlobs
+struct/member fuchsia.pkg/NeededBlobs_OpenBlob_Response.needed bool
+struct fuchsia.pkg/NeededBlobs_OpenBlob_Response
+union/member fuchsia.pkg/NeededBlobs_OpenBlob_Result.err fuchsia.pkg/OpenBlobError
+union/member fuchsia.pkg/NeededBlobs_OpenBlob_Result.response fuchsia.pkg/NeededBlobs_OpenBlob_Response
+strict union fuchsia.pkg/NeededBlobs_OpenBlob_Result
+struct/member fuchsia.pkg/NeededBlobs_OpenMetaBlob_Response.needed bool
+struct fuchsia.pkg/NeededBlobs_OpenMetaBlob_Response
+union/member fuchsia.pkg/NeededBlobs_OpenMetaBlob_Result.err fuchsia.pkg/OpenBlobError
+union/member fuchsia.pkg/NeededBlobs_OpenMetaBlob_Result.response fuchsia.pkg/NeededBlobs_OpenMetaBlob_Response
+strict union fuchsia.pkg/NeededBlobs_OpenMetaBlob_Result
+enum/member fuchsia.pkg/OpenBlobError.CONCURRENT_WRITE 2
+enum/member fuchsia.pkg/OpenBlobError.INTERNAL 4
+enum/member fuchsia.pkg/OpenBlobError.OUT_OF_SPACE 1
+enum/member fuchsia.pkg/OpenBlobError.UNSPECIFIED_IO 3
+strict enum fuchsia.pkg/OpenBlobError uint32
+protocol/member fuchsia.pkg/PackageCache.BasePackageIndex(server_end:fuchsia.pkg/PackageIndexIterator iterator)
+protocol/member fuchsia.pkg/PackageCache.Get(fuchsia.pkg/BlobInfo meta_far_blob,vector<string> selectors,server_end:fuchsia.pkg/NeededBlobs needed_blobs,server_end:<fuchsia.io/Directory,optional> dir) -> (fuchsia.pkg/PackageCache_Get_Result result)
+protocol/member fuchsia.pkg/PackageCache.Open(fuchsia.pkg/BlobId meta_far_blob_id,vector<string> selectors,server_end:fuchsia.io/Directory dir) -> (fuchsia.pkg/PackageCache_Open_Result result)
+protocol/member fuchsia.pkg/PackageCache.Sync() -> (fuchsia.pkg/PackageCache_Sync_Result result)
+protocol fuchsia.pkg/PackageCache
+struct fuchsia.pkg/PackageCache_Get_Response
+union/member fuchsia.pkg/PackageCache_Get_Result.err int32
+union/member fuchsia.pkg/PackageCache_Get_Result.response fuchsia.pkg/PackageCache_Get_Response
+strict union fuchsia.pkg/PackageCache_Get_Result
+struct fuchsia.pkg/PackageCache_Open_Response
+union/member fuchsia.pkg/PackageCache_Open_Result.err int32
+union/member fuchsia.pkg/PackageCache_Open_Result.response fuchsia.pkg/PackageCache_Open_Response
+strict union fuchsia.pkg/PackageCache_Open_Result
+struct fuchsia.pkg/PackageCache_Sync_Response
+union/member fuchsia.pkg/PackageCache_Sync_Result.err int32
+union/member fuchsia.pkg/PackageCache_Sync_Result.response fuchsia.pkg/PackageCache_Sync_Response
+strict union fuchsia.pkg/PackageCache_Sync_Result
+struct/member fuchsia.pkg/PackageIndexEntry.meta_far_blob_id fuchsia.pkg/BlobId
+struct/member fuchsia.pkg/PackageIndexEntry.package_url fuchsia.pkg/PackageUrl
+struct fuchsia.pkg/PackageIndexEntry
+protocol/member fuchsia.pkg/PackageIndexIterator.Next() -> (vector<fuchsia.pkg/PackageIndexEntry> entries)
+protocol fuchsia.pkg/PackageIndexIterator
+protocol/member fuchsia.pkg/PackageResolver.GetHash(fuchsia.pkg/PackageUrl package_url) -> (fuchsia.pkg/PackageResolver_GetHash_Result result)
+protocol/member fuchsia.pkg/PackageResolver.Resolve(string package_url,vector<string> selectors,server_end:fuchsia.io/Directory dir) -> (fuchsia.pkg/PackageResolver_Resolve_Result result)
+protocol fuchsia.pkg/PackageResolver
+protocol/member fuchsia.pkg/PackageResolverAdmin.SetExperimentState(fuchsia.pkg/ExperimentToggle experiment_id,bool state) -> ()
+protocol fuchsia.pkg/PackageResolverAdmin
+struct/member fuchsia.pkg/PackageResolver_GetHash_Response.meta_far_blob_id fuchsia.pkg/BlobId
+struct fuchsia.pkg/PackageResolver_GetHash_Response
+union/member fuchsia.pkg/PackageResolver_GetHash_Result.err int32
+union/member fuchsia.pkg/PackageResolver_GetHash_Result.response fuchsia.pkg/PackageResolver_GetHash_Response
+strict union fuchsia.pkg/PackageResolver_GetHash_Result
+struct fuchsia.pkg/PackageResolver_Resolve_Response
+union/member fuchsia.pkg/PackageResolver_Resolve_Result.err fuchsia.pkg/ResolveError
+union/member fuchsia.pkg/PackageResolver_Resolve_Result.response fuchsia.pkg/PackageResolver_Resolve_Response
+strict union fuchsia.pkg/PackageResolver_Resolve_Result
+struct/member fuchsia.pkg/PackageUrl.url string:2048
+struct fuchsia.pkg/PackageUrl
+table/member fuchsia.pkg/RepositoryConfig.mirrors vector<fuchsia.pkg/MirrorConfig>
+table/member fuchsia.pkg/RepositoryConfig.repo_url string
+table/member fuchsia.pkg/RepositoryConfig.root_keys vector<fuchsia.pkg/RepositoryKeyConfig>
+table/member fuchsia.pkg/RepositoryConfig.root_threshold uint32
+table/member fuchsia.pkg/RepositoryConfig.root_version uint32
+table/member fuchsia.pkg/RepositoryConfig.storage_type fuchsia.pkg/RepositoryStorageType
+table/member fuchsia.pkg/RepositoryConfig.update_package_url string
+table/member fuchsia.pkg/RepositoryConfig.use_local_mirror bool
+table fuchsia.pkg/RepositoryConfig
+protocol/member fuchsia.pkg/RepositoryIterator.Next() -> (vector<fuchsia.pkg/RepositoryConfig> repos)
+protocol fuchsia.pkg/RepositoryIterator
+union/member fuchsia.pkg/RepositoryKeyConfig.ed25519_key vector<uint8>
+flexible union fuchsia.pkg/RepositoryKeyConfig
+protocol/member fuchsia.pkg/RepositoryManager.Add(fuchsia.pkg/RepositoryConfig repo) -> (fuchsia.pkg/RepositoryManager_Add_Result result)
+protocol/member fuchsia.pkg/RepositoryManager.AddMirror(string repo_url,fuchsia.pkg/MirrorConfig mirror) -> (fuchsia.pkg/RepositoryManager_AddMirror_Result result)
+protocol/member fuchsia.pkg/RepositoryManager.List(server_end:fuchsia.pkg/RepositoryIterator iterator)
+protocol/member fuchsia.pkg/RepositoryManager.Remove(string repo_url) -> (fuchsia.pkg/RepositoryManager_Remove_Result result)
+protocol/member fuchsia.pkg/RepositoryManager.RemoveMirror(string repo_url,string mirror_url) -> (fuchsia.pkg/RepositoryManager_RemoveMirror_Result result)
+protocol fuchsia.pkg/RepositoryManager
+struct fuchsia.pkg/RepositoryManager_AddMirror_Response
+union/member fuchsia.pkg/RepositoryManager_AddMirror_Result.err int32
+union/member fuchsia.pkg/RepositoryManager_AddMirror_Result.response fuchsia.pkg/RepositoryManager_AddMirror_Response
+strict union fuchsia.pkg/RepositoryManager_AddMirror_Result
+struct fuchsia.pkg/RepositoryManager_Add_Response
+union/member fuchsia.pkg/RepositoryManager_Add_Result.err int32
+union/member fuchsia.pkg/RepositoryManager_Add_Result.response fuchsia.pkg/RepositoryManager_Add_Response
+strict union fuchsia.pkg/RepositoryManager_Add_Result
+struct fuchsia.pkg/RepositoryManager_RemoveMirror_Response
+union/member fuchsia.pkg/RepositoryManager_RemoveMirror_Result.err int32
+union/member fuchsia.pkg/RepositoryManager_RemoveMirror_Result.response fuchsia.pkg/RepositoryManager_RemoveMirror_Response
+strict union fuchsia.pkg/RepositoryManager_RemoveMirror_Result
+struct fuchsia.pkg/RepositoryManager_Remove_Response
+union/member fuchsia.pkg/RepositoryManager_Remove_Result.err int32
+union/member fuchsia.pkg/RepositoryManager_Remove_Result.response fuchsia.pkg/RepositoryManager_Remove_Response
+strict union fuchsia.pkg/RepositoryManager_Remove_Result
+enum/member fuchsia.pkg/RepositoryStorageType.EPHEMERAL 1
+enum/member fuchsia.pkg/RepositoryStorageType.PERSISTENT 2
+strict enum fuchsia.pkg/RepositoryStorageType uint32
+struct/member fuchsia.pkg/RepositoryUrl.url string:2048
+struct fuchsia.pkg/RepositoryUrl
+enum/member fuchsia.pkg/ResolveError.ACCESS_DENIED 2
+enum/member fuchsia.pkg/ResolveError.BLOB_NOT_FOUND 4
+enum/member fuchsia.pkg/ResolveError.INTERNAL 1
+enum/member fuchsia.pkg/ResolveError.INVALID_URL 10
+enum/member fuchsia.pkg/ResolveError.IO 3
+enum/member fuchsia.pkg/ResolveError.NO_SPACE 7
+enum/member fuchsia.pkg/ResolveError.PACKAGE_NOT_FOUND 5
+enum/member fuchsia.pkg/ResolveError.REPO_NOT_FOUND 6
+enum/member fuchsia.pkg/ResolveError.UNAVAILABLE_BLOB 8
+enum/member fuchsia.pkg/ResolveError.UNAVAILABLE_REPO_METADATA 9
+strict enum fuchsia.pkg/ResolveError int32
+protocol/member fuchsia.pkg/RetainedPackages.Clear() -> ()
+protocol/member fuchsia.pkg/RetainedPackages.Replace(client_end:fuchsia.pkg/BlobIdIterator iterator) -> ()
+protocol fuchsia.pkg/RetainedPackages
+library fuchsia.pkg

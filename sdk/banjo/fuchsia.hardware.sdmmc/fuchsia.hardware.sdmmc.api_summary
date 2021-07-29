@@ -1,0 +1,94 @@
+protocol/member fuchsia.hardware.sdmmc/InBandInterrupt.Callback() -> ()
+protocol fuchsia.hardware.sdmmc/InBandInterrupt
+const fuchsia.hardware.sdmmc/SDMMC_MAX_CLIENT_ID uint8 7
+const fuchsia.hardware.sdmmc/SDMMC_PAGES_COUNT uint64 512
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.HostInfo() -> (int32 s,fuchsia.hardware.sdmmc/SdmmcHostInfo info)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.HwReset() -> ()
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.PerformTuning(uint32 cmd_idx) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.RegisterInBandInterrupt(client_end:fuchsia.hardware.sdmmc/InBandInterrupt interrupt_cb) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.RegisterVmo(uint32 vmo_id,uint8 client_id,zx/handle:VMO vmo,uint64 offset,uint64 size,uint32 vmo_rights) -> (int32 status)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.Request(fuchsia.hardware.sdmmc/SdmmcReq req) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.RequestNew(fuchsia.hardware.sdmmc/SdmmcReqNew req) -> (int32 status,array<uint32,4> response)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.SetBusFreq(uint32 bus_freq) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.SetBusWidth(fuchsia.hardware.sdmmc/SdmmcBusWidth bus_width) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.SetSignalVoltage(fuchsia.hardware.sdmmc/SdmmcVoltage voltage) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.SetTiming(fuchsia.hardware.sdmmc/SdmmcTiming timing) -> (int32 s)
+protocol/member fuchsia.hardware.sdmmc/Sdmmc.UnregisterVmo(uint32 vmo_id,uint8 client_id) -> (int32 status,zx/handle:VMO vmo)
+protocol fuchsia.hardware.sdmmc/Sdmmc
+union/member fuchsia.hardware.sdmmc/SdmmcBuffer.vmo zx/handle:VMO
+union/member fuchsia.hardware.sdmmc/SdmmcBuffer.vmo_id uint32
+resource strict union fuchsia.hardware.sdmmc/SdmmcBuffer
+struct/member fuchsia.hardware.sdmmc/SdmmcBufferRegion.buffer fuchsia.hardware.sdmmc/SdmmcBuffer
+struct/member fuchsia.hardware.sdmmc/SdmmcBufferRegion.offset uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcBufferRegion.size uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcBufferRegion.type fuchsia.hardware.sdmmc/SdmmcBufferType
+resource struct fuchsia.hardware.sdmmc/SdmmcBufferRegion
+enum/member fuchsia.hardware.sdmmc/SdmmcBufferType.VMO_HANDLE 2
+enum/member fuchsia.hardware.sdmmc/SdmmcBufferType.VMO_ID 1
+strict enum fuchsia.hardware.sdmmc/SdmmcBufferType uint32
+enum/member fuchsia.hardware.sdmmc/SdmmcBusWidth.EIGHT 2
+enum/member fuchsia.hardware.sdmmc/SdmmcBusWidth.FOUR 1
+enum/member fuchsia.hardware.sdmmc/SdmmcBusWidth.MAX 3
+enum/member fuchsia.hardware.sdmmc/SdmmcBusWidth.ONE 0
+strict enum fuchsia.hardware.sdmmc/SdmmcBusWidth uint8
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.AUTO_CMD12 8
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.BUS_WIDTH_8 1
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.DDR50 64
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.DMA 2
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.NO_TUNING_SDR50 128
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.SDR104 16
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.SDR50 32
+enum/member fuchsia.hardware.sdmmc/SdmmcHostCap.VOLTAGE_330 4
+strict enum fuchsia.hardware.sdmmc/SdmmcHostCap uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcHostInfo.caps uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcHostInfo.max_buffer_regions uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcHostInfo.max_transfer_size uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcHostInfo.max_transfer_size_non_dma uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcHostInfo.prefs uint64
+struct fuchsia.hardware.sdmmc/SdmmcHostInfo
+enum/member fuchsia.hardware.sdmmc/SdmmcHostPrefs.DISABLE_HS200 2
+enum/member fuchsia.hardware.sdmmc/SdmmcHostPrefs.DISABLE_HS400 1
+enum/member fuchsia.hardware.sdmmc/SdmmcHostPrefs.DISABLE_HSDDR 4
+strict enum fuchsia.hardware.sdmmc/SdmmcHostPrefs uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.arg uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.blockcount uint16
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.blocksize uint16
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.buf_offset uint64
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.cmd_flags uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.cmd_idx uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.dma_vmo zx/handle:VMO
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.pmt zx/handle
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.probe_tuning_cmd bool
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.response array<uint32,4>
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.status int32
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.use_dma bool
+struct/member fuchsia.hardware.sdmmc/SdmmcReq.virt vector<uint8>
+resource struct fuchsia.hardware.sdmmc/SdmmcReq
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.arg uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.blocksize uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.buffers vector<fuchsia.hardware.sdmmc/SdmmcBufferRegion>
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.client_id uint8
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.cmd_flags uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.cmd_idx uint32
+struct/member fuchsia.hardware.sdmmc/SdmmcReqNew.probe_tuning_cmd bool
+resource struct fuchsia.hardware.sdmmc/SdmmcReqNew
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.DDR50 9
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.HS 1
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.HS200 3
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.HS400 4
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.HSDDR 2
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.LEGACY 0
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.MAX 10
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.SDR104 8
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.SDR12 5
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.SDR25 6
+enum/member fuchsia.hardware.sdmmc/SdmmcTiming.SDR50 7
+strict enum fuchsia.hardware.sdmmc/SdmmcTiming uint8
+enum/member fuchsia.hardware.sdmmc/SdmmcVmoRight.READ 1
+enum/member fuchsia.hardware.sdmmc/SdmmcVmoRight.WRITE 2
+strict enum fuchsia.hardware.sdmmc/SdmmcVmoRight uint32
+enum/member fuchsia.hardware.sdmmc/SdmmcVoltage.MAX 2
+enum/member fuchsia.hardware.sdmmc/SdmmcVoltage.V180 1
+enum/member fuchsia.hardware.sdmmc/SdmmcVoltage.V330 0
+strict enum fuchsia.hardware.sdmmc/SdmmcVoltage uint8
+library fuchsia.hardware.sdmmc

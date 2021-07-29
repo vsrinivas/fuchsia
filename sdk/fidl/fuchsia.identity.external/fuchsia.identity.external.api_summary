@@ -1,0 +1,68 @@
+enum/member fuchsia.identity.external/Error.ABORTED 11
+enum/member fuchsia.identity.external/Error.CONFIG 3
+enum/member fuchsia.identity.external/Error.INSUFFICIENT_TOKEN 10
+enum/member fuchsia.identity.external/Error.INTERNAL 2
+enum/member fuchsia.identity.external/Error.INVALID_REQUEST 5
+enum/member fuchsia.identity.external/Error.INVALID_TOKEN 9
+enum/member fuchsia.identity.external/Error.NETWORK 7
+enum/member fuchsia.identity.external/Error.RESOURCE 6
+enum/member fuchsia.identity.external/Error.SERVER 8
+enum/member fuchsia.identity.external/Error.UNKNOWN 1
+enum/member fuchsia.identity.external/Error.UNSUPPORTED_OPERATION 4
+strict enum fuchsia.identity.external/Error uint32
+protocol/member fuchsia.identity.external/Oauth.CreateRefreshToken(fuchsia.identity.external/OauthRefreshTokenRequest request) -> (fuchsia.identity.external/Oauth_CreateRefreshToken_Result result)
+protocol/member fuchsia.identity.external/Oauth.GetAccessTokenFromRefreshToken(fuchsia.identity.external/OauthAccessTokenFromOauthRefreshTokenRequest request) -> (fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Result result)
+protocol/member fuchsia.identity.external/Oauth.RevokeAccessToken(fuchsia.identity.tokens/OauthAccessToken access_token) -> (fuchsia.identity.external/Oauth_RevokeAccessToken_Result result)
+protocol/member fuchsia.identity.external/Oauth.RevokeRefreshToken(fuchsia.identity.tokens/OauthRefreshToken refresh_token) -> (fuchsia.identity.external/Oauth_RevokeRefreshToken_Result result)
+protocol fuchsia.identity.external/Oauth
+table/member fuchsia.identity.external/OauthAccessTokenFromOauthRefreshTokenRequest.client_id string:256
+table/member fuchsia.identity.external/OauthAccessTokenFromOauthRefreshTokenRequest.refresh_token fuchsia.identity.tokens/OauthRefreshToken
+table/member fuchsia.identity.external/OauthAccessTokenFromOauthRefreshTokenRequest.scopes vector<string:256>:64
+table fuchsia.identity.external/OauthAccessTokenFromOauthRefreshTokenRequest
+protocol/member fuchsia.identity.external/OauthOpenIdConnect.GetIdTokenFromRefreshToken(fuchsia.identity.external/OpenIdTokenFromOauthRefreshTokenRequest request) -> (fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Result result)
+protocol/member fuchsia.identity.external/OauthOpenIdConnect.GetUserInfoFromAccessToken(fuchsia.identity.external/OpenIdUserInfoFromOauthAccessTokenRequest request) -> (fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Result result)
+protocol fuchsia.identity.external/OauthOpenIdConnect
+struct/member fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Response.id_token fuchsia.identity.tokens/OpenIdToken
+struct fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Response
+union/member fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Result.response fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Response
+strict union fuchsia.identity.external/OauthOpenIdConnect_GetIdTokenFromRefreshToken_Result
+struct/member fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Response.user_info fuchsia.identity.tokens/OpenIdUserInfo
+struct fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Response
+union/member fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Result.response fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Response
+strict union fuchsia.identity.external/OauthOpenIdConnect_GetUserInfoFromAccessToken_Result
+table/member fuchsia.identity.external/OauthRefreshTokenRequest.account_id string:256
+table/member fuchsia.identity.external/OauthRefreshTokenRequest.ui_context fuchsia.auth/AuthenticationUIContext
+resource table fuchsia.identity.external/OauthRefreshTokenRequest
+struct/member fuchsia.identity.external/Oauth_CreateRefreshToken_Response.access_token fuchsia.identity.tokens/OauthAccessToken
+struct/member fuchsia.identity.external/Oauth_CreateRefreshToken_Response.refresh_token fuchsia.identity.tokens/OauthRefreshToken
+struct fuchsia.identity.external/Oauth_CreateRefreshToken_Response
+union/member fuchsia.identity.external/Oauth_CreateRefreshToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/Oauth_CreateRefreshToken_Result.response fuchsia.identity.external/Oauth_CreateRefreshToken_Response
+strict union fuchsia.identity.external/Oauth_CreateRefreshToken_Result
+struct/member fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Response.access_token fuchsia.identity.tokens/OauthAccessToken
+struct fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Response
+union/member fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Result.response fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Response
+strict union fuchsia.identity.external/Oauth_GetAccessTokenFromRefreshToken_Result
+struct fuchsia.identity.external/Oauth_RevokeAccessToken_Response
+union/member fuchsia.identity.external/Oauth_RevokeAccessToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/Oauth_RevokeAccessToken_Result.response fuchsia.identity.external/Oauth_RevokeAccessToken_Response
+strict union fuchsia.identity.external/Oauth_RevokeAccessToken_Result
+struct fuchsia.identity.external/Oauth_RevokeRefreshToken_Response
+union/member fuchsia.identity.external/Oauth_RevokeRefreshToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/Oauth_RevokeRefreshToken_Result.response fuchsia.identity.external/Oauth_RevokeRefreshToken_Response
+strict union fuchsia.identity.external/Oauth_RevokeRefreshToken_Result
+protocol/member fuchsia.identity.external/OpenIdConnect.RevokeIdToken(fuchsia.identity.tokens/OpenIdToken id_token) -> (fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Result result)
+protocol fuchsia.identity.external/OpenIdConnect
+struct fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Response
+union/member fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Result.err fuchsia.identity.external/Error
+union/member fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Result.response fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Response
+strict union fuchsia.identity.external/OpenIdConnect_RevokeIdToken_Result
+table/member fuchsia.identity.external/OpenIdTokenFromOauthRefreshTokenRequest.audiences vector<string:256>:16
+table/member fuchsia.identity.external/OpenIdTokenFromOauthRefreshTokenRequest.refresh_token fuchsia.identity.tokens/OauthRefreshToken
+table fuchsia.identity.external/OpenIdTokenFromOauthRefreshTokenRequest
+table/member fuchsia.identity.external/OpenIdUserInfoFromOauthAccessTokenRequest.access_token fuchsia.identity.tokens/OauthAccessToken
+table fuchsia.identity.external/OpenIdUserInfoFromOauthAccessTokenRequest
+library fuchsia.identity.external

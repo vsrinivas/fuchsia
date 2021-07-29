@@ -1,0 +1,96 @@
+struct/member fuchsia.bluetooth.gatt/AttributePermissions.read box<fuchsia.bluetooth.gatt/SecurityRequirements>
+struct/member fuchsia.bluetooth.gatt/AttributePermissions.update box<fuchsia.bluetooth.gatt/SecurityRequirements>
+struct/member fuchsia.bluetooth.gatt/AttributePermissions.write box<fuchsia.bluetooth.gatt/SecurityRequirements>
+struct fuchsia.bluetooth.gatt/AttributePermissions
+struct/member fuchsia.bluetooth.gatt/Characteristic.descriptors vector<fuchsia.bluetooth.gatt/Descriptor>:<65532,optional>
+struct/member fuchsia.bluetooth.gatt/Characteristic.id uint64
+struct/member fuchsia.bluetooth.gatt/Characteristic.permissions box<fuchsia.bluetooth.gatt/AttributePermissions>
+struct/member fuchsia.bluetooth.gatt/Characteristic.properties uint32
+struct/member fuchsia.bluetooth.gatt/Characteristic.type string:36
+struct fuchsia.bluetooth.gatt/Characteristic
+protocol/member fuchsia.bluetooth.gatt/Client.ConnectToService(uint64 id,server_end:fuchsia.bluetooth.gatt/RemoteService service)
+protocol/member fuchsia.bluetooth.gatt/Client.ListServices(vector<string:36>:optional uuids) -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/ServiceInfo>:65535 services)
+protocol fuchsia.bluetooth.gatt/Client
+struct/member fuchsia.bluetooth.gatt/Descriptor.id uint64
+struct/member fuchsia.bluetooth.gatt/Descriptor.permissions box<fuchsia.bluetooth.gatt/AttributePermissions>
+struct/member fuchsia.bluetooth.gatt/Descriptor.type string:36
+struct fuchsia.bluetooth.gatt/Descriptor
+enum/member fuchsia.bluetooth.gatt/Error.FAILURE 1
+enum/member fuchsia.bluetooth.gatt/Error.INSUFFICIENT_AUTHENTICATION 5
+enum/member fuchsia.bluetooth.gatt/Error.INSUFFICIENT_AUTHORIZATION 4
+enum/member fuchsia.bluetooth.gatt/Error.INSUFFICIENT_ENCRYPTION 7
+enum/member fuchsia.bluetooth.gatt/Error.INSUFFICIENT_ENCRYPTION_KEY_SIZE 6
+enum/member fuchsia.bluetooth.gatt/Error.INVALID_RESPONSE 2
+enum/member fuchsia.bluetooth.gatt/Error.READ_NOT_PERMITTED 8
+enum/member fuchsia.bluetooth.gatt/Error.TOO_MANY_RESULTS 3
+strict enum fuchsia.bluetooth.gatt/Error uint32
+enum/member fuchsia.bluetooth.gatt/ErrorCode.INVALID_OFFSET 1
+enum/member fuchsia.bluetooth.gatt/ErrorCode.INVALID_VALUE_LENGTH 2
+enum/member fuchsia.bluetooth.gatt/ErrorCode.NOT_PERMITTED 3
+enum/member fuchsia.bluetooth.gatt/ErrorCode.NO_ERROR 0
+strict enum fuchsia.bluetooth.gatt/ErrorCode uint32
+protocol/member fuchsia.bluetooth.gatt/LocalService.NotifyValue(uint64 characteristic_id,string:16 peer_id,vector<uint8> value,bool confirm)
+protocol/member fuchsia.bluetooth.gatt/LocalService.RemoveService()
+protocol fuchsia.bluetooth.gatt/LocalService
+protocol/member fuchsia.bluetooth.gatt/LocalServiceDelegate.OnCharacteristicConfiguration(uint64 characteristic_id,string:16 peer_id,bool notify,bool indicate)
+protocol/member fuchsia.bluetooth.gatt/LocalServiceDelegate.OnReadValue(uint64 id,int32 offset) -> (vector<uint8>:optional value,fuchsia.bluetooth.gatt/ErrorCode status)
+protocol/member fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteValue(uint64 id,uint16 offset,vector<uint8> value) -> (fuchsia.bluetooth.gatt/ErrorCode status)
+protocol/member fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteWithoutResponse(uint64 id,uint16 offset,vector<uint8> value)
+protocol fuchsia.bluetooth.gatt/LocalServiceDelegate
+const fuchsia.bluetooth.gatt/MAX_ATTRIBUTE_COUNT uint16 65535
+const fuchsia.bluetooth.gatt/MAX_CHARACTERISTIC_COUNT uint16 32767
+const fuchsia.bluetooth.gatt/MAX_DESCRIPTOR_COUNT uint16 65532
+const fuchsia.bluetooth.gatt/MAX_READ_BY_TYPE_RESULTS uint16 189
+const fuchsia.bluetooth.gatt/MAX_READ_BY_TYPE_VALUE_LENGTH uint16 253
+const fuchsia.bluetooth.gatt/MAX_SERVICE_COUNT uint16 65535
+const fuchsia.bluetooth.gatt/MAX_VALUE_LENGTH uint16 512
+table/member fuchsia.bluetooth.gatt/ReadByTypeResult.error fuchsia.bluetooth.gatt/Error
+table/member fuchsia.bluetooth.gatt/ReadByTypeResult.id uint64
+table/member fuchsia.bluetooth.gatt/ReadByTypeResult.value vector<uint8>:253
+table fuchsia.bluetooth.gatt/ReadByTypeResult
+enum/member fuchsia.bluetooth.gatt/ReliableMode.DISABLED 1
+enum/member fuchsia.bluetooth.gatt/ReliableMode.ENABLED 2
+strict enum fuchsia.bluetooth.gatt/ReliableMode uint32
+protocol/member fuchsia.bluetooth.gatt/RemoteService.DiscoverCharacteristics() -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/Characteristic>:32767 characteristics)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.NotifyCharacteristic(uint64 id,bool enable) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.OnCharacteristicValueUpdated -> (uint64 id,vector<uint8> value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.ReadByType(fuchsia.bluetooth/Uuid uuid) -> (fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result result)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.ReadCharacteristic(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.ReadDescriptor(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.ReadLongCharacteristic(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8>:512 value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.ReadLongDescriptor(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8> value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristic(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristicWithoutResponse(uint64 id,vector<uint8> value)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.WriteDescriptor(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.WriteLongCharacteristic(uint64 id,uint16 offset,vector<uint8>:512 value,fuchsia.bluetooth.gatt/WriteOptions write_options) -> (fuchsia.bluetooth/Status status)
+protocol/member fuchsia.bluetooth.gatt/RemoteService.WriteLongDescriptor(uint64 id,uint16 offset,vector<uint8>:512 value) -> (fuchsia.bluetooth/Status status)
+protocol fuchsia.bluetooth.gatt/RemoteService
+struct/member fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response.results vector<fuchsia.bluetooth.gatt/ReadByTypeResult>:189
+struct fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response
+union/member fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.err fuchsia.bluetooth.gatt/Error
+union/member fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.response fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response
+strict union fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result
+struct/member fuchsia.bluetooth.gatt/SecurityRequirements.authentication_required bool
+struct/member fuchsia.bluetooth.gatt/SecurityRequirements.authorization_required bool
+struct/member fuchsia.bluetooth.gatt/SecurityRequirements.encryption_required bool
+struct fuchsia.bluetooth.gatt/SecurityRequirements
+protocol/member fuchsia.bluetooth.gatt/Server.PublishService(fuchsia.bluetooth.gatt/ServiceInfo info,client_end:fuchsia.bluetooth.gatt/LocalServiceDelegate delegate,server_end:fuchsia.bluetooth.gatt/LocalService service) -> (fuchsia.bluetooth/Status status)
+protocol fuchsia.bluetooth.gatt/Server
+struct/member fuchsia.bluetooth.gatt/ServiceInfo.characteristics vector<fuchsia.bluetooth.gatt/Characteristic>:<32767,optional>
+struct/member fuchsia.bluetooth.gatt/ServiceInfo.id uint64
+struct/member fuchsia.bluetooth.gatt/ServiceInfo.includes vector<uint64>:<65535,optional>
+struct/member fuchsia.bluetooth.gatt/ServiceInfo.primary bool
+struct/member fuchsia.bluetooth.gatt/ServiceInfo.type string:36
+struct fuchsia.bluetooth.gatt/ServiceInfo
+table/member fuchsia.bluetooth.gatt/WriteOptions.reliable_mode fuchsia.bluetooth.gatt/ReliableMode
+table fuchsia.bluetooth.gatt/WriteOptions
+const fuchsia.bluetooth.gatt/kPropertyAuthenticatedSignedWrites uint32 64
+const fuchsia.bluetooth.gatt/kPropertyBroadcast uint32 1
+const fuchsia.bluetooth.gatt/kPropertyIndicate uint32 32
+const fuchsia.bluetooth.gatt/kPropertyNotify uint32 16
+const fuchsia.bluetooth.gatt/kPropertyRead uint32 2
+const fuchsia.bluetooth.gatt/kPropertyReliableWrite uint32 256
+const fuchsia.bluetooth.gatt/kPropertyWritableAuxiliaries uint32 512
+const fuchsia.bluetooth.gatt/kPropertyWrite uint32 8
+const fuchsia.bluetooth.gatt/kPropertyWriteWithoutResponse uint32 4
+library fuchsia.bluetooth.gatt

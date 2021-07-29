@@ -1,0 +1,69 @@
+const fuchsia.hardware.sdio/SDIO_FN_1 uint8 1
+const fuchsia.hardware.sdio/SDIO_FN_2 uint8 2
+const fuchsia.hardware.sdio/SDIO_MAX_FUNCS uint8 8
+protocol/member fuchsia.hardware.sdio/Sdio.DisableFn() -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.DisableFnIntr() -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.DoRwByte(bool write,uint32 addr,uint8 write_byte) -> (int32 s,uint8 read_byte)
+protocol/member fuchsia.hardware.sdio/Sdio.DoRwTxn(fuchsia.hardware.sdio/SdioRwTxn txn) -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.DoRwTxnNew(fuchsia.hardware.sdio/SdioRwTxnNew txn) -> (int32 status)
+protocol/member fuchsia.hardware.sdio/Sdio.DoVendorControlRwByte(bool write,uint8 addr,uint8 write_byte) -> (int32 s,uint8 read_byte)
+protocol/member fuchsia.hardware.sdio/Sdio.EnableFn() -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.EnableFnIntr() -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.GetBlockSize() -> (int32 s,uint16 cur_blk_size)
+protocol/member fuchsia.hardware.sdio/Sdio.GetDevHwInfo() -> (int32 s,fuchsia.hardware.sdio/SdioHwInfo hw_info)
+protocol/member fuchsia.hardware.sdio/Sdio.GetInBandIntr() -> (int32 s,zx/handle:INTERRUPT irq)
+protocol/member fuchsia.hardware.sdio/Sdio.IntrPending() -> (int32 s,bool pending)
+protocol/member fuchsia.hardware.sdio/Sdio.IoAbort() -> (int32 s)
+protocol/member fuchsia.hardware.sdio/Sdio.RegisterVmo(uint32 vmo_id,zx/handle:VMO vmo,uint64 offset,uint64 size,uint32 vmo_rights) -> (int32 status)
+protocol/member fuchsia.hardware.sdio/Sdio.RunDiagnostics()
+protocol/member fuchsia.hardware.sdio/Sdio.UnregisterVmo(uint32 vmo_id) -> (int32 status,zx/handle:VMO vmo)
+protocol/member fuchsia.hardware.sdio/Sdio.UpdateBlockSize(uint16 blk_sz,bool deflt) -> (int32 s)
+protocol fuchsia.hardware.sdio/Sdio
+enum/member fuchsia.hardware.sdio/SdioCard.DIRECT_COMMAND 4
+enum/member fuchsia.hardware.sdio/SdioCard.FOUR_BIT_BUS 128
+enum/member fuchsia.hardware.sdio/SdioCard.HIGH_POWER 64
+enum/member fuchsia.hardware.sdio/SdioCard.HIGH_SPEED 32
+enum/member fuchsia.hardware.sdio/SdioCard.HS_SDR12 256
+enum/member fuchsia.hardware.sdio/SdioCard.HS_SDR25 512
+enum/member fuchsia.hardware.sdio/SdioCard.LOW_SPEED 16
+enum/member fuchsia.hardware.sdio/SdioCard.MULTI_BLOCK 1
+enum/member fuchsia.hardware.sdio/SdioCard.SRW 2
+enum/member fuchsia.hardware.sdio/SdioCard.SUSPEND_RESUME 8
+enum/member fuchsia.hardware.sdio/SdioCard.TYPE_A 8192
+enum/member fuchsia.hardware.sdio/SdioCard.TYPE_B 16384
+enum/member fuchsia.hardware.sdio/SdioCard.TYPE_C 32768
+enum/member fuchsia.hardware.sdio/SdioCard.TYPE_D 65536
+enum/member fuchsia.hardware.sdio/SdioCard.UHS_DDR50 4096
+enum/member fuchsia.hardware.sdio/SdioCard.UHS_SDR104 2048
+enum/member fuchsia.hardware.sdio/SdioCard.UHS_SDR50 1024
+strict enum fuchsia.hardware.sdio/SdioCard uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.caps uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.cccr_vsn uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.num_funcs uint32
+struct/member fuchsia.hardware.sdio/SdioDeviceHwInfo.sdio_vsn uint32
+struct fuchsia.hardware.sdio/SdioDeviceHwInfo
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.fn_intf_code uint8
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.manufacturer_id uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.max_blk_size uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.max_tran_speed uint32
+struct/member fuchsia.hardware.sdio/SdioFuncHwInfo.product_id uint32
+struct fuchsia.hardware.sdio/SdioFuncHwInfo
+struct/member fuchsia.hardware.sdio/SdioHwInfo.dev_hw_info fuchsia.hardware.sdio/SdioDeviceHwInfo
+struct/member fuchsia.hardware.sdio/SdioHwInfo.funcs_hw_info array<fuchsia.hardware.sdio/SdioFuncHwInfo,8>
+struct/member fuchsia.hardware.sdio/SdioHwInfo.host_max_transfer_size uint32
+struct fuchsia.hardware.sdio/SdioHwInfo
+struct/member fuchsia.hardware.sdio/SdioRwTxn.addr uint32
+struct/member fuchsia.hardware.sdio/SdioRwTxn.buf_offset uint64
+struct/member fuchsia.hardware.sdio/SdioRwTxn.data_size uint32
+struct/member fuchsia.hardware.sdio/SdioRwTxn.dma_vmo zx/handle:VMO
+struct/member fuchsia.hardware.sdio/SdioRwTxn.incr bool
+struct/member fuchsia.hardware.sdio/SdioRwTxn.use_dma bool
+struct/member fuchsia.hardware.sdio/SdioRwTxn.virt vector<uint8>
+struct/member fuchsia.hardware.sdio/SdioRwTxn.write bool
+resource struct fuchsia.hardware.sdio/SdioRwTxn
+struct/member fuchsia.hardware.sdio/SdioRwTxnNew.addr uint32
+struct/member fuchsia.hardware.sdio/SdioRwTxnNew.buffers vector<fuchsia.hardware.sdmmc/SdmmcBufferRegion>
+struct/member fuchsia.hardware.sdio/SdioRwTxnNew.incr bool
+struct/member fuchsia.hardware.sdio/SdioRwTxnNew.write bool
+resource struct fuchsia.hardware.sdio/SdioRwTxnNew
+library fuchsia.hardware.sdio

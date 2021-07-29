@@ -1,0 +1,4 @@
+struct/member ddk.hw.physiter/SgEntry.length uint64
+struct/member ddk.hw.physiter/SgEntry.offset uint64
+struct ddk.hw.physiter/SgEntry
+library ddk.hw.physiter

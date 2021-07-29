@@ -1,0 +1,53 @@
+const fuchsia.camera/CAMERA_OUTPUT_BURST uint32 2
+const fuchsia.camera/CAMERA_OUTPUT_DEPTH uint32 16
+const fuchsia.camera/CAMERA_OUTPUT_HDR uint32 8
+const fuchsia.camera/CAMERA_OUTPUT_STEREO uint32 32
+const fuchsia.camera/CAMERA_OUTPUT_STILL_IMAGE uint32 1
+const fuchsia.camera/CAMERA_OUTPUT_STREAM uint32 4
+const fuchsia.camera/CAMERA_OUTPUT_UNKNOWN uint32 0
+protocol/member fuchsia.camera/Control.CreateStream(fuchsia.sysmem/BufferCollectionInfo buffer_collection,fuchsia.camera/FrameRate rate,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR stream_token)
+protocol/member fuchsia.camera/Control.GetDeviceInfo() -> (fuchsia.camera/DeviceInfo device_info)
+protocol/member fuchsia.camera/Control.GetFormats(uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count,int32 status)
+protocol fuchsia.camera/Control
+struct/member fuchsia.camera/DeviceInfo.camera_id uint64
+struct/member fuchsia.camera/DeviceInfo.max_stream_count uint16
+struct/member fuchsia.camera/DeviceInfo.output_capabilities uint32
+struct/member fuchsia.camera/DeviceInfo.product_id uint16
+struct/member fuchsia.camera/DeviceInfo.product_name string
+struct/member fuchsia.camera/DeviceInfo.vendor_id uint16
+struct/member fuchsia.camera/DeviceInfo.vendor_name string
+struct fuchsia.camera/DeviceInfo
+struct/member fuchsia.camera/FrameAvailableEvent.buffer_id uint32
+struct/member fuchsia.camera/FrameAvailableEvent.frame_status fuchsia.camera/FrameStatus
+struct/member fuchsia.camera/FrameAvailableEvent.metadata fuchsia.camera/Metadata
+struct fuchsia.camera/FrameAvailableEvent
+struct/member fuchsia.camera/FrameRate.frames_per_sec_denominator uint32
+struct/member fuchsia.camera/FrameRate.frames_per_sec_numerator uint32
+struct fuchsia.camera/FrameRate
+enum/member fuchsia.camera/FrameStatus.ERROR_BUFFER_FULL 2
+enum/member fuchsia.camera/FrameStatus.ERROR_FRAME 1
+enum/member fuchsia.camera/FrameStatus.OK 0
+strict enum fuchsia.camera/FrameStatus uint32
+const fuchsia.camera/MAX_FORMATS_PER_RESPONSE uint32 16
+protocol/member fuchsia.camera/Manager.CreateStream(fuchsia.camera/VideoStream request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)
+protocol/member fuchsia.camera/Manager.CreateStreamV2(fuchsia.camera/VideoStreamV2 request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)
+protocol/member fuchsia.camera/Manager.GetDevices() -> (vector<fuchsia.camera/DeviceInfo> descriptions)
+protocol/member fuchsia.camera/Manager.GetFormats(uint64 camera_id,uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count)
+protocol fuchsia.camera/Manager
+struct/member fuchsia.camera/Metadata.timestamp int64
+struct fuchsia.camera/Metadata
+protocol/member fuchsia.camera/Stream.OnFrameAvailable -> (fuchsia.camera/FrameAvailableEvent frame)
+protocol/member fuchsia.camera/Stream.ReleaseFrame(uint32 buffer_id)
+protocol/member fuchsia.camera/Stream.Start()
+protocol/member fuchsia.camera/Stream.Stop()
+protocol fuchsia.camera/Stream
+struct/member fuchsia.camera/VideoFormat.format fuchsia.sysmem/ImageFormat
+struct/member fuchsia.camera/VideoFormat.rate fuchsia.camera/FrameRate
+struct fuchsia.camera/VideoFormat
+struct/member fuchsia.camera/VideoStream.camera_id uint64
+struct/member fuchsia.camera/VideoStream.format fuchsia.camera/VideoFormat
+struct fuchsia.camera/VideoStream
+struct/member fuchsia.camera/VideoStreamV2.camera_id uint64
+struct/member fuchsia.camera/VideoStreamV2.format fuchsia.camera/VideoFormat
+struct fuchsia.camera/VideoStreamV2
+library fuchsia.camera

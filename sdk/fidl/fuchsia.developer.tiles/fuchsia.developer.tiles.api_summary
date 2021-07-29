@@ -1,0 +1,7 @@
+protocol/member fuchsia.developer.tiles/Controller.AddTileFromURL(string url,bool allow_focus,vector<string>:optional args) -> (uint32 key)
+protocol/member fuchsia.developer.tiles/Controller.AddTileFromViewProvider(string url,fuchsia.ui.app/ViewProvider provider) -> (uint32 key)
+protocol/member fuchsia.developer.tiles/Controller.ListTiles() -> (vector<uint32> keys,vector<string> urls,vector<fuchsia.ui.gfx/vec3> sizes,vector<bool> focusabilities)
+protocol/member fuchsia.developer.tiles/Controller.Quit()
+protocol/member fuchsia.developer.tiles/Controller.RemoveTile(uint32 key)
+protocol fuchsia.developer.tiles/Controller
+library fuchsia.developer.tiles

@@ -1,0 +1,26 @@
+struct/member fuchsia.minfs/BlockRegion.length uint64
+struct/member fuchsia.minfs/BlockRegion.offset uint64
+struct fuchsia.minfs/BlockRegion
+struct/member fuchsia.minfs/Metrics.dirty_bytes uint64
+struct/member fuchsia.minfs/Metrics.fs_metrics fuchsia.storage.metrics/FsMetrics
+struct/member fuchsia.minfs/Metrics.init_dinum_count uint32
+struct/member fuchsia.minfs/Metrics.init_dnum_count uint32
+struct/member fuchsia.minfs/Metrics.init_inum_count uint32
+struct/member fuchsia.minfs/Metrics.init_user_data_size uint64
+struct/member fuchsia.minfs/Metrics.init_user_data_ticks uint64
+struct/member fuchsia.minfs/Metrics.initialized_vmos uint64
+struct/member fuchsia.minfs/Metrics.vnodes_opened_cache_hit uint64
+struct fuchsia.minfs/Metrics
+protocol/member fuchsia.minfs/Minfs.GetAllocatedRegions() -> (int32 status,zx/handle:<VMO,optional> regions,uint64 count)
+protocol/member fuchsia.minfs/Minfs.GetMetrics() -> (int32 status,box<fuchsia.minfs/Metrics> metrics)
+protocol/member fuchsia.minfs/Minfs.GetMountState() -> (int32 status,box<fuchsia.minfs/MountState> mount_state)
+protocol/member fuchsia.minfs/Minfs.ToggleMetrics(bool enable) -> (int32 status)
+protocol fuchsia.minfs/Minfs
+struct/member fuchsia.minfs/MountState.collect_metrics bool
+struct/member fuchsia.minfs/MountState.dirty_cache_enabled bool
+struct/member fuchsia.minfs/MountState.readonly_after_initialization bool
+struct/member fuchsia.minfs/MountState.repair_filesystem bool
+struct/member fuchsia.minfs/MountState.use_journal bool
+struct/member fuchsia.minfs/MountState.verbose bool
+struct fuchsia.minfs/MountState
+library fuchsia.minfs

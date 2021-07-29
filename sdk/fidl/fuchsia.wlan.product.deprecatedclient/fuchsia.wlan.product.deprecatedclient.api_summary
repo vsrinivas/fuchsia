@@ -1,0 +1,14 @@
+struct/member fuchsia.wlan.product.deprecatedclient/Ap.rssi_dbm int8
+struct/member fuchsia.wlan.product.deprecatedclient/Ap.ssid string:32
+struct fuchsia.wlan.product.deprecatedclient/Ap
+protocol/member fuchsia.wlan.product.deprecatedclient/DeprecatedClient.Status() -> (fuchsia.wlan.product.deprecatedclient/WlanStatus status)
+protocol fuchsia.wlan.product.deprecatedclient/DeprecatedClient
+enum/member fuchsia.wlan.product.deprecatedclient/State.ASSOCIATED 3
+enum/member fuchsia.wlan.product.deprecatedclient/State.ASSOCIATING 2
+enum/member fuchsia.wlan.product.deprecatedclient/State.DISASSOCIATED 1
+enum/member fuchsia.wlan.product.deprecatedclient/State.NO_CLIENT 0
+strict enum fuchsia.wlan.product.deprecatedclient/State uint32
+struct/member fuchsia.wlan.product.deprecatedclient/WlanStatus.current_ap box<fuchsia.wlan.product.deprecatedclient/Ap>
+struct/member fuchsia.wlan.product.deprecatedclient/WlanStatus.state fuchsia.wlan.product.deprecatedclient/State
+struct fuchsia.wlan.product.deprecatedclient/WlanStatus
+library fuchsia.wlan.product.deprecatedclient

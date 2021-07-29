@@ -1,0 +1,77 @@
+protocol/member fuchsia.sys/ComponentController.Detach()
+protocol/member fuchsia.sys/ComponentController.Kill()
+protocol/member fuchsia.sys/ComponentController.OnDirectoryReady -> ()
+protocol/member fuchsia.sys/ComponentController.OnTerminated -> (int64 return_code,fuchsia.sys/TerminationReason termination_reason)
+protocol fuchsia.sys/ComponentController
+protocol/member fuchsia.sys/Environment.CreateNestedEnvironment(server_end:fuchsia.sys/Environment environment,server_end:fuchsia.sys/EnvironmentController controller,string label,box<fuchsia.sys/ServiceList> additional_services,fuchsia.sys/EnvironmentOptions options)
+protocol/member fuchsia.sys/Environment.GetDirectory(zx/handle:CHANNEL directory_request)
+protocol/member fuchsia.sys/Environment.GetLauncher(server_end:fuchsia.sys/Launcher launcher)
+protocol/member fuchsia.sys/Environment.GetServices(server_end:fuchsia.sys/ServiceProvider services)
+protocol fuchsia.sys/Environment
+protocol/member fuchsia.sys/EnvironmentController.Detach()
+protocol/member fuchsia.sys/EnvironmentController.Kill() -> ()
+protocol/member fuchsia.sys/EnvironmentController.OnCreated -> ()
+protocol fuchsia.sys/EnvironmentController
+struct/member fuchsia.sys/EnvironmentOptions.delete_storage_on_death bool
+struct/member fuchsia.sys/EnvironmentOptions.inherit_parent_services bool
+struct/member fuchsia.sys/EnvironmentOptions.kill_on_oom bool
+struct/member fuchsia.sys/EnvironmentOptions.use_parent_runners bool
+struct fuchsia.sys/EnvironmentOptions
+struct/member fuchsia.sys/FileDescriptor.handle0 zx/handle:optional
+struct/member fuchsia.sys/FileDescriptor.handle1 zx/handle:optional
+struct/member fuchsia.sys/FileDescriptor.handle2 zx/handle:optional
+struct/member fuchsia.sys/FileDescriptor.type0 int32
+struct/member fuchsia.sys/FileDescriptor.type1 int32
+struct/member fuchsia.sys/FileDescriptor.type2 int32
+resource struct fuchsia.sys/FileDescriptor
+struct/member fuchsia.sys/FlatNamespace.directories vector<zx/handle:CHANNEL>
+struct/member fuchsia.sys/FlatNamespace.paths vector<string>
+resource struct fuchsia.sys/FlatNamespace
+protocol/member fuchsia.sys/JobProvider.GetJob() -> (zx/handle:JOB job)
+protocol fuchsia.sys/JobProvider
+struct/member fuchsia.sys/LaunchInfo.additional_services box<fuchsia.sys/ServiceList>
+struct/member fuchsia.sys/LaunchInfo.arguments vector<string>:optional
+struct/member fuchsia.sys/LaunchInfo.directory_request zx/handle:<CHANNEL,optional>
+struct/member fuchsia.sys/LaunchInfo.err box<fuchsia.sys/FileDescriptor>
+struct/member fuchsia.sys/LaunchInfo.flat_namespace box<fuchsia.sys/FlatNamespace>
+struct/member fuchsia.sys/LaunchInfo.out box<fuchsia.sys/FileDescriptor>
+struct/member fuchsia.sys/LaunchInfo.url string:2083
+resource struct fuchsia.sys/LaunchInfo
+protocol/member fuchsia.sys/Launcher.CreateComponent(fuchsia.sys/LaunchInfo launch_info,server_end:<fuchsia.sys/ComponentController,optional> controller)
+protocol fuchsia.sys/Launcher
+protocol/member fuchsia.sys/Loader.LoadUrl(string:2083 url) -> (box<fuchsia.sys/Package> package)
+protocol fuchsia.sys/Loader
+const fuchsia.sys/MAX_URL_LENGTH uint16 2083
+struct/member fuchsia.sys/Package.data fuchsia.mem/Buffer:optional
+struct/member fuchsia.sys/Package.directory zx/handle:<CHANNEL,optional>
+struct/member fuchsia.sys/Package.resolved_url string:2083
+resource struct fuchsia.sys/Package
+struct/member fuchsia.sys/ProgramMetadata.key string
+struct/member fuchsia.sys/ProgramMetadata.value string
+struct fuchsia.sys/ProgramMetadata
+protocol/member fuchsia.sys/Runner.StartComponent(fuchsia.sys/Package package,fuchsia.sys/StartupInfo startup_info,server_end:<fuchsia.sys/ComponentController,optional> controller)
+protocol fuchsia.sys/Runner
+struct/member fuchsia.sys/ServiceList.host_directory zx/handle:<CHANNEL,optional>
+struct/member fuchsia.sys/ServiceList.names vector<string>
+struct/member fuchsia.sys/ServiceList.provider client_end:<fuchsia.sys/ServiceProvider,optional>
+resource struct fuchsia.sys/ServiceList
+protocol/member fuchsia.sys/ServiceProvider.ConnectToService(string service_name,zx/handle:CHANNEL channel)
+protocol fuchsia.sys/ServiceProvider
+struct/member fuchsia.sys/StartupInfo.flat_namespace fuchsia.sys/FlatNamespace
+struct/member fuchsia.sys/StartupInfo.launch_info fuchsia.sys/LaunchInfo
+struct/member fuchsia.sys/StartupInfo.program_metadata vector<fuchsia.sys/ProgramMetadata>:optional
+resource struct fuchsia.sys/StartupInfo
+enum/member fuchsia.sys/TerminationReason.ACCESS_DENIED 10
+enum/member fuchsia.sys/TerminationReason.EXITED 1
+enum/member fuchsia.sys/TerminationReason.INTERNAL_ERROR 4
+enum/member fuchsia.sys/TerminationReason.PACKAGE_NOT_FOUND 3
+enum/member fuchsia.sys/TerminationReason.PROCESS_CREATION_ERROR 5
+enum/member fuchsia.sys/TerminationReason.REALM_SHUTTING_DOWN 9
+enum/member fuchsia.sys/TerminationReason.RUNNER_FAILED 6
+enum/member fuchsia.sys/TerminationReason.RUNNER_TERMINATED 7
+enum/member fuchsia.sys/TerminationReason.UNKNOWN 0
+enum/member fuchsia.sys/TerminationReason.UNSUPPORTED 8
+enum/member fuchsia.sys/TerminationReason.URL_INVALID 2
+strict enum fuchsia.sys/TerminationReason uint32
+const fuchsia.sys/kLabelMaxLength uint32 32
+library fuchsia.sys

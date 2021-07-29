@@ -1,0 +1,19 @@
+protocol/member fuchsia.hardware.block.volume/BlockVolume.Destroy() -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/BlockVolume.Extend(fuchsia.hardware.block.volume/SliceExtent extent) -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/BlockVolume.Query() -> (int32 status,fuchsia.hardware.block.volume/ParentVolumeInfo info)
+protocol/member fuchsia.hardware.block.volume/BlockVolume.QuerySlices(vector<uint64>:16 start) -> (int32 status,vector<fuchsia.hardware.block.volume/SliceRegion>:16 responses)
+protocol/member fuchsia.hardware.block.volume/BlockVolume.Shrink(fuchsia.hardware.block.volume/SliceExtent extent) -> (int32 status)
+protocol fuchsia.hardware.block.volume/BlockVolume
+const fuchsia.hardware.block.volume/MAX_SLICE_QUERY_REQUESTS uint32 16
+struct/member fuchsia.hardware.block.volume/ParentVolumeInfo.physical_slice_count_total uint64
+struct/member fuchsia.hardware.block.volume/ParentVolumeInfo.physical_slice_count_used uint64
+struct/member fuchsia.hardware.block.volume/ParentVolumeInfo.slice_size uint64
+struct/member fuchsia.hardware.block.volume/ParentVolumeInfo.virtual_slice_count uint64
+struct fuchsia.hardware.block.volume/ParentVolumeInfo
+struct/member fuchsia.hardware.block.volume/SliceExtent.length uint64
+struct/member fuchsia.hardware.block.volume/SliceExtent.offset uint64
+struct fuchsia.hardware.block.volume/SliceExtent
+struct/member fuchsia.hardware.block.volume/SliceRegion.allocated bool
+struct/member fuchsia.hardware.block.volume/SliceRegion.count uint64
+struct fuchsia.hardware.block.volume/SliceRegion
+library fuchsia.hardware.block.volume

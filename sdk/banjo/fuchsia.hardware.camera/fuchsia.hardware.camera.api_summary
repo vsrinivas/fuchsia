@@ -1,0 +1,25 @@
+enum/member fuchsia.hardware.camera/BayerPattern.BGGR 4
+enum/member fuchsia.hardware.camera/BayerPattern.GBRG 3
+enum/member fuchsia.hardware.camera/BayerPattern.GRBG 2
+enum/member fuchsia.hardware.camera/BayerPattern.RGGB 1
+strict enum fuchsia.hardware.camera/BayerPattern uint8
+struct/member fuchsia.hardware.camera/ColorVal.blue uint16
+struct/member fuchsia.hardware.camera/ColorVal.green_b uint16
+struct/member fuchsia.hardware.camera/ColorVal.green_r uint16
+struct/member fuchsia.hardware.camera/ColorVal.red uint16
+struct fuchsia.hardware.camera/ColorVal
+struct/member fuchsia.hardware.camera/Dimensions.x float32
+struct/member fuchsia.hardware.camera/Dimensions.y float32
+struct fuchsia.hardware.camera/Dimensions
+struct/member fuchsia.hardware.camera/FrameRate.frames_per_sec_denominator uint32
+struct/member fuchsia.hardware.camera/FrameRate.frames_per_sec_numerator uint32
+struct fuchsia.hardware.camera/FrameRate
+struct/member fuchsia.hardware.camera/MinMaxConstraints.max uint32
+struct/member fuchsia.hardware.camera/MinMaxConstraints.min uint32
+struct fuchsia.hardware.camera/MinMaxConstraints
+struct/member fuchsia.hardware.camera/Rect.height uint32
+struct/member fuchsia.hardware.camera/Rect.width uint32
+struct/member fuchsia.hardware.camera/Rect.x uint32
+struct/member fuchsia.hardware.camera/Rect.y uint32
+struct fuchsia.hardware.camera/Rect
+library fuchsia.hardware.camera

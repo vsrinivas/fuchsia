@@ -1,0 +1,19 @@
+union/member fuchsia.ui.activity/DiscreteActivity.generic fuchsia.ui.activity/GenericActivity
+flexible union fuchsia.ui.activity/DiscreteActivity
+table/member fuchsia.ui.activity/GenericActivity.label string
+table fuchsia.ui.activity/GenericActivity
+protocol/member fuchsia.ui.activity/Listener.OnStateChanged(fuchsia.ui.activity/State state,int64 transition_time) -> ()
+protocol fuchsia.ui.activity/Listener
+union/member fuchsia.ui.activity/OngoingActivity.generic fuchsia.ui.activity/GenericActivity
+flexible union fuchsia.ui.activity/OngoingActivity
+protocol/member fuchsia.ui.activity/Provider.WatchState(client_end:fuchsia.ui.activity/Listener listener)
+protocol fuchsia.ui.activity/Provider
+enum/member fuchsia.ui.activity/State.ACTIVE 2
+enum/member fuchsia.ui.activity/State.IDLE 1
+enum/member fuchsia.ui.activity/State.UNKNOWN 0
+strict enum fuchsia.ui.activity/State uint32
+protocol/member fuchsia.ui.activity/Tracker.EndOngoingActivity(uint32 activity_id,int64 end_time) -> ()
+protocol/member fuchsia.ui.activity/Tracker.ReportDiscreteActivity(fuchsia.ui.activity/DiscreteActivity activity,int64 event_time) -> ()
+protocol/member fuchsia.ui.activity/Tracker.StartOngoingActivity(uint32 activity_id,fuchsia.ui.activity/OngoingActivity activity,int64 start_time) -> ()
+protocol fuchsia.ui.activity/Tracker
+library fuchsia.ui.activity

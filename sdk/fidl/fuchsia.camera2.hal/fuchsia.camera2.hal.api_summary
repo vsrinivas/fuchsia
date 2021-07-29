@@ -1,0 +1,16 @@
+struct/member fuchsia.camera2.hal/Config.stream_configs vector<fuchsia.camera2.hal/StreamConfig>:64
+struct fuchsia.camera2.hal/Config
+protocol/member fuchsia.camera2.hal/Controller.CreateStream(uint32 config_index,uint32 stream_index,uint32 image_format_index,server_end:fuchsia.camera2/Stream stream)
+protocol/member fuchsia.camera2.hal/Controller.DisableStreaming()
+protocol/member fuchsia.camera2.hal/Controller.EnableStreaming()
+protocol/member fuchsia.camera2.hal/Controller.GetDeviceInfo() -> (fuchsia.camera2/DeviceInfo info)
+protocol/member fuchsia.camera2.hal/Controller.GetNextConfig() -> (box<fuchsia.camera2.hal/Config> config,int32 status)
+protocol fuchsia.camera2.hal/Controller
+const fuchsia.camera2.hal/MAX_CONFIGURATIONS uint64 256
+const fuchsia.camera2.hal/MAX_STREAMS uint64 64
+struct/member fuchsia.camera2.hal/StreamConfig.constraints fuchsia.sysmem/BufferCollectionConstraints
+struct/member fuchsia.camera2.hal/StreamConfig.frame_rate fuchsia.camera2/FrameRate
+struct/member fuchsia.camera2.hal/StreamConfig.image_formats vector<fuchsia.sysmem/ImageFormat_2>:256
+struct/member fuchsia.camera2.hal/StreamConfig.properties fuchsia.camera2/StreamProperties
+struct fuchsia.camera2.hal/StreamConfig
+library fuchsia.camera2.hal

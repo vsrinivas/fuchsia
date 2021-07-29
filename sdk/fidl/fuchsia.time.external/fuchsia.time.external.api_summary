@@ -1,0 +1,38 @@
+enum/member fuchsia.time.external/Error.HARDWARE 5
+enum/member fuchsia.time.external/Error.INTERNAL 2
+enum/member fuchsia.time.external/Error.NETWORK 4
+enum/member fuchsia.time.external/Error.PROTOCOL 6
+enum/member fuchsia.time.external/Error.PROTOCOL_UNRECOVERABLE 7
+enum/member fuchsia.time.external/Error.RATE_LIMITED 8
+enum/member fuchsia.time.external/Error.RESOURCE 3
+enum/member fuchsia.time.external/Error.UNKNOWN 1
+strict enum fuchsia.time.external/Error uint32
+table fuchsia.time.external/Properties
+protocol/member fuchsia.time.external/PullSource.NextPossibleSampleTime() -> (int64 next_possible_time)
+protocol/member fuchsia.time.external/PullSource.Sample() -> (fuchsia.time.external/PullSource_Sample_Result result)
+protocol/member fuchsia.time.external/PullSource.UpdateDeviceProperties(fuchsia.time.external/Properties properties)
+protocol fuchsia.time.external/PullSource
+struct/member fuchsia.time.external/PullSource_Sample_Response.sample fuchsia.time.external/TimeSample
+struct fuchsia.time.external/PullSource_Sample_Response
+union/member fuchsia.time.external/PullSource_Sample_Result.err fuchsia.time.external/Error
+union/member fuchsia.time.external/PullSource_Sample_Result.response fuchsia.time.external/PullSource_Sample_Response
+strict union fuchsia.time.external/PullSource_Sample_Result
+protocol/member fuchsia.time.external/PushSource.UpdateDeviceProperties(fuchsia.time.external/Properties properties)
+protocol/member fuchsia.time.external/PushSource.WatchSample() -> (fuchsia.time.external/TimeSample sample)
+protocol/member fuchsia.time.external/PushSource.WatchStatus() -> (fuchsia.time.external/Status status)
+protocol fuchsia.time.external/PushSource
+enum/member fuchsia.time.external/Status.HARDWARE 4
+enum/member fuchsia.time.external/Status.INITIALIZING 0
+enum/member fuchsia.time.external/Status.NETWORK 3
+enum/member fuchsia.time.external/Status.OK 1
+enum/member fuchsia.time.external/Status.PROTOCOL 5
+enum/member fuchsia.time.external/Status.RESOURCE 6
+enum/member fuchsia.time.external/Status.UNKNOWN_UNHEALTHY 2
+strict enum fuchsia.time.external/Status uint32
+table/member fuchsia.time.external/TimeSample.monotonic int64
+table/member fuchsia.time.external/TimeSample.standard_deviation int64
+table/member fuchsia.time.external/TimeSample.utc int64
+table fuchsia.time.external/TimeSample
+protocol/member fuchsia.time.external/TimeSource.UpdateDeviceProperties(fuchsia.time.external/Properties properties)
+protocol fuchsia.time.external/TimeSource
+library fuchsia.time.external

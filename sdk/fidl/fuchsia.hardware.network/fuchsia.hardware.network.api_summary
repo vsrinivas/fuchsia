@@ -1,0 +1,169 @@
+protocol/member fuchsia.hardware.network/Device.GetInfo() -> (fuchsia.hardware.network/DeviceInfo info)
+protocol/member fuchsia.hardware.network/Device.GetPort(uint8 id,server_end:fuchsia.hardware.network/Port port)
+protocol/member fuchsia.hardware.network/Device.GetPortWatcher(server_end:fuchsia.hardware.network/PortWatcher watcher)
+protocol/member fuchsia.hardware.network/Device.OpenSession(string:64 session_name,fuchsia.hardware.network/SessionInfo session_info) -> (fuchsia.hardware.network/Device_OpenSession_Result result)
+protocol fuchsia.hardware.network/Device
+enum/member fuchsia.hardware.network/DeviceClass.BRIDGE 4
+enum/member fuchsia.hardware.network/DeviceClass.ETHERNET 1
+enum/member fuchsia.hardware.network/DeviceClass.PPP 3
+enum/member fuchsia.hardware.network/DeviceClass.UNKNOWN 0
+enum/member fuchsia.hardware.network/DeviceClass.WLAN 2
+strict enum fuchsia.hardware.network/DeviceClass uint16
+table/member fuchsia.hardware.network/DeviceInfo.buffer_alignment uint32
+table/member fuchsia.hardware.network/DeviceInfo.descriptor_version uint8
+table/member fuchsia.hardware.network/DeviceInfo.max_buffer_length uint32
+table/member fuchsia.hardware.network/DeviceInfo.max_buffer_parts uint8
+table/member fuchsia.hardware.network/DeviceInfo.min_descriptor_length uint8
+table/member fuchsia.hardware.network/DeviceInfo.min_rx_buffer_length uint32
+table/member fuchsia.hardware.network/DeviceInfo.min_tx_buffer_head uint16
+table/member fuchsia.hardware.network/DeviceInfo.min_tx_buffer_length uint32
+table/member fuchsia.hardware.network/DeviceInfo.min_tx_buffer_tail uint16
+table/member fuchsia.hardware.network/DeviceInfo.rx_accel vector<fuchsia.hardware.network/RxAcceleration>:16
+table/member fuchsia.hardware.network/DeviceInfo.rx_depth uint16
+table/member fuchsia.hardware.network/DeviceInfo.tx_accel vector<fuchsia.hardware.network/TxAcceleration>:16
+table/member fuchsia.hardware.network/DeviceInfo.tx_depth uint16
+table fuchsia.hardware.network/DeviceInfo
+protocol/member fuchsia.hardware.network/DeviceInstance.GetDevice(server_end:fuchsia.hardware.network/Device device)
+protocol fuchsia.hardware.network/DeviceInstance
+union/member fuchsia.hardware.network/DevicePortEvent.added uint8
+union/member fuchsia.hardware.network/DevicePortEvent.existing uint8
+union/member fuchsia.hardware.network/DevicePortEvent.idle fuchsia.hardware.network/Empty
+union/member fuchsia.hardware.network/DevicePortEvent.removed uint8
+strict union fuchsia.hardware.network/DevicePortEvent
+struct/member fuchsia.hardware.network/Device_OpenSession_Response.fifos fuchsia.hardware.network/Fifos
+struct/member fuchsia.hardware.network/Device_OpenSession_Response.session client_end:fuchsia.hardware.network/Session
+resource struct fuchsia.hardware.network/Device_OpenSession_Response
+union/member fuchsia.hardware.network/Device_OpenSession_Result.err int32
+union/member fuchsia.hardware.network/Device_OpenSession_Result.response fuchsia.hardware.network/Device_OpenSession_Response
+resource strict union fuchsia.hardware.network/Device_OpenSession_Result
+struct fuchsia.hardware.network/Empty
+bits/member fuchsia.hardware.network/EthernetFeatures.ETHERNET_II 2
+bits/member fuchsia.hardware.network/EthernetFeatures.E_802_1_Q 4
+bits/member fuchsia.hardware.network/EthernetFeatures.E_802_1_Q_IN_Q 8
+bits/member fuchsia.hardware.network/EthernetFeatures.E_802_3_LLC_SNAP 16
+bits/member fuchsia.hardware.network/EthernetFeatures.RAW 1
+strict bits fuchsia.hardware.network/EthernetFeatures uint32
+const fuchsia.hardware.network/FRAME_FEATURES_RAW uint32 1
+struct/member fuchsia.hardware.network/Fifos.rx zx/handle:FIFO
+struct/member fuchsia.hardware.network/Fifos.tx zx/handle:FIFO
+resource struct fuchsia.hardware.network/Fifos
+enum/member fuchsia.hardware.network/FrameType.ETHERNET 1
+enum/member fuchsia.hardware.network/FrameType.IPV4 2
+enum/member fuchsia.hardware.network/FrameType.IPV6 3
+strict enum fuchsia.hardware.network/FrameType uint8
+struct/member fuchsia.hardware.network/FrameTypeSupport.features uint32
+struct/member fuchsia.hardware.network/FrameTypeSupport.supported_flags fuchsia.hardware.network/TxFlags
+struct/member fuchsia.hardware.network/FrameTypeSupport.type fuchsia.hardware.network/FrameType
+struct fuchsia.hardware.network/FrameTypeSupport
+enum/member fuchsia.hardware.network/InfoType.NO_INFO 0
+strict enum fuchsia.hardware.network/InfoType uint32
+const fuchsia.hardware.network/MAX_ACCEL_FLAGS uint32 16
+const fuchsia.hardware.network/MAX_DESCRIPTOR_CHAIN uint8 4
+const fuchsia.hardware.network/MAX_FRAME_TYPES uint32 4
+const fuchsia.hardware.network/MAX_PORTS uint8 32
+const fuchsia.hardware.network/MAX_SESSION_NAME uint32 64
+const fuchsia.hardware.network/MAX_STATUS_BUFFER uint32 50
+protocol/member fuchsia.hardware.network/MacAddressing.AddMulticastAddress(fuchsia.net/MacAddress address) -> (int32 status)
+protocol/member fuchsia.hardware.network/MacAddressing.GetUnicastAddress() -> (fuchsia.net/MacAddress address)
+protocol/member fuchsia.hardware.network/MacAddressing.RemoveMulticastAddress(fuchsia.net/MacAddress address) -> (int32 status)
+protocol/member fuchsia.hardware.network/MacAddressing.SetMode(fuchsia.hardware.network/MacFilterMode mode) -> (int32 status)
+protocol fuchsia.hardware.network/MacAddressing
+enum/member fuchsia.hardware.network/MacFilterMode.MULTICAST_FILTER 0
+enum/member fuchsia.hardware.network/MacFilterMode.MULTICAST_PROMISCUOUS 1
+enum/member fuchsia.hardware.network/MacFilterMode.PROMISCUOUS 2
+strict enum fuchsia.hardware.network/MacFilterMode uint32
+protocol/member fuchsia.hardware.network/Port.GetInfo() -> (fuchsia.hardware.network/PortInfo info)
+protocol/member fuchsia.hardware.network/Port.GetMac(server_end:fuchsia.hardware.network/MacAddressing mac)
+protocol/member fuchsia.hardware.network/Port.GetStatus() -> (fuchsia.hardware.network/PortStatus status)
+protocol/member fuchsia.hardware.network/Port.GetStatusWatcher(server_end:fuchsia.hardware.network/StatusWatcher watcher,uint32 buffer)
+protocol fuchsia.hardware.network/Port
+table/member fuchsia.hardware.network/PortInfo.class fuchsia.hardware.network/DeviceClass
+table/member fuchsia.hardware.network/PortInfo.id uint8
+table/member fuchsia.hardware.network/PortInfo.rx_types vector<fuchsia.hardware.network/FrameType>:4
+table/member fuchsia.hardware.network/PortInfo.tx_types vector<fuchsia.hardware.network/FrameTypeSupport>:4
+table fuchsia.hardware.network/PortInfo
+table/member fuchsia.hardware.network/PortStatus.flags fuchsia.hardware.network/StatusFlags
+table/member fuchsia.hardware.network/PortStatus.mtu uint32
+table fuchsia.hardware.network/PortStatus
+protocol/member fuchsia.hardware.network/PortWatcher.Watch() -> (fuchsia.hardware.network/DevicePortEvent event)
+protocol fuchsia.hardware.network/PortWatcher
+enum/member fuchsia.hardware.network/RxAcceleration.VALIDATED_ETHERNET_FCS 0
+enum/member fuchsia.hardware.network/RxAcceleration.VALIDATED_IPV4_CHECKSUM 1
+enum/member fuchsia.hardware.network/RxAcceleration.VALIDATED_TCP_CHECKSUM 2
+enum/member fuchsia.hardware.network/RxAcceleration.VALIDATED_UDP_CHECKSUM 3
+strict enum fuchsia.hardware.network/RxAcceleration uint8
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_0 1
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_1 2
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_10 1024
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_11 2048
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_12 4096
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_13 8192
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_14 16384
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_15 32768
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_2 4
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_3 8
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_4 16
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_5 32
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_6 64
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_7 128
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_8 256
+bits/member fuchsia.hardware.network/RxFlags.RX_ACCEL_9 512
+bits/member fuchsia.hardware.network/RxFlags.RX_ECHOED_TX 2147483648
+bits/member fuchsia.hardware.network/RxFlags.RX_OVERRUN 536870912
+bits/member fuchsia.hardware.network/RxFlags.RX_VALIDATION_ERROR 1073741824
+strict bits fuchsia.hardware.network/RxFlags uint32
+protocol/member fuchsia.hardware.network/Session.Attach(uint8 port,vector<fuchsia.hardware.network/FrameType>:4 rx_frames) -> (fuchsia.hardware.network/Session_Attach_Result result)
+protocol/member fuchsia.hardware.network/Session.Close()
+protocol/member fuchsia.hardware.network/Session.Detach(uint8 port) -> (fuchsia.hardware.network/Session_Detach_Result result)
+protocol fuchsia.hardware.network/Session
+bits/member fuchsia.hardware.network/SessionFlags.LISTEN_TX 2
+bits/member fuchsia.hardware.network/SessionFlags.PRIMARY 1
+bits/member fuchsia.hardware.network/SessionFlags.REPORT_INVALID_RX 4
+strict bits fuchsia.hardware.network/SessionFlags uint16
+table/member fuchsia.hardware.network/SessionInfo.data zx/handle:VMO
+table/member fuchsia.hardware.network/SessionInfo.descriptor_count uint16
+table/member fuchsia.hardware.network/SessionInfo.descriptor_length uint8
+table/member fuchsia.hardware.network/SessionInfo.descriptor_version uint8
+table/member fuchsia.hardware.network/SessionInfo.descriptors zx/handle:VMO
+table/member fuchsia.hardware.network/SessionInfo.options fuchsia.hardware.network/SessionFlags
+resource table fuchsia.hardware.network/SessionInfo
+struct fuchsia.hardware.network/Session_Attach_Response
+union/member fuchsia.hardware.network/Session_Attach_Result.err int32
+union/member fuchsia.hardware.network/Session_Attach_Result.response fuchsia.hardware.network/Session_Attach_Response
+strict union fuchsia.hardware.network/Session_Attach_Result
+struct fuchsia.hardware.network/Session_Detach_Response
+union/member fuchsia.hardware.network/Session_Detach_Result.err int32
+union/member fuchsia.hardware.network/Session_Detach_Result.response fuchsia.hardware.network/Session_Detach_Response
+strict union fuchsia.hardware.network/Session_Detach_Result
+bits/member fuchsia.hardware.network/StatusFlags.ONLINE 1
+strict bits fuchsia.hardware.network/StatusFlags uint32
+protocol/member fuchsia.hardware.network/StatusWatcher.WatchStatus() -> (fuchsia.hardware.network/PortStatus port_status)
+protocol fuchsia.hardware.network/StatusWatcher
+enum/member fuchsia.hardware.network/TxAcceleration.COMPUTE_ETHERNET_FCS 0
+enum/member fuchsia.hardware.network/TxAcceleration.COMPUTE_IPV4_CHECKSUM 1
+enum/member fuchsia.hardware.network/TxAcceleration.COMPUTE_TCP_CHECKSUM 2
+enum/member fuchsia.hardware.network/TxAcceleration.COMPUTE_UDP_CHECKSUM 3
+strict enum fuchsia.hardware.network/TxAcceleration uint8
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_0 1
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_1 2
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_10 1024
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_11 2048
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_12 4096
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_13 8192
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_14 16384
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_15 32768
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_2 4
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_3 8
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_4 16
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_5 32
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_6 64
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_7 128
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_8 256
+bits/member fuchsia.hardware.network/TxFlags.TX_ACCEL_9 512
+strict bits fuchsia.hardware.network/TxFlags uint32
+bits/member fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR 2147483648
+bits/member fuchsia.hardware.network/TxReturnFlags.TX_RET_NOT_AVAILABLE 4
+bits/member fuchsia.hardware.network/TxReturnFlags.TX_RET_NOT_SUPPORTED 1
+bits/member fuchsia.hardware.network/TxReturnFlags.TX_RET_OUT_OF_RESOURCES 2
+strict bits fuchsia.hardware.network/TxReturnFlags uint32
+library fuchsia.hardware.network

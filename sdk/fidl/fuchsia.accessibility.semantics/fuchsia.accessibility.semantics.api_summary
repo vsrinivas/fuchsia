@@ -1,0 +1,118 @@
+enum/member fuchsia.accessibility.semantics/Action.DECREMENT 6
+enum/member fuchsia.accessibility.semantics/Action.DEFAULT 1
+enum/member fuchsia.accessibility.semantics/Action.INCREMENT 7
+enum/member fuchsia.accessibility.semantics/Action.SECONDARY 2
+enum/member fuchsia.accessibility.semantics/Action.SET_FOCUS 3
+enum/member fuchsia.accessibility.semantics/Action.SET_VALUE 4
+enum/member fuchsia.accessibility.semantics/Action.SHOW_ON_SCREEN 5
+strict enum fuchsia.accessibility.semantics/Action uint32
+table/member fuchsia.accessibility.semantics/AnnounceEvent.message string:16384
+table fuchsia.accessibility.semantics/AnnounceEvent
+table/member fuchsia.accessibility.semantics/Attributes.hierarchical_level uint32
+table/member fuchsia.accessibility.semantics/Attributes.is_keyboard_key bool
+table/member fuchsia.accessibility.semantics/Attributes.label string:16384
+table/member fuchsia.accessibility.semantics/Attributes.label_origin fuchsia.accessibility.semantics/LabelOrigin
+table/member fuchsia.accessibility.semantics/Attributes.list_attributes fuchsia.accessibility.semantics/SetAttributes
+table/member fuchsia.accessibility.semantics/Attributes.list_element_attributes fuchsia.accessibility.semantics/SetAttributes
+table/member fuchsia.accessibility.semantics/Attributes.range fuchsia.accessibility.semantics/RangeAttributes
+table/member fuchsia.accessibility.semantics/Attributes.secondary_action_description string:16384
+table/member fuchsia.accessibility.semantics/Attributes.secondary_label string:16384
+table/member fuchsia.accessibility.semantics/Attributes.set fuchsia.accessibility.semantics/SetAttributes
+table/member fuchsia.accessibility.semantics/Attributes.table_attributes fuchsia.accessibility.semantics/TableAttributes
+table fuchsia.accessibility.semantics/Attributes
+enum/member fuchsia.accessibility.semantics/CheckedState.CHECKED 2
+enum/member fuchsia.accessibility.semantics/CheckedState.MIXED 4
+enum/member fuchsia.accessibility.semantics/CheckedState.NONE 1
+enum/member fuchsia.accessibility.semantics/CheckedState.UNCHECKED 3
+strict enum fuchsia.accessibility.semantics/CheckedState uint32
+table/member fuchsia.accessibility.semantics/Hit.node_id uint32
+table/member fuchsia.accessibility.semantics/Hit.path_from_root vector<uint32>:256
+table fuchsia.accessibility.semantics/Hit
+enum/member fuchsia.accessibility.semantics/LabelOrigin.ATTRIBUTE 2
+enum/member fuchsia.accessibility.semantics/LabelOrigin.ATTRIBUTE_EMPTY 3
+enum/member fuchsia.accessibility.semantics/LabelOrigin.CAPTION 4
+enum/member fuchsia.accessibility.semantics/LabelOrigin.CONTENTS 5
+enum/member fuchsia.accessibility.semantics/LabelOrigin.PLACEHOLDER 6
+enum/member fuchsia.accessibility.semantics/LabelOrigin.RELATED_ELEMENT 7
+enum/member fuchsia.accessibility.semantics/LabelOrigin.TITLE 8
+enum/member fuchsia.accessibility.semantics/LabelOrigin.UNITIALIZED 1
+enum/member fuchsia.accessibility.semantics/LabelOrigin.VALUE 9
+strict enum fuchsia.accessibility.semantics/LabelOrigin uint32
+const fuchsia.accessibility.semantics/MAX_FAN_OUT uint64 20000
+const fuchsia.accessibility.semantics/MAX_LABEL_SIZE uint64 16384
+const fuchsia.accessibility.semantics/MAX_MESSAGE_SIZE uint64 16384
+const fuchsia.accessibility.semantics/MAX_NODES_PER_UPDATE uint64 2048
+const fuchsia.accessibility.semantics/MAX_SET_ELEMENTS uint32 100
+const fuchsia.accessibility.semantics/MAX_TREE_DEPTH uint64 256
+const fuchsia.accessibility.semantics/MAX_VALUE_SIZE uint64 16384
+table/member fuchsia.accessibility.semantics/Node.actions vector<fuchsia.accessibility.semantics/Action>:100
+table/member fuchsia.accessibility.semantics/Node.attributes fuchsia.accessibility.semantics/Attributes
+table/member fuchsia.accessibility.semantics/Node.child_ids vector<uint32>:20000
+table/member fuchsia.accessibility.semantics/Node.container_id uint32
+table/member fuchsia.accessibility.semantics/Node.location fuchsia.ui.gfx/BoundingBox
+table/member fuchsia.accessibility.semantics/Node.node_id uint32
+table/member fuchsia.accessibility.semantics/Node.role fuchsia.accessibility.semantics/Role
+table/member fuchsia.accessibility.semantics/Node.states fuchsia.accessibility.semantics/States
+table/member fuchsia.accessibility.semantics/Node.transform fuchsia.ui.gfx/mat4
+table fuchsia.accessibility.semantics/Node
+table/member fuchsia.accessibility.semantics/RangeAttributes.max_value float32
+table/member fuchsia.accessibility.semantics/RangeAttributes.min_value float32
+table/member fuchsia.accessibility.semantics/RangeAttributes.step_delta float32
+table fuchsia.accessibility.semantics/RangeAttributes
+enum/member fuchsia.accessibility.semantics/Role.BUTTON 2
+enum/member fuchsia.accessibility.semantics/Role.CELL 18
+enum/member fuchsia.accessibility.semantics/Role.CHECK_BOX 8
+enum/member fuchsia.accessibility.semantics/Role.COLUMN_HEADER 19
+enum/member fuchsia.accessibility.semantics/Role.GRID 16
+enum/member fuchsia.accessibility.semantics/Role.HEADER 3
+enum/member fuchsia.accessibility.semantics/Role.IMAGE 4
+enum/member fuchsia.accessibility.semantics/Role.LINK 7
+enum/member fuchsia.accessibility.semantics/Role.LIST 10
+enum/member fuchsia.accessibility.semantics/Role.LIST_ELEMENT_MARKER 12
+enum/member fuchsia.accessibility.semantics/Role.PARAGRAPH 21
+enum/member fuchsia.accessibility.semantics/Role.RADIO_BUTTON 9
+enum/member fuchsia.accessibility.semantics/Role.ROW_GROUP 20
+enum/member fuchsia.accessibility.semantics/Role.SLIDER 6
+enum/member fuchsia.accessibility.semantics/Role.STATIC_TEXT 13
+enum/member fuchsia.accessibility.semantics/Role.TABLE 15
+enum/member fuchsia.accessibility.semantics/Role.TABLE_ROW 17
+enum/member fuchsia.accessibility.semantics/Role.TEXT_FIELD 5
+enum/member fuchsia.accessibility.semantics/Role.TOGGLE_SWITCH 14
+enum/member fuchsia.accessibility.semantics/Role.UNKNOWN 1
+strict enum fuchsia.accessibility.semantics/Role uint32
+union/member fuchsia.accessibility.semantics/SemanticEvent.announce fuchsia.accessibility.semantics/AnnounceEvent
+strict union fuchsia.accessibility.semantics/SemanticEvent
+protocol/member fuchsia.accessibility.semantics/SemanticListener.HitTest(fuchsia.math/PointF local_point) -> (fuchsia.accessibility.semantics/Hit result)
+protocol/member fuchsia.accessibility.semantics/SemanticListener.OnAccessibilityActionRequested(uint32 node_id,fuchsia.accessibility.semantics/Action action) -> (bool handled)
+protocol/member fuchsia.accessibility.semantics/SemanticListener.OnSemanticsModeChanged(bool updates_enabled) -> ()
+protocol fuchsia.accessibility.semantics/SemanticListener
+protocol/member fuchsia.accessibility.semantics/SemanticTree.CommitUpdates() -> ()
+protocol/member fuchsia.accessibility.semantics/SemanticTree.DeleteSemanticNodes(vector<uint32>:2048 node_ids)
+protocol/member fuchsia.accessibility.semantics/SemanticTree.SendSemanticEvent(fuchsia.accessibility.semantics/SemanticEvent semantic_event) -> ()
+protocol/member fuchsia.accessibility.semantics/SemanticTree.UpdateSemanticNodes(vector<fuchsia.accessibility.semantics/Node>:2048 nodes)
+protocol fuchsia.accessibility.semantics/SemanticTree
+protocol/member fuchsia.accessibility.semantics/SemanticsManager.RegisterViewForSemantics(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.accessibility.semantics/SemanticListener listener,server_end:fuchsia.accessibility.semantics/SemanticTree semantic_tree_request)
+protocol fuchsia.accessibility.semantics/SemanticsManager
+table/member fuchsia.accessibility.semantics/SetAttributes.index uint32
+table/member fuchsia.accessibility.semantics/SetAttributes.set_element_ids vector<uint32>:100
+table/member fuchsia.accessibility.semantics/SetAttributes.size uint32
+table fuchsia.accessibility.semantics/SetAttributes
+table/member fuchsia.accessibility.semantics/States.checked bool
+table/member fuchsia.accessibility.semantics/States.checked_state fuchsia.accessibility.semantics/CheckedState
+table/member fuchsia.accessibility.semantics/States.focusable bool
+table/member fuchsia.accessibility.semantics/States.has_input_focus bool
+table/member fuchsia.accessibility.semantics/States.hidden bool
+table/member fuchsia.accessibility.semantics/States.range_value float32
+table/member fuchsia.accessibility.semantics/States.selected bool
+table/member fuchsia.accessibility.semantics/States.toggled_state fuchsia.accessibility.semantics/ToggledState
+table/member fuchsia.accessibility.semantics/States.value string:16384
+table/member fuchsia.accessibility.semantics/States.viewport_offset fuchsia.ui.gfx/vec2
+table fuchsia.accessibility.semantics/States
+table/member fuchsia.accessibility.semantics/TableAttributes.column_span uint32
+table/member fuchsia.accessibility.semantics/TableAttributes.row_span uint32
+table fuchsia.accessibility.semantics/TableAttributes
+enum/member fuchsia.accessibility.semantics/ToggledState.INDETERMINATE 3
+enum/member fuchsia.accessibility.semantics/ToggledState.OFF 2
+enum/member fuchsia.accessibility.semantics/ToggledState.ON 1
+strict enum fuchsia.accessibility.semantics/ToggledState uint32
+library fuchsia.accessibility.semantics

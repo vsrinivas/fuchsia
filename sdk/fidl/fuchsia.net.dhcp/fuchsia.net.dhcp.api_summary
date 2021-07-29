@@ -1,0 +1,247 @@
+table/member fuchsia.net.dhcp/AddressPool.prefix_length uint8
+table/member fuchsia.net.dhcp/AddressPool.range_start fuchsia.net/Ipv4Address
+table/member fuchsia.net.dhcp/AddressPool.range_stop fuchsia.net/Ipv4Address
+table fuchsia.net.dhcp/AddressPool
+protocol/member fuchsia.net.dhcp/Client.Start() -> (fuchsia.net.dhcp/Client_Start_Result result)
+protocol/member fuchsia.net.dhcp/Client.Stop() -> (fuchsia.net.dhcp/Client_Stop_Result result)
+protocol fuchsia.net.dhcp/Client
+struct fuchsia.net.dhcp/Client_Start_Response
+union/member fuchsia.net.dhcp/Client_Start_Result.err int32
+union/member fuchsia.net.dhcp/Client_Start_Result.response fuchsia.net.dhcp/Client_Start_Response
+strict union fuchsia.net.dhcp/Client_Start_Result
+struct fuchsia.net.dhcp/Client_Stop_Response
+union/member fuchsia.net.dhcp/Client_Stop_Result.err int32
+union/member fuchsia.net.dhcp/Client_Stop_Result.response fuchsia.net.dhcp/Client_Stop_Response
+strict union fuchsia.net.dhcp/Client_Stop_Result
+table/member fuchsia.net.dhcp/LeaseLength.default uint32
+table/member fuchsia.net.dhcp/LeaseLength.max uint32
+table fuchsia.net.dhcp/LeaseLength
+enum/member fuchsia.net.dhcp/MessageType.DHCPACK 5
+enum/member fuchsia.net.dhcp/MessageType.DHCPDECLINE 4
+enum/member fuchsia.net.dhcp/MessageType.DHCPDISCOVER 1
+enum/member fuchsia.net.dhcp/MessageType.DHCPINFORM 8
+enum/member fuchsia.net.dhcp/MessageType.DHCPNAK 6
+enum/member fuchsia.net.dhcp/MessageType.DHCPOFFER 2
+enum/member fuchsia.net.dhcp/MessageType.DHCPRELEASE 7
+enum/member fuchsia.net.dhcp/MessageType.DHCPREQUEST 3
+strict enum fuchsia.net.dhcp/MessageType uint8
+bits/member fuchsia.net.dhcp/NodeTypes.B_NODE 1
+bits/member fuchsia.net.dhcp/NodeTypes.H_NODE 8
+bits/member fuchsia.net.dhcp/NodeTypes.M_NODE 4
+bits/member fuchsia.net.dhcp/NodeTypes.P_NODE 2
+strict bits fuchsia.net.dhcp/NodeTypes uint8
+union/member fuchsia.net.dhcp/Option.all_subnets_local bool
+union/member fuchsia.net.dhcp/Option.arp_cache_timeout uint32
+union/member fuchsia.net.dhcp/Option.boot_file_size uint16
+union/member fuchsia.net.dhcp/Option.bootfile_name string:255
+union/member fuchsia.net.dhcp/Option.broadcast_address fuchsia.net/Ipv4Address
+union/member fuchsia.net.dhcp/Option.cookie_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.default_finger_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.default_ip_ttl uint8
+union/member fuchsia.net.dhcp/Option.default_irc_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.default_www_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.domain_name string:255
+union/member fuchsia.net.dhcp/Option.domain_name_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.ethernet_encapsulation bool
+union/member fuchsia.net.dhcp/Option.extensions_path string:255
+union/member fuchsia.net.dhcp/Option.host_name string:255
+union/member fuchsia.net.dhcp/Option.impress_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.interface_mtu uint16
+union/member fuchsia.net.dhcp/Option.ip_forwarding bool
+union/member fuchsia.net.dhcp/Option.log_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.lpr_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.mask_supplier bool
+union/member fuchsia.net.dhcp/Option.max_datagram_reassembly_size uint16
+union/member fuchsia.net.dhcp/Option.max_dhcp_message_size uint16
+union/member fuchsia.net.dhcp/Option.merit_dump_file string:255
+union/member fuchsia.net.dhcp/Option.mobile_ip_home_agent vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.name_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.netbios_over_tcpip_datagram_distribution_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.netbios_over_tcpip_name_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.netbios_over_tcpip_node_type fuchsia.net.dhcp/NodeTypes
+union/member fuchsia.net.dhcp/Option.netbios_over_tcpip_scope string:255
+union/member fuchsia.net.dhcp/Option.network_information_servers vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.network_information_service_domain string:255
+union/member fuchsia.net.dhcp/Option.network_information_service_plus_domain string:255
+union/member fuchsia.net.dhcp/Option.network_information_service_plus_servers vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.network_time_protocol_servers vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.nntp_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.non_local_source_routing bool
+union/member fuchsia.net.dhcp/Option.option_overload fuchsia.net.dhcp/OptionOverloadValue
+union/member fuchsia.net.dhcp/Option.path_mtu_aging_timeout uint32
+union/member fuchsia.net.dhcp/Option.path_mtu_plateau_table vector<uint16>:127
+union/member fuchsia.net.dhcp/Option.perform_mask_discovery bool
+union/member fuchsia.net.dhcp/Option.perform_router_discovery bool
+union/member fuchsia.net.dhcp/Option.policy_filter vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.pop3_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.rebinding_time_value uint32
+union/member fuchsia.net.dhcp/Option.renewal_time_value uint32
+union/member fuchsia.net.dhcp/Option.resource_location_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.root_path string:255
+union/member fuchsia.net.dhcp/Option.router vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.router_solicitation_address fuchsia.net/Ipv4Address
+union/member fuchsia.net.dhcp/Option.smtp_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.static_route vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.streettalk_directory_assistance_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.streettalk_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.subnet_mask fuchsia.net/Ipv4Address
+union/member fuchsia.net.dhcp/Option.swap_server fuchsia.net/Ipv4Address
+union/member fuchsia.net.dhcp/Option.tcp_default_ttl uint8
+union/member fuchsia.net.dhcp/Option.tcp_keepalive_garbage bool
+union/member fuchsia.net.dhcp/Option.tcp_keepalive_interval uint32
+union/member fuchsia.net.dhcp/Option.tftp_server_name string:255
+union/member fuchsia.net.dhcp/Option.time_offset int32
+union/member fuchsia.net.dhcp/Option.time_server vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.trailer_encapsulation bool
+union/member fuchsia.net.dhcp/Option.vendor_specific_information vector<uint8>:255
+union/member fuchsia.net.dhcp/Option.x_window_system_display_manager vector<fuchsia.net/Ipv4Address>:63
+union/member fuchsia.net.dhcp/Option.x_window_system_font_server vector<fuchsia.net/Ipv4Address>:63
+flexible union fuchsia.net.dhcp/Option
+enum/member fuchsia.net.dhcp/OptionCode.ALL_SUBNETS_LOCAL 27
+enum/member fuchsia.net.dhcp/OptionCode.ARP_CACHE_TIMEOUT 35
+enum/member fuchsia.net.dhcp/OptionCode.BOOTFILE_NAME 67
+enum/member fuchsia.net.dhcp/OptionCode.BOOT_FILE_SIZE 13
+enum/member fuchsia.net.dhcp/OptionCode.BROADCAST_ADDRESS 28
+enum/member fuchsia.net.dhcp/OptionCode.COOKIE_SERVER 8
+enum/member fuchsia.net.dhcp/OptionCode.DEFAULT_FINGER_SERVER 73
+enum/member fuchsia.net.dhcp/OptionCode.DEFAULT_IP_TTL 23
+enum/member fuchsia.net.dhcp/OptionCode.DEFAULT_IRC_SERVER 74
+enum/member fuchsia.net.dhcp/OptionCode.DEFAULT_WWW_SERVER 72
+enum/member fuchsia.net.dhcp/OptionCode.DOMAIN_NAME 15
+enum/member fuchsia.net.dhcp/OptionCode.DOMAIN_NAME_SERVER 6
+enum/member fuchsia.net.dhcp/OptionCode.ETHERNET_ENCAPSULATION 36
+enum/member fuchsia.net.dhcp/OptionCode.EXTENSIONS_PATH 18
+enum/member fuchsia.net.dhcp/OptionCode.HOST_NAME 12
+enum/member fuchsia.net.dhcp/OptionCode.IMPRESS_SERVER 10
+enum/member fuchsia.net.dhcp/OptionCode.INTERFACE_MTU 26
+enum/member fuchsia.net.dhcp/OptionCode.IP_FORWARDING 19
+enum/member fuchsia.net.dhcp/OptionCode.LOG_SERVER 7
+enum/member fuchsia.net.dhcp/OptionCode.LPR_SERVER 9
+enum/member fuchsia.net.dhcp/OptionCode.MASK_SUPPLIER 30
+enum/member fuchsia.net.dhcp/OptionCode.MAX_DATAGRAM_REASSEMBLY_SIZE 22
+enum/member fuchsia.net.dhcp/OptionCode.MAX_DHCP_MESSAGE_SIZE 57
+enum/member fuchsia.net.dhcp/OptionCode.MERIT_DUMP_FILE 14
+enum/member fuchsia.net.dhcp/OptionCode.MOBILE_IP_HOME_AGENT 68
+enum/member fuchsia.net.dhcp/OptionCode.NAME_SERVER 5
+enum/member fuchsia.net.dhcp/OptionCode.NETBIOS_OVER_TCPIP_DATAGRAM_DISTRIBUTION_SERVER 45
+enum/member fuchsia.net.dhcp/OptionCode.NETBIOS_OVER_TCPIP_NAME_SERVER 44
+enum/member fuchsia.net.dhcp/OptionCode.NETBIOS_OVER_TCPIP_NODE_TYPE 46
+enum/member fuchsia.net.dhcp/OptionCode.NETBIOS_OVER_TCPIP_SCOPE 47
+enum/member fuchsia.net.dhcp/OptionCode.NETWORK_INFORMATION_SERVERS 41
+enum/member fuchsia.net.dhcp/OptionCode.NETWORK_INFORMATION_SERVICE_DOMAIN 40
+enum/member fuchsia.net.dhcp/OptionCode.NETWORK_INFORMATION_SERVICE_PLUS_DOMAIN 64
+enum/member fuchsia.net.dhcp/OptionCode.NETWORK_INFORMATION_SERVICE_PLUS_SERVERS 65
+enum/member fuchsia.net.dhcp/OptionCode.NETWORK_TIME_PROTOCOL_SERVERS 42
+enum/member fuchsia.net.dhcp/OptionCode.NNTP_SERVER 71
+enum/member fuchsia.net.dhcp/OptionCode.NON_LOCAL_SOURCE_ROUTING 20
+enum/member fuchsia.net.dhcp/OptionCode.OPTION_OVERLOAD 52
+enum/member fuchsia.net.dhcp/OptionCode.PATH_MTU_AGING_TIMEOUT 24
+enum/member fuchsia.net.dhcp/OptionCode.PATH_MTU_PLATEAU_TABLE 25
+enum/member fuchsia.net.dhcp/OptionCode.PERFORM_MASK_DISCOVERY 29
+enum/member fuchsia.net.dhcp/OptionCode.PERFORM_ROUTER_DISCOVERY 31
+enum/member fuchsia.net.dhcp/OptionCode.POLICY_FILTER 21
+enum/member fuchsia.net.dhcp/OptionCode.POP3_SERVER 70
+enum/member fuchsia.net.dhcp/OptionCode.REBINDING_TIME_VALUE 59
+enum/member fuchsia.net.dhcp/OptionCode.RENEWAL_TIME_VALUE 58
+enum/member fuchsia.net.dhcp/OptionCode.RESOURCE_LOCATION_SERVER 11
+enum/member fuchsia.net.dhcp/OptionCode.ROOT_PATH 17
+enum/member fuchsia.net.dhcp/OptionCode.ROUTER 3
+enum/member fuchsia.net.dhcp/OptionCode.ROUTER_SOLICITATION_ADDRESS 32
+enum/member fuchsia.net.dhcp/OptionCode.SMTP_SERVER 69
+enum/member fuchsia.net.dhcp/OptionCode.STATIC_ROUTE 33
+enum/member fuchsia.net.dhcp/OptionCode.STREETTALK_DIRECTORY_ASSISTANCE_SERVER 76
+enum/member fuchsia.net.dhcp/OptionCode.STREETTALK_SERVER 75
+enum/member fuchsia.net.dhcp/OptionCode.SUBNET_MASK 1
+enum/member fuchsia.net.dhcp/OptionCode.SWAP_SERVER 16
+enum/member fuchsia.net.dhcp/OptionCode.TCP_DEFAULT_TTL 37
+enum/member fuchsia.net.dhcp/OptionCode.TCP_KEEPALIVE_GARBAGE 39
+enum/member fuchsia.net.dhcp/OptionCode.TCP_KEEPALIVE_INTERVAL 38
+enum/member fuchsia.net.dhcp/OptionCode.TFTP_SERVER_NAME 66
+enum/member fuchsia.net.dhcp/OptionCode.TIME_OFFSET 2
+enum/member fuchsia.net.dhcp/OptionCode.TIME_SERVER 4
+enum/member fuchsia.net.dhcp/OptionCode.TRAILER_ENCAPSULATION 34
+enum/member fuchsia.net.dhcp/OptionCode.VENDOR_SPECIFIC_INFORMATION 43
+enum/member fuchsia.net.dhcp/OptionCode.X_WINDOW_SYSTEM_DISPLAY_MANAGER 49
+enum/member fuchsia.net.dhcp/OptionCode.X_WINDOW_SYSTEM_FONT_SERVER 48
+strict enum fuchsia.net.dhcp/OptionCode uint32
+enum/member fuchsia.net.dhcp/OptionOverloadValue.BOTH 3
+enum/member fuchsia.net.dhcp/OptionOverloadValue.FILE 1
+enum/member fuchsia.net.dhcp/OptionOverloadValue.SNAME 2
+strict enum fuchsia.net.dhcp/OptionOverloadValue uint8
+union/member fuchsia.net.dhcp/Parameter.address_pool fuchsia.net.dhcp/AddressPool
+union/member fuchsia.net.dhcp/Parameter.arp_probe bool
+union/member fuchsia.net.dhcp/Parameter.bound_device_names vector<string:256>:256
+union/member fuchsia.net.dhcp/Parameter.ip_addrs vector<fuchsia.net/Ipv4Address>:256
+union/member fuchsia.net.dhcp/Parameter.lease fuchsia.net.dhcp/LeaseLength
+union/member fuchsia.net.dhcp/Parameter.permitted_macs vector<fuchsia.net/MacAddress>:256
+union/member fuchsia.net.dhcp/Parameter.statically_assigned_addrs vector<fuchsia.net.dhcp/StaticAssignment>:256
+flexible union fuchsia.net.dhcp/Parameter
+enum/member fuchsia.net.dhcp/ParameterName.ADDRESS_POOL 1
+enum/member fuchsia.net.dhcp/ParameterName.ARP_PROBE 5
+enum/member fuchsia.net.dhcp/ParameterName.BOUND_DEVICE_NAMES 6
+enum/member fuchsia.net.dhcp/ParameterName.IP_ADDRS 0
+enum/member fuchsia.net.dhcp/ParameterName.LEASE_LENGTH 2
+enum/member fuchsia.net.dhcp/ParameterName.PERMITTED_MACS 3
+enum/member fuchsia.net.dhcp/ParameterName.STATICALLY_ASSIGNED_ADDRS 4
+strict enum fuchsia.net.dhcp/ParameterName uint32
+protocol/member fuchsia.net.dhcp/Server.ClearLeases() -> (fuchsia.net.dhcp/Server_ClearLeases_Result result)
+protocol/member fuchsia.net.dhcp/Server.GetOption(fuchsia.net.dhcp/OptionCode code) -> (fuchsia.net.dhcp/Server_GetOption_Result result)
+protocol/member fuchsia.net.dhcp/Server.GetParameter(fuchsia.net.dhcp/ParameterName name) -> (fuchsia.net.dhcp/Server_GetParameter_Result result)
+protocol/member fuchsia.net.dhcp/Server.IsServing() -> (bool enabled)
+protocol/member fuchsia.net.dhcp/Server.ListOptions() -> (fuchsia.net.dhcp/Server_ListOptions_Result result)
+protocol/member fuchsia.net.dhcp/Server.ListParameters() -> (fuchsia.net.dhcp/Server_ListParameters_Result result)
+protocol/member fuchsia.net.dhcp/Server.ResetOptions() -> (fuchsia.net.dhcp/Server_ResetOptions_Result result)
+protocol/member fuchsia.net.dhcp/Server.ResetParameters() -> (fuchsia.net.dhcp/Server_ResetParameters_Result result)
+protocol/member fuchsia.net.dhcp/Server.SetOption(fuchsia.net.dhcp/Option value) -> (fuchsia.net.dhcp/Server_SetOption_Result result)
+protocol/member fuchsia.net.dhcp/Server.SetParameter(fuchsia.net.dhcp/Parameter value) -> (fuchsia.net.dhcp/Server_SetParameter_Result result)
+protocol/member fuchsia.net.dhcp/Server.StartServing() -> (fuchsia.net.dhcp/Server_StartServing_Result result)
+protocol/member fuchsia.net.dhcp/Server.StopServing() -> ()
+protocol fuchsia.net.dhcp/Server
+struct fuchsia.net.dhcp/Server_ClearLeases_Response
+union/member fuchsia.net.dhcp/Server_ClearLeases_Result.err int32
+union/member fuchsia.net.dhcp/Server_ClearLeases_Result.response fuchsia.net.dhcp/Server_ClearLeases_Response
+strict union fuchsia.net.dhcp/Server_ClearLeases_Result
+struct/member fuchsia.net.dhcp/Server_GetOption_Response.value fuchsia.net.dhcp/Option
+struct fuchsia.net.dhcp/Server_GetOption_Response
+union/member fuchsia.net.dhcp/Server_GetOption_Result.err int32
+union/member fuchsia.net.dhcp/Server_GetOption_Result.response fuchsia.net.dhcp/Server_GetOption_Response
+strict union fuchsia.net.dhcp/Server_GetOption_Result
+struct/member fuchsia.net.dhcp/Server_GetParameter_Response.value fuchsia.net.dhcp/Parameter
+struct fuchsia.net.dhcp/Server_GetParameter_Response
+union/member fuchsia.net.dhcp/Server_GetParameter_Result.err int32
+union/member fuchsia.net.dhcp/Server_GetParameter_Result.response fuchsia.net.dhcp/Server_GetParameter_Response
+strict union fuchsia.net.dhcp/Server_GetParameter_Result
+struct/member fuchsia.net.dhcp/Server_ListOptions_Response.options vector<fuchsia.net.dhcp/Option>:256
+struct fuchsia.net.dhcp/Server_ListOptions_Response
+union/member fuchsia.net.dhcp/Server_ListOptions_Result.err int32
+union/member fuchsia.net.dhcp/Server_ListOptions_Result.response fuchsia.net.dhcp/Server_ListOptions_Response
+strict union fuchsia.net.dhcp/Server_ListOptions_Result
+struct/member fuchsia.net.dhcp/Server_ListParameters_Response.parameters vector<fuchsia.net.dhcp/Parameter>:256
+struct fuchsia.net.dhcp/Server_ListParameters_Response
+union/member fuchsia.net.dhcp/Server_ListParameters_Result.err int32
+union/member fuchsia.net.dhcp/Server_ListParameters_Result.response fuchsia.net.dhcp/Server_ListParameters_Response
+strict union fuchsia.net.dhcp/Server_ListParameters_Result
+struct fuchsia.net.dhcp/Server_ResetOptions_Response
+union/member fuchsia.net.dhcp/Server_ResetOptions_Result.err int32
+union/member fuchsia.net.dhcp/Server_ResetOptions_Result.response fuchsia.net.dhcp/Server_ResetOptions_Response
+strict union fuchsia.net.dhcp/Server_ResetOptions_Result
+struct fuchsia.net.dhcp/Server_ResetParameters_Response
+union/member fuchsia.net.dhcp/Server_ResetParameters_Result.err int32
+union/member fuchsia.net.dhcp/Server_ResetParameters_Result.response fuchsia.net.dhcp/Server_ResetParameters_Response
+strict union fuchsia.net.dhcp/Server_ResetParameters_Result
+struct fuchsia.net.dhcp/Server_SetOption_Response
+union/member fuchsia.net.dhcp/Server_SetOption_Result.err int32
+union/member fuchsia.net.dhcp/Server_SetOption_Result.response fuchsia.net.dhcp/Server_SetOption_Response
+strict union fuchsia.net.dhcp/Server_SetOption_Result
+struct fuchsia.net.dhcp/Server_SetParameter_Response
+union/member fuchsia.net.dhcp/Server_SetParameter_Result.err int32
+union/member fuchsia.net.dhcp/Server_SetParameter_Result.response fuchsia.net.dhcp/Server_SetParameter_Response
+strict union fuchsia.net.dhcp/Server_SetParameter_Result
+struct fuchsia.net.dhcp/Server_StartServing_Response
+union/member fuchsia.net.dhcp/Server_StartServing_Result.err int32
+union/member fuchsia.net.dhcp/Server_StartServing_Result.response fuchsia.net.dhcp/Server_StartServing_Response
+strict union fuchsia.net.dhcp/Server_StartServing_Result
+table/member fuchsia.net.dhcp/StaticAssignment.assigned_addr fuchsia.net/Ipv4Address
+table/member fuchsia.net.dhcp/StaticAssignment.host fuchsia.net/MacAddress
+table fuchsia.net.dhcp/StaticAssignment
+library fuchsia.net.dhcp

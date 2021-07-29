@@ -1,0 +1,21 @@
+protocol fuchsia.component/Binder
+enum/member fuchsia.component/Error.ACCESS_DENIED 4
+enum/member fuchsia.component/Error.COLLECTION_NOT_FOUND 9
+enum/member fuchsia.component/Error.INSTANCE_ALREADY_EXISTS 6
+enum/member fuchsia.component/Error.INSTANCE_CANNOT_RESOLVE 8
+enum/member fuchsia.component/Error.INSTANCE_CANNOT_START 7
+enum/member fuchsia.component/Error.INSTANCE_DIED 11
+enum/member fuchsia.component/Error.INSTANCE_NOT_FOUND 5
+enum/member fuchsia.component/Error.INTERNAL 1
+enum/member fuchsia.component/Error.INVALID_ARGUMENTS 2
+enum/member fuchsia.component/Error.RESOURCE_NOT_FOUND 12
+enum/member fuchsia.component/Error.RESOURCE_UNAVAILABLE 10
+enum/member fuchsia.component/Error.UNSUPPORTED 3
+strict enum fuchsia.component/Error uint32
+const fuchsia.component/MAX_MONIKER_LENGTH uint32 4096
+const fuchsia.component/MAX_NAME_LENGTH uint32 100
+const fuchsia.component/MAX_NUM_EVENTS_RECEIVED uint64 100
+const fuchsia.component/MAX_PATH_LENGTH uint32 1024
+const fuchsia.component/MAX_SUBSCRIPTION_REQUESTS uint32 2
+const fuchsia.component/MAX_URL_SCHEME_LENGTH uint32 100
+library fuchsia.component

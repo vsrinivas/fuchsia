@@ -1,0 +1,4 @@
+protocol/member fuchsia.ultrasound/Factory.CreateCapturer(server_end:fuchsia.media/AudioCapturer request) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)
+protocol/member fuchsia.ultrasound/Factory.CreateRenderer(server_end:fuchsia.media/AudioRenderer renderer) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)
+protocol fuchsia.ultrasound/Factory
+library fuchsia.ultrasound

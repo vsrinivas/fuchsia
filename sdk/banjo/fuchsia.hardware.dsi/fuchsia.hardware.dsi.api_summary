@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.dsi/Dsi.Connect(zx/handle:CHANNEL server) -> (int32 status)
+protocol fuchsia.hardware.dsi/Dsi
+library fuchsia.hardware.dsi

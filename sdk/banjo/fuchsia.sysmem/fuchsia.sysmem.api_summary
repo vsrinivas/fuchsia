@@ -1,0 +1,154 @@
+struct/member fuchsia.sysmem/BufferCollectionConstraints.buffer_memory_constraints fuchsia.sysmem/BufferMemoryConstraints
+struct/member fuchsia.sysmem/BufferCollectionConstraints.has_buffer_memory_constraints bool
+struct/member fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints array<fuchsia.sysmem/ImageFormatConstraints,32>
+struct/member fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints_count uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.max_buffer_count uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_camping uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_dedicated_slack uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_shared_slack uint32
+struct/member fuchsia.sysmem/BufferCollectionConstraints.usage fuchsia.sysmem/BufferUsage
+struct fuchsia.sysmem/BufferCollectionConstraints
+struct/member fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.allow_clear_aux_buffers_for_secure bool
+struct/member fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.need_clear_aux_buffers_for_secure bool
+struct fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers
+struct/member fuchsia.sysmem/BufferCollectionInfo_2.buffer_count uint32
+struct/member fuchsia.sysmem/BufferCollectionInfo_2.buffers array<fuchsia.sysmem/VmoBuffer,64>
+struct/member fuchsia.sysmem/BufferCollectionInfo_2.settings fuchsia.sysmem/SingleBufferSettings
+resource struct fuchsia.sysmem/BufferCollectionInfo_2
+struct/member fuchsia.sysmem/BufferMemoryConstraints.cpu_domain_supported bool true
+struct/member fuchsia.sysmem/BufferMemoryConstraints.heap_permitted array<fuchsia.sysmem/HeapType,32>
+struct/member fuchsia.sysmem/BufferMemoryConstraints.heap_permitted_count uint32
+struct/member fuchsia.sysmem/BufferMemoryConstraints.inaccessible_domain_supported bool false
+struct/member fuchsia.sysmem/BufferMemoryConstraints.max_size_bytes uint32 4294967295
+struct/member fuchsia.sysmem/BufferMemoryConstraints.min_size_bytes uint32 0
+struct/member fuchsia.sysmem/BufferMemoryConstraints.physically_contiguous_required bool false
+struct/member fuchsia.sysmem/BufferMemoryConstraints.ram_domain_supported bool false
+struct/member fuchsia.sysmem/BufferMemoryConstraints.secure_required bool false
+struct fuchsia.sysmem/BufferMemoryConstraints
+struct/member fuchsia.sysmem/BufferMemorySettings.coherency_domain fuchsia.sysmem/CoherencyDomain
+struct/member fuchsia.sysmem/BufferMemorySettings.heap fuchsia.sysmem/HeapType
+struct/member fuchsia.sysmem/BufferMemorySettings.is_physically_contiguous bool
+struct/member fuchsia.sysmem/BufferMemorySettings.is_secure bool
+struct/member fuchsia.sysmem/BufferMemorySettings.size_bytes uint32
+struct fuchsia.sysmem/BufferMemorySettings
+struct/member fuchsia.sysmem/BufferUsage.cpu uint32
+struct/member fuchsia.sysmem/BufferUsage.display uint32
+struct/member fuchsia.sysmem/BufferUsage.none uint32
+struct/member fuchsia.sysmem/BufferUsage.video uint32
+struct/member fuchsia.sysmem/BufferUsage.vulkan uint32
+struct fuchsia.sysmem/BufferUsage
+enum/member fuchsia.sysmem/CoherencyDomain.CPU 0
+enum/member fuchsia.sysmem/CoherencyDomain.INACCESSIBLE 2
+enum/member fuchsia.sysmem/CoherencyDomain.RAM 1
+strict enum fuchsia.sysmem/CoherencyDomain uint32
+struct/member fuchsia.sysmem/ColorSpace.type fuchsia.sysmem/ColorSpaceType
+struct fuchsia.sysmem/ColorSpace
+enum/member fuchsia.sysmem/ColorSpaceType.INVALID 0
+enum/member fuchsia.sysmem/ColorSpaceType.REC2020 7
+enum/member fuchsia.sysmem/ColorSpaceType.REC2100 8
+enum/member fuchsia.sysmem/ColorSpaceType.REC601_NTSC 2
+enum/member fuchsia.sysmem/ColorSpaceType.REC601_NTSC_FULL_RANGE 3
+enum/member fuchsia.sysmem/ColorSpaceType.REC601_PAL 4
+enum/member fuchsia.sysmem/ColorSpaceType.REC601_PAL_FULL_RANGE 5
+enum/member fuchsia.sysmem/ColorSpaceType.REC709 6
+enum/member fuchsia.sysmem/ColorSpaceType.SRGB 1
+strict enum fuchsia.sysmem/ColorSpaceType uint32
+struct/member fuchsia.sysmem/FormatModifier.value uint64
+struct fuchsia.sysmem/FormatModifier
+enum/member fuchsia.sysmem/HeapType.AMLOGIC_SECURE 1152921504606912512
+enum/member fuchsia.sysmem/HeapType.AMLOGIC_SECURE_VDEC 1152921504606912513
+enum/member fuchsia.sysmem/HeapType.GOLDFISH_DEVICE_LOCAL 1152921504606978048
+enum/member fuchsia.sysmem/HeapType.GOLDFISH_HOST_VISIBLE 1152921504606978049
+enum/member fuchsia.sysmem/HeapType.SYSTEM_RAM 0
+strict enum fuchsia.sysmem/HeapType uint64
+struct/member fuchsia.sysmem/ImageFormat.color_space fuchsia.sysmem/ColorSpace
+struct/member fuchsia.sysmem/ImageFormat.height uint32
+struct/member fuchsia.sysmem/ImageFormat.layers uint32 1
+struct/member fuchsia.sysmem/ImageFormat.pixel_format fuchsia.sysmem/PixelFormat
+struct/member fuchsia.sysmem/ImageFormat.planes array<fuchsia.sysmem/ImagePlane,4>
+struct/member fuchsia.sysmem/ImageFormat.width uint32
+struct fuchsia.sysmem/ImageFormat
+struct/member fuchsia.sysmem/ImageFormatConstraints.bytes_per_row_divisor uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.coded_height_divisor uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.coded_width_divisor uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.color_space array<fuchsia.sysmem/ColorSpace,32>
+struct/member fuchsia.sysmem/ImageFormatConstraints.color_spaces_count uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.display_height_divisor uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.display_width_divisor uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.layers uint32 1
+struct/member fuchsia.sysmem/ImageFormatConstraints.max_bytes_per_row uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.max_coded_height uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.max_coded_width uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.max_coded_width_times_coded_height uint32 4294967295
+struct/member fuchsia.sysmem/ImageFormatConstraints.min_bytes_per_row uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.min_coded_height uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.min_coded_width uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.pixel_format fuchsia.sysmem/PixelFormat
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_max_bytes_per_row uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_max_coded_height uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_max_coded_width uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_min_bytes_per_row uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_min_coded_height uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.required_min_coded_width uint32
+struct/member fuchsia.sysmem/ImageFormatConstraints.start_offset_divisor uint32 1
+struct fuchsia.sysmem/ImageFormatConstraints
+struct/member fuchsia.sysmem/ImageFormat_2.bytes_per_row uint32
+struct/member fuchsia.sysmem/ImageFormat_2.coded_height uint32
+struct/member fuchsia.sysmem/ImageFormat_2.coded_width uint32
+struct/member fuchsia.sysmem/ImageFormat_2.color_space fuchsia.sysmem/ColorSpace
+struct/member fuchsia.sysmem/ImageFormat_2.display_height uint32
+struct/member fuchsia.sysmem/ImageFormat_2.display_width uint32
+struct/member fuchsia.sysmem/ImageFormat_2.has_pixel_aspect_ratio bool false
+struct/member fuchsia.sysmem/ImageFormat_2.layers uint32 1
+struct/member fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_height uint32 1
+struct/member fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_width uint32 1
+struct/member fuchsia.sysmem/ImageFormat_2.pixel_format fuchsia.sysmem/PixelFormat
+struct fuchsia.sysmem/ImageFormat_2
+struct/member fuchsia.sysmem/ImagePlane.byte_offset uint32
+struct/member fuchsia.sysmem/ImagePlane.bytes_per_row uint32
+struct fuchsia.sysmem/ImagePlane
+struct/member fuchsia.sysmem/ImageSpec.color_space fuchsia.sysmem/ColorSpace
+struct/member fuchsia.sysmem/ImageSpec.layers uint32 1
+struct/member fuchsia.sysmem/ImageSpec.min_height uint32
+struct/member fuchsia.sysmem/ImageSpec.min_width uint32
+struct/member fuchsia.sysmem/ImageSpec.pixel_format fuchsia.sysmem/PixelFormat
+struct fuchsia.sysmem/ImageSpec
+struct/member fuchsia.sysmem/PixelFormat.format_modifier fuchsia.sysmem/FormatModifier
+struct/member fuchsia.sysmem/PixelFormat.has_format_modifier bool
+struct/member fuchsia.sysmem/PixelFormat.type fuchsia.sysmem/PixelFormatType
+struct fuchsia.sysmem/PixelFormat
+enum/member fuchsia.sysmem/PixelFormatType.BGR24 108
+enum/member fuchsia.sysmem/PixelFormatType.BGRA32 101
+enum/member fuchsia.sysmem/PixelFormatType.I420 102
+enum/member fuchsia.sysmem/PixelFormatType.INVALID 0
+enum/member fuchsia.sysmem/PixelFormatType.L8 112
+enum/member fuchsia.sysmem/PixelFormatType.M420 103
+enum/member fuchsia.sysmem/PixelFormatType.MJPEG 106
+enum/member fuchsia.sysmem/PixelFormatType.NV12 104
+enum/member fuchsia.sysmem/PixelFormatType.R8 113
+enum/member fuchsia.sysmem/PixelFormatType.R8G8 114
+enum/member fuchsia.sysmem/PixelFormatType.R8G8B8A8 1
+enum/member fuchsia.sysmem/PixelFormatType.RGB2220 111
+enum/member fuchsia.sysmem/PixelFormatType.RGB332 110
+enum/member fuchsia.sysmem/PixelFormatType.RGB565 109
+enum/member fuchsia.sysmem/PixelFormatType.YUY2 105
+enum/member fuchsia.sysmem/PixelFormatType.YV12 107
+strict enum fuchsia.sysmem/PixelFormatType uint32
+const fuchsia.sysmem/SYSMEM_METADATA_TYPE uint32 1400458596
+struct/member fuchsia.sysmem/SingleBufferInfo.buffer fuchsia.sysmem/VmoBuffer
+struct/member fuchsia.sysmem/SingleBufferInfo.settings fuchsia.sysmem/SingleBufferSettings
+resource struct fuchsia.sysmem/SingleBufferInfo
+struct/member fuchsia.sysmem/SingleBufferSettings.buffer_settings fuchsia.sysmem/BufferMemorySettings
+struct/member fuchsia.sysmem/SingleBufferSettings.has_image_format_constraints bool
+struct/member fuchsia.sysmem/SingleBufferSettings.image_format_constraints fuchsia.sysmem/ImageFormatConstraints
+struct fuchsia.sysmem/SingleBufferSettings
+struct/member fuchsia.sysmem/SysmemMetadata.contiguous_memory_size int64
+struct/member fuchsia.sysmem/SysmemMetadata.pid uint32
+struct/member fuchsia.sysmem/SysmemMetadata.protected_memory_size int64
+struct/member fuchsia.sysmem/SysmemMetadata.vid uint32
+struct fuchsia.sysmem/SysmemMetadata
+struct/member fuchsia.sysmem/VmoBuffer.vmo zx/handle:<VMO,optional>
+struct/member fuchsia.sysmem/VmoBuffer.vmo_usable_start uint64
+resource struct fuchsia.sysmem/VmoBuffer
+library fuchsia.sysmem

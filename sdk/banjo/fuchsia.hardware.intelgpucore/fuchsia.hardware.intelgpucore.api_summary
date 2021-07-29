@@ -1,0 +1,18 @@
+const fuchsia.hardware.intelgpucore/IMAGE_TYPE_X_TILED uint32 1
+const fuchsia.hardware.intelgpucore/IMAGE_TYPE_YF_TILED uint32 3
+const fuchsia.hardware.intelgpucore/IMAGE_TYPE_Y_LEGACY_TILED uint32 2
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GetPciBti(uint32 index) -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GttAlloc(uint64 page_count) -> (int32 s,uint64 addr)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GttClear(uint64 addr) -> (int32 s)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GttFree(uint64 addr) -> (int32 s)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GttGetSize() -> (uint64 size)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.GttInsert(uint64 addr,zx/handle:VMO buffer,uint64 page_offset,uint64 page_count) -> (int32 s)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.MapPciMmio(uint32 pci_bar) -> (int32 s,vector<uint8> buf)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.ReadPciConfig16(uint16 addr) -> (int32 s,uint16 value)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.RegisterInterruptCallback(client_end:fuchsia.hardware.intelgpucore/ZxIntelGpuCoreInterrupt callback,uint32 interrupt_mask) -> (int32 s)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.UnmapPciMmio(uint32 pci_bar) -> (int32 s)
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCore.UnregisterInterruptCallback() -> (int32 s)
+protocol fuchsia.hardware.intelgpucore/ZxIntelGpuCore
+protocol/member fuchsia.hardware.intelgpucore/ZxIntelGpuCoreInterrupt.Callback(uint32 master_interrupt_control,uint64 timestamp) -> ()
+protocol fuchsia.hardware.intelgpucore/ZxIntelGpuCoreInterrupt
+library fuchsia.hardware.intelgpucore

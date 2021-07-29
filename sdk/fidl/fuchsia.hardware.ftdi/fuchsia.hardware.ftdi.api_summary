@@ -1,0 +1,12 @@
+protocol/member fuchsia.hardware.ftdi/Device.CreateI2C(fuchsia.hardware.ftdi/I2cBusLayout layout,fuchsia.hardware.ftdi/I2cDevice device)
+protocol fuchsia.hardware.ftdi/Device
+struct/member fuchsia.hardware.ftdi/I2cBusLayout.scl uint32
+struct/member fuchsia.hardware.ftdi/I2cBusLayout.sda_in uint32
+struct/member fuchsia.hardware.ftdi/I2cBusLayout.sda_out uint32
+struct fuchsia.hardware.ftdi/I2cBusLayout
+struct/member fuchsia.hardware.ftdi/I2cDevice.address uint32
+struct/member fuchsia.hardware.ftdi/I2cDevice.did uint32
+struct/member fuchsia.hardware.ftdi/I2cDevice.pid uint32
+struct/member fuchsia.hardware.ftdi/I2cDevice.vid uint32
+struct fuchsia.hardware.ftdi/I2cDevice
+library fuchsia.hardware.ftdi

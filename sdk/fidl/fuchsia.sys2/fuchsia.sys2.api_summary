@@ -1,0 +1,452 @@
+union/member fuchsia.sys2/CapabilityDecl.directory fuchsia.sys2/DirectoryDecl
+union/member fuchsia.sys2/CapabilityDecl.protocol fuchsia.sys2/ProtocolDecl
+union/member fuchsia.sys2/CapabilityDecl.resolver fuchsia.sys2/ResolverDecl
+union/member fuchsia.sys2/CapabilityDecl.runner fuchsia.sys2/RunnerDecl
+union/member fuchsia.sys2/CapabilityDecl.service fuchsia.sys2/ServiceDecl
+union/member fuchsia.sys2/CapabilityDecl.storage fuchsia.sys2/StorageDecl
+flexible union fuchsia.sys2/CapabilityDecl
+struct/member fuchsia.sys2/CapabilityRef.name string:100
+struct fuchsia.sys2/CapabilityRef
+table/member fuchsia.sys2/CapabilityRequestedError.name string:100
+table fuchsia.sys2/CapabilityRequestedError
+table/member fuchsia.sys2/CapabilityRequestedPayload.capability zx/handle:CHANNEL
+table/member fuchsia.sys2/CapabilityRequestedPayload.name string:100
+resource table fuchsia.sys2/CapabilityRequestedPayload
+table/member fuchsia.sys2/CapabilityRoutedError.name string:100
+table fuchsia.sys2/CapabilityRoutedError
+table/member fuchsia.sys2/CapabilityRoutedPayload.name string:100
+resource table fuchsia.sys2/CapabilityRoutedPayload
+table/member fuchsia.sys2/ChildDecl.environment string:100
+table/member fuchsia.sys2/ChildDecl.name string:100
+table/member fuchsia.sys2/ChildDecl.startup fuchsia.sys2/StartupMode
+table/member fuchsia.sys2/ChildDecl.url string:4096
+table fuchsia.sys2/ChildDecl
+protocol/member fuchsia.sys2/ChildIterator.Next() -> (vector<fuchsia.sys2/ChildRef> children)
+protocol fuchsia.sys2/ChildIterator
+struct/member fuchsia.sys2/ChildRef.collection string:<100,optional>
+struct/member fuchsia.sys2/ChildRef.name string:100
+struct fuchsia.sys2/ChildRef
+table/member fuchsia.sys2/CollectionDecl.durability fuchsia.sys2/Durability
+table/member fuchsia.sys2/CollectionDecl.environment string:100
+table/member fuchsia.sys2/CollectionDecl.name string:100
+table fuchsia.sys2/CollectionDecl
+struct/member fuchsia.sys2/CollectionRef.name string:100
+struct fuchsia.sys2/CollectionRef
+table/member fuchsia.sys2/Component.decl fuchsia.mem/Data
+table/member fuchsia.sys2/Component.package fuchsia.sys2/Package
+table/member fuchsia.sys2/Component.resolved_url string
+resource table fuchsia.sys2/Component
+table/member fuchsia.sys2/ComponentDecl.capabilities vector<fuchsia.sys2/CapabilityDecl>
+table/member fuchsia.sys2/ComponentDecl.children vector<fuchsia.sys2/ChildDecl>
+table/member fuchsia.sys2/ComponentDecl.collections vector<fuchsia.sys2/CollectionDecl>
+table/member fuchsia.sys2/ComponentDecl.environments vector<fuchsia.sys2/EnvironmentDecl>
+table/member fuchsia.sys2/ComponentDecl.exposes vector<fuchsia.sys2/ExposeDecl>
+table/member fuchsia.sys2/ComponentDecl.facets fuchsia.sys2/Object
+table/member fuchsia.sys2/ComponentDecl.offers vector<fuchsia.sys2/OfferDecl>
+table/member fuchsia.sys2/ComponentDecl.program fuchsia.sys2/ProgramDecl
+table/member fuchsia.sys2/ComponentDecl.uses vector<fuchsia.sys2/UseDecl>
+table fuchsia.sys2/ComponentDecl
+protocol/member fuchsia.sys2/ComponentResolver.Resolve(string component_url) -> (fuchsia.sys2/ComponentResolver_Resolve_Result result)
+protocol fuchsia.sys2/ComponentResolver
+struct/member fuchsia.sys2/ComponentResolver_Resolve_Response.component fuchsia.sys2/Component
+resource struct fuchsia.sys2/ComponentResolver_Resolve_Response
+union/member fuchsia.sys2/ComponentResolver_Resolve_Result.err fuchsia.sys2/ResolverError
+union/member fuchsia.sys2/ComponentResolver_Resolve_Result.response fuchsia.sys2/ComponentResolver_Resolve_Response
+resource strict union fuchsia.sys2/ComponentResolver_Resolve_Result
+table/member fuchsia.sys2/DebugProtocolRegistration.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/DebugProtocolRegistration.source_name string:100
+table/member fuchsia.sys2/DebugProtocolRegistration.target_name string:100
+table fuchsia.sys2/DebugProtocolRegistration
+struct fuchsia.sys2/DebugRef
+union/member fuchsia.sys2/DebugRegistration.protocol fuchsia.sys2/DebugProtocolRegistration
+flexible union fuchsia.sys2/DebugRegistration
+enum/member fuchsia.sys2/DependencyType.STRONG 1
+enum/member fuchsia.sys2/DependencyType.WEAK 2
+enum/member fuchsia.sys2/DependencyType.WEAK_FOR_MIGRATION 3
+strict enum fuchsia.sys2/DependencyType uint32
+table fuchsia.sys2/DestroyedError
+table fuchsia.sys2/DestroyedPayload
+table/member fuchsia.sys2/DirectoryDecl.name string:100
+table/member fuchsia.sys2/DirectoryDecl.rights fuchsia.io2/Operations
+table/member fuchsia.sys2/DirectoryDecl.source_path string:1024
+table fuchsia.sys2/DirectoryDecl
+table/member fuchsia.sys2/DirectoryReadyError.name string:100
+table fuchsia.sys2/DirectoryReadyError
+table/member fuchsia.sys2/DirectoryReadyPayload.name string:100
+table/member fuchsia.sys2/DirectoryReadyPayload.node fuchsia.io/Node
+resource table fuchsia.sys2/DirectoryReadyPayload
+table fuchsia.sys2/DiscoveredError
+table fuchsia.sys2/DiscoveredPayload
+enum/member fuchsia.sys2/Durability.PERSISTENT 1
+enum/member fuchsia.sys2/Durability.TRANSIENT 2
+strict enum fuchsia.sys2/Durability uint32
+struct/member fuchsia.sys2/Entry.key string
+struct/member fuchsia.sys2/Entry.value fuchsia.sys2/Value:optional
+struct fuchsia.sys2/Entry
+table/member fuchsia.sys2/EnvironmentDecl.debug_capabilities vector<fuchsia.sys2/DebugRegistration>
+table/member fuchsia.sys2/EnvironmentDecl.extends fuchsia.sys2/EnvironmentExtends
+table/member fuchsia.sys2/EnvironmentDecl.name string:100
+table/member fuchsia.sys2/EnvironmentDecl.resolvers vector<fuchsia.sys2/ResolverRegistration>
+table/member fuchsia.sys2/EnvironmentDecl.runners vector<fuchsia.sys2/RunnerRegistration>
+table/member fuchsia.sys2/EnvironmentDecl.stop_timeout_ms uint32
+table fuchsia.sys2/EnvironmentDecl
+enum/member fuchsia.sys2/EnvironmentExtends.NONE 0
+enum/member fuchsia.sys2/EnvironmentExtends.REALM 1
+strict enum fuchsia.sys2/EnvironmentExtends uint32
+table/member fuchsia.sys2/Event.event_result fuchsia.sys2/EventResult
+table/member fuchsia.sys2/Event.handler client_end:fuchsia.sys2/Handler
+table/member fuchsia.sys2/Event.header fuchsia.sys2/EventHeader
+resource table fuchsia.sys2/Event
+table/member fuchsia.sys2/EventError.description string:100
+table/member fuchsia.sys2/EventError.error_payload fuchsia.sys2/EventErrorPayload
+table fuchsia.sys2/EventError
+union/member fuchsia.sys2/EventErrorPayload.capability_requested fuchsia.sys2/CapabilityRequestedError
+union/member fuchsia.sys2/EventErrorPayload.capability_routed fuchsia.sys2/CapabilityRoutedError
+union/member fuchsia.sys2/EventErrorPayload.destroyed fuchsia.sys2/DestroyedError
+union/member fuchsia.sys2/EventErrorPayload.directory_ready fuchsia.sys2/DirectoryReadyError
+union/member fuchsia.sys2/EventErrorPayload.discovered fuchsia.sys2/DiscoveredError
+union/member fuchsia.sys2/EventErrorPayload.marked_for_destruction fuchsia.sys2/MarkedForDestructionError
+union/member fuchsia.sys2/EventErrorPayload.resolved fuchsia.sys2/ResolvedError
+union/member fuchsia.sys2/EventErrorPayload.running fuchsia.sys2/RunningError
+union/member fuchsia.sys2/EventErrorPayload.started fuchsia.sys2/StartedError
+union/member fuchsia.sys2/EventErrorPayload.stopped fuchsia.sys2/StoppedError
+flexible union fuchsia.sys2/EventErrorPayload
+table/member fuchsia.sys2/EventHeader.component_url string:4096
+table/member fuchsia.sys2/EventHeader.event_type fuchsia.sys2/EventType
+table/member fuchsia.sys2/EventHeader.moniker string:4096
+table/member fuchsia.sys2/EventHeader.timestamp int64
+table fuchsia.sys2/EventHeader
+enum/member fuchsia.sys2/EventMode.ASYNC 0
+enum/member fuchsia.sys2/EventMode.SYNC 1
+strict enum fuchsia.sys2/EventMode uint32
+union/member fuchsia.sys2/EventPayload.capability_requested fuchsia.sys2/CapabilityRequestedPayload
+union/member fuchsia.sys2/EventPayload.capability_routed fuchsia.sys2/CapabilityRoutedPayload
+union/member fuchsia.sys2/EventPayload.destroyed fuchsia.sys2/DestroyedPayload
+union/member fuchsia.sys2/EventPayload.directory_ready fuchsia.sys2/DirectoryReadyPayload
+union/member fuchsia.sys2/EventPayload.discovered fuchsia.sys2/DiscoveredPayload
+union/member fuchsia.sys2/EventPayload.marked_for_destruction fuchsia.sys2/MarkedForDestructionPayload
+union/member fuchsia.sys2/EventPayload.resolved fuchsia.sys2/ResolvedPayload
+union/member fuchsia.sys2/EventPayload.running fuchsia.sys2/RunningPayload
+union/member fuchsia.sys2/EventPayload.started fuchsia.sys2/StartedPayload
+union/member fuchsia.sys2/EventPayload.stopped fuchsia.sys2/StoppedPayload
+resource flexible union fuchsia.sys2/EventPayload
+union/member fuchsia.sys2/EventResult.error fuchsia.sys2/EventError
+union/member fuchsia.sys2/EventResult.payload fuchsia.sys2/EventPayload
+resource flexible union fuchsia.sys2/EventResult
+protocol/member fuchsia.sys2/EventSource.Subscribe(vector<fuchsia.sys2/EventSubscription>:2 events,client_end:fuchsia.sys2/EventStream stream) -> (fuchsia.sys2/EventSource_Subscribe_Result result)
+protocol/member fuchsia.sys2/EventSource.TakeStaticEventStream(string:4096 path) -> (fuchsia.sys2/EventSource_TakeStaticEventStream_Result result)
+protocol fuchsia.sys2/EventSource
+struct fuchsia.sys2/EventSource_Subscribe_Response
+union/member fuchsia.sys2/EventSource_Subscribe_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/EventSource_Subscribe_Result.response fuchsia.sys2/EventSource_Subscribe_Response
+strict union fuchsia.sys2/EventSource_Subscribe_Result
+struct/member fuchsia.sys2/EventSource_TakeStaticEventStream_Response.server_end server_end:fuchsia.sys2/EventStream
+resource struct fuchsia.sys2/EventSource_TakeStaticEventStream_Response
+union/member fuchsia.sys2/EventSource_TakeStaticEventStream_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/EventSource_TakeStaticEventStream_Result.response fuchsia.sys2/EventSource_TakeStaticEventStream_Response
+resource strict union fuchsia.sys2/EventSource_TakeStaticEventStream_Result
+protocol/member fuchsia.sys2/EventStream.OnEvent(fuchsia.sys2/Event event)
+protocol fuchsia.sys2/EventStream
+table/member fuchsia.sys2/EventSubscription.event_name string:100
+table/member fuchsia.sys2/EventSubscription.mode fuchsia.sys2/EventMode
+table fuchsia.sys2/EventSubscription
+enum/member fuchsia.sys2/EventType.CAPABILITY_REQUESTED 1
+enum/member fuchsia.sys2/EventType.CAPABILITY_ROUTED 2
+enum/member fuchsia.sys2/EventType.DESTROYED 3
+enum/member fuchsia.sys2/EventType.DIRECTORY_READY 4
+enum/member fuchsia.sys2/EventType.DISCOVERED 5
+enum/member fuchsia.sys2/EventType.MARKED_FOR_DESTRUCTION 6
+enum/member fuchsia.sys2/EventType.RESOLVED 7
+enum/member fuchsia.sys2/EventType.RUNNING 10
+enum/member fuchsia.sys2/EventType.STARTED 8
+enum/member fuchsia.sys2/EventType.STOPPED 9
+strict enum fuchsia.sys2/EventType uint32
+union/member fuchsia.sys2/ExposeDecl.directory fuchsia.sys2/ExposeDirectoryDecl
+union/member fuchsia.sys2/ExposeDecl.protocol fuchsia.sys2/ExposeProtocolDecl
+union/member fuchsia.sys2/ExposeDecl.resolver fuchsia.sys2/ExposeResolverDecl
+union/member fuchsia.sys2/ExposeDecl.runner fuchsia.sys2/ExposeRunnerDecl
+union/member fuchsia.sys2/ExposeDecl.service fuchsia.sys2/ExposeServiceDecl
+flexible union fuchsia.sys2/ExposeDecl
+table/member fuchsia.sys2/ExposeDirectoryDecl.rights fuchsia.io2/Operations
+table/member fuchsia.sys2/ExposeDirectoryDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeDirectoryDecl.source_name string:100
+table/member fuchsia.sys2/ExposeDirectoryDecl.subdir string:1024
+table/member fuchsia.sys2/ExposeDirectoryDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeDirectoryDecl.target_name string:100
+table fuchsia.sys2/ExposeDirectoryDecl
+table/member fuchsia.sys2/ExposeProtocolDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeProtocolDecl.source_name string:100
+table/member fuchsia.sys2/ExposeProtocolDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeProtocolDecl.target_name string:100
+table fuchsia.sys2/ExposeProtocolDecl
+table/member fuchsia.sys2/ExposeResolverDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeResolverDecl.source_name string:100
+table/member fuchsia.sys2/ExposeResolverDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeResolverDecl.target_name string:100
+table fuchsia.sys2/ExposeResolverDecl
+table/member fuchsia.sys2/ExposeRunnerDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeRunnerDecl.source_name string:100
+table/member fuchsia.sys2/ExposeRunnerDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeRunnerDecl.target_name string:100
+table fuchsia.sys2/ExposeRunnerDecl
+table/member fuchsia.sys2/ExposeServiceDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeServiceDecl.source_name string:100
+table/member fuchsia.sys2/ExposeServiceDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/ExposeServiceDecl.target_name string:100
+table fuchsia.sys2/ExposeServiceDecl
+struct fuchsia.sys2/FrameworkRef
+protocol/member fuchsia.sys2/Handler.Resume() -> ()
+protocol fuchsia.sys2/Handler
+protocol/member fuchsia.sys2/LifecycleController.Bind(string:4096 moniker) -> (fuchsia.sys2/LifecycleController_Bind_Result result)
+protocol/member fuchsia.sys2/LifecycleController.Resolve(string:4096 moniker) -> (fuchsia.sys2/LifecycleController_Resolve_Result result)
+protocol/member fuchsia.sys2/LifecycleController.Stop(string:4096 moniker,bool is_recursive) -> (fuchsia.sys2/LifecycleController_Stop_Result result)
+protocol fuchsia.sys2/LifecycleController
+struct fuchsia.sys2/LifecycleController_Bind_Response
+union/member fuchsia.sys2/LifecycleController_Bind_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/LifecycleController_Bind_Result.response fuchsia.sys2/LifecycleController_Bind_Response
+strict union fuchsia.sys2/LifecycleController_Bind_Result
+struct fuchsia.sys2/LifecycleController_Resolve_Response
+union/member fuchsia.sys2/LifecycleController_Resolve_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/LifecycleController_Resolve_Result.response fuchsia.sys2/LifecycleController_Resolve_Response
+strict union fuchsia.sys2/LifecycleController_Resolve_Result
+struct fuchsia.sys2/LifecycleController_Stop_Response
+union/member fuchsia.sys2/LifecycleController_Stop_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/LifecycleController_Stop_Result.response fuchsia.sys2/LifecycleController_Stop_Response
+strict union fuchsia.sys2/LifecycleController_Stop_Result
+const fuchsia.sys2/MAX_CAPABILITY_ID_LENGTH uint64 50
+const fuchsia.sys2/MAX_ERROR_DESCRIPTION_LENGTH uint64 100
+const fuchsia.sys2/MAX_WORK_ID_LENGTH uint32 100
+table fuchsia.sys2/MarkedForDestructionError
+table fuchsia.sys2/MarkedForDestructionPayload
+struct/member fuchsia.sys2/Object.entries vector<fuchsia.sys2/Entry>
+struct fuchsia.sys2/Object
+union/member fuchsia.sys2/OfferDecl.directory fuchsia.sys2/OfferDirectoryDecl
+union/member fuchsia.sys2/OfferDecl.event fuchsia.sys2/OfferEventDecl
+union/member fuchsia.sys2/OfferDecl.protocol fuchsia.sys2/OfferProtocolDecl
+union/member fuchsia.sys2/OfferDecl.resolver fuchsia.sys2/OfferResolverDecl
+union/member fuchsia.sys2/OfferDecl.runner fuchsia.sys2/OfferRunnerDecl
+union/member fuchsia.sys2/OfferDecl.service fuchsia.sys2/OfferServiceDecl
+union/member fuchsia.sys2/OfferDecl.storage fuchsia.sys2/OfferStorageDecl
+flexible union fuchsia.sys2/OfferDecl
+table/member fuchsia.sys2/OfferDirectoryDecl.dependency_type fuchsia.sys2/DependencyType
+table/member fuchsia.sys2/OfferDirectoryDecl.rights fuchsia.io2/Operations
+table/member fuchsia.sys2/OfferDirectoryDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferDirectoryDecl.source_name string:100
+table/member fuchsia.sys2/OfferDirectoryDecl.subdir string:1024
+table/member fuchsia.sys2/OfferDirectoryDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferDirectoryDecl.target_name string:100
+table fuchsia.sys2/OfferDirectoryDecl
+table/member fuchsia.sys2/OfferEventDecl.filter fuchsia.data/Dictionary
+table/member fuchsia.sys2/OfferEventDecl.mode fuchsia.sys2/EventMode
+table/member fuchsia.sys2/OfferEventDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferEventDecl.source_name string:100
+table/member fuchsia.sys2/OfferEventDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferEventDecl.target_name string:100
+table fuchsia.sys2/OfferEventDecl
+table/member fuchsia.sys2/OfferProtocolDecl.dependency_type fuchsia.sys2/DependencyType
+table/member fuchsia.sys2/OfferProtocolDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferProtocolDecl.source_name string:100
+table/member fuchsia.sys2/OfferProtocolDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferProtocolDecl.target_name string:100
+table fuchsia.sys2/OfferProtocolDecl
+table/member fuchsia.sys2/OfferResolverDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferResolverDecl.source_name string:100
+table/member fuchsia.sys2/OfferResolverDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferResolverDecl.target_name string:100
+table fuchsia.sys2/OfferResolverDecl
+table/member fuchsia.sys2/OfferRunnerDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferRunnerDecl.source_name string:100
+table/member fuchsia.sys2/OfferRunnerDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferRunnerDecl.target_name string:100
+table fuchsia.sys2/OfferRunnerDecl
+table/member fuchsia.sys2/OfferServiceDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferServiceDecl.source_name string:100
+table/member fuchsia.sys2/OfferServiceDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferServiceDecl.target_name string:100
+table fuchsia.sys2/OfferServiceDecl
+table/member fuchsia.sys2/OfferStorageDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferStorageDecl.source_name string:100
+table/member fuchsia.sys2/OfferStorageDecl.target fuchsia.sys2/Ref
+table/member fuchsia.sys2/OfferStorageDecl.target_name string:100
+table fuchsia.sys2/OfferStorageDecl
+table/member fuchsia.sys2/Package.package_dir fuchsia.io/Directory
+table/member fuchsia.sys2/Package.package_url string
+resource table fuchsia.sys2/Package
+struct fuchsia.sys2/ParentRef
+table/member fuchsia.sys2/ProgramDecl.info fuchsia.data/Dictionary
+table/member fuchsia.sys2/ProgramDecl.runner string:100
+table fuchsia.sys2/ProgramDecl
+table/member fuchsia.sys2/ProtocolDecl.name string:100
+table/member fuchsia.sys2/ProtocolDecl.source_path string:1024
+table fuchsia.sys2/ProtocolDecl
+protocol/member fuchsia.sys2/Realm.BindChild(fuchsia.sys2/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.sys2/Realm_BindChild_Result result)
+protocol/member fuchsia.sys2/Realm.CreateChild(fuchsia.sys2/CollectionRef collection,fuchsia.sys2/ChildDecl decl) -> (fuchsia.sys2/Realm_CreateChild_Result result)
+protocol/member fuchsia.sys2/Realm.DestroyChild(fuchsia.sys2/ChildRef child) -> (fuchsia.sys2/Realm_DestroyChild_Result result)
+protocol/member fuchsia.sys2/Realm.ListChildren(fuchsia.sys2/CollectionRef collection,server_end:fuchsia.sys2/ChildIterator iter) -> (fuchsia.sys2/Realm_ListChildren_Result result)
+protocol/member fuchsia.sys2/Realm.OpenExposedDir(fuchsia.sys2/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.sys2/Realm_OpenExposedDir_Result result)
+protocol fuchsia.sys2/Realm
+struct fuchsia.sys2/Realm_BindChild_Response
+union/member fuchsia.sys2/Realm_BindChild_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Realm_BindChild_Result.response fuchsia.sys2/Realm_BindChild_Response
+strict union fuchsia.sys2/Realm_BindChild_Result
+struct fuchsia.sys2/Realm_CreateChild_Response
+union/member fuchsia.sys2/Realm_CreateChild_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Realm_CreateChild_Result.response fuchsia.sys2/Realm_CreateChild_Response
+strict union fuchsia.sys2/Realm_CreateChild_Result
+struct fuchsia.sys2/Realm_DestroyChild_Response
+union/member fuchsia.sys2/Realm_DestroyChild_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Realm_DestroyChild_Result.response fuchsia.sys2/Realm_DestroyChild_Response
+strict union fuchsia.sys2/Realm_DestroyChild_Result
+struct fuchsia.sys2/Realm_ListChildren_Response
+union/member fuchsia.sys2/Realm_ListChildren_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Realm_ListChildren_Result.response fuchsia.sys2/Realm_ListChildren_Response
+strict union fuchsia.sys2/Realm_ListChildren_Result
+struct fuchsia.sys2/Realm_OpenExposedDir_Response
+union/member fuchsia.sys2/Realm_OpenExposedDir_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Realm_OpenExposedDir_Result.response fuchsia.sys2/Realm_OpenExposedDir_Response
+strict union fuchsia.sys2/Realm_OpenExposedDir_Result
+union/member fuchsia.sys2/Ref.capability fuchsia.sys2/CapabilityRef
+union/member fuchsia.sys2/Ref.child fuchsia.sys2/ChildRef
+union/member fuchsia.sys2/Ref.collection fuchsia.sys2/CollectionRef
+union/member fuchsia.sys2/Ref.debug fuchsia.sys2/DebugRef
+union/member fuchsia.sys2/Ref.framework fuchsia.sys2/FrameworkRef
+union/member fuchsia.sys2/Ref.parent fuchsia.sys2/ParentRef
+union/member fuchsia.sys2/Ref.self fuchsia.sys2/SelfRef
+flexible union fuchsia.sys2/Ref
+table fuchsia.sys2/ResolvedError
+table fuchsia.sys2/ResolvedPayload
+table/member fuchsia.sys2/ResolverDecl.name string:100
+table/member fuchsia.sys2/ResolverDecl.source_path string:1024
+table fuchsia.sys2/ResolverDecl
+enum/member fuchsia.sys2/ResolverError.INTERNAL 1
+enum/member fuchsia.sys2/ResolverError.INVALID_ARGS 3
+enum/member fuchsia.sys2/ResolverError.IO 2
+enum/member fuchsia.sys2/ResolverError.MANIFEST_NOT_FOUND 5
+enum/member fuchsia.sys2/ResolverError.NOT_SUPPORTED 4
+enum/member fuchsia.sys2/ResolverError.NO_SPACE 7
+enum/member fuchsia.sys2/ResolverError.PACKAGE_NOT_FOUND 6
+enum/member fuchsia.sys2/ResolverError.RESOURCE_UNAVAILABLE 8
+strict enum fuchsia.sys2/ResolverError uint32
+table/member fuchsia.sys2/ResolverRegistration.resolver string:100
+table/member fuchsia.sys2/ResolverRegistration.scheme string:100
+table/member fuchsia.sys2/ResolverRegistration.source fuchsia.sys2/Ref
+table fuchsia.sys2/ResolverRegistration
+table/member fuchsia.sys2/RunnerDecl.name string:100
+table/member fuchsia.sys2/RunnerDecl.source_path string:1024
+table fuchsia.sys2/RunnerDecl
+table/member fuchsia.sys2/RunnerRegistration.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/RunnerRegistration.source_name string:100
+table/member fuchsia.sys2/RunnerRegistration.target_name string:100
+table fuchsia.sys2/RunnerRegistration
+table/member fuchsia.sys2/RunningError.started_timestamp int64
+table fuchsia.sys2/RunningError
+table/member fuchsia.sys2/RunningPayload.started_timestamp int64
+table fuchsia.sys2/RunningPayload
+struct fuchsia.sys2/SelfRef
+table/member fuchsia.sys2/ServiceDecl.name string:100
+table/member fuchsia.sys2/ServiceDecl.source_path string:1024
+table fuchsia.sys2/ServiceDecl
+union/member fuchsia.sys2/Start.delay int64
+union/member fuchsia.sys2/Start.monotonic_time int64
+flexible union fuchsia.sys2/Start
+table fuchsia.sys2/StartedError
+table fuchsia.sys2/StartedPayload
+enum/member fuchsia.sys2/StartupMode.EAGER 1
+enum/member fuchsia.sys2/StartupMode.LAZY 0
+strict enum fuchsia.sys2/StartupMode uint32
+table fuchsia.sys2/StoppedError
+table/member fuchsia.sys2/StoppedPayload.status int32
+table fuchsia.sys2/StoppedPayload
+protocol/member fuchsia.sys2/StorageAdmin.DeleteComponentStorage(string:4096 relative_moniker) -> (fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Result result)
+protocol/member fuchsia.sys2/StorageAdmin.OpenComponentStorage(string:4096 relative_moniker,uint32 flags,uint32 mode,server_end:fuchsia.io/Node object)
+protocol fuchsia.sys2/StorageAdmin
+struct fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Response
+union/member fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Result.response fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Response
+strict union fuchsia.sys2/StorageAdmin_DeleteComponentStorage_Result
+table/member fuchsia.sys2/StorageDecl.backing_dir string:100
+table/member fuchsia.sys2/StorageDecl.name string:100
+table/member fuchsia.sys2/StorageDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/StorageDecl.storage_id fuchsia.sys2/StorageId
+table/member fuchsia.sys2/StorageDecl.subdir string:1024
+table fuchsia.sys2/StorageDecl
+enum/member fuchsia.sys2/StorageId.STATIC_INSTANCE_ID 1
+enum/member fuchsia.sys2/StorageId.STATIC_INSTANCE_ID_OR_MONIKER 2
+strict enum fuchsia.sys2/StorageId uint32
+protocol/member fuchsia.sys2/SystemController.Shutdown() -> ()
+protocol fuchsia.sys2/SystemController
+union/member fuchsia.sys2/UseDecl.directory fuchsia.sys2/UseDirectoryDecl
+union/member fuchsia.sys2/UseDecl.event fuchsia.sys2/UseEventDecl
+union/member fuchsia.sys2/UseDecl.event_stream fuchsia.sys2/UseEventStreamDecl
+union/member fuchsia.sys2/UseDecl.protocol fuchsia.sys2/UseProtocolDecl
+union/member fuchsia.sys2/UseDecl.service fuchsia.sys2/UseServiceDecl
+union/member fuchsia.sys2/UseDecl.storage fuchsia.sys2/UseStorageDecl
+flexible union fuchsia.sys2/UseDecl
+table/member fuchsia.sys2/UseDirectoryDecl.rights fuchsia.io2/Operations
+table/member fuchsia.sys2/UseDirectoryDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/UseDirectoryDecl.source_name string:100
+table/member fuchsia.sys2/UseDirectoryDecl.subdir string:1024
+table/member fuchsia.sys2/UseDirectoryDecl.target_path string:1024
+table fuchsia.sys2/UseDirectoryDecl
+table/member fuchsia.sys2/UseEventDecl.filter fuchsia.data/Dictionary
+table/member fuchsia.sys2/UseEventDecl.mode fuchsia.sys2/EventMode
+table/member fuchsia.sys2/UseEventDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/UseEventDecl.source_name string:100
+table/member fuchsia.sys2/UseEventDecl.target_name string:100
+table fuchsia.sys2/UseEventDecl
+table/member fuchsia.sys2/UseEventStreamDecl.name string:100
+table/member fuchsia.sys2/UseEventStreamDecl.subscriptions vector<fuchsia.sys2/EventSubscription>:100
+table fuchsia.sys2/UseEventStreamDecl
+table/member fuchsia.sys2/UseProtocolDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/UseProtocolDecl.source_name string:100
+table/member fuchsia.sys2/UseProtocolDecl.target_path string:1024
+table fuchsia.sys2/UseProtocolDecl
+table/member fuchsia.sys2/UseServiceDecl.source fuchsia.sys2/Ref
+table/member fuchsia.sys2/UseServiceDecl.source_name string:100
+table/member fuchsia.sys2/UseServiceDecl.target_path string:1024
+table fuchsia.sys2/UseServiceDecl
+table/member fuchsia.sys2/UseStorageDecl.source_name string:100
+table/member fuchsia.sys2/UseStorageDecl.target_path string:1024
+table fuchsia.sys2/UseStorageDecl
+union/member fuchsia.sys2/Value.bit bool
+union/member fuchsia.sys2/Value.fnum float64
+union/member fuchsia.sys2/Value.inum int64
+union/member fuchsia.sys2/Value.obj fuchsia.sys2/Object
+union/member fuchsia.sys2/Value.str string
+union/member fuchsia.sys2/Value.vec fuchsia.sys2/Vector
+strict union fuchsia.sys2/Value
+struct/member fuchsia.sys2/Vector.values vector<fuchsia.sys2/Value:optional>
+struct fuchsia.sys2/Vector
+table/member fuchsia.sys2/WorkRequest.period int64
+table/member fuchsia.sys2/WorkRequest.start fuchsia.sys2/Start
+table fuchsia.sys2/WorkRequest
+protocol/member fuchsia.sys2/WorkScheduler.CancelWork(string:100 work_id) -> (fuchsia.sys2/WorkScheduler_CancelWork_Result result)
+protocol/member fuchsia.sys2/WorkScheduler.ScheduleWork(string:100 work_id,fuchsia.sys2/WorkRequest work_request) -> (fuchsia.sys2/WorkScheduler_ScheduleWork_Result result)
+protocol fuchsia.sys2/WorkScheduler
+protocol/member fuchsia.sys2/WorkSchedulerControl.GetBatchPeriod() -> (fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Result result)
+protocol/member fuchsia.sys2/WorkSchedulerControl.SetBatchPeriod(int64 batch_period) -> (fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Result result)
+protocol fuchsia.sys2/WorkSchedulerControl
+struct/member fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Response.batch_period int64
+struct fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Response
+union/member fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Result.response fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Response
+strict union fuchsia.sys2/WorkSchedulerControl_GetBatchPeriod_Result
+struct fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Response
+union/member fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Result.response fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Response
+strict union fuchsia.sys2/WorkSchedulerControl_SetBatchPeriod_Result
+struct fuchsia.sys2/WorkScheduler_CancelWork_Response
+union/member fuchsia.sys2/WorkScheduler_CancelWork_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/WorkScheduler_CancelWork_Result.response fuchsia.sys2/WorkScheduler_CancelWork_Response
+strict union fuchsia.sys2/WorkScheduler_CancelWork_Result
+struct fuchsia.sys2/WorkScheduler_ScheduleWork_Response
+union/member fuchsia.sys2/WorkScheduler_ScheduleWork_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/WorkScheduler_ScheduleWork_Result.response fuchsia.sys2/WorkScheduler_ScheduleWork_Response
+strict union fuchsia.sys2/WorkScheduler_ScheduleWork_Result
+protocol/member fuchsia.sys2/Worker.DoWork(string:100 work_id) -> (fuchsia.sys2/Worker_DoWork_Result result)
+protocol fuchsia.sys2/Worker
+struct fuchsia.sys2/Worker_DoWork_Response
+union/member fuchsia.sys2/Worker_DoWork_Result.err fuchsia.component/Error
+union/member fuchsia.sys2/Worker_DoWork_Result.response fuchsia.sys2/Worker_DoWork_Response
+strict union fuchsia.sys2/Worker_DoWork_Result
+library fuchsia.sys2

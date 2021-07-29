@@ -1,0 +1,171 @@
+protocol/member fuchsia.bluetooth.sys/Access.Connect(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Connect_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.Disconnect(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Disconnect_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.Forget(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Forget_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.MakeDiscoverable(server_end:fuchsia.bluetooth.sys/ProcedureToken token) -> (fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.Pair(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingOptions options) -> (fuchsia.bluetooth.sys/Access_Pair_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.SetDeviceClass(fuchsia.bluetooth/DeviceClass device_class)
+protocol/member fuchsia.bluetooth.sys/Access.SetLocalName(string:248 name)
+protocol/member fuchsia.bluetooth.sys/Access.SetPairingDelegate(fuchsia.bluetooth.sys/InputCapability input,fuchsia.bluetooth.sys/OutputCapability output,client_end:fuchsia.bluetooth.sys/PairingDelegate delegate)
+protocol/member fuchsia.bluetooth.sys/Access.StartDiscovery(server_end:fuchsia.bluetooth.sys/ProcedureToken token) -> (fuchsia.bluetooth.sys/Access_StartDiscovery_Result result)
+protocol/member fuchsia.bluetooth.sys/Access.WatchPeers() -> (vector<fuchsia.bluetooth.sys/Peer> updated,vector<fuchsia.bluetooth/PeerId> removed)
+protocol fuchsia.bluetooth.sys/Access
+struct fuchsia.bluetooth.sys/Access_Connect_Response
+union/member fuchsia.bluetooth.sys/Access_Connect_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_Connect_Result.response fuchsia.bluetooth.sys/Access_Connect_Response
+strict union fuchsia.bluetooth.sys/Access_Connect_Result
+struct fuchsia.bluetooth.sys/Access_Disconnect_Response
+union/member fuchsia.bluetooth.sys/Access_Disconnect_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_Disconnect_Result.response fuchsia.bluetooth.sys/Access_Disconnect_Response
+strict union fuchsia.bluetooth.sys/Access_Disconnect_Result
+struct fuchsia.bluetooth.sys/Access_Forget_Response
+union/member fuchsia.bluetooth.sys/Access_Forget_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_Forget_Result.response fuchsia.bluetooth.sys/Access_Forget_Response
+strict union fuchsia.bluetooth.sys/Access_Forget_Result
+struct fuchsia.bluetooth.sys/Access_MakeDiscoverable_Response
+union/member fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result.response fuchsia.bluetooth.sys/Access_MakeDiscoverable_Response
+strict union fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result
+struct fuchsia.bluetooth.sys/Access_Pair_Response
+union/member fuchsia.bluetooth.sys/Access_Pair_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_Pair_Result.response fuchsia.bluetooth.sys/Access_Pair_Response
+strict union fuchsia.bluetooth.sys/Access_Pair_Result
+struct fuchsia.bluetooth.sys/Access_StartDiscovery_Response
+union/member fuchsia.bluetooth.sys/Access_StartDiscovery_Result.err fuchsia.bluetooth.sys/Error
+union/member fuchsia.bluetooth.sys/Access_StartDiscovery_Result.response fuchsia.bluetooth.sys/Access_StartDiscovery_Response
+strict union fuchsia.bluetooth.sys/Access_StartDiscovery_Result
+enum/member fuchsia.bluetooth.sys/BondableMode.BONDABLE 1
+enum/member fuchsia.bluetooth.sys/BondableMode.NON_BONDABLE 2
+strict enum fuchsia.bluetooth.sys/BondableMode uint32
+table/member fuchsia.bluetooth.sys/BondingData.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.sys/BondingData.bredr_bond fuchsia.bluetooth.sys/BredrBondData
+table/member fuchsia.bluetooth.sys/BondingData.identifier fuchsia.bluetooth/PeerId
+table/member fuchsia.bluetooth.sys/BondingData.le_bond fuchsia.bluetooth.sys/LeBondData
+table/member fuchsia.bluetooth.sys/BondingData.local_address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.sys/BondingData.name string:248
+table fuchsia.bluetooth.sys/BondingData
+protocol/member fuchsia.bluetooth.sys/Bootstrap.AddIdentities(vector<fuchsia.bluetooth.sys/Identity> identities)
+protocol/member fuchsia.bluetooth.sys/Bootstrap.Commit() -> (fuchsia.bluetooth.sys/Bootstrap_Commit_Result result)
+protocol fuchsia.bluetooth.sys/Bootstrap
+enum/member fuchsia.bluetooth.sys/BootstrapError.INVALID_HOST_IDENTITY 1
+enum/member fuchsia.bluetooth.sys/BootstrapError.WRITE_FAILURE 2
+strict enum fuchsia.bluetooth.sys/BootstrapError uint32
+struct fuchsia.bluetooth.sys/Bootstrap_Commit_Response
+union/member fuchsia.bluetooth.sys/Bootstrap_Commit_Result.err fuchsia.bluetooth.sys/BootstrapError
+union/member fuchsia.bluetooth.sys/Bootstrap_Commit_Result.response fuchsia.bluetooth.sys/Bootstrap_Commit_Response
+strict union fuchsia.bluetooth.sys/Bootstrap_Commit_Result
+table/member fuchsia.bluetooth.sys/BredrBondData.link_key fuchsia.bluetooth.sys/PeerKey
+table/member fuchsia.bluetooth.sys/BredrBondData.role_preference fuchsia.bluetooth/ConnectionRole
+table/member fuchsia.bluetooth.sys/BredrBondData.services vector<fuchsia.bluetooth/Uuid>:65535
+table fuchsia.bluetooth.sys/BredrBondData
+protocol/member fuchsia.bluetooth.sys/Configuration.Update(fuchsia.bluetooth.sys/Settings settings) -> (fuchsia.bluetooth.sys/Settings result)
+protocol fuchsia.bluetooth.sys/Configuration
+enum/member fuchsia.bluetooth.sys/Error.CANCELED 4
+enum/member fuchsia.bluetooth.sys/Error.FAILED 1
+enum/member fuchsia.bluetooth.sys/Error.INVALID_ARGUMENTS 7
+enum/member fuchsia.bluetooth.sys/Error.IN_PROGRESS 5
+enum/member fuchsia.bluetooth.sys/Error.NOT_SUPPORTED 6
+enum/member fuchsia.bluetooth.sys/Error.PEER_NOT_FOUND 2
+enum/member fuchsia.bluetooth.sys/Error.TIMED_OUT 3
+strict enum fuchsia.bluetooth.sys/Error uint32
+table/member fuchsia.bluetooth.sys/HostData.irk fuchsia.bluetooth.sys/Key
+table fuchsia.bluetooth.sys/HostData
+table/member fuchsia.bluetooth.sys/HostInfo.active bool
+table/member fuchsia.bluetooth.sys/HostInfo.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.sys/HostInfo.discoverable bool
+table/member fuchsia.bluetooth.sys/HostInfo.discovering bool
+table/member fuchsia.bluetooth.sys/HostInfo.id fuchsia.bluetooth/HostId
+table/member fuchsia.bluetooth.sys/HostInfo.local_name string:248
+table/member fuchsia.bluetooth.sys/HostInfo.technology fuchsia.bluetooth.sys/TechnologyType
+table fuchsia.bluetooth.sys/HostInfo
+protocol/member fuchsia.bluetooth.sys/HostWatcher.SetActive(fuchsia.bluetooth/HostId id) -> (fuchsia.bluetooth.sys/HostWatcher_SetActive_Result result)
+protocol/member fuchsia.bluetooth.sys/HostWatcher.Watch() -> (vector<fuchsia.bluetooth.sys/HostInfo> hosts)
+protocol fuchsia.bluetooth.sys/HostWatcher
+struct fuchsia.bluetooth.sys/HostWatcher_SetActive_Response
+union/member fuchsia.bluetooth.sys/HostWatcher_SetActive_Result.err int32
+union/member fuchsia.bluetooth.sys/HostWatcher_SetActive_Result.response fuchsia.bluetooth.sys/HostWatcher_SetActive_Response
+strict union fuchsia.bluetooth.sys/HostWatcher_SetActive_Result
+table/member fuchsia.bluetooth.sys/Identity.bonds vector<fuchsia.bluetooth.sys/BondingData>
+table/member fuchsia.bluetooth.sys/Identity.host fuchsia.bluetooth.sys/HostData
+table fuchsia.bluetooth.sys/Identity
+enum/member fuchsia.bluetooth.sys/InputCapability.CONFIRMATION 2
+enum/member fuchsia.bluetooth.sys/InputCapability.KEYBOARD 3
+enum/member fuchsia.bluetooth.sys/InputCapability.NONE 1
+strict enum fuchsia.bluetooth.sys/InputCapability uint32
+struct/member fuchsia.bluetooth.sys/Key.value array<uint8,16>
+struct fuchsia.bluetooth.sys/Key
+table/member fuchsia.bluetooth.sys/LeBondData.connection_parameters fuchsia.bluetooth.sys/LeConnectionParameters
+table/member fuchsia.bluetooth.sys/LeBondData.csrk fuchsia.bluetooth.sys/PeerKey
+table/member fuchsia.bluetooth.sys/LeBondData.irk fuchsia.bluetooth.sys/PeerKey
+table/member fuchsia.bluetooth.sys/LeBondData.local_ltk fuchsia.bluetooth.sys/Ltk
+table/member fuchsia.bluetooth.sys/LeBondData.peer_ltk fuchsia.bluetooth.sys/Ltk
+table/member fuchsia.bluetooth.sys/LeBondData.services vector<fuchsia.bluetooth/Uuid>:65535
+table fuchsia.bluetooth.sys/LeBondData
+struct/member fuchsia.bluetooth.sys/LeConnectionParameters.connection_interval uint16
+struct/member fuchsia.bluetooth.sys/LeConnectionParameters.connection_latency uint16
+struct/member fuchsia.bluetooth.sys/LeConnectionParameters.supervision_timeout uint16
+struct fuchsia.bluetooth.sys/LeConnectionParameters
+enum/member fuchsia.bluetooth.sys/LeSecurityMode.MODE_1 1
+enum/member fuchsia.bluetooth.sys/LeSecurityMode.SECURE_CONNECTIONS_ONLY 2
+strict enum fuchsia.bluetooth.sys/LeSecurityMode uint32
+struct/member fuchsia.bluetooth.sys/Ltk.ediv uint16
+struct/member fuchsia.bluetooth.sys/Ltk.key fuchsia.bluetooth.sys/PeerKey
+struct/member fuchsia.bluetooth.sys/Ltk.rand uint64
+struct fuchsia.bluetooth.sys/Ltk
+const fuchsia.bluetooth.sys/MAX_PEER_SERVICES uint16 65535
+enum/member fuchsia.bluetooth.sys/OutputCapability.DISPLAY 2
+enum/member fuchsia.bluetooth.sys/OutputCapability.NONE 1
+strict enum fuchsia.bluetooth.sys/OutputCapability uint32
+protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnLocalKeypress -> (fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)
+protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnPairingComplete(fuchsia.bluetooth/PeerId id,bool success)
+protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnPairingRequest(fuchsia.bluetooth.sys/Peer peer,fuchsia.bluetooth.sys/PairingMethod method,uint32 displayed_passkey) -> (bool accept,uint32 entered_passkey)
+protocol/member fuchsia.bluetooth.sys/PairingDelegate.OnRemoteKeypress(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)
+protocol fuchsia.bluetooth.sys/PairingDelegate
+enum/member fuchsia.bluetooth.sys/PairingKeypress.DIGIT_ENTERED 1
+enum/member fuchsia.bluetooth.sys/PairingKeypress.DIGIT_ERASED 2
+enum/member fuchsia.bluetooth.sys/PairingKeypress.PASSKEY_CLEARED 3
+enum/member fuchsia.bluetooth.sys/PairingKeypress.PASSKEY_ENTERED 4
+strict enum fuchsia.bluetooth.sys/PairingKeypress uint32
+enum/member fuchsia.bluetooth.sys/PairingMethod.CONSENT 1
+enum/member fuchsia.bluetooth.sys/PairingMethod.PASSKEY_COMPARISON 3
+enum/member fuchsia.bluetooth.sys/PairingMethod.PASSKEY_DISPLAY 2
+enum/member fuchsia.bluetooth.sys/PairingMethod.PASSKEY_ENTRY 4
+strict enum fuchsia.bluetooth.sys/PairingMethod uint32
+table/member fuchsia.bluetooth.sys/PairingOptions.bondable_mode fuchsia.bluetooth.sys/BondableMode
+table/member fuchsia.bluetooth.sys/PairingOptions.le_security_level fuchsia.bluetooth.sys/PairingSecurityLevel
+table/member fuchsia.bluetooth.sys/PairingOptions.transport fuchsia.bluetooth.sys/TechnologyType
+table fuchsia.bluetooth.sys/PairingOptions
+enum/member fuchsia.bluetooth.sys/PairingSecurityLevel.AUTHENTICATED 2
+enum/member fuchsia.bluetooth.sys/PairingSecurityLevel.ENCRYPTED 1
+strict enum fuchsia.bluetooth.sys/PairingSecurityLevel uint32
+table/member fuchsia.bluetooth.sys/Peer.address fuchsia.bluetooth/Address
+table/member fuchsia.bluetooth.sys/Peer.appearance fuchsia.bluetooth/Appearance
+table/member fuchsia.bluetooth.sys/Peer.bonded bool
+table/member fuchsia.bluetooth.sys/Peer.bredr_services vector<fuchsia.bluetooth/Uuid>:65535
+table/member fuchsia.bluetooth.sys/Peer.connected bool
+table/member fuchsia.bluetooth.sys/Peer.device_class fuchsia.bluetooth/DeviceClass
+table/member fuchsia.bluetooth.sys/Peer.id fuchsia.bluetooth/PeerId
+table/member fuchsia.bluetooth.sys/Peer.le_services vector<fuchsia.bluetooth/Uuid>:65535
+table/member fuchsia.bluetooth.sys/Peer.name string:248
+table/member fuchsia.bluetooth.sys/Peer.rssi int8
+table/member fuchsia.bluetooth.sys/Peer.services vector<fuchsia.bluetooth/Uuid>:65535
+table/member fuchsia.bluetooth.sys/Peer.technology fuchsia.bluetooth.sys/TechnologyType
+table/member fuchsia.bluetooth.sys/Peer.tx_power int8
+table fuchsia.bluetooth.sys/Peer
+struct/member fuchsia.bluetooth.sys/PeerKey.data fuchsia.bluetooth.sys/Key
+struct/member fuchsia.bluetooth.sys/PeerKey.security fuchsia.bluetooth.sys/SecurityProperties
+struct fuchsia.bluetooth.sys/PeerKey
+protocol fuchsia.bluetooth.sys/ProcedureToken
+struct/member fuchsia.bluetooth.sys/SecurityProperties.authenticated bool
+struct/member fuchsia.bluetooth.sys/SecurityProperties.encryption_key_size uint8
+struct/member fuchsia.bluetooth.sys/SecurityProperties.secure_connections bool
+struct fuchsia.bluetooth.sys/SecurityProperties
+table/member fuchsia.bluetooth.sys/Settings.bredr_connectable_mode bool
+table/member fuchsia.bluetooth.sys/Settings.le_background_scan bool
+table/member fuchsia.bluetooth.sys/Settings.le_privacy bool
+table/member fuchsia.bluetooth.sys/Settings.le_security_mode fuchsia.bluetooth.sys/LeSecurityMode
+table fuchsia.bluetooth.sys/Settings
+enum/member fuchsia.bluetooth.sys/TechnologyType.CLASSIC 2
+enum/member fuchsia.bluetooth.sys/TechnologyType.DUAL_MODE 3
+enum/member fuchsia.bluetooth.sys/TechnologyType.LOW_ENERGY 1
+strict enum fuchsia.bluetooth.sys/TechnologyType uint32
+library fuchsia.bluetooth.sys

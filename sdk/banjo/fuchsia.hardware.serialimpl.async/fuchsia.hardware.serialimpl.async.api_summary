@@ -1,0 +1,11 @@
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.CancelAll() -> ()
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.Config(uint32 baud_rate,uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.Enable(bool enable) -> (int32 s)
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.GetInfo() -> (int32 s,fuchsia.hardware.serial/SerialPortInfo info)
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.ReadAsync() -> (int32 s,vector<uint8> buf)
+protocol/member fuchsia.hardware.serialimpl.async/SerialImplAsync.WriteAsync(vector<uint8> buf) -> (int32 s)
+protocol fuchsia.hardware.serialimpl.async/SerialImplAsync
+enum/member fuchsia.hardware.serialimpl.async/SerialState.READABLE 1
+enum/member fuchsia.hardware.serialimpl.async/SerialState.WRITABLE 2
+strict enum fuchsia.hardware.serialimpl.async/SerialState uint32
+library fuchsia.hardware.serialimpl.async

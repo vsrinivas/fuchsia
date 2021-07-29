@@ -1,0 +1,21 @@
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.BITSTREAM 1
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.EIGHT_BIT 2
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.FLAG_INVERT_ENDIAN 32768
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.FLAG_MASK 49152
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.FLAG_UNSIGNED 16384
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.SIXTEEN_BIT 4
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.THIRTY_TWO_BIT 256
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.THIRTY_TWO_BIT_FLOAT 512
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.TWENTY_BIT_IN32 64
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.TWENTY_BIT_PACKED 16
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.TWENTY_FOUR_BIT_IN32 128
+enum/member fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat.TWENTY_FOUR_BIT_PACKED 32
+strict enum fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat uint32
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.flags uint16
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.max_channels uint8
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.max_frames_per_second uint32
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.min_channels uint8
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.min_frames_per_second uint32
+struct/member fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange.sample_formats fuchsia.hardware.audiotypes/AudioTypesAudioSampleFormat
+struct fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange
+library fuchsia.hardware.audiotypes

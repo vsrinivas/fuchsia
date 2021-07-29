@@ -1,0 +1,27 @@
+table/member fuchsia.test/Case.enabled bool
+table/member fuchsia.test/Case.name string:512
+table fuchsia.test/Case
+protocol/member fuchsia.test/CaseIterator.GetNext() -> (vector<fuchsia.test/Case> cases)
+protocol fuchsia.test/CaseIterator
+protocol/member fuchsia.test/CaseListener.Finished(fuchsia.test/Result result)
+protocol fuchsia.test/CaseListener
+table/member fuchsia.test/Invocation.name string:512
+table/member fuchsia.test/Invocation.tag string:512
+table fuchsia.test/Invocation
+table/member fuchsia.test/Result.status fuchsia.test/Status
+table fuchsia.test/Result
+protocol/member fuchsia.test/RunListener.OnFinished()
+protocol/member fuchsia.test/RunListener.OnTestCaseStarted(fuchsia.test/Invocation invocation,zx/handle:SOCKET primary_log,server_end:fuchsia.test/CaseListener listener)
+protocol fuchsia.test/RunListener
+table/member fuchsia.test/RunOptions.arguments vector<string>
+table/member fuchsia.test/RunOptions.include_disabled_tests bool
+table/member fuchsia.test/RunOptions.parallel uint16
+table fuchsia.test/RunOptions
+enum/member fuchsia.test/Status.FAILED 2
+enum/member fuchsia.test/Status.PASSED 1
+enum/member fuchsia.test/Status.SKIPPED 3
+strict enum fuchsia.test/Status uint32
+protocol/member fuchsia.test/Suite.GetTests(server_end:fuchsia.test/CaseIterator iterator)
+protocol/member fuchsia.test/Suite.Run(vector<fuchsia.test/Invocation> tests,fuchsia.test/RunOptions options,client_end:fuchsia.test/RunListener listener)
+protocol fuchsia.test/Suite
+library fuchsia.test

@@ -1,0 +1,10 @@
+enum/member fuchsia.castremotecontrol/LaunchError.INTERNAL 2
+enum/member fuchsia.castremotecontrol/LaunchError.NOT_FOUND 1
+strict enum fuchsia.castremotecontrol/LaunchError uint32
+protocol/member fuchsia.castremotecontrol/Launcher.Launch(string device_id) -> (fuchsia.castremotecontrol/Launcher_Launch_Result result)
+protocol fuchsia.castremotecontrol/Launcher
+struct fuchsia.castremotecontrol/Launcher_Launch_Response
+union/member fuchsia.castremotecontrol/Launcher_Launch_Result.err fuchsia.castremotecontrol/LaunchError
+union/member fuchsia.castremotecontrol/Launcher_Launch_Result.response fuchsia.castremotecontrol/Launcher_Launch_Response
+strict union fuchsia.castremotecontrol/Launcher_Launch_Result
+library fuchsia.castremotecontrol

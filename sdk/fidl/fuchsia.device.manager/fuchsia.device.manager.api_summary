@@ -1,0 +1,169 @@
+bits/member fuchsia.device.manager/AddDeviceConfig.ALLOW_MULTI_COMPOSITE 1
+bits/member fuchsia.device.manager/AddDeviceConfig.SKIP_AUTOBIND 4
+strict bits fuchsia.device.manager/AddDeviceConfig uint32
+protocol/member fuchsia.device.manager/Administrator.Suspend(uint32 flags) -> (int32 status)
+protocol/member fuchsia.device.manager/Administrator.UnregisterSystemStorageForShutdown() -> (int32 status)
+protocol fuchsia.device.manager/Administrator
+const fuchsia.device.manager/BIND_RULES_INSTRUCTIONS_MAX uint32 256
+struct/member fuchsia.device.manager/BindInstruction.arg uint32
+struct/member fuchsia.device.manager/BindInstruction.debug uint32
+struct/member fuchsia.device.manager/BindInstruction.op uint32
+struct fuchsia.device.manager/BindInstruction
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_BIND_NO_DDKADD 2
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_BIND_TIMEOUT 3
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_INTERNAL 7
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_SUSPEND_DDKREMOVE 6
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_NO_DDKREMOVE 4
+enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_TIMEOUT 5
+enum/member fuchsia.device.manager/CompatibilityTestStatus.OK 1
+strict enum fuchsia.device.manager/CompatibilityTestStatus uint32
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.fragments vector<fuchsia.device.manager/DeviceFragment>:16
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.metadata vector<fuchsia.device.manager/DeviceMetadata>:<32,optional>
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.primary_fragment_index uint32
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.props vector<fuchsia.device.manager/DeviceProperty>:256
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.spawn_colocated bool
+struct/member fuchsia.device.manager/CompositeDeviceDescriptor.str_props vector<fuchsia.device.manager/DeviceStrProperty>:256
+struct fuchsia.device.manager/CompositeDeviceDescriptor
+protocol/member fuchsia.device.manager/Coordinator.AddCompositeDevice(string:31 name,fuchsia.device.manager/CompositeDeviceDescriptor comp_desc) -> (fuchsia.device.manager/Coordinator_AddCompositeDevice_Result result)
+protocol/member fuchsia.device.manager/Coordinator.AddDevice(server_end:fuchsia.device.manager/Coordinator coordinator,client_end:fuchsia.device.manager/DeviceController device_controller,fuchsia.device.manager/DevicePropertyList property_list,string:31 name,uint32 protocol_id,string:<1024,optional> driver_path,string:<1024,optional> args,fuchsia.device.manager/AddDeviceConfig device_add_config,bool has_init,zx/handle:<VMO,optional> inspect,zx/handle:<CHANNEL,optional> client_remote) -> (fuchsia.device.manager/Coordinator_AddDevice_Result result)
+protocol/member fuchsia.device.manager/Coordinator.AddMetadata(uint32 key,vector<uint8>:<8192,optional> data) -> (fuchsia.device.manager/Coordinator_AddMetadata_Result result)
+protocol/member fuchsia.device.manager/Coordinator.BindDevice(string:<1024,optional> driver_path) -> (fuchsia.device.manager/Coordinator_BindDevice_Result result)
+protocol/member fuchsia.device.manager/Coordinator.GetMetadata(uint32 key) -> (fuchsia.device.manager/Coordinator_GetMetadata_Result result)
+protocol/member fuchsia.device.manager/Coordinator.GetMetadataSize(uint32 key) -> (fuchsia.device.manager/Coordinator_GetMetadataSize_Result result)
+protocol/member fuchsia.device.manager/Coordinator.GetTopologicalPath() -> (fuchsia.device.manager/Coordinator_GetTopologicalPath_Result result)
+protocol/member fuchsia.device.manager/Coordinator.LoadFirmware(string:1024 driver_path,string:1024 fw_path) -> (fuchsia.device.manager/Coordinator_LoadFirmware_Result result)
+protocol/member fuchsia.device.manager/Coordinator.PublishMetadata(string:1024 device_path,uint32 key,vector<uint8>:<8192,optional> data) -> (fuchsia.device.manager/Coordinator_PublishMetadata_Result result)
+protocol/member fuchsia.device.manager/Coordinator.RunCompatibilityTests(int64 hook_wait_time) -> (fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result result)
+protocol/member fuchsia.device.manager/Coordinator.ScheduleRemove(bool unbind_self)
+protocol/member fuchsia.device.manager/Coordinator.ScheduleUnbindChildren()
+protocol fuchsia.device.manager/Coordinator
+struct fuchsia.device.manager/Coordinator_AddCompositeDevice_Response
+union/member fuchsia.device.manager/Coordinator_AddCompositeDevice_Result.err int32
+union/member fuchsia.device.manager/Coordinator_AddCompositeDevice_Result.response fuchsia.device.manager/Coordinator_AddCompositeDevice_Response
+strict union fuchsia.device.manager/Coordinator_AddCompositeDevice_Result
+struct/member fuchsia.device.manager/Coordinator_AddDevice_Response.local_device_id uint64
+struct fuchsia.device.manager/Coordinator_AddDevice_Response
+union/member fuchsia.device.manager/Coordinator_AddDevice_Result.err int32
+union/member fuchsia.device.manager/Coordinator_AddDevice_Result.response fuchsia.device.manager/Coordinator_AddDevice_Response
+strict union fuchsia.device.manager/Coordinator_AddDevice_Result
+struct fuchsia.device.manager/Coordinator_AddMetadata_Response
+union/member fuchsia.device.manager/Coordinator_AddMetadata_Result.err int32
+union/member fuchsia.device.manager/Coordinator_AddMetadata_Result.response fuchsia.device.manager/Coordinator_AddMetadata_Response
+strict union fuchsia.device.manager/Coordinator_AddMetadata_Result
+struct fuchsia.device.manager/Coordinator_BindDevice_Response
+union/member fuchsia.device.manager/Coordinator_BindDevice_Result.err int32
+union/member fuchsia.device.manager/Coordinator_BindDevice_Result.response fuchsia.device.manager/Coordinator_BindDevice_Response
+strict union fuchsia.device.manager/Coordinator_BindDevice_Result
+struct/member fuchsia.device.manager/Coordinator_GetMetadataSize_Response.size uint64
+struct fuchsia.device.manager/Coordinator_GetMetadataSize_Response
+union/member fuchsia.device.manager/Coordinator_GetMetadataSize_Result.err int32
+union/member fuchsia.device.manager/Coordinator_GetMetadataSize_Result.response fuchsia.device.manager/Coordinator_GetMetadataSize_Response
+strict union fuchsia.device.manager/Coordinator_GetMetadataSize_Result
+struct/member fuchsia.device.manager/Coordinator_GetMetadata_Response.data vector<uint8>:8192
+struct fuchsia.device.manager/Coordinator_GetMetadata_Response
+union/member fuchsia.device.manager/Coordinator_GetMetadata_Result.err int32
+union/member fuchsia.device.manager/Coordinator_GetMetadata_Result.response fuchsia.device.manager/Coordinator_GetMetadata_Response
+strict union fuchsia.device.manager/Coordinator_GetMetadata_Result
+struct/member fuchsia.device.manager/Coordinator_GetTopologicalPath_Response.path string:1024
+struct fuchsia.device.manager/Coordinator_GetTopologicalPath_Response
+union/member fuchsia.device.manager/Coordinator_GetTopologicalPath_Result.err int32
+union/member fuchsia.device.manager/Coordinator_GetTopologicalPath_Result.response fuchsia.device.manager/Coordinator_GetTopologicalPath_Response
+strict union fuchsia.device.manager/Coordinator_GetTopologicalPath_Result
+struct/member fuchsia.device.manager/Coordinator_LoadFirmware_Response.size uint64
+struct/member fuchsia.device.manager/Coordinator_LoadFirmware_Response.vmo zx/handle:VMO
+resource struct fuchsia.device.manager/Coordinator_LoadFirmware_Response
+union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.err int32
+union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.response fuchsia.device.manager/Coordinator_LoadFirmware_Response
+resource strict union fuchsia.device.manager/Coordinator_LoadFirmware_Result
+struct fuchsia.device.manager/Coordinator_PublishMetadata_Response
+union/member fuchsia.device.manager/Coordinator_PublishMetadata_Result.err int32
+union/member fuchsia.device.manager/Coordinator_PublishMetadata_Result.response fuchsia.device.manager/Coordinator_PublishMetadata_Response
+strict union fuchsia.device.manager/Coordinator_PublishMetadata_Result
+struct/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response.status fuchsia.device.manager/CompatibilityTestStatus
+struct fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response
+union/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result.err int32
+union/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result.response fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response
+strict union fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result
+const fuchsia.device.manager/DEVICE_ARGS_MAX uint32 1024
+const fuchsia.device.manager/DEVICE_FRAGMENT_PARTS_MAX uint32 16
+const fuchsia.device.manager/DEVICE_FRAGMENT_PART_INSTRUCTIONS_MAX uint32 32
+const fuchsia.device.manager/DEVICE_NAME_MAX uint32 31
+const fuchsia.device.manager/DEVICE_PATH_MAX uint32 1024
+protocol/member fuchsia.device.manager/DebugDumper.DumpBindingProperties(zx/handle:VMO output) -> (int32 status,uint64 written,uint64 available)
+protocol/member fuchsia.device.manager/DebugDumper.DumpDrivers(zx/handle:VMO output) -> (int32 status,uint64 written,uint64 available)
+protocol/member fuchsia.device.manager/DebugDumper.DumpTree(zx/handle:VMO output) -> (int32 status,uint64 written,uint64 available)
+protocol fuchsia.device.manager/DebugDumper
+protocol/member fuchsia.device.manager/DeviceController.BindDriver(string:1024 driver_path,zx/handle:VMO driver) -> (int32 status,zx/handle:<CHANNEL,optional> test_output)
+protocol/member fuchsia.device.manager/DeviceController.CompleteRemoval() -> (fuchsia.device.manager/DeviceController_CompleteRemoval_Result result)
+protocol/member fuchsia.device.manager/DeviceController.ConnectProxy(zx/handle:CHANNEL shadow)
+protocol/member fuchsia.device.manager/DeviceController.Init() -> (int32 status)
+protocol/member fuchsia.device.manager/DeviceController.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.device.manager/DeviceController.Resume(uint32 target_system_state) -> (int32 status)
+protocol/member fuchsia.device.manager/DeviceController.Suspend(uint32 flags) -> (int32 status)
+protocol/member fuchsia.device.manager/DeviceController.Unbind() -> (fuchsia.device.manager/DeviceController_Unbind_Result result)
+protocol fuchsia.device.manager/DeviceController
+struct fuchsia.device.manager/DeviceController_CompleteRemoval_Response
+union/member fuchsia.device.manager/DeviceController_CompleteRemoval_Result.err int32
+union/member fuchsia.device.manager/DeviceController_CompleteRemoval_Result.response fuchsia.device.manager/DeviceController_CompleteRemoval_Response
+strict union fuchsia.device.manager/DeviceController_CompleteRemoval_Result
+struct fuchsia.device.manager/DeviceController_Unbind_Response
+union/member fuchsia.device.manager/DeviceController_Unbind_Result.err int32
+union/member fuchsia.device.manager/DeviceController_Unbind_Result.response fuchsia.device.manager/DeviceController_Unbind_Response
+strict union fuchsia.device.manager/DeviceController_Unbind_Result
+struct/member fuchsia.device.manager/DeviceFragment.name string:32
+struct/member fuchsia.device.manager/DeviceFragment.parts vector<fuchsia.device.manager/DeviceFragmentPart>:16
+struct fuchsia.device.manager/DeviceFragment
+struct/member fuchsia.device.manager/DeviceFragmentPart.match_program vector<fuchsia.device.manager/BindInstruction>:32
+struct fuchsia.device.manager/DeviceFragmentPart
+struct/member fuchsia.device.manager/DeviceMetadata.data vector<uint8>:8192
+struct/member fuchsia.device.manager/DeviceMetadata.key uint32
+struct fuchsia.device.manager/DeviceMetadata
+struct/member fuchsia.device.manager/DeviceProperty.id uint16
+struct/member fuchsia.device.manager/DeviceProperty.reserved uint16
+struct/member fuchsia.device.manager/DeviceProperty.value uint32
+struct fuchsia.device.manager/DeviceProperty
+struct/member fuchsia.device.manager/DevicePropertyList.props vector<fuchsia.device.manager/DeviceProperty>:256
+struct/member fuchsia.device.manager/DevicePropertyList.str_props vector<fuchsia.device.manager/DeviceStrProperty>:256
+struct fuchsia.device.manager/DevicePropertyList
+struct/member fuchsia.device.manager/DeviceStrProperty.key string:255
+struct/member fuchsia.device.manager/DeviceStrProperty.value fuchsia.device.manager/PropertyValue
+struct fuchsia.device.manager/DeviceStrProperty
+protocol/member fuchsia.device.manager/DeviceWatcher.NextDevice() -> (fuchsia.device.manager/DeviceWatcher_NextDevice_Result result)
+protocol fuchsia.device.manager/DeviceWatcher
+struct/member fuchsia.device.manager/DeviceWatcher_NextDevice_Response.device zx/handle:CHANNEL
+resource struct fuchsia.device.manager/DeviceWatcher_NextDevice_Response
+union/member fuchsia.device.manager/DeviceWatcher_NextDevice_Result.err int32
+union/member fuchsia.device.manager/DeviceWatcher_NextDevice_Result.response fuchsia.device.manager/DeviceWatcher_NextDevice_Response
+resource strict union fuchsia.device.manager/DeviceWatcher_NextDevice_Result
+protocol/member fuchsia.device.manager/DriverHostController.CreateCompositeDevice(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,vector<fuchsia.device.manager/Fragment>:16 fragments,string:31 name,uint64 local_device_id) -> (int32 status)
+protocol/member fuchsia.device.manager/DriverHostController.CreateDevice(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,string:1024 driver_path,zx/handle:VMO driver,zx/handle:optional parent_proxy,string:<1024,optional> proxy_args,uint64 local_device_id)
+protocol/member fuchsia.device.manager/DriverHostController.CreateDeviceStub(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,uint32 protocol_id,uint64 local_device_id)
+protocol/member fuchsia.device.manager/DriverHostController.Restart() -> (int32 status)
+protocol fuchsia.device.manager/DriverHostController
+const fuchsia.device.manager/FRAGMENTS_MAX uint32 16
+const fuchsia.device.manager/FRAGMENT_NAME_MAX uint32 32
+struct/member fuchsia.device.manager/Fragment.id uint64
+struct/member fuchsia.device.manager/Fragment.name string:32
+struct fuchsia.device.manager/Fragment
+const fuchsia.device.manager/METADATA_BYTES_MAX uint32 8192
+const fuchsia.device.manager/METADATA_MAX uint32 32
+const fuchsia.device.manager/PROPERTIES_MAX uint32 256
+union/member fuchsia.device.manager/PropertyValue.bool_value bool
+union/member fuchsia.device.manager/PropertyValue.int_value uint32
+union/member fuchsia.device.manager/PropertyValue.str_value string:255
+strict union fuchsia.device.manager/PropertyValue
+const fuchsia.device.manager/STR_LENGTH_MAX uint32 255
+const fuchsia.device.manager/STR_PROPERTIES_MAX uint32 256
+const fuchsia.device.manager/SUSPEND_FLAG_MEXEC uint32 3705406208
+const fuchsia.device.manager/SUSPEND_FLAG_POWEROFF uint32 3705405952
+const fuchsia.device.manager/SUSPEND_FLAG_REBOOT uint32 3705405696
+const fuchsia.device.manager/SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 3705405697
+const fuchsia.device.manager/SUSPEND_FLAG_REBOOT_RECOVERY uint32 3705405698
+const fuchsia.device.manager/SUSPEND_FLAG_SUSPEND_RAM uint32 3705406464
+protocol/member fuchsia.device.manager/SystemStateTransition.SetTerminationSystemState(fuchsia.hardware.power.statecontrol/SystemPowerState state) -> (fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result result)
+protocol fuchsia.device.manager/SystemStateTransition
+struct fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Response
+union/member fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result.err int32
+union/member fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result.response fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Response
+strict union fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result
+library fuchsia.device.manager

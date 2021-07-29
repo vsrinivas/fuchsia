@@ -1,0 +1,16 @@
+enum/member fuchsia.telephony.snoop/Direction.FROM_MODEM 1
+enum/member fuchsia.telephony.snoop/Direction.TO_MODEM 2
+strict enum fuchsia.telephony.snoop/Direction uint32
+union/member fuchsia.telephony.snoop/Message.qmi_message fuchsia.telephony.snoop/QmiMessage
+strict union fuchsia.telephony.snoop/Message
+protocol/member fuchsia.telephony.snoop/Publisher.SendMessage(fuchsia.telephony.snoop/Message msg)
+protocol fuchsia.telephony.snoop/Publisher
+struct/member fuchsia.telephony.snoop/QmiMessage.direction fuchsia.telephony.snoop/Direction
+struct/member fuchsia.telephony.snoop/QmiMessage.is_partial_copy bool
+struct/member fuchsia.telephony.snoop/QmiMessage.opaque_bytes array<uint8,256>
+struct/member fuchsia.telephony.snoop/QmiMessage.timestamp int64
+struct fuchsia.telephony.snoop/QmiMessage
+protocol/member fuchsia.telephony.snoop/Snooper.GetDeviceNum() -> (uint32 device_num)
+protocol/member fuchsia.telephony.snoop/Snooper.OnMessage -> (fuchsia.telephony.snoop/Message msg)
+protocol fuchsia.telephony.snoop/Snooper
+library fuchsia.telephony.snoop

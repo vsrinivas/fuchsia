@@ -1,0 +1,26 @@
+protocol/member fuchsia.boot/Arguments.Collect(string:64 prefix) -> (vector<string:193>:32 results)
+protocol/member fuchsia.boot/Arguments.GetBool(string:64 key,bool defaultval) -> (bool value)
+protocol/member fuchsia.boot/Arguments.GetBools(vector<fuchsia.boot/BoolPair>:32 keys) -> (vector<bool>:32 values)
+protocol/member fuchsia.boot/Arguments.GetString(string:64 key) -> (string:<128,optional> value)
+protocol/member fuchsia.boot/Arguments.GetStrings(vector<string:64>:32 keys) -> (vector<string:<128,optional>>:193 values)
+protocol fuchsia.boot/Arguments
+struct/member fuchsia.boot/BoolPair.defaultval bool
+struct/member fuchsia.boot/BoolPair.key string:64
+struct fuchsia.boot/BoolPair
+protocol/member fuchsia.boot/FactoryItems.Get(uint32 extra) -> (zx/handle:<VMO,optional> payload,uint32 length)
+protocol fuchsia.boot/FactoryItems
+protocol/member fuchsia.boot/Items.Get(uint32 type,uint32 extra) -> (zx/handle:<VMO,optional> payload,uint32 length)
+protocol/member fuchsia.boot/Items.GetBootloaderFile(string:255 filename) -> (zx/handle:<VMO,optional> payload)
+protocol fuchsia.boot/Items
+const fuchsia.boot/MAX_ARGS_COLLECT_LENGTH uint8 193
+const fuchsia.boot/MAX_ARGS_NAME_LENGTH uint8 64
+const fuchsia.boot/MAX_ARGS_VALUE_LENGTH uint8 128
+const fuchsia.boot/MAX_ARGS_VECTOR_LENGTH uint8 32
+const fuchsia.boot/MAX_FILE_NAME_LENGTH uint8 255
+protocol/member fuchsia.boot/ReadOnlyLog.Get() -> (zx/handle:DEBUGLOG log)
+protocol fuchsia.boot/ReadOnlyLog
+protocol/member fuchsia.boot/RootResource.Get() -> (zx/handle:RESOURCE resource)
+protocol fuchsia.boot/RootResource
+protocol/member fuchsia.boot/WriteOnlyLog.Get() -> (zx/handle:DEBUGLOG log)
+protocol fuchsia.boot/WriteOnlyLog
+library fuchsia.boot

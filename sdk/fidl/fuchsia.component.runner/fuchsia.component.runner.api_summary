@@ -1,0 +1,19 @@
+protocol/member fuchsia.component.runner/ComponentController.Kill()
+protocol/member fuchsia.component.runner/ComponentController.OnPublishDiagnostics -> (fuchsia.diagnostics.types/ComponentDiagnostics payload)
+protocol/member fuchsia.component.runner/ComponentController.Stop()
+protocol fuchsia.component.runner/ComponentController
+table/member fuchsia.component.runner/ComponentNamespaceEntry.directory fuchsia.io/Directory
+table/member fuchsia.component.runner/ComponentNamespaceEntry.path string:1024
+resource table fuchsia.component.runner/ComponentNamespaceEntry
+protocol/member fuchsia.component.runner/ComponentRunner.Start(fuchsia.component.runner/ComponentStartInfo start_info,server_end:fuchsia.component.runner/ComponentController controller)
+protocol fuchsia.component.runner/ComponentRunner
+table/member fuchsia.component.runner/ComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
+table/member fuchsia.component.runner/ComponentStartInfo.numbered_handles vector<fuchsia.process/HandleInfo>:128
+table/member fuchsia.component.runner/ComponentStartInfo.outgoing_dir server_end:fuchsia.io/Directory
+table/member fuchsia.component.runner/ComponentStartInfo.program fuchsia.data/Dictionary
+table/member fuchsia.component.runner/ComponentStartInfo.resolved_url string:4096
+table/member fuchsia.component.runner/ComponentStartInfo.runtime_dir server_end:fuchsia.io/Directory
+resource table fuchsia.component.runner/ComponentStartInfo
+const fuchsia.component.runner/MAX_HANDLE_COUNT uint32 128
+const fuchsia.component.runner/MAX_NAMESPACE_COUNT uint32 32
+library fuchsia.component.runner

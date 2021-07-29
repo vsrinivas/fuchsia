@@ -1,0 +1,101 @@
+protocol/member fuchsia.device/Controller.Bind(string:1024 driver) -> (fuchsia.device/Controller_Bind_Result result)
+protocol/member fuchsia.device/Controller.ConfigureAutoSuspend(bool enable,fuchsia.device/DevicePowerState requested_deepest_sleep_state) -> (int32 status)
+protocol/member fuchsia.device/Controller.GetCurrentPerformanceState() -> (uint32 out_state)
+protocol/member fuchsia.device/Controller.GetDeviceName() -> (string:32 name)
+protocol/member fuchsia.device/Controller.GetDevicePerformanceStates() -> (array<fuchsia.device/DevicePerformanceStateInfo,20> states,int32 status)
+protocol/member fuchsia.device/Controller.GetDevicePowerCaps() -> (fuchsia.device/Controller_GetDevicePowerCaps_Result result)
+protocol/member fuchsia.device/Controller.GetDriverLogFlags() -> (int32 status,uint32 flags)
+protocol/member fuchsia.device/Controller.GetDriverName() -> (int32 status,string:<32,optional> name)
+protocol/member fuchsia.device/Controller.GetEventHandle() -> (int32 status,zx/handle:<EVENT,optional> event)
+protocol/member fuchsia.device/Controller.GetPowerStateMapping() -> (fuchsia.device/Controller_GetPowerStateMapping_Result result)
+protocol/member fuchsia.device/Controller.GetTopologicalPath() -> (fuchsia.device/Controller_GetTopologicalPath_Result result)
+protocol/member fuchsia.device/Controller.Rebind(string:1024 driver) -> (fuchsia.device/Controller_Rebind_Result result)
+protocol/member fuchsia.device/Controller.Resume() -> (int32 status,fuchsia.device/DevicePowerState out_power_state,uint32 out_perf_state)
+protocol/member fuchsia.device/Controller.RunCompatibilityTests(int64 hook_wait_time) -> (uint32 status)
+protocol/member fuchsia.device/Controller.ScheduleUnbind() -> (fuchsia.device/Controller_ScheduleUnbind_Result result)
+protocol/member fuchsia.device/Controller.SetDriverLogFlags(uint32 clear_flags,uint32 set_flags) -> (int32 status)
+protocol/member fuchsia.device/Controller.SetPerformanceState(uint32 requested_state) -> (int32 status,uint32 out_state)
+protocol/member fuchsia.device/Controller.Suspend(fuchsia.device/DevicePowerState requested_state) -> (int32 status,fuchsia.device/DevicePowerState out_state)
+protocol/member fuchsia.device/Controller.UnbindChildren() -> (fuchsia.device/Controller_UnbindChildren_Result result)
+protocol/member fuchsia.device/Controller.UpdatePowerStateMapping(array<fuchsia.device/SystemPowerStateInfo,7> mapping) -> (fuchsia.device/Controller_UpdatePowerStateMapping_Result result)
+protocol fuchsia.device/Controller
+struct fuchsia.device/Controller_Bind_Response
+union/member fuchsia.device/Controller_Bind_Result.err int32
+union/member fuchsia.device/Controller_Bind_Result.response fuchsia.device/Controller_Bind_Response
+strict union fuchsia.device/Controller_Bind_Result
+struct/member fuchsia.device/Controller_GetDevicePowerCaps_Response.dpstates array<fuchsia.device/DevicePowerStateInfo,5>
+struct fuchsia.device/Controller_GetDevicePowerCaps_Response
+union/member fuchsia.device/Controller_GetDevicePowerCaps_Result.err int32
+union/member fuchsia.device/Controller_GetDevicePowerCaps_Result.response fuchsia.device/Controller_GetDevicePowerCaps_Response
+strict union fuchsia.device/Controller_GetDevicePowerCaps_Result
+struct/member fuchsia.device/Controller_GetPowerStateMapping_Response.mapping array<fuchsia.device/SystemPowerStateInfo,7>
+struct fuchsia.device/Controller_GetPowerStateMapping_Response
+union/member fuchsia.device/Controller_GetPowerStateMapping_Result.err int32
+union/member fuchsia.device/Controller_GetPowerStateMapping_Result.response fuchsia.device/Controller_GetPowerStateMapping_Response
+strict union fuchsia.device/Controller_GetPowerStateMapping_Result
+struct/member fuchsia.device/Controller_GetTopologicalPath_Response.path string:1024
+struct fuchsia.device/Controller_GetTopologicalPath_Response
+union/member fuchsia.device/Controller_GetTopologicalPath_Result.err int32
+union/member fuchsia.device/Controller_GetTopologicalPath_Result.response fuchsia.device/Controller_GetTopologicalPath_Response
+strict union fuchsia.device/Controller_GetTopologicalPath_Result
+struct fuchsia.device/Controller_Rebind_Response
+union/member fuchsia.device/Controller_Rebind_Result.err int32
+union/member fuchsia.device/Controller_Rebind_Result.response fuchsia.device/Controller_Rebind_Response
+strict union fuchsia.device/Controller_Rebind_Result
+struct fuchsia.device/Controller_ScheduleUnbind_Response
+union/member fuchsia.device/Controller_ScheduleUnbind_Result.err int32
+union/member fuchsia.device/Controller_ScheduleUnbind_Result.response fuchsia.device/Controller_ScheduleUnbind_Response
+strict union fuchsia.device/Controller_ScheduleUnbind_Result
+struct fuchsia.device/Controller_UnbindChildren_Response
+union/member fuchsia.device/Controller_UnbindChildren_Result.err int32
+union/member fuchsia.device/Controller_UnbindChildren_Result.response fuchsia.device/Controller_UnbindChildren_Response
+strict union fuchsia.device/Controller_UnbindChildren_Result
+struct fuchsia.device/Controller_UpdatePowerStateMapping_Response
+union/member fuchsia.device/Controller_UpdatePowerStateMapping_Result.err int32
+union/member fuchsia.device/Controller_UpdatePowerStateMapping_Result.response fuchsia.device/Controller_UpdatePowerStateMapping_Response
+strict union fuchsia.device/Controller_UpdatePowerStateMapping_Result
+const fuchsia.device/DEFAULT_DEVICE_NAME string "fuchsia"
+const fuchsia.device/DEVICE_NAME_MAX uint32 255
+const fuchsia.device/DEVICE_PERFORMANCE_STATE_P0 uint32 0
+const fuchsia.device/DEVICE_SIGNAL_ERROR uint32 134217728
+const fuchsia.device/DEVICE_SIGNAL_HANGUP uint32 268435456
+const fuchsia.device/DEVICE_SIGNAL_OOB uint32 33554432
+const fuchsia.device/DEVICE_SIGNAL_READABLE uint32 16777216
+const fuchsia.device/DEVICE_SIGNAL_WRITABLE uint32 67108864
+struct/member fuchsia.device/DevicePerformanceStateInfo.is_supported bool
+struct/member fuchsia.device/DevicePerformanceStateInfo.restore_latency int64
+struct/member fuchsia.device/DevicePerformanceStateInfo.state_id int32
+struct fuchsia.device/DevicePerformanceStateInfo
+enum/member fuchsia.device/DevicePowerState.DEVICE_POWER_STATE_D0 0
+enum/member fuchsia.device/DevicePowerState.DEVICE_POWER_STATE_D1 1
+enum/member fuchsia.device/DevicePowerState.DEVICE_POWER_STATE_D2 2
+enum/member fuchsia.device/DevicePowerState.DEVICE_POWER_STATE_D3COLD 4
+enum/member fuchsia.device/DevicePowerState.DEVICE_POWER_STATE_D3HOT 3
+strict enum fuchsia.device/DevicePowerState uint8
+struct/member fuchsia.device/DevicePowerStateInfo.is_supported bool
+struct/member fuchsia.device/DevicePowerStateInfo.restore_latency int64
+struct/member fuchsia.device/DevicePowerStateInfo.state_id fuchsia.device/DevicePowerState
+struct/member fuchsia.device/DevicePowerStateInfo.system_wake_state int32
+struct/member fuchsia.device/DevicePowerStateInfo.wakeup_capable bool
+struct fuchsia.device/DevicePowerStateInfo
+const fuchsia.device/MAX_DEVICE_NAME_LEN uint64 32
+const fuchsia.device/MAX_DEVICE_PATH_LEN uint64 1024
+const fuchsia.device/MAX_DEVICE_PERFORMANCE_STATES uint32 20
+const fuchsia.device/MAX_DEVICE_POWER_STATES uint32 5
+const fuchsia.device/MAX_DRIVER_NAME_LEN uint64 32
+const fuchsia.device/MAX_DRIVER_PATH_LEN uint64 1024
+const fuchsia.device/MIN_DEVICE_PERFORMANCE_STATES uint32 1
+const fuchsia.device/MIN_DEVICE_POWER_STATES uint32 2
+protocol/member fuchsia.device/NameProvider.GetDeviceName() -> (fuchsia.device/NameProvider_GetDeviceName_Result result)
+protocol fuchsia.device/NameProvider
+struct/member fuchsia.device/NameProvider_GetDeviceName_Response.name string:255
+struct fuchsia.device/NameProvider_GetDeviceName_Response
+union/member fuchsia.device/NameProvider_GetDeviceName_Result.err int32
+union/member fuchsia.device/NameProvider_GetDeviceName_Result.response fuchsia.device/NameProvider_GetDeviceName_Response
+strict union fuchsia.device/NameProvider_GetDeviceName_Result
+struct/member fuchsia.device/SystemPowerStateInfo.dev_state fuchsia.device/DevicePowerState
+struct/member fuchsia.device/SystemPowerStateInfo.performance_state uint32
+struct/member fuchsia.device/SystemPowerStateInfo.suspend_flag uint32
+struct/member fuchsia.device/SystemPowerStateInfo.wakeup_enable bool
+struct fuchsia.device/SystemPowerStateInfo
+library fuchsia.device

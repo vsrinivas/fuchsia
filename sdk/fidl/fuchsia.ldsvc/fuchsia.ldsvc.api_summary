@@ -1,0 +1,6 @@
+protocol/member fuchsia.ldsvc/Loader.Clone(server_end:fuchsia.ldsvc/Loader loader) -> (int32 rv)
+protocol/member fuchsia.ldsvc/Loader.Config(string:1024 config) -> (int32 rv)
+protocol/member fuchsia.ldsvc/Loader.Done()
+protocol/member fuchsia.ldsvc/Loader.LoadObject(string:1024 object_name) -> (int32 rv,zx/handle:<VMO,optional> object)
+protocol fuchsia.ldsvc/Loader
+library fuchsia.ldsvc

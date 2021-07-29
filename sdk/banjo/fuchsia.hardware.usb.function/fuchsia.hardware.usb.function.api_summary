@@ -1,0 +1,19 @@
+protocol/member fuchsia.hardware.usb.function/UsbFunction.AllocEp(uint8 direction) -> (int32 s,uint8 address)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.AllocInterface() -> (int32 s,uint8 intf_num)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.AllocStringDesc(string string) -> (int32 s,uint8 index)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.CancelAll(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.ConfigEp(fuchsia.hardware.usb.descriptor/UsbEndpointDescriptor ep_desc,fuchsia.hardware.usb.descriptor/UsbSsEpCompDescriptor ss_comp_desc) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.DisableEp(uint8 address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.EpClearStall(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.EpSetStall(uint8 ep_address) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.GetRequestSize() -> (uint64 size)
+protocol/member fuchsia.hardware.usb.function/UsbFunction.RequestQueue(fuchsia.hardware.usb.request/UsbRequest usb_request,fuchsia.hardware.usb.request/UsbRequestCompleteCallback complete_cb) -> ()
+protocol/member fuchsia.hardware.usb.function/UsbFunction.SetInterface(client_end:fuchsia.hardware.usb.function/UsbFunctionInterface interface) -> (int32 s)
+protocol fuchsia.hardware.usb.function/UsbFunction
+protocol/member fuchsia.hardware.usb.function/UsbFunctionInterface.Control(fuchsia.hardware.usb.descriptor/UsbSetup setup,vector<uint8> write) -> (int32 status,vector<uint8> read)
+protocol/member fuchsia.hardware.usb.function/UsbFunctionInterface.GetDescriptors() -> (vector<uint8> descriptors)
+protocol/member fuchsia.hardware.usb.function/UsbFunctionInterface.GetDescriptorsSize() -> (uint64 size)
+protocol/member fuchsia.hardware.usb.function/UsbFunctionInterface.SetConfigured(bool configured,fuchsia.hardware.usb.descriptor/UsbSpeed speed) -> (int32 s)
+protocol/member fuchsia.hardware.usb.function/UsbFunctionInterface.SetInterface(uint8 interface,uint8 alt_setting) -> (int32 s)
+protocol fuchsia.hardware.usb.function/UsbFunctionInterface
+library fuchsia.hardware.usb.function

@@ -1,0 +1,201 @@
+protocol/member fuchsia.identity.account/Account.CreateAuthMechanismEnrollment(string:2083 auth_mechanism_id) -> (fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Result result)
+protocol/member fuchsia.identity.account/Account.GetAccountName() -> (string:128 name)
+protocol/member fuchsia.identity.account/Account.GetAuthMechanismEnrollments() -> (fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Result result)
+protocol/member fuchsia.identity.account/Account.GetAuthState(fuchsia.identity.account/Scenario scenario) -> (fuchsia.identity.account/AuthTarget_GetAuthState_Result result)
+protocol/member fuchsia.identity.account/Account.GetDataDirectory(server_end:fuchsia.io/Directory data_directory) -> (fuchsia.identity.account/Account_GetDataDirectory_Result result)
+protocol/member fuchsia.identity.account/Account.GetDefaultPersona(server_end:fuchsia.identity.account/Persona persona) -> (fuchsia.identity.account/Account_GetDefaultPersona_Result result)
+protocol/member fuchsia.identity.account/Account.GetLifetime() -> (fuchsia.identity.account/Lifetime lifetime)
+protocol/member fuchsia.identity.account/Account.GetPersona(uint64 id,server_end:fuchsia.identity.account/Persona persona) -> (fuchsia.identity.account/Account_GetPersona_Result result)
+protocol/member fuchsia.identity.account/Account.GetPersonaIds() -> (vector<uint64>:128 persona_ids)
+protocol/member fuchsia.identity.account/Account.GetRecoveryAccount() -> (fuchsia.identity.account/Account_GetRecoveryAccount_Result result)
+protocol/member fuchsia.identity.account/Account.Lock() -> (fuchsia.identity.account/Account_Lock_Result result)
+protocol/member fuchsia.identity.account/Account.RegisterAuthListener(fuchsia.identity.account/Scenario scenario,client_end:fuchsia.identity.account/AuthListener listener,bool initial_state,fuchsia.identity.account/AuthChangeGranularity granularity) -> (fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result result)
+protocol/member fuchsia.identity.account/Account.RemoveAuthMechanismEnrollment(uint64 enrollment_id) -> (fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Result result)
+protocol/member fuchsia.identity.account/Account.SetRecoveryAccount(fuchsia.auth/ServiceProviderAccount account) -> (fuchsia.identity.account/Account_SetRecoveryAccount_Result result)
+protocol fuchsia.identity.account/Account
+struct/member fuchsia.identity.account/AccountAuthState.account_id uint64
+struct/member fuchsia.identity.account/AccountAuthState.auth_state fuchsia.identity.account/AuthState
+struct fuchsia.identity.account/AccountAuthState
+protocol/member fuchsia.identity.account/AccountListener.OnAccountAdded(fuchsia.identity.account/InitialAccountState account_state) -> ()
+protocol/member fuchsia.identity.account/AccountListener.OnAccountRemoved(uint64 account_id) -> ()
+protocol/member fuchsia.identity.account/AccountListener.OnAuthStateChanged(fuchsia.identity.account/AccountAuthState account_auth_state) -> ()
+protocol/member fuchsia.identity.account/AccountListener.OnInitialize(vector<fuchsia.identity.account/InitialAccountState>:128 account_states) -> ()
+protocol fuchsia.identity.account/AccountListener
+struct/member fuchsia.identity.account/AccountListenerOptions.add_account bool
+struct/member fuchsia.identity.account/AccountListenerOptions.granularity box<fuchsia.identity.account/AuthChangeGranularity>
+struct/member fuchsia.identity.account/AccountListenerOptions.initial_state bool
+struct/member fuchsia.identity.account/AccountListenerOptions.remove_account bool
+struct/member fuchsia.identity.account/AccountListenerOptions.scenario box<fuchsia.identity.account/Scenario>
+struct fuchsia.identity.account/AccountListenerOptions
+protocol/member fuchsia.identity.account/AccountManager.GetAccount(uint64 id,fuchsia.auth/AuthenticationContextProvider context_provider,server_end:fuchsia.identity.account/Account account) -> (fuchsia.identity.account/AccountManager_GetAccount_Result result)
+protocol/member fuchsia.identity.account/AccountManager.GetAccountAuthStates(fuchsia.identity.account/Scenario scenario) -> (fuchsia.identity.account/AccountManager_GetAccountAuthStates_Result result)
+protocol/member fuchsia.identity.account/AccountManager.GetAccountIds() -> (vector<uint64>:128 account_ids)
+protocol/member fuchsia.identity.account/AccountManager.GetAuthenticationMechanisms() -> (fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Result result)
+protocol/member fuchsia.identity.account/AccountManager.ProvisionFromAuthProvider(fuchsia.auth/AuthenticationContextProvider auth_context_provider,string:128 auth_provider_type,fuchsia.identity.account/Lifetime lifetime,string:<2083,optional> auth_mechanism_id) -> (fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Result result)
+protocol/member fuchsia.identity.account/AccountManager.ProvisionNewAccount(fuchsia.identity.account/Lifetime lifetime,string:<2083,optional> auth_mechanism_id) -> (fuchsia.identity.account/AccountManager_ProvisionNewAccount_Result result)
+protocol/member fuchsia.identity.account/AccountManager.RegisterAccountListener(client_end:fuchsia.identity.account/AccountListener listener,fuchsia.identity.account/AccountListenerOptions options) -> (fuchsia.identity.account/AccountManager_RegisterAccountListener_Result result)
+protocol/member fuchsia.identity.account/AccountManager.RemoveAccount(uint64 id,bool force) -> (fuchsia.identity.account/AccountManager_RemoveAccount_Result result)
+protocol fuchsia.identity.account/AccountManager
+struct/member fuchsia.identity.account/AccountManager_GetAccountAuthStates_Response.account_auth_states vector<fuchsia.identity.account/AccountAuthState>:128
+struct fuchsia.identity.account/AccountManager_GetAccountAuthStates_Response
+union/member fuchsia.identity.account/AccountManager_GetAccountAuthStates_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_GetAccountAuthStates_Result.response fuchsia.identity.account/AccountManager_GetAccountAuthStates_Response
+strict union fuchsia.identity.account/AccountManager_GetAccountAuthStates_Result
+struct fuchsia.identity.account/AccountManager_GetAccount_Response
+union/member fuchsia.identity.account/AccountManager_GetAccount_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_GetAccount_Result.response fuchsia.identity.account/AccountManager_GetAccount_Response
+strict union fuchsia.identity.account/AccountManager_GetAccount_Result
+struct/member fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Response.auth_mechanisms vector<fuchsia.identity.account/AuthMechanismProperties>:16
+struct fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Response
+union/member fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Result.response fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Response
+strict union fuchsia.identity.account/AccountManager_GetAuthenticationMechanisms_Result
+struct/member fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Response.account_id uint64
+struct fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Response
+union/member fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Result.response fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Response
+strict union fuchsia.identity.account/AccountManager_ProvisionFromAuthProvider_Result
+struct/member fuchsia.identity.account/AccountManager_ProvisionNewAccount_Response.account_id uint64
+struct fuchsia.identity.account/AccountManager_ProvisionNewAccount_Response
+union/member fuchsia.identity.account/AccountManager_ProvisionNewAccount_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_ProvisionNewAccount_Result.response fuchsia.identity.account/AccountManager_ProvisionNewAccount_Response
+strict union fuchsia.identity.account/AccountManager_ProvisionNewAccount_Result
+struct fuchsia.identity.account/AccountManager_RegisterAccountListener_Response
+union/member fuchsia.identity.account/AccountManager_RegisterAccountListener_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_RegisterAccountListener_Result.response fuchsia.identity.account/AccountManager_RegisterAccountListener_Response
+strict union fuchsia.identity.account/AccountManager_RegisterAccountListener_Result
+struct fuchsia.identity.account/AccountManager_RemoveAccount_Response
+union/member fuchsia.identity.account/AccountManager_RemoveAccount_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AccountManager_RemoveAccount_Result.response fuchsia.identity.account/AccountManager_RemoveAccount_Response
+strict union fuchsia.identity.account/AccountManager_RemoveAccount_Result
+struct/member fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Response.enrollment_id uint64
+struct fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Response
+union/member fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Result.response fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Response
+strict union fuchsia.identity.account/Account_CreateAuthMechanismEnrollment_Result
+struct/member fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Response.enrollments vector<fuchsia.identity.account/AuthMechanismEnrollmentMetadata>:32
+struct fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Response
+union/member fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Result.response fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Response
+strict union fuchsia.identity.account/Account_GetAuthMechanismEnrollments_Result
+struct fuchsia.identity.account/Account_GetDataDirectory_Response
+union/member fuchsia.identity.account/Account_GetDataDirectory_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_GetDataDirectory_Result.response fuchsia.identity.account/Account_GetDataDirectory_Response
+strict union fuchsia.identity.account/Account_GetDataDirectory_Result
+struct/member fuchsia.identity.account/Account_GetDefaultPersona_Response.id uint64
+struct fuchsia.identity.account/Account_GetDefaultPersona_Response
+union/member fuchsia.identity.account/Account_GetDefaultPersona_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_GetDefaultPersona_Result.response fuchsia.identity.account/Account_GetDefaultPersona_Response
+strict union fuchsia.identity.account/Account_GetDefaultPersona_Result
+struct fuchsia.identity.account/Account_GetPersona_Response
+union/member fuchsia.identity.account/Account_GetPersona_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_GetPersona_Result.response fuchsia.identity.account/Account_GetPersona_Response
+strict union fuchsia.identity.account/Account_GetPersona_Result
+struct/member fuchsia.identity.account/Account_GetRecoveryAccount_Response.account fuchsia.auth/ServiceProviderAccount:optional
+struct fuchsia.identity.account/Account_GetRecoveryAccount_Response
+union/member fuchsia.identity.account/Account_GetRecoveryAccount_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_GetRecoveryAccount_Result.response fuchsia.identity.account/Account_GetRecoveryAccount_Response
+strict union fuchsia.identity.account/Account_GetRecoveryAccount_Result
+struct fuchsia.identity.account/Account_Lock_Response
+union/member fuchsia.identity.account/Account_Lock_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_Lock_Result.response fuchsia.identity.account/Account_Lock_Response
+strict union fuchsia.identity.account/Account_Lock_Result
+struct fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Response
+union/member fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Result.response fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Response
+strict union fuchsia.identity.account/Account_RemoveAuthMechanismEnrollment_Result
+struct fuchsia.identity.account/Account_SetRecoveryAccount_Response
+union/member fuchsia.identity.account/Account_SetRecoveryAccount_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Account_SetRecoveryAccount_Result.response fuchsia.identity.account/Account_SetRecoveryAccount_Response
+strict union fuchsia.identity.account/Account_SetRecoveryAccount_Result
+struct/member fuchsia.identity.account/AuthChangeGranularity.engagement_changes bool
+struct/member fuchsia.identity.account/AuthChangeGranularity.presence_changes bool
+struct/member fuchsia.identity.account/AuthChangeGranularity.summary_changes bool
+struct fuchsia.identity.account/AuthChangeGranularity
+protocol/member fuchsia.identity.account/AuthListener.OnAuthStateChanged(fuchsia.identity.account/AuthState auth_state) -> ()
+protocol/member fuchsia.identity.account/AuthListener.OnInitialize(fuchsia.identity.account/AuthState auth_state) -> ()
+protocol fuchsia.identity.account/AuthListener
+struct/member fuchsia.identity.account/AuthMechanismEnrollmentMetadata.id uint64
+struct/member fuchsia.identity.account/AuthMechanismEnrollmentMetadata.name string:128
+struct fuchsia.identity.account/AuthMechanismEnrollmentMetadata
+struct/member fuchsia.identity.account/AuthMechanismProperties.id string:2083
+struct/member fuchsia.identity.account/AuthMechanismProperties.storage_unlock bool
+struct fuchsia.identity.account/AuthMechanismProperties
+struct/member fuchsia.identity.account/AuthState.engagement fuchsia.identity.account/Engagement
+struct/member fuchsia.identity.account/AuthState.presence fuchsia.identity.account/Presence
+struct/member fuchsia.identity.account/AuthState.scenario fuchsia.identity.account/Scenario
+struct/member fuchsia.identity.account/AuthState.summary fuchsia.identity.account/AuthStateSummary
+struct fuchsia.identity.account/AuthState
+enum/member fuchsia.identity.account/AuthStateSummary.ENGAGED 4
+enum/member fuchsia.identity.account/AuthStateSummary.LOCKED 1
+enum/member fuchsia.identity.account/AuthStateSummary.NOT_KNOWN_TO_BE_PRESENT_OR_ENGAGED 2
+enum/member fuchsia.identity.account/AuthStateSummary.PRESENT_WITHOUT_KNOWN_ENGAGEMENT 3
+strict enum fuchsia.identity.account/AuthStateSummary uint32
+protocol/member fuchsia.identity.account/AuthTarget.GetAuthState(fuchsia.identity.account/Scenario scenario) -> (fuchsia.identity.account/AuthTarget_GetAuthState_Result result)
+protocol/member fuchsia.identity.account/AuthTarget.RegisterAuthListener(fuchsia.identity.account/Scenario scenario,client_end:fuchsia.identity.account/AuthListener listener,bool initial_state,fuchsia.identity.account/AuthChangeGranularity granularity) -> (fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result result)
+protocol fuchsia.identity.account/AuthTarget
+struct/member fuchsia.identity.account/AuthTarget_GetAuthState_Response.auth_state fuchsia.identity.account/AuthState
+struct fuchsia.identity.account/AuthTarget_GetAuthState_Response
+union/member fuchsia.identity.account/AuthTarget_GetAuthState_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AuthTarget_GetAuthState_Result.response fuchsia.identity.account/AuthTarget_GetAuthState_Response
+strict union fuchsia.identity.account/AuthTarget_GetAuthState_Result
+struct fuchsia.identity.account/AuthTarget_RegisterAuthListener_Response
+union/member fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result.response fuchsia.identity.account/AuthTarget_RegisterAuthListener_Response
+strict union fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result
+enum/member fuchsia.identity.account/Engagement.DISENGAGED 2
+enum/member fuchsia.identity.account/Engagement.ENGAGED 4
+enum/member fuchsia.identity.account/Engagement.ENGAGEMENT_UNKNOWN 3
+enum/member fuchsia.identity.account/Engagement.LOCKED 1
+strict enum fuchsia.identity.account/Engagement uint32
+enum/member fuchsia.identity.account/Error.FAILED_AUTHENTICATION 10
+enum/member fuchsia.identity.account/Error.FAILED_PRECONDITION 9
+enum/member fuchsia.identity.account/Error.INTERNAL 2
+enum/member fuchsia.identity.account/Error.INVALID_REQUEST 4
+enum/member fuchsia.identity.account/Error.NETWORK 6
+enum/member fuchsia.identity.account/Error.NOT_FOUND 7
+enum/member fuchsia.identity.account/Error.REMOVAL_IN_PROGRESS 8
+enum/member fuchsia.identity.account/Error.RESOURCE 5
+enum/member fuchsia.identity.account/Error.UNKNOWN 1
+enum/member fuchsia.identity.account/Error.UNSUPPORTED_OPERATION 3
+strict enum fuchsia.identity.account/Error uint32
+struct/member fuchsia.identity.account/InitialAccountState.account_id uint64
+struct/member fuchsia.identity.account/InitialAccountState.auth_state box<fuchsia.identity.account/AuthState>
+struct fuchsia.identity.account/InitialAccountState
+enum/member fuchsia.identity.account/Lifetime.EPHEMERAL 1
+enum/member fuchsia.identity.account/Lifetime.PERSISTENT 2
+strict enum fuchsia.identity.account/Lifetime uint8
+const fuchsia.identity.account/MAX_ACCOUNTS_PER_DEVICE uint32 128
+const fuchsia.identity.account/MAX_AUTH_MECHANISMS uint32 16
+const fuchsia.identity.account/MAX_AUTH_MECHANISM_ENROLLMENTS uint32 32
+const fuchsia.identity.account/MAX_AUTH_PROVIDER_TYPE_SIZE uint32 128
+const fuchsia.identity.account/MAX_ID_SIZE uint32 256
+const fuchsia.identity.account/MAX_NAME_SIZE uint32 128
+const fuchsia.identity.account/MAX_PERSONAE_PER_ACCOUNT uint32 128
+protocol/member fuchsia.identity.account/Persona.GetAuthState(fuchsia.identity.account/Scenario scenario) -> (fuchsia.identity.account/AuthTarget_GetAuthState_Result result)
+protocol/member fuchsia.identity.account/Persona.GetKeyManager(string:2083 application_url,server_end:fuchsia.identity.keys/KeyManager key_manager) -> (fuchsia.identity.account/Persona_GetKeyManager_Result result)
+protocol/member fuchsia.identity.account/Persona.GetLifetime() -> (fuchsia.identity.account/Lifetime lifetime)
+protocol/member fuchsia.identity.account/Persona.GetTokenManager(string:2083 application_url,server_end:fuchsia.auth/TokenManager token_manager) -> (fuchsia.identity.account/Persona_GetTokenManager_Result result)
+protocol/member fuchsia.identity.account/Persona.RegisterAuthListener(fuchsia.identity.account/Scenario scenario,client_end:fuchsia.identity.account/AuthListener listener,bool initial_state,fuchsia.identity.account/AuthChangeGranularity granularity) -> (fuchsia.identity.account/AuthTarget_RegisterAuthListener_Result result)
+protocol fuchsia.identity.account/Persona
+struct fuchsia.identity.account/Persona_GetKeyManager_Response
+union/member fuchsia.identity.account/Persona_GetKeyManager_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Persona_GetKeyManager_Result.response fuchsia.identity.account/Persona_GetKeyManager_Response
+strict union fuchsia.identity.account/Persona_GetKeyManager_Result
+struct fuchsia.identity.account/Persona_GetTokenManager_Response
+union/member fuchsia.identity.account/Persona_GetTokenManager_Result.err fuchsia.identity.account/Error
+union/member fuchsia.identity.account/Persona_GetTokenManager_Result.response fuchsia.identity.account/Persona_GetTokenManager_Response
+strict union fuchsia.identity.account/Persona_GetTokenManager_Result
+enum/member fuchsia.identity.account/Presence.ABSENT 2
+enum/member fuchsia.identity.account/Presence.LOCKED 1
+enum/member fuchsia.identity.account/Presence.PRESENCE_UNKNOWN 3
+enum/member fuchsia.identity.account/Presence.PRESENT 4
+strict enum fuchsia.identity.account/Presence uint32
+struct/member fuchsia.identity.account/Scenario.include_test bool
+struct/member fuchsia.identity.account/Scenario.threat_scenario fuchsia.identity.account/ThreatScenario
+struct fuchsia.identity.account/Scenario
+enum/member fuchsia.identity.account/ThreatScenario.ADVANCED_ATTACKER 3
+enum/member fuchsia.identity.account/ThreatScenario.BASIC_ATTACKER 2
+enum/member fuchsia.identity.account/ThreatScenario.NONE 1
+strict enum fuchsia.identity.account/ThreatScenario uint32
+library fuchsia.identity.account

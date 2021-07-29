@@ -1,0 +1,4 @@
+protocol/member fuchsia.hardware.tee/DeviceConnector.ConnectToApplication(fuchsia.tee/Uuid application_uuid,fuchsia.tee.manager/Provider:optional service_provider,server_end:fuchsia.tee/Application application_request)
+protocol/member fuchsia.hardware.tee/DeviceConnector.ConnectToDeviceInfo(server_end:fuchsia.tee/DeviceInfo device_info_request)
+protocol fuchsia.hardware.tee/DeviceConnector
+library fuchsia.hardware.tee

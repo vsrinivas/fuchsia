@@ -1,0 +1,36 @@
+protocol/member fuchsia.hardware.pty/Device.AdvisoryLock(fuchsia.io2/AdvisoryLockRequest request) -> (fuchsia.io2/AdvisoryLocking_AdvisoryLock_Result result)
+protocol/member fuchsia.hardware.pty/Device.Clone(uint32 flags,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.hardware.pty/Device.Close() -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.ClrSetFeature(uint32 clr,uint32 set) -> (int32 status,uint32 features)
+protocol/member fuchsia.hardware.pty/Device.Describe() -> (fuchsia.io/NodeInfo info)
+protocol/member fuchsia.hardware.pty/Device.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
+protocol/member fuchsia.hardware.pty/Device.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
+protocol/member fuchsia.hardware.pty/Device.GetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.hardware.pty/Device.GetWindowSize() -> (int32 status,fuchsia.hardware.pty/WindowSize size)
+protocol/member fuchsia.hardware.pty/Device.MakeActive(uint32 client_pty_id) -> (int32 status)
+protocol/member fuchsia.hardware.pty/Device.NodeGetFlags() -> (int32 s,uint32 flags)
+protocol/member fuchsia.hardware.pty/Device.NodeSetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
+protocol/member fuchsia.hardware.pty/Device.OpenClient(uint32 id,server_end:fuchsia.hardware.pty/Device client) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.Read(uint64 count) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.hardware.pty/Device.ReadAt(uint64 count,uint64 offset) -> (int32 s,vector<uint8>:8192 data)
+protocol/member fuchsia.hardware.pty/Device.ReadEvents() -> (int32 status,uint32 events)
+protocol/member fuchsia.hardware.pty/Device.Seek(int64 offset,fuchsia.io/SeekOrigin start) -> (int32 s,uint64 offset)
+protocol/member fuchsia.hardware.pty/Device.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.SetFlags(uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.SetWindowSize(fuchsia.hardware.pty/WindowSize size) -> (int32 status)
+protocol/member fuchsia.hardware.pty/Device.Sync() -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.Truncate(uint64 length) -> (int32 s)
+protocol/member fuchsia.hardware.pty/Device.Write(vector<uint8>:8192 data) -> (int32 s,uint64 actual)
+protocol/member fuchsia.hardware.pty/Device.WriteAt(vector<uint8>:8192 data,uint64 offset) -> (int32 s,uint64 actual)
+protocol fuchsia.hardware.pty/Device
+const fuchsia.hardware.pty/EVENT_HANGUP uint32 1
+const fuchsia.hardware.pty/EVENT_INTERRUPT uint32 2
+const fuchsia.hardware.pty/EVENT_MASK uint32 7
+const fuchsia.hardware.pty/EVENT_SUSPEND uint32 4
+const fuchsia.hardware.pty/FEATURE_RAW uint32 1
+const fuchsia.hardware.pty/SIGNAL_EVENT uint32 33554432
+struct/member fuchsia.hardware.pty/WindowSize.height uint32
+struct/member fuchsia.hardware.pty/WindowSize.width uint32
+struct fuchsia.hardware.pty/WindowSize
+library fuchsia.hardware.pty

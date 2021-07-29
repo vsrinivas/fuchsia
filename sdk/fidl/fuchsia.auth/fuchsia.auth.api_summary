@@ -1,0 +1,50 @@
+struct/member fuchsia.auth/AppConfig.auth_provider_type string
+struct/member fuchsia.auth/AppConfig.client_id string:optional
+struct/member fuchsia.auth/AppConfig.client_secret string:optional
+struct/member fuchsia.auth/AppConfig.redirect_uri string:optional
+struct fuchsia.auth/AppConfig
+protocol/member fuchsia.auth/AttestationSigner.SignData(vector<uint8> plaintext) -> (fuchsia.auth/AttestationSignerStatus status,vector<uint8>:optional signature)
+protocol fuchsia.auth/AttestationSigner
+enum/member fuchsia.auth/AttestationSignerStatus.INVALID_ARGUMENT 1
+enum/member fuchsia.auth/AttestationSignerStatus.OK 0
+enum/member fuchsia.auth/AttestationSignerStatus.SIGNING_ERROR 2
+strict enum fuchsia.auth/AttestationSignerStatus uint32
+struct/member fuchsia.auth/AuthProviderConfig.auth_provider_type string
+struct/member fuchsia.auth/AuthProviderConfig.params vector<string>:optional
+struct/member fuchsia.auth/AuthProviderConfig.url string
+struct fuchsia.auth/AuthProviderConfig
+protocol/member fuchsia.auth/AuthenticationContextProvider.GetAuthenticationUIContext(server_end:fuchsia.auth/AuthenticationUIContext request)
+protocol fuchsia.auth/AuthenticationContextProvider
+protocol/member fuchsia.auth/AuthenticationUIContext.StartOverlay(fuchsia.ui.views/ViewHolderToken view_holder_token)
+protocol/member fuchsia.auth/AuthenticationUIContext.StopOverlay()
+protocol fuchsia.auth/AuthenticationUIContext
+struct/member fuchsia.auth/ServiceProviderAccount.identity_provider_domain string
+struct/member fuchsia.auth/ServiceProviderAccount.user_profile_id string
+struct fuchsia.auth/ServiceProviderAccount
+enum/member fuchsia.auth/Status.AUTH_PROVIDER_SERVER_ERROR 2
+enum/member fuchsia.auth/Status.AUTH_PROVIDER_SERVICE_UNAVAILABLE 1
+enum/member fuchsia.auth/Status.INTERNAL_ERROR 3
+enum/member fuchsia.auth/Status.INVALID_AUTH_CONTEXT 4
+enum/member fuchsia.auth/Status.INVALID_REQUEST 5
+enum/member fuchsia.auth/Status.IO_ERROR 7
+enum/member fuchsia.auth/Status.NETWORK_ERROR 11
+enum/member fuchsia.auth/Status.OK 0
+enum/member fuchsia.auth/Status.REAUTH_REQUIRED 9
+enum/member fuchsia.auth/Status.UNKNOWN_ERROR 8
+enum/member fuchsia.auth/Status.USER_CANCELLED 10
+enum/member fuchsia.auth/Status.USER_NOT_FOUND 6
+strict enum fuchsia.auth/Status uint32
+protocol/member fuchsia.auth/TokenManager.Authorize(fuchsia.auth/AppConfig app_config,client_end:<fuchsia.auth/AuthenticationUIContext,optional> auth_ui_context,vector<string> app_scopes,string:optional user_profile_id,string:optional auth_code) -> (fuchsia.auth/Status status,box<fuchsia.auth/UserProfileInfo> user_profile_info)
+protocol/member fuchsia.auth/TokenManager.DeleteAllTokens(fuchsia.auth/AppConfig app_config,string user_profile_id,bool force) -> (fuchsia.auth/Status status)
+protocol/member fuchsia.auth/TokenManager.GetAccessToken(fuchsia.auth/AppConfig app_config,string user_profile_id,vector<string> app_scopes) -> (fuchsia.auth/Status status,string:optional access_token)
+protocol/member fuchsia.auth/TokenManager.GetIdToken(fuchsia.auth/AppConfig app_config,string user_profile_id,string:optional audience) -> (fuchsia.auth/Status status,string:optional id_token)
+protocol/member fuchsia.auth/TokenManager.ListProfileIds(fuchsia.auth/AppConfig app_config) -> (fuchsia.auth/Status status,vector<string> user_profile_ids)
+protocol fuchsia.auth/TokenManager
+protocol/member fuchsia.auth/TokenManagerFactory.GetTokenManager(string user_id,string application_url,vector<fuchsia.auth/AuthProviderConfig> auth_provider_configs,client_end:fuchsia.auth/AuthenticationContextProvider auth_context_provider,server_end:fuchsia.auth/TokenManager token_manager)
+protocol fuchsia.auth/TokenManagerFactory
+struct/member fuchsia.auth/UserProfileInfo.display_name string:optional
+struct/member fuchsia.auth/UserProfileInfo.id string
+struct/member fuchsia.auth/UserProfileInfo.image_url string:optional
+struct/member fuchsia.auth/UserProfileInfo.url string:optional
+struct fuchsia.auth/UserProfileInfo
+library fuchsia.auth

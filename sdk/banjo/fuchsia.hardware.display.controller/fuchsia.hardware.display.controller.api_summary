@@ -1,0 +1,146 @@
+struct/member fuchsia.hardware.display.controller/AddedDisplayArgs.cursor_info vector<fuchsia.hardware.display.controller/CursorInfo>
+struct/member fuchsia.hardware.display.controller/AddedDisplayArgs.display_id uint64
+struct/member fuchsia.hardware.display.controller/AddedDisplayArgs.edid_present bool
+struct/member fuchsia.hardware.display.controller/AddedDisplayArgs.panel fuchsia.hardware.display.controller/Panel
+struct/member fuchsia.hardware.display.controller/AddedDisplayArgs.pixel_format vector<uint32>
+struct fuchsia.hardware.display.controller/AddedDisplayArgs
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.audio_format_count uint32
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.horizontal_size_mm uint32
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.is_hdmi_out bool
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.is_standard_srgb_out bool
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.manufacturer_id string:4
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.manufacturer_name string
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.monitor_name string:14
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.monitor_serial string:14
+struct/member fuchsia.hardware.display.controller/AddedDisplayInfo.vertical_size_mm uint32
+struct fuchsia.hardware.display.controller/AddedDisplayInfo
+enum/member fuchsia.hardware.display.controller/Alpha.DISABLE 0
+enum/member fuchsia.hardware.display.controller/Alpha.HW_MULTIPLY 2
+enum/member fuchsia.hardware.display.controller/Alpha.PREMULTIPLIED 1
+strict enum fuchsia.hardware.display.controller/Alpha uint8
+enum/member fuchsia.hardware.display.controller/Client.ALPHA 128
+enum/member fuchsia.hardware.display.controller/Client.COLOR_CONVERSION 64
+enum/member fuchsia.hardware.display.controller/Client.FRAME_SCALE 8
+enum/member fuchsia.hardware.display.controller/Client.GAMMA 256
+enum/member fuchsia.hardware.display.controller/Client.MERGE_BASE 2
+enum/member fuchsia.hardware.display.controller/Client.MERGE_SRC 4
+enum/member fuchsia.hardware.display.controller/Client.SRC_FRAME 16
+enum/member fuchsia.hardware.display.controller/Client.TRANSFORM 32
+enum/member fuchsia.hardware.display.controller/Client.USE_PRIMARY 1
+strict enum fuchsia.hardware.display.controller/Client uint32
+enum/member fuchsia.hardware.display.controller/ColorConversion.COEFFICIENTS 2
+enum/member fuchsia.hardware.display.controller/ColorConversion.POSTOFFSET 4
+enum/member fuchsia.hardware.display.controller/ColorConversion.PREOFFSET 1
+strict enum fuchsia.hardware.display.controller/ColorConversion uint32
+struct/member fuchsia.hardware.display.controller/ColorLayer.color vector<uint8>
+struct/member fuchsia.hardware.display.controller/ColorLayer.format uint32
+struct fuchsia.hardware.display.controller/ColorLayer
+enum/member fuchsia.hardware.display.controller/ConfigDisplay.OK 0
+enum/member fuchsia.hardware.display.controller/ConfigDisplay.TOO_MANY 1
+enum/member fuchsia.hardware.display.controller/ConfigDisplay.UNSUPPORTED_MODES 2
+strict enum fuchsia.hardware.display.controller/ConfigDisplay uint32
+struct/member fuchsia.hardware.display.controller/CursorInfo.format uint32
+struct/member fuchsia.hardware.display.controller/CursorInfo.height uint32
+struct/member fuchsia.hardware.display.controller/CursorInfo.width uint32
+struct fuchsia.hardware.display.controller/CursorInfo
+struct/member fuchsia.hardware.display.controller/CursorLayer.image fuchsia.hardware.display.controller/Image
+struct/member fuchsia.hardware.display.controller/CursorLayer.x_pos int32
+struct/member fuchsia.hardware.display.controller/CursorLayer.y_pos int32
+struct fuchsia.hardware.display.controller/CursorLayer
+struct/member fuchsia.hardware.display.controller/DisplayConfig.apply_gamma_table bool
+struct/member fuchsia.hardware.display.controller/DisplayConfig.cc_coefficients array<array<float32,3>,3>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.cc_flags uint32
+struct/member fuchsia.hardware.display.controller/DisplayConfig.cc_postoffsets array<float32,3>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.cc_preoffsets array<float32,3>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.display_id uint64
+struct/member fuchsia.hardware.display.controller/DisplayConfig.gamma_blue vector<float32>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.gamma_green vector<float32>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.gamma_red vector<float32>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.gamma_table_present bool
+struct/member fuchsia.hardware.display.controller/DisplayConfig.layer vector<fuchsia.hardware.display.controller/Layer>
+struct/member fuchsia.hardware.display.controller/DisplayConfig.mode fuchsia.hardware.display.controller/DisplayMode
+struct fuchsia.hardware.display.controller/DisplayConfig
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.ApplyConfiguration(vector<fuchsia.hardware.display.controller/DisplayConfig> display_config) -> ()
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.CheckConfiguration(vector<fuchsia.hardware.display.controller/DisplayConfig> display_config) -> (uint32 display_cfg_result,vector<uint32> layer_cfg_result)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.GetSingleBufferFramebuffer() -> (int32 res,zx/handle:VMO vmo,uint32 stride)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.GetSysmemConnection(zx/handle:CHANNEL sysmem_handle) -> (int32 s)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.ImportImage(fuchsia.hardware.display.controller/Image image,uint32 collection,uint32 index) -> (int32 s)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.ImportVmoImage(fuchsia.hardware.display.controller/Image image,zx/handle:VMO vmo,uint64 offset) -> (int32 s)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.ReleaseImage(fuchsia.hardware.display.controller/Image image) -> ()
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.SetBufferCollectionConstraints(fuchsia.hardware.display.controller/Image config,uint32 collection) -> (int32 s)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.SetDisplayControllerInterface(client_end:fuchsia.hardware.display.controller/DisplayControllerInterface intf) -> ()
+protocol/member fuchsia.hardware.display.controller/DisplayControllerImpl.SetEld(uint64 display_id,vector<uint8> raw_eld) -> ()
+protocol fuchsia.hardware.display.controller/DisplayControllerImpl
+protocol/member fuchsia.hardware.display.controller/DisplayControllerInterface.GetAudioFormat(uint64 display_id,uint32 fmt_idx) -> (int32 s,fuchsia.hardware.audiotypes/AudioTypesAudioStreamFormatRange fmt)
+protocol/member fuchsia.hardware.display.controller/DisplayControllerInterface.OnDisplayVsync(uint64 display_id,int64 timestamp,vector<uint64> handle) -> ()
+protocol/member fuchsia.hardware.display.controller/DisplayControllerInterface.OnDisplaysChanged(vector<fuchsia.hardware.display.controller/AddedDisplayArgs> added_display,vector<uint64> removed_display) -> (vector<fuchsia.hardware.display.controller/AddedDisplayInfo> display_info)
+protocol fuchsia.hardware.display.controller/DisplayControllerInterface
+struct/member fuchsia.hardware.display.controller/DisplayMode.flags uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.h_addressable uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.h_blanking uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.h_front_porch uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.h_sync_pulse uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.pixel_clock_10khz uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.v_addressable uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.v_blanking uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.v_front_porch uint32
+struct/member fuchsia.hardware.display.controller/DisplayMode.v_sync_pulse uint32
+struct fuchsia.hardware.display.controller/DisplayMode
+struct/member fuchsia.hardware.display.controller/DisplayParams.height uint32
+struct/member fuchsia.hardware.display.controller/DisplayParams.refresh_rate_e2 uint32
+struct/member fuchsia.hardware.display.controller/DisplayParams.width uint32
+struct fuchsia.hardware.display.controller/DisplayParams
+struct/member fuchsia.hardware.display.controller/Frame.height uint32
+struct/member fuchsia.hardware.display.controller/Frame.width uint32
+struct/member fuchsia.hardware.display.controller/Frame.x_pos uint32
+struct/member fuchsia.hardware.display.controller/Frame.y_pos uint32
+struct fuchsia.hardware.display.controller/Frame
+enum/member fuchsia.hardware.display.controller/FrameTransform.IDENTITY 0
+enum/member fuchsia.hardware.display.controller/FrameTransform.REFLECT_X 1
+enum/member fuchsia.hardware.display.controller/FrameTransform.REFLECT_Y 2
+enum/member fuchsia.hardware.display.controller/FrameTransform.ROT_180 4
+enum/member fuchsia.hardware.display.controller/FrameTransform.ROT_270 5
+enum/member fuchsia.hardware.display.controller/FrameTransform.ROT_90 3
+enum/member fuchsia.hardware.display.controller/FrameTransform.ROT_90_REFLECT_X 6
+enum/member fuchsia.hardware.display.controller/FrameTransform.ROT_90_REFLECT_Y 7
+strict enum fuchsia.hardware.display.controller/FrameTransform uint32
+const fuchsia.hardware.display.controller/INVALID_DISPLAY_ID uint32 0
+const fuchsia.hardware.display.controller/INVALID_ID uint32 0
+struct/member fuchsia.hardware.display.controller/Image.handle uint64
+struct/member fuchsia.hardware.display.controller/Image.height uint32
+struct/member fuchsia.hardware.display.controller/Image.pixel_format uint32
+struct/member fuchsia.hardware.display.controller/Image.type uint32
+struct/member fuchsia.hardware.display.controller/Image.width uint32
+struct fuchsia.hardware.display.controller/Image
+enum/member fuchsia.hardware.display.controller/ImageType.CAPTURE 10
+enum/member fuchsia.hardware.display.controller/ImageType.SIMPLE 0
+strict enum fuchsia.hardware.display.controller/ImageType uint32
+struct/member fuchsia.hardware.display.controller/Layer.cfg fuchsia.hardware.display.controller/LayerConfig
+struct/member fuchsia.hardware.display.controller/Layer.type fuchsia.hardware.display.controller/LayerType
+struct/member fuchsia.hardware.display.controller/Layer.z_index uint32
+struct fuchsia.hardware.display.controller/Layer
+union/member fuchsia.hardware.display.controller/LayerConfig.color fuchsia.hardware.display.controller/ColorLayer
+union/member fuchsia.hardware.display.controller/LayerConfig.cursor fuchsia.hardware.display.controller/CursorLayer
+union/member fuchsia.hardware.display.controller/LayerConfig.primary fuchsia.hardware.display.controller/PrimaryLayer
+strict union fuchsia.hardware.display.controller/LayerConfig
+enum/member fuchsia.hardware.display.controller/LayerType.COLOR 2
+enum/member fuchsia.hardware.display.controller/LayerType.CURSOR 1
+enum/member fuchsia.hardware.display.controller/LayerType.PRIMARY 0
+strict enum fuchsia.hardware.display.controller/LayerType uint32
+enum/member fuchsia.hardware.display.controller/ModeFlag.ALTERNATING_VBLANK 8
+enum/member fuchsia.hardware.display.controller/ModeFlag.DOUBLE_CLOCKED 16
+enum/member fuchsia.hardware.display.controller/ModeFlag.HSYNC_POSITIVE 2
+enum/member fuchsia.hardware.display.controller/ModeFlag.INTERLACED 4
+enum/member fuchsia.hardware.display.controller/ModeFlag.VSYNC_POSITIVE 1
+strict enum fuchsia.hardware.display.controller/ModeFlag uint32
+union/member fuchsia.hardware.display.controller/Panel.i2c_bus_id uint32
+union/member fuchsia.hardware.display.controller/Panel.params fuchsia.hardware.display.controller/DisplayParams
+strict union fuchsia.hardware.display.controller/Panel
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.alpha_layer_val float32
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.alpha_mode fuchsia.hardware.display.controller/Alpha
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.dest_frame fuchsia.hardware.display.controller/Frame
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.image fuchsia.hardware.display.controller/Image
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.src_frame fuchsia.hardware.display.controller/Frame
+struct/member fuchsia.hardware.display.controller/PrimaryLayer.transform_mode fuchsia.hardware.display.controller/FrameTransform
+struct fuchsia.hardware.display.controller/PrimaryLayer
+library fuchsia.hardware.display.controller

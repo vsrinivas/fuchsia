@@ -1,0 +1,12 @@
+protocol/member fuchsia.vsock/Acceptor.Accept(fuchsia.hardware.vsock/Addr addr) -> (box<fuchsia.vsock/ConnectionTransport> con)
+protocol fuchsia.vsock/Acceptor
+protocol/member fuchsia.vsock/Connection.SendVmo(zx/handle:VMO vmo,uint64 off,uint64 len) -> (int32 status)
+protocol/member fuchsia.vsock/Connection.Shutdown()
+protocol fuchsia.vsock/Connection
+struct/member fuchsia.vsock/ConnectionTransport.con server_end:fuchsia.vsock/Connection
+struct/member fuchsia.vsock/ConnectionTransport.data zx/handle:SOCKET
+resource struct fuchsia.vsock/ConnectionTransport
+protocol/member fuchsia.vsock/Connector.Connect(uint32 remote_cid,uint32 remote_port,fuchsia.vsock/ConnectionTransport con) -> (int32 status,uint32 local_port)
+protocol/member fuchsia.vsock/Connector.Listen(uint32 local_port,client_end:fuchsia.vsock/Acceptor acceptor) -> (int32 status)
+protocol fuchsia.vsock/Connector
+library fuchsia.vsock

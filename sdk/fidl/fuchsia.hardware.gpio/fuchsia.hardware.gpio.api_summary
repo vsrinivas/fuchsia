@@ -1,0 +1,34 @@
+protocol/member fuchsia.hardware.gpio/Gpio.ConfigIn(fuchsia.hardware.gpio/GpioFlags flags) -> (fuchsia.hardware.gpio/Gpio_ConfigIn_Result result)
+protocol/member fuchsia.hardware.gpio/Gpio.ConfigOut(uint8 initial_value) -> (fuchsia.hardware.gpio/Gpio_ConfigOut_Result result)
+protocol/member fuchsia.hardware.gpio/Gpio.Read() -> (fuchsia.hardware.gpio/Gpio_Read_Result result)
+protocol/member fuchsia.hardware.gpio/Gpio.SetDriveStrength(uint64 ds_ua) -> (fuchsia.hardware.gpio/Gpio_SetDriveStrength_Result result)
+protocol/member fuchsia.hardware.gpio/Gpio.Write(uint8 value) -> (fuchsia.hardware.gpio/Gpio_Write_Result result)
+protocol fuchsia.hardware.gpio/Gpio
+enum/member fuchsia.hardware.gpio/GpioFlags.NO_PULL 2
+enum/member fuchsia.hardware.gpio/GpioFlags.PULL_DOWN 0
+enum/member fuchsia.hardware.gpio/GpioFlags.PULL_MASK 3
+enum/member fuchsia.hardware.gpio/GpioFlags.PULL_UP 1
+strict enum fuchsia.hardware.gpio/GpioFlags uint32
+struct fuchsia.hardware.gpio/Gpio_ConfigIn_Response
+union/member fuchsia.hardware.gpio/Gpio_ConfigIn_Result.err int32
+union/member fuchsia.hardware.gpio/Gpio_ConfigIn_Result.response fuchsia.hardware.gpio/Gpio_ConfigIn_Response
+strict union fuchsia.hardware.gpio/Gpio_ConfigIn_Result
+struct fuchsia.hardware.gpio/Gpio_ConfigOut_Response
+union/member fuchsia.hardware.gpio/Gpio_ConfigOut_Result.err int32
+union/member fuchsia.hardware.gpio/Gpio_ConfigOut_Result.response fuchsia.hardware.gpio/Gpio_ConfigOut_Response
+strict union fuchsia.hardware.gpio/Gpio_ConfigOut_Result
+struct/member fuchsia.hardware.gpio/Gpio_Read_Response.value uint8
+struct fuchsia.hardware.gpio/Gpio_Read_Response
+union/member fuchsia.hardware.gpio/Gpio_Read_Result.err int32
+union/member fuchsia.hardware.gpio/Gpio_Read_Result.response fuchsia.hardware.gpio/Gpio_Read_Response
+strict union fuchsia.hardware.gpio/Gpio_Read_Result
+struct/member fuchsia.hardware.gpio/Gpio_SetDriveStrength_Response.actual_ds_ua uint64
+struct fuchsia.hardware.gpio/Gpio_SetDriveStrength_Response
+union/member fuchsia.hardware.gpio/Gpio_SetDriveStrength_Result.err int32
+union/member fuchsia.hardware.gpio/Gpio_SetDriveStrength_Result.response fuchsia.hardware.gpio/Gpio_SetDriveStrength_Response
+strict union fuchsia.hardware.gpio/Gpio_SetDriveStrength_Result
+struct fuchsia.hardware.gpio/Gpio_Write_Response
+union/member fuchsia.hardware.gpio/Gpio_Write_Result.err int32
+union/member fuchsia.hardware.gpio/Gpio_Write_Result.response fuchsia.hardware.gpio/Gpio_Write_Response
+strict union fuchsia.hardware.gpio/Gpio_Write_Result
+library fuchsia.hardware.gpio

@@ -1,0 +1,14 @@
+struct/member fuchsia.hardware.network.mac/Features.multicast_filter_count uint32
+struct/member fuchsia.hardware.network.mac/Features.supported_modes uint32
+struct fuchsia.hardware.network.mac/Features
+const fuchsia.hardware.network.mac/MAC_SIZE uint64 6
+const fuchsia.hardware.network.mac/MAX_MAC_FILTER uint64 64
+protocol/member fuchsia.hardware.network.mac/MacAddr.GetAddress() -> (array<uint8,6> mac)
+protocol/member fuchsia.hardware.network.mac/MacAddr.GetFeatures() -> (fuchsia.hardware.network.mac/Features features)
+protocol/member fuchsia.hardware.network.mac/MacAddr.SetMode(fuchsia.hardware.network.mac/Mode mode,vector<array<uint8,6>>:64 multicast_macs) -> ()
+protocol fuchsia.hardware.network.mac/MacAddr
+enum/member fuchsia.hardware.network.mac/Mode.MULTICAST_FILTER 1
+enum/member fuchsia.hardware.network.mac/Mode.MULTICAST_PROMISCUOUS 2
+enum/member fuchsia.hardware.network.mac/Mode.PROMISCUOUS 4
+strict enum fuchsia.hardware.network.mac/Mode uint32
+library fuchsia.hardware.network.mac

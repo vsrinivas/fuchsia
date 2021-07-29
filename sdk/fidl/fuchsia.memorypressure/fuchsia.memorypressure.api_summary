@@ -1,0 +1,9 @@
+enum/member fuchsia.memorypressure/Level.CRITICAL 3
+enum/member fuchsia.memorypressure/Level.NORMAL 1
+enum/member fuchsia.memorypressure/Level.WARNING 2
+strict enum fuchsia.memorypressure/Level uint32
+protocol/member fuchsia.memorypressure/Provider.RegisterWatcher(client_end:fuchsia.memorypressure/Watcher watcher)
+protocol fuchsia.memorypressure/Provider
+protocol/member fuchsia.memorypressure/Watcher.OnLevelChanged(fuchsia.memorypressure/Level level) -> ()
+protocol fuchsia.memorypressure/Watcher
+library fuchsia.memorypressure

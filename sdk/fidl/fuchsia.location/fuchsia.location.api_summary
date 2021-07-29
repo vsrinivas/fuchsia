@@ -1,0 +1,3 @@
+enum/member fuchsia.location/Error.GENERAL_ERROR 1
+strict enum fuchsia.location/Error uint32
+library fuchsia.location

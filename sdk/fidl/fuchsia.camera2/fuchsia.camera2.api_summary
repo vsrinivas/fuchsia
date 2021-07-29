@@ -1,0 +1,57 @@
+bits/member fuchsia.camera2/CameraStreamType.DOWNSCALED_RESOLUTION 8
+bits/member fuchsia.camera2/CameraStreamType.EXTENDED_FOV 32
+bits/member fuchsia.camera2/CameraStreamType.FULL_RESOLUTION 4
+bits/member fuchsia.camera2/CameraStreamType.MACHINE_LEARNING 1
+bits/member fuchsia.camera2/CameraStreamType.MONITORING 2
+bits/member fuchsia.camera2/CameraStreamType.VIDEO_CONFERENCE 16
+strict bits fuchsia.camera2/CameraStreamType uint32
+table/member fuchsia.camera2/DeviceInfo.product_id uint16
+table/member fuchsia.camera2/DeviceInfo.product_name string:255
+table/member fuchsia.camera2/DeviceInfo.type fuchsia.camera2/DeviceType
+table/member fuchsia.camera2/DeviceInfo.vendor_id uint16
+table/member fuchsia.camera2/DeviceInfo.vendor_name string:255
+table fuchsia.camera2/DeviceInfo
+enum/member fuchsia.camera2/DeviceType.BUILTIN 1
+enum/member fuchsia.camera2/DeviceType.VIRTUAL 2
+strict enum fuchsia.camera2/DeviceType uint32
+struct/member fuchsia.camera2/FrameAvailableInfo.buffer_id uint32
+struct/member fuchsia.camera2/FrameAvailableInfo.frame_status fuchsia.camera2/FrameStatus
+struct/member fuchsia.camera2/FrameAvailableInfo.metadata fuchsia.camera2/FrameMetadata
+struct fuchsia.camera2/FrameAvailableInfo
+table/member fuchsia.camera2/FrameMetadata.capture_timestamp int64
+table/member fuchsia.camera2/FrameMetadata.image_format_index uint32
+table/member fuchsia.camera2/FrameMetadata.timestamp int64
+table fuchsia.camera2/FrameMetadata
+struct/member fuchsia.camera2/FrameRate.frames_per_sec_denominator uint32
+struct/member fuchsia.camera2/FrameRate.frames_per_sec_numerator uint32
+struct fuchsia.camera2/FrameRate
+enum/member fuchsia.camera2/FrameStatus.ERROR_BUFFER_FULL 2
+enum/member fuchsia.camera2/FrameStatus.ERROR_FRAME 1
+enum/member fuchsia.camera2/FrameStatus.OK 0
+strict enum fuchsia.camera2/FrameStatus uint32
+const fuchsia.camera2/MAX_IMAGE_FORMATS uint64 256
+protocol/member fuchsia.camera2/Manager.AcknowledgeDeviceEvent()
+protocol/member fuchsia.camera2/Manager.ConnectToStream(int32 device_id,fuchsia.camera2/StreamConstraints constraints,fuchsia.sysmem/BufferCollectionToken token,server_end:fuchsia.camera2/Stream stream) -> (fuchsia.sysmem/ImageFormat_2 format)
+protocol/member fuchsia.camera2/Manager.OnDeviceAvailable -> (int32 device_id,fuchsia.camera2/DeviceInfo description,bool last_known_camera)
+protocol/member fuchsia.camera2/Manager.OnDeviceMuteChanged -> (int32 device_id,bool currently_muted)
+protocol/member fuchsia.camera2/Manager.OnDeviceUnavailable -> (int32 device_id)
+protocol fuchsia.camera2/Manager
+protocol/member fuchsia.camera2/MuteControl.Mute(int32 device_id) -> (int32 status)
+protocol/member fuchsia.camera2/MuteControl.Unmute(int32 device_id) -> (int32 status)
+protocol fuchsia.camera2/MuteControl
+protocol/member fuchsia.camera2/Stream.AcknowledgeFrameError()
+protocol/member fuchsia.camera2/Stream.GetBuffers() -> (fuchsia.sysmem/BufferCollectionToken token)
+protocol/member fuchsia.camera2/Stream.GetImageFormats() -> (vector<fuchsia.sysmem/ImageFormat_2>:256 image_formats)
+protocol/member fuchsia.camera2/Stream.OnFrameAvailable -> (fuchsia.camera2/FrameAvailableInfo frame)
+protocol/member fuchsia.camera2/Stream.ReleaseFrame(uint32 buffer_id)
+protocol/member fuchsia.camera2/Stream.SetImageFormat(uint32 image_format_index) -> (int32 s)
+protocol/member fuchsia.camera2/Stream.SetRegionOfInterest(float32 x_min,float32 y_min,float32 x_max,float32 y_max) -> (int32 s)
+protocol/member fuchsia.camera2/Stream.Start()
+protocol/member fuchsia.camera2/Stream.Stop()
+protocol fuchsia.camera2/Stream
+table/member fuchsia.camera2/StreamConstraints.format_index uint32
+table/member fuchsia.camera2/StreamConstraints.properties fuchsia.camera2/StreamProperties
+table fuchsia.camera2/StreamConstraints
+table/member fuchsia.camera2/StreamProperties.stream_type fuchsia.camera2/CameraStreamType
+table fuchsia.camera2/StreamProperties
+library fuchsia.camera2

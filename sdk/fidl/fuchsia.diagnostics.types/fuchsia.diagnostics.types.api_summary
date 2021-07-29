@@ -1,0 +1,10 @@
+table/member fuchsia.diagnostics.types/ComponentDiagnostics.tasks fuchsia.diagnostics.types/ComponentTasks
+resource table fuchsia.diagnostics.types/ComponentDiagnostics
+table/member fuchsia.diagnostics.types/ComponentTasks.component_task fuchsia.diagnostics.types/Task
+table/member fuchsia.diagnostics.types/ComponentTasks.parent_task fuchsia.diagnostics.types/Task
+resource table fuchsia.diagnostics.types/ComponentTasks
+union/member fuchsia.diagnostics.types/Task.job zx/handle:JOB
+union/member fuchsia.diagnostics.types/Task.process zx/handle:PROCESS
+union/member fuchsia.diagnostics.types/Task.thread zx/handle:THREAD
+resource flexible union fuchsia.diagnostics.types/Task
+library fuchsia.diagnostics.types

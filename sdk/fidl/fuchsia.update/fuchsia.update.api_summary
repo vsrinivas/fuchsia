@@ -1,0 +1,51 @@
+enum/member fuchsia.update/CheckNotStartedReason.ALREADY_IN_PROGRESS 3
+enum/member fuchsia.update/CheckNotStartedReason.INTERNAL 1
+enum/member fuchsia.update/CheckNotStartedReason.INVALID_OPTIONS 2
+enum/member fuchsia.update/CheckNotStartedReason.THROTTLED 4
+strict enum fuchsia.update/CheckNotStartedReason uint32
+table/member fuchsia.update/CheckOptions.allow_attaching_to_existing_update_check bool
+table/member fuchsia.update/CheckOptions.initiator fuchsia.update/Initiator
+table fuchsia.update/CheckOptions
+table fuchsia.update/CheckingForUpdatesData
+protocol/member fuchsia.update/CommitStatusProvider.IsCurrentSystemCommitted() -> (zx/handle:EVENTPAIR event)
+protocol fuchsia.update/CommitStatusProvider
+table fuchsia.update/ErrorCheckingForUpdateData
+enum/member fuchsia.update/Initiator.SERVICE 2
+enum/member fuchsia.update/Initiator.USER 1
+strict enum fuchsia.update/Initiator uint32
+enum/member fuchsia.update/InstallationDeferralReason.CURRENT_SYSTEM_NOT_COMMITTED 1
+flexible enum fuchsia.update/InstallationDeferralReason uint32
+table/member fuchsia.update/InstallationDeferredData.deferral_reason fuchsia.update/InstallationDeferralReason
+table/member fuchsia.update/InstallationDeferredData.update fuchsia.update/UpdateInfo
+table fuchsia.update/InstallationDeferredData
+table/member fuchsia.update/InstallationErrorData.installation_progress fuchsia.update/InstallationProgress
+table/member fuchsia.update/InstallationErrorData.update fuchsia.update/UpdateInfo
+table fuchsia.update/InstallationErrorData
+table/member fuchsia.update/InstallationProgress.fraction_completed float32
+table fuchsia.update/InstallationProgress
+table/member fuchsia.update/InstallingData.installation_progress fuchsia.update/InstallationProgress
+table/member fuchsia.update/InstallingData.update fuchsia.update/UpdateInfo
+table fuchsia.update/InstallingData
+const fuchsia.update/MAX_VERSION_STRING_SIZE uint32 128
+protocol/member fuchsia.update/Manager.CheckNow(fuchsia.update/CheckOptions options,client_end:<fuchsia.update/Monitor,optional> monitor) -> (fuchsia.update/Manager_CheckNow_Result result)
+protocol/member fuchsia.update/Manager.PerformPendingReboot() -> (bool rebooting)
+protocol fuchsia.update/Manager
+struct fuchsia.update/Manager_CheckNow_Response
+union/member fuchsia.update/Manager_CheckNow_Result.err fuchsia.update/CheckNotStartedReason
+union/member fuchsia.update/Manager_CheckNow_Result.response fuchsia.update/Manager_CheckNow_Response
+strict union fuchsia.update/Manager_CheckNow_Result
+protocol/member fuchsia.update/Monitor.OnState(fuchsia.update/State state) -> ()
+protocol fuchsia.update/Monitor
+table fuchsia.update/NoUpdateAvailableData
+union/member fuchsia.update/State.checking_for_updates fuchsia.update/CheckingForUpdatesData
+union/member fuchsia.update/State.error_checking_for_update fuchsia.update/ErrorCheckingForUpdateData
+union/member fuchsia.update/State.installation_deferred_by_policy fuchsia.update/InstallationDeferredData
+union/member fuchsia.update/State.installation_error fuchsia.update/InstallationErrorData
+union/member fuchsia.update/State.installing_update fuchsia.update/InstallingData
+union/member fuchsia.update/State.no_update_available fuchsia.update/NoUpdateAvailableData
+union/member fuchsia.update/State.waiting_for_reboot fuchsia.update/InstallingData
+strict union fuchsia.update/State
+table/member fuchsia.update/UpdateInfo.download_size uint64
+table/member fuchsia.update/UpdateInfo.version_available string:128
+table fuchsia.update/UpdateInfo
+library fuchsia.update

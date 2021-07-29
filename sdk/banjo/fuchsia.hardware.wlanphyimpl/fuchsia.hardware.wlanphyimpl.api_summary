@@ -1,0 +1,19 @@
+const fuchsia.hardware.wlanphyimpl/WLANPHY_ALPHA2_LEN uint8 2
+union/member fuchsia.hardware.wlanphyimpl/WlanphyCountry.alpha2 array<uint8,2>
+union/member fuchsia.hardware.wlanphyimpl/WlanphyCountry.val uint16
+strict union fuchsia.hardware.wlanphyimpl/WlanphyCountry
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.ClearCountry() -> (int32 s)
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.CreateIface(fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq req) -> (int32 s,uint16 iface_id)
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.DestroyIface(uint16 iface_id) -> (int32 s)
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.GetCountry() -> (int32 s,fuchsia.hardware.wlanphyimpl/WlanphyCountry country)
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.Query() -> (int32 s,fuchsia.hardware.wlanphyimpl/WlanphyImplInfo info)
+protocol/member fuchsia.hardware.wlanphyimpl/WlanphyImpl.SetCountry(fuchsia.hardware.wlanphyimpl/WlanphyCountry country) -> (int32 s)
+protocol fuchsia.hardware.wlanphyimpl/WlanphyImpl
+struct/member fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq.has_init_mac_addr bool
+struct/member fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq.init_mac_addr array<uint8,6>
+struct/member fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq.role ddk.hw.wlan.wlaninfo/WlanInfoMacRole
+struct/member fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq.sme_channel zx/handle:CHANNEL
+resource struct fuchsia.hardware.wlanphyimpl/WlanphyImplCreateIfaceReq
+struct/member fuchsia.hardware.wlanphyimpl/WlanphyImplInfo.supported_mac_roles ddk.hw.wlan.wlaninfo/WlanInfoMacRole
+struct fuchsia.hardware.wlanphyimpl/WlanphyImplInfo
+library fuchsia.hardware.wlanphyimpl

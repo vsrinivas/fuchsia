@@ -1,0 +1,2 @@
+const fuchsia.url/MAX_URL_LENGTH uint32 4096
+library fuchsia.url

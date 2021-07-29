@@ -1,0 +1,6 @@
+protocol/member fuchsia.update.channelcontrol/ChannelControl.GetCurrent() -> (string:128 channel)
+protocol/member fuchsia.update.channelcontrol/ChannelControl.GetTarget() -> (string:128 channel)
+protocol/member fuchsia.update.channelcontrol/ChannelControl.GetTargetList() -> (vector<string:128>:100 channels)
+protocol/member fuchsia.update.channelcontrol/ChannelControl.SetTarget(string:128 channel) -> ()
+protocol fuchsia.update.channelcontrol/ChannelControl
+library fuchsia.update.channelcontrol

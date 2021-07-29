@@ -1,0 +1,64 @@
+const fuchsia.logger/COMPONENT_NAME_PLACEHOLDER_TAG string "COMPONENT_NAME"
+const fuchsia.logger/LOG_LEVEL_DEFAULT uint8 48
+const fuchsia.logger/LOG_SEVERITY_MAX_STEP uint8 6
+const fuchsia.logger/LOG_SEVERITY_STEP_SIZE uint8 16
+const fuchsia.logger/LOG_VERBOSITY_STEP_SIZE uint8 1
+protocol/member fuchsia.logger/Log.DumpLogs(client_end:fuchsia.logger/LogListener log_listener,box<fuchsia.logger/LogFilterOptions> options)
+protocol/member fuchsia.logger/Log.DumpLogsSafe(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)
+protocol/member fuchsia.logger/Log.Listen(client_end:fuchsia.logger/LogListener log_listener,box<fuchsia.logger/LogFilterOptions> options)
+protocol/member fuchsia.logger/Log.ListenSafe(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)
+protocol/member fuchsia.logger/Log.ListenSafeWithSelectors(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options,vector<fuchsia.logger/LogInterestSelector>:5 selectors)
+protocol fuchsia.logger/Log
+struct/member fuchsia.logger/LogFilterOptions.filter_by_pid bool
+struct/member fuchsia.logger/LogFilterOptions.filter_by_tid bool
+struct/member fuchsia.logger/LogFilterOptions.min_severity fuchsia.logger/LogLevelFilter
+struct/member fuchsia.logger/LogFilterOptions.pid uint64
+struct/member fuchsia.logger/LogFilterOptions.tags vector<string:63>:16
+struct/member fuchsia.logger/LogFilterOptions.tid uint64
+struct/member fuchsia.logger/LogFilterOptions.verbosity uint8
+struct fuchsia.logger/LogFilterOptions
+struct/member fuchsia.logger/LogInterestSelector.interest fuchsia.diagnostics/Interest
+struct/member fuchsia.logger/LogInterestSelector.selector fuchsia.diagnostics/ComponentSelector
+struct fuchsia.logger/LogInterestSelector
+enum/member fuchsia.logger/LogLevelFilter.ALL -127
+enum/member fuchsia.logger/LogLevelFilter.DEBUG 32
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_ERROR 2
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_FATAL 3
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_INFO 0
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_NONE -1
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_WARN 1
+enum/member fuchsia.logger/LogLevelFilter.ERROR 80
+enum/member fuchsia.logger/LogLevelFilter.FATAL 96
+enum/member fuchsia.logger/LogLevelFilter.INFO 48
+enum/member fuchsia.logger/LogLevelFilter.NONE 127
+enum/member fuchsia.logger/LogLevelFilter.TRACE 16
+enum/member fuchsia.logger/LogLevelFilter.WARN 64
+strict enum fuchsia.logger/LogLevelFilter int8
+protocol/member fuchsia.logger/LogListener.Done()
+protocol/member fuchsia.logger/LogListener.Log(fuchsia.logger/LogMessage log)
+protocol/member fuchsia.logger/LogListener.LogMany(vector<fuchsia.logger/LogMessage> log)
+protocol fuchsia.logger/LogListener
+protocol/member fuchsia.logger/LogListenerSafe.Done()
+protocol/member fuchsia.logger/LogListenerSafe.Log(fuchsia.logger/LogMessage log) -> ()
+protocol/member fuchsia.logger/LogListenerSafe.LogMany(vector<fuchsia.logger/LogMessage> log) -> ()
+protocol fuchsia.logger/LogListenerSafe
+struct/member fuchsia.logger/LogMessage.dropped_logs uint32
+struct/member fuchsia.logger/LogMessage.msg string:32768
+struct/member fuchsia.logger/LogMessage.pid uint64
+struct/member fuchsia.logger/LogMessage.severity int32
+struct/member fuchsia.logger/LogMessage.tags vector<string:63>:5
+struct/member fuchsia.logger/LogMessage.tid uint64
+struct/member fuchsia.logger/LogMessage.time int64
+struct fuchsia.logger/LogMessage
+protocol/member fuchsia.logger/LogSink.Connect(zx/handle:SOCKET socket)
+protocol/member fuchsia.logger/LogSink.ConnectStructured(zx/handle:SOCKET socket)
+protocol/member fuchsia.logger/LogSink.OnInterestChanged -> (fuchsia.diagnostics/Interest interest)
+protocol/member fuchsia.logger/LogSink.OnRegisterInterest -> (fuchsia.diagnostics/Interest interest)
+protocol fuchsia.logger/LogSink
+const fuchsia.logger/MAX_DATAGRAM_LEN_BYTES uint32 32768
+const fuchsia.logger/MAX_LOG_MANY_SIZE_BYTES uint64 16384
+const fuchsia.logger/MAX_LOG_SELECTORS uint8 5
+const fuchsia.logger/MAX_TAGS uint8 16
+const fuchsia.logger/MAX_TAGS_PER_LOG_MESSAGE uint8 5
+const fuchsia.logger/MAX_TAG_LEN_BYTES uint8 63
+library fuchsia.logger

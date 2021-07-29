@@ -1,0 +1,30 @@
+struct/member fuchsia.hardware.usb.request/UsbHeader.device_id uint32
+struct/member fuchsia.hardware.usb.request/UsbHeader.ep_address uint8
+struct/member fuchsia.hardware.usb.request/UsbHeader.frame uint64
+struct/member fuchsia.hardware.usb.request/UsbHeader.length uint64
+struct/member fuchsia.hardware.usb.request/UsbHeader.send_zlp bool
+struct fuchsia.hardware.usb.request/UsbHeader
+struct/member fuchsia.hardware.usb.request/UsbRequest.alloc_size uint64
+struct/member fuchsia.hardware.usb.request/UsbRequest.cb_on_error_only bool
+struct/member fuchsia.hardware.usb.request/UsbRequest.direct bool
+struct/member fuchsia.hardware.usb.request/UsbRequest.header fuchsia.hardware.usb.request/UsbHeader
+struct/member fuchsia.hardware.usb.request/UsbRequest.offset uint64
+struct/member fuchsia.hardware.usb.request/UsbRequest.phys vector<uint64>
+struct/member fuchsia.hardware.usb.request/UsbRequest.pmt zx/handle
+struct/member fuchsia.hardware.usb.request/UsbRequest.release_frees bool
+struct/member fuchsia.hardware.usb.request/UsbRequest.reset bool
+struct/member fuchsia.hardware.usb.request/UsbRequest.reset_address uint8
+struct/member fuchsia.hardware.usb.request/UsbRequest.response fuchsia.hardware.usb.request/UsbResponse
+struct/member fuchsia.hardware.usb.request/UsbRequest.setup fuchsia.hardware.usb.descriptor/UsbSetup
+struct/member fuchsia.hardware.usb.request/UsbRequest.sg vector<ddk.hw.physiter/SgEntry>
+struct/member fuchsia.hardware.usb.request/UsbRequest.size uint64
+struct/member fuchsia.hardware.usb.request/UsbRequest.virt uint64
+struct/member fuchsia.hardware.usb.request/UsbRequest.vmo_handle zx/handle:VMO
+resource struct fuchsia.hardware.usb.request/UsbRequest
+protocol/member fuchsia.hardware.usb.request/UsbRequestCompleteCallback.Callback(fuchsia.hardware.usb.request/UsbRequest req) -> ()
+protocol fuchsia.hardware.usb.request/UsbRequestCompleteCallback
+struct/member fuchsia.hardware.usb.request/UsbResponse.actual uint64
+struct/member fuchsia.hardware.usb.request/UsbResponse.silent_completions_count uint64
+struct/member fuchsia.hardware.usb.request/UsbResponse.status int32
+struct fuchsia.hardware.usb.request/UsbResponse
+library fuchsia.hardware.usb.request

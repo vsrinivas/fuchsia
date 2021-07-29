@@ -1,0 +1,33 @@
+protocol/member fuchsia.pkg.rewrite/EditTransaction.Add(fuchsia.pkg.rewrite/Rule rule) -> (fuchsia.pkg.rewrite/EditTransaction_Add_Result result)
+protocol/member fuchsia.pkg.rewrite/EditTransaction.Commit() -> (fuchsia.pkg.rewrite/EditTransaction_Commit_Result result)
+protocol/member fuchsia.pkg.rewrite/EditTransaction.ListDynamic(server_end:fuchsia.pkg.rewrite/RuleIterator iterator)
+protocol/member fuchsia.pkg.rewrite/EditTransaction.ResetAll()
+protocol fuchsia.pkg.rewrite/EditTransaction
+struct fuchsia.pkg.rewrite/EditTransaction_Add_Response
+union/member fuchsia.pkg.rewrite/EditTransaction_Add_Result.err int32
+union/member fuchsia.pkg.rewrite/EditTransaction_Add_Result.response fuchsia.pkg.rewrite/EditTransaction_Add_Response
+strict union fuchsia.pkg.rewrite/EditTransaction_Add_Result
+struct fuchsia.pkg.rewrite/EditTransaction_Commit_Response
+union/member fuchsia.pkg.rewrite/EditTransaction_Commit_Result.err int32
+union/member fuchsia.pkg.rewrite/EditTransaction_Commit_Result.response fuchsia.pkg.rewrite/EditTransaction_Commit_Response
+strict union fuchsia.pkg.rewrite/EditTransaction_Commit_Result
+protocol/member fuchsia.pkg.rewrite/Engine.List(server_end:fuchsia.pkg.rewrite/RuleIterator iterator)
+protocol/member fuchsia.pkg.rewrite/Engine.ListStatic(server_end:fuchsia.pkg.rewrite/RuleIterator iterator)
+protocol/member fuchsia.pkg.rewrite/Engine.StartEditTransaction(server_end:fuchsia.pkg.rewrite/EditTransaction transaction)
+protocol/member fuchsia.pkg.rewrite/Engine.TestApply(string url) -> (fuchsia.pkg.rewrite/Engine_TestApply_Result result)
+protocol fuchsia.pkg.rewrite/Engine
+struct/member fuchsia.pkg.rewrite/Engine_TestApply_Response.rewritten string
+struct fuchsia.pkg.rewrite/Engine_TestApply_Response
+union/member fuchsia.pkg.rewrite/Engine_TestApply_Result.err int32
+union/member fuchsia.pkg.rewrite/Engine_TestApply_Result.response fuchsia.pkg.rewrite/Engine_TestApply_Response
+strict union fuchsia.pkg.rewrite/Engine_TestApply_Result
+struct/member fuchsia.pkg.rewrite/LiteralRule.host_match string
+struct/member fuchsia.pkg.rewrite/LiteralRule.host_replacement string
+struct/member fuchsia.pkg.rewrite/LiteralRule.path_prefix_match string
+struct/member fuchsia.pkg.rewrite/LiteralRule.path_prefix_replacement string
+struct fuchsia.pkg.rewrite/LiteralRule
+union/member fuchsia.pkg.rewrite/Rule.literal fuchsia.pkg.rewrite/LiteralRule
+flexible union fuchsia.pkg.rewrite/Rule
+protocol/member fuchsia.pkg.rewrite/RuleIterator.Next() -> (vector<fuchsia.pkg.rewrite/Rule> rules)
+protocol fuchsia.pkg.rewrite/RuleIterator
+library fuchsia.pkg.rewrite

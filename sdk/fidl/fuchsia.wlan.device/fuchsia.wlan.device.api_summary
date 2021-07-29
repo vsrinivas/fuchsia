@@ -1,0 +1,62 @@
+struct/member fuchsia.wlan.device/BandInfo.band_id fuchsia.wlan.common/Band
+struct/member fuchsia.wlan.device/BandInfo.ht_caps fuchsia.wlan.internal/HtCapabilities:optional
+struct/member fuchsia.wlan.device/BandInfo.rates vector<uint8>:12
+struct/member fuchsia.wlan.device/BandInfo.supported_channels fuchsia.wlan.device/ChannelList
+struct/member fuchsia.wlan.device/BandInfo.vht_caps fuchsia.wlan.internal/VhtCapabilities:optional
+struct fuchsia.wlan.device/BandInfo
+enum/member fuchsia.wlan.device/Capability.QOS 512
+enum/member fuchsia.wlan.device/Capability.RADIO_MSMT 4096
+enum/member fuchsia.wlan.device/Capability.SHORT_PREAMBLE 32
+enum/member fuchsia.wlan.device/Capability.SHORT_SLOT_TIME 1024
+enum/member fuchsia.wlan.device/Capability.SIMULTANEOUS_CLIENT_AP 65536
+enum/member fuchsia.wlan.device/Capability.SPECTRUM_MGMT 256
+strict enum fuchsia.wlan.device/Capability uint32
+struct/member fuchsia.wlan.device/ChannelList.base_freq uint16
+struct/member fuchsia.wlan.device/ChannelList.channels vector<uint8>:200
+struct fuchsia.wlan.device/ChannelList
+protocol/member fuchsia.wlan.device/Connector.Connect(server_end:fuchsia.wlan.device/Phy request)
+protocol fuchsia.wlan.device/Connector
+struct/member fuchsia.wlan.device/CountryCode.alpha2 array<uint8,2>
+struct fuchsia.wlan.device/CountryCode
+struct/member fuchsia.wlan.device/CreateIfaceRequest.init_mac_addr vector<uint8>:<6,optional>
+struct/member fuchsia.wlan.device/CreateIfaceRequest.role fuchsia.wlan.device/MacRole
+struct/member fuchsia.wlan.device/CreateIfaceRequest.sme_channel zx/handle:<CHANNEL,optional>
+resource struct fuchsia.wlan.device/CreateIfaceRequest
+struct/member fuchsia.wlan.device/CreateIfaceResponse.iface_id uint16
+struct/member fuchsia.wlan.device/CreateIfaceResponse.status int32
+struct fuchsia.wlan.device/CreateIfaceResponse
+struct/member fuchsia.wlan.device/DestroyIfaceRequest.id uint16
+struct fuchsia.wlan.device/DestroyIfaceRequest
+struct/member fuchsia.wlan.device/DestroyIfaceResponse.status int32
+struct fuchsia.wlan.device/DestroyIfaceResponse
+const fuchsia.wlan.device/MAX_NUM_RATES uint8 12
+enum/member fuchsia.wlan.device/MacRole.AP 2
+enum/member fuchsia.wlan.device/MacRole.CLIENT 1
+enum/member fuchsia.wlan.device/MacRole.MESH 3
+strict enum fuchsia.wlan.device/MacRole uint32
+protocol/member fuchsia.wlan.device/Phy.ClearCountry() -> (int32 status)
+protocol/member fuchsia.wlan.device/Phy.CreateIface(fuchsia.wlan.device/CreateIfaceRequest req) -> (fuchsia.wlan.device/CreateIfaceResponse resp)
+protocol/member fuchsia.wlan.device/Phy.DestroyIface(fuchsia.wlan.device/DestroyIfaceRequest req) -> (fuchsia.wlan.device/DestroyIfaceResponse resp)
+protocol/member fuchsia.wlan.device/Phy.GetCountry() -> (fuchsia.wlan.device/Phy_GetCountry_Result result)
+protocol/member fuchsia.wlan.device/Phy.Query() -> (fuchsia.wlan.device/QueryResponse resp)
+protocol/member fuchsia.wlan.device/Phy.SetCountry(fuchsia.wlan.device/CountryCode req) -> (int32 status)
+protocol fuchsia.wlan.device/Phy
+struct/member fuchsia.wlan.device/PhyInfo.dev_path string:optional
+struct/member fuchsia.wlan.device/PhyInfo.id uint16
+struct/member fuchsia.wlan.device/PhyInfo.supported_mac_roles vector<fuchsia.wlan.device/MacRole>:8
+struct fuchsia.wlan.device/PhyInfo
+struct/member fuchsia.wlan.device/Phy_GetCountry_Response.resp fuchsia.wlan.device/CountryCode
+struct fuchsia.wlan.device/Phy_GetCountry_Response
+union/member fuchsia.wlan.device/Phy_GetCountry_Result.err int32
+union/member fuchsia.wlan.device/Phy_GetCountry_Result.response fuchsia.wlan.device/Phy_GetCountry_Response
+strict union fuchsia.wlan.device/Phy_GetCountry_Result
+struct/member fuchsia.wlan.device/QueryResponse.info fuchsia.wlan.device/PhyInfo
+struct/member fuchsia.wlan.device/QueryResponse.status int32
+struct fuchsia.wlan.device/QueryResponse
+enum/member fuchsia.wlan.device/SupportedPhy.CCK 2
+enum/member fuchsia.wlan.device/SupportedPhy.DSSS 1
+enum/member fuchsia.wlan.device/SupportedPhy.HT 4
+enum/member fuchsia.wlan.device/SupportedPhy.OFDM 3
+enum/member fuchsia.wlan.device/SupportedPhy.VHT 5
+strict enum fuchsia.wlan.device/SupportedPhy uint32
+library fuchsia.wlan.device

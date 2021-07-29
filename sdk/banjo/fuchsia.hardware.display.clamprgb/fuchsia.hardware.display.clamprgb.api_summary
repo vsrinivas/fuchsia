@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.display.clamprgb/DisplayClampRgbImpl.SetMinimumRgb(uint8 minimum_rgb) -> (int32 s)
+protocol fuchsia.hardware.display.clamprgb/DisplayClampRgbImpl
+library fuchsia.hardware.display.clamprgb

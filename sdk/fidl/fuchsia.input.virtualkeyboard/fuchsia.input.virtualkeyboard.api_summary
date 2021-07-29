@@ -1,0 +1,18 @@
+protocol/member fuchsia.input.virtualkeyboard/Controller.RequestHide()
+protocol/member fuchsia.input.virtualkeyboard/Controller.RequestShow()
+protocol/member fuchsia.input.virtualkeyboard/Controller.SetTextType(fuchsia.input.virtualkeyboard/TextType text_type)
+protocol/member fuchsia.input.virtualkeyboard/Controller.WatchVisibility() -> (bool is_visible)
+protocol fuchsia.input.virtualkeyboard/Controller
+protocol/member fuchsia.input.virtualkeyboard/ControllerCreator.Create(fuchsia.ui.views/ViewRef view_ref,fuchsia.input.virtualkeyboard/TextType text_type,server_end:fuchsia.input.virtualkeyboard/Controller controller_request)
+protocol fuchsia.input.virtualkeyboard/ControllerCreator
+protocol/member fuchsia.input.virtualkeyboard/Manager.Notify(bool is_visible,fuchsia.input.virtualkeyboard/VisibilityChangeReason reason) -> ()
+protocol/member fuchsia.input.virtualkeyboard/Manager.WatchTypeAndVisibility() -> (fuchsia.input.virtualkeyboard/TextType text_type,bool is_visible)
+protocol fuchsia.input.virtualkeyboard/Manager
+enum/member fuchsia.input.virtualkeyboard/TextType.ALPHANUMERIC 0
+enum/member fuchsia.input.virtualkeyboard/TextType.NUMERIC 1
+enum/member fuchsia.input.virtualkeyboard/TextType.PHONE 2
+flexible enum fuchsia.input.virtualkeyboard/TextType uint32
+enum/member fuchsia.input.virtualkeyboard/VisibilityChangeReason.PROGRAMMATIC 1
+enum/member fuchsia.input.virtualkeyboard/VisibilityChangeReason.USER_INTERACTION 2
+flexible enum fuchsia.input.virtualkeyboard/VisibilityChangeReason uint32
+library fuchsia.input.virtualkeyboard

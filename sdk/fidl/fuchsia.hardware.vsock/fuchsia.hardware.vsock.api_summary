@@ -1,0 +1,20 @@
+struct/member fuchsia.hardware.vsock/Addr.local_port uint32
+struct/member fuchsia.hardware.vsock/Addr.remote_cid uint32
+struct/member fuchsia.hardware.vsock/Addr.remote_port uint32
+struct fuchsia.hardware.vsock/Addr
+protocol/member fuchsia.hardware.vsock/Callbacks.Request(fuchsia.hardware.vsock/Addr addr)
+protocol/member fuchsia.hardware.vsock/Callbacks.Response(fuchsia.hardware.vsock/Addr addr)
+protocol/member fuchsia.hardware.vsock/Callbacks.Rst(fuchsia.hardware.vsock/Addr addr)
+protocol/member fuchsia.hardware.vsock/Callbacks.SendVmoComplete(fuchsia.hardware.vsock/Addr addr)
+protocol/member fuchsia.hardware.vsock/Callbacks.Shutdown(fuchsia.hardware.vsock/Addr addr)
+protocol/member fuchsia.hardware.vsock/Callbacks.TransportReset(uint32 new_cid) -> ()
+protocol fuchsia.hardware.vsock/Callbacks
+protocol/member fuchsia.hardware.vsock/Device.GetCid() -> (uint32 local_cid)
+protocol/member fuchsia.hardware.vsock/Device.SendRequest(fuchsia.hardware.vsock/Addr addr,zx/handle:SOCKET data) -> (int32 status)
+protocol/member fuchsia.hardware.vsock/Device.SendResponse(fuchsia.hardware.vsock/Addr addr,zx/handle:SOCKET data) -> (int32 status)
+protocol/member fuchsia.hardware.vsock/Device.SendRst(fuchsia.hardware.vsock/Addr addr) -> (int32 status)
+protocol/member fuchsia.hardware.vsock/Device.SendShutdown(fuchsia.hardware.vsock/Addr addr) -> (int32 status)
+protocol/member fuchsia.hardware.vsock/Device.SendVmo(fuchsia.hardware.vsock/Addr addr,zx/handle:VMO vmo,uint64 off,uint64 len) -> (int32 status)
+protocol/member fuchsia.hardware.vsock/Device.Start(client_end:fuchsia.hardware.vsock/Callbacks cb) -> (int32 status)
+protocol fuchsia.hardware.vsock/Device
+library fuchsia.hardware.vsock

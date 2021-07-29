@@ -1,0 +1,41 @@
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.ConnectSysmem(zx/handle:CHANNEL connection) -> (int32 s)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.Create() -> (int32 s,int32 id,zx/handle:VMO vmo)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.Destroy(int32 id)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.Exec(int32 id)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.GetBti() -> (int32 s,zx/handle:BTI bti)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.Open(int32 id)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.RegisterSysmemHeap(uint64 heap,zx/handle:CHANNEL connection) -> (int32 s)
+protocol/member fuchsia.hardware.goldfish.pipe/GoldfishPipe.SetEvent(int32 id,zx/handle:EVENT pipe_event) -> (int32 s)
+protocol fuchsia.hardware.goldfish.pipe/GoldfishPipe
+const fuchsia.hardware.goldfish.pipe/MAX_BUFFERS_PER_COMMAND uint32 336
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdBuffer.cmd int32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdBuffer.id int32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdBuffer.reserved int32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdBuffer.rw_params fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdBuffer.status int32
+struct fuchsia.hardware.goldfish.pipe/PipeCmdBuffer
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.CALL 11
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.CLOSE 2
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.OPEN 1
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.POLL 3
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.READ 6
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.WAKE_ON_READ 7
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.WAKE_ON_WRITE 5
+enum/member fuchsia.hardware.goldfish.pipe/PipeCmdCode.WRITE 4
+strict enum fuchsia.hardware.goldfish.pipe/PipeCmdCode int32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams.buffers_count uint32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams.consumed_size int32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams.ptrs array<uint64,336>
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams.read_index uint32
+struct/member fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams.sizes array<uint32,336>
+struct fuchsia.hardware.goldfish.pipe/PipeCmdReadWriteParams
+enum/member fuchsia.hardware.goldfish.pipe/PipeError.AGAIN -2
+enum/member fuchsia.hardware.goldfish.pipe/PipeError.INVAL -1
+enum/member fuchsia.hardware.goldfish.pipe/PipeError.IO -4
+enum/member fuchsia.hardware.goldfish.pipe/PipeError.NOMEM -3
+strict enum fuchsia.hardware.goldfish.pipe/PipeError int32
+enum/member fuchsia.hardware.goldfish.pipe/PipeWakeFlag.CLOSED 1
+enum/member fuchsia.hardware.goldfish.pipe/PipeWakeFlag.READ 2
+enum/member fuchsia.hardware.goldfish.pipe/PipeWakeFlag.WRITE 4
+strict enum fuchsia.hardware.goldfish.pipe/PipeWakeFlag int32
+library fuchsia.hardware.goldfish.pipe

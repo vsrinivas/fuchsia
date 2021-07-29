@@ -1,0 +1,10 @@
+const fuchsia.driver.test/LOG_MESSAGE_MAX uint32 1024
+protocol/member fuchsia.driver.test/Logger.LogMessage(string:1024 msg)
+protocol/member fuchsia.driver.test/Logger.LogTestCase(string:256 name,fuchsia.driver.test/TestCaseResult result)
+protocol fuchsia.driver.test/Logger
+const fuchsia.driver.test/TEST_CASE_NAME_MAX uint32 256
+struct/member fuchsia.driver.test/TestCaseResult.failed uint64
+struct/member fuchsia.driver.test/TestCaseResult.passed uint64
+struct/member fuchsia.driver.test/TestCaseResult.skipped uint64
+struct fuchsia.driver.test/TestCaseResult
+library fuchsia.driver.test

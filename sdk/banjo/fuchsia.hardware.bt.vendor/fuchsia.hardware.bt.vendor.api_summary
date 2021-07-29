@@ -1,0 +1,21 @@
+const fuchsia.hardware.bt.vendor/BT_VENDOR_MAX_COMMAND_BUFFER_LEN uint16 16
+protocol/member fuchsia.hardware.bt.vendor/BtVendor.EncodeCommand(fuchsia.hardware.bt.vendor/BtVendorCommand command,fuchsia.hardware.bt.vendor/BtVendorParams params) -> (int32 status,vector<uint8>:16 encoded)
+protocol/member fuchsia.hardware.bt.vendor/BtVendor.GetFeatures() -> (fuchsia.hardware.bt.vendor/BtVendorFeatures features)
+protocol fuchsia.hardware.bt.vendor/BtVendor
+enum/member fuchsia.hardware.bt.vendor/BtVendorAclDirection.SINK 1
+enum/member fuchsia.hardware.bt.vendor/BtVendorAclDirection.SOURCE 0
+strict enum fuchsia.hardware.bt.vendor/BtVendorAclDirection uint8
+enum/member fuchsia.hardware.bt.vendor/BtVendorAclPriority.HIGH 1
+enum/member fuchsia.hardware.bt.vendor/BtVendorAclPriority.NORMAL 0
+strict enum fuchsia.hardware.bt.vendor/BtVendorAclPriority uint8
+enum/member fuchsia.hardware.bt.vendor/BtVendorCommand.SET_ACL_PRIORITY 0
+strict enum fuchsia.hardware.bt.vendor/BtVendorCommand uint32
+enum/member fuchsia.hardware.bt.vendor/BtVendorFeatures.SET_ACL_PRIORITY_COMMAND 1
+strict enum fuchsia.hardware.bt.vendor/BtVendorFeatures uint32
+union/member fuchsia.hardware.bt.vendor/BtVendorParams.set_acl_priority fuchsia.hardware.bt.vendor/BtVendorSetAclPriorityParams
+strict union fuchsia.hardware.bt.vendor/BtVendorParams
+struct/member fuchsia.hardware.bt.vendor/BtVendorSetAclPriorityParams.connection_handle uint16
+struct/member fuchsia.hardware.bt.vendor/BtVendorSetAclPriorityParams.direction fuchsia.hardware.bt.vendor/BtVendorAclDirection
+struct/member fuchsia.hardware.bt.vendor/BtVendorSetAclPriorityParams.priority fuchsia.hardware.bt.vendor/BtVendorAclPriority
+struct fuchsia.hardware.bt.vendor/BtVendorSetAclPriorityParams
+library fuchsia.hardware.bt.vendor

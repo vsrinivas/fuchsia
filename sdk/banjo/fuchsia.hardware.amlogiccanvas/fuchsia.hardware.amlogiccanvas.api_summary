@@ -1,0 +1,14 @@
+protocol/member fuchsia.hardware.amlogiccanvas/AmlogicCanvas.Config(zx/handle:VMO vmo,uint64 offset,fuchsia.hardware.amlogiccanvas/CanvasInfo info) -> (int32 s,uint8 canvas_idx)
+protocol/member fuchsia.hardware.amlogiccanvas/AmlogicCanvas.Free(uint8 canvas_idx) -> (int32 s)
+protocol fuchsia.hardware.amlogiccanvas/AmlogicCanvas
+enum/member fuchsia.hardware.amlogiccanvas/CanvasFlags.READ 1
+enum/member fuchsia.hardware.amlogiccanvas/CanvasFlags.WRITE 2
+strict enum fuchsia.hardware.amlogiccanvas/CanvasFlags uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.blkmode uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.endianness uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.flags uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.height uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.stride_bytes uint32
+struct/member fuchsia.hardware.amlogiccanvas/CanvasInfo.wrap uint32
+struct fuchsia.hardware.amlogiccanvas/CanvasInfo
+library fuchsia.hardware.amlogiccanvas

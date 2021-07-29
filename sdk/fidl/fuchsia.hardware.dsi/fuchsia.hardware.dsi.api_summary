@@ -1,0 +1,97 @@
+enum/member fuchsia.hardware.dsi/ColorCode.LOOSE_24BIT_666 3
+enum/member fuchsia.hardware.dsi/ColorCode.PACKED_16BIT_565 1
+enum/member fuchsia.hardware.dsi/ColorCode.PACKED_18BIT_666 2
+enum/member fuchsia.hardware.dsi/ColorCode.PACKED_24BIT_888 4
+strict enum fuchsia.hardware.dsi/ColorCode uint8
+table/member fuchsia.hardware.dsi/DisplaySetting.bit_rate_max uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.clock_factor uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.h_active uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.h_period uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.hsync_bp uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.hsync_pol uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.hsync_width uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.lane_num uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.lcd_clock uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.v_active uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.v_period uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.vsync_bp uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.vsync_pol uint32
+table/member fuchsia.hardware.dsi/DisplaySetting.vsync_width uint32
+table fuchsia.hardware.dsi/DisplaySetting
+protocol/member fuchsia.hardware.dsi/DsiBase.SendCmd(fuchsia.hardware.dsi/MipiDsiCmd cmd,vector<uint8>:64 txdata) -> (fuchsia.hardware.dsi/DsiBase_SendCmd_Result result)
+protocol fuchsia.hardware.dsi/DsiBase
+struct/member fuchsia.hardware.dsi/DsiBase_SendCmd_Response.rxdata vector<uint8>:64
+struct fuchsia.hardware.dsi/DsiBase_SendCmd_Response
+union/member fuchsia.hardware.dsi/DsiBase_SendCmd_Result.err int32
+union/member fuchsia.hardware.dsi/DsiBase_SendCmd_Result.response fuchsia.hardware.dsi/DsiBase_SendCmd_Response
+strict union fuchsia.hardware.dsi/DsiBase_SendCmd_Result
+table/member fuchsia.hardware.dsi/DsiConfig.color_coding fuchsia.hardware.dsi/ColorCode
+table/member fuchsia.hardware.dsi/DsiConfig.display_setting fuchsia.hardware.dsi/DisplaySetting
+table/member fuchsia.hardware.dsi/DsiConfig.vendor_config fuchsia.hardware.dsi/VendorConfig
+table/member fuchsia.hardware.dsi/DsiConfig.video_mode_type fuchsia.hardware.dsi/VideoMode
+table fuchsia.hardware.dsi/DsiConfig
+protocol/member fuchsia.hardware.dsi/DsiExtended.Config(fuchsia.hardware.dsi/DsiConfig dsi_config) -> (fuchsia.hardware.dsi/DsiExtended_Config_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.EnableBist(uint32 pattern) -> (fuchsia.hardware.dsi/DsiExtended_EnableBist_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.IsPoweredUp() -> (bool on)
+protocol/member fuchsia.hardware.dsi/DsiExtended.PhyConfig(fuchsia.hardware.dsi/DsiConfig dsi_config) -> (fuchsia.hardware.dsi/DsiExtended_PhyConfig_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.PhyPowerDown() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.PhyPowerUp() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.PhySendCode(uint32 code,uint32 parameter) -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.PhyWaitForReady() -> (fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.PowerDown() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.PowerUp() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.PrintDsiRegisters() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.ReadReg(uint32 reg) -> (fuchsia.hardware.dsi/DsiExtended_ReadReg_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.Reset() -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.SendCmd(fuchsia.hardware.dsi/MipiDsiCmd cmd,vector<uint8>:64 txdata) -> (fuchsia.hardware.dsi/DsiBase_SendCmd_Result result)
+protocol/member fuchsia.hardware.dsi/DsiExtended.SetMode(fuchsia.hardware.dsi/DsiMode mode) -> ()
+protocol/member fuchsia.hardware.dsi/DsiExtended.WriteReg(uint32 reg,uint32 val) -> (fuchsia.hardware.dsi/DsiExtended_WriteReg_Result result)
+protocol fuchsia.hardware.dsi/DsiExtended
+struct fuchsia.hardware.dsi/DsiExtended_Config_Response
+union/member fuchsia.hardware.dsi/DsiExtended_Config_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_Config_Result.response fuchsia.hardware.dsi/DsiExtended_Config_Response
+strict union fuchsia.hardware.dsi/DsiExtended_Config_Result
+struct fuchsia.hardware.dsi/DsiExtended_EnableBist_Response
+union/member fuchsia.hardware.dsi/DsiExtended_EnableBist_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_EnableBist_Result.response fuchsia.hardware.dsi/DsiExtended_EnableBist_Response
+strict union fuchsia.hardware.dsi/DsiExtended_EnableBist_Result
+struct fuchsia.hardware.dsi/DsiExtended_PhyConfig_Response
+union/member fuchsia.hardware.dsi/DsiExtended_PhyConfig_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_PhyConfig_Result.response fuchsia.hardware.dsi/DsiExtended_PhyConfig_Response
+strict union fuchsia.hardware.dsi/DsiExtended_PhyConfig_Result
+struct fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Response
+union/member fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Result.response fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Response
+strict union fuchsia.hardware.dsi/DsiExtended_PhyWaitForReady_Result
+struct/member fuchsia.hardware.dsi/DsiExtended_ReadReg_Response.val uint32
+struct fuchsia.hardware.dsi/DsiExtended_ReadReg_Response
+union/member fuchsia.hardware.dsi/DsiExtended_ReadReg_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_ReadReg_Result.response fuchsia.hardware.dsi/DsiExtended_ReadReg_Response
+strict union fuchsia.hardware.dsi/DsiExtended_ReadReg_Result
+struct fuchsia.hardware.dsi/DsiExtended_WriteReg_Response
+union/member fuchsia.hardware.dsi/DsiExtended_WriteReg_Result.err int32
+union/member fuchsia.hardware.dsi/DsiExtended_WriteReg_Result.response fuchsia.hardware.dsi/DsiExtended_WriteReg_Response
+strict union fuchsia.hardware.dsi/DsiExtended_WriteReg_Result
+enum/member fuchsia.hardware.dsi/DsiMode.COMMAND 2
+enum/member fuchsia.hardware.dsi/DsiMode.VIDEO 1
+strict enum fuchsia.hardware.dsi/DsiMode uint8
+const fuchsia.hardware.dsi/MAX_PAYLOAD_SIZE uint32 64
+table/member fuchsia.hardware.dsi/MipiDsiCmd.dsi_data_type uint8
+table/member fuchsia.hardware.dsi/MipiDsiCmd.expected_read_length uint32
+table/member fuchsia.hardware.dsi/MipiDsiCmd.flags uint32
+table/member fuchsia.hardware.dsi/MipiDsiCmd.virtual_channel_id uint8
+table/member fuchsia.hardware.dsi/MipiDsiCmd.write_length uint32
+table fuchsia.hardware.dsi/MipiDsiCmd
+table/member fuchsia.hardware.dsi/VendorConfig.auto_clklane uint8
+table/member fuchsia.hardware.dsi/VendorConfig.lp_cmd_pkt_size uint32
+table/member fuchsia.hardware.dsi/VendorConfig.lp_escape_time uint32
+table/member fuchsia.hardware.dsi/VendorConfig.phy_timer_clkhs_to_lp uint32
+table/member fuchsia.hardware.dsi/VendorConfig.phy_timer_clklp_to_hs uint32
+table/member fuchsia.hardware.dsi/VendorConfig.phy_timer_hs_to_lp uint32
+table/member fuchsia.hardware.dsi/VendorConfig.phy_timer_lp_to_hs uint32
+table fuchsia.hardware.dsi/VendorConfig
+enum/member fuchsia.hardware.dsi/VideoMode.BURST 3
+enum/member fuchsia.hardware.dsi/VideoMode.NON_BURST_EVENT 2
+enum/member fuchsia.hardware.dsi/VideoMode.NON_BURST_PULSE 1
+strict enum fuchsia.hardware.dsi/VideoMode uint8
+library fuchsia.hardware.dsi

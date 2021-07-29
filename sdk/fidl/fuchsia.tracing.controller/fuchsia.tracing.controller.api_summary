@@ -1,0 +1,65 @@
+enum/member fuchsia.tracing.controller/BufferDisposition.CLEAR_ALL 1
+enum/member fuchsia.tracing.controller/BufferDisposition.CLEAR_NONDURABLE 2
+enum/member fuchsia.tracing.controller/BufferDisposition.RETAIN 3
+strict enum fuchsia.tracing.controller/BufferDisposition uint8
+enum/member fuchsia.tracing.controller/BufferingMode.CIRCULAR 1
+enum/member fuchsia.tracing.controller/BufferingMode.ONESHOT 0
+enum/member fuchsia.tracing.controller/BufferingMode.STREAMING 2
+strict enum fuchsia.tracing.controller/BufferingMode uint8
+protocol/member fuchsia.tracing.controller/Controller.GetKnownCategories() -> (vector<fuchsia.tracing.controller/KnownCategory>:100 categories)
+protocol/member fuchsia.tracing.controller/Controller.GetProviders() -> (vector<fuchsia.tracing.controller/ProviderInfo>:100 providers)
+protocol/member fuchsia.tracing.controller/Controller.InitializeTracing(fuchsia.tracing.controller/TraceConfig config,zx/handle:SOCKET output)
+protocol/member fuchsia.tracing.controller/Controller.OnSessionStateChange -> (fuchsia.tracing.controller/SessionState state)
+protocol/member fuchsia.tracing.controller/Controller.StartTracing(fuchsia.tracing.controller/StartOptions options) -> (fuchsia.tracing.controller/Controller_StartTracing_Result result)
+protocol/member fuchsia.tracing.controller/Controller.StopTracing(fuchsia.tracing.controller/StopOptions options) -> ()
+protocol/member fuchsia.tracing.controller/Controller.TerminateTracing(fuchsia.tracing.controller/TerminateOptions options) -> (fuchsia.tracing.controller/TerminateResult result)
+protocol/member fuchsia.tracing.controller/Controller.WatchAlert() -> (string:14 alert_name)
+protocol fuchsia.tracing.controller/Controller
+struct fuchsia.tracing.controller/Controller_StartTracing_Response
+union/member fuchsia.tracing.controller/Controller_StartTracing_Result.err fuchsia.tracing.controller/StartErrorCode
+union/member fuchsia.tracing.controller/Controller_StartTracing_Result.response fuchsia.tracing.controller/Controller_StartTracing_Response
+strict union fuchsia.tracing.controller/Controller_StartTracing_Result
+struct/member fuchsia.tracing.controller/KnownCategory.description string:400
+struct/member fuchsia.tracing.controller/KnownCategory.name string:100
+struct fuchsia.tracing.controller/KnownCategory
+const fuchsia.tracing.controller/MAX_ALERT_NAME_LENGTH uint32 14
+const fuchsia.tracing.controller/MAX_CATEGORY_DESCRIPTION_LENGTH uint32 400
+const fuchsia.tracing.controller/MAX_CATEGORY_NAME_LENGTH uint32 100
+const fuchsia.tracing.controller/MAX_NUM_CATEGORIES uint32 100
+const fuchsia.tracing.controller/MAX_NUM_PROVIDERS uint32 100
+const fuchsia.tracing.controller/MAX_PROVIDER_NAME_LENGTH uint32 100
+table/member fuchsia.tracing.controller/ProviderInfo.id uint32
+table/member fuchsia.tracing.controller/ProviderInfo.name string:100
+table/member fuchsia.tracing.controller/ProviderInfo.pid uint64
+table fuchsia.tracing.controller/ProviderInfo
+table/member fuchsia.tracing.controller/ProviderSpec.buffer_size_megabytes_hint uint32
+table/member fuchsia.tracing.controller/ProviderSpec.name string:100
+table fuchsia.tracing.controller/ProviderSpec
+enum/member fuchsia.tracing.controller/SessionState.INITIALIZED 2
+enum/member fuchsia.tracing.controller/SessionState.READY 1
+enum/member fuchsia.tracing.controller/SessionState.STARTED 4
+enum/member fuchsia.tracing.controller/SessionState.STARTING 3
+enum/member fuchsia.tracing.controller/SessionState.STOPPED 6
+enum/member fuchsia.tracing.controller/SessionState.STOPPING 5
+enum/member fuchsia.tracing.controller/SessionState.TERMINATING 7
+strict enum fuchsia.tracing.controller/SessionState uint32
+enum/member fuchsia.tracing.controller/StartErrorCode.ALREADY_STARTED 2
+enum/member fuchsia.tracing.controller/StartErrorCode.NOT_INITIALIZED 1
+enum/member fuchsia.tracing.controller/StartErrorCode.STOPPING 3
+enum/member fuchsia.tracing.controller/StartErrorCode.TERMINATING 4
+strict enum fuchsia.tracing.controller/StartErrorCode uint32
+table/member fuchsia.tracing.controller/StartOptions.additional_categories vector<string:100>:100
+table/member fuchsia.tracing.controller/StartOptions.buffer_disposition fuchsia.tracing.controller/BufferDisposition
+table fuchsia.tracing.controller/StartOptions
+table/member fuchsia.tracing.controller/StopOptions.write_results bool
+table fuchsia.tracing.controller/StopOptions
+table/member fuchsia.tracing.controller/TerminateOptions.write_results bool
+table fuchsia.tracing.controller/TerminateOptions
+table fuchsia.tracing.controller/TerminateResult
+table/member fuchsia.tracing.controller/TraceConfig.buffer_size_megabytes_hint uint32
+table/member fuchsia.tracing.controller/TraceConfig.buffering_mode fuchsia.tracing.controller/BufferingMode
+table/member fuchsia.tracing.controller/TraceConfig.categories vector<string:100>:100
+table/member fuchsia.tracing.controller/TraceConfig.provider_specs vector<fuchsia.tracing.controller/ProviderSpec>:100
+table/member fuchsia.tracing.controller/TraceConfig.start_timeout_milliseconds uint64
+table fuchsia.tracing.controller/TraceConfig
+library fuchsia.tracing.controller

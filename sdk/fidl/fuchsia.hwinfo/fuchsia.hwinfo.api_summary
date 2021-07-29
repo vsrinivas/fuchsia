@@ -1,0 +1,36 @@
+enum/member fuchsia.hwinfo/Architecture.ARM64 2
+enum/member fuchsia.hwinfo/Architecture.X64 1
+flexible enum fuchsia.hwinfo/Architecture uint32
+protocol/member fuchsia.hwinfo/Board.GetInfo() -> (fuchsia.hwinfo/BoardInfo info)
+protocol fuchsia.hwinfo/Board
+table/member fuchsia.hwinfo/BoardInfo.cpu_architecture fuchsia.hwinfo/Architecture
+table/member fuchsia.hwinfo/BoardInfo.name string
+table/member fuchsia.hwinfo/BoardInfo.revision string
+table fuchsia.hwinfo/BoardInfo
+protocol/member fuchsia.hwinfo/Device.GetInfo() -> (fuchsia.hwinfo/DeviceInfo info)
+protocol fuchsia.hwinfo/Device
+table/member fuchsia.hwinfo/DeviceInfo.is_retail_demo bool
+table/member fuchsia.hwinfo/DeviceInfo.retail_sku string:255
+table/member fuchsia.hwinfo/DeviceInfo.serial_number string:255
+table fuchsia.hwinfo/DeviceInfo
+const fuchsia.hwinfo/MAX_VALUE_SIZE uint8 255
+protocol/member fuchsia.hwinfo/Product.GetInfo() -> (fuchsia.hwinfo/ProductInfo info)
+protocol fuchsia.hwinfo/Product
+table/member fuchsia.hwinfo/ProductInfo.audio_amplifier string:255
+table/member fuchsia.hwinfo/ProductInfo.build_date string
+table/member fuchsia.hwinfo/ProductInfo.build_name string:255
+table/member fuchsia.hwinfo/ProductInfo.colorway string:255
+table/member fuchsia.hwinfo/ProductInfo.display string:255
+table/member fuchsia.hwinfo/ProductInfo.emmc_storage string:255
+table/member fuchsia.hwinfo/ProductInfo.language string
+table/member fuchsia.hwinfo/ProductInfo.locale_list vector<fuchsia.intl/LocaleId>
+table/member fuchsia.hwinfo/ProductInfo.manufacturer string
+table/member fuchsia.hwinfo/ProductInfo.memory string:255
+table/member fuchsia.hwinfo/ProductInfo.microphone string:255
+table/member fuchsia.hwinfo/ProductInfo.model string
+table/member fuchsia.hwinfo/ProductInfo.name string
+table/member fuchsia.hwinfo/ProductInfo.nand_storage string:255
+table/member fuchsia.hwinfo/ProductInfo.regulatory_domain fuchsia.intl/RegulatoryDomain
+table/member fuchsia.hwinfo/ProductInfo.sku string
+table fuchsia.hwinfo/ProductInfo
+library fuchsia.hwinfo

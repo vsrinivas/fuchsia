@@ -1,0 +1,16 @@
+protocol/member fuchsia.hardware.shareddma/DmaNotifyCallback.Callback(fuchsia.hardware.shareddma/DmaState state) -> ()
+protocol fuchsia.hardware.shareddma/DmaNotifyCallback
+enum/member fuchsia.hardware.shareddma/DmaState.COMPLETED 1
+enum/member fuchsia.hardware.shareddma/DmaState.FAILED 2
+strict enum fuchsia.hardware.shareddma/DmaState uint32
+enum/member fuchsia.hardware.shareddma/DmaType.CYCLIC 2
+enum/member fuchsia.hardware.shareddma/DmaType.REGULAR 1
+strict enum fuchsia.hardware.shareddma/DmaType uint32
+protocol/member fuchsia.hardware.shareddma/SharedDma.GetBufferPosition(uint32 channel_id) -> (uint32 position)
+protocol/member fuchsia.hardware.shareddma/SharedDma.GetTransferSize(uint32 channel_id) -> (uint32 available_size)
+protocol/member fuchsia.hardware.shareddma/SharedDma.InitializeAndGetBuffer(uint32 channel_id,fuchsia.hardware.shareddma/DmaType type,uint32 size) -> (int32 s,zx/handle:VMO vmo)
+protocol/member fuchsia.hardware.shareddma/SharedDma.SetNotifyCallback(uint32 channel_id,client_end:fuchsia.hardware.shareddma/DmaNotifyCallback cb) -> (int32 s)
+protocol/member fuchsia.hardware.shareddma/SharedDma.Start(uint32 channel_id)
+protocol/member fuchsia.hardware.shareddma/SharedDma.Stop(uint32 channel_id)
+protocol fuchsia.hardware.shareddma/SharedDma
+library fuchsia.hardware.shareddma

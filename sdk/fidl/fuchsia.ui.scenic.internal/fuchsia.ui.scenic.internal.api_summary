@@ -1,0 +1,79 @@
+struct/member fuchsia.ui.scenic.internal/ContentId.value uint64
+struct fuchsia.ui.scenic.internal/ContentId
+protocol/member fuchsia.ui.scenic.internal/ContentLink.GetStatus() -> (fuchsia.ui.scenic.internal/ContentLinkStatus status)
+protocol fuchsia.ui.scenic.internal/ContentLink
+enum/member fuchsia.ui.scenic.internal/ContentLinkStatus.CONTENT_HAS_PRESENTED 1
+strict enum fuchsia.ui.scenic.internal/ContentLinkStatus uint32
+struct/member fuchsia.ui.scenic.internal/ContentLinkToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.scenic.internal/ContentLinkToken
+enum/member fuchsia.ui.scenic.internal/Error.BAD_HANGING_GET 3
+enum/member fuchsia.ui.scenic.internal/Error.BAD_OPERATION 1
+enum/member fuchsia.ui.scenic.internal/Error.NO_PRESENTS_REMAINING 2
+strict enum fuchsia.ui.scenic.internal/Error uint32
+protocol/member fuchsia.ui.scenic.internal/Flatland.AddChild(fuchsia.ui.scenic.internal/TransformId parent_transform_id,fuchsia.ui.scenic.internal/TransformId child_transform_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.ClearGraph()
+protocol/member fuchsia.ui.scenic.internal/Flatland.CreateImage(fuchsia.ui.scenic.internal/ContentId image_id,fuchsia.scenic.allocation/BufferCollectionImportToken import_token,uint32 vmo_index,fuchsia.ui.scenic.internal/ImageProperties properties)
+protocol/member fuchsia.ui.scenic.internal/Flatland.CreateLink(fuchsia.ui.scenic.internal/ContentId link_id,fuchsia.ui.scenic.internal/ContentLinkToken token,fuchsia.ui.scenic.internal/LinkProperties properties,server_end:fuchsia.ui.scenic.internal/ContentLink content_link)
+protocol/member fuchsia.ui.scenic.internal/Flatland.CreateTransform(fuchsia.ui.scenic.internal/TransformId transform_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.LinkToParent(fuchsia.ui.scenic.internal/GraphLinkToken token,server_end:fuchsia.ui.scenic.internal/GraphLink graph_link)
+protocol/member fuchsia.ui.scenic.internal/Flatland.OnFramePresented -> (fuchsia.scenic.scheduling/FramePresentedInfo frame_presented_info)
+protocol/member fuchsia.ui.scenic.internal/Flatland.OnPresentProcessed -> (uint32 present_tokens,vector<fuchsia.scenic.scheduling/PresentationInfo>:8 future_presentation_infos)
+protocol/member fuchsia.ui.scenic.internal/Flatland.Present(fuchsia.ui.scenic.internal/PresentArgs args) -> (fuchsia.ui.scenic.internal/Flatland_Present_Result result)
+protocol/member fuchsia.ui.scenic.internal/Flatland.ReleaseImage(fuchsia.ui.scenic.internal/ContentId image_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.ReleaseLink(fuchsia.ui.scenic.internal/ContentId link_id) -> (fuchsia.ui.scenic.internal/ContentLinkToken tokid)
+protocol/member fuchsia.ui.scenic.internal/Flatland.ReleaseTransform(fuchsia.ui.scenic.internal/TransformId transform_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.RemoveChild(fuchsia.ui.scenic.internal/TransformId parent_transform_id,fuchsia.ui.scenic.internal/TransformId child_transform_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetContent(fuchsia.ui.scenic.internal/TransformId transform_id,fuchsia.ui.scenic.internal/ContentId content_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetLinkProperties(fuchsia.ui.scenic.internal/ContentId link_id,fuchsia.ui.scenic.internal/LinkProperties properties)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetLinkSize(fuchsia.ui.scenic.internal/ContentId link_id,fuchsia.ui.scenic.internal/Vec2 size)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetOpacity(fuchsia.ui.scenic.internal/TransformId transform_id,float32 val)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetOrientation(fuchsia.ui.scenic.internal/TransformId transform_id,fuchsia.ui.scenic.internal/Orientation orientation)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetRootTransform(fuchsia.ui.scenic.internal/TransformId transform_id)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetScale(fuchsia.ui.scenic.internal/TransformId transform_id,fuchsia.ui.scenic.internal/Vec2 scale)
+protocol/member fuchsia.ui.scenic.internal/Flatland.SetTranslation(fuchsia.ui.scenic.internal/TransformId transform_id,fuchsia.ui.scenic.internal/Vec2 translation)
+protocol/member fuchsia.ui.scenic.internal/Flatland.UnlinkFromParent() -> (fuchsia.ui.scenic.internal/GraphLinkToken token)
+protocol fuchsia.ui.scenic.internal/Flatland
+protocol/member fuchsia.ui.scenic.internal/FlatlandDisplay.SetContent(fuchsia.ui.scenic.internal/ContentLinkToken token,server_end:fuchsia.ui.scenic.internal/ContentLink content_link)
+protocol fuchsia.ui.scenic.internal/FlatlandDisplay
+struct fuchsia.ui.scenic.internal/Flatland_Present_Response
+union/member fuchsia.ui.scenic.internal/Flatland_Present_Result.err fuchsia.ui.scenic.internal/Error
+union/member fuchsia.ui.scenic.internal/Flatland_Present_Result.response fuchsia.ui.scenic.internal/Flatland_Present_Response
+strict union fuchsia.ui.scenic.internal/Flatland_Present_Result
+protocol/member fuchsia.ui.scenic.internal/GraphLink.GetLayout() -> (fuchsia.ui.scenic.internal/LayoutInfo info)
+protocol/member fuchsia.ui.scenic.internal/GraphLink.GetStatus() -> (fuchsia.ui.scenic.internal/GraphLinkStatus status)
+protocol fuchsia.ui.scenic.internal/GraphLink
+enum/member fuchsia.ui.scenic.internal/GraphLinkStatus.CONNECTED_TO_DISPLAY 1
+enum/member fuchsia.ui.scenic.internal/GraphLinkStatus.DISCONNECTED_FROM_DISPLAY 2
+strict enum fuchsia.ui.scenic.internal/GraphLinkStatus uint32
+struct/member fuchsia.ui.scenic.internal/GraphLinkToken.value zx/handle:EVENTPAIR
+resource struct fuchsia.ui.scenic.internal/GraphLinkToken
+table/member fuchsia.ui.scenic.internal/ImageProperties.height uint32
+table/member fuchsia.ui.scenic.internal/ImageProperties.width uint32
+table fuchsia.ui.scenic.internal/ImageProperties
+table/member fuchsia.ui.scenic.internal/LayoutInfo.logical_size fuchsia.ui.scenic.internal/Vec2
+table/member fuchsia.ui.scenic.internal/LayoutInfo.pixel_scale fuchsia.ui.scenic.internal/Vec2
+table fuchsia.ui.scenic.internal/LayoutInfo
+table/member fuchsia.ui.scenic.internal/LinkProperties.logical_size fuchsia.ui.scenic.internal/Vec2
+table fuchsia.ui.scenic.internal/LinkProperties
+const fuchsia.ui.scenic.internal/MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 16
+enum/member fuchsia.ui.scenic.internal/Orientation.CCW_0_DEGREES 1
+enum/member fuchsia.ui.scenic.internal/Orientation.CCW_180_DEGREES 3
+enum/member fuchsia.ui.scenic.internal/Orientation.CCW_270_DEGREES 4
+enum/member fuchsia.ui.scenic.internal/Orientation.CCW_90_DEGREES 2
+strict enum fuchsia.ui.scenic.internal/Orientation uint32
+table/member fuchsia.ui.scenic.internal/PresentArgs.acquire_fences vector<zx/handle:EVENT>:16
+table/member fuchsia.ui.scenic.internal/PresentArgs.release_fences vector<zx/handle:EVENT>:16
+table/member fuchsia.ui.scenic.internal/PresentArgs.requested_presentation_time int64
+table/member fuchsia.ui.scenic.internal/PresentArgs.squashable bool
+resource table fuchsia.ui.scenic.internal/PresentArgs
+protocol/member fuchsia.ui.scenic.internal/Snapshot.TakeSnapshot() -> (vector<fuchsia.ui.scenic.internal/SnapshotResult> snapshots)
+protocol fuchsia.ui.scenic.internal/Snapshot
+struct/member fuchsia.ui.scenic.internal/SnapshotResult.buffer fuchsia.mem/Buffer
+struct/member fuchsia.ui.scenic.internal/SnapshotResult.success bool
+resource struct fuchsia.ui.scenic.internal/SnapshotResult
+struct/member fuchsia.ui.scenic.internal/TransformId.value uint64
+struct fuchsia.ui.scenic.internal/TransformId
+struct/member fuchsia.ui.scenic.internal/Vec2.x float32
+struct/member fuchsia.ui.scenic.internal/Vec2.y float32
+struct fuchsia.ui.scenic.internal/Vec2
+library fuchsia.ui.scenic.internal

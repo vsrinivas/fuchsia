@@ -1,0 +1,10 @@
+protocol/member fuchsia.starnix.developer/Manager.Start(string:4096 url) -> ()
+protocol/member fuchsia.starnix.developer/Manager.StartShell(fuchsia.starnix.developer/ShellParams params,server_end:fuchsia.starnix.developer/ShellController controller)
+protocol fuchsia.starnix.developer/Manager
+protocol/member fuchsia.starnix.developer/ShellController.OnTerminated -> (int32 return_code)
+protocol fuchsia.starnix.developer/ShellController
+table/member fuchsia.starnix.developer/ShellParams.stderr zx/handle:SOCKET
+table/member fuchsia.starnix.developer/ShellParams.stdin zx/handle:SOCKET
+table/member fuchsia.starnix.developer/ShellParams.stdout zx/handle:SOCKET
+resource table fuchsia.starnix.developer/ShellParams
+library fuchsia.starnix.developer

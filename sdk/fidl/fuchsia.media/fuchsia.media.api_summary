@@ -1,0 +1,553 @@
+const fuchsia.media/AUDIO_ENCODING_AAC string "fuchsia.media.aac"
+const fuchsia.media/AUDIO_ENCODING_AACLATM string "fuchsia.media.aaclatm"
+const fuchsia.media/AUDIO_ENCODING_AMRNB string "fuchsia.media.amrnb"
+const fuchsia.media/AUDIO_ENCODING_AMRWB string "fuchsia.media.amrwb"
+const fuchsia.media/AUDIO_ENCODING_APTX string "fuchsia.media.aptx"
+const fuchsia.media/AUDIO_ENCODING_FLAC string "fuchsia.media.flac"
+const fuchsia.media/AUDIO_ENCODING_GSMMS string "fuchsia.media.gsmms"
+const fuchsia.media/AUDIO_ENCODING_LPCM string "fuchsia.media.lpcm"
+const fuchsia.media/AUDIO_ENCODING_MP3 string "fuchsia.media.mp3"
+const fuchsia.media/AUDIO_ENCODING_OPUS string "fuchsia.media.opus"
+const fuchsia.media/AUDIO_ENCODING_PCMALAW string "fuchsia.media.pcmalaw"
+const fuchsia.media/AUDIO_ENCODING_PCMMULAW string "fuchsia.media.pcmmulaw"
+const fuchsia.media/AUDIO_ENCODING_SBC string "fuchsia.media.sbc"
+const fuchsia.media/AUDIO_ENCODING_VORBIS string "fuchsia.media.vorbis"
+enum/member fuchsia.media/AacAudioObjectType.MPEG2_AAC_LC 0
+enum/member fuchsia.media/AacAudioObjectType.MPEG4_AAC_LC 1
+strict enum fuchsia.media/AacAudioObjectType uint32
+union/member fuchsia.media/AacBitRate.constant fuchsia.media/AacConstantBitRate
+union/member fuchsia.media/AacBitRate.variable fuchsia.media/AacVariableBitRate
+strict union fuchsia.media/AacBitRate
+enum/member fuchsia.media/AacChannelMode.MONO 0
+enum/member fuchsia.media/AacChannelMode.STEREO 2
+strict enum fuchsia.media/AacChannelMode uint32
+struct/member fuchsia.media/AacConstantBitRate.bit_rate uint32
+struct fuchsia.media/AacConstantBitRate
+struct/member fuchsia.media/AacEncoderSettings.aot fuchsia.media/AacAudioObjectType
+struct/member fuchsia.media/AacEncoderSettings.bit_rate fuchsia.media/AacBitRate
+struct/member fuchsia.media/AacEncoderSettings.channel_mode fuchsia.media/AacChannelMode
+struct/member fuchsia.media/AacEncoderSettings.transport fuchsia.media/AacTransport
+struct fuchsia.media/AacEncoderSettings
+union/member fuchsia.media/AacTransport.adts fuchsia.media/AacTransportAdts
+union/member fuchsia.media/AacTransport.latm fuchsia.media/AacTransportLatm
+union/member fuchsia.media/AacTransport.raw fuchsia.media/AacTransportRaw
+flexible union fuchsia.media/AacTransport
+struct fuchsia.media/AacTransportAdts
+struct/member fuchsia.media/AacTransportLatm.mux_config_present bool
+struct fuchsia.media/AacTransportLatm
+struct fuchsia.media/AacTransportRaw
+enum/member fuchsia.media/AacVariableBitRate.V1 1
+enum/member fuchsia.media/AacVariableBitRate.V2 2
+enum/member fuchsia.media/AacVariableBitRate.V3 3
+enum/member fuchsia.media/AacVariableBitRate.V4 4
+enum/member fuchsia.media/AacVariableBitRate.V5 5
+strict enum fuchsia.media/AacVariableBitRate uint32
+protocol/member fuchsia.media/ActivityReporter.WatchCaptureActivity() -> (vector<fuchsia.media/AudioCaptureUsage>:4 active_usages)
+protocol/member fuchsia.media/ActivityReporter.WatchRenderActivity() -> (vector<fuchsia.media/AudioRenderUsage>:5 active_usages)
+protocol fuchsia.media/ActivityReporter
+protocol/member fuchsia.media/Audio.CreateAudioCapturer(server_end:fuchsia.media/AudioCapturer audio_capturer_request,bool loopback)
+protocol/member fuchsia.media/Audio.CreateAudioRenderer(server_end:fuchsia.media/AudioRenderer audio_renderer_request)
+protocol/member fuchsia.media/Audio.SetSystemGain(float32 gain_db)
+protocol/member fuchsia.media/Audio.SetSystemMute(bool muted)
+protocol/member fuchsia.media/Audio.SystemGainMuteChanged -> (float32 gain_db,bool muted)
+protocol fuchsia.media/Audio
+enum/member fuchsia.media/AudioBitrateMode.CBR 1
+enum/member fuchsia.media/AudioBitrateMode.UNSPECIFIED 0
+enum/member fuchsia.media/AudioBitrateMode.VBR 2
+strict enum fuchsia.media/AudioBitrateMode uint32
+enum/member fuchsia.media/AudioCaptureUsage.BACKGROUND 0
+enum/member fuchsia.media/AudioCaptureUsage.COMMUNICATION 3
+enum/member fuchsia.media/AudioCaptureUsage.FOREGROUND 1
+enum/member fuchsia.media/AudioCaptureUsage.SYSTEM_AGENT 2
+strict enum fuchsia.media/AudioCaptureUsage uint32
+protocol/member fuchsia.media/AudioCapturer.AddPayloadBuffer(uint32 id,zx/handle:VMO payload_buffer)
+protocol/member fuchsia.media/AudioCapturer.BindGainControl(server_end:fuchsia.media.audio/GainControl gain_control_request)
+protocol/member fuchsia.media/AudioCapturer.CaptureAt(uint32 payload_buffer_id,uint32 payload_offset,uint32 frames) -> (fuchsia.media/StreamPacket captured_packet)
+protocol/member fuchsia.media/AudioCapturer.DiscardAllPackets() -> ()
+protocol/member fuchsia.media/AudioCapturer.DiscardAllPacketsNoReply()
+protocol/member fuchsia.media/AudioCapturer.GetReferenceClock() -> (zx/handle:CLOCK reference_clock)
+protocol/member fuchsia.media/AudioCapturer.GetStreamType() -> (fuchsia.media/StreamType stream_type)
+protocol/member fuchsia.media/AudioCapturer.OnEndOfStream -> ()
+protocol/member fuchsia.media/AudioCapturer.OnPacketProduced -> (fuchsia.media/StreamPacket packet)
+protocol/member fuchsia.media/AudioCapturer.ReleasePacket(fuchsia.media/StreamPacket packet)
+protocol/member fuchsia.media/AudioCapturer.RemovePayloadBuffer(uint32 id)
+protocol/member fuchsia.media/AudioCapturer.SetPcmStreamType(fuchsia.media/AudioStreamType stream_type)
+protocol/member fuchsia.media/AudioCapturer.SetReferenceClock(zx/handle:<CLOCK,optional> reference_clock)
+protocol/member fuchsia.media/AudioCapturer.SetUsage(fuchsia.media/AudioCaptureUsage usage)
+protocol/member fuchsia.media/AudioCapturer.StartAsyncCapture(uint32 frames_per_packet)
+protocol/member fuchsia.media/AudioCapturer.StopAsyncCapture() -> ()
+protocol/member fuchsia.media/AudioCapturer.StopAsyncCaptureNoReply()
+protocol fuchsia.media/AudioCapturer
+union/member fuchsia.media/AudioCapturerConfiguration.input fuchsia.media/InputAudioCapturerConfiguration
+union/member fuchsia.media/AudioCapturerConfiguration.loopback fuchsia.media/LoopbackAudioCapturerConfiguration
+strict union fuchsia.media/AudioCapturerConfiguration
+enum/member fuchsia.media/AudioChannelId.CF 3
+enum/member fuchsia.media/AudioChannelId.CS 7
+enum/member fuchsia.media/AudioChannelId.END_DEFINED 10
+enum/member fuchsia.media/AudioChannelId.EXTENDED_CHANNEL_ID_BASE 1862270976
+enum/member fuchsia.media/AudioChannelId.LF 1
+enum/member fuchsia.media/AudioChannelId.LFE 6
+enum/member fuchsia.media/AudioChannelId.LR 8
+enum/member fuchsia.media/AudioChannelId.LS 4
+enum/member fuchsia.media/AudioChannelId.MAX 2147483647
+enum/member fuchsia.media/AudioChannelId.RF 2
+enum/member fuchsia.media/AudioChannelId.RR 9
+enum/member fuchsia.media/AudioChannelId.RS 5
+enum/member fuchsia.media/AudioChannelId.SKIP 0
+strict enum fuchsia.media/AudioChannelId uint32
+union/member fuchsia.media/AudioCompressedFormat.aac fuchsia.media/AudioCompressedFormatAac
+union/member fuchsia.media/AudioCompressedFormat.sbc fuchsia.media/AudioCompressedFormatSbc
+flexible union fuchsia.media/AudioCompressedFormat
+struct fuchsia.media/AudioCompressedFormatAac
+struct fuchsia.media/AudioCompressedFormatSbc
+protocol/member fuchsia.media/AudioConsumer.BindVolumeControl(server_end:fuchsia.media.audio/VolumeControl volume_control_request)
+protocol/member fuchsia.media/AudioConsumer.CreateStreamSink(vector<zx/handle:VMO>:16 buffers,fuchsia.media/AudioStreamType stream_type,box<fuchsia.media/Compression> compression,server_end:fuchsia.media/StreamSink stream_sink_request)
+protocol/member fuchsia.media/AudioConsumer.OnEndOfStream -> ()
+protocol/member fuchsia.media/AudioConsumer.SetRate(float32 rate)
+protocol/member fuchsia.media/AudioConsumer.Start(fuchsia.media/AudioConsumerStartFlags flags,int64 reference_time,int64 media_time)
+protocol/member fuchsia.media/AudioConsumer.Stop()
+protocol/member fuchsia.media/AudioConsumer.WatchStatus() -> (fuchsia.media/AudioConsumerStatus status)
+protocol fuchsia.media/AudioConsumer
+union/member fuchsia.media/AudioConsumerError.place_holder fuchsia.media/Void
+strict union fuchsia.media/AudioConsumerError
+bits/member fuchsia.media/AudioConsumerStartFlags.LOW_LATENCY 1
+bits/member fuchsia.media/AudioConsumerStartFlags.SUPPLY_DRIVEN 2
+strict bits fuchsia.media/AudioConsumerStartFlags uint32
+table/member fuchsia.media/AudioConsumerStatus.error fuchsia.media/AudioConsumerError
+table/member fuchsia.media/AudioConsumerStatus.max_lead_time uint64
+table/member fuchsia.media/AudioConsumerStatus.min_lead_time uint64
+table/member fuchsia.media/AudioConsumerStatus.presentation_timeline fuchsia.media/TimelineFunction
+table fuchsia.media/AudioConsumerStatus
+protocol/member fuchsia.media/AudioCore.BindUsageVolumeControl(fuchsia.media/Usage usage,server_end:fuchsia.media.audio/VolumeControl volume_control)
+protocol/member fuchsia.media/AudioCore.CreateAudioCapturer(bool loopback,server_end:fuchsia.media/AudioCapturer audio_in_request)
+protocol/member fuchsia.media/AudioCore.CreateAudioCapturerWithConfiguration(fuchsia.media/AudioStreamType stream_type,fuchsia.media/AudioCapturerConfiguration configuration,server_end:fuchsia.media/AudioCapturer audio_capturer_request)
+protocol/member fuchsia.media/AudioCore.CreateAudioRenderer(server_end:fuchsia.media/AudioRenderer audio_out_request)
+protocol/member fuchsia.media/AudioCore.EnableDeviceSettings(bool enabled)
+protocol/member fuchsia.media/AudioCore.LoadDefaults()
+protocol/member fuchsia.media/AudioCore.ResetInteractions()
+protocol/member fuchsia.media/AudioCore.SetCaptureUsageGain(fuchsia.media/AudioCaptureUsage usage,float32 gain_db)
+protocol/member fuchsia.media/AudioCore.SetInteraction(fuchsia.media/Usage active,fuchsia.media/Usage affected,fuchsia.media/Behavior behavior)
+protocol/member fuchsia.media/AudioCore.SetRenderUsageGain(fuchsia.media/AudioRenderUsage usage,float32 gain_db)
+protocol/member fuchsia.media/AudioCore.SetSystemGain(float32 gain_db)
+protocol/member fuchsia.media/AudioCore.SetSystemMute(bool muted)
+protocol/member fuchsia.media/AudioCore.SystemGainMuteChanged -> (float32 gain_db,bool muted)
+protocol fuchsia.media/AudioCore
+protocol/member fuchsia.media/AudioDeviceEnumerator.AddDeviceByChannel(string:256 device_name,bool is_input,fuchsia.hardware.audio/StreamConfig channel)
+protocol/member fuchsia.media/AudioDeviceEnumerator.GetDefaultInputDevice() -> (uint64 device_token)
+protocol/member fuchsia.media/AudioDeviceEnumerator.GetDefaultOutputDevice() -> (uint64 device_token)
+protocol/member fuchsia.media/AudioDeviceEnumerator.GetDeviceGain(uint64 device_token) -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)
+protocol/member fuchsia.media/AudioDeviceEnumerator.GetDevices() -> (vector<fuchsia.media/AudioDeviceInfo> devices)
+protocol/member fuchsia.media/AudioDeviceEnumerator.OnDefaultDeviceChanged -> (uint64 old_default_token,uint64 new_default_token)
+protocol/member fuchsia.media/AudioDeviceEnumerator.OnDeviceAdded -> (fuchsia.media/AudioDeviceInfo device)
+protocol/member fuchsia.media/AudioDeviceEnumerator.OnDeviceGainChanged -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)
+protocol/member fuchsia.media/AudioDeviceEnumerator.OnDeviceRemoved -> (uint64 device_token)
+protocol/member fuchsia.media/AudioDeviceEnumerator.SetDeviceGain(uint64 device_token,fuchsia.media/AudioGainInfo gain_info,fuchsia.media/AudioGainValidFlags valid_flags)
+protocol fuchsia.media/AudioDeviceEnumerator
+struct/member fuchsia.media/AudioDeviceInfo.gain_info fuchsia.media/AudioGainInfo
+struct/member fuchsia.media/AudioDeviceInfo.is_default bool
+struct/member fuchsia.media/AudioDeviceInfo.is_input bool
+struct/member fuchsia.media/AudioDeviceInfo.name string
+struct/member fuchsia.media/AudioDeviceInfo.token_id uint64
+struct/member fuchsia.media/AudioDeviceInfo.unique_id string
+struct fuchsia.media/AudioDeviceInfo
+union/member fuchsia.media/AudioFormat.compressed fuchsia.media/AudioCompressedFormat
+union/member fuchsia.media/AudioFormat.uncompressed fuchsia.media/AudioUncompressedFormat
+strict union fuchsia.media/AudioFormat
+struct/member fuchsia.media/AudioGainInfo.flags fuchsia.media/AudioGainInfoFlags
+struct/member fuchsia.media/AudioGainInfo.gain_db float32
+struct fuchsia.media/AudioGainInfo
+bits/member fuchsia.media/AudioGainInfoFlags.AGC_ENABLED 4
+bits/member fuchsia.media/AudioGainInfoFlags.AGC_SUPPORTED 2
+bits/member fuchsia.media/AudioGainInfoFlags.MUTE 1
+strict bits fuchsia.media/AudioGainInfoFlags uint32
+bits/member fuchsia.media/AudioGainValidFlags.AGC_VALID 4
+bits/member fuchsia.media/AudioGainValidFlags.GAIN_VALID 1
+bits/member fuchsia.media/AudioGainValidFlags.MUTE_VALID 2
+strict bits fuchsia.media/AudioGainValidFlags uint32
+enum/member fuchsia.media/AudioOutputRoutingPolicy.ALL_PLUGGED_OUTPUTS 0
+enum/member fuchsia.media/AudioOutputRoutingPolicy.LAST_PLUGGED_OUTPUT 1
+strict enum fuchsia.media/AudioOutputRoutingPolicy uint32
+enum/member fuchsia.media/AudioPcmMode.ALAW 1
+enum/member fuchsia.media/AudioPcmMode.LINEAR 0
+enum/member fuchsia.media/AudioPcmMode.MULAW 2
+strict enum fuchsia.media/AudioPcmMode uint32
+enum/member fuchsia.media/AudioRenderUsage.BACKGROUND 0
+enum/member fuchsia.media/AudioRenderUsage.COMMUNICATION 4
+enum/member fuchsia.media/AudioRenderUsage.INTERRUPTION 2
+enum/member fuchsia.media/AudioRenderUsage.MEDIA 1
+enum/member fuchsia.media/AudioRenderUsage.SYSTEM_AGENT 3
+strict enum fuchsia.media/AudioRenderUsage uint32
+protocol/member fuchsia.media/AudioRenderer.AddPayloadBuffer(uint32 id,zx/handle:VMO payload_buffer)
+protocol/member fuchsia.media/AudioRenderer.BindGainControl(server_end:fuchsia.media.audio/GainControl gain_control_request)
+protocol/member fuchsia.media/AudioRenderer.DiscardAllPackets() -> ()
+protocol/member fuchsia.media/AudioRenderer.DiscardAllPacketsNoReply()
+protocol/member fuchsia.media/AudioRenderer.EnableMinLeadTimeEvents(bool enabled)
+protocol/member fuchsia.media/AudioRenderer.EndOfStream()
+protocol/member fuchsia.media/AudioRenderer.GetMinLeadTime() -> (int64 min_lead_time_nsec)
+protocol/member fuchsia.media/AudioRenderer.GetReferenceClock() -> (zx/handle:CLOCK reference_clock)
+protocol/member fuchsia.media/AudioRenderer.OnMinLeadTimeChanged -> (int64 min_lead_time_nsec)
+protocol/member fuchsia.media/AudioRenderer.Pause() -> (int64 reference_time,int64 media_time)
+protocol/member fuchsia.media/AudioRenderer.PauseNoReply()
+protocol/member fuchsia.media/AudioRenderer.Play(int64 reference_time,int64 media_time) -> (int64 reference_time,int64 media_time)
+protocol/member fuchsia.media/AudioRenderer.PlayNoReply(int64 reference_time,int64 media_time)
+protocol/member fuchsia.media/AudioRenderer.RemovePayloadBuffer(uint32 id)
+protocol/member fuchsia.media/AudioRenderer.SendPacket(fuchsia.media/StreamPacket packet) -> ()
+protocol/member fuchsia.media/AudioRenderer.SendPacketNoReply(fuchsia.media/StreamPacket packet)
+protocol/member fuchsia.media/AudioRenderer.SetPcmStreamType(fuchsia.media/AudioStreamType type)
+protocol/member fuchsia.media/AudioRenderer.SetPtsContinuityThreshold(float32 threshold_seconds)
+protocol/member fuchsia.media/AudioRenderer.SetPtsUnits(uint32 tick_per_second_numerator,uint32 tick_per_second_denominator)
+protocol/member fuchsia.media/AudioRenderer.SetReferenceClock(zx/handle:<CLOCK,optional> reference_clock)
+protocol/member fuchsia.media/AudioRenderer.SetUsage(fuchsia.media/AudioRenderUsage usage)
+protocol fuchsia.media/AudioRenderer
+enum/member fuchsia.media/AudioSampleFormat.FLOAT 4
+enum/member fuchsia.media/AudioSampleFormat.SIGNED_16 2
+enum/member fuchsia.media/AudioSampleFormat.SIGNED_24_IN_32 3
+enum/member fuchsia.media/AudioSampleFormat.UNSIGNED_8 1
+strict enum fuchsia.media/AudioSampleFormat uint32
+struct/member fuchsia.media/AudioStreamType.channels uint32
+struct/member fuchsia.media/AudioStreamType.frames_per_second uint32
+struct/member fuchsia.media/AudioStreamType.sample_format fuchsia.media/AudioSampleFormat
+struct fuchsia.media/AudioStreamType
+union/member fuchsia.media/AudioUncompressedFormat.pcm fuchsia.media/PcmFormat
+strict union fuchsia.media/AudioUncompressedFormat
+enum/member fuchsia.media/Behavior.DUCK 1
+enum/member fuchsia.media/Behavior.MUTE 2
+enum/member fuchsia.media/Behavior.NONE 0
+strict enum fuchsia.media/Behavior uint32
+const fuchsia.media/CAPTURE_USAGE_COUNT uint8 4
+enum/member fuchsia.media/ColorSpace.HD_REC709 3
+enum/member fuchsia.media/ColorSpace.JPEG 2
+enum/member fuchsia.media/ColorSpace.NOT_APPLICABLE 1
+enum/member fuchsia.media/ColorSpace.SD_REC601 4
+enum/member fuchsia.media/ColorSpace.UNKNOWN 0
+strict enum fuchsia.media/ColorSpace uint32
+struct/member fuchsia.media/Compression.parameters vector<uint8>:<8192,optional>
+struct/member fuchsia.media/Compression.type string:256
+struct fuchsia.media/Compression
+union/member fuchsia.media/CryptoFormat.decrypted fuchsia.media/DecryptedFormat
+union/member fuchsia.media/CryptoFormat.encrypted fuchsia.media/EncryptedFormat
+flexible union fuchsia.media/CryptoFormat
+table/member fuchsia.media/DecryptedFormat.ignore_this_field bool
+table fuchsia.media/DecryptedFormat
+union/member fuchsia.media/DomainFormat.audio fuchsia.media/AudioFormat
+union/member fuchsia.media/DomainFormat.crypto fuchsia.media/CryptoFormat
+union/member fuchsia.media/DomainFormat.video fuchsia.media/VideoFormat
+strict union fuchsia.media/DomainFormat
+const fuchsia.media/ENCRYPTION_SCHEME_CBC1 string "cbc1"
+const fuchsia.media/ENCRYPTION_SCHEME_CBCS string "cbcs"
+const fuchsia.media/ENCRYPTION_SCHEME_CENC string "cenc"
+const fuchsia.media/ENCRYPTION_SCHEME_CENS string "cens"
+const fuchsia.media/ENCRYPTION_SCHEME_UNENCRYPTED string "unencrypted"
+union/member fuchsia.media/EncoderSettings.aac fuchsia.media/AacEncoderSettings
+union/member fuchsia.media/EncoderSettings.h264 fuchsia.media/H264EncoderSettings
+union/member fuchsia.media/EncoderSettings.hevc fuchsia.media/HevcEncoderSettings
+union/member fuchsia.media/EncoderSettings.sbc fuchsia.media/SbcEncoderSettings
+flexible union fuchsia.media/EncoderSettings
+table/member fuchsia.media/EncryptedFormat.init_vector vector<uint8>:16
+table/member fuchsia.media/EncryptedFormat.key_id vector<uint8>:16
+table/member fuchsia.media/EncryptedFormat.pattern fuchsia.media/EncryptionPattern
+table/member fuchsia.media/EncryptedFormat.scheme string
+table/member fuchsia.media/EncryptedFormat.subsamples vector<fuchsia.media/SubsampleEntry>
+table fuchsia.media/EncryptedFormat
+struct/member fuchsia.media/EncryptionPattern.clear_blocks uint32
+struct/member fuchsia.media/EncryptionPattern.encrypted_blocks uint32
+struct fuchsia.media/EncryptionPattern
+table/member fuchsia.media/FormatDetails.domain fuchsia.media/DomainFormat
+table/member fuchsia.media/FormatDetails.encoder_settings fuchsia.media/EncoderSettings
+table/member fuchsia.media/FormatDetails.format_details_version_ordinal uint64
+table/member fuchsia.media/FormatDetails.mime_type string
+table/member fuchsia.media/FormatDetails.oob_bytes vector<uint8>
+table/member fuchsia.media/FormatDetails.pass_through_parameters vector<fuchsia.media/Parameter>
+table/member fuchsia.media/FormatDetails.timebase uint64
+table fuchsia.media/FormatDetails
+table/member fuchsia.media/H264EncoderSettings.bit_rate uint32
+table/member fuchsia.media/H264EncoderSettings.force_key_frame bool
+table/member fuchsia.media/H264EncoderSettings.frame_rate uint32
+table/member fuchsia.media/H264EncoderSettings.gop_size uint32
+table/member fuchsia.media/H264EncoderSettings.min_frame_rate uint32
+table/member fuchsia.media/H264EncoderSettings.quantization_params fuchsia.media/H264QuantizationParameters
+table/member fuchsia.media/H264EncoderSettings.variable_frame_rate bool
+table fuchsia.media/H264EncoderSettings
+table/member fuchsia.media/H264QuantizationParameters.i_base uint32
+table/member fuchsia.media/H264QuantizationParameters.i_max uint32
+table/member fuchsia.media/H264QuantizationParameters.i_min uint32
+table/member fuchsia.media/H264QuantizationParameters.p_base uint32
+table/member fuchsia.media/H264QuantizationParameters.p_max uint32
+table/member fuchsia.media/H264QuantizationParameters.p_min uint32
+table fuchsia.media/H264QuantizationParameters
+table/member fuchsia.media/HevcEncoderSettings.bit_rate uint32
+table/member fuchsia.media/HevcEncoderSettings.frame_rate uint32
+table/member fuchsia.media/HevcEncoderSettings.gop_size uint32
+table fuchsia.media/HevcEncoderSettings
+table/member fuchsia.media/InputAudioCapturerConfiguration.usage fuchsia.media/AudioCaptureUsage
+table fuchsia.media/InputAudioCapturerConfiguration
+table fuchsia.media/LoopbackAudioCapturerConfiguration
+const fuchsia.media/MAX_ENCRYPTION_SCHEME_SIZE uint32 100
+const fuchsia.media/MAX_FRAMES_PER_RENDERER_PACKET int64 262143
+const fuchsia.media/MAX_INIT_VECTOR_SIZE uint32 16
+const fuchsia.media/MAX_KEY_ID_SIZE uint32 16
+const fuchsia.media/MAX_PCM_CHANNEL_COUNT uint32 8
+const fuchsia.media/MAX_PCM_FRAMES_PER_SECOND uint32 192000
+const fuchsia.media/METADATA_LABEL_ALBUM string "fuchsia.media.album"
+const fuchsia.media/METADATA_LABEL_ARTIST string "fuchsia.media.artist"
+const fuchsia.media/METADATA_LABEL_COMPOSER string "fuchsia.media.composer"
+const fuchsia.media/METADATA_LABEL_EPISODE string "fuchsia.media.episode"
+const fuchsia.media/METADATA_LABEL_GENRE string "fuchsia.media.genre"
+const fuchsia.media/METADATA_LABEL_PUBLISHER string "fuchsia.media.publisher"
+const fuchsia.media/METADATA_LABEL_RELEASE_DATE string "fuchsia.media.release_date"
+const fuchsia.media/METADATA_LABEL_SEASON string "fuchsia.media.season"
+const fuchsia.media/METADATA_LABEL_STUDIO string "fuchsia.media.studio"
+const fuchsia.media/METADATA_LABEL_SUBTITLE string "fuchsia.media.subtitle"
+const fuchsia.media/METADATA_LABEL_TITLE string "fuchsia.media.title"
+const fuchsia.media/METADATA_LABEL_TRACK_NUMBER string "fuchsia.media.track_number"
+const fuchsia.media/METADATA_SOURCE_TITLE string "fuchsia.media.source_title"
+const fuchsia.media/MIN_PCM_CHANNEL_COUNT uint32 1
+const fuchsia.media/MIN_PCM_FRAMES_PER_SECOND uint32 1000
+union/member fuchsia.media/MediumSpecificStreamType.audio fuchsia.media/AudioStreamType
+union/member fuchsia.media/MediumSpecificStreamType.subpicture fuchsia.media/SubpictureStreamType
+union/member fuchsia.media/MediumSpecificStreamType.text fuchsia.media/TextStreamType
+union/member fuchsia.media/MediumSpecificStreamType.video fuchsia.media/VideoStreamType
+strict union fuchsia.media/MediumSpecificStreamType
+struct/member fuchsia.media/Metadata.properties vector<fuchsia.media/Property>
+struct fuchsia.media/Metadata
+const fuchsia.media/NO_TIMESTAMP int64 9223372036854775807
+table/member fuchsia.media/Packet.buffer_index uint32
+table/member fuchsia.media/Packet.header fuchsia.media/PacketHeader
+table/member fuchsia.media/Packet.key_frame bool
+table/member fuchsia.media/Packet.known_end_access_unit bool
+table/member fuchsia.media/Packet.start_access_unit bool
+table/member fuchsia.media/Packet.start_offset uint32
+table/member fuchsia.media/Packet.stream_lifetime_ordinal uint64
+table/member fuchsia.media/Packet.timestamp_ish uint64
+table/member fuchsia.media/Packet.valid_length_bytes uint32
+table fuchsia.media/Packet
+table/member fuchsia.media/PacketHeader.buffer_lifetime_ordinal uint64
+table/member fuchsia.media/PacketHeader.packet_index uint32
+table fuchsia.media/PacketHeader
+struct/member fuchsia.media/Parameter.name string
+struct/member fuchsia.media/Parameter.scope string
+struct/member fuchsia.media/Parameter.value fuchsia.media/Value
+struct fuchsia.media/Parameter
+struct/member fuchsia.media/PcmFormat.bits_per_sample uint32
+struct/member fuchsia.media/PcmFormat.channel_map vector<fuchsia.media/AudioChannelId>:16
+struct/member fuchsia.media/PcmFormat.frames_per_second uint32
+struct/member fuchsia.media/PcmFormat.pcm_mode fuchsia.media/AudioPcmMode
+struct fuchsia.media/PcmFormat
+protocol/member fuchsia.media/ProfileProvider.RegisterHandler(zx/handle:THREAD thread_handle,string:64 name,int64 period) -> (int64 period,int64 capacity)
+protocol/member fuchsia.media/ProfileProvider.RegisterHandlerWithCapacity(zx/handle:THREAD thread_handle,string:64 name,int64 period,float32 capacity) -> (int64 period,int64 capacity)
+protocol fuchsia.media/ProfileProvider
+struct/member fuchsia.media/Property.label string
+struct/member fuchsia.media/Property.value string
+struct fuchsia.media/Property
+const fuchsia.media/RENDER_USAGE_COUNT uint8 5
+const fuchsia.media/STREAM_PACKET_FLAG_DISCONTINUITY uint32 4
+const fuchsia.media/STREAM_PACKET_FLAG_DROPPABLE uint32 2
+const fuchsia.media/STREAM_PACKET_FLAG_KEY_FRAME uint32 1
+enum/member fuchsia.media/SbcAllocation.ALLOC_LOUDNESS 0
+enum/member fuchsia.media/SbcAllocation.ALLOC_SNR 1
+strict enum fuchsia.media/SbcAllocation uint32
+enum/member fuchsia.media/SbcBlockCount.BLOCK_COUNT_12 12
+enum/member fuchsia.media/SbcBlockCount.BLOCK_COUNT_16 16
+enum/member fuchsia.media/SbcBlockCount.BLOCK_COUNT_4 4
+enum/member fuchsia.media/SbcBlockCount.BLOCK_COUNT_8 8
+strict enum fuchsia.media/SbcBlockCount uint32
+enum/member fuchsia.media/SbcChannelMode.DUAL 1
+enum/member fuchsia.media/SbcChannelMode.JOINT_STEREO 3
+enum/member fuchsia.media/SbcChannelMode.MONO 0
+enum/member fuchsia.media/SbcChannelMode.STEREO 2
+strict enum fuchsia.media/SbcChannelMode uint32
+struct/member fuchsia.media/SbcEncoderSettings.allocation fuchsia.media/SbcAllocation 0
+struct/member fuchsia.media/SbcEncoderSettings.bit_pool uint64
+struct/member fuchsia.media/SbcEncoderSettings.block_count fuchsia.media/SbcBlockCount 4
+struct/member fuchsia.media/SbcEncoderSettings.channel_mode fuchsia.media/SbcChannelMode
+struct/member fuchsia.media/SbcEncoderSettings.sub_bands fuchsia.media/SbcSubBands 8
+struct fuchsia.media/SbcEncoderSettings
+enum/member fuchsia.media/SbcSubBands.SUB_BANDS_4 4
+enum/member fuchsia.media/SbcSubBands.SUB_BANDS_8 8
+strict enum fuchsia.media/SbcSubBands uint32
+protocol/member fuchsia.media/SessionAudioConsumerFactory.CreateAudioConsumer(uint64 session_id,server_end:fuchsia.media/AudioConsumer audio_consumer_request)
+protocol fuchsia.media/SessionAudioConsumerFactory
+protocol/member fuchsia.media/SimpleStreamSink.AddPayloadBuffer(uint32 id,zx/handle:VMO payload_buffer)
+protocol/member fuchsia.media/SimpleStreamSink.DiscardAllPackets() -> ()
+protocol/member fuchsia.media/SimpleStreamSink.DiscardAllPacketsNoReply()
+protocol/member fuchsia.media/SimpleStreamSink.EndOfStream()
+protocol/member fuchsia.media/SimpleStreamSink.RemovePayloadBuffer(uint32 id)
+protocol/member fuchsia.media/SimpleStreamSink.SendPacket(fuchsia.media/StreamPacket packet) -> ()
+protocol/member fuchsia.media/SimpleStreamSink.SendPacketNoReply(fuchsia.media/StreamPacket packet)
+protocol fuchsia.media/SimpleStreamSink
+table/member fuchsia.media/StreamBufferConstraints.buffer_constraints_version_ordinal uint64
+table/member fuchsia.media/StreamBufferConstraints.default_settings fuchsia.media/StreamBufferSettings
+table/member fuchsia.media/StreamBufferConstraints.is_physically_contiguous_required bool
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_client_max uint32
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_client_min uint32
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_server_max uint32
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_server_min uint32
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended uint32
+table/member fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended_max uint32
+table/member fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_max uint32
+table/member fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_min uint32
+table/member fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_recommended uint32
+table/member fuchsia.media/StreamBufferConstraints.single_buffer_mode_allowed bool
+table fuchsia.media/StreamBufferConstraints
+table/member fuchsia.media/StreamBufferPartialSettings.buffer_constraints_version_ordinal uint64
+table/member fuchsia.media/StreamBufferPartialSettings.buffer_lifetime_ordinal uint64
+table/member fuchsia.media/StreamBufferPartialSettings.packet_count_for_client uint32
+table/member fuchsia.media/StreamBufferPartialSettings.packet_count_for_server uint32
+table/member fuchsia.media/StreamBufferPartialSettings.single_buffer_mode bool
+table/member fuchsia.media/StreamBufferPartialSettings.sysmem_token fuchsia.sysmem/BufferCollectionToken
+resource table fuchsia.media/StreamBufferPartialSettings
+protocol/member fuchsia.media/StreamBufferSet.AddPayloadBuffer(uint32 id,zx/handle:VMO payload_buffer)
+protocol/member fuchsia.media/StreamBufferSet.RemovePayloadBuffer(uint32 id)
+protocol fuchsia.media/StreamBufferSet
+table/member fuchsia.media/StreamBufferSettings.buffer_constraints_version_ordinal uint64
+table/member fuchsia.media/StreamBufferSettings.buffer_lifetime_ordinal uint64
+table/member fuchsia.media/StreamBufferSettings.packet_count_for_client uint32
+table/member fuchsia.media/StreamBufferSettings.packet_count_for_server uint32
+table/member fuchsia.media/StreamBufferSettings.per_packet_buffer_bytes uint32
+table/member fuchsia.media/StreamBufferSettings.single_buffer_mode bool
+table fuchsia.media/StreamBufferSettings
+enum/member fuchsia.media/StreamError.DECODER_DATA_PARSING 16777218
+enum/member fuchsia.media/StreamError.DECODER_UNKNOWN 16777217
+enum/member fuchsia.media/StreamError.DECRYPTOR_NO_KEY 50331650
+enum/member fuchsia.media/StreamError.DECRYPTOR_UNKNOWN 50331649
+enum/member fuchsia.media/StreamError.ENCODER_UNKNOWN 33554433
+enum/member fuchsia.media/StreamError.EOS_PROCESSING 4
+enum/member fuchsia.media/StreamError.INCOMPATIBLE_BUFFERS_PROVIDED 3
+enum/member fuchsia.media/StreamError.INVALID_INPUT_FORMAT_DETAILS 2
+enum/member fuchsia.media/StreamError.UNKNOWN 1
+strict enum fuchsia.media/StreamError uint32
+table/member fuchsia.media/StreamOutputConstraints.buffer_constraints fuchsia.media/StreamBufferConstraints
+table/member fuchsia.media/StreamOutputConstraints.buffer_constraints_action_required bool
+table/member fuchsia.media/StreamOutputConstraints.stream_lifetime_ordinal uint64
+table fuchsia.media/StreamOutputConstraints
+table/member fuchsia.media/StreamOutputFormat.format_details fuchsia.media/FormatDetails
+table/member fuchsia.media/StreamOutputFormat.stream_lifetime_ordinal uint64
+table fuchsia.media/StreamOutputFormat
+struct/member fuchsia.media/StreamPacket.buffer_config uint64 0
+struct/member fuchsia.media/StreamPacket.flags uint32 0
+struct/member fuchsia.media/StreamPacket.payload_buffer_id uint32
+struct/member fuchsia.media/StreamPacket.payload_offset uint64
+struct/member fuchsia.media/StreamPacket.payload_size uint64
+struct/member fuchsia.media/StreamPacket.pts int64 9223372036854775807
+struct/member fuchsia.media/StreamPacket.stream_segment_id uint64 0
+struct fuchsia.media/StreamPacket
+protocol/member fuchsia.media/StreamProcessor.CloseCurrentStream(uint64 stream_lifetime_ordinal,bool release_input_buffers,bool release_output_buffers)
+protocol/member fuchsia.media/StreamProcessor.CompleteOutputBufferPartialSettings(uint64 buffer_lifetime_ordinal)
+protocol/member fuchsia.media/StreamProcessor.EnableOnStreamFailed()
+protocol/member fuchsia.media/StreamProcessor.FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal)
+protocol/member fuchsia.media/StreamProcessor.OnFreeInputPacket -> (fuchsia.media/PacketHeader free_input_packet)
+protocol/member fuchsia.media/StreamProcessor.OnInputConstraints -> (fuchsia.media/StreamBufferConstraints input_constraints)
+protocol/member fuchsia.media/StreamProcessor.OnOutputConstraints -> (fuchsia.media/StreamOutputConstraints output_config)
+protocol/member fuchsia.media/StreamProcessor.OnOutputEndOfStream -> (uint64 stream_lifetime_ordinal,bool error_detected_before)
+protocol/member fuchsia.media/StreamProcessor.OnOutputFormat -> (fuchsia.media/StreamOutputFormat output_format)
+protocol/member fuchsia.media/StreamProcessor.OnOutputPacket -> (fuchsia.media/Packet output_packet,bool error_detected_before,bool error_detected_during)
+protocol/member fuchsia.media/StreamProcessor.OnStreamFailed -> (uint64 stream_lifetime_ordinal,fuchsia.media/StreamError error)
+protocol/member fuchsia.media/StreamProcessor.QueueInputEndOfStream(uint64 stream_lifetime_ordinal)
+protocol/member fuchsia.media/StreamProcessor.QueueInputFormatDetails(uint64 stream_lifetime_ordinal,fuchsia.media/FormatDetails format_details)
+protocol/member fuchsia.media/StreamProcessor.QueueInputPacket(fuchsia.media/Packet packet)
+protocol/member fuchsia.media/StreamProcessor.RecycleOutputPacket(fuchsia.media/PacketHeader available_output_packet)
+protocol/member fuchsia.media/StreamProcessor.SetInputBufferPartialSettings(fuchsia.media/StreamBufferPartialSettings input_settings)
+protocol/member fuchsia.media/StreamProcessor.SetOutputBufferPartialSettings(fuchsia.media/StreamBufferPartialSettings output_settings)
+protocol/member fuchsia.media/StreamProcessor.Sync() -> ()
+protocol fuchsia.media/StreamProcessor
+protocol/member fuchsia.media/StreamSink.DiscardAllPackets() -> ()
+protocol/member fuchsia.media/StreamSink.DiscardAllPacketsNoReply()
+protocol/member fuchsia.media/StreamSink.EndOfStream()
+protocol/member fuchsia.media/StreamSink.SendPacket(fuchsia.media/StreamPacket packet) -> ()
+protocol/member fuchsia.media/StreamSink.SendPacketNoReply(fuchsia.media/StreamPacket packet)
+protocol fuchsia.media/StreamSink
+protocol/member fuchsia.media/StreamSource.DiscardAllPackets() -> ()
+protocol/member fuchsia.media/StreamSource.DiscardAllPacketsNoReply()
+protocol/member fuchsia.media/StreamSource.OnEndOfStream -> ()
+protocol/member fuchsia.media/StreamSource.OnPacketProduced -> (fuchsia.media/StreamPacket packet)
+protocol/member fuchsia.media/StreamSource.ReleasePacket(fuchsia.media/StreamPacket packet)
+protocol fuchsia.media/StreamSource
+struct/member fuchsia.media/StreamType.encoding string:255
+struct/member fuchsia.media/StreamType.encoding_parameters vector<uint8>:optional
+struct/member fuchsia.media/StreamType.medium_specific fuchsia.media/MediumSpecificStreamType
+struct fuchsia.media/StreamType
+struct fuchsia.media/SubpictureStreamType
+struct/member fuchsia.media/SubsampleEntry.clear_bytes uint32
+struct/member fuchsia.media/SubsampleEntry.encrypted_bytes uint32
+struct fuchsia.media/SubsampleEntry
+struct fuchsia.media/TextStreamType
+struct/member fuchsia.media/TimelineFunction.reference_delta uint32 1
+struct/member fuchsia.media/TimelineFunction.reference_time int64 0
+struct/member fuchsia.media/TimelineFunction.subject_delta uint32 0
+struct/member fuchsia.media/TimelineFunction.subject_time int64 0
+struct fuchsia.media/TimelineFunction
+union/member fuchsia.media/Usage.capture_usage fuchsia.media/AudioCaptureUsage
+union/member fuchsia.media/Usage.render_usage fuchsia.media/AudioRenderUsage
+strict union fuchsia.media/Usage
+protocol/member fuchsia.media/UsageAudioConsumerFactory.CreateAudioConsumer(fuchsia.media/AudioRenderUsage usage,server_end:fuchsia.media/AudioConsumer audio_consumer_request)
+protocol fuchsia.media/UsageAudioConsumerFactory
+protocol/member fuchsia.media/UsageGainListener.OnGainMuteChanged(bool muted,float32 gain_dbfs) -> ()
+protocol fuchsia.media/UsageGainListener
+protocol/member fuchsia.media/UsageGainReporter.RegisterListener(string:36 device_unique_id,fuchsia.media/Usage usage,client_end:fuchsia.media/UsageGainListener usage_gain_listener)
+protocol fuchsia.media/UsageGainReporter
+protocol/member fuchsia.media/UsageReporter.Watch(fuchsia.media/Usage usage,client_end:fuchsia.media/UsageWatcher usage_watcher)
+protocol fuchsia.media/UsageReporter
+union/member fuchsia.media/UsageState.ducked fuchsia.media/UsageStateDucked
+union/member fuchsia.media/UsageState.muted fuchsia.media/UsageStateMuted
+union/member fuchsia.media/UsageState.unadjusted fuchsia.media/UsageStateUnadjusted
+flexible union fuchsia.media/UsageState
+table fuchsia.media/UsageStateDucked
+table fuchsia.media/UsageStateMuted
+table fuchsia.media/UsageStateUnadjusted
+protocol/member fuchsia.media/UsageWatcher.OnStateChanged(fuchsia.media/Usage usage,fuchsia.media/UsageState state) -> ()
+protocol fuchsia.media/UsageWatcher
+const fuchsia.media/VIDEO_ENCODING_H263 string "fuchsia.media.h263"
+const fuchsia.media/VIDEO_ENCODING_H264 string "fuchsia.media.h264"
+const fuchsia.media/VIDEO_ENCODING_MPEG4 string "fuchsia.media.mpeg4"
+const fuchsia.media/VIDEO_ENCODING_THEORA string "fuchsia.media.theora"
+const fuchsia.media/VIDEO_ENCODING_UNCOMPRESSED string "fuchsia.media.uncompressed_video"
+const fuchsia.media/VIDEO_ENCODING_VP3 string "fuchsia.media.vp3"
+const fuchsia.media/VIDEO_ENCODING_VP8 string "fuchsia.media.vp8"
+const fuchsia.media/VIDEO_ENCODING_VP9 string "fuchsia.media.vp9"
+union/member fuchsia.media/Value.bool_value bool
+union/member fuchsia.media/Value.bytes_value vector<uint8>
+union/member fuchsia.media/Value.int64_value int64
+union/member fuchsia.media/Value.string_value string
+union/member fuchsia.media/Value.uint64_value uint64
+strict union fuchsia.media/Value
+enum/member fuchsia.media/VideoColorSpace.INVALID 0
+strict enum fuchsia.media/VideoColorSpace uint32
+union/member fuchsia.media/VideoCompressedFormat.temp_field_todo_remove uint32
+strict union fuchsia.media/VideoCompressedFormat
+union/member fuchsia.media/VideoFormat.compressed fuchsia.media/VideoCompressedFormat
+union/member fuchsia.media/VideoFormat.uncompressed fuchsia.media/VideoUncompressedFormat
+strict union fuchsia.media/VideoFormat
+struct/member fuchsia.media/VideoStreamType.coded_height uint32
+struct/member fuchsia.media/VideoStreamType.coded_width uint32
+struct/member fuchsia.media/VideoStreamType.color_space fuchsia.media/ColorSpace
+struct/member fuchsia.media/VideoStreamType.height uint32
+struct/member fuchsia.media/VideoStreamType.pixel_aspect_ratio_height uint32
+struct/member fuchsia.media/VideoStreamType.pixel_aspect_ratio_width uint32
+struct/member fuchsia.media/VideoStreamType.pixel_format fuchsia.images/PixelFormat
+struct/member fuchsia.media/VideoStreamType.stride uint32
+struct/member fuchsia.media/VideoStreamType.width uint32
+struct fuchsia.media/VideoStreamType
+struct/member fuchsia.media/VideoUncompressedFormat.fourcc uint32
+struct/member fuchsia.media/VideoUncompressedFormat.has_pixel_aspect_ratio bool false
+struct/member fuchsia.media/VideoUncompressedFormat.image_format fuchsia.sysmem/ImageFormat_2
+struct/member fuchsia.media/VideoUncompressedFormat.pixel_aspect_ratio_height uint32 1
+struct/member fuchsia.media/VideoUncompressedFormat.pixel_aspect_ratio_width uint32 1
+struct/member fuchsia.media/VideoUncompressedFormat.planar bool
+struct/member fuchsia.media/VideoUncompressedFormat.primary_display_height_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_display_width_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_height_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_line_stride_bytes uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_pixel_stride uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_start_offset uint32
+struct/member fuchsia.media/VideoUncompressedFormat.primary_width_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.secondary_height_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.secondary_line_stride_bytes uint32
+struct/member fuchsia.media/VideoUncompressedFormat.secondary_pixel_stride uint32
+struct/member fuchsia.media/VideoUncompressedFormat.secondary_start_offset uint32
+struct/member fuchsia.media/VideoUncompressedFormat.secondary_width_pixels uint32
+struct/member fuchsia.media/VideoUncompressedFormat.swizzled bool
+struct/member fuchsia.media/VideoUncompressedFormat.tertiary_start_offset uint32
+struct fuchsia.media/VideoUncompressedFormat
+struct fuchsia.media/Void
+const fuchsia.media/kMaxOobBytesSize uint64 8192
+library fuchsia.media

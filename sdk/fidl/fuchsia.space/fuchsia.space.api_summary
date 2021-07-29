@@ -1,0 +1,10 @@
+enum/member fuchsia.space/ErrorCode.INTERNAL 1
+enum/member fuchsia.space/ErrorCode.PENDING_COMMIT 2
+strict enum fuchsia.space/ErrorCode uint32
+protocol/member fuchsia.space/Manager.Gc() -> (fuchsia.space/Manager_Gc_Result result)
+protocol fuchsia.space/Manager
+struct fuchsia.space/Manager_Gc_Response
+union/member fuchsia.space/Manager_Gc_Result.err fuchsia.space/ErrorCode
+union/member fuchsia.space/Manager_Gc_Result.response fuchsia.space/Manager_Gc_Response
+strict union fuchsia.space/Manager_Gc_Result
+library fuchsia.space

@@ -1,0 +1,5 @@
+protocol/member fuchsia.hardware.usb.composite/UsbComposite.ClaimInterface(fuchsia.hardware.usb.descriptor/UsbInterfaceDescriptor desc,uint32 length) -> (int32 s)
+protocol/member fuchsia.hardware.usb.composite/UsbComposite.GetAdditionalDescriptorLength() -> (uint64 length)
+protocol/member fuchsia.hardware.usb.composite/UsbComposite.GetAdditionalDescriptorList() -> (int32 s,vector<uint8> desc)
+protocol fuchsia.hardware.usb.composite/UsbComposite
+library fuchsia.hardware.usb.composite

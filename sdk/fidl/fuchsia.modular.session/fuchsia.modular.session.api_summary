@@ -1,0 +1,43 @@
+table/member fuchsia.modular.session/AgentServiceIndexEntry.agent_url string:2083
+table/member fuchsia.modular.session/AgentServiceIndexEntry.service_name string
+table fuchsia.modular.session/AgentServiceIndexEntry
+table/member fuchsia.modular.session/AppConfig.args vector<string>
+table/member fuchsia.modular.session/AppConfig.url string:4096
+table fuchsia.modular.session/AppConfig
+table/member fuchsia.modular.session/BaseShellConfig.app_config fuchsia.modular.session/AppConfig
+table/member fuchsia.modular.session/BaseShellConfig.keep_alive_after_login bool
+table fuchsia.modular.session/BaseShellConfig
+table/member fuchsia.modular.session/BasemgrConfig.base_shell fuchsia.modular.session/BaseShellConfig
+table/member fuchsia.modular.session/BasemgrConfig.enable_cobalt bool
+table/member fuchsia.modular.session/BasemgrConfig.session_launcher fuchsia.modular.session/AppConfig
+table/member fuchsia.modular.session/BasemgrConfig.session_shell_map vector<fuchsia.modular.session/SessionShellMapEntry>
+table/member fuchsia.modular.session/BasemgrConfig.story_shell fuchsia.modular.session/StoryShellConfig
+table/member fuchsia.modular.session/BasemgrConfig.use_session_shell_for_story_shell_factory bool
+table fuchsia.modular.session/BasemgrConfig
+protocol/member fuchsia.modular.session/Launcher.LaunchSessionmgr(fuchsia.mem/Buffer config)
+protocol/member fuchsia.modular.session/Launcher.LaunchSessionmgrWithServices(fuchsia.mem/Buffer config,fuchsia.sys/ServiceList additional_services)
+protocol fuchsia.modular.session/Launcher
+table/member fuchsia.modular.session/ModularConfig.basemgr_config fuchsia.modular.session/BasemgrConfig
+table/member fuchsia.modular.session/ModularConfig.sessionmgr_config fuchsia.modular.session/SessionmgrConfig
+table fuchsia.modular.session/ModularConfig
+table/member fuchsia.modular.session/SessionShellConfig.app_config fuchsia.modular.session/AppConfig
+table/member fuchsia.modular.session/SessionShellConfig.display_usage fuchsia.ui.policy/DisplayUsage
+table/member fuchsia.modular.session/SessionShellConfig.screen_height float32
+table/member fuchsia.modular.session/SessionShellConfig.screen_width float32
+table fuchsia.modular.session/SessionShellConfig
+table/member fuchsia.modular.session/SessionShellMapEntry.config fuchsia.modular.session/SessionShellConfig
+table/member fuchsia.modular.session/SessionShellMapEntry.name string:4096
+table fuchsia.modular.session/SessionShellMapEntry
+table/member fuchsia.modular.session/SessionmgrConfig.agent_service_index vector<fuchsia.modular.session/AgentServiceIndexEntry>
+table/member fuchsia.modular.session/SessionmgrConfig.component_args vector<fuchsia.modular.session/AppConfig>
+table/member fuchsia.modular.session/SessionmgrConfig.disable_agent_restart_on_crash bool
+table/member fuchsia.modular.session/SessionmgrConfig.enable_cobalt bool
+table/member fuchsia.modular.session/SessionmgrConfig.reserved bool
+table/member fuchsia.modular.session/SessionmgrConfig.restart_session_on_agent_crash vector<string:4096>
+table/member fuchsia.modular.session/SessionmgrConfig.session_agents vector<string:4096>
+table/member fuchsia.modular.session/SessionmgrConfig.startup_agents vector<string:4096>
+table/member fuchsia.modular.session/SessionmgrConfig.story_shell_url string:4096
+table fuchsia.modular.session/SessionmgrConfig
+table/member fuchsia.modular.session/StoryShellConfig.app_config fuchsia.modular.session/AppConfig
+table fuchsia.modular.session/StoryShellConfig
+library fuchsia.modular.session

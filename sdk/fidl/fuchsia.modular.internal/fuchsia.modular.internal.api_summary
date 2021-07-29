@@ -1,0 +1,16 @@
+protocol/member fuchsia.modular.internal/BasemgrDebug.RestartSession() -> ()
+protocol/member fuchsia.modular.internal/BasemgrDebug.Shutdown()
+protocol/member fuchsia.modular.internal/BasemgrDebug.StartSessionWithRandomId()
+protocol fuchsia.modular.internal/BasemgrDebug
+protocol/member fuchsia.modular.internal/SessionContext.GetPresentation(server_end:fuchsia.ui.policy/Presentation presentation)
+protocol/member fuchsia.modular.internal/SessionContext.Restart()
+protocol/member fuchsia.modular.internal/SessionContext.RestartDueToCriticalFailure()
+protocol fuchsia.modular.internal/SessionContext
+protocol/member fuchsia.modular.internal/Sessionmgr.Initialize(string session_id,client_end:fuchsia.modular.internal/SessionContext session_context,fuchsia.sys/ServiceList additional_services_for_agents,fuchsia.ui.views/ViewToken view_token,fuchsia.ui.views/ViewRefControl control_ref,fuchsia.ui.views/ViewRef view_ref)
+protocol fuchsia.modular.internal/Sessionmgr
+table/member fuchsia.modular.internal/StoryData.story_info fuchsia.modular/StoryInfo2
+table/member fuchsia.modular.internal/StoryData.story_name string
+table/member fuchsia.modular.internal/StoryData.story_options fuchsia.modular/StoryOptions
+table/member fuchsia.modular.internal/StoryData.story_page_id string
+resource table fuchsia.modular.internal/StoryData
+library fuchsia.modular.internal

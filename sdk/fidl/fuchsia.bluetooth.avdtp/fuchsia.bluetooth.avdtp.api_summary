@@ -1,0 +1,65 @@
+const fuchsia.bluetooth.avdtp/MAX_PICONET_SIZE uint64 8
+protocol/member fuchsia.bluetooth.avdtp/PeerController.AbortStream() -> (fuchsia.bluetooth.avdtp/PeerController_AbortStream_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.EstablishStream() -> (fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.GetAllCapabilities() -> (fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.GetCapabilities() -> (fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.GetConfiguration() -> (fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.ReconfigureStream() -> (fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.ReleaseStream() -> (fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.SetConfiguration() -> (fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.StartStream() -> (fuchsia.bluetooth.avdtp/PeerController_StartStream_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.SuspendAndReconfigure() -> (fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Result result)
+protocol/member fuchsia.bluetooth.avdtp/PeerController.SuspendStream() -> (fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Result result)
+protocol fuchsia.bluetooth.avdtp/PeerController
+struct fuchsia.bluetooth.avdtp/PeerController_AbortStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_AbortStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_AbortStream_Result.response fuchsia.bluetooth.avdtp/PeerController_AbortStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_AbortStream_Result
+struct fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Result.response fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_EstablishStream_Result
+struct fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Result.response fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_GetAllCapabilities_Result
+struct fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Result.response fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_GetCapabilities_Result
+struct fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Result.response fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_GetConfiguration_Result
+struct fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Result.response fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_ReconfigureStream_Result
+struct fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Result.response fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_ReleaseStream_Result
+struct fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Result.response fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_SetConfiguration_Result
+struct fuchsia.bluetooth.avdtp/PeerController_StartStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_StartStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_StartStream_Result.response fuchsia.bluetooth.avdtp/PeerController_StartStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_StartStream_Result
+struct fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Result.response fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_SuspendAndReconfigure_Result
+struct fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Response
+union/member fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Result.err fuchsia.bluetooth.avdtp/PeerError
+union/member fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Result.response fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Response
+strict union fuchsia.bluetooth.avdtp/PeerController_SuspendStream_Result
+enum/member fuchsia.bluetooth.avdtp/PeerError.PROTOCOL_ERROR 2
+enum/member fuchsia.bluetooth.avdtp/PeerError.UNKNOWN_FAILURE 1
+strict enum fuchsia.bluetooth.avdtp/PeerError uint32
+protocol/member fuchsia.bluetooth.avdtp/PeerManager.ConnectedPeers() -> (vector<fuchsia.bluetooth/PeerId>:8 peer_ids)
+protocol/member fuchsia.bluetooth.avdtp/PeerManager.GetPeer(fuchsia.bluetooth/PeerId peer_id,server_end:fuchsia.bluetooth.avdtp/PeerController handle)
+protocol/member fuchsia.bluetooth.avdtp/PeerManager.OnPeerConnected -> (fuchsia.bluetooth/PeerId peer_id)
+protocol fuchsia.bluetooth.avdtp/PeerManager
+library fuchsia.bluetooth.avdtp

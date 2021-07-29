@@ -1,0 +1,22 @@
+protocol/member fuchsia.inspect.deprecated/Inspect.ListChildren() -> (vector<string> children_names)
+protocol/member fuchsia.inspect.deprecated/Inspect.OpenChild(string child_name,server_end:fuchsia.inspect.deprecated/Inspect child_channel) -> (bool success)
+protocol/member fuchsia.inspect.deprecated/Inspect.ReadData() -> (fuchsia.inspect.deprecated/Object object)
+protocol fuchsia.inspect.deprecated/Inspect
+struct/member fuchsia.inspect.deprecated/Metric.key string
+struct/member fuchsia.inspect.deprecated/Metric.value fuchsia.inspect.deprecated/MetricValue
+struct fuchsia.inspect.deprecated/Metric
+union/member fuchsia.inspect.deprecated/MetricValue.double_value float64
+union/member fuchsia.inspect.deprecated/MetricValue.int_value int64
+union/member fuchsia.inspect.deprecated/MetricValue.uint_value uint64
+strict union fuchsia.inspect.deprecated/MetricValue
+struct/member fuchsia.inspect.deprecated/Object.metrics vector<fuchsia.inspect.deprecated/Metric>
+struct/member fuchsia.inspect.deprecated/Object.name string
+struct/member fuchsia.inspect.deprecated/Object.properties vector<fuchsia.inspect.deprecated/Property>
+struct fuchsia.inspect.deprecated/Object
+struct/member fuchsia.inspect.deprecated/Property.key string
+struct/member fuchsia.inspect.deprecated/Property.value fuchsia.inspect.deprecated/PropertyValue
+struct fuchsia.inspect.deprecated/Property
+union/member fuchsia.inspect.deprecated/PropertyValue.bytes vector<uint8>
+union/member fuchsia.inspect.deprecated/PropertyValue.str string
+strict union fuchsia.inspect.deprecated/PropertyValue
+library fuchsia.inspect.deprecated

@@ -1,0 +1,15 @@
+protocol/member fuchsia.location.position/EmergencyProvider.GetCurrent() -> (fuchsia.location.position/EmergencyProvider_GetCurrent_Result result)
+protocol fuchsia.location.position/EmergencyProvider
+struct/member fuchsia.location.position/EmergencyProvider_GetCurrent_Response.position fuchsia.location.position/Position
+struct fuchsia.location.position/EmergencyProvider_GetCurrent_Response
+union/member fuchsia.location.position/EmergencyProvider_GetCurrent_Result.err fuchsia.location/Error
+union/member fuchsia.location.position/EmergencyProvider_GetCurrent_Result.response fuchsia.location.position/EmergencyProvider_GetCurrent_Response
+strict union fuchsia.location.position/EmergencyProvider_GetCurrent_Result
+struct/member fuchsia.location.position/Position.extras fuchsia.location.position/PositionExtras
+struct/member fuchsia.location.position/Position.latitude float64
+struct/member fuchsia.location.position/Position.longitude float64
+struct fuchsia.location.position/Position
+table/member fuchsia.location.position/PositionExtras.accuracy_meters float64
+table/member fuchsia.location.position/PositionExtras.altitude_meters float64
+table fuchsia.location.position/PositionExtras
+library fuchsia.location.position

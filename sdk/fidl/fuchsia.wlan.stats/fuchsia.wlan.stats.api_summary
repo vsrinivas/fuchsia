@@ -1,0 +1,76 @@
+enum/member fuchsia.wlan.stats/AntennaFreq.ANTENNA_2_G 1
+enum/member fuchsia.wlan.stats/AntennaFreq.ANTENNA_5_G 2
+strict enum fuchsia.wlan.stats/AntennaFreq uint8
+struct/member fuchsia.wlan.stats/AntennaId.freq fuchsia.wlan.stats/AntennaFreq
+struct/member fuchsia.wlan.stats/AntennaId.index uint8
+struct fuchsia.wlan.stats/AntennaId
+struct/member fuchsia.wlan.stats/ApMlmeStats.not_used fuchsia.wlan.stats/PacketCounter
+struct fuchsia.wlan.stats/ApMlmeStats
+struct/member fuchsia.wlan.stats/ClientMlmeStats.assoc_data_rssi fuchsia.wlan.stats/RssiStats
+struct/member fuchsia.wlan.stats/ClientMlmeStats.beacon_rssi fuchsia.wlan.stats/RssiStats
+struct/member fuchsia.wlan.stats/ClientMlmeStats.data_frame fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/ClientMlmeStats.mgmt_frame fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/ClientMlmeStats.noise_floor_histograms vector<fuchsia.wlan.stats/NoiseFloorHistogram>:8
+struct/member fuchsia.wlan.stats/ClientMlmeStats.rssi_histograms vector<fuchsia.wlan.stats/RssiHistogram>:8
+struct/member fuchsia.wlan.stats/ClientMlmeStats.rx_frame fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/ClientMlmeStats.rx_rate_index_histograms vector<fuchsia.wlan.stats/RxRateIndexHistogram>:8
+struct/member fuchsia.wlan.stats/ClientMlmeStats.snr_histograms vector<fuchsia.wlan.stats/SnrHistogram>:8
+struct/member fuchsia.wlan.stats/ClientMlmeStats.svc_msg fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/ClientMlmeStats.tx_frame fuchsia.wlan.stats/PacketCounter
+struct fuchsia.wlan.stats/ClientMlmeStats
+struct/member fuchsia.wlan.stats/Counter.count uint64
+struct/member fuchsia.wlan.stats/Counter.name string
+struct fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/DispatcherStats.any_packet fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/DispatcherStats.ctrl_frame fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/DispatcherStats.data_frame fuchsia.wlan.stats/PacketCounter
+struct/member fuchsia.wlan.stats/DispatcherStats.mgmt_frame fuchsia.wlan.stats/PacketCounter
+struct fuchsia.wlan.stats/DispatcherStats
+struct/member fuchsia.wlan.stats/HistBucket.bucket_index uint16
+struct/member fuchsia.wlan.stats/HistBucket.num_samples uint64
+struct fuchsia.wlan.stats/HistBucket
+enum/member fuchsia.wlan.stats/HistScope.PER_ANTENNA 2
+enum/member fuchsia.wlan.stats/HistScope.STATION 1
+strict enum fuchsia.wlan.stats/HistScope uint8
+struct/member fuchsia.wlan.stats/IfaceStats.dispatcher_stats fuchsia.wlan.stats/DispatcherStats
+struct/member fuchsia.wlan.stats/IfaceStats.mlme_stats fuchsia.wlan.stats/MlmeStats:optional
+struct fuchsia.wlan.stats/IfaceStats
+const fuchsia.wlan.stats/MAX_HISTOGRAMS_PER_TYPE uint8 8
+const fuchsia.wlan.stats/MAX_NOISE_FLOOR_SAMPLES uint8 255
+const fuchsia.wlan.stats/MAX_RSSI_SAMPLES uint8 255
+const fuchsia.wlan.stats/MAX_RX_RATE_INDEX_SAMPLES uint8 196
+const fuchsia.wlan.stats/MAX_SNR_SAMPLES uint16 256
+union/member fuchsia.wlan.stats/MlmeStats.ap_mlme_stats fuchsia.wlan.stats/ApMlmeStats
+union/member fuchsia.wlan.stats/MlmeStats.client_mlme_stats fuchsia.wlan.stats/ClientMlmeStats
+strict union fuchsia.wlan.stats/MlmeStats
+struct/member fuchsia.wlan.stats/NoiseFloorHistogram.antenna_id box<fuchsia.wlan.stats/AntennaId>
+struct/member fuchsia.wlan.stats/NoiseFloorHistogram.hist_scope fuchsia.wlan.stats/HistScope
+struct/member fuchsia.wlan.stats/NoiseFloorHistogram.invalid_samples uint64 0
+struct/member fuchsia.wlan.stats/NoiseFloorHistogram.noise_floor_samples vector<fuchsia.wlan.stats/HistBucket>:255
+struct fuchsia.wlan.stats/NoiseFloorHistogram
+struct/member fuchsia.wlan.stats/PacketCounter.drop fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/PacketCounter.drop_bytes fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/PacketCounter.in fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/PacketCounter.in_bytes fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/PacketCounter.out fuchsia.wlan.stats/Counter
+struct/member fuchsia.wlan.stats/PacketCounter.out_bytes fuchsia.wlan.stats/Counter
+struct fuchsia.wlan.stats/PacketCounter
+const fuchsia.wlan.stats/RSSI_BINS uint8 129
+struct/member fuchsia.wlan.stats/RssiHistogram.antenna_id box<fuchsia.wlan.stats/AntennaId>
+struct/member fuchsia.wlan.stats/RssiHistogram.hist_scope fuchsia.wlan.stats/HistScope
+struct/member fuchsia.wlan.stats/RssiHistogram.invalid_samples uint64 0
+struct/member fuchsia.wlan.stats/RssiHistogram.rssi_samples vector<fuchsia.wlan.stats/HistBucket>:255
+struct fuchsia.wlan.stats/RssiHistogram
+struct/member fuchsia.wlan.stats/RssiStats.hist vector<uint64>:129
+struct fuchsia.wlan.stats/RssiStats
+struct/member fuchsia.wlan.stats/RxRateIndexHistogram.antenna_id box<fuchsia.wlan.stats/AntennaId>
+struct/member fuchsia.wlan.stats/RxRateIndexHistogram.hist_scope fuchsia.wlan.stats/HistScope
+struct/member fuchsia.wlan.stats/RxRateIndexHistogram.invalid_samples uint64 0
+struct/member fuchsia.wlan.stats/RxRateIndexHistogram.rx_rate_index_samples vector<fuchsia.wlan.stats/HistBucket>:196
+struct fuchsia.wlan.stats/RxRateIndexHistogram
+struct/member fuchsia.wlan.stats/SnrHistogram.antenna_id box<fuchsia.wlan.stats/AntennaId>
+struct/member fuchsia.wlan.stats/SnrHistogram.hist_scope fuchsia.wlan.stats/HistScope
+struct/member fuchsia.wlan.stats/SnrHistogram.invalid_samples uint64
+struct/member fuchsia.wlan.stats/SnrHistogram.snr_samples vector<fuchsia.wlan.stats/HistBucket>:256
+struct fuchsia.wlan.stats/SnrHistogram
+library fuchsia.wlan.stats

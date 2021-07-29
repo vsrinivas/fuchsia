@@ -1,0 +1,206 @@
+struct/member fuchsia.input.report/Axis.range fuchsia.input.report/Range
+struct/member fuchsia.input.report/Axis.unit fuchsia.input.report/Unit
+struct fuchsia.input.report/Axis
+const fuchsia.input.report/CONSUMER_CONTROL_MAX_NUM_BUTTONS uint32 255
+enum/member fuchsia.input.report/ConsumerControlButton.CAMERA_DISABLE 7
+enum/member fuchsia.input.report/ConsumerControlButton.FACTORY_RESET 4
+enum/member fuchsia.input.report/ConsumerControlButton.MIC_MUTE 5
+enum/member fuchsia.input.report/ConsumerControlButton.PAUSE 3
+enum/member fuchsia.input.report/ConsumerControlButton.REBOOT 6
+enum/member fuchsia.input.report/ConsumerControlButton.VOLUME_DOWN 2
+enum/member fuchsia.input.report/ConsumerControlButton.VOLUME_UP 1
+strict enum fuchsia.input.report/ConsumerControlButton uint32
+table/member fuchsia.input.report/ConsumerControlDescriptor.input fuchsia.input.report/ConsumerControlInputDescriptor
+table fuchsia.input.report/ConsumerControlDescriptor
+table/member fuchsia.input.report/ConsumerControlInputDescriptor.buttons vector<fuchsia.input.report/ConsumerControlButton>:255
+table fuchsia.input.report/ConsumerControlInputDescriptor
+table/member fuchsia.input.report/ConsumerControlInputReport.pressed_buttons vector<fuchsia.input.report/ConsumerControlButton>:255
+table fuchsia.input.report/ConsumerControlInputReport
+table/member fuchsia.input.report/ContactInputDescriptor.contact_height fuchsia.input.report/Axis
+table/member fuchsia.input.report/ContactInputDescriptor.contact_width fuchsia.input.report/Axis
+table/member fuchsia.input.report/ContactInputDescriptor.position_x fuchsia.input.report/Axis
+table/member fuchsia.input.report/ContactInputDescriptor.position_y fuchsia.input.report/Axis
+table/member fuchsia.input.report/ContactInputDescriptor.pressure fuchsia.input.report/Axis
+table fuchsia.input.report/ContactInputDescriptor
+table/member fuchsia.input.report/ContactInputReport.contact_height int64
+table/member fuchsia.input.report/ContactInputReport.contact_id uint32
+table/member fuchsia.input.report/ContactInputReport.contact_width int64
+table/member fuchsia.input.report/ContactInputReport.position_x int64
+table/member fuchsia.input.report/ContactInputReport.position_y int64
+table/member fuchsia.input.report/ContactInputReport.pressure int64
+table fuchsia.input.report/ContactInputReport
+table/member fuchsia.input.report/DeviceDescriptor.consumer_control fuchsia.input.report/ConsumerControlDescriptor
+table/member fuchsia.input.report/DeviceDescriptor.device_info fuchsia.input.report/DeviceInfo
+table/member fuchsia.input.report/DeviceDescriptor.keyboard fuchsia.input.report/KeyboardDescriptor
+table/member fuchsia.input.report/DeviceDescriptor.mouse fuchsia.input.report/MouseDescriptor
+table/member fuchsia.input.report/DeviceDescriptor.sensor fuchsia.input.report/SensorDescriptor
+table/member fuchsia.input.report/DeviceDescriptor.touch fuchsia.input.report/TouchDescriptor
+table fuchsia.input.report/DeviceDescriptor
+struct/member fuchsia.input.report/DeviceInfo.product_id uint32
+struct/member fuchsia.input.report/DeviceInfo.vendor_id uint32
+struct/member fuchsia.input.report/DeviceInfo.version uint32
+struct fuchsia.input.report/DeviceInfo
+table/member fuchsia.input.report/FeatureReport.sensor fuchsia.input.report/SensorFeatureReport
+table fuchsia.input.report/FeatureReport
+protocol/member fuchsia.input.report/InputDevice.GetDescriptor() -> (fuchsia.input.report/DeviceDescriptor descriptor)
+protocol/member fuchsia.input.report/InputDevice.GetFeatureReport() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)
+protocol/member fuchsia.input.report/InputDevice.GetInputReportsReader(server_end:fuchsia.input.report/InputReportsReader reader)
+protocol/member fuchsia.input.report/InputDevice.SendOutputReport(fuchsia.input.report/OutputReport report) -> (fuchsia.input.report/InputDevice_SendOutputReport_Result result)
+protocol/member fuchsia.input.report/InputDevice.SetFeatureReport(fuchsia.input.report/FeatureReport report) -> (fuchsia.input.report/InputDevice_SetFeatureReport_Result result)
+protocol fuchsia.input.report/InputDevice
+struct/member fuchsia.input.report/InputDevice_GetFeatureReport_Response.report fuchsia.input.report/FeatureReport
+struct fuchsia.input.report/InputDevice_GetFeatureReport_Response
+union/member fuchsia.input.report/InputDevice_GetFeatureReport_Result.err int32
+union/member fuchsia.input.report/InputDevice_GetFeatureReport_Result.response fuchsia.input.report/InputDevice_GetFeatureReport_Response
+strict union fuchsia.input.report/InputDevice_GetFeatureReport_Result
+struct fuchsia.input.report/InputDevice_SendOutputReport_Response
+union/member fuchsia.input.report/InputDevice_SendOutputReport_Result.err int32
+union/member fuchsia.input.report/InputDevice_SendOutputReport_Result.response fuchsia.input.report/InputDevice_SendOutputReport_Response
+strict union fuchsia.input.report/InputDevice_SendOutputReport_Result
+struct fuchsia.input.report/InputDevice_SetFeatureReport_Response
+union/member fuchsia.input.report/InputDevice_SetFeatureReport_Result.err int32
+union/member fuchsia.input.report/InputDevice_SetFeatureReport_Result.response fuchsia.input.report/InputDevice_SetFeatureReport_Response
+strict union fuchsia.input.report/InputDevice_SetFeatureReport_Result
+table/member fuchsia.input.report/InputReport.consumer_control fuchsia.input.report/ConsumerControlInputReport
+table/member fuchsia.input.report/InputReport.event_time int64
+table/member fuchsia.input.report/InputReport.keyboard fuchsia.input.report/KeyboardInputReport
+table/member fuchsia.input.report/InputReport.mouse fuchsia.input.report/MouseInputReport
+table/member fuchsia.input.report/InputReport.sensor fuchsia.input.report/SensorInputReport
+table/member fuchsia.input.report/InputReport.touch fuchsia.input.report/TouchInputReport
+table/member fuchsia.input.report/InputReport.trace_id uint64
+table fuchsia.input.report/InputReport
+protocol/member fuchsia.input.report/InputReportsReader.ReadInputReports() -> (fuchsia.input.report/InputReportsReader_ReadInputReports_Result result)
+protocol fuchsia.input.report/InputReportsReader
+struct/member fuchsia.input.report/InputReportsReader_ReadInputReports_Response.reports vector<fuchsia.input.report/InputReport>:50
+struct fuchsia.input.report/InputReportsReader_ReadInputReports_Response
+union/member fuchsia.input.report/InputReportsReader_ReadInputReports_Result.err int32
+union/member fuchsia.input.report/InputReportsReader_ReadInputReports_Result.response fuchsia.input.report/InputReportsReader_ReadInputReports_Response
+strict union fuchsia.input.report/InputReportsReader_ReadInputReports_Result
+const fuchsia.input.report/KEYBOARD_MAX_NUM_KEYS uint32 256
+const fuchsia.input.report/KEYBOARD_MAX_NUM_LEDS uint32 256
+const fuchsia.input.report/KEYBOARD_MAX_PRESSED_KEYS uint32 256
+table/member fuchsia.input.report/KeyboardDescriptor.input fuchsia.input.report/KeyboardInputDescriptor
+table/member fuchsia.input.report/KeyboardDescriptor.output fuchsia.input.report/KeyboardOutputDescriptor
+table fuchsia.input.report/KeyboardDescriptor
+table/member fuchsia.input.report/KeyboardInputDescriptor.keys3 vector<fuchsia.input/Key>:256
+table fuchsia.input.report/KeyboardInputDescriptor
+table/member fuchsia.input.report/KeyboardInputReport.pressed_keys3 vector<fuchsia.input/Key>:256
+table fuchsia.input.report/KeyboardInputReport
+table/member fuchsia.input.report/KeyboardOutputDescriptor.leds vector<fuchsia.input.report/LedType>:256
+table fuchsia.input.report/KeyboardOutputDescriptor
+table/member fuchsia.input.report/KeyboardOutputReport.enabled_leds vector<fuchsia.input.report/LedType>:256
+table fuchsia.input.report/KeyboardOutputReport
+enum/member fuchsia.input.report/LedType.CAPS_LOCK 2
+enum/member fuchsia.input.report/LedType.COMPOSE 4
+enum/member fuchsia.input.report/LedType.KANA 5
+enum/member fuchsia.input.report/LedType.NUM_LOCK 1
+enum/member fuchsia.input.report/LedType.SCROLL_LOCK 3
+strict enum fuchsia.input.report/LedType uint32
+const fuchsia.input.report/MAX_DEVICE_REPORT_COUNT uint32 50
+const fuchsia.input.report/MOUSE_MAX_NUM_BUTTONS uint32 32
+table/member fuchsia.input.report/MouseDescriptor.input fuchsia.input.report/MouseInputDescriptor
+table fuchsia.input.report/MouseDescriptor
+table/member fuchsia.input.report/MouseInputDescriptor.buttons vector<uint8>:32
+table/member fuchsia.input.report/MouseInputDescriptor.movement_x fuchsia.input.report/Axis
+table/member fuchsia.input.report/MouseInputDescriptor.movement_y fuchsia.input.report/Axis
+table/member fuchsia.input.report/MouseInputDescriptor.position_x fuchsia.input.report/Axis
+table/member fuchsia.input.report/MouseInputDescriptor.position_y fuchsia.input.report/Axis
+table/member fuchsia.input.report/MouseInputDescriptor.scroll_h fuchsia.input.report/Axis
+table/member fuchsia.input.report/MouseInputDescriptor.scroll_v fuchsia.input.report/Axis
+table fuchsia.input.report/MouseInputDescriptor
+table/member fuchsia.input.report/MouseInputReport.movement_x int64
+table/member fuchsia.input.report/MouseInputReport.movement_y int64
+table/member fuchsia.input.report/MouseInputReport.position_x int64
+table/member fuchsia.input.report/MouseInputReport.position_y int64
+table/member fuchsia.input.report/MouseInputReport.pressed_buttons vector<uint8>:32
+table/member fuchsia.input.report/MouseInputReport.scroll_h int64
+table/member fuchsia.input.report/MouseInputReport.scroll_v int64
+table fuchsia.input.report/MouseInputReport
+table/member fuchsia.input.report/OutputDescriptor.keyboard fuchsia.input.report/KeyboardOutputDescriptor
+table fuchsia.input.report/OutputDescriptor
+table/member fuchsia.input.report/OutputReport.keyboard fuchsia.input.report/KeyboardOutputReport
+table fuchsia.input.report/OutputReport
+struct/member fuchsia.input.report/Range.max int64
+struct/member fuchsia.input.report/Range.min int64
+struct fuchsia.input.report/Range
+const fuchsia.input.report/SENSOR_MAX_VALUES uint32 100
+struct/member fuchsia.input.report/SensorAxis.axis fuchsia.input.report/Axis
+struct/member fuchsia.input.report/SensorAxis.type fuchsia.input.report/SensorType
+struct fuchsia.input.report/SensorAxis
+table/member fuchsia.input.report/SensorDescriptor.feature fuchsia.input.report/SensorFeatureDescriptor
+table/member fuchsia.input.report/SensorDescriptor.input fuchsia.input.report/SensorInputDescriptor
+table fuchsia.input.report/SensorDescriptor
+table/member fuchsia.input.report/SensorFeatureDescriptor.report_interval fuchsia.input.report/Axis
+table/member fuchsia.input.report/SensorFeatureDescriptor.sensitivity vector<fuchsia.input.report/SensorAxis>:100
+table/member fuchsia.input.report/SensorFeatureDescriptor.supports_reporting_state bool
+table/member fuchsia.input.report/SensorFeatureDescriptor.threshold_high vector<fuchsia.input.report/SensorAxis>:100
+table/member fuchsia.input.report/SensorFeatureDescriptor.threshold_low vector<fuchsia.input.report/SensorAxis>:100
+table fuchsia.input.report/SensorFeatureDescriptor
+table/member fuchsia.input.report/SensorFeatureReport.report_interval int64
+table/member fuchsia.input.report/SensorFeatureReport.reporting_state fuchsia.input.report/SensorReportingState
+table/member fuchsia.input.report/SensorFeatureReport.sensitivity vector<int64>:100
+table/member fuchsia.input.report/SensorFeatureReport.threshold_high vector<int64>:100
+table/member fuchsia.input.report/SensorFeatureReport.threshold_low vector<int64>:100
+table fuchsia.input.report/SensorFeatureReport
+table/member fuchsia.input.report/SensorInputDescriptor.values vector<fuchsia.input.report/SensorAxis>:100
+table fuchsia.input.report/SensorInputDescriptor
+table/member fuchsia.input.report/SensorInputReport.values vector<int64>:100
+table fuchsia.input.report/SensorInputReport
+enum/member fuchsia.input.report/SensorReportingState.REPORT_ALL_EVENTS 2
+enum/member fuchsia.input.report/SensorReportingState.REPORT_NO_EVENTS 1
+enum/member fuchsia.input.report/SensorReportingState.REPORT_THRESHOLD_EVENTS 3
+strict enum fuchsia.input.report/SensorReportingState uint32
+enum/member fuchsia.input.report/SensorType.ACCELEROMETER_X 1
+enum/member fuchsia.input.report/SensorType.ACCELEROMETER_Y 2
+enum/member fuchsia.input.report/SensorType.ACCELEROMETER_Z 3
+enum/member fuchsia.input.report/SensorType.GYROSCOPE_X 7
+enum/member fuchsia.input.report/SensorType.GYROSCOPE_Y 8
+enum/member fuchsia.input.report/SensorType.GYROSCOPE_Z 9
+enum/member fuchsia.input.report/SensorType.LIGHT_BLUE 13
+enum/member fuchsia.input.report/SensorType.LIGHT_GREEN 12
+enum/member fuchsia.input.report/SensorType.LIGHT_ILLUMINANCE 10
+enum/member fuchsia.input.report/SensorType.LIGHT_RED 11
+enum/member fuchsia.input.report/SensorType.MAGNETOMETER_X 4
+enum/member fuchsia.input.report/SensorType.MAGNETOMETER_Y 5
+enum/member fuchsia.input.report/SensorType.MAGNETOMETER_Z 6
+strict enum fuchsia.input.report/SensorType uint32
+const fuchsia.input.report/TOUCH_MAX_CONTACTS uint32 10
+const fuchsia.input.report/TOUCH_MAX_NUM_BUTTONS uint32 10
+table/member fuchsia.input.report/TouchDescriptor.input fuchsia.input.report/TouchInputDescriptor
+table fuchsia.input.report/TouchDescriptor
+table/member fuchsia.input.report/TouchInputDescriptor.buttons vector<uint8>:10
+table/member fuchsia.input.report/TouchInputDescriptor.contacts vector<fuchsia.input.report/ContactInputDescriptor>:10
+table/member fuchsia.input.report/TouchInputDescriptor.max_contacts uint32
+table/member fuchsia.input.report/TouchInputDescriptor.touch_type fuchsia.input.report/TouchType
+table fuchsia.input.report/TouchInputDescriptor
+table/member fuchsia.input.report/TouchInputReport.contacts vector<fuchsia.input.report/ContactInputReport>:10
+table/member fuchsia.input.report/TouchInputReport.pressed_buttons vector<uint8>:10
+table fuchsia.input.report/TouchInputReport
+enum/member fuchsia.input.report/TouchType.TOUCHPAD 2
+enum/member fuchsia.input.report/TouchType.TOUCHSCREEN 1
+strict enum fuchsia.input.report/TouchType uint32
+struct/member fuchsia.input.report/Unit.exponent int32
+struct/member fuchsia.input.report/Unit.type fuchsia.input.report/UnitType
+struct fuchsia.input.report/Unit
+enum/member fuchsia.input.report/UnitType.CANDELAS 9
+enum/member fuchsia.input.report/UnitType.DEGREES 4
+enum/member fuchsia.input.report/UnitType.ENGLISH_ANGULAR_VELOCITY 5
+enum/member fuchsia.input.report/UnitType.GRAMS 3
+enum/member fuchsia.input.report/UnitType.LUX 11
+enum/member fuchsia.input.report/UnitType.METERS 2
+enum/member fuchsia.input.report/UnitType.NONE 0
+enum/member fuchsia.input.report/UnitType.OTHER 1
+enum/member fuchsia.input.report/UnitType.PASCALS 10
+enum/member fuchsia.input.report/UnitType.SECONDS 12
+enum/member fuchsia.input.report/UnitType.SI_LINEAR_ACCELERATION 7
+enum/member fuchsia.input.report/UnitType.SI_LINEAR_VELOCITY 6
+enum/member fuchsia.input.report/UnitType.WEBERS 8
+strict enum fuchsia.input.report/UnitType uint32
+enum/member fuchsia.input.report/VendorGoogleProductId.AMS_LIGHT_SENSOR 65538
+enum/member fuchsia.input.report/VendorGoogleProductId.FOCALTECH_TOUCHSCREEN 65537
+enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_ACCELERATION_SENSOR 2417819649
+enum/member fuchsia.input.report/VendorGoogleProductId.GOLDFISH_GYROSCOPE_SENSOR 2417819650
+strict enum fuchsia.input.report/VendorGoogleProductId uint32
+enum/member fuchsia.input.report/VendorId.GOOGLE 6353
+strict enum fuchsia.input.report/VendorId uint32
+library fuchsia.input.report

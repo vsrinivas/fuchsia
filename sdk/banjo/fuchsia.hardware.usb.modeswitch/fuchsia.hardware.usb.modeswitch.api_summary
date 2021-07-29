@@ -1,0 +1,8 @@
+enum/member fuchsia.hardware.usb.modeswitch/UsbMode.HOST 1
+enum/member fuchsia.hardware.usb.modeswitch/UsbMode.NONE 0
+enum/member fuchsia.hardware.usb.modeswitch/UsbMode.OTG 3
+enum/member fuchsia.hardware.usb.modeswitch/UsbMode.PERIPHERAL 2
+strict enum fuchsia.hardware.usb.modeswitch/UsbMode uint32
+protocol/member fuchsia.hardware.usb.modeswitch/UsbModeSwitch.SetMode(fuchsia.hardware.usb.modeswitch/UsbMode mode) -> (int32 s)
+protocol fuchsia.hardware.usb.modeswitch/UsbModeSwitch
+library fuchsia.hardware.usb.modeswitch

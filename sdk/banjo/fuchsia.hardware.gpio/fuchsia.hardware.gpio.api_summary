@@ -1,0 +1,18 @@
+const fuchsia.hardware.gpio/GPIO_NO_PULL uint32 2
+const fuchsia.hardware.gpio/GPIO_PULL_DOWN uint32 0
+const fuchsia.hardware.gpio/GPIO_PULL_MASK uint32 3
+const fuchsia.hardware.gpio/GPIO_PULL_UP uint32 1
+protocol/member fuchsia.hardware.gpio/Gpio.ConfigIn(uint32 flags) -> (int32 s)
+protocol/member fuchsia.hardware.gpio/Gpio.ConfigOut(uint8 initial_value) -> (int32 s)
+protocol/member fuchsia.hardware.gpio/Gpio.GetInterrupt(uint32 flags) -> (int32 s,zx/handle:INTERRUPT irq)
+protocol/member fuchsia.hardware.gpio/Gpio.Read() -> (int32 s,uint8 value)
+protocol/member fuchsia.hardware.gpio/Gpio.ReleaseInterrupt() -> (int32 s)
+protocol/member fuchsia.hardware.gpio/Gpio.SetAltFunction(uint64 function) -> (int32 s)
+protocol/member fuchsia.hardware.gpio/Gpio.SetDriveStrength(uint64 ds_ua) -> (int32 s,uint64 actual_ds_ua)
+protocol/member fuchsia.hardware.gpio/Gpio.SetPolarity(fuchsia.hardware.gpio/GpioPolarity polarity) -> (int32 s)
+protocol/member fuchsia.hardware.gpio/Gpio.Write(uint8 value) -> (int32 s)
+protocol fuchsia.hardware.gpio/Gpio
+enum/member fuchsia.hardware.gpio/GpioPolarity.HIGH 1
+enum/member fuchsia.hardware.gpio/GpioPolarity.LOW 0
+strict enum fuchsia.hardware.gpio/GpioPolarity uint32
+library fuchsia.hardware.gpio

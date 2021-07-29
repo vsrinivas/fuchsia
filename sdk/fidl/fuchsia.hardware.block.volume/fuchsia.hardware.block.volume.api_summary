@@ -1,0 +1,37 @@
+const fuchsia.hardware.block.volume/ALLOCATE_PARTITION_FLAG_INACTIVE uint32 1
+const fuchsia.hardware.block.volume/MAX_SLICE_REQUESTS uint32 16
+protocol/member fuchsia.hardware.block.volume/Volume.AttachVmo(zx/handle:VMO vmo) -> (int32 status,fuchsia.hardware.block/VmoId:optional vmoid)
+protocol/member fuchsia.hardware.block.volume/Volume.CloseFifo() -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/Volume.Destroy() -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/Volume.Extend(uint64 start_slice,uint64 slice_count) -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/Volume.GetFifo() -> (int32 status,zx/handle:<FIFO,optional> fifo)
+protocol/member fuchsia.hardware.block.volume/Volume.GetInfo() -> (int32 status,fuchsia.hardware.block/BlockInfo:optional info)
+protocol/member fuchsia.hardware.block.volume/Volume.GetInstanceGuid() -> (int32 status,fuchsia.hardware.block.partition/GUID:optional guid)
+protocol/member fuchsia.hardware.block.volume/Volume.GetName() -> (int32 status,string:<128,optional> name)
+protocol/member fuchsia.hardware.block.volume/Volume.GetStats(bool clear) -> (int32 status,fuchsia.hardware.block/BlockStats:optional stats)
+protocol/member fuchsia.hardware.block.volume/Volume.GetTypeGuid() -> (int32 status,fuchsia.hardware.block.partition/GUID:optional guid)
+protocol/member fuchsia.hardware.block.volume/Volume.Query() -> (int32 status,box<fuchsia.hardware.block.volume/VolumeInfo> info)
+protocol/member fuchsia.hardware.block.volume/Volume.QuerySlices(vector<uint64>:16 start_slices) -> (int32 status,array<fuchsia.hardware.block.volume/VsliceRange,16> response,uint64 response_count)
+protocol/member fuchsia.hardware.block.volume/Volume.RebindDevice() -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/Volume.Shrink(uint64 start_slice,uint64 slice_count) -> (int32 status)
+protocol fuchsia.hardware.block.volume/Volume
+struct/member fuchsia.hardware.block.volume/VolumeInfo.pslice_allocated_count uint64
+struct/member fuchsia.hardware.block.volume/VolumeInfo.pslice_total_count uint64
+struct/member fuchsia.hardware.block.volume/VolumeInfo.slice_size uint64
+struct/member fuchsia.hardware.block.volume/VolumeInfo.vslice_count uint64
+struct fuchsia.hardware.block.volume/VolumeInfo
+protocol/member fuchsia.hardware.block.volume/VolumeManager.Activate(fuchsia.hardware.block.partition/GUID old_guid,fuchsia.hardware.block.partition/GUID new_guid) -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/VolumeManager.AllocatePartition(uint64 slice_count,fuchsia.hardware.block.partition/GUID type,fuchsia.hardware.block.partition/GUID instance,string:128 name,uint32 flags) -> (int32 status)
+protocol/member fuchsia.hardware.block.volume/VolumeManager.GetInfo() -> (int32 status,box<fuchsia.hardware.block.volume/VolumeManagerInfo> info)
+protocol/member fuchsia.hardware.block.volume/VolumeManager.GetPartitionLimit(fuchsia.hardware.block.partition/GUID guid) -> (int32 status,uint64 byte_count)
+protocol/member fuchsia.hardware.block.volume/VolumeManager.Query() -> (int32 status,box<fuchsia.hardware.block.volume/VolumeInfo> info)
+protocol/member fuchsia.hardware.block.volume/VolumeManager.SetPartitionLimit(fuchsia.hardware.block.partition/GUID guid,uint64 byte_count) -> (int32 status)
+protocol fuchsia.hardware.block.volume/VolumeManager
+struct/member fuchsia.hardware.block.volume/VolumeManagerInfo.current_slice_count uint64
+struct/member fuchsia.hardware.block.volume/VolumeManagerInfo.maximum_slice_count uint64
+struct/member fuchsia.hardware.block.volume/VolumeManagerInfo.slice_size uint64
+struct fuchsia.hardware.block.volume/VolumeManagerInfo
+struct/member fuchsia.hardware.block.volume/VsliceRange.allocated bool
+struct/member fuchsia.hardware.block.volume/VsliceRange.count uint64
+struct fuchsia.hardware.block.volume/VsliceRange
+library fuchsia.hardware.block.volume

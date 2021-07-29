@@ -1,0 +1,74 @@
+struct/member fuchsia.session/Annotation.key string
+struct/member fuchsia.session/Annotation.value fuchsia.session/Value:optional
+resource struct fuchsia.session/Annotation
+enum/member fuchsia.session/AnnotationError.NOT_FOUND 2
+enum/member fuchsia.session/AnnotationError.REJECTED 1
+strict enum fuchsia.session/AnnotationError uint32
+table/member fuchsia.session/Annotations.custom_annotations vector<fuchsia.session/Annotation>
+resource table fuchsia.session/Annotations
+protocol/member fuchsia.session/ElementController.GetAnnotations() -> (fuchsia.session/ElementController_GetAnnotations_Result result)
+protocol/member fuchsia.session/ElementController.SetAnnotations(fuchsia.session/Annotations annotations) -> (fuchsia.session/ElementController_SetAnnotations_Result result)
+protocol fuchsia.session/ElementController
+struct/member fuchsia.session/ElementController_GetAnnotations_Response.annotations fuchsia.session/Annotations
+resource struct fuchsia.session/ElementController_GetAnnotations_Response
+union/member fuchsia.session/ElementController_GetAnnotations_Result.err fuchsia.session/AnnotationError
+union/member fuchsia.session/ElementController_GetAnnotations_Result.response fuchsia.session/ElementController_GetAnnotations_Response
+resource strict union fuchsia.session/ElementController_GetAnnotations_Result
+struct fuchsia.session/ElementController_SetAnnotations_Response
+union/member fuchsia.session/ElementController_SetAnnotations_Result.err fuchsia.session/AnnotationError
+union/member fuchsia.session/ElementController_SetAnnotations_Result.response fuchsia.session/ElementController_SetAnnotations_Response
+strict union fuchsia.session/ElementController_SetAnnotations_Result
+protocol/member fuchsia.session/ElementManager.ProposeElement(fuchsia.session/ElementSpec spec,server_end:<fuchsia.session/ElementController,optional> element_controller) -> (fuchsia.session/ElementManager_ProposeElement_Result result)
+protocol fuchsia.session/ElementManager
+struct fuchsia.session/ElementManager_ProposeElement_Response
+union/member fuchsia.session/ElementManager_ProposeElement_Result.err fuchsia.session/ProposeElementError
+union/member fuchsia.session/ElementManager_ProposeElement_Result.response fuchsia.session/ElementManager_ProposeElement_Response
+strict union fuchsia.session/ElementManager_ProposeElement_Result
+table/member fuchsia.session/ElementSpec.additional_services fuchsia.sys/ServiceList
+table/member fuchsia.session/ElementSpec.annotations fuchsia.session/Annotations
+table/member fuchsia.session/ElementSpec.component_url string:4096
+resource table fuchsia.session/ElementSpec
+protocol/member fuchsia.session/GraphicalPresenter.PresentView(fuchsia.session/ViewSpec view_spec,server_end:<fuchsia.session/ViewController,optional> view_controller_request)
+protocol fuchsia.session/GraphicalPresenter
+table/member fuchsia.session/LaunchConfiguration.session_url string:4096
+table fuchsia.session/LaunchConfiguration
+enum/member fuchsia.session/LaunchError.CREATE_COMPONENT_FAILED 4
+enum/member fuchsia.session/LaunchError.DESTROY_COMPONENT_FAILED 3
+enum/member fuchsia.session/LaunchError.INVALID_ARGS 1
+enum/member fuchsia.session/LaunchError.NOT_FOUND 2
+strict enum fuchsia.session/LaunchError uint32
+protocol/member fuchsia.session/Launcher.Launch(fuchsia.session/LaunchConfiguration configuration) -> (fuchsia.session/Launcher_Launch_Result result)
+protocol fuchsia.session/Launcher
+struct fuchsia.session/Launcher_Launch_Response
+union/member fuchsia.session/Launcher_Launch_Result.err fuchsia.session/LaunchError
+union/member fuchsia.session/Launcher_Launch_Result.response fuchsia.session/Launcher_Launch_Response
+strict union fuchsia.session/Launcher_Launch_Result
+enum/member fuchsia.session/ProposeElementError.NOT_FOUND 1
+enum/member fuchsia.session/ProposeElementError.REJECTED 2
+strict enum fuchsia.session/ProposeElementError uint32
+enum/member fuchsia.session/RestartError.CREATE_COMPONENT_FAILED 4
+enum/member fuchsia.session/RestartError.DESTROY_COMPONENT_FAILED 3
+enum/member fuchsia.session/RestartError.NOT_FOUND 2
+enum/member fuchsia.session/RestartError.NOT_RUNNING 1
+strict enum fuchsia.session/RestartError uint32
+protocol/member fuchsia.session/Restarter.Restart() -> (fuchsia.session/Restarter_Restart_Result result)
+protocol fuchsia.session/Restarter
+struct fuchsia.session/Restarter_Restart_Response
+union/member fuchsia.session/Restarter_Restart_Result.err fuchsia.session/RestartError
+union/member fuchsia.session/Restarter_Restart_Result.response fuchsia.session/Restarter_Restart_Response
+strict union fuchsia.session/Restarter_Restart_Result
+union/member fuchsia.session/Value.buffer fuchsia.mem/Buffer
+union/member fuchsia.session/Value.text string
+resource strict union fuchsia.session/Value
+protocol/member fuchsia.session/ViewController.Annotate(fuchsia.session/Annotations annotations) -> ()
+protocol/member fuchsia.session/ViewController.Dismiss()
+protocol/member fuchsia.session/ViewController.OnPresented -> ()
+protocol fuchsia.session/ViewController
+enum/member fuchsia.session/ViewControllerEpitaph.INVALID_VIEW_SPEC 1
+enum/member fuchsia.session/ViewControllerEpitaph.REJECTED 2
+strict enum fuchsia.session/ViewControllerEpitaph uint32
+table/member fuchsia.session/ViewSpec.annotations fuchsia.session/Annotations
+table/member fuchsia.session/ViewSpec.view_holder_token fuchsia.ui.views/ViewHolderToken
+table/member fuchsia.session/ViewSpec.view_ref fuchsia.ui.views/ViewRef
+resource table fuchsia.session/ViewSpec
+library fuchsia.session

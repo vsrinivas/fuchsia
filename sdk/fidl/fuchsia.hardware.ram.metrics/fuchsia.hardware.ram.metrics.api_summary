@@ -1,0 +1,28 @@
+struct/member fuchsia.hardware.ram.metrics/BandwidthInfo.bytes_per_cycle uint64
+struct/member fuchsia.hardware.ram.metrics/BandwidthInfo.channels array<fuchsia.hardware.ram.metrics/GrantedCyclesResult,8>
+struct/member fuchsia.hardware.ram.metrics/BandwidthInfo.frequency uint64
+struct/member fuchsia.hardware.ram.metrics/BandwidthInfo.timestamp int64
+struct/member fuchsia.hardware.ram.metrics/BandwidthInfo.total fuchsia.hardware.ram.metrics/GrantedCyclesResult
+struct fuchsia.hardware.ram.metrics/BandwidthInfo
+struct/member fuchsia.hardware.ram.metrics/BandwidthMeasurementConfig.channels array<uint64,8>
+struct/member fuchsia.hardware.ram.metrics/BandwidthMeasurementConfig.cycles_to_measure uint64
+struct fuchsia.hardware.ram.metrics/BandwidthMeasurementConfig
+protocol/member fuchsia.hardware.ram.metrics/Device.GetDdrWindowingResults() -> (fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Result result)
+protocol/member fuchsia.hardware.ram.metrics/Device.MeasureBandwidth(fuchsia.hardware.ram.metrics/BandwidthMeasurementConfig config) -> (fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Result result)
+protocol fuchsia.hardware.ram.metrics/Device
+struct/member fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Response.value uint32
+struct fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Response
+union/member fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Result.err int32
+union/member fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Result.response fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Response
+strict union fuchsia.hardware.ram.metrics/Device_GetDdrWindowingResults_Result
+struct/member fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Response.info fuchsia.hardware.ram.metrics/BandwidthInfo
+struct fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Response
+union/member fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Result.err int32
+union/member fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Result.response fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Response
+strict union fuchsia.hardware.ram.metrics/Device_MeasureBandwidth_Result
+struct/member fuchsia.hardware.ram.metrics/GrantedCyclesResult.read_cycles uint64
+struct/member fuchsia.hardware.ram.metrics/GrantedCyclesResult.readwrite_cycles uint64
+struct/member fuchsia.hardware.ram.metrics/GrantedCyclesResult.write_cycles uint64
+struct fuchsia.hardware.ram.metrics/GrantedCyclesResult
+const fuchsia.hardware.ram.metrics/MAX_COUNT_CHANNELS uint32 8
+library fuchsia.hardware.ram.metrics

@@ -1,0 +1,3 @@
+protocol/member fuchsia.debugger/DebugAgent.Connect(zx/handle:SOCKET socket) -> (int32 status)
+protocol fuchsia.debugger/DebugAgent
+library fuchsia.debugger

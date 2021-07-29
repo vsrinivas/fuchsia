@@ -1,0 +1,3 @@
+protocol/member fuchsia.hardware.registers/Registers.Connect(zx/handle:CHANNEL chan) -> ()
+protocol fuchsia.hardware.registers/Registers
+library fuchsia.hardware.registers

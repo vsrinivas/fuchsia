@@ -1,0 +1,47 @@
+protocol/member fuchsia.tee/Application.CloseSession(uint32 session_id) -> ()
+protocol/member fuchsia.tee/Application.InvokeCommand(uint32 session_id,uint32 command_id,vector<fuchsia.tee/Parameter>:4 parameter_set) -> (fuchsia.tee/OpResult op_result)
+protocol/member fuchsia.tee/Application.OpenSession2(vector<fuchsia.tee/Parameter>:4 parameter_set) -> (uint32 session_id,fuchsia.tee/OpResult op_result)
+protocol fuchsia.tee/Application
+table/member fuchsia.tee/Buffer.direction fuchsia.tee/Direction
+table/member fuchsia.tee/Buffer.offset uint64
+table/member fuchsia.tee/Buffer.size uint64
+table/member fuchsia.tee/Buffer.vmo zx/handle:VMO
+resource table fuchsia.tee/Buffer
+protocol/member fuchsia.tee/DeviceInfo.GetOsInfo() -> (fuchsia.tee/OsInfo info)
+protocol fuchsia.tee/DeviceInfo
+enum/member fuchsia.tee/Direction.INOUT 2
+enum/member fuchsia.tee/Direction.INPUT 0
+enum/member fuchsia.tee/Direction.OUTPUT 1
+strict enum fuchsia.tee/Direction uint32
+const fuchsia.tee/MAX_PARAMETERSET_COUNT uint32 4
+struct fuchsia.tee/None
+table/member fuchsia.tee/OpResult.parameter_set vector<fuchsia.tee/Parameter>:4
+table/member fuchsia.tee/OpResult.return_code uint64
+table/member fuchsia.tee/OpResult.return_origin fuchsia.tee/ReturnOrigin
+resource table fuchsia.tee/OpResult
+table/member fuchsia.tee/OsInfo.is_global_platform_compliant bool
+table/member fuchsia.tee/OsInfo.revision fuchsia.tee/OsRevision
+table/member fuchsia.tee/OsInfo.uuid fuchsia.tee/Uuid
+table fuchsia.tee/OsInfo
+table/member fuchsia.tee/OsRevision.major uint32
+table/member fuchsia.tee/OsRevision.minor uint32
+table fuchsia.tee/OsRevision
+union/member fuchsia.tee/Parameter.buffer fuchsia.tee/Buffer
+union/member fuchsia.tee/Parameter.none fuchsia.tee/None
+union/member fuchsia.tee/Parameter.value fuchsia.tee/Value
+resource flexible union fuchsia.tee/Parameter
+enum/member fuchsia.tee/ReturnOrigin.COMMUNICATION 0
+enum/member fuchsia.tee/ReturnOrigin.TRUSTED_APPLICATION 2
+enum/member fuchsia.tee/ReturnOrigin.TRUSTED_OS 1
+strict enum fuchsia.tee/ReturnOrigin uint32
+struct/member fuchsia.tee/Uuid.clock_seq_and_node array<uint8,8>
+struct/member fuchsia.tee/Uuid.time_hi_and_version uint16
+struct/member fuchsia.tee/Uuid.time_low uint32
+struct/member fuchsia.tee/Uuid.time_mid uint16
+struct fuchsia.tee/Uuid
+table/member fuchsia.tee/Value.a uint64
+table/member fuchsia.tee/Value.b uint64
+table/member fuchsia.tee/Value.c uint64
+table/member fuchsia.tee/Value.direction fuchsia.tee/Direction
+table fuchsia.tee/Value
+library fuchsia.tee

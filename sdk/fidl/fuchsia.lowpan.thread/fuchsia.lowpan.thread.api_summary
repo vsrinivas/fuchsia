@@ -1,0 +1,3 @@
+protocol/member fuchsia.lowpan.thread/LegacyJoining.MakeJoinable(int64 duration,uint16 port) -> ()
+protocol fuchsia.lowpan.thread/LegacyJoining
+library fuchsia.lowpan.thread

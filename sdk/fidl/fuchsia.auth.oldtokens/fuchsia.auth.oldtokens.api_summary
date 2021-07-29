@@ -1,0 +1,6 @@
+table/member fuchsia.auth.oldtokens/Credential.access_token string
+table/member fuchsia.auth.oldtokens/Credential.user_id string
+table fuchsia.auth.oldtokens/Credential
+protocol/member fuchsia.auth.oldtokens/CredentialsProducer.GetUpdatedCredentials() -> (vector<fuchsia.auth.oldtokens/Credential> credentials)
+protocol fuchsia.auth.oldtokens/CredentialsProducer
+library fuchsia.auth.oldtokens

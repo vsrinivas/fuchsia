@@ -1,0 +1,6 @@
+protocol/member fuchsia.input.keymap/Configuration.SetLayout(fuchsia.input.keymap/Id keymap) -> ()
+protocol fuchsia.input.keymap/Configuration
+enum/member fuchsia.input.keymap/Id.FR_AZERTY 1
+enum/member fuchsia.input.keymap/Id.US_QWERTY 0
+flexible enum fuchsia.input.keymap/Id uint32
+library fuchsia.input.keymap

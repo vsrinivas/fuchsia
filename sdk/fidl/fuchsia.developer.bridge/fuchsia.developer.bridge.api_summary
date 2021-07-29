@@ -1,0 +1,219 @@
+protocol/member fuchsia.developer.bridge/Daemon.AddTarget(fuchsia.developer.bridge/TargetAddrInfo ip) -> (fuchsia.developer.bridge/Daemon_AddTarget_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.ConnectToService(string:255 name,zx/handle:CHANNEL server_channel) -> (fuchsia.developer.bridge/Daemon_ConnectToService_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.Crash() -> ()
+protocol/member fuchsia.developer.bridge/Daemon.EchoString(string:256 value) -> (string:256 response)
+protocol/member fuchsia.developer.bridge/Daemon.GetFastboot(string:<255,optional> target,server_end:fuchsia.developer.bridge/Fastboot fastboot) -> (fuchsia.developer.bridge/Daemon_GetFastboot_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.GetHash() -> (string:64 response)
+protocol/member fuchsia.developer.bridge/Daemon.GetRemoteControl(string:<255,optional> target,server_end:fuchsia.developer.remotecontrol/RemoteControl remote) -> (fuchsia.developer.bridge/Daemon_GetRemoteControl_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.GetSshAddress(string:<255,optional> target,int64 timeout) -> (fuchsia.developer.bridge/Daemon_GetSshAddress_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.GetTarget(string:<255,optional> target,server_end:fuchsia.developer.bridge/TargetControl target_controller) -> (fuchsia.developer.bridge/Daemon_GetTarget_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.GetVersionInfo() -> (fuchsia.developer.bridge/VersionInfo info)
+protocol/member fuchsia.developer.bridge/Daemon.Hang() -> ()
+protocol/member fuchsia.developer.bridge/Daemon.ListTargets(string:255 value) -> (vector<fuchsia.developer.bridge/Target>:512 response)
+protocol/member fuchsia.developer.bridge/Daemon.Quit() -> (bool success)
+protocol/member fuchsia.developer.bridge/Daemon.RemoveTarget(string:255 target_id) -> (fuchsia.developer.bridge/Daemon_RemoveTarget_Result result)
+protocol/member fuchsia.developer.bridge/Daemon.StreamDiagnostics(string:<255,optional> target,fuchsia.developer.bridge/DaemonDiagnosticsStreamParameters parameters,server_end:fuchsia.developer.remotecontrol/ArchiveIterator iterator) -> (fuchsia.developer.bridge/Daemon_StreamDiagnostics_Result result)
+protocol fuchsia.developer.bridge/Daemon
+table/member fuchsia.developer.bridge/DaemonDiagnosticsStreamParameters.min_target_timestamp_nanos uint64
+table/member fuchsia.developer.bridge/DaemonDiagnosticsStreamParameters.stream_mode fuchsia.developer.bridge/StreamMode
+table fuchsia.developer.bridge/DaemonDiagnosticsStreamParameters
+enum/member fuchsia.developer.bridge/DaemonError.BAD_SERVICE_REGISTER_STATE 12
+enum/member fuchsia.developer.bridge/DaemonError.NON_FASTBOOT_DEVICE 9
+enum/member fuchsia.developer.bridge/DaemonError.RCS_CONNECTION_ERROR 3
+enum/member fuchsia.developer.bridge/DaemonError.SERVICE_NOT_FOUND 10
+enum/member fuchsia.developer.bridge/DaemonError.SERVICE_OPEN_ERROR 11
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_AMBIGUOUS 6
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_CACHE_EMPTY 5
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_CACHE_ERROR 1
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_IN_FASTBOOT 8
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_IN_ZEDBOOT 13
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_NOT_FOUND 7
+enum/member fuchsia.developer.bridge/DaemonError.TARGET_STATE_ERROR 2
+enum/member fuchsia.developer.bridge/DaemonError.TIMEOUT 4
+strict enum fuchsia.developer.bridge/DaemonError uint32
+struct fuchsia.developer.bridge/Daemon_AddTarget_Response
+union/member fuchsia.developer.bridge/Daemon_AddTarget_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_AddTarget_Result.response fuchsia.developer.bridge/Daemon_AddTarget_Response
+strict union fuchsia.developer.bridge/Daemon_AddTarget_Result
+struct fuchsia.developer.bridge/Daemon_ConnectToService_Response
+union/member fuchsia.developer.bridge/Daemon_ConnectToService_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_ConnectToService_Result.response fuchsia.developer.bridge/Daemon_ConnectToService_Response
+strict union fuchsia.developer.bridge/Daemon_ConnectToService_Result
+struct fuchsia.developer.bridge/Daemon_GetFastboot_Response
+union/member fuchsia.developer.bridge/Daemon_GetFastboot_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_GetFastboot_Result.response fuchsia.developer.bridge/Daemon_GetFastboot_Response
+strict union fuchsia.developer.bridge/Daemon_GetFastboot_Result
+struct fuchsia.developer.bridge/Daemon_GetRemoteControl_Response
+union/member fuchsia.developer.bridge/Daemon_GetRemoteControl_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_GetRemoteControl_Result.response fuchsia.developer.bridge/Daemon_GetRemoteControl_Response
+strict union fuchsia.developer.bridge/Daemon_GetRemoteControl_Result
+struct/member fuchsia.developer.bridge/Daemon_GetSshAddress_Response.ip fuchsia.developer.bridge/TargetAddrInfo
+struct fuchsia.developer.bridge/Daemon_GetSshAddress_Response
+union/member fuchsia.developer.bridge/Daemon_GetSshAddress_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_GetSshAddress_Result.response fuchsia.developer.bridge/Daemon_GetSshAddress_Response
+strict union fuchsia.developer.bridge/Daemon_GetSshAddress_Result
+struct fuchsia.developer.bridge/Daemon_GetTarget_Response
+union/member fuchsia.developer.bridge/Daemon_GetTarget_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_GetTarget_Result.response fuchsia.developer.bridge/Daemon_GetTarget_Response
+strict union fuchsia.developer.bridge/Daemon_GetTarget_Result
+struct/member fuchsia.developer.bridge/Daemon_RemoveTarget_Response.removed bool
+struct fuchsia.developer.bridge/Daemon_RemoveTarget_Response
+union/member fuchsia.developer.bridge/Daemon_RemoveTarget_Result.err fuchsia.developer.bridge/DaemonError
+union/member fuchsia.developer.bridge/Daemon_RemoveTarget_Result.response fuchsia.developer.bridge/Daemon_RemoveTarget_Response
+strict union fuchsia.developer.bridge/Daemon_RemoveTarget_Result
+struct fuchsia.developer.bridge/Daemon_StreamDiagnostics_Response
+union/member fuchsia.developer.bridge/Daemon_StreamDiagnostics_Result.err fuchsia.developer.bridge/DiagnosticsStreamError
+union/member fuchsia.developer.bridge/Daemon_StreamDiagnostics_Result.response fuchsia.developer.bridge/Daemon_StreamDiagnostics_Response
+strict union fuchsia.developer.bridge/Daemon_StreamDiagnostics_Result
+enum/member fuchsia.developer.bridge/DiagnosticsStreamError.GENERIC_ERROR 1
+enum/member fuchsia.developer.bridge/DiagnosticsStreamError.MISSING_PARAMETER 2
+enum/member fuchsia.developer.bridge/DiagnosticsStreamError.NO_MATCHING_TARGETS 4
+enum/member fuchsia.developer.bridge/DiagnosticsStreamError.NO_STREAM_FOR_TARGET 5
+enum/member fuchsia.developer.bridge/DiagnosticsStreamError.TARGET_MATCH_FAILED 3
+strict enum fuchsia.developer.bridge/DiagnosticsStreamError uint32
+protocol/member fuchsia.developer.bridge/Echo.EchoString(string:255 value) -> (string:255 response)
+protocol fuchsia.developer.bridge/Echo
+protocol/member fuchsia.developer.bridge/Fastboot.ContinueBoot() -> (fuchsia.developer.bridge/Fastboot_ContinueBoot_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Erase(string:64 partition_name) -> (fuchsia.developer.bridge/Fastboot_Erase_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Flash(string:64 partition_name,string:256 path,client_end:fuchsia.developer.bridge/UploadProgressListener listener) -> (fuchsia.developer.bridge/Fastboot_Flash_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.GetVar(string:64 name) -> (fuchsia.developer.bridge/Fastboot_GetVar_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Oem(string:64 command) -> (fuchsia.developer.bridge/Fastboot_Oem_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Prepare(client_end:fuchsia.developer.bridge/RebootListener listener) -> (fuchsia.developer.bridge/Fastboot_Prepare_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Reboot() -> (fuchsia.developer.bridge/Fastboot_Reboot_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.RebootBootloader(client_end:fuchsia.developer.bridge/RebootListener listener) -> (fuchsia.developer.bridge/Fastboot_RebootBootloader_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.SetActive(string:64 slot) -> (fuchsia.developer.bridge/Fastboot_SetActive_Result result)
+protocol/member fuchsia.developer.bridge/Fastboot.Stage(string:256 path,client_end:fuchsia.developer.bridge/UploadProgressListener listener) -> (fuchsia.developer.bridge/Fastboot_Stage_Result result)
+protocol fuchsia.developer.bridge/Fastboot
+enum/member fuchsia.developer.bridge/FastbootError.COMMUNICATION_ERROR 2
+enum/member fuchsia.developer.bridge/FastbootError.NON_FASTBOOT_DEVICE 5
+enum/member fuchsia.developer.bridge/FastbootError.PROTOCOL_ERROR 1
+enum/member fuchsia.developer.bridge/FastbootError.REBOOT_FAILED 6
+enum/member fuchsia.developer.bridge/FastbootError.REDISCOVERED_ERROR 3
+enum/member fuchsia.developer.bridge/FastbootError.TARGET_ERROR 4
+strict enum fuchsia.developer.bridge/FastbootError uint32
+struct fuchsia.developer.bridge/Fastboot_ContinueBoot_Response
+union/member fuchsia.developer.bridge/Fastboot_ContinueBoot_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_ContinueBoot_Result.response fuchsia.developer.bridge/Fastboot_ContinueBoot_Response
+strict union fuchsia.developer.bridge/Fastboot_ContinueBoot_Result
+struct fuchsia.developer.bridge/Fastboot_Erase_Response
+union/member fuchsia.developer.bridge/Fastboot_Erase_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Erase_Result.response fuchsia.developer.bridge/Fastboot_Erase_Response
+strict union fuchsia.developer.bridge/Fastboot_Erase_Result
+struct fuchsia.developer.bridge/Fastboot_Flash_Response
+union/member fuchsia.developer.bridge/Fastboot_Flash_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Flash_Result.response fuchsia.developer.bridge/Fastboot_Flash_Response
+strict union fuchsia.developer.bridge/Fastboot_Flash_Result
+struct/member fuchsia.developer.bridge/Fastboot_GetVar_Response.value string:64
+struct fuchsia.developer.bridge/Fastboot_GetVar_Response
+union/member fuchsia.developer.bridge/Fastboot_GetVar_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_GetVar_Result.response fuchsia.developer.bridge/Fastboot_GetVar_Response
+strict union fuchsia.developer.bridge/Fastboot_GetVar_Result
+struct fuchsia.developer.bridge/Fastboot_Oem_Response
+union/member fuchsia.developer.bridge/Fastboot_Oem_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Oem_Result.response fuchsia.developer.bridge/Fastboot_Oem_Response
+strict union fuchsia.developer.bridge/Fastboot_Oem_Result
+struct fuchsia.developer.bridge/Fastboot_Prepare_Response
+union/member fuchsia.developer.bridge/Fastboot_Prepare_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Prepare_Result.response fuchsia.developer.bridge/Fastboot_Prepare_Response
+strict union fuchsia.developer.bridge/Fastboot_Prepare_Result
+struct fuchsia.developer.bridge/Fastboot_RebootBootloader_Response
+union/member fuchsia.developer.bridge/Fastboot_RebootBootloader_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_RebootBootloader_Result.response fuchsia.developer.bridge/Fastboot_RebootBootloader_Response
+strict union fuchsia.developer.bridge/Fastboot_RebootBootloader_Result
+struct fuchsia.developer.bridge/Fastboot_Reboot_Response
+union/member fuchsia.developer.bridge/Fastboot_Reboot_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Reboot_Result.response fuchsia.developer.bridge/Fastboot_Reboot_Response
+strict union fuchsia.developer.bridge/Fastboot_Reboot_Result
+struct fuchsia.developer.bridge/Fastboot_SetActive_Response
+union/member fuchsia.developer.bridge/Fastboot_SetActive_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_SetActive_Result.response fuchsia.developer.bridge/Fastboot_SetActive_Response
+strict union fuchsia.developer.bridge/Fastboot_SetActive_Result
+struct fuchsia.developer.bridge/Fastboot_Stage_Response
+union/member fuchsia.developer.bridge/Fastboot_Stage_Result.err fuchsia.developer.bridge/FastbootError
+union/member fuchsia.developer.bridge/Fastboot_Stage_Result.response fuchsia.developer.bridge/Fastboot_Stage_Response
+strict union fuchsia.developer.bridge/Fastboot_Stage_Result
+table/member fuchsia.developer.bridge/FileSystemRepositorySpec.path string:4095
+table fuchsia.developer.bridge/FileSystemRepositorySpec
+const fuchsia.developer.bridge/MAX_BUILD_VERSION_LENGTH uint16 100
+const fuchsia.developer.bridge/MAX_GIT_COMMIT_LENGTH uint16 40
+const fuchsia.developer.bridge/MAX_NAME uint64 255
+const fuchsia.developer.bridge/MAX_PATH uint64 4095
+const fuchsia.developer.bridge/MAX_REPOS uint64 512
+const fuchsia.developer.bridge/MAX_SERVICE_NAME_SIZE uint8 255
+protocol/member fuchsia.developer.bridge/RebootListener.OnReboot()
+protocol fuchsia.developer.bridge/RebootListener
+enum/member fuchsia.developer.bridge/RemoteControlState.DOWN 2
+enum/member fuchsia.developer.bridge/RemoteControlState.UNKNOWN 3
+enum/member fuchsia.developer.bridge/RemoteControlState.UP 1
+strict enum fuchsia.developer.bridge/RemoteControlState uint32
+protocol/member fuchsia.developer.bridge/Repositories.Add(string:255 name,fuchsia.developer.bridge/RepositorySpec repository)
+protocol/member fuchsia.developer.bridge/Repositories.List(server_end:fuchsia.developer.bridge/RepositoryIterator iterator)
+protocol/member fuchsia.developer.bridge/Repositories.Remove(string:255 name) -> (bool found)
+protocol/member fuchsia.developer.bridge/Repositories.Serve(fuchsia.net/IpAddress addr,uint16 port) -> (bool success)
+protocol fuchsia.developer.bridge/Repositories
+struct/member fuchsia.developer.bridge/RepositoryConfig.name string:255
+struct/member fuchsia.developer.bridge/RepositoryConfig.spec fuchsia.developer.bridge/RepositorySpec
+struct fuchsia.developer.bridge/RepositoryConfig
+protocol/member fuchsia.developer.bridge/RepositoryIterator.Next() -> (vector<fuchsia.developer.bridge/RepositoryConfig>:512 repos)
+protocol fuchsia.developer.bridge/RepositoryIterator
+union/member fuchsia.developer.bridge/RepositorySpec.filesystem fuchsia.developer.bridge/FileSystemRepositorySpec
+flexible union fuchsia.developer.bridge/RepositorySpec
+enum/member fuchsia.developer.bridge/StreamMode.SNAPSHOT_ALL 1
+enum/member fuchsia.developer.bridge/StreamMode.SNAPSHOT_ALL_THEN_SUBSCRIBE 3
+enum/member fuchsia.developer.bridge/StreamMode.SNAPSHOT_RECENT_THEN_SUBSCRIBE 2
+enum/member fuchsia.developer.bridge/StreamMode.SUBSCRIBE 4
+strict enum fuchsia.developer.bridge/StreamMode uint32
+table/member fuchsia.developer.bridge/Target.addresses vector<fuchsia.developer.bridge/TargetAddrInfo>:256
+table/member fuchsia.developer.bridge/Target.age_ms uint64
+table/member fuchsia.developer.bridge/Target.board_config string:100
+table/member fuchsia.developer.bridge/Target.nodename string:255
+table/member fuchsia.developer.bridge/Target.product_config string:100
+table/member fuchsia.developer.bridge/Target.rcs_state fuchsia.developer.bridge/RemoteControlState
+table/member fuchsia.developer.bridge/Target.serial_number string:256
+table/member fuchsia.developer.bridge/Target.ssh_address fuchsia.developer.bridge/TargetAddrInfo
+table/member fuchsia.developer.bridge/Target.target_state fuchsia.developer.bridge/TargetState
+table/member fuchsia.developer.bridge/Target.target_type fuchsia.developer.bridge/TargetType
+table fuchsia.developer.bridge/Target
+union/member fuchsia.developer.bridge/TargetAddrInfo.ip fuchsia.developer.bridge/TargetIp
+union/member fuchsia.developer.bridge/TargetAddrInfo.ip_port fuchsia.developer.bridge/TargetIpPort
+strict union fuchsia.developer.bridge/TargetAddrInfo
+protocol/member fuchsia.developer.bridge/TargetControl.Reboot(fuchsia.developer.bridge/TargetRebootState state) -> (fuchsia.developer.bridge/TargetControl_Reboot_Result result)
+protocol fuchsia.developer.bridge/TargetControl
+struct fuchsia.developer.bridge/TargetControl_Reboot_Response
+union/member fuchsia.developer.bridge/TargetControl_Reboot_Result.err fuchsia.developer.bridge/TargetRebootError
+union/member fuchsia.developer.bridge/TargetControl_Reboot_Result.response fuchsia.developer.bridge/TargetControl_Reboot_Response
+strict union fuchsia.developer.bridge/TargetControl_Reboot_Result
+struct/member fuchsia.developer.bridge/TargetIp.ip fuchsia.net/IpAddress
+struct/member fuchsia.developer.bridge/TargetIp.scope_id uint32
+struct fuchsia.developer.bridge/TargetIp
+struct/member fuchsia.developer.bridge/TargetIpPort.ip fuchsia.net/IpAddress
+struct/member fuchsia.developer.bridge/TargetIpPort.port uint16
+struct/member fuchsia.developer.bridge/TargetIpPort.scope_id uint32
+struct fuchsia.developer.bridge/TargetIpPort
+enum/member fuchsia.developer.bridge/TargetRebootError.FASTBOOT_COMMUNICATION 4
+enum/member fuchsia.developer.bridge/TargetRebootError.FASTBOOT_TO_RECOVERY 2
+enum/member fuchsia.developer.bridge/TargetRebootError.TARGET_COMMUNICATION 3
+enum/member fuchsia.developer.bridge/TargetRebootError.UNKNOWN 1
+strict enum fuchsia.developer.bridge/TargetRebootError uint32
+enum/member fuchsia.developer.bridge/TargetRebootState.BOOTLOADER 2
+enum/member fuchsia.developer.bridge/TargetRebootState.PRODUCT 1
+enum/member fuchsia.developer.bridge/TargetRebootState.RECOVERY 3
+strict enum fuchsia.developer.bridge/TargetRebootState uint32
+enum/member fuchsia.developer.bridge/TargetState.DISCONNECTED 2
+enum/member fuchsia.developer.bridge/TargetState.FASTBOOT 4
+enum/member fuchsia.developer.bridge/TargetState.PRODUCT 3
+enum/member fuchsia.developer.bridge/TargetState.UNKNOWN 1
+enum/member fuchsia.developer.bridge/TargetState.ZEDBOOT 5
+strict enum fuchsia.developer.bridge/TargetState uint32
+enum/member fuchsia.developer.bridge/TargetType.UNKNOWN 1
+strict enum fuchsia.developer.bridge/TargetType uint32
+protocol/member fuchsia.developer.bridge/UploadProgressListener.OnError(string error)
+protocol/member fuchsia.developer.bridge/UploadProgressListener.OnFinished()
+protocol/member fuchsia.developer.bridge/UploadProgressListener.OnProgress(uint64 bytes_written)
+protocol/member fuchsia.developer.bridge/UploadProgressListener.OnStarted(uint64 size)
+protocol fuchsia.developer.bridge/UploadProgressListener
+table/member fuchsia.developer.bridge/VersionInfo.build_version string:100
+table/member fuchsia.developer.bridge/VersionInfo.commit_hash string:40
+table/member fuchsia.developer.bridge/VersionInfo.commit_timestamp uint64
+table fuchsia.developer.bridge/VersionInfo
+library fuchsia.developer.bridge

@@ -1,0 +1,72 @@
+struct/member fuchsia.camera3/Configuration.streams vector<fuchsia.camera3/StreamProperties>:256
+struct fuchsia.camera3/Configuration
+table/member fuchsia.camera3/Configuration2.streams vector<fuchsia.camera3/StreamProperties2>:256
+table fuchsia.camera3/Configuration2
+protocol/member fuchsia.camera3/Device.ConnectToStream(uint32 index,server_end:fuchsia.camera3/Stream request)
+protocol/member fuchsia.camera3/Device.GetConfigurations() -> (vector<fuchsia.camera3/Configuration>:256 configurations)
+protocol/member fuchsia.camera3/Device.GetConfigurations2() -> (vector<fuchsia.camera3/Configuration2>:256 configurations)
+protocol/member fuchsia.camera3/Device.GetIdentifier() -> (string:<256,optional> identifier)
+protocol/member fuchsia.camera3/Device.Rebind(server_end:fuchsia.camera3/Device request)
+protocol/member fuchsia.camera3/Device.SetCurrentConfiguration(uint32 index)
+protocol/member fuchsia.camera3/Device.SetSoftwareMuteState(bool muted) -> ()
+protocol/member fuchsia.camera3/Device.WatchCurrentConfiguration() -> (uint32 index)
+protocol/member fuchsia.camera3/Device.WatchMuteState() -> (bool software_muted,bool hardware_muted)
+protocol fuchsia.camera3/Device
+protocol/member fuchsia.camera3/DeviceWatcher.ConnectToDevice(uint64 id,server_end:fuchsia.camera3/Device request)
+protocol/member fuchsia.camera3/DeviceWatcher.WatchDevices() -> (vector<fuchsia.camera3/WatchDevicesEvent>:256 events)
+protocol fuchsia.camera3/DeviceWatcher
+struct/member fuchsia.camera3/FrameInfo.buffer_index uint32
+struct/member fuchsia.camera3/FrameInfo.frame_counter uint64
+struct/member fuchsia.camera3/FrameInfo.release_fence zx/handle:EVENTPAIR
+struct/member fuchsia.camera3/FrameInfo.timestamp int64
+resource struct fuchsia.camera3/FrameInfo
+table/member fuchsia.camera3/FrameInfo2.buffer_index uint32
+table/member fuchsia.camera3/FrameInfo2.capture_timestamp int64
+table/member fuchsia.camera3/FrameInfo2.frame_counter uint64
+table/member fuchsia.camera3/FrameInfo2.release_fence zx/handle:EVENTPAIR
+table/member fuchsia.camera3/FrameInfo2.timestamp int64
+resource table fuchsia.camera3/FrameInfo2
+struct/member fuchsia.camera3/FrameRate.denominator uint32
+struct/member fuchsia.camera3/FrameRate.numerator uint32
+struct fuchsia.camera3/FrameRate
+const fuchsia.camera3/MAX_CONFIGURATIONS_PER_CAMERA uint32 256
+const fuchsia.camera3/MAX_IDENTIFIER_LENGTH uint32 256
+const fuchsia.camera3/MAX_RESOLUTIONS_PER_STREAM uint32 256
+const fuchsia.camera3/MAX_STREAMS_PER_CONFIGURATION uint32 256
+const fuchsia.camera3/MAX_WATCH_DEVICES_EVENTS uint32 256
+enum/member fuchsia.camera3/Orientation.DOWN 2
+enum/member fuchsia.camera3/Orientation.DOWN_FLIPPED 6
+enum/member fuchsia.camera3/Orientation.LEFT 3
+enum/member fuchsia.camera3/Orientation.LEFT_FLIPPED 7
+enum/member fuchsia.camera3/Orientation.RIGHT 4
+enum/member fuchsia.camera3/Orientation.RIGHT_FLIPPED 8
+enum/member fuchsia.camera3/Orientation.UP 1
+enum/member fuchsia.camera3/Orientation.UP_FLIPPED 5
+strict enum fuchsia.camera3/Orientation uint32
+protocol/member fuchsia.camera3/Stream.GetNextFrame() -> (fuchsia.camera3/FrameInfo info)
+protocol/member fuchsia.camera3/Stream.GetNextFrame2() -> (fuchsia.camera3/FrameInfo2 info)
+protocol/member fuchsia.camera3/Stream.GetProperties() -> (fuchsia.camera3/StreamProperties properties)
+protocol/member fuchsia.camera3/Stream.GetProperties2() -> (fuchsia.camera3/StreamProperties2 properties)
+protocol/member fuchsia.camera3/Stream.Rebind(server_end:fuchsia.camera3/Stream request)
+protocol/member fuchsia.camera3/Stream.SetBufferCollection(fuchsia.sysmem/BufferCollectionToken:optional token)
+protocol/member fuchsia.camera3/Stream.SetCropRegion(fuchsia.math/RectF:optional region)
+protocol/member fuchsia.camera3/Stream.SetResolution(fuchsia.math/Size coded_size)
+protocol/member fuchsia.camera3/Stream.WatchBufferCollection() -> (fuchsia.sysmem/BufferCollectionToken token)
+protocol/member fuchsia.camera3/Stream.WatchCropRegion() -> (fuchsia.math/RectF:optional region)
+protocol/member fuchsia.camera3/Stream.WatchOrientation() -> (fuchsia.camera3/Orientation orientation)
+protocol/member fuchsia.camera3/Stream.WatchResolution() -> (fuchsia.math/Size coded_size)
+protocol fuchsia.camera3/Stream
+struct/member fuchsia.camera3/StreamProperties.frame_rate fuchsia.camera3/FrameRate
+struct/member fuchsia.camera3/StreamProperties.image_format fuchsia.sysmem/ImageFormat_2
+struct/member fuchsia.camera3/StreamProperties.supports_crop_region bool
+struct fuchsia.camera3/StreamProperties
+table/member fuchsia.camera3/StreamProperties2.frame_rate fuchsia.camera3/FrameRate
+table/member fuchsia.camera3/StreamProperties2.image_format fuchsia.sysmem/ImageFormat_2
+table/member fuchsia.camera3/StreamProperties2.supported_resolutions vector<fuchsia.math/Size>:256
+table/member fuchsia.camera3/StreamProperties2.supports_crop_region bool
+table fuchsia.camera3/StreamProperties2
+union/member fuchsia.camera3/WatchDevicesEvent.added uint64
+union/member fuchsia.camera3/WatchDevicesEvent.existing uint64
+union/member fuchsia.camera3/WatchDevicesEvent.removed uint64
+strict union fuchsia.camera3/WatchDevicesEvent
+library fuchsia.camera3

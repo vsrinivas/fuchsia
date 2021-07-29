@@ -1,0 +1,4 @@
+protocol/member fuchsia.virtualconsole/SessionManager.CreateSession(server_end:fuchsia.hardware.pty/Device session) -> (int32 status)
+protocol/member fuchsia.virtualconsole/SessionManager.HasPrimaryConnected() -> (bool connected)
+protocol fuchsia.virtualconsole/SessionManager
+library fuchsia.virtualconsole
