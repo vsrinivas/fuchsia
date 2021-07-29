@@ -210,7 +210,16 @@ def main():
                 parent = os.path.dirname(dstdir)
                 if not os.path.exists(parent):
                     os.makedirs(parent)
-                os.symlink(src, dstdir)
+                # hardlink regular files instead of symlinking to handle non-Go
+                # files that we want to embed using //go:embed, which doesn't
+                # support symlinks.
+                # TODO(https://fxbug.dev/81748): Add a separate mechanism for
+                # declaring embedded files, and only hardlink those files
+                # instead of hardlinking all sources.
+                if os.path.isdir(src):
+                    os.symlink(src, dstdir)
+                else:
+                    os.link(src, dstdir)
                 link_to_source[dstdir] = src
             else:
                 # Map individual files since the dependency is only on the
