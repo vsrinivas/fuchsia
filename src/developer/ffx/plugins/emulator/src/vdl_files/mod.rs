@@ -28,6 +28,8 @@ use tempfile::{Builder, TempDir};
 
 mod remote;
 
+static ANALYTICS_ENV_VAR: &str = "FVDL_INVOKER";
+
 /// Monitors a shared process for the interrupt signal. Only used for --monitor or --emu-only modes.
 ///
 /// If user runs with --montior or --emu-only, Fuchsia Emulator will be running in the foreground,
@@ -283,6 +285,20 @@ impl VDLFiles {
         }
     }
 
+    // Sets the label used in analytics. If running in automated testing environment, user can create
+    // a custom label to track usage by setting the environment variable FVDL_INVOKER.
+    pub fn resolve_invoker(&self) -> String {
+        match env::var_os(ANALYTICS_ENV_VAR) {
+            Some(v) => return String::from(v.to_str().unwrap_or_default()),
+            None => {
+                if self.is_sdk {
+                    return String::from("fvdl-sdk");
+                }
+                return String::from("fvdl-intree");
+            }
+        }
+    }
+
     pub fn check_start_command(&self, command: &StartCommand) -> Result<()> {
         if command.nointeractive && command.vdl_output.is_none() {
             ffx_bail!(
@@ -398,11 +414,7 @@ impl VDLFiles {
             _ => false,
         };
 
-        let mut invoker = "fvdl-intree";
-        if self.is_sdk {
-            invoker = "fvdl-sdk";
-        }
-
+        let invoker = self.resolve_invoker();
         let mut cmd = Command::new(&vdl);
         cmd.arg("--action=start")
             .arg("--emulator_binary_path")
@@ -639,6 +651,7 @@ impl VDLFiles {
 
     // Shuts down emulator and local services.
     pub fn stop_vdl(&self, kill_command: &KillCommand) -> Result<()> {
+        let invoker = self.resolve_invoker();
         // If user specified vdl_path in arg, use that. If not, check if environment variable
         // PREBUILD_VDL_DIR is set, if set use that. If not, check if self.host_tools has found
         // default path for device_launcher, when running in-tree this will be read from
@@ -678,8 +691,8 @@ impl VDLFiles {
             Some(proto_location) => {
                 Command::new(&vdl)
                     .arg("--action=kill")
-                    .arg("--launched_virtual_device_proto")
-                    .arg(proto_location)
+                    .arg(format!("--launched_virtual_device_proto={}", &proto_location))
+                    .arg(format!("--event_action={}", &invoker))
                     .status()?;
             }
         }
@@ -838,6 +851,17 @@ mod tests {
         let pid_no_match = 123;
         assert!(str::from_utf8(&out).unwrap().lines().any(|p| p == pid_match.to_string()));
         assert!(!str::from_utf8(&out).unwrap().lines().any(|p| p == pid_no_match.to_string()));
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_resolve_analytics_label() -> Result<()> {
+        let mut label = VDLFiles::new(true /* is_sdk */, false /* verbose */)?.resolve_invoker();
+        assert_eq!(label, "fvdl-sdk");
+        env::set_var(ANALYTICS_ENV_VAR, "apple-pie");
+        label = VDLFiles::new(true /* is_sdk */, false /* verbose */)?.resolve_invoker();
+        assert_eq!(label, "apple-pie");
         Ok(())
     }
 }

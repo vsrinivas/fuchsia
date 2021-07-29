@@ -151,12 +151,13 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 				"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
 				"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
 				"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
+				"FVDL_INVOKER=fvdl_e2e_test",
 			)
 		} else {
 			t.Logf("[test info] setting HOME to: %s", runtimeDir)
 			// Set $HOME to runtimeDir so that fvdl can find the ssh key files, which are
 			// expected in $HOME/.ssh/...
-			cmd.Env = append(os.Environ(), "HOME="+runtimeDir)
+			cmd.Env = append(os.Environ(), "HOME="+runtimeDir, "FVDL_INVOKER=fvdl_e2e_test")
 		}
 		cmd.Dir = td
 		cmd.Stdout = os.Stdout
@@ -203,6 +204,7 @@ func killEmu(ctx context.Context, t *testing.T, intree bool, vdlOut string) {
 			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
 			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
 			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
+			"FVDL_INVOKER=fvdl_e2e_test",
 		)
 	} else {
 		cmd = exec.CommandContext(
@@ -215,6 +217,7 @@ func killEmu(ctx context.Context, t *testing.T, intree bool, vdlOut string) {
 			"-d",
 			mustAbs(t, filepath.Join(deviceLauncher, "device_launcher")),
 		)
+		cmd.Env = append(os.Environ(), "FVDL_INVOKER=fvdl_e2e_test")
 	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
