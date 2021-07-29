@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, component_hub::list::ListFilter, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -42,38 +42,10 @@ on the RCS column.",
 pub struct ComponentListCommand {
     #[argh(option, long = "only", short = 'o')]
     /// output only cmx/cml/running/stopped components depending on the flag.
-    pub only: Option<String>,
+    pub only: Option<ListFilter>,
 
     #[argh(switch, long = "verbose", short = 'v')]
     /// whether or not to display a column showing component type and a column
     /// showing running/stopped.
     pub verbose: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["list"];
-
-    #[test]
-    fn test_command() {
-        fn check(args: &[&str], expected_only: Option<String>, expected_verbose: bool) {
-            assert_eq!(
-                ComponentListCommand::from_args(CMD_NAME, args),
-                Ok(ComponentListCommand { only: expected_only, verbose: expected_verbose })
-            )
-        }
-
-        check(&["--only", "cmx", "--verbose"], Some("cmx".to_string()), true);
-        check(&["--only", "cml", "--verbose"], Some("cml".to_string()), true);
-        check(&["--only", "running", "--verbose"], Some("running".to_string()), true);
-        check(&["--only", "stopped", "--verbose"], Some("stopped".to_string()), true);
-        check(&["-o", "cmx", "--verbose"], Some("cmx".to_string()), true);
-        check(&["-o", "cml", "--verbose"], Some("cml".to_string()), true);
-        check(&["-o", "running", "--verbose"], Some("running".to_string()), true);
-        check(&["-o", "stopped", "--verbose"], Some("stopped".to_string()), true);
-        check(&["--only", "cmx", "-v"], Some("cmx".to_string()), true);
-        check(&["--only", "cml"], Some("cml".to_string()), false);
-        check(&["-v"], None, true);
-    }
 }

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 pub mod io;
-pub mod list;
 pub mod v1;
 pub mod v2;
 

@@ -11,10 +11,7 @@ mod log_stats;
 
 use {
     anyhow::{format_err, Error},
-    cs::{
-        io::Directory, list::Component, v2::V2Component, Only, Subcommand, CS_INFO_HELP,
-        CS_TREE_HELP,
-    },
+    cs::{io::Directory, v2::V2Component, Only, Subcommand, CS_INFO_HELP, CS_TREE_HELP},
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -117,7 +114,7 @@ async fn main() -> Result<(), Error> {
         Opt::Tree { only, verbose } => {
             println!("'cs tree' is deprecated. Please use 'ffx component list' instead!");
             if let Some(hub_dir) = validate_hub_directory() {
-                let component = Component::parse(".".to_string(), hub_dir).await;
+                let component = V2Component::explore(hub_dir, Subcommand::List).await;
                 if let Some(only) = only {
                     let only = Only::from_string(&only).map_err(|e| {
                         format_err!(
@@ -127,10 +124,10 @@ async fn main() -> Result<(), Error> {
                             CS_TREE_HELP
                         )
                     })?;
-                    component.print(&only, verbose, 0);
+                    component.print_tree(only, verbose);
                 } else {
                     // Default option is printing all components
-                    component.print(&Only::All, verbose, 0);
+                    component.print_tree(Only::All, verbose);
                 }
             }
         }

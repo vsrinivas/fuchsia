@@ -30,7 +30,6 @@ rustc_library("lib") {
 
   sources = [
     "lib/io.rs",
-    "lib/list.rs",
     "lib/mod.rs",
     "lib/v1.rs",
     "lib/v2.rs",
