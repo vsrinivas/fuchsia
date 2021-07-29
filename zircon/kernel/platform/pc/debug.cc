@@ -269,12 +269,6 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, SerialConfig* config) 
     return ZX_OK;
   }
 
-  // Detect UART from ACPI DBG2 table?
-  if (!strcmp(serial_mode, "acpi")) {
-    config->type = SerialConfig::Type::kAcpi;
-    return ZX_OK;
-  }
-
   // Legacy mode port (x86 IO ports).
   if (!strcmp(serial_mode, "legacy")) {
     config->type = SerialConfig::Type::kIoPort;
@@ -461,44 +455,6 @@ static bool handle_serial_zbi() {
   return false;
 }
 
-// Attempt to read information about a debug UART out of the ZBI.
-//
-// Return "true" if a debug port was found.
-static bool handle_serial_acpi() {
-  // Fetch ACPI debug port information, if present.
-  zx::status<acpi_lite::AcpiDebugPortDescriptor> desc =
-      acpi_lite::GetDebugPort(GlobalAcpiLiteParser());
-  if (desc.is_error()) {
-    dprintf(INFO, "UART: no DBG2 ACPI entry found, or unsupported port type.\n");
-    return false;
-  }
-
-  // Allocate mapping to UART MMIO.
-  void* ptr;
-  zx_status_t status = VmAspace::kernel_aspace()->AllocPhysical(
-      "debug_uart", /*size=*/PAGE_SIZE,
-      /*ptr=*/&ptr,
-      /*align_pow2=*/PAGE_SIZE_SHIFT,
-      /*paddr=*/static_cast<paddr_t>(desc->address),
-      /*vmm_flags=*/0,
-      /*arch_mmu_flags=*/ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
-          ARCH_MMU_FLAG_PERM_WRITE);
-  if (status != ZX_OK) {
-    dprintf(INFO, "UART: failed to allocate physical memory for ACPI UART.\n");
-    return false;
-  }
-
-  // Initialise.
-  dprintf(INFO, "UART: found ACPI debug port at address %#08lx.\n", desc->address);
-  DebugPort port;
-  port.type = DebugPort::Type::Mmio;
-  port.phys_addr = desc->address;
-  port.mem_addr = reinterpret_cast<vaddr_t>(ptr);
-  port.irq = 0;
-  setup_uart(port);
-  return true;
-}
-
 void pc_init_debug_early() {
   // Fetch serial information from the command line.
   switch (gBootOptions->serial_source) {
@@ -521,13 +477,6 @@ void pc_init_debug_early() {
 void pc_init_debug_post_acpi() {
   // If we already have a UART configured, bail.
   if (debug_port.type != DebugPort::Type::Unknown) {
-    return;
-  }
-
-  // Fetch serial information from ACPI if it was specified on the command line and we still don't
-  // have anything.
-  if (kernel_serial_command_line.type == SerialConfig::Type::kAcpi) {
-    handle_serial_acpi();
     return;
   }
 

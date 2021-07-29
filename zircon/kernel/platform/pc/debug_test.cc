@@ -22,9 +22,6 @@ bool test_parse_kernel_serial_arg() {
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("none", &result));
   EXPECT_EQ(result.type, SerialConfig::Type::kDisabled);
 
-  EXPECT_EQ(ZX_OK, parse_serial_cmdline("acpi", &result));
-  EXPECT_EQ(result.type, SerialConfig::Type::kAcpi);
-
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("legacy", &result));
   EXPECT_EQ(result.type, SerialConfig::Type::kIoPort);
   EXPECT_EQ(result.config.io_port.port, 0x3f8u);

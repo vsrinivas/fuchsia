@@ -48,8 +48,6 @@ struct SerialConfig {
     kUnspecified,
     // Serial explicitly disabled.
     kDisabled,
-    // Should scan ACPI for a DBG2 port.
-    kAcpi,
     // Should use custom IO port and interrupt.
     kIoPort,
     // Should use a custom MMIO address and interrupt.
