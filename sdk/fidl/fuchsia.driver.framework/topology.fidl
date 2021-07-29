@@ -29,14 +29,25 @@ type NodeSymbol = table {
     2: address zx.vaddr;
 };
 
+type NodePropertyKeyUnion = strict union {
+    1: int_value uint32;
+    2: string_value NodePropertyKey;
+};
+
+type NodePropertyValue = strict union {
+    1: int_value NodePropertyValueUint;
+    2: string_value NodePropertyValueString;
+    3: bool_value NodePropertyValueBool;
+};
+
 /// Definition of a property for a node. A property is commonly used to match a
 /// node to a driver for driver binding.
 type NodeProperty = table {
     /// Key for the property.
-    1: key uint32;
+    1: key NodePropertyKeyUnion;
 
     /// Value for the property.
-    2: value uint32;
+    2: value NodePropertyValue;
 };
 
 /// Arguments for adding a node.

@@ -66,10 +66,20 @@ fn node_to_device_property(
         if property.key.is_none() || property.value.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
-        device_properties.insert(
-            PropertyKey::NumberKey(property.key.unwrap().into()),
-            bind::compiler::Symbol::NumberValue(property.value.unwrap().into()),
-        );
+        let key = match property.key.as_ref().unwrap() {
+            fdf::NodePropertyKeyUnion::IntValue(i) => PropertyKey::NumberKey(i.clone().into()),
+            fdf::NodePropertyKeyUnion::StringValue(s) => PropertyKey::StringKey(s.clone()),
+        };
+        let value = match property.value.as_ref().unwrap() {
+            fdf::NodePropertyValue::IntValue(i) => {
+                bind::compiler::Symbol::NumberValue(i.clone().into())
+            }
+            fdf::NodePropertyValue::StringValue(s) => {
+                bind::compiler::Symbol::StringValue(s.clone())
+            }
+            fdf::NodePropertyValue::BoolValue(b) => bind::compiler::Symbol::BoolValue(b.clone()),
+        };
+        device_properties.insert(key, value);
     }
     Ok(device_properties)
 }
@@ -487,8 +497,10 @@ mod tests {
         let test_task = async move {
             // Check the value from the 'test-bind' binary. This should match my-driver.cm
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(1),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
@@ -507,8 +519,10 @@ mod tests {
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(2),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
@@ -527,14 +541,81 @@ mod tests {
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(3),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_bind_string() {
+        use bind::compiler::Symbol;
+        use bind::compiler::SymbolicInstruction;
+        use bind::compiler::SymbolicInstructionInfo;
+        use bind::parser::bind_library::ValueType;
+
+        // Make the bind instructions.
+        let always_match = bind::compiler::BindRules {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("my-key".to_string(), ValueType::Str),
+                    rhs: Symbol::StringValue("test-value".to_string()),
+                },
+            }],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedBindRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
+        )
+        .unwrap();
+
+        // Make our driver.
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            driver_path: "meta/my-driver.so".to_string(),
+            bind_rules: always_match.clone(),
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKeyUnion::StringValue("my-key".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("test-value".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+            assert_eq!(1, result.len());
+            assert_eq!(
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
+                result[0].url.as_ref().unwrap().as_str(),
+            );
         }
         .fuse();
 
@@ -588,8 +669,10 @@ mod tests {
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(2),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
@@ -634,8 +717,10 @@ mod tests {
         let test_task = async move {
             // Check the value from the 'test-bind' binary. This should match my-driver.cm
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(1),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
@@ -652,8 +737,10 @@ mod tests {
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(2),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =
@@ -670,8 +757,10 @@ mod tests {
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
-                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
-                value: Some(3),
+                key: Some(fdf::NodePropertyKeyUnion::IntValue(
+                    bind::ddk_bind_constants::BIND_PROTOCOL,
+                )),
+                value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };
             let args =

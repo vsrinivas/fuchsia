@@ -741,8 +741,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
 TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
   FakeDriverIndex driver_index(
       loop().dispatcher(), [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
-        if (args.has_properties() && args.properties()[0].key() == 0x1985 &&
-            args.properties()[0].value() == 0x2301) {
+        if (args.has_properties() && args.properties()[0].key().is_int_value() &&
+            args.properties()[0].key().int_value() == 0x1985 &&
+            args.properties()[0].value().is_int_value() &&
+
+            args.properties()[0].value().int_value() == 0x2301) {
           return zx::ok(FakeDriverIndex::MatchResult{
               .url = "fuchsia-boot:///#meta/second-driver.cm",
           });
@@ -782,7 +785,9 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_properties()->emplace_back(
-        std::move(fdf::NodeProperty().set_key(0x1985).set_value(0x2301)));
+        std::move(fdf::NodeProperty()
+                      .set_key(fdf::NodePropertyKeyUnion::WithIntValue(0x1985))
+                      .set_value(fdf::NodePropertyValue::WithIntValue(0x2301))));
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     BindDriver(std::move(request), std::move(root_node));
