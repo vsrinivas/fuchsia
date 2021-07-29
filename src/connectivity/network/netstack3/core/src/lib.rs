@@ -4,6 +4,7 @@
 
 //! A networking stack.
 
+#![no_std]
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
@@ -14,14 +15,12 @@
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
-#![cfg_attr(not(test), no_std)]
 
 // TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove
 // this module.
 extern crate fakealloc as alloc;
 
 // TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
-#[cfg(not(test))]
 extern crate fakestd as std;
 
 #[cfg(all(test, feature = "benchmark"))]

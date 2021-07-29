@@ -458,11 +458,12 @@ impl<D: EventDispatcher> CounterContext for Context<D> {
 /// will take care of the rest.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use std::collections::{BinaryHeap, HashMap};
-    use std::fmt::{self, Debug, Formatter};
-    use std::hash::Hash;
-    use std::ops;
-    use std::time::Duration;
+    use alloc::boxed::Box;
+    use alloc::collections::{BinaryHeap, HashMap};
+    use alloc::vec::Vec;
+    use core::fmt::{self, Debug, Formatter};
+    use core::hash::Hash;
+    use core::ops;
 
     use packet::Buf;
     use rand_xorshift::XorShiftRng;
@@ -578,13 +579,13 @@ pub(crate) mod testutil {
     }
 
     impl<D> Ord for InstantAndData<D> {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        fn cmp(&self, other: &Self) -> core::cmp::Ordering {
             other.0.cmp(&self.0)
         }
     }
 
     impl<D> PartialOrd for InstantAndData<D> {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
             Some(self.cmp(other))
         }
     }
@@ -1152,7 +1153,7 @@ pub(crate) mod testutil {
         ) -> StepResult
         where
             DummyContext<S, TimerId, SendMeta>: TimerHandler<TimerId>,
-            TimerId: std::fmt::Debug,
+            TimerId: core::fmt::Debug,
         {
             self.collect_frames();
 
@@ -1297,16 +1298,16 @@ pub(crate) mod testutil {
             heap.push(new_data(now + Duration::from_secs(2), 2));
 
             // Earlier timer is popped first.
-            assert!(heap.pop().unwrap().1 == 1);
-            assert!(heap.pop().unwrap().1 == 2);
+            assert_eq!(heap.pop().unwrap().1, 1);
+            assert_eq!(heap.pop().unwrap().1, 2);
             assert!(heap.pop().is_none());
 
             heap.push(new_data(now + Duration::from_secs(1), 1));
             heap.push(new_data(now + Duration::from_secs(1), 1));
 
             // Can pop twice with identical data.
-            assert!(heap.pop().unwrap().1 == 1);
-            assert!(heap.pop().unwrap().1 == 1);
+            assert_eq!(heap.pop().unwrap().1, 1);
+            assert_eq!(heap.pop().unwrap().1, 1);
             assert!(heap.pop().is_none());
         }
 

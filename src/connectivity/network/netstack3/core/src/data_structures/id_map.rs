@@ -134,7 +134,7 @@ impl<T> IdMapEntry<T> {
     }
 }
 
-/// A generic container for `T` keyed by densily packed integers.
+/// A generic container for `T` keyed by densely packed integers.
 ///
 /// `IdMap` is a generic container keyed by `usize` that manages its own key
 /// pool. `IdMap` reuses keys that are free to keep its key pool as dense as
@@ -645,6 +645,9 @@ impl<'a, K: EntryKey, T> Entry<'a, K, T> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+    use alloc::vec::Vec;
+
     use super::IdMapEntry::{self, Allocated, Free};
     use super::{Entry, IdMap};
     use super::{FreeList, FreeListLink};

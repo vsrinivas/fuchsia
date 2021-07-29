@@ -20,6 +20,7 @@ rustc_library("netstack3-core") {
 
     # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
     "fakestd",
+    "teststd",
     "//garnet/lib/rust/never",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",

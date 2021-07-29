@@ -374,6 +374,8 @@ fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
 #[cfg(test)]
 #[macro_use]
 pub(crate) mod testutil {
+    use alloc::vec::Vec;
+
     use super::*;
 
     // TODO(rheacock): remove `#[allow(dead_code)]` when the impl_pmtu_handler

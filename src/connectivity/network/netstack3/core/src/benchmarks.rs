@@ -7,6 +7,7 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
+use alloc::vec;
 use core::time::Duration;
 
 use net_types::ip::Ipv4;
@@ -159,7 +160,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     assert!(
         frame_size
             >= ETHERNET_HDR_LEN_NO_TAG
-                + std::cmp::max(ETHERNET_MIN_BODY_LEN_NO_TAG, IPV4_MIN_HDR_LEN)
+                + core::cmp::max(ETHERNET_MIN_BODY_LEN_NO_TAG, IPV4_MIN_HDR_LEN)
     );
     let body = vec![0; frame_size - (ETHERNET_HDR_LEN_NO_TAG + IPV4_MIN_HDR_LEN)];
     let mut buf = body

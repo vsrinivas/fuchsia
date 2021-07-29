@@ -156,7 +156,7 @@ pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     //               overlapping fragments.
     InvalidFragment,
 
-    /// Successfully proccessed the provided fragment. We are still waiting on
+    /// Successfully processed the provided fragment. We are still waiting on
     /// more fragments for a packet to arrive before being ready to reassemble
     /// the packet.
     NeedMoreFragments,
@@ -484,7 +484,7 @@ where
     //
     //   Here we can see that with a `found_gap` of [4, MAX], `packet` covers
     //   [4, 7] and we don't expect more fragment blocks after the blocks in
-    //   `packet` (as noted by `m_flag`) so we dont create a new gap. Note, if
+    //   `packet` (as noted by `m_flag`) so we don't create a new gap. Note, if
     //   we encounter a `packet` where `m_flag` is false, `found_gap`'s end
     //   value must be MAX because we should only ever not create a new gap
     //   where the end is MAX when we are processing a packet with the last
@@ -720,6 +720,8 @@ impl Ord for PacketBodyFragment {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use net_types::ip::{IpAddress, Ipv4, Ipv6};
     use net_types::Witness;
     use packet::{Buf, ParseBuffer, Serializer};
@@ -1183,7 +1185,7 @@ mod tests {
             fragment_id += 1;
         }
 
-        // Now that the cache is at or above thre threshold, observe OOM.
+        // Now that the cache is at or above the threshold, observe OOM.
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::OutOfMemory);
         validate_cache_size(ctx.get_state());
 

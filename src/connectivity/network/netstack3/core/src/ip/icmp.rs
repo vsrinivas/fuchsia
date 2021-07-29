@@ -2115,6 +2115,7 @@ fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, vec};
     use core::convert::TryInto;
     use core::fmt::Debug;
     use core::num::NonZeroU16;
@@ -2710,7 +2711,7 @@ mod tests {
         ));
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, allow_dst_multicast));
 
-        // Should not send becuase from multicast addr, even though dest
+        // Should not send because from multicast addr, even though dest
         // multicast exception applies.
         assert!(!should_send_icmpv6_error(
             FrameDestination::Broadcast,
@@ -3195,7 +3196,7 @@ mod tests {
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
             // evidence of a bug; we may just have to update this test to
-            // accomodate whatever new ID allocation scheme is being used.
+            // accommodate whatever new ID allocation scheme is being used.
             assert_eq!(
                 new_icmpv4_connection_inner(
                     &mut ctx,
@@ -3506,7 +3507,7 @@ mod tests {
             // that the rest of this test assumes that the new connection has ID
             // 0. If this assertion fails in the future, that isn't necessarily
             // evidence of a bug; we may just have to update this test to
-            // accomodate whatever new ID allocation scheme is being used.
+            // accommodate whatever new ID allocation scheme is being used.
             assert_eq!(
                 new_icmpv6_connection_inner(
                     &mut ctx,

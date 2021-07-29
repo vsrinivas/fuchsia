@@ -771,8 +771,6 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
-
     use matches::assert_matches;
     use never::Never;
 

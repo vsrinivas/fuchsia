@@ -235,7 +235,7 @@ impl<I: Ip> PortAllocImpl for UdpConnectionState<I> {
         let port = NonZeroU16::new(port).unwrap();
         // Check if we have any listeners. Return true if we have no listeners
         // or active connections using the selected local port.
-        self.listeners.get_by_addr(&Listener { addr: *id.local_addr(), port: port }).is_none()
+        self.listeners.get_by_addr(&Listener { addr: *id.local_addr(), port }).is_none()
             && self.wildcard_listeners.get_by_addr(&port).is_none()
             && self
                 .conns
@@ -1056,6 +1056,11 @@ impl<S: Serializer> From<S> for SendError {
 
 #[cfg(test)]
 mod tests {
+    use alloc::borrow::ToOwned;
+    use alloc::boxed::Box;
+    use alloc::vec;
+    use alloc::vec::Vec;
+
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
     use packet::{Buf, InnerPacketBuilder, Serializer};
     use packet_formats::icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode};

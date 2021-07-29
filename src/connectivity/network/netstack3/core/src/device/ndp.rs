@@ -86,7 +86,7 @@ const ADVERTISED_LINK_MTU: Option<NonZeroU32> = None;
 const ADVERTISED_REACHABLE_TIME: u32 = 0;
 const ADVERTISED_RETRANSMIT_TIMER: u32 = 0;
 const ADVERTISED_CURRENT_HOP_LIMIT: u8 = 64;
-// This call to `new_unchecked` is okay becase 1800 is non-zero, so we will not
+// This call to `new_unchecked` is okay because 1800 is non-zero, so we will not
 // be violating `NonZeroU16`'s contract.
 const ADVERTISED_DEFAULT_LIFETIME: Option<NonZeroU16> =
     unsafe { Some(NonZeroU16::new_unchecked(1800)) };
@@ -134,7 +134,7 @@ const MAX_MULTICAST_SOLICIT: u8 = 3;
 // Host Constants
 
 /// Maximum number of Router Solicitation messages that may be sent when
-/// attempting to discover routers. Each message sent must be seperated by at
+/// attempting to discover routers. Each message sent must be separated by at
 /// least `RTR_SOLICITATION_INTERVAL` as defined in [RFC 4861 section 10].
 ///
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
@@ -194,7 +194,7 @@ const MAX_INITIAL_RTR_ADVERT_INTERVAL: Duration = Duration::from_secs(16);
 ///
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 /// [RFC 4861 section 6.3.5]: https://tools.ietf.org/html/rfc4861#section-6.2.5
-// This call to `new_unchecked` is okay becase 3 is non-zero, so we will not be
+// This call to `new_unchecked` is okay because 3 is non-zero, so we will not be
 // violating `NonZeroU8`'s contract.
 const MAX_FINAL_RTR_ADVERTISEMENTS: Option<NonZeroU8> =
     unsafe { Some(NonZeroU8::new_unchecked(3)) };
@@ -463,7 +463,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     /// rule may result in incorrect IP packets being sent.
     ///
     /// `get_ipv6_addr` may return a non-tentative link-local address if
-    /// `device_id` deosn't have any non-tentative global addresses.
+    /// `device_id` doesn't have any non-tentative global addresses.
     fn get_ipv6_addr(&self, device_id: Self::DeviceId) -> Option<Ipv6Addr>;
 
     /// The type of the iterator returned from `get_ipv6_addr_entries`.
@@ -499,7 +499,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// # Panics
     ///
-    /// May panic if `device_id` is not intialized. See
+    /// May panic if `device_id` is not initialized. See
     /// [`crate::device::initialize_device`] for more information.
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -541,7 +541,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// # Panics
     ///
-    /// Panics if `addr` is not tentative on the devide identified by
+    /// Panics if `addr` is not tentative on the device identified by
     /// `device_id`.
     fn unique_address_determined(&mut self, device_id: Self::DeviceId, addr: UnicastAddr<Ipv6Addr>);
 
@@ -647,7 +647,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
                 .get_router_configurations()
                 .get_should_send_advertisements()
             {
-                // At this point, we know that `devie_id` is an advertising
+                // At this point, we know that `device_id` is an advertising
                 // interface and has an assigned link-local address. Given this,
                 // we know that `start_advertising_interface` will not panic.
                 start_advertising_interface(self, device_id);
@@ -664,7 +664,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     ///
     /// # Panics
     ///
-    /// Panics if `addr` is not tentative on the devide identified by
+    /// Panics if `addr` is not tentative on the device identified by
     /// `device_id`.
     fn unique_address_determined_wrapper(
         &mut self,
@@ -676,7 +676,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         self.unique_address_determined(device_id, addr);
 
         if addr.is_linklocal() {
-            // Here know know that we just resolved a link-local address becuase
+            // Here know know that we just resolved a link-local address because
             // we just checked that `addr` is link-local and we know that
             // `unique_address_determined` would have panicked if `addr` was not
             // tentative on `device_id`.
@@ -1012,7 +1012,7 @@ impl NdpRouterConfigurations {
 
         if let Some(v) = self.advertised_default_lifetime {
             if v.get() < end {
-                trace!("set_router_advertisements_interval: router_advertiements_interval of {:?} is less than new maximum router advertisements interval, setting to new max of {:?}", v.get(), end);
+                trace!("set_router_advertisements_interval: router_advertisement_interval of {:?} is less than new maximum router advertisements interval, setting to new max of {:?}", v.get(), end);
                 self.advertised_default_lifetime = NonZeroU16::new(end);
             }
         }
@@ -1225,14 +1225,14 @@ pub(crate) struct NdpState<D: LinkDevice, Instant> {
     ///
     /// Note, this value does not include Router Advertisements sent directly to
     /// a host (response to a Router Solicitation message).
-    all_nodes_transmited_router_advertisements: u64,
+    all_nodes_transmitted_router_advertisements: u64,
 
     /// Instant when the last Router Advertisement to the all-nodes multicast
     /// address was sent.
     last_router_advertisement_instant: Option<Instant>,
 
     //
-    // Interace parameters learned from Router Advertisements.
+    // Interface parameters learned from Router Advertisements.
     //
     // See RFC 4861 section 6.3.2.
     //
@@ -1288,7 +1288,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
             on_link_prefixes: HashSet::new(),
             router_solicitations_remaining: 0,
             final_router_advertisements_remaining: 0,
-            all_nodes_transmited_router_advertisements: 0,
+            all_nodes_transmitted_router_advertisements: 0,
             last_router_advertisement_instant: None,
 
             base_reachable_time: REACHABLE_TIME_DEFAULT,
@@ -1383,7 +1383,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
         self.remove_prefix(&addr_sub);
     }
 
-    // Interace parameters learned from Router Advertisements.
+    // Interface parameters learned from Router Advertisements.
 
     /// Set the base value used for computing the random `reachable_time` value.
     ///
@@ -1604,7 +1604,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
             // not reference a known default router, but we will only reach here
             // if we received an NDP Router Advertisement from a router with a
             // valid lifetime > 0, at which point this timeout. would have been
-            // set. Givem this, we know that `invalidate_default_router` will
+            // set. Given this, we know that `invalidate_default_router` will
             // not panic.
             ctx.get_state_mut_with(id.device_id).invalidate_default_router(&ip)
         }
@@ -1669,8 +1669,8 @@ fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
         let old_rc = existing_configs.get_router_configurations();
         let new_rc = get_ndp_configurations(ctx, device_id).get_router_configurations();
 
-        // Check if device changes advertising interfacee status
-        // (should/should't send Router Advertisements).
+        // Check if device changes advertising interface status
+        // (should/shouldn't send Router Advertisements).
 
         if !old_rc.get_should_send_advertisements() && new_rc.get_should_send_advertisements() {
             // If the device is now an advertising interface, start sending
@@ -2050,9 +2050,9 @@ fn start_periodic_router_advertisements<D: LinkDevice, C: NdpContext<D>>(
         device_id
     );
 
-    // Reset the number of Router Advertisements transmited to the all-nodes
+    // Reset the number of Router Advertisements transmitted to the all-nodes
     // multicast address.
-    ctx.get_state_mut_with(device_id).all_nodes_transmited_router_advertisements = 0;
+    ctx.get_state_mut_with(device_id).all_nodes_transmitted_router_advertisements = 0;
 
     schedule_next_router_advertisement(ctx, device_id);
 }
@@ -2117,7 +2117,7 @@ fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // TODO(ghanan): Make the choice to limit the delay of the first few
     // advertisements configurable.
     let ndp_state = ctx.get_state_mut_with(device_id);
-    if (ndp_state.all_nodes_transmited_router_advertisements < MAX_INITIAL_RTR_ADVERTISEMENTS)
+    if (ndp_state.all_nodes_transmitted_router_advertisements < MAX_INITIAL_RTR_ADVERTISEMENTS)
         && (delay > MAX_INITIAL_RTR_ADVERT_INTERVAL)
     {
         trace!("schedule_next_router_advertisement: still sending the initial batch of router advertisements so limiting delay to MAX_INITIAL_RTR_ADVERT_INTERVAL ({:?})", MAX_INITIAL_RTR_ADVERT_INTERVAL);
@@ -2125,7 +2125,7 @@ fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
         delay = MAX_INITIAL_RTR_ADVERT_INTERVAL;
     }
 
-    // Schedule the timout to send the router advertisement.
+    // Schedule the timeout to send the router advertisement.
     let instant =
         ctx.now().checked_add(delay).expect("Failed to calculate next NDP RA transmit instant");
     schedule_next_router_advertisement_instant(ctx, device_id, instant);
@@ -2411,7 +2411,7 @@ fn send_neighbor_solicitation<D: LinkDevice, C: NdpContext<D>>(
     device_id: C::DeviceId,
     lookup_addr: UnicastAddr<Ipv6Addr>,
 ) {
-    trace!("send_neighbor_solicitation: lookip_addr {:?}", lookup_addr);
+    trace!("send_neighbor_solicitation: lookup_addr {:?}", lookup_addr);
 
     // TODO(brunodalbo) when we send neighbor solicitations, we SHOULD set the
     //  source IP to the same IP as the packet that triggered the solicitation,
@@ -2550,7 +2550,7 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // counter for number of Router Advertisements sent to the IPv6 all-nodes
     // multicast address.
     if dst_ip == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified() {
-        ndp_state.all_nodes_transmited_router_advertisements += 1;
+        ndp_state.all_nodes_transmitted_router_advertisements += 1;
     }
 
     // Attempt to send the router advertisement message.
@@ -2680,7 +2680,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 // is a source link-layer address option in the message, we MUST
                 // silently discard the Router Solicitation message as per RFC
                 // 4861 section 6.1.1.
-                trace!("receive_ndp_packet: source is unspcified but it has the source link-layer address option, discarding NDP RS");
+                trace!("receive_ndp_packet: source is unspecified but it has the source link-layer address option, discarding NDP RS");
                 return;
             }
 
@@ -3235,7 +3235,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                 // |    link prefix     |  interface identifier  |
                                 // +---------------------------------------------+
                                 if valid_for == ZERO_DURATION {
-                                    trace!("receive_ndp_packet: autonomous prefix has valid lfietime = 0, ignoring");
+                                    trace!("receive_ndp_packet: autonomous prefix has valid lifetime = 0, ignoring");
                                     continue;
                                 }
 
@@ -3355,7 +3355,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 return;
             }
 
-            // At this point, we gurantee the following is true because of the
+            // At this point, we guarantee the following is true because of the
             // earlier checks:
             //
             //   1) The target address is a valid unicast address.
@@ -3459,7 +3459,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                 if let Some(address) = target_ll {
                     // Set the IsRouter flag as per RFC 4861 section 7.2.5.
                     trace!(
-                        "receive_ndp_packet: NDP RS from {:?} indicicates it {:?} a router",
+                        "receive_ndp_packet: NDP RS from {:?} indicates it {:?} a router",
                         src_ip,
                         if message.router_flag() { "is" } else { "isn't" }
                     );
@@ -3528,7 +3528,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             let mut is_same = false;
 
             // If override is set, the link-layer address MUST be inserted into
-            // the cache (if one is supplied and differs from the alreadt
+            // the cache (if one is supplied and differs from the already
             // recoded address).
             if let Some(address) = target_ll {
                 let address = Some(address);
@@ -3653,6 +3653,7 @@ fn generate_global_address(
 mod tests {
     use super::*;
 
+    use alloc::vec;
     use core::convert::{TryFrom, TryInto};
 
     use net_types::ethernet::Mac;
@@ -4595,8 +4596,6 @@ mod tests {
         crate::device::set_ndp_configurations(net.context("local"), device_id, ndp_configs.clone());
         crate::device::set_ndp_configurations(net.context("remote"), device_id, ndp_configs);
 
-        println!("Setting new IP on local");
-
         let addr = AddrSubnet::new(local_ip().get(), 128).unwrap();
         let multicast_addr = local_ip().to_solicited_node_address();
         add_ip_addr_subnet(net.context("local"), device_id, addr).unwrap();
@@ -4616,8 +4615,6 @@ mod tests {
         )
         .unwrap()
         .is_assigned());
-
-        println!("Set new IP on remote");
 
         add_ip_addr_subnet(net.context("remote"), device_id, addr).unwrap();
         // Local & remote should be in the multicast group.
@@ -5375,7 +5372,7 @@ mod tests {
         assert_eq!(ndp_state.retrans_timer, Duration::from_millis(41));
         assert_eq!(get_ipv6_hop_limit(&ctx, device_id).get(), 37);
 
-        // Invaldate the router by triggering the timeout.
+        // Invalidate the router by triggering the timeout.
         assert_eq!(
             trigger_next_timer(&mut ctx).unwrap(),
             NdpTimerId::new_router_invalidation(device_id.id().into(), src_ip).into()
@@ -5972,7 +5969,7 @@ mod tests {
         let dummy_config = Ipv6::DUMMY_CONFIG;
 
         // If netstack is not set to forward packets, make sure router
-        // solicitations do not get cancelled when we enable forwading on the
+        // solicitations do not get cancelled when we enable forwarding on the
         // device.
 
         let mut state_builder = StackStateBuilder::default();
@@ -6173,7 +6170,7 @@ mod tests {
             dummy_config.remote_ip.try_into().unwrap(),
         )
         .into();
-        // Allow aleady started DAD to complete (2 more more NS, 3 more timers).
+        // Allow already started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
@@ -7448,7 +7445,7 @@ mod tests {
             Some(neighbor_mac),
         );
 
-        // Receive unsolicted NA from a neighbor with new target link addr.
+        // Receive unsolicited NA from a neighbor with new target link addr.
         //
         // Should NOT update link layer addr, but set state to STALE.
 
@@ -7468,7 +7465,7 @@ mod tests {
             Some(neighbor_mac),
         );
 
-        // Receive unsolicted NA from a neighbor with new target link addr and
+        // Receive unsolicited NA from a neighbor with new target link addr and
         // override set.
         //
         // Should update link layer addr and set state to STALE.
@@ -7487,7 +7484,7 @@ mod tests {
             Some(new_mac),
         );
 
-        // Receive solicted NA from a neighbor with the same link layer addr.
+        // Receive solicited NA from a neighbor with the same link layer addr.
         //
         // Should not update link layer addr, but set state to REACHABLE.
 
@@ -7505,7 +7502,7 @@ mod tests {
             Some(new_mac),
         );
 
-        // Receive unsolicted NA from a neighbor with new target link addr and
+        // Receive unsolicited NA from a neighbor with new target link addr and
         // override set.
         //
         // Should update link layer addr, and set state to Stale.
@@ -7524,7 +7521,7 @@ mod tests {
             Some(neighbor_mac),
         );
 
-        // Receive solicted NA from a neighbor with new target link addr and
+        // Receive solicited NA from a neighbor with new target link addr and
         // override set.
         //
         // Should set state to Reachable.
@@ -7543,8 +7540,8 @@ mod tests {
             Some(neighbor_mac),
         );
 
-        // Receive unsolicted NA from a neighbor with no target link addr and
-        // overide set.
+        // Receive unsolicited NA from a neighbor with no target link addr and
+        // override set.
         //
         // Should do nothing.
 
@@ -8757,7 +8754,7 @@ mod tests {
 
         // Receive a new RA with new prefix (autonomous).
         //
-        // Should get a new IP and set prefered lifetime to 1s.
+        // Should get a new IP and set preferred lifetime to 1s.
 
         let valid_lifetime = 2;
         let preferred_lifetime = 1;
@@ -8959,7 +8956,7 @@ mod tests {
 
         // Receive a new RA with new prefix (autonomous).
         //
-        // Should get a new IP and set prefered lifetime to 1s.
+        // Should get a new IP and set preferred lifetime to 1s.
 
         // Make sure deprecate and invalidation timers are set.
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 30, 60, 60);

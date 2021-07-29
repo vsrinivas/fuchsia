@@ -198,6 +198,8 @@ fn handle_destination_options_ext_hdr<
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use super::*;
 
     use packet::serialize::{Buf, Serializer};

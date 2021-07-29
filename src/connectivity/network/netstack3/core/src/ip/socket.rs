@@ -762,6 +762,8 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use net_types::ip::AddrSubnet;
     use net_types::Witness;
     use packet::InnerPacketBuilder;

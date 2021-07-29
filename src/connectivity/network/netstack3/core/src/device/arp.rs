@@ -718,6 +718,9 @@ impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+    use alloc::vec::Vec;
+
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4Addr;
     use packet::{ParseBuffer, Serializer};

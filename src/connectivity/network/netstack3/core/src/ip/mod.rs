@@ -255,7 +255,7 @@ impl<I: IpExt, B: BufferMut, C: TransportIpContext<I> + FrameContext<B, IpPacket
 /// The execution context for IPv6's transport layer.
 ///
 /// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for each IPv6
-/// protocol number. The procol numbers 1 (ICMP) and 2 (IGMP) are used by the
+/// protocol number. The protocol numbers 1 (ICMP) and 2 (IGMP) are used by the
 /// stack itself, and cannot be overridden.
 pub(crate) trait Ipv4TransportLayerContext {
     type Proto6: IpTransportContext<Ipv4, Self>;
@@ -265,7 +265,7 @@ pub(crate) trait Ipv4TransportLayerContext {
 /// The execution context for IPv6's transport layer.
 ///
 /// `Ipv6TransportLayerContext` defines the [`IpTransportContext`] for
-/// each IPv6 protocol number. The procol numbers 0 (Hop-by-Hop Options), 58
+/// each IPv6 protocol number. The protocol numbers 0 (Hop-by-Hop Options), 58
 /// (ICMPv6), 59 (No Next Header), and 60 (Destination Options) are used by the
 /// stack itself, and cannot be overridden.
 pub(crate) trait Ipv6TransportLayerContext {
@@ -349,7 +349,7 @@ pub(crate) struct DummyDeviceId;
 
 #[cfg(test)]
 impl Display for DummyDeviceId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "DummyDeviceId")
     }
 }
@@ -1279,7 +1279,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 // an (optional) fragment extension header which we attempt to
                 // handle by calling `ipv6::handle_extension_headers`. We will
                 // only end up here if its return value is
-                // `Ipv6PacketAction::ProcessFragment` which is only posisble
+                // `Ipv6PacketAction::ProcessFragment` which is only possible
                 // when the packet has the fragment extension header (even if
                 // the fragment data has values that implies that the packet is
                 // not fragmented).
@@ -2128,8 +2128,9 @@ pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
 mod tests {
     use super::*;
 
-    use std::convert::TryFrom;
-    use std::num::NonZeroU16;
+    use alloc::vec;
+    use core::convert::TryFrom;
+    use core::num::NonZeroU16;
 
     use net_types::ip::{Ipv4Addr, Ipv6Addr};
     use net_types::UnicastAddr;
@@ -2773,7 +2774,7 @@ mod tests {
         // body itself is 5000). Note, the final packet will be larger because
         // of IP header data.
         let mut rng = new_rng(70812476915813);
-        let body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(5000).collect();
+        let body: Vec<u8> = core::iter::repeat_with(|| rng.gen()).take(5000).collect();
 
         // Ip packet from some node destined to a remote on this network,
         // arriving locally.

@@ -265,7 +265,7 @@ pub(crate) struct EthernetDeviceState<I: Instant> {
     ndp: ndp::NdpState<EthernetLinkDevice, I>,
 
     // pending_frames stores a list of serialized frames indexed by their
-    // desintation IP addresses. The frames contain an entire EthernetFrame
+    // destination IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
     pending_frames: HashMap<IpAddr, VecDeque<Buf<Vec<u8>>>>,
 
@@ -518,7 +518,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
 ) {
     trace!("ethernet::receive_frame: device_id = {:?}", device_id);
     // NOTE(joshlf): We do not currently validate that the Ethernet frame
-    // satisfies the minimum length requierment. We expect that if this
+    // satisfies the minimum length requirement. We expect that if this
     // requirement is necessary (due to requirements of the physical medium),
     // the driver or hardware will have checked it, and that if this requirement
     // is not necessary, it is acceptable for us to operate on a smaller
@@ -1297,7 +1297,7 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
 
     fn get_ipv6_addr(&self, device_id: C::DeviceId) -> Option<Ipv6Addr> {
         // Return a non tentative global address, or the link-local address if no non-tentative
-        // global addressses are associated with `device_id`.
+        // global addresses are associated with `device_id`.
 
         match get_ip_addr_subnet::<_, Ipv6Addr>(self, device_id) {
             Some(addr_sub) => Some(addr_sub.addr().get()),
@@ -1342,6 +1342,19 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
         let address = SpecifiedAddr::new(address.get())?;
 
         get_ip_addr_state::<_, Ipv6Addr>(self, device_id, &address)
+    }
+
+    fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        device_id: Self::DeviceId,
+        next_hop: SpecifiedAddr<Ipv6Addr>,
+        body: S,
+    ) -> Result<(), S> {
+        // `device_id` must not be uninitialized.
+        assert!(self.is_device_usable(device_id));
+
+        // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
+        send_ip_frame(self, device_id, next_hop, body)
     }
 
     fn address_resolved(
@@ -1525,19 +1538,6 @@ impl<C: EthernetIpDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn is_router(&self, device_id: Self::DeviceId) -> bool {
         self.is_router_device::<Ipv6>(device_id)
     }
-
-    fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        device_id: Self::DeviceId,
-        next_hop: SpecifiedAddr<Ipv6Addr>,
-        body: S,
-    ) -> Result<(), S> {
-        // `device_id` must not be uninitialized.
-        assert!(self.is_device_usable(device_id));
-
-        // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
-        send_ip_frame(self, device_id, next_hop, body)
-    }
 }
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.
@@ -1612,6 +1612,8 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use matches::assert_matches;
     use packet::Buf;
     use packet_formats::icmp::{IcmpDestUnreachable, IcmpIpExt};
@@ -1917,7 +1919,7 @@ mod tests {
         let device = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;
         let mut rng = new_rng(70812476915813);
-        let mut body: Vec<u8> = std::iter::repeat_with(|| rng.gen()).take(100).collect();
+        let mut body: Vec<u8> = core::iter::repeat_with(|| rng.gen()).take(100).collect();
         let buf = Buf::new(&mut body[..], ..)
             .encapsulate(I::PacketBuilder::new(
                 src_ip.get(),
@@ -1930,7 +1932,7 @@ mod tests {
             .unwrap()
             .unwrap_b();
 
-        // Test with netstack no fowarding
+        // Test with netstack no forwarding
 
         let mut builder = DummyEventDispatcherBuilder::from_config(config.clone());
         add_arp_or_ndp_table_entry(&mut builder, device.id(), src_ip.get(), src_mac);
@@ -1955,7 +1957,7 @@ mod tests {
         // Still should not send ICMP because device has routing disabled.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
-        // Test with netstack fowarding
+        // Test with netstack forwarding
 
         let mut state_builder = StackStateBuilder::default();
         let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
@@ -1989,8 +1991,6 @@ mod tests {
         // device).
         receive_ip_packet::<_, _, I>(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        println!("{:?}", buf.as_ref());
-        println!("{:?}", ctx.dispatcher().frames_sent()[0].1);
         let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
             parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher().frames_sent()[0].1[..])
                 .unwrap();

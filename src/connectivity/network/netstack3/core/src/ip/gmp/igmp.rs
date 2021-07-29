@@ -485,7 +485,7 @@ fn run_action<D: LinkDevice, C: IgmpContext<D>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::convert::TryInto;
+    use core::convert::TryInto;
 
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
@@ -827,7 +827,7 @@ mod tests {
     }
 
     #[test]
-    fn test_igmp_integration_not_last_dont_send_leave() {
+    fn test_igmp_integration_not_last_does_not_send_leave() {
         let mut ctx = setup_simple_test_environment();
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);

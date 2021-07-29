@@ -4,12 +4,15 @@
 
 //! Testing-related utilities.
 
-use std::collections::{BinaryHeap, HashMap};
-use std::fmt::{self, Debug, Formatter};
-use std::hash::Hash;
-use std::ops;
-use std::sync::Once;
-use std::time::Duration;
+use alloc::borrow::ToOwned;
+use alloc::collections::{BinaryHeap, HashMap};
+use alloc::string::{String, ToString};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt::{self, Debug, Formatter};
+use core::hash::Hash;
+use core::ops;
+use core::time::Duration;
 
 use log::{debug, trace};
 use net_types::ethernet::Mac;
@@ -139,7 +142,7 @@ pub(crate) fn new_rng(mut seed: u128) -> XorShiftRng {
 /// `with_fake_rngs` will create `iterations` different [`FakeCryptoRng`]s and
 /// call the function `f` for each one of them.
 ///
-/// This function can be used for tests that weed out weirdnesses that can
+/// This function can be used for tests that weed out weirdness that can
 /// happen with certain random number sequences.
 pub(crate) fn with_fake_rngs<F: Fn(FakeCryptoRng<XorShiftRng>)>(iterations: u128, f: F) {
     for seed in 0..iterations {
@@ -173,7 +176,7 @@ impl log::Log for Logger {
     }
 
     fn log(&self, record: &log::Record<'_>) {
-        println!("{}", record.args())
+        teststd::println!("{}", record.args())
     }
 
     fn flush(&self) {}
@@ -181,7 +184,7 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger;
 
-static LOGGER_ONCE: Once = Once::new();
+static LOGGER_ONCE: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(true);
 
 /// Install a logger for tests.
 ///
@@ -189,12 +192,11 @@ static LOGGER_ONCE: Once = Once::new();
 /// This function sets global program state, so all tests that run after this
 /// function is called will use the logger.
 pub(crate) fn set_logger_for_test() {
-    // log::set_logger will panic if called multiple times; using a Once makes
-    // set_logger_for_test idempotent.
-    LOGGER_ONCE.call_once(|| {
+    // log::set_logger will panic if called multiple times.
+    if LOGGER_ONCE.swap(false, core::sync::atomic::Ordering::AcqRel) {
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(log::LevelFilter::Trace);
-    })
+    }
 }
 
 /// Skip current time forward to trigger the next timer event.
@@ -659,13 +661,13 @@ impl<D> PartialEq for InstantAndData<D> {
 }
 
 impl<D> Ord for InstantAndData<D> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         other.0.cmp(&self.0)
     }
 }
 
 impl<D> PartialOrd for InstantAndData<D> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -917,7 +919,7 @@ pub(crate) struct LoopLimitReachedError;
 
 impl<N, F> DummyNetwork<N, F>
 where
-    N: Eq + Hash + Clone + std::fmt::Debug,
+    N: Eq + Hash + Clone + core::fmt::Debug,
     F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
 {
     /// Creates a new `DummyNetwork`.
@@ -1209,7 +1211,7 @@ pub(crate) fn new_dummy_network_from_config_with_latency<A: IpAddress, N>(
     latency: Option<Duration>,
 ) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
 where
-    N: Eq + Hash + Clone + std::fmt::Debug,
+    N: Eq + Hash + Clone + core::fmt::Debug,
 {
     let bob = DummyEventDispatcherBuilder::from_config(cfg.swap()).build();
     let alice = DummyEventDispatcherBuilder::from_config(cfg).build();
@@ -1233,15 +1235,13 @@ pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
     cfg: DummyEventDispatcherConfig<A>,
 ) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
 where
-    N: Eq + Hash + Clone + std::fmt::Debug,
+    N: Eq + Hash + Clone + core::fmt::Debug,
 {
     new_dummy_network_from_config_with_latency(a, b, cfg, None)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-
     use packet::{Buf, Serializer};
     use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
     use packet_formats::ip::Ipv4Proto;
@@ -1405,16 +1405,16 @@ mod tests {
         heap.push(new_data(now + Duration::from_secs(2), 2));
 
         // Earlier timer is popped first.
-        assert!(heap.pop().unwrap().1 == 1);
-        assert!(heap.pop().unwrap().1 == 2);
+        assert_eq!(heap.pop().unwrap().1, 1);
+        assert_eq!(heap.pop().unwrap().1, 2);
         assert!(heap.pop().is_none());
 
         heap.push(new_data(now + Duration::from_secs(1), 1));
         heap.push(new_data(now + Duration::from_secs(1), 1));
 
         // Can pop twice with identical data.
-        assert!(heap.pop().unwrap().1 == 1);
-        assert!(heap.pop().unwrap().1 == 1);
+        assert_eq!(heap.pop().unwrap().1, 1);
+        assert_eq!(heap.pop().unwrap().1, 1);
         assert!(heap.pop().is_none());
     }
 
@@ -1560,16 +1560,11 @@ mod tests {
         let contexts =
             vec![(a.clone(), alice.build()), (b.clone(), bob.build()), (c.clone(), calvin.build())]
                 .into_iter();
-        let mut net = DummyNetwork::new(contexts, move |net, _| {
-            let ret = match *net {
-                "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
-                "bob" => vec![(a.clone(), device, None)],
-                "calvin" => Vec::new(),
-                _ => unreachable!(),
-            };
-
-            println!("{:?}", ret);
-            ret
+        let mut net = DummyNetwork::new(contexts, move |net, _| match *net {
+            "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
+            "bob" => vec![(a.clone(), device, None)],
+            "calvin" => Vec::new(),
+            _ => unreachable!(),
         });
 
         net.collect_frames();

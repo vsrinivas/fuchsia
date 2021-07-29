@@ -427,7 +427,7 @@ fn send_mld_packet<D: LinkDevice, C: MldContext<D>, B: ByteSlice, M: IcmpMldv1Me
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
+    use core::convert::TryInto;
 
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
@@ -797,7 +797,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mld_integration_not_last_dont_send_leave() {
+    fn test_mld_integration_not_last_does_not_send_leave() {
         let mut ctx = DummyContext::default();
         assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
@@ -870,10 +870,10 @@ mod tests {
         // skip.
         test(DummyContext::default(), Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
         let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
-        // Manually set the "scop" field to 0.
+        // Manually set the "scope" field to 0.
         bytes[1] = bytes[1] & 0xF0;
         let reserved0 = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
-        // Manually set the "scop" field to 1 (interface-local).
+        // Manually set the "scope" field to 1 (interface-local).
         bytes[1] = (bytes[1] & 0xF0) | 1;
         let iface_local = MulticastAddr::new(Ipv6Addr::new(bytes)).unwrap();
         test(DummyContext::default(), reserved0);
