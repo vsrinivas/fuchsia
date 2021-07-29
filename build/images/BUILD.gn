@@ -1704,6 +1704,8 @@ action("flash_script") {
 
   if (custom_signing_script != "") {
     image_suffix = "zbi.signed"
+  } else if (use_vboot) {
+    image_suffix = "zbi.vboot"
   } else {
     image_suffix = "zbi"
   }

@@ -30,7 +30,7 @@ bootserver \
     --boot "$IMAGES_PATH/fuchsia.zbi" \
     --fvm "$IMAGES_PATH/obj/build/images/fvm.sparse.blk" \
     --zircona "$IMAGES_PATH/fuchsia.zbi.vboot" \
-    --zirconr "$IMAGES_PATH/zedboot.vboot"
+    --zirconr "$IMAGES_PATH/zedboot.zbi.vboot"
 ```
 
 
