@@ -19,10 +19,10 @@ impl SymlinkNode {
 
 impl FsNodeOps for SymlinkNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(NullFile))
+        unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink<'a>(&'a self, node: &FsNode) -> Result<FsString, Errno> {
+    fn readlink(&self, node: &FsNode) -> Result<FsString, Errno> {
         let now = fuchsia_runtime::utc_time();
         node.info_write().time_access = now;
         Ok(self.target.clone())

@@ -130,12 +130,12 @@ pub trait FsNodeOps: Send + Sync {
     }
 
     /// Creates a symlink with the given `target` path.
-    fn mksymlink(&self, _child: FsNode, _target: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn create_symlink(&self, _child: FsNode, _target: &FsStr) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
     /// Reads the symlink from this node.
-    fn readlink<'a>(&'a self, _node: &FsNode) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode) -> Result<FsString, Errno> {
         Err(EINVAL)
     }
 
@@ -304,13 +304,13 @@ impl FsNode {
         })
     }
 
-    pub fn mksymlink(
+    pub fn create_symlink(
         self: &FsNodeHandle,
         name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |node| {
-            self.ops().mksymlink(node, target)
+            self.ops().create_symlink(node, target)
         })
     }
 
@@ -319,19 +319,18 @@ impl FsNode {
     }
 
     pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
-        let _child = {
-            let mut children = self.children.write();
-            let child =
-                children.get(name).and_then(OnceCell::get).ok_or(ENOENT)?.upgrade().unwrap();
-            // TODO: Check _kind against the child's mode.
-            self.ops().unlink(self, &child, kind)?;
-            children.remove(name);
-            child
-        };
-        // We hold a reference to child until we have released the children
-        // lock so that we do not trigger a deadlock in the Drop trait for
-        // FsNode, which attempts to remove the FsNode from its parent's child
-        // list.
+        let mut children = self.children.write();
+        let child = children.get(name).and_then(OnceCell::get).ok_or(ENOENT)?.upgrade().unwrap();
+        // TODO: Check _kind against the child's mode.
+        self.ops().unlink(self, &child, kind)?;
+        children.remove(name);
+
+        // We drop the children lock before we drop the child so that we do
+        // not trigger a deadlock in the Drop trait for FsNode, which attempts
+        // to remove the FsNode from its parent's child list.
+        std::mem::drop(children);
+        std::mem::drop(child);
+
         Ok(())
     }
 

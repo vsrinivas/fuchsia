@@ -147,7 +147,7 @@ impl NamespaceNode {
     }
 
     pub fn symlink(&self, name: &FsStr, target: &FsStr) -> Result<NamespaceNode, Errno> {
-        self.create_node(name, || self.node.mksymlink(name, target))
+        self.create_node(name, || self.node.create_symlink(name, target))
     }
 
     pub fn unlink(&self, context: &FsContext, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {

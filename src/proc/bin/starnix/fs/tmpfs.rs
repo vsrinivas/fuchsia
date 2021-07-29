@@ -72,7 +72,7 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(child)
     }
 
-    fn mksymlink(&self, mut child: FsNode, target: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn create_symlink(&self, mut child: FsNode, target: &FsStr) -> Result<FsNodeHandle, Errno> {
         assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
         child.set_ops(SymlinkNode::new(target));
         let child = child.into_handle();
