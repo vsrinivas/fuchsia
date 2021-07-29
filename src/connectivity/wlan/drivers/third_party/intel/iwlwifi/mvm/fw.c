@@ -1245,16 +1245,17 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
         ret = iwl_mvm_init_mcc(mvm);
         if (ret) { goto error; }
     }
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
-        mvm->scan_type = IWL_SCAN_TYPE_NOT_SET;
-        mvm->hb_scan_type = IWL_SCAN_TYPE_NOT_SET;
-        ret = iwl_mvm_config_scan(mvm);
-        if (ret != ZX_OK) {
-            goto error;
-        }
-    }
 #endif  // NEEDS_PORTING
+
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+    mvm->scan_type = IWL_SCAN_TYPE_NOT_SET;
+    mvm->hb_scan_type = IWL_SCAN_TYPE_NOT_SET;
+    ret = iwl_mvm_config_scan(mvm);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvm, "Config scan error.");
+      goto error;
+    }
+  }
 
   /* allow FW/transport low power modes if not during restart */
   if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {

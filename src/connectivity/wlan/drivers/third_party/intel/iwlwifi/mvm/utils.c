@@ -277,7 +277,7 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info
   if (!ptr_chan_idx) {
     return ZX_ERR_INVALID_ARGS;
   }
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   if (band == NL80211_BAND_60GHZ) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -706,7 +706,7 @@ zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int s
  */
 zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
   return ZX_ERR_NOT_SUPPORTED;
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct iwl_host_cmd cmd = {
         .id = LQ_CMD,
         .len =
@@ -739,7 +739,7 @@ zx_status_t iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool
 void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                          enum iwl_mvm_smps_type_request req_type,
                          enum ieee80211_smps_mode smps_request) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct iwl_mvm_vif* mvmvif;
     enum ieee80211_smps_mode smps_mode;
     int i;
@@ -773,7 +773,7 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 
 zx_status_t iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
   return ZX_ERR_NOT_SUPPORTED;
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     struct iwl_statistics_cmd scmd = {
         .flags = clear ? cpu_to_le32(IWL_STATISTICS_FLG_CLEAR) : 0,
     };
@@ -878,45 +878,46 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
 
     return iwl_mvm_power_update_mac(mvm);
 }
+#endif  // NEEDS_PORTING
 
 struct iwl_mvm_low_latency_iter {
-    bool result;
-    bool result_per_band[NUM_NL80211_BANDS];
+  bool result;
+  bool result_per_band[WLAN_INFO_BAND_COUNT];
 };
 
-static void iwl_mvm_ll_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_mvm_low_latency_iter* result = _data;
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    enum nl80211_band band;
+static void iwl_mvm_ll_iter(void* _data, struct iwl_mvm_vif* mvmvif) {
+  struct iwl_mvm_low_latency_iter* result = _data;
+  wlan_info_band_t band;
 
-    if (iwl_mvm_vif_low_latency(mvmvif)) {
-        result->result = true;
+  if (iwl_mvm_vif_low_latency(mvmvif)) {
+    result->result = true;
 
-        if (!mvmvif->phy_ctxt) { return; }
-
-        band = mvmvif->phy_ctxt->channel->band;
-        result->result_per_band[band] = true;
+    if (!mvmvif->phy_ctxt) {
+      return;
     }
+
+    band = mvmvif->phy_ctxt->chandef.cbw;
+    result->result_per_band[band] = true;
+  }
 }
 
 bool iwl_mvm_low_latency(struct iwl_mvm* mvm) {
-    struct iwl_mvm_low_latency_iter data = {};
+  struct iwl_mvm_low_latency_iter data = {};
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_ll_iter, &data);
+  ieee80211_iterate_active_interfaces_atomic(mvm, iwl_mvm_ll_iter, &data);
 
-    return data.result;
+  return data.result;
 }
 
-bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, enum nl80211_band band) {
-    struct iwl_mvm_low_latency_iter data = {};
+bool iwl_mvm_low_latency_band(struct iwl_mvm* mvm, wlan_info_band_t band) {
+  struct iwl_mvm_low_latency_iter data = {};
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_ll_iter, &data);
+  ieee80211_iterate_active_interfaces_atomic(mvm, iwl_mvm_ll_iter, &data);
 
-    return data.result_per_band[band];
+  return data.result_per_band[band];
 }
 
+#if 0   // NEEDS_PORTING
 struct iwl_bss_iter_data {
     struct ieee80211_vif* vif;
     bool error;

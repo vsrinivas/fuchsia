@@ -17,6 +17,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-capa-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
@@ -273,8 +274,75 @@ class ScanTest : public MvmTest {
   } scan_result;
 };
 
+class UmacScanTest : public FakeUcodeCapaTest {
+ public:
+  UmacScanTest() TA_NO_THREAD_SAFETY_ANALYSIS
+      : FakeUcodeCapaTest(0, BIT(IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
+    mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
+    mvmvif_->mvm = mvm_;
+    mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
+        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+    mvm_->mvmvif[0] = mvmvif_;
+    mvm_->vif_count++;
+
+    mtx_lock(&mvm_->mutex);
+
+    // Fake callback registered to capture scan completion responses.
+    ops_.hw_scan_complete = [](void* ctx, const wlan_hw_scan_result_t* result) {
+      struct ScanResult* sr = (struct ScanResult*)ctx;
+      sr->sme_notified = true;
+      sr->success = (result->code == WLAN_HW_SCAN_SUCCESS ? true : false);
+    };
+
+    mvmvif_sta_.mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
+    mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    mvmvif_sta_.ifc.ops = &ops_;
+    mvmvif_sta_.ifc.ctx = &scan_result_;
+
+    // This can be moved out or overridden when we add other scan types.
+    scan_config_.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
+
+    // Create scan timeout async loop.
+    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(loop_->StartThread("iwlwifi-mvm-test-worker", nullptr));
+
+    trans_ = sim_trans_.iwl_trans();
+    trans_->dispatcher = loop_->dispatcher();
+
+    mvm_->dispatcher = trans_->dispatcher;
+    mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
+    mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
+    mvm_->scan_timeout_delay = ZX_SEC(10);
+  }
+
+  ~UmacScanTest() TA_NO_THREAD_SAFETY_ANALYSIS {
+    free(mvmvif_->ifc.ops);
+    free(mvmvif_);
+    mtx_unlock(&mvm_->mutex);
+  }
+
+  std::unique_ptr<::async::Loop> loop_;
+  struct iwl_trans* trans_;
+  wlanmac_ifc_protocol_ops_t ops_;
+  struct iwl_mvm_vif mvmvif_sta_;
+  wlan_hw_scan_config_t scan_config_{.num_channels = 4, .channels = {7, 1, 40, 136}};
+
+  // Structure to capture scan results.
+  struct ScanResult {
+    bool sme_notified;
+    bool success;
+  } scan_result_;
+
+ protected:
+  struct iwl_mvm* mvm_;
+  struct iwl_mvm_vif* mvmvif_;
+};
+
+/* Tests for LMAC scan */
 // Tests scenario for a successful scan completion.
-TEST_F(ScanTest, RegPassiveScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(ScanTest, RegPassiveLmacScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
   ASSERT_EQ(false, scan_result.sme_notified);
@@ -300,7 +368,7 @@ TEST_F(ScanTest, RegPassiveScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 // Tests scenario where the scan request aborted / failed.
-TEST_F(ScanTest, RegPassiveScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
+TEST_F(ScanTest, RegPassiveLmacScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   ASSERT_EQ(nullptr, mvm_->scan_vif);
 
@@ -326,6 +394,61 @@ TEST_F(ScanTest, RegPassiveScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
   EXPECT_EQ(false, scan_result.success);
 }
 
+/* Tests for UMAC scan */
+// Tests scenario for a successful scan completion.
+TEST_F(UmacScanTest, RegPassiveUmacScanSuccess) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+  ASSERT_EQ(false, scan_result_.sme_notified);
+  ASSERT_EQ(false, scan_result_.success);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &scan_config_));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
+
+  struct iwl_umac_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_COMPLETED
+  };
+  TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
+
+  // Call notify complete to simulate scan completion.
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_rx_umac_scan_complete_notif(mvm_, &rxb);
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result_.sme_notified);
+  EXPECT_EQ(true, scan_result_.success);
+}
+
+// Tests scenario where the scan request aborted / failed.
+TEST_F(UmacScanTest, RegPassiveUmacScanAborted) TA_NO_THREAD_SAFETY_ANALYSIS {
+  ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  ASSERT_EQ(nullptr, mvm_->scan_vif);
+
+  ASSERT_EQ(false, scan_result_.sme_notified);
+  ASSERT_EQ(false, scan_result_.success);
+  ASSERT_EQ(ZX_OK, iwl_mvm_reg_scan_start(&mvmvif_sta_, &scan_config_));
+  EXPECT_EQ(IWL_MVM_SCAN_REGULAR, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(&mvmvif_sta_, mvm_->scan_vif);
+
+  // Set scan status to ABORTED so simulate a scan abort.
+  struct iwl_umac_scan_complete scan_notif {
+    .status = IWL_SCAN_OFFLOAD_ABORTED
+  };
+  TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
+
+  // Call notify complete to simulate scan abort.
+  mtx_unlock(&mvm_->mutex);
+  iwl_mvm_rx_umac_scan_complete_notif(mvm_, &rxb);
+  mtx_lock(&mvm_->mutex);
+
+  EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
+  EXPECT_EQ(true, scan_result_.sme_notified);
+  EXPECT_EQ(false, scan_result_.success);
+}
+
+/* Tests for both LMAC and UMAC scans */
 // Tests condition where scan completion timeouts out due to no response from FW.
 TEST_F(ScanTest, RegPassiveScanTimeout) TA_NO_THREAD_SAFETY_ANALYSIS {
   ASSERT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);

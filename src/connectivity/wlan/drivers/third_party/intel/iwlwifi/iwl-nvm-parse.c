@@ -139,6 +139,21 @@ uint16_t iwl_cfg80211_rates[] = {
 #define RATES_52_OFFS 4  // 5GHz band doesn't support legacy rates (1/2/5.5/11Mbps).
 #define N_RATES_52 (N_RATES_24 - RATES_52_OFFS)
 
+// Get the index of the 'rate' in the iwl_cfg80211_rates[].
+//
+// Note that it is the 'hw_index' field in the original code and was removed in fxr/338189.
+//
+size_t iwl_get_rate_index(uint16_t rate) {
+  for (size_t i = 0; i < ARRAY_SIZE(iwl_cfg80211_rates); i++) {
+    if (iwl_cfg80211_rates[i] == rate) {
+      return i;
+    }
+  }
+
+  IWL_WARN(nullptr, "Unexpected rate value (%u)\n", rate);
+  return 0;
+}
+
 /**
  * enum iwl_nvm_channel_flags - channel flags in NVM
  * @NVM_CHANNEL_VALID: channel is usable for this SKU/geo

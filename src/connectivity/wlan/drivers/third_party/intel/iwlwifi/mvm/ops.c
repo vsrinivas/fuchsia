@@ -266,10 +266,11 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 
     RX_HANDLER(SCAN_ITERATION_COMPLETE, iwl_mvm_rx_lmac_scan_iter_complete_notif, RX_HANDLER_SYNC),
 #endif  // NEEDS_PORTING
+    // TODO(79965): Add support for handler with RX_HANDLER_ASYNC_LOCKED.
     RX_HANDLER(SCAN_OFFLOAD_COMPLETE, iwl_mvm_rx_lmac_scan_complete_notif, RX_HANDLER_SYNC),
+    RX_HANDLER(SCAN_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_complete_notif, RX_HANDLER_SYNC),
 #if 0  // NEEDS_PORTING
     RX_HANDLER(MATCH_FOUND_NOTIFICATION, iwl_mvm_rx_scan_match_found, RX_HANDLER_SYNC),
-    RX_HANDLER(SCAN_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_complete_notif, RX_HANDLER_ASYNC_LOCKED),
     RX_HANDLER(SCAN_ITERATION_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_iter_complete_notif,
                RX_HANDLER_SYNC),
 

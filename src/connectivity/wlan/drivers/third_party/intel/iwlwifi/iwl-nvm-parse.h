@@ -115,4 +115,9 @@ static inline unsigned cfg_rates_to_80211(uint16_t cfg) { return cfg / 5; }
 // extern
 extern uint16_t iwl_cfg80211_rates[];
 
+//
+// Get the index of the 'rate' in the iwl_cfg80211_rates[].
+//
+size_t iwl_get_rate_index(uint16_t rate);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_
