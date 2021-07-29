@@ -11,11 +11,11 @@ use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{FutureExt as _, Stream, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{Stream, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_subnet, net_ip_v4, net_ip_v6, net_mac};
 use netstack_testing_common::{
     constants::{ipv4 as ipv4_consts, ipv6 as ipv6_consts},
-    environments::{Netstack2, Reachability as _, ReachabilityMonitor, TestSandboxExt as _},
+    environments::{KnownServiceProvider, Netstack2, TestSandboxExt as _},
     get_inspect_data, EthertapName as _,
 };
 use netstack_testing_macros::variants_test;
@@ -428,21 +428,24 @@ fn handle_frame_stream<'a>(
         (InterfaceConfig::new_secondary(HIGHER_METRIC), State::Internet),
     ];
     "internet_internet")]
-async fn test_reachability_monitor_state<E: netemul::Endpoint>(
+async fn test_state<E: netemul::Endpoint>(
     name: &str,
     sub_test_name: &str,
     configs: &[(InterfaceConfig, State)],
 ) {
     let name = format!("{}_{}", name, sub_test_name);
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let env = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(name.clone(), &[])
-        .expect("failed to create environment");
-    let controller = env
-        .connect_to_service::<fnet_neighbor::ControllerMarker>()
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            name.clone(),
+            std::iter::once(&KnownServiceProvider::Reachability),
+        )
+        .expect("failed to create realm");
+    let controller = realm
+        .connect_to_protocol::<fnet_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
-    let netstack = env
-        .connect_to_service::<fnetstack::NetstackMarker>()
+    let netstack = realm
+        .connect_to_protocol::<fnetstack::NetstackMarker>()
         .expect("failed to connect to Netstack");
 
     let interfaces = futures::stream::iter(configs.iter())
@@ -454,7 +457,7 @@ async fn test_reachability_monitor_state<E: netemul::Endpoint>(
                     sandbox.create_network(name.clone()).await.expect("failed to create network");
                 let fake_ep =
                     network.create_fake_endpoint().expect("failed to create fake endpoint");
-                let interface = env
+                let interface = realm
                     .join_network::<E, _>(
                         &network,
                         name.as_str().ethertap_compatible_name(),
@@ -490,28 +493,18 @@ async fn test_reachability_monitor_state<E: netemul::Endpoint>(
         })
         .collect::<futures::stream::SelectAll<_>>();
 
-    // Start reachability monitor.
-    let launcher = env.get_launcher().expect("get launcher");
-    let mut reachability = fuchsia_component::client::launch(
-        &launcher,
-        ReachabilityMonitor::PKG_URL.to_string(),
-        None,
-    )
-    .expect("failed to launch reachability monitor");
-
-    // TODO(fxbug.dev/65585) Get reachability monitor's reachability state over FIDL rather than
-    // the inspect data. Watching for updates to inspect data is currently not supported, so poll
-    // every 100ms (sufficiently frequent to not increase the time it takes for the test to
+    // TODO(https://fxbug.dev/65585): Get reachability monitor's reachability state over FIDL rather
+    // than the inspect data. Watching for updates to inspect data is currently not supported, so
+    // poll every 100ms (sufficiently frequent to not increase the time it takes for the test to
     // complete and not too frequent to encounter the "InconsistentSnapshot" inspect get error).
-    const INSPECT_COMPONENT: &str = "reachability.cmx";
+    const INSPECT_COMPONENT: &str = "reachability";
     const INSPECT_TREE_SELECTOR: &str = "root";
     let inspect_data_stream = fasync::Interval::new(zx::Duration::from_millis(100))
         .then(|()| {
-            get_inspect_data(&env, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
+            get_inspect_data(&realm, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
                 .map_ok(|data| extract_reachability_states(&data))
         })
         .fuse();
-    let mut reachability_monitor_wait_fut = reachability.wait().fuse();
     futures::pin_mut!(inspect_data_stream);
 
     // Ensure that at least one echo request has been replied to before polling the inspect data
@@ -527,66 +520,63 @@ async fn test_reachability_monitor_state<E: netemul::Endpoint>(
             },
         );
     loop {
+        // TODO(https://fxbug.dev/80818): Wait on reachability monitor exiting and fail the test if
+        // so.
         futures::select! {
-            o = echo_reply_streams.next() => {
-                let () = o.expect("interface echo reply stream ended unexpectedly");
-            }
-            r = inspect_data_stream.try_next() => {
-                let (got_interfaces, IpStates { ipv4: got_system_ipv4, ipv6: got_system_ipv6 }) = r
-                    .expect("inspect data stream error")
-                    .expect("inspect data stream ended unexpectedly");
+             o = echo_reply_streams.next() => {
+                 let () = o.expect("interface echo reply stream ended unexpectedly");
+             }
+             r = inspect_data_stream.try_next() => {
+                 let (got_interfaces, IpStates { ipv4: got_system_ipv4, ipv6: got_system_ipv6 }) = r
+                     .expect("inspect data stream error")
+                     .expect("inspect data stream ended unexpectedly");
 
-                let equal_count = got_interfaces.iter().fold(0, |equal_count, (id, got)| {
-                    let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
-                        want_interfaces.get(&id).expect(
-                            &format!(
-                                "unknow interface {} with state {:?} found in inspect data",
-                                id, got
-                            )
-                        );
-                    let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
-                    if got_ipv4 > want_ipv4 {
-                        panic!(
-                            "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
-                            id, got_ipv4, want_ipv4,
-                        );
-                    }
-                    if got_ipv6 > want_ipv6 {
-                        panic!(
-                            "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
-                            id, got_ipv6, want_ipv6,
-                        );
-                    }
-                    if got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6 {
-                        equal_count + 1
-                    } else {
-                        equal_count
-                    }
-                });
-                if got_system_ipv4 > want_system_ipv4 {
-                    panic!(
-                        "system IPv4 state exceeded; got: {:?}, want: {:?}",
-                        got_system_ipv4, want_system_ipv4,
-                    )
-                }
-                if got_system_ipv6 > want_system_ipv6 {
-                    panic!(
-                        "system IPv6 state exceeded; got: {:?}, want: {:?}",
-                        got_system_ipv6, want_system_ipv6,
-                    )
-                }
-                if got_system_ipv4 == want_system_ipv4
-                    && got_system_ipv6 == want_system_ipv6
-                    && equal_count == interfaces.len()
-                {
-                    return;
-                }
-            }
-            r = reachability_monitor_wait_fut => {
-                let exit_status =
-                    r.expect("error while waiting for reachability monitor to exit");
-                panic!("reachability monitor terminated unexpectedly with: {}", exit_status);
-            }
+                 let equal_count = got_interfaces.iter().fold(0, |equal_count, (id, got)| {
+                     let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
+                         want_interfaces.get(&id).expect(
+                             &format!(
+                                 "unknow interface {} with state {:?} found in inspect data",
+                                 id, got
+                             )
+                         );
+                     let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
+                     if got_ipv4 > want_ipv4 {
+                         panic!(
+                             "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
+                             id, got_ipv4, want_ipv4,
+                         );
+                     }
+                     if got_ipv6 > want_ipv6 {
+                         panic!(
+                             "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
+                             id, got_ipv6, want_ipv6,
+                         );
+                     }
+                     if got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6 {
+                         equal_count + 1
+                     } else {
+                         equal_count
+                     }
+                 });
+                 if got_system_ipv4 > want_system_ipv4 {
+                     panic!(
+                         "system IPv4 state exceeded; got: {:?}, want: {:?}",
+                         got_system_ipv4, want_system_ipv4,
+                     )
+                 }
+                 if got_system_ipv6 > want_system_ipv6 {
+                     panic!(
+                         "system IPv6 state exceeded; got: {:?}, want: {:?}",
+                         got_system_ipv6, want_system_ipv6,
+                     )
+                 }
+                 if got_system_ipv4 == want_system_ipv4
+                     && got_system_ipv6 == want_system_ipv6
+                     && equal_count == interfaces.len()
+                 {
+                     return;
+                 }
+             }
         }
     }
 }

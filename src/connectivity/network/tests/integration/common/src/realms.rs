@@ -65,6 +65,7 @@ pub enum KnownServiceProvider {
     DhcpServer,
     Dhcpv6Client,
     LookupAdmin,
+    Reachability,
 }
 
 /// Constant properties of components used in networking integration tests, such
@@ -97,6 +98,10 @@ pub mod constants {
         pub const COMPONENT_NAME: &str = "dns-resolver";
         pub const COMPONENT_URL: &str =
             "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dns resolver";
+    }
+    pub mod reachability {
+        pub const COMPONENT_NAME: &str = "reachability";
+        pub const COMPONENT_URL: &str = "#meta/reachability.cm";
     }
 }
 
@@ -191,6 +196,24 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ])),
                 ..fnetemul::ChildDef::EMPTY
             },
+            KnownServiceProvider::Reachability => fnetemul::ChildDef {
+                name: Some(constants::reachability::COMPONENT_NAME.to_string()),
+                url: Some(constants::reachability::COMPONENT_URL.to_string()),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnetstack::NetstackMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                ])),
+                eager: Some(true),
+                ..fnetemul::ChildDef::EMPTY
+            },
         }
     }
 }
@@ -245,20 +268,6 @@ impl Manager for NetCfg {
     const PKG_URL: &'static str = "#meta/netcfg-netemul.cmx";
     // Specify an empty config file for NetCfg when it is run in netemul.
     const TESTING_ARGS: &'static [&'static str] = &["--config-data", "netcfg/empty.json"];
-}
-
-/// Abstraction for a Fuchsia component which monitors reachability status.
-pub trait Reachability: Copy + Clone {
-    /// The Fuchsia package URL to the component.
-    const PKG_URL: &'static str;
-}
-
-/// Uninstantiable type that represents a reachability monitor.
-#[derive(Copy, Clone)]
-pub enum ReachabilityMonitor {}
-
-impl Reachability for ReachabilityMonitor {
-    const PKG_URL: &'static str = "#meta/reachability.cmx";
 }
 
 /// Extensions to `netemul::TestSandbox`.

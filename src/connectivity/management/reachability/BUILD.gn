@@ -10,13 +10,11 @@ rustc_binary("bin") {
   name = "reachability"
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
 
   deps = [
     "core:lib",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -33,19 +31,16 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:pin-utils",
-  ]
-
   sources = [
     "src/eventloop.rs",
     "src/main.rs",
   ]
+}
+
+fuchsia_component("component-v2") {
+  component_name = "reachability"
+  manifest = "meta/reachability.cml"
+  deps = [ ":bin" ]
 }
 
 fuchsia_component("component") {
@@ -58,17 +53,9 @@ fuchsia_package("reachability") {
   deps = [ ":component" ]
 }
 
-fuchsia_unittest_package("reachability-tests") {
-  deps = [ ":bin_test" ]
-  manifest = "meta/reachability_bin_test.cmx"
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    ":reachability-tests",
-    "core:tests",
-  ]
+  deps = [ "core:tests" ]
 }
 
 config_data("reachability_sysmgr_config") {

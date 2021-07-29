@@ -59,6 +59,5 @@ rustc_library("lib") {
     "//src/connectivity/network/tests/integration/dns",
     "//src/connectivity/network/tests/integration/ipv6",
     "//src/connectivity/network/tests/integration/management",
-    "//src/connectivity/network/tests/integration/reachability",
   ]
 }

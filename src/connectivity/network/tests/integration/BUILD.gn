@@ -28,7 +28,6 @@ tests = [
   "dns",
   "ipv6",
   "management",
-  "reachability",
 ]
 
 foreach(test, tests) {
@@ -72,9 +71,6 @@ fuchsia_test_package("netstack-integration-tests") {
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
 
-    # reachability monitor is tested.
-    "//src/connectivity/management/reachability:component",
-
     # netemul-sandbox is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
   ]
@@ -86,6 +82,7 @@ tests_v2 = [
   "inspect",
   "ipv4",
   "neighbor",
+  "reachability",
   "routes",
   "socket",
   "sys",
@@ -114,6 +111,9 @@ fuchsia_test_package("netstack-integration-tests-v2") {
 
     # netstack3 is under test.
     "//src/connectivity/network/netstack3:component-v2",
+
+    # reachability monitor is under test.
+    "//src/connectivity/management/reachability:component-v2",
 
     # sampler config is tested as part of inspect integration tests.
     ":sampler-config",
