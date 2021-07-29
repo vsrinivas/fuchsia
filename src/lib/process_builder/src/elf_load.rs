@@ -196,7 +196,11 @@ pub fn map_elf_segments(
             vmo_to_map = vmo;
         } else {
             writeable_vmo = vmo
-                .create_child(zx::VmoChildOptions::COPY_ON_WRITE, vmo_start as u64, vmo_size as u64)
+                .create_child(
+                    zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE,
+                    vmo_start as u64,
+                    vmo_size as u64,
+                )
                 .map_err(ElfLoadError::VmoCowClone)?;
             writeable_vmo
                 .set_name(&vmo_name_with_prefix(&vmo_name, VMO_NAME_PREFIX_DATA))
