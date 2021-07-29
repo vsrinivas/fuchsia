@@ -144,16 +144,9 @@ Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const Store::Root
   RemoveEmptyDirectories(tmp_metadata_.RootDir());
   RemoveEmptyDirectories(cache_metadata_.RootDir());
 
-  tmp_metadata_.RecreateFromFilesystem();
-  cache_metadata_.RecreateFromFilesystem();
-
-  for (const auto report_id : tmp_metadata_.Reports()) {
-    tags_->Register(report_id, {Logname(tmp_metadata_.ReportProgram(report_id))});
-  }
-
-  for (const auto report_id : cache_metadata_.Reports()) {
-    tags_->Register(report_id, {Logname(cache_metadata_.ReportProgram(report_id))});
-  }
+  // |temp_root.dir| must be usable immediately.
+  FX_CHECK(RecreateFromFilesystem(tmp_metadata_));
+  RecreateFromFilesystem(cache_metadata_);
 }
 
 bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports) {
@@ -265,7 +258,6 @@ Report Store::Get(const ReportId report_id) {
 std::vector<ReportId> Store::GetReports() const {
   auto all_reports = tmp_metadata_.Reports();
   const auto cache_reports = cache_metadata_.Reports();
-
   all_reports.insert(all_reports.end(), cache_reports.begin(), cache_reports.end());
 
   return all_reports;
@@ -347,19 +339,46 @@ void Store::RemoveAll() {
   };
 
   DeleteAll(tmp_metadata_.RootDir());
-  tmp_metadata_.RecreateFromFilesystem();
 
-  DeleteAll(cache_metadata_.RootDir());
-  cache_metadata_.RecreateFromFilesystem();
+  FX_CHECK(RecreateFromFilesystem(tmp_metadata_));
+
+  if (cache_metadata_.IsDirectoryUsable()) {
+    DeleteAll(cache_metadata_.RootDir());
+  }
+  RecreateFromFilesystem(cache_metadata_);
+}
+
+bool Store::RecreateFromFilesystem(StoreMetadata& store_root) {
+  const bool success = store_root.RecreateFromFilesystem();
+  for (const auto report_id : store_root.Reports()) {
+    tags_->Register(report_id, {Logname(store_root.ReportProgram(report_id))});
+  }
+
+  return success;
 }
 
 StoreMetadata& Store::RootFor(const ReportId id) {
-  return (tmp_metadata_.Contains(id)) ? tmp_metadata_ : cache_metadata_;
+  if (tmp_metadata_.Contains(id)) {
+    return tmp_metadata_;
+  }
+
+  if (!cache_metadata_.IsDirectoryUsable()) {
+    FX_LOGS(FATAL) << "Unable to find root for " << id << ", there's a logic bug somewhere";
+  }
+
+  return cache_metadata_;
 }
 
 StoreMetadata& Store::PickRootForStorage(const StorageSize report_size) {
-  // Only use cache if there's enough space to put the report there.
-  return (cache_metadata_.RemainingSpace() < report_size) ? tmp_metadata_ : cache_metadata_;
+  // Attempt to make |cache_metadata_| usable if it isn't already.
+  if (!cache_metadata_.IsDirectoryUsable()) {
+    RecreateFromFilesystem(cache_metadata_);
+  }
+
+  // Only use cache if it's valid and there's enough space to put the report there.
+  return (!cache_metadata_.IsDirectoryUsable() || cache_metadata_.RemainingSpace() < report_size)
+             ? tmp_metadata_
+             : cache_metadata_;
 }
 
 bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize required_space,

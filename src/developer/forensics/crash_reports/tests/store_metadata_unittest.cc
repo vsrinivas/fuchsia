@@ -13,6 +13,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace forensics {
@@ -185,6 +187,17 @@ TEST_F(StoreMetadataTest, AddAndDelete) {
 
   ASSERT_FALSE(metadata().Contains(0));
   ASSERT_FALSE(metadata().Contains("program 1"));
+}
+
+TEST_F(StoreMetadataTest, RecreateFromFilesystem_FailsInitially) {
+  StoreMetadata metadata("/tmp/delayed/path", StorageSize::Gigabytes(1u));
+  ASSERT_FALSE(metadata.IsDirectoryUsable());
+
+  ASSERT_TRUE(files::CreateDirectory("/tmp/delayed/path"));
+  metadata.RecreateFromFilesystem();
+  EXPECT_TRUE(metadata.IsDirectoryUsable());
+
+  ASSERT_TRUE(files::DeletePath("/tmp/delayed", /*recursive=*/true));
 }
 
 }  // namespace

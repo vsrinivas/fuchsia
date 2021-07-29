@@ -58,6 +58,9 @@ class Store {
   bool Contains(ReportId id);
 
  private:
+  // Recreates |store_root| from the filesystem and initializes necessary state.
+  bool RecreateFromFilesystem(StoreMetadata& store_root);
+
   // The root that the report with ReportId |id| is stored under.
   StoreMetadata& RootFor(ReportId id);
 

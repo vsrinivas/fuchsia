@@ -508,6 +508,82 @@ TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
   EXPECT_FALSE(files::IsDirectory(empty_dir));
 }
 
+TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
+  const std::string expected_program_shortname = "program_shortname";
+
+  const std::map<std::string, std::string> expected_annotations = {
+      {"annotation0.cc", "annotation_value0"},
+      {"annotation1.txt", "annotation_value1"},
+      {"annotation2.zip", "annotation_value2"},
+  };
+
+  const std::map<std::string, std::string> expected_attachments = {
+      {"attachment_key0", "attachment_value0"},
+      {"attachment_key1", "attachment_value1"},
+      {"attachment_key2", "attachment_value2"},
+  };
+
+  const std::string expected_snapshot_uuid = "snapshot_uuid";
+  const std::string expected_minidump = "mindump";
+
+  size_t expected_report_size = expected_snapshot_uuid.size() + expected_minidump.size();
+  for (const auto& [k, v] : expected_annotations) {
+    expected_report_size += k.size() + v.size() + 11 /*json formatting*/;
+  }
+  expected_report_size += 5 /*json formatting*/;
+  for (const auto& [k, v] : expected_attachments) {
+    expected_report_size += v.size();
+  }
+
+  const std::string cache_root = files::JoinPath(cache_dir_.path(), "delayed/path");
+  store_ = std::make_unique<Store>(
+      &tags_, info_context_,
+      /*temp_root=*/Store::Root{tmp_dir_.path(), StorageSize::Gigabytes(1u)},
+      /*persistent_root=*/Store::Root{cache_root, StorageSize::Gigabytes(1u)});
+
+  std::map<std::string, std::string> annotations;
+  std::map<std::string, std::string> attachments;
+  std::optional<std::string> snapshot_uuid;
+  std::optional<std::string> minidump;
+
+  // The first report should be placed under the tmp directory because the cache directory isn't
+  // ready.
+  std::vector<ReportId> garbage_collected_reports;
+  const auto tmp_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                          expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
+
+  ASSERT_TRUE(store_->Contains(tmp_id.value()));
+  ASSERT_TRUE(ReadTmp(expected_program_shortname, tmp_id.value(), &annotations, &attachments,
+                      &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(expected_annotations, annotations);
+  EXPECT_EQ(expected_attachments, attachments);
+  ASSERT_TRUE(snapshot_uuid.has_value());
+  EXPECT_EQ(expected_snapshot_uuid, snapshot_uuid.value());
+  ASSERT_TRUE(minidump.has_value());
+  EXPECT_EQ(expected_minidump, minidump.value());
+
+  // Create the cache directory so it can be used for the next report.
+  ASSERT_TRUE(files::CreateDirectory(cache_root));
+
+  // The second report should be placed under the cache directory.
+  const auto cache_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
+                            expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
+  EXPECT_TRUE(cache_id.has_value());
+  EXPECT_TRUE(garbage_collected_reports.empty());
+
+  ASSERT_TRUE(store_->Contains(cache_id.value()));
+  ASSERT_TRUE(Read(cache_root, expected_program_shortname, cache_id.value(), &annotations,
+                   &attachments, &snapshot_uuid, &minidump));
+
+  EXPECT_EQ(expected_annotations, annotations);
+  EXPECT_EQ(expected_attachments, attachments);
+  ASSERT_TRUE(snapshot_uuid.has_value());
+  EXPECT_EQ(expected_snapshot_uuid, snapshot_uuid.value());
+  ASSERT_TRUE(minidump.has_value());
+  EXPECT_EQ(expected_minidump, minidump.value());
+}
+
 TEST_F(StoreTest, Check_InspectTree) {
   const std::string snapshot_uuid = "snapshot_uuid";
   const std::string minidump = "minidump";

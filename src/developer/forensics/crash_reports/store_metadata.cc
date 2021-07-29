@@ -16,17 +16,21 @@ namespace fs = std::filesystem;
 StoreMetadata::StoreMetadata(std::string store_root, const StorageSize max_size)
     : store_root_(std::move(store_root)),
       max_size_(max_size),
-      current_size_(StorageSize::Bytes(0u)) {
+      current_size_(StorageSize::Bytes(0u)),
+      is_directory_usable_(false) {
   RecreateFromFilesystem();
 }
 
-void StoreMetadata::RecreateFromFilesystem() {
+bool StoreMetadata::RecreateFromFilesystem() {
   current_size_ = StorageSize::Bytes(0u);
   report_metadata_.clear();
   program_metadata_.clear();
 
-  if (!fs::is_directory(store_root_)) {
-    FX_CHECK(fs::create_directory(store_root_));
+  std::error_code error_code;
+  if (!fs::is_directory(store_root_) && !fs::create_directory(store_root_, error_code)) {
+    FX_LOGS(WARNING) << "Failed to create " << store_root_ << " " << error_code;
+    is_directory_usable_ = false;
+    return false;
   }
 
   for (const auto& program_dir : fs::directory_iterator(store_root_)) {
@@ -63,7 +67,12 @@ void StoreMetadata::RecreateFromFilesystem() {
   for (auto& [_, metadata] : program_metadata_) {
     std::sort(metadata.report_ids.begin(), metadata.report_ids.end());
   }
+
+  is_directory_usable_ = true;
+  return true;
 }
+
+bool StoreMetadata::IsDirectoryUsable() const { return is_directory_usable_; }
 
 bool StoreMetadata::Contains(const ReportId report_id) const {
   return report_metadata_.find(report_id) != report_metadata_.end();
@@ -81,6 +90,7 @@ const std::string& StoreMetadata::RootDir() const { return store_root_; }
 
 void StoreMetadata::Add(const ReportId report_id, std::string program,
                         std::vector<std::string> attachments, const StorageSize size) {
+  FX_CHECK(IsDirectoryUsable());
   current_size_ += size;
 
   program_metadata_[program].dir = fs::path(store_root_) / program;
@@ -94,6 +104,7 @@ void StoreMetadata::Add(const ReportId report_id, std::string program,
 }
 
 void StoreMetadata::Delete(const ReportId report_id) {
+  FX_CHECK(IsDirectoryUsable());
   FX_CHECK(Contains(report_id));
 
   const auto& program = ReportProgram(report_id);
@@ -151,10 +162,10 @@ StorageSize StoreMetadata::ReportSize(const ReportId report_id) const {
 }
 
 std::vector<std::string> StoreMetadata::ReportAttachments(ReportId report_id,
-                                                          const bool absolute_paths) {
+                                                          const bool absolute_paths) const {
   FX_CHECK(Contains(report_id));
 
-  auto& report_metadata = report_metadata_[report_id];
+  auto& report_metadata = report_metadata_.at(report_id);
   if (!absolute_paths) {
     return report_metadata.attachments;
   }

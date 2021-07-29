@@ -24,8 +24,17 @@ class StoreMetadata {
  public:
   StoreMetadata(std::string store_root, StorageSize max_size);
 
-  // Recreate the metadata from the store at |store_root_|.
-  void RecreateFromFilesystem();
+  // Returns true if the directory underlying the StoreMetadata can safely be used.
+  //
+  // Note: Add and Delete will check-fail if this is false as the underlying directory shouldn't be
+  // manipulated.
+  bool IsDirectoryUsable() const;
+
+  // Recreates the metadata from the store at |store_root_|.
+  //
+  // Returns false if the |metadata| does not accurately represent the filesystem and the underlying
+  // directory can't safely be used.
+  bool RecreateFromFilesystem();
 
   bool Contains(ReportId report_id) const;
   bool Contains(const std::string& program) const;
@@ -60,7 +69,7 @@ class StoreMetadata {
   // The attachments for report |report_id|. If |absolute_paths| is true, the absolute path of the
   // attachments in the filesystem will be returned otherwise the attachment file names will be
   // returned.
-  std::vector<std::string> ReportAttachments(ReportId report_id, bool absolute_paths = false);
+  std::vector<std::string> ReportAttachments(ReportId report_id, bool absolute_paths = false) const;
 
  private:
   // Metadata about each program including:
@@ -88,6 +97,8 @@ class StoreMetadata {
 
   StorageSize max_size_;
   StorageSize current_size_;
+
+  bool is_directory_usable_;
 
   std::map<std::string, ProgramMetadata> program_metadata_;
   std::map<ReportId, ReportMetadata> report_metadata_;
