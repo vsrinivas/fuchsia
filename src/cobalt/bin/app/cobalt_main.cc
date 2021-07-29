@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/channel.h>
@@ -250,6 +251,9 @@ int main(int argc, const char** argv) {
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
+  sys::ComponentInspector inspector(context.get());
+  inspector.Health().StartingUp();
+
   // Lower the priority of the main thread.
   fuchsia::scheduler::ProfileProviderSyncPtr provider;
   context->svc()->Connect<fuchsia::scheduler::ProfileProvider>(provider.NewRequest());
@@ -280,9 +284,11 @@ int main(int argc, const char** argv) {
       .jitter = upload_jitter,
   };
   cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
-      std::move(context), loop.dispatcher(), upload_schedule, event_aggregator_backfill_days,
-      start_event_aggregator_worker, use_memory_observation_store, max_bytes_per_observation_store,
-      ReadBuildInfo("product"), boardname, ReadBuildInfo("version"));
+      std::move(context), loop.dispatcher(), inspector.root().CreateChild("cobalt_app"),
+      upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
+      use_memory_observation_store, max_bytes_per_observation_store, ReadBuildInfo("product"),
+      boardname, ReadBuildInfo("version"));
+  inspector.Health().Ok();
   loop.Run();
   return 0;
 }

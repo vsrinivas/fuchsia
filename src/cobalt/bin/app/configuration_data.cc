@@ -4,6 +4,7 @@
 
 #include "src/cobalt/bin/app/configuration_data.h"
 
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/file.h"
@@ -311,5 +312,17 @@ bool FuchsiaConfigurationData::GetEnableReplacementMetrics() const {
 }
 
 std::string FuchsiaConfigurationData::GetApiKey() const { return api_key_; }
+
+void FuchsiaConfigurationData::PopulateInspect(inspect::Node& inspect_node,
+                                               inspect::ValueList& inspect_values) const {
+  inspect_node.CreateInt("backend_environment", backend_environment_, &inspect_values);
+  inspect_node.CreateInt("release_stage", release_stage_, &inspect_values);
+  inspect_node.CreateInt("data_collection_policy", static_cast<int>(data_collection_policy_),
+                         &inspect_values);
+  inspect_node.CreateBool("watch_for_user_consent", watch_for_user_consent_, &inspect_values);
+  inspect_node.CreateBool("enable_replacement_metrics", enable_replacement_metrics_,
+                          &inspect_values);
+  inspect_node.CreateInt("build_type", build_type_, &inspect_values);
+}
 
 }  // namespace cobalt

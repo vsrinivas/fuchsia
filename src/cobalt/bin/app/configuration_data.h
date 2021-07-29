@@ -5,6 +5,8 @@
 #ifndef SRC_COBALT_BIN_APP_CONFIGURATION_DATA_H_
 #define SRC_COBALT_BIN_APP_CONFIGURATION_DATA_H_
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <iostream>
 #include <string>
 
@@ -62,6 +64,8 @@ class FuchsiaConfigurationData {
 
   // Returns the cobalt API key. If it cannot be found, return the default API key.
   std::string GetApiKey() const;
+
+  void PopulateInspect(inspect::Node& inspect_node, inspect::ValueList& inspect_values) const;
 
  private:
   static const char kDefaultConfigDir[];

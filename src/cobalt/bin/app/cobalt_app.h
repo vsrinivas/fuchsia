@@ -9,6 +9,7 @@
 #include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <stdlib.h>
 
 #include <chrono>
@@ -75,10 +76,10 @@ class CobaltApp {
   //           Example: 20190220_01_RC00
   static CobaltApp CreateCobaltApp(
       std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-      UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-      bool start_event_aggregator_worker, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, const std::string& product_name,
-      const std::string& board_name, const std::string& version);
+      inspect::Node inspect_node, UploadScheduleConfig upload_schedule_cfg,
+      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      const std::string& product_name, const std::string& board_name, const std::string& version);
 
  private:
   friend class CobaltAppTest;
@@ -95,6 +96,8 @@ class CobaltApp {
       std::unique_ptr<ActivityListenerImpl> listener);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+            inspect::Node inspect_node, inspect::Node inspect_config_node,
+            inspect::ValueList inspect_values,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
             bool start_event_aggregator_worker, bool watch_for_user_consent);
@@ -102,6 +105,10 @@ class CobaltApp {
   static encoder::ClientSecret getClientSecret();
 
   std::unique_ptr<sys::ComponentContext> context_;
+
+  inspect::Node inspect_node_;
+  inspect::Node inspect_config_node_;
+  inspect::ValueList inspect_values_;
 
   std::unique_ptr<CobaltServiceInterface> cobalt_service_;
 

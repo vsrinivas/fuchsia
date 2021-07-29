@@ -8,6 +8,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <chrono>
@@ -42,11 +43,11 @@ class FuchsiaSystemClockInterface : public util::ValidatedClockInterface {
 class FuchsiaSystemClock : public FuchsiaSystemClockInterface {
  public:
   // Construct a |FuchsiaSystemClock| that reads the UTC clock passed to the runtime.
-  explicit FuchsiaSystemClock(async_dispatcher_t* dispatcher);
+  explicit FuchsiaSystemClock(async_dispatcher_t* dispatcher, inspect::Node node);
   // Construct a |FuchsiaSystemClock| that uses the given |clock| to check if the clock is
   // started, but reads time off of the UTC clock passed to the runtime. This constructor is
   // only intended for testing this class.
-  explicit FuchsiaSystemClock(async_dispatcher_t* dispatcher, zx::unowned_clock clock);
+  explicit FuchsiaSystemClock(async_dispatcher_t* dispatcher, inspect::Node node, zx::unowned_clock clock);
 
   // Returns the current time once the Fuchsia timekeeper service reports that
   // the system clock has been initialized from an external source.
@@ -61,6 +62,9 @@ class FuchsiaSystemClock : public FuchsiaSystemClockInterface {
   std::atomic_bool accurate_ = false;
   // Async dispatcher used for watching clock signals.
   async_dispatcher_t* dispatcher_;  // not owned.
+  inspect::Node system_clock_node_;
+  inspect::BoolProperty system_clock_accurate_;
+  inspect::ValueList inspect_values_;
   async::WaitOnce utc_start_wait_;
 };
 

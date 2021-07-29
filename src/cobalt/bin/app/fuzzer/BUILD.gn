@@ -44,6 +44,7 @@ source_set("system_data_updater_server_provider") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fidl/cpp/fuzzing",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/cobalt/bin/app:lib",
   ]
 }

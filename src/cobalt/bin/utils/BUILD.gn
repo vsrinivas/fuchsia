@@ -35,6 +35,7 @@ source_set("clock") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//third_party/cobalt/src/public/lib:clock_interfaces",
   ]
@@ -67,7 +68,9 @@ executable("cobalt_utils_unittests") {
     ":clock",
     ":fuchsia_http_client",
     "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/cobalt/bin/testing:fake_http_loader",
     "//src/lib/fsl",
     "//third_party/googletest:gmock",

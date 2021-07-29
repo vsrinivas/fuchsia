@@ -16,16 +16,22 @@
 namespace cobalt {
 
 UserConsentWatcher::UserConsentWatcher(
-    async_dispatcher_t *dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    async_dispatcher_t *dispatcher, inspect::Node inspect_node,
+    std::shared_ptr<sys::ServiceDirectory> services,
     std::function<void(const CobaltServiceInterface::DataCollectionPolicy &)> callback)
     : dispatcher_(dispatcher),
+      inspect_node_(std::move(inspect_node)),
       services_(services),
       callback_(callback),
-      backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u, /*max_delay=*/zx::hour(1)) {}
+      backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u, /*max_delay=*/zx::hour(1)) {
+  watch_successes_ = inspect_node_.CreateInt("successful_watches", 0);
+  watch_errors_ = inspect_node_.CreateInt("watch_errors", 0);
+}
 
 void UserConsentWatcher::StartWatching() {
   privacy_settings_ptr_ = services_->Connect<fuchsia::settings::Privacy>();
   privacy_settings_ptr_.set_error_handler([this](zx_status_t status) {
+    watch_errors_.Add(1);
     FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.settings.Privacy";
     RestartWatching();
   });
@@ -47,6 +53,7 @@ void UserConsentWatcher::Watch() {
     // Reset the exponential backoff since we successfully watched once.
     backoff_.Reset();
 
+    watch_successes_.Add(1);
     privacy_settings_ = std::move(settings);
     Update();
 
@@ -60,14 +67,20 @@ void UserConsentWatcher::ResetConsent() {
   Update();
 }
 
-void UserConsentWatcher::Update() {
+CobaltServiceInterface::DataCollectionPolicy UserConsentWatcher::GetDataCollectionPolicy() {
   if (!privacy_settings_.has_user_data_sharing_consent()) {
-    callback_(CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
-  } else if (privacy_settings_.user_data_sharing_consent()) {
-    callback_(CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
-  } else {
-    callback_(CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
+    return CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD;
   }
+  if (privacy_settings_.user_data_sharing_consent()) {
+    return CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD;
+  }
+  return CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT;
+}
+
+void UserConsentWatcher::Update() {
+  CobaltServiceInterface::DataCollectionPolicy policy = GetDataCollectionPolicy();
+  current_policy_ = inspect_node_.CreateInt("data_collection_policy", static_cast<int>(policy));
+  callback_(policy);
 }
 
 }  // namespace cobalt

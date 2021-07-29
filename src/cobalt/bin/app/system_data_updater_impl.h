@@ -6,6 +6,7 @@
 #define SRC_COBALT_BIN_APP_SYSTEM_DATA_UPDATER_IMPL_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <stdlib.h>
 
 #include "src/lib/fxl/macros.h"
@@ -15,7 +16,7 @@ namespace cobalt {
 
 class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
  public:
-  SystemDataUpdaterImpl(encoder::SystemDataInterface* system_data,
+  SystemDataUpdaterImpl(inspect::Node inspect_node, encoder::SystemDataInterface* system_data,
                         const std::string& cache_file_name_prefix);
 
   // Resets Cobalt's view of the system-wide experiment state and replaces it
@@ -63,6 +64,11 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   void ClearData();
 
  private:
+  inspect::Node inspect_node_;
+  inspect::IntProperty num_calls_;
+  inspect::StringProperty channel_;
+  inspect::StringProperty realm_;
+
   encoder::SystemDataInterface* system_data_;  // Not owned.
   std::string cache_file_name_prefix_;
 

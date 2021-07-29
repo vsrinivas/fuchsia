@@ -4,6 +4,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fidl/cpp/fuzzing/server_provider.h>
+#include <lib/inspect/cpp/inspect.h>
 
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 #include "third_party/cobalt/src/system_data/system_data.h"
@@ -27,4 +28,4 @@ FIDL_FUZZER_DEFINITION(
     // client and server work from the same thread/loop/dispatcher.
     ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller,
     // All remaining parameters forwarded to the `SystemDataUpdaterImpl` constructor.
-    &system_data, "/tmp/cache");
+    inspect::Node(), &system_data, "/tmp/cache");

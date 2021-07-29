@@ -5,6 +5,8 @@
 #include "src/cobalt/bin/app/cobalt_app.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <gmock/gmock.h>
@@ -18,7 +20,6 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "third_party/abseil-cpp/absl/strings/match.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
 
 namespace cobalt {
@@ -33,7 +34,7 @@ bool WriteFile(const std::string& file, const std::string& to_write) {
 class CreateCobaltConfigTest : public gtest::TestLoopFixture {
  public:
   CreateCobaltConfigTest()
-      : ::gtest::TestLoopFixture(), context_provider_(), clock_(dispatcher()) {}
+      : ::gtest::TestLoopFixture(), context_provider_(), clock_(dispatcher(), inspect::Node()) {}
 
  protected:
   void SetUp() override {
@@ -150,6 +151,11 @@ TEST_F(CreateCobaltConfigTest, InvalidBuildType) {
   EXPECT_EQ(config.build_type, SystemProfile::OTHER_TYPE);
 }
 
+using inspect::testing::ChildrenMatch;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using ::testing::UnorderedElementsAre;
+
 class CobaltAppTest : public gtest::TestLoopFixture {
  public:
   CobaltAppTest()
@@ -158,6 +164,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
         clock_(new FakeFuchsiaSystemClock(dispatcher())),
         fake_service_(new testing::FakeCobaltService()),
         cobalt_app_(context_provider_.TakeContext(), dispatcher(),
+                    inspector_.GetRoot().CreateChild("cobalt_app"), inspect::Node(),
+                    inspect::ValueList(),
                     std::unique_ptr<testing::FakeCobaltService>(fake_service_),
                     std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
 
@@ -203,6 +211,7 @@ class CobaltAppTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   FakeFuchsiaSystemClock* clock_;
   testing::FakeCobaltService* fake_service_;
+  inspect::Inspector inspector_;
   CobaltApp cobalt_app_;
   fuchsia::cobalt::LoggerFactoryPtr factory_;
   fuchsia::metrics::MetricEventLoggerFactoryPtr metric_event_logger_factory_;
@@ -250,6 +259,17 @@ TEST_F(CobaltAppTest, SystemClockIsAccurate) {
   RunLoopUntilIdle();
   EXPECT_EQ(fake_service_->system_clock_is_accurate(), true);
   EXPECT_TRUE(callback_invoked);
+}
+
+TEST_F(CobaltAppTest, InspectData) {
+  fpromise::result<inspect::Hierarchy> result = inspect::ReadFromVmo(inspector_.DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_THAT(
+      result.take_value(),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(AllOf(
+                NodeMatches(NameMatches("cobalt_app")),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("system_data")))))))));
 }
 
 TEST_F(CobaltAppTest, LogEvent) {

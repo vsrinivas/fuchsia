@@ -4,6 +4,8 @@
 
 #include "src/cobalt/bin/app/cobalt_app.h"
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <memory>
 
 #include "lib/sys/cpp/component_context.h"
@@ -18,7 +20,6 @@
 namespace cobalt {
 
 using encoder::ClientSecret;
-using logger::ProjectContextFactory;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
@@ -65,7 +66,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
   // source of the encryption keys, as well as determining the destination for generated
   // observations (either clearcut, or the local filesystem).
   std::unique_ptr<TargetPipelineInterface> target_pipeline;
-  const auto& backend_environment = configuration_data.GetBackendEnvironment();
+  const system_data::Environment& backend_environment = configuration_data.GetBackendEnvironment();
   if (backend_environment == system_data::Environment::LOCAL) {
     target_pipeline = std::make_unique<LocalPipeline>();
   } else {
@@ -117,16 +118,24 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
 CobaltApp CobaltApp::CreateCobaltApp(
     std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
-    UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-    bool start_event_aggregator_worker, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name, const std::string& version) {
+    inspect::Node inspect_node, UploadScheduleConfig upload_schedule_cfg,
+    size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+    const std::string& product_name, const std::string& board_name, const std::string& version) {
+  inspect::ValueList inspect_values;
+  inspect::Node inspect_config_node = inspect_node.CreateChild("configuration_data");
+  inspect_config_node.CreateString("product_name", product_name, &inspect_values);
+  inspect_config_node.CreateString("board_name", board_name, &inspect_values);
+  inspect_config_node.CreateString("version", version, &inspect_values);
+
   // Create the configuration data from the data in the filesystem.
   FuchsiaConfigurationData configuration_data;
+  configuration_data.PopulateInspect(inspect_config_node, inspect_values);
 
   sys::ComponentContext* context_ptr = context.get();
 
-  auto validated_clock = std::make_unique<FuchsiaSystemClock>(dispatcher);
+  auto validated_clock =
+      std::make_unique<FuchsiaSystemClock>(dispatcher, inspect_node.CreateChild("system_clock"));
 
   auto cobalt_service = std::make_unique<CobaltService>(CreateCobaltConfig(
       dispatcher, kMetricsRegistryPath, configuration_data, validated_clock.get(),
@@ -141,27 +150,26 @@ CobaltApp CobaltApp::CreateCobaltApp(
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
-  return CobaltApp(std::move(context), dispatcher, std::move(cobalt_service),
-                   std::move(validated_clock), start_event_aggregator_worker,
-                   configuration_data.GetWatchForUserConsent());
+  return CobaltApp(std::move(context), dispatcher, std::move(inspect_node),
+                   std::move(inspect_config_node), std::move(inspect_values),
+                   std::move(cobalt_service), std::move(validated_clock),
+                   start_event_aggregator_worker, configuration_data.GetWatchForUserConsent());
 }
 
 CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
+                     inspect::Node inspect_node, inspect::Node inspect_config_node,
+                     inspect::ValueList inspect_values,
                      std::unique_ptr<CobaltServiceInterface> cobalt_service,
                      std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
                      bool start_event_aggregator_worker, bool watch_for_user_consent)
     : context_(std::move(context)),
+      inspect_node_(std::move(inspect_node)),
+      inspect_config_node_(std::move(inspect_config_node)),
+      inspect_values_(std::move(inspect_values)),
       cobalt_service_(std::move(cobalt_service)),
       validated_clock_(std::move(validated_clock)),
       timer_manager_(dispatcher) {
-  auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
-                << std::put_time(std::localtime(&current_time), "%F %T %z");
   validated_clock_->AwaitExternalSource([this, start_event_aggregator_worker]() {
-    auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    FX_LOGS(INFO) << "The system clock has become accurate, now at: "
-                  << std::put_time(std::localtime(&current_time), "%F %T %z");
-
     // Now that the clock is accurate, notify CobaltService.
     cobalt_service_->SystemClockIsAccurate(std::make_unique<util::SystemClock>(),
                                            start_event_aggregator_worker);
@@ -189,13 +197,15 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   // Create SystemDataUpdater protocol implementation and start serving it.
   system_data_updater_impl_.reset(
-      new SystemDataUpdaterImpl(cobalt_service_->system_data(), kSystemDataCachePrefix));
+      new SystemDataUpdaterImpl(inspect_node_.CreateChild("system_data"),
+                                cobalt_service_->system_data(), kSystemDataCachePrefix));
   context_->outgoing()->AddPublicService(
       system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
 
   if (watch_for_user_consent) {
     user_consent_watcher_ = std::make_unique<UserConsentWatcher>(
-        dispatcher, context_->svc(), [this](const CobaltService::DataCollectionPolicy& new_policy) {
+        dispatcher, inspect_node_.CreateChild("user_consent_watcher"), context_->svc(),
+        [this](const CobaltService::DataCollectionPolicy& new_policy) {
           cobalt_service_->SetDataCollectionPolicy(new_policy);
         });
 
