@@ -389,10 +389,11 @@ TEST_F(GfxLegacyCoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyTransfo
       PointerMatches(child2_events[0].pointer(), 1u, PointerEventPhase::ADD, 0.f / 2.f, 1.f / 3.f));
   EXPECT_TRUE(PointerMatches(child2_events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.f / 2.f,
                              1.f / 3.f));
-  EXPECT_TRUE(PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::MOVE, 0.f / 2.f,
-                             -4.f / 3.f));
-  EXPECT_TRUE(PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::MOVE, 5.f / 2.f,
-                             -4.f / 3.f));
+  // TODO(fxbug.dev/81710): Coordinates clamped to their owning view.
+  EXPECT_TRUE(
+      PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::MOVE, 0.f / 2.f, 0.f));
+  EXPECT_TRUE(
+      PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::MOVE, 5.f / 2.f, 0.f));
   EXPECT_TRUE(
       PointerMatches(child2_events[4].pointer(), 1u, PointerEventPhase::UP, 5.f / 2.f, 1.f / 3.f));
   EXPECT_TRUE(PointerMatches(child2_events[5].pointer(), 1u, PointerEventPhase::REMOVE, 5.f / 2.f,
