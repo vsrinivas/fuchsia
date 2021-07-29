@@ -486,6 +486,17 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenTableStruct_v2',
+				fidl.WireFormat.v2,
+				GoldenTableStruct(v: GoldenTable(v: 0x1)),
+				kGoldenTableStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenUnionStruct_v1',
 				fidl.WireFormat.v1,
 				GoldenUnionStruct(v: GoldenUnion.withV(0x1)),

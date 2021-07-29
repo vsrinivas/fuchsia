@@ -418,9 +418,16 @@ class Transformer {
           .num_handles = static_cast<uint16_t>(src_envelope.num_handles),
           .flags = kEmptyFlags,
       };
-      memcpy(&dst_bytes_[dst_next_out_of_line_], &src_bytes_[src_next_out_of_line_],
-             src_envelope.num_bytes);
-      return IncreaseNextOutOfLine(src_envelope.num_bytes, src_envelope.num_bytes);
+
+      uint32_t src_block_offset = src_next_out_of_line_;
+      uint32_t dst_block_offset = dst_next_out_of_line_;
+      zx_status_t status = IncreaseNextOutOfLine(src_envelope.num_bytes, src_envelope.num_bytes);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      memcpy(&dst_bytes_[dst_block_offset], &src_bytes_[src_block_offset], src_envelope.num_bytes);
+      return ZX_OK;
     }
 
     if (TypeSizeV2(type) <= 4) {
@@ -429,10 +436,17 @@ class Transformer {
           .num_handles = static_cast<uint16_t>(src_envelope.num_handles),
           .flags = kInlinedEnvelopeFlag,
       };
-      memcpy(dst_envelope.inlined_value, &src_bytes_[src_next_out_of_line_],
+
+      uint32_t src_block_offset = src_next_out_of_line_;
+      zx_status_t status = IncreaseNextOutOfLine(8, 0);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      memcpy(dst_envelope.inlined_value, &src_bytes_[src_block_offset],
              sizeof(dst_envelope.inlined_value));
       dst<WireEnvelopeV2>(dst_offset) = dst_envelope;
-      return IncreaseNextOutOfLine(8, 0);
+      return ZX_OK;
     }
 
     uint32_t checkpoint_dst_next_out_of_line = dst_next_out_of_line_;
@@ -464,10 +478,16 @@ class Transformer {
           .presence_marker = FIDL_ALLOC_PRESENT,
       };
 
-      memcpy(&dst_bytes_[dst_next_out_of_line_], src_envelope.inlined_value,
+      uint32_t dst_block_offset = dst_next_out_of_line_;
+      zx_status_t status = IncreaseNextOutOfLine(0, 8);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      memcpy(&dst_bytes_[dst_block_offset], src_envelope.inlined_value,
              sizeof(src_envelope.inlined_value));
-      memset(&dst_bytes_[dst_next_out_of_line_ + 4], 0, 4);
-      return IncreaseNextOutOfLine(0, 8);
+      memset(&dst_bytes_[dst_block_offset + 4], 0, 4);
+      return ZX_OK;
     }
 
     if (src_envelope.num_bytes > 0 || src_envelope.num_handles > 0) {
@@ -497,10 +517,16 @@ class Transformer {
           .num_handles = src_envelope.num_handles,
           .presence_marker = FIDL_ALLOC_PRESENT,
       };
-      memcpy(&dst_bytes_[dst_next_out_of_line_], &src_bytes_[src_next_out_of_line_],
-             src_envelope.num_bytes);
 
-      return IncreaseNextOutOfLine(src_envelope.num_bytes, src_envelope.num_bytes);
+      uint32_t src_block_offset = src_next_out_of_line_;
+      uint32_t dst_block_offset = dst_next_out_of_line_;
+      zx_status_t status = IncreaseNextOutOfLine(src_envelope.num_bytes, src_envelope.num_bytes);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      memcpy(&dst_bytes_[dst_block_offset], &src_bytes_[src_block_offset], src_envelope.num_bytes);
+      return ZX_OK;
     }
 
     dst<WireEnvelopeV1>(dst_offset) = WireEnvelopeV1{
@@ -614,6 +640,8 @@ class Transformer {
 
   template <typename T>
   T src(uint32_t offset) {
+    ZX_ASSERT(offset + sizeof(T) <= src_next_out_of_line_);
+    ZX_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
     ZX_ASSERT(offset % 8 == 0);
     // Use memcpy rather than reinterpret_cast to avoid issues
     // due to the strict aliasing rule.
@@ -646,6 +674,8 @@ class Transformer {
 
   template <typename T>
   DstTarget<T> dst(uint32_t offset) {
+    ZX_ASSERT(offset + sizeof(T) <= dst_next_out_of_line_);
+    ZX_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
     ZX_ASSERT(offset % 8 == 0);
     return DstTarget<T>(this, offset);
   }

@@ -28,6 +28,18 @@ success("Sandwich1Case1") {
             0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data, i.e. Sandwich1.the_union.data
             0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
         ],
+        v2 = [
+            0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
+            0x00, 0x00, 0x00, 0x00,  // Sandwich1.before (padding)
+
+            0x03, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1.the_union
+            0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.padding
+            0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.env.value
+            0x00, 0x00, 0x01, 0x00,  // UnionSize8Aligned4.env.num_handle, UnionSize8Aligned4.env.inlined
+
+            0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
+            0x00, 0x00, 0x00, 0x00,  // Sandwich1.after (padding)
+        ],
     },
 }
 
@@ -1681,6 +1693,18 @@ success("Table_StructWithReservedSandwich") {
             0x19, 0x1A, 0x1B, 0x00,  // StructSize3Alignment1 data (3 bytes) + padding (1 byte)
             0x00, 0x00, 0x00, 0x00,  // StructSize3Alignment1 padding [cont.]
         ],
+        v2 = [
+            0x03, 0x00, 0x00, 0x00,  // vector<envelope>.size
+            0x00, 0x00, 0x00, 0x00,  // [cont.]
+            0xFF, 0xFF, 0xFF, 0xFF,  // Table_StructWithReservedSandwich.vector<envelope>.presence
+            0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
+            0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_bytes
+            0x00, 0x00, 0x00, 0x00,  // vector<envelope>[0].num_handles
+            0x09, 0x0A, 0x0B, 0x00,  // vector<envelope>[1].value
+            0x00, 0x00, 0x01, 0x00,  // vector<envelope>[1].num_handles, vector<envelope>[1].inlined
+            0x19, 0x1A, 0x1B, 0x00,  // vector<envelope>[2].value
+            0x00, 0x00, 0x01, 0x00,  // vector<envelope>[2].num_handles, vector<envelope>[2].inlined
+        ],
     },
 }
 
@@ -2032,7 +2056,7 @@ success("TransformerEmptyStruct") {
 
 success("EmptyStructUnion") {
     // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus, transformer],
+    bindings_denylist = [fuzzer_corpus,],
     value = EmptyStructUnionStruct {
         u: EmptyStructUnion {
             es: TransformerEmptyStruct {},
@@ -2993,7 +3017,7 @@ success("Regression8TableWithUnionSize12Aligned4") {
 
 success("Regression9Response") {
     // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus, transformer],
+    bindings_denylist = [fuzzer_corpus,],
     value = Regression9Message {
         header: TransactionHeader {
             tx_id: 1,

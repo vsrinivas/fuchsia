@@ -127,9 +127,15 @@ success("GoldenTableStruct") {
         v1 = [
             num(1):8,
             repeat(0xff):8,
-            num(8):4, padding:4,
+            num(8):4, num(0):4,
             repeat(0xff):8,
             num(1):4, padding:4,
+        ],
+        v2 = [
+            num(1):8, // len
+            repeat(0xff):8, // presence
+
+            num(1):4, num(0):2, num(1):2, // envelope
         ],
     },
 }

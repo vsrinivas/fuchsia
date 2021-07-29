@@ -819,6 +819,30 @@ fn test_golden_table_struct_v1_decode() {
 }
 
 #[test]
+fn test_golden_table_struct_v2_decode() {
+	let bytes = &[
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+];
+	let handle_definitions: Vec<HandleDef> = Vec::new();
+	let mut handles = Vec::new();
+	let mut handle_infos : Vec::<_> = handles.drain(..).zip(handle_definitions.iter()).map(|(h, hd)| {
+		HandleInfo {
+			handle: h,
+			object_type: match hd.subtype {
+				HandleSubtype::Event => ObjectType::EVENT,
+				HandleSubtype::Channel => ObjectType::CHANNEL,
+			},
+			rights: hd.rights,
+		}
+	}).collect();
+	let value = &mut conformance::GoldenTableStruct::new_empty();
+	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
+	assert_eq!(value, &conformance::GoldenTableStruct { v: conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..conformance::GoldenTable::EMPTY } });
+}
+
+#[test]
 fn test_golden_union_struct_v1_decode() {
 	let bytes = &[
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,

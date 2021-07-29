@@ -1003,6 +1003,41 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 
 	{
 		decodeSuccessCase{
+			name:    "GoldenTableStruct_v2",
+			context: fidl.MarshalerContext{UseV2WireFormat: true},
+			input: &conformance.GoldenTableStruct{
+				V: conformance.GoldenTable{
+					V:        0x1,
+					VPresent: true,
+				},
+			},
+			bytes: []byte{
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenTableStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if !(f2.HasV()) {
+					t.Fatalf("expected true but was false: %s", "f2.HasV()")
+				}
+				f3 := f2.GetV()
+				ignore_unused_warning(f3)
+				if f3 != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3", "1")
+				}
+
+			},
+		}.check(t)
+	}
+
+	{
+		decodeSuccessCase{
 			name:    "GoldenUnionStruct_v1",
 			context: fidl.MarshalerContext{UseV2WireFormat: false},
 			input: &conformance.GoldenUnionStruct{

@@ -70,7 +70,7 @@ success("UnionMigration_SingleVariant") {
 
 success("ReverseOrdinalUnion") {
     // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus,transformer],
+    bindings_denylist = [fuzzer_corpus],
     value = ReverseOrdinalUnionStruct {
         u: ReverseOrdinalUnion {
             x: 42,
@@ -120,7 +120,7 @@ decode_failure("UnionWithInvalidPresenceIndicator") {
 success("FlexibleUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    bindings_denylist = [llcpp,transformer],
+    bindings_denylist = [llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion{
             1234: {
@@ -146,7 +146,7 @@ success("FlexibleUnionUnknownValue") {
 success("FlexibleResourceUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    bindings_denylist = [llcpp,transformer],
+    bindings_denylist = [llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion{
             1234: {
@@ -172,7 +172,7 @@ success("FlexibleResourceUnionUnknownValue") {
 success("FlexibleResourceUnionUnknownValueWithHandles") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    bindings_denylist = [llcpp,transformer],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -691,7 +691,7 @@ decode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
 
 success("OptionalStrictValueUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go.
-    bindings_denylist = [go, transformer],
+    bindings_denylist = [go,],
     value = TestOptionalStrictXUnionInStruct {
         xu: null,
     },
@@ -728,7 +728,7 @@ decode_failure("OptionalStrictValueUnionZeroOrdinalWithPayload") {
 
 success("OptionalStrictResourceUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go.
-    bindings_denylist = [go, transformer],
+    bindings_denylist = [go,],
     value = TestOptionalStrictResourceXUnionInStruct {
         xu: null,
     },
