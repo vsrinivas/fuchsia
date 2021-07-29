@@ -190,9 +190,9 @@ class MsdIntelDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
   std::atomic_bool device_thread_quit_flag_{false};
   std::unique_ptr<GpuProgress> progress_;
-  std::atomic_uint64_t suspected_gpu_hang_count_;
-  std::atomic_uint64_t last_interrupt_callback_timestamp_;
-  std::atomic_uint64_t last_interrupt_timestamp_;
+  std::atomic_uint64_t suspected_gpu_hang_count_{};
+  std::atomic_uint64_t last_interrupt_callback_timestamp_{};
+  std::atomic_uint64_t last_interrupt_timestamp_{};
 
   std::unique_ptr<MsdIntelPciDevice> platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;

@@ -248,7 +248,7 @@ class MsdVsiDevice : public msd_device_t,
 
   std::thread interrupt_thread_;
   std::unique_ptr<magma::PlatformInterrupt> interrupt_;
-  std::atomic_uint64_t last_interrupt_timestamp_;
+  std::atomic_uint64_t last_interrupt_timestamp_{};
   std::atomic_bool stop_interrupt_thread_{false};
 
   std::thread device_thread_;
