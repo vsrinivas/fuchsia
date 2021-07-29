@@ -34,9 +34,9 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_PACKAGES: i64 = 512;
 const MAX_REGISTERED_TARGETS: i64 = 512;
 
-const CONFIG_KEY_REPOSITORIES: &str = "repository.server.repositories";
-const CONFIG_KEY_REGISTRATIONS: &str = "repository.server.registrations";
-const CONFIG_KEY_DEFAULT: &str = "repository.server.default";
+const CONFIG_KEY_REPOSITORIES: &str = "repository.repositories";
+const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
+const CONFIG_KEY_DEFAULT: &str = "repository.default";
 
 fn repository_query(repo_name: &str) -> String {
     format!("{}.{}", CONFIG_KEY_REPOSITORIES, repo_name)
@@ -1032,22 +1032,20 @@ mod tests {
             ffx_config::set(
                 ("repository", ConfigLevel::User),
                 serde_json::json!({
-                    "server": {
-                        "repositories": {
-                            REPO_NAME: {
-                                "type": "file_system",
-                                "path": repo_path
-                            },
+                    "repositories": {
+                        REPO_NAME: {
+                            "type": "file_system",
+                            "path": repo_path
                         },
-                        "registrations": {
-                            REPO_NAME: {
-                                TARGET_NODENAME: {
-                                    "repo_name": REPO_NAME,
-                                    "target_identifier": TARGET_NODENAME,
-                                    "aliases": [ "fuchsia.com", "example.com" ],
-                                    "storage_type": "ephemeral",
-                                },
-                            }
+                    },
+                    "registrations": {
+                        REPO_NAME: {
+                            TARGET_NODENAME: {
+                                "repo_name": REPO_NAME,
+                                "target_identifier": TARGET_NODENAME,
+                                "aliases": [ "fuchsia.com", "example.com" ],
+                                "storage_type": "ephemeral",
+                            },
                         }
                     }
                 }),
