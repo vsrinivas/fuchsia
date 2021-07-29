@@ -142,6 +142,8 @@ pub fn dispatch_syscall(
         ftruncate[2],
         futex[6],
         getcwd[2],
+        getdents[3],
+        getdents64[3],
         getegid[0],
         geteuid[0],
         getgid[0],

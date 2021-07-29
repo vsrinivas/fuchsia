@@ -5,13 +5,15 @@
 use fuchsia_zircon::{self as zx, VmoOptions};
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::ops::Bound;
 use std::sync::{Arc, Weak};
 
-use super::*;
 use crate::devices::*;
+use crate::fd_impl_nonseekable;
 use crate::fs::pipe::Pipe;
-use crate::fs::SymlinkNode;
+use crate::fs::*;
 use crate::mm::vmo::round_up_to_system_page_size;
+use crate::task::*;
 use crate::types::*;
 
 pub struct TmpFs {
@@ -45,7 +47,7 @@ struct TmpfsDirectory {
 
 impl FsNodeOps for TmpfsDirectory {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(NullFile))
+        Ok(Box::new(DirectoryFileObject::new()))
     }
 
     fn lookup(&self, _parent: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
@@ -89,6 +91,87 @@ impl FsNodeOps for TmpfsDirectory {
 
     fn unlinked(&self, node: &FsNodeHandle) {
         self.fs.upgrade().unwrap().unregister(node);
+    }
+}
+
+struct DirectoryFileObject {
+    /// The current position for readdir.
+    ///
+    /// When readdir is called multiple times, we need to return subsequent
+    /// directory entries. This field records where the previous readdir
+    /// stopped.
+    ///
+    /// The state is actually recorded twice: once in the offset for this
+    /// FileObject and again here. Recovering the state from the offset is slow
+    /// because we would need to iterate through the keys of the BTree. Having
+    /// the FsString cached lets us search the keys of the BTree faster.
+    ///
+    /// The initial "." and ".." entries are not recorded here. They are
+    /// represented only in the offset field in the FileObject.
+    readdir_position: Mutex<Bound<FsString>>,
+}
+
+impl DirectoryFileObject {
+    fn new() -> DirectoryFileObject {
+        DirectoryFileObject { readdir_position: Mutex::new(Bound::Unbounded) }
+    }
+}
+
+impl FileOps for DirectoryFileObject {
+    // TODO: seek should interact with directory listing.
+    fd_impl_nonseekable!();
+
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+        Err(EISDIR)
+    }
+
+    fn write(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(EISDIR)
+    }
+
+    fn readdir(
+        &self,
+        file: &FileObject,
+        _task: &Task,
+        sink: &mut dyn DirentSink,
+    ) -> Result<(), Errno> {
+        let mut offset = file.offset.lock();
+        let mut readdir_position = self.readdir_position.lock();
+        if *offset == 0 {
+            *readdir_position = Bound::Unbounded;
+            sink.add(file.node().info().inode_num, 1, DirectoryEntryType::DIR, b".")?;
+            *offset += 1;
+        }
+        if *offset == 1 {
+            sink.add(
+                file.node().parent().unwrap_or_else(|| file.node()).info().inode_num,
+                2,
+                DirectoryEntryType::DIR,
+                b"..",
+            )?;
+            *offset += 1;
+        }
+        let children = file.node().children();
+        for (name, node_cell) in children.range((readdir_position.clone(), Bound::Unbounded)) {
+            if let Some(node) = node_cell.get().and_then(|weak| weak.upgrade()) {
+                let next_offset = *offset + 1;
+                let info = node.info();
+                sink.add(
+                    info.inode_num,
+                    next_offset,
+                    DirectoryEntryType::from_mode(info.mode),
+                    &name,
+                )?;
+                *offset = next_offset;
+                *readdir_position = Bound::Excluded(name.to_vec());
+            }
+        }
+        Ok(())
     }
 }
 

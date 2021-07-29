@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod anon_node;
+mod dirent_sink;
 mod fd_events;
 mod fd_number;
 mod fd_table;
@@ -16,6 +17,7 @@ mod symlink_node;
 mod vmo_file;
 
 pub use anon_node::*;
+pub use dirent_sink::*;
 pub use fd_events::*;
 pub use fd_number::*;
 pub use fd_table::*;

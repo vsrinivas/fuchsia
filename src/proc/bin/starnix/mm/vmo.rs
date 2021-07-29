@@ -4,15 +4,17 @@
 
 use crate::mm::PAGE_SIZE;
 
-pub fn round_up_to_page_size(size: usize, page_size: usize) -> usize {
-    let spare = size % page_size;
+// TODO: Move this function to somewhere more generic. It doesn't really have
+// anything to do with the memory manager.
+pub fn round_up_to_increment(size: usize, increment: usize) -> usize {
+    let spare = size % increment;
     if spare > 0 {
-        size + (page_size - spare)
+        size + (increment - spare)
     } else {
         size
     }
 }
 
 pub fn round_up_to_system_page_size(size: usize) -> usize {
-    round_up_to_page_size(size, *PAGE_SIZE as usize)
+    round_up_to_increment(size, *PAGE_SIZE as usize)
 }

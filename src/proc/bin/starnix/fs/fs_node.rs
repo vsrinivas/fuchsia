@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use once_cell::sync::OnceCell;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::{Arc, Weak};
 
 use fuchsia_zircon::Time;
@@ -67,7 +67,7 @@ pub struct FsNode {
     ///
     /// This may include empty OnceCells for nodes that are in the process of being initialized. If
     /// initialization fails, the nodes will be dropped from the cache.
-    children: RwLock<HashMap<FsString, OnceCell<Weak<FsNode>>>>,
+    children: RwLock<BTreeMap<FsString, OnceCell<Weak<FsNode>>>>,
 }
 
 pub type FsNodeHandle = Arc<FsNode>;
@@ -216,7 +216,7 @@ impl FsNode {
             local_name,
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
-            children: RwLock::new(HashMap::new()),
+            children: RwLock::new(BTreeMap::new()),
         }
     }
 
@@ -375,6 +375,10 @@ impl FsNode {
     }
     pub fn info_mut(&mut self) -> &mut FsNodeInfo {
         self.info.get_mut()
+    }
+
+    pub fn children(&self) -> RwLockReadGuard<'_, BTreeMap<FsString, OnceCell<Weak<FsNode>>>> {
+        self.children.read()
     }
 
     fn create_child<F>(
