@@ -1641,7 +1641,7 @@ TEST_F(VmoClone2TestCase, ParentStartLimitRegression) {
 TEST_F(VmoClone2TestCase, DropChildrenInParallel) {
   // Try some N times and hope that if there is a bug we get the right timing. Prior to fixing
   // fxbug.dev/56137 this was enough iterations to reliably trigger.
-  for (size_t i = 0; i < 10000; i++) {
+  for (size_t i = 0; i < 1000; i++) {
     zx::vmo vmo;
 
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
