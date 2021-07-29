@@ -4,6 +4,7 @@
 library fuchsia.wlan.device;
 
 using fuchsia.wlan.common;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
 using zx;
 
@@ -73,7 +74,7 @@ type CreateIfaceRequest = resource struct {
     role MacRole;
     // TODO(fxbug.dev/29547): Make `mlme_channel` mandatory once all drivers support the channel.
     mlme_channel zx.handle:<CHANNEL, optional>;
-    init_mac_addr bytes:<6, optional>;
+    init_mac_addr ieee80211.MacAddr;
 };
 
 type CreateIfaceResponse = struct {

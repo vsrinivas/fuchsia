@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_wlan_device_service as fidl_service,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_zircon,
+    ieee80211::{MacAddr, NULL_MAC_ADDR},
     log::{error, info, warn},
     std::collections::{HashMap, HashSet},
     thiserror::Error,
@@ -272,7 +273,7 @@ impl PhyManagerApi for PhyManager {
             && phy_container.supported_mac_roles.contains(&MacRole::Client)
         {
             let iface_id =
-                create_iface(&self.device_monitor, phy_id, MacRole::Client, None).await?;
+                create_iface(&self.device_monitor, phy_id, MacRole::Client, NULL_MAC_ADDR).await?;
             // Find out the capabilities of the iface.
             let driver_features = self.get_iface_driver_features(iface_id).await?;
             if let Some(_) = phy_container.client_ifaces.insert(iface_id, driver_features) {
@@ -369,7 +370,7 @@ impl PhyManagerApi for PhyManager {
                         &self.device_monitor,
                         *client_phy,
                         MacRole::Client,
-                        None,
+                        NULL_MAC_ADDR,
                     )
                     .await
                     {
@@ -471,8 +472,8 @@ impl PhyManagerApi for PhyManager {
                 self.phys.get_mut(&ap_phy_id).ok_or(PhyManagerError::PhyQueryFailure)?;
             if phy_container.ap_ifaces.is_empty() {
                 let mac = match self.suggested_ap_mac {
-                    Some(mac) => Some(mac.as_bytes().to_vec()),
-                    None => None,
+                    Some(mac) => mac.to_array(),
+                    None => NULL_MAC_ADDR,
                 };
                 let iface_id =
                     create_iface(&self.device_monitor, *ap_phy_id, MacRole::Ap, mac).await?;
@@ -590,9 +591,9 @@ async fn create_iface(
     proxy: &fidl_service::DeviceMonitorProxy,
     phy_id: u16,
     role: MacRole,
-    mac: Option<Vec<u8>>,
+    mac_addr: MacAddr,
 ) -> Result<u16, PhyManagerError> {
-    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr: mac };
+    let mut request = fidl_service::CreateIfaceRequest { phy_id, role, mac_addr };
     let create_iface_response = match proxy.create_iface(&mut request).await {
         Ok((status, iface_response)) => {
             if fuchsia_zircon::ok(status).is_err() || iface_response.is_none() {
@@ -1919,10 +1920,7 @@ mod tests {
                     responder,
                 }
             ))) => {
-                let requested_mac = match req.mac_addr {
-                    Some(mac) => MacAddress::from_bytes(&mac).unwrap(),
-                    None => panic!("requested mac is None")
-                };
+                let requested_mac = MacAddress::from_bytes(&req.mac_addr).unwrap();
                 assert_eq!(requested_mac, mac);
                 let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
                 let response = Some(&mut response);
@@ -1968,7 +1966,7 @@ mod tests {
                     responder,
                 }
             ))) => {
-                assert!(req.mac_addr.is_none());
+                assert_eq!(req.mac_addr, ieee80211::NULL_MAC_ADDR);
                 let mut response = fidl_service::CreateIfaceResponse { iface_id: fake_iface_id };
                 let response = Some(&mut response);
                 responder.send(ZX_OK, response).expect("sending fake iface id");

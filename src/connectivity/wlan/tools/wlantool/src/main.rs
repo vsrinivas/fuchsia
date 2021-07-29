@@ -21,7 +21,7 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use hex::{FromHex, ToHex};
-use ieee80211::Ssid;
+use ieee80211::{Ssid, NULL_MAC_ADDR};
 use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
@@ -144,9 +144,9 @@ async fn do_iface(
 ) -> Result<(), Error> {
     match cmd {
         opts::IfaceCmd::New { phy_id, role, mac_addr } => {
-            let mac_addr: Option<Vec<u8>> = match mac_addr {
-                Some(s) => Some(s.parse::<MacAddr>()?.0.to_vec()),
-                None => None,
+            let mac_addr = match mac_addr {
+                Some(s) => s.parse::<MacAddr>()?.0,
+                None => NULL_MAC_ADDR,
             };
 
             let mut req = wlan_service::CreateIfaceRequest { phy_id, role: role.into(), mac_addr };

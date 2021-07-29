@@ -13,6 +13,7 @@ rustc_binary("util") {
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
