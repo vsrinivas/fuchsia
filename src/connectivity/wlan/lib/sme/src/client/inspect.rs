@@ -254,42 +254,32 @@ pub struct ServingApInfoNode {
 
 impl ServingApInfoNode {
     fn new(node: Node, ap: &ServingApInfo, hasher: &WlanHasher) -> Self {
-        let bssid = node.create_string("bssid", ap.bssid.to_mac_string());
-        let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid));
-        let ssid = node.create_string("ssid", ap.ssid.to_ssid_string());
-        let ssid_hash = node.create_string("ssid_hash", hasher.hash_ssid(&ap.ssid));
-        let rssi_dbm = node.create_int("rssi_dbm", ap.rssi_dbm as i64);
-        let snr_db = node.create_int("snr_db", ap.snr_db as i64);
-        let signal_report_time = node.create_time_at("signal_report_time", ap.signal_report_time);
-        let channel = ChannelNode::new(node.create_child("channel"), ap.channel.into());
-        let protection = node.create_string("protection", format!("{}", ap.protection));
-        let is_wmm_assoc = node.create_bool("is_wmm_assoc", ap.wmm_param.is_some());
-        let wmm_param =
-            ap.wmm_param.as_ref().map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
-        let ht_cap =
-            ap.ht_cap.map(|capability_info| node.create_bytes("ht_cap", capability_info.bytes));
-        let vht_cap =
-            ap.vht_cap.map(|capability_info| node.create_bytes("vht_cap", capability_info.bytes));
+        let mut serving_ap_info_node = Self {
+            bssid: node.create_string("bssid", ap.bssid.to_mac_string()),
+            bssid_hash: node.create_string("bssid_hash", hasher.hash_mac_addr(&ap.bssid)),
+            ssid: node.create_string("ssid", ap.ssid.to_ssid_string()),
+            ssid_hash: node.create_string("ssid_hash", hasher.hash_ssid(&ap.ssid)),
+            rssi_dbm: node.create_int("rssi_dbm", ap.rssi_dbm as i64),
+            snr_db: node.create_int("snr_db", ap.snr_db as i64),
+            signal_report_time: node.create_time_at("signal_report_time", ap.signal_report_time),
+            channel: ChannelNode::new(node.create_child("channel"), ap.channel.into()),
+            protection: node.create_string("protection", format!("{}", ap.protection)),
 
-        let mut this = Self {
-            node,
-            bssid,
-            bssid_hash,
-            ssid,
-            ssid_hash,
-            rssi_dbm,
-            snr_db,
-            signal_report_time,
-            channel,
-            protection,
-            is_wmm_assoc,
-            wmm_param,
-            ht_cap,
-            vht_cap,
+            // Reuse update_* helper functions to fill this fields.
+            ht_cap: None,
+            vht_cap: None,
+            is_wmm_assoc: node.create_bool("is_wmm_assoc", false),
+            wmm_param: None,
             wsc: None,
+
+            node,
         };
-        this.update_wsc_node(ap);
-        this
+        serving_ap_info_node.update_ht_cap_node(ap);
+        serving_ap_info_node.update_vht_cap_node(ap);
+        serving_ap_info_node.update_wmm_node(ap);
+        serving_ap_info_node.update_wsc_node(ap);
+
+        serving_ap_info_node
     }
 
     fn update(&mut self, ap: &ServingApInfo, hasher: &WlanHasher) {
@@ -302,6 +292,14 @@ impl ServingApInfoNode {
         self.signal_report_time.set_at(ap.signal_report_time);
         self.channel.update(ap.channel.into());
         self.protection.set(&format!("{}", ap.protection));
+
+        self.update_ht_cap_node(ap);
+        self.update_vht_cap_node(ap);
+        self.update_wmm_node(ap);
+        self.update_wsc_node(ap);
+    }
+
+    fn update_ht_cap_node(&mut self, ap: &ServingApInfo) {
         match &ap.ht_cap {
             Some(ht_cap) => match self.ht_cap.as_mut() {
                 Some(ht_cap_prop) => ht_cap_prop.set(&ht_cap.bytes),
@@ -311,6 +309,9 @@ impl ServingApInfoNode {
                 self.ht_cap.take();
             }
         }
+    }
+
+    fn update_vht_cap_node(&mut self, ap: &ServingApInfo) {
         match &ap.vht_cap {
             Some(vht_cap) => match self.vht_cap.as_mut() {
                 Some(vht_cap_prop) => vht_cap_prop.set(&vht_cap.bytes),
@@ -320,8 +321,6 @@ impl ServingApInfoNode {
                 self.vht_cap.take();
             }
         }
-        self.update_wmm_node(ap);
-        self.update_wsc_node(ap);
     }
 
     fn update_wmm_node(&mut self, ap: &ServingApInfo) {
