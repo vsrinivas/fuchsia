@@ -41,7 +41,11 @@ impl FakeFactoryItemsServer {
                 let size = item.0.get_size().unwrap();
 
                 (
-                    Some(item.0.create_child(zx::VmoChildOptions::COPY_ON_WRITE, 0, size).unwrap()),
+                    Some(
+                        item.0
+                            .create_child(zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, size)
+                            .unwrap(),
+                    ),
                     item.1,
                 )
             }
