@@ -78,8 +78,6 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
   WireClientImpl() = default;
 
  private:
-  friend class Client<fidl_testing::TestProtocol>;
-
   // For each event, increment the event count.
   std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
                                           AsyncEventHandler* event_handler) override {

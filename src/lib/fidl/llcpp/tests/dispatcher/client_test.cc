@@ -135,7 +135,7 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  Client<TestProtocol> client(std::move(local), loop.dispatcher());
+  WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
   TestResponseContext context(client.operator->());
@@ -347,7 +347,7 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnPeerClosed) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  Client<TestProtocol> client(std::move(local), loop.dispatcher());
+  WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Create and register a response context which will signal when deleted.
   sync_completion_t done;
