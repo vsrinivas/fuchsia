@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -40,12 +40,16 @@ impl InfoReporter {
     }
 
     pub fn report_scan_ended<D>(&mut self, _txn_id: ScanTxnId, result: &scan::ScanResult<D>) {
-        if let scan::ScanResult::DiscoveryFinished { result, .. } = result {
-            let (bss_list, scan_result) = convert_scan_result(result);
-            let stats = self.stats_collector.report_discovery_scan_ended(scan_result, bss_list);
-            warn_if_err!(stats);
-            if let Ok(stats) = stats {
-                self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
+        match result {
+            scan::ScanResult::None => {}
+            scan::ScanResult::DiscoveryFinished { bss_description_list, .. } => {
+                let (bss_count, result_code) = summarize_scan_result(&bss_description_list);
+                let stats =
+                    self.stats_collector.report_discovery_scan_ended(result_code, bss_count);
+                warn_if_err!(stats);
+                if let Ok(stats) = stats {
+                    self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
+                }
             }
         }
     }
@@ -112,11 +116,13 @@ impl InfoReporter {
     }
 }
 
-fn convert_scan_result(
-    result: &Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
-) -> (Option<&Vec<BssDescription>>, ScanResult) {
-    match result {
-        Ok(bss_list) => (Some(bss_list), ScanResult::Success),
-        Err(code) => (None, ScanResult::Failed(*code)),
+fn summarize_scan_result(
+    bss_description_list: &Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
+) -> (usize, fidl_mlme::ScanResultCode) {
+    match bss_description_list {
+        Ok(bss_description_list) => {
+            (bss_description_list.len(), fidl_mlme::ScanResultCode::Success)
+        }
+        Err(result_code) => (0, *result_code),
     }
 }

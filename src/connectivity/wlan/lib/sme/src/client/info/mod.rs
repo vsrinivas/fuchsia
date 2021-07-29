@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,19 +41,13 @@ pub enum InfoEvent {
     DisconnectInfo(DisconnectInfo),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum ScanResult {
-    Success,
-    Failed(fidl_mlme::ScanResultCode),
-}
-
 #[derive(Debug, PartialEq)]
 pub struct ScanStats {
     pub scan_start_at: zx::Time,
     pub scan_end_at: zx::Time,
     pub scan_type: fidl_mlme::ScanTypes,
     pub scan_start_while_connected: bool,
-    pub result: ScanResult,
+    pub result_code: fidl_mlme::ScanResultCode,
     /// Number of BSS found in scan result. For join scan, this only counts BSS with requested
     /// SSID.
     pub bss_count: usize,
@@ -143,7 +137,7 @@ pub struct ScanStartStats {
 #[derive(Debug, PartialEq)]
 pub struct ScanEndStats {
     pub scan_end_at: zx::Time,
-    pub result: ScanResult,
+    pub result_code: fidl_mlme::ScanResultCode,
     /// Number of BSS found with the requested SSID from join scan
     pub bss_count: usize,
 }

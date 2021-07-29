@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::VecDeque,
     thiserror::Error,
-    wlan_common::bss::BssDescription,
     wlan_rsn::{
         key::exchange::Key,
         rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
@@ -46,8 +45,8 @@ impl StatsCollector {
 
     pub fn report_discovery_scan_ended(
         &mut self,
-        result: ScanResult,
-        bss_list: Option<&Vec<BssDescription>>,
+        result_code: fidl_mlme::ScanResultCode,
+        bss_count: usize,
     ) -> Result<ScanStats, StatsError> {
         let now = now();
         let pending_stats = self.discovery_scan_stats.take().ok_or(StatsError::NoPendingScan)?;
@@ -57,8 +56,8 @@ impl StatsCollector {
             scan_start_while_connected: pending_stats.scan_start_while_connected,
             scan_start_at: pending_stats.scan_start_at,
             scan_end_at: now,
-            result,
-            bss_count: bss_list.map(|bss_list| bss_list.len()).unwrap_or(0),
+            result_code,
+            bss_count,
         };
         Ok(scan_stats)
     }
@@ -352,14 +351,13 @@ mod tests {
         let is_connected = true;
         assert!(stats_collector.report_discovery_scan_started(req, is_connected).is_none());
 
-        let bss_desc = fake_bss!(Open, ssid: SSID.to_vec(), rates: vec![12]);
         let stats =
-            stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
+            stats_collector.report_discovery_scan_ended(fidl_mlme::ScanResultCode::Success, 1);
         assert_variant!(stats, Ok(scan_stats) => {
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
             assert_eq!(scan_stats.scan_start_while_connected, is_connected);
-            assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(scan_stats.result_code, fidl_mlme::ScanResultCode::Success);
             assert_eq!(scan_stats.bss_count, 1);
         })
     }
@@ -564,9 +562,8 @@ mod tests {
     #[test]
     fn test_no_pending_discovery_scan_stats() {
         let mut stats_collector = StatsCollector::default();
-        let bss_desc = fake_bss!(Wpa2, ssid: SSID.to_vec());
         let stats =
-            stats_collector.report_discovery_scan_ended(ScanResult::Success, Some(&vec![bss_desc]));
+            stats_collector.report_discovery_scan_ended(fidl_mlme::ScanResultCode::Success, 1);
         assert_variant!(stats, Err(StatsError::NoPendingScan));
     }
 

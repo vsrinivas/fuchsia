@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +8,7 @@ use {
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
-        info::{ConnectionMilestone, DisconnectSource, ScanResult},
+        info::{ConnectionMilestone, DisconnectSource},
         ConnectFailure, ConnectResult, SelectNetworkFailure,
     },
 };
@@ -161,7 +161,7 @@ pub(super) fn convert_assoc_error_code(
 }
 
 pub(super) fn convert_scan_result(
-    result: &ScanResult,
+    result_code: &fidl_mlme::ScanResultCode,
 ) -> (
     metrics::ScanResultMetricDimensionScanResult,
     Option<metrics::ScanFailureMetricDimensionErrorCode>,
@@ -169,21 +169,15 @@ pub(super) fn convert_scan_result(
     use metrics::ScanFailureMetricDimensionErrorCode::*;
     use metrics::ScanResultMetricDimensionScanResult::*;
 
-    match result {
-        ScanResult::Success => (Success, None),
-        ScanResult::Failed(error_code) => (
-            Failed,
-            Some(match error_code {
-                fidl_mlme::ScanResultCode::NotSupported => NotSupported,
-                fidl_mlme::ScanResultCode::InvalidArgs => InvalidArgs,
-                fidl_mlme::ScanResultCode::InternalError => InternalError,
-                fidl_mlme::ScanResultCode::ShouldWait => InternalError,
-                fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => InternalError,
-                // This shouldn't happen, but we'll just map it to InternalError
-                fidl_mlme::ScanResultCode::Success => InternalError,
-            }),
-        ),
+    match result_code {
+        fidl_mlme::ScanResultCode::Success => None,
+        fidl_mlme::ScanResultCode::NotSupported => Some(NotSupported),
+        fidl_mlme::ScanResultCode::InvalidArgs => Some(InvalidArgs),
+        fidl_mlme::ScanResultCode::InternalError => Some(InternalError),
+        fidl_mlme::ScanResultCode::ShouldWait => Some(InternalError),
+        fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => Some(InternalError),
     }
+    .map_or((Success, None), |error_code_dim| (Failed, Some(error_code_dim)))
 }
 
 pub(super) fn convert_scan_type(

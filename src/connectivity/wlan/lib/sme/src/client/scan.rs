@@ -73,9 +73,12 @@ pub enum ScanResult<D> {
     // No reaction: the scan results are not relevant anymore, or we received
     // an unexpected ScanConfirm.
     None,
-    // "Discovery" scan has finished, either successfully or not.
+    // Scan finished, either successfully or not.
     // SME is expected to forward the result to the user.
-    DiscoveryFinished { tokens: Vec<D>, result: Result<Vec<BssDescription>, ScanResultCode> },
+    DiscoveryFinished {
+        tokens: Vec<D>,
+        bss_description_list: Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
+    },
 }
 
 impl<D> ScanScheduler<D> {
@@ -140,7 +143,7 @@ impl<D> ScanScheduler<D> {
             ScanState::NotScanning => ScanResult::None,
             ScanState::ScanningToDiscover { cmd, bss_map, .. } => ScanResult::DiscoveryFinished {
                 tokens: cmd.tokens,
-                result: match msg.code {
+                bss_description_list: match msg.code {
                     ScanResultCode::Success => Ok(convert_bss_map(bss_map, None, sme_inspect)),
                     other => Err(other),
                 },
@@ -388,12 +391,12 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+        let (tokens, bss_description_list) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
             "expected discovery scan to be completed"
         );
         assert_eq!(vec![10], tokens);
-        let mut ssid_list = result
+        let mut ssid_list = bss_description_list
             .expect("expected a successful scan result")
             .into_iter()
             .map(|bss| bss.ssid().to_vec())
@@ -436,12 +439,12 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+        let (tokens, bss_description_list) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
             "expected discovery scan to be completed"
         );
         assert_eq!(vec![10], tokens);
-        let mut ssid_list = result
+        let mut ssid_list = bss_description_list
             .expect("expected a successful scan result")
             .into_iter()
             .map(|bss| bss.ssid().to_vec())
@@ -475,13 +478,13 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+        let (tokens, bss_description_list) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
             "expected discovery scan to be completed"
         );
         assert_eq!(vec![10], tokens);
 
-        let result = result.expect("expected a successful scan result");
+        let result = bss_description_list.expect("expected a successful scan result");
         assert_eq!(result.len(), 1);
         // Verify that both IEs are processed.
         assert!(slice_contains(&result[0].ies[..], ie_marker1));
@@ -684,12 +687,12 @@ mod tests {
         expected_tokens: Vec<i32>,
         expected_ssids: Vec<Vec<u8>>,
     ) {
-        let (tokens, result) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+        let (tokens, bss_description_list) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
             "expected discovery scan to be completed"
         );
         assert_eq!(tokens, expected_tokens);
-        let mut ssid_list = result
+        let mut ssid_list = bss_description_list
             .expect("expected a successful scan result")
             .into_iter()
             .map(|bss| bss.ssid().to_vec())

@@ -242,11 +242,11 @@ pub fn log_scan_stats(
     inspect_log!(inspect_tree.client_stats.scan.lock().get_mut(), {
         start_at: scan_stats.scan_start_at.into_nanos(),
         end_at: scan_stats.scan_end_at.into_nanos(),
-        result: format!("{:?}", scan_stats.result),
+        result: format!("{:?}", scan_stats.result_code),
         start_while_connected: scan_stats.scan_start_while_connected,
     });
 
-    let (scan_result_dim, error_code_dim) = convert_scan_result(&scan_stats.result);
+    let (scan_result_dim, error_code_dim) = convert_scan_result(&scan_stats.result_code);
     let scan_type_dim = convert_scan_type(scan_stats.scan_type);
     let is_join_scan_dim = convert_bool_dim(is_join_scan);
     let client_state_dim = match scan_stats.scan_start_while_connected {
@@ -846,7 +846,7 @@ mod tests {
         wlan_sme::client::{
             info::{
                 CandidateNetwork, ConnectStats, DisconnectCause, DisconnectInfo,
-                DisconnectMlmeEventName, DisconnectSource, PreviousDisconnectInfo, ScanResult,
+                DisconnectMlmeEventName, DisconnectSource, PreviousDisconnectInfo,
                 SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
@@ -929,7 +929,7 @@ mod tests {
             scan_end_at: now,
             scan_type: fidl_mlme::ScanTypes::Active,
             scan_start_while_connected: true,
-            result: ScanResult::Success,
+            result_code: fidl_mlme::ScanResultCode::Success,
             bss_count: 5,
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
@@ -1594,7 +1594,7 @@ mod tests {
             scan_end_at: now,
             scan_type: fidl_mlme::ScanTypes::Active,
             scan_start_while_connected: true,
-            result: ScanResult::Success,
+            result_code: fidl_mlme::ScanResultCode::Success,
             bss_count: 5,
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);
@@ -1625,7 +1625,7 @@ mod tests {
             scan_end_at: now,
             scan_type: fidl_mlme::ScanTypes::Active,
             scan_start_while_connected: true,
-            result: ScanResult::Failed(fidl_mlme::ScanResultCode::InvalidArgs),
+            result_code: fidl_mlme::ScanResultCode::InvalidArgs,
             bss_count: 5,
         };
         log_scan_stats(&mut cobalt_sender, inspect_tree.clone(), &scan_stats, true);

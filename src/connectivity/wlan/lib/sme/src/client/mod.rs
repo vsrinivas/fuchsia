@@ -53,7 +53,7 @@ use {
 
 pub use self::{
     bss::{BssInfo, ClientConfig},
-    info::{InfoEvent, ScanResult},
+    info::InfoEvent,
 };
 
 // This is necessary to trick the private-in-public checker.
@@ -413,21 +413,22 @@ impl super::Station for ClientSme {
                 self.send_scan_request(request);
                 match result {
                     scan::ScanResult::None => (),
-                    scan::ScanResult::DiscoveryFinished { tokens, result } => {
-                        let result = result.map(|bss_list| {
-                            bss_list
-                                .iter()
-                                .map(|bss| {
-                                    self.cfg.convert_bss_description(
-                                        &bss,
-                                        None,
-                                        &self.context.device_info,
-                                    )
-                                })
-                                .collect()
-                        });
+                    scan::ScanResult::DiscoveryFinished { tokens, bss_description_list } => {
+                        let bss_description_list =
+                            bss_description_list.map(|bss_description_list| {
+                                bss_description_list
+                                    .iter()
+                                    .map(|bss_description| {
+                                        self.cfg.convert_bss_description(
+                                            &bss_description,
+                                            None,
+                                            &self.context.device_info,
+                                        )
+                                    })
+                                    .collect()
+                            });
                         for responder in tokens {
-                            responder.respond(result.clone());
+                            responder.respond(bss_description_list.clone());
                         }
                     }
                 }
@@ -1211,7 +1212,7 @@ mod tests {
             assert!(!scan_stats.scan_start_while_connected);
             assert!(scan_stats.scan_time().into_nanos() > 0);
             assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
-            assert_eq!(scan_stats.result, ScanResult::Success);
+            assert_eq!(scan_stats.result_code, fidl_mlme::ScanResultCode::Success);
             assert_eq!(scan_stats.bss_count, 1);
         });
     }
