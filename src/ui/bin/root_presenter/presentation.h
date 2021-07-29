@@ -92,8 +92,7 @@ class Presentation : fuchsia::ui::policy::Presenter,
  public:
   Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
                fuchsia::ui::scenic::Scenic* scenic, std::unique_ptr<scenic::Session> session,
-               int32_t display_startup_rotation_adjustment,
-               fit::function<void(fuchsia::ui::views::ViewRef)> request_focus);
+               fuchsia::ui::views::FocuserPtr focuser, int32_t display_startup_rotation_adjustment);
   ~Presentation() override = default;
 
   // |fuchsia.ui.policy.Presenter|
@@ -195,7 +194,7 @@ class Presentation : fuchsia::ui::policy::Presenter,
   InputReportInspector input_report_inspector_;
   InputEventInspector input_event_inspector_;
 
-  const std::unique_ptr<scenic::Session> root_session_;
+  std::unique_ptr<scenic::Session> root_session_;
 
   scenic::DisplayCompositor compositor_;
   scenic::LayerStack layer_stack_;
@@ -280,9 +279,10 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // Presenter to register presentations with Accessibility for magnification.
   fuchsia::accessibility::MagnifierPtr magnifier_;
 
-  ColorTransformHandler color_transform_handler_;
+  // Scenic focuser used to request focus chain updates.
+  fuchsia::ui::views::FocuserPtr view_focuser_;
 
-  const fit::function<void(fuchsia::ui::views::ViewRef)> request_focus_;
+  ColorTransformHandler color_transform_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Presentation);
 };

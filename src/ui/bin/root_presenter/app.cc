@@ -38,7 +38,6 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
       input_report_inspector_(inspector_.root().CreateChild("input_reports")),
       input_reader_(this),
       fdr_manager_(*component_context, std::make_shared<MediaRetriever>()),
-      focuser_binding_(this),
       media_buttons_handler_(),
       focus_dispatcher_(component_context->svc()),
       virtual_keyboard_coordinator_(component_context) {
@@ -48,21 +47,10 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
 
   component_context->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
   component_context->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
-  component_context->outgoing()->AddPublicService(a11y_focuser_registry_bindings_.GetHandler(this));
 
   component_context->svc()->Connect(scenic_.NewRequest());
   scenic_.set_error_handler([this](zx_status_t error) {
     FX_LOGS(WARNING) << "Scenic died with error " << zx_status_get_string(error)
-                     << ". Killing RootPresenter.";
-    Exit();
-  });
-
-  view_focuser_.set_error_handler([](zx_status_t error) {
-    FX_LOGS(WARNING) << "ViewFocuser died with error " << zx_status_get_string(error);
-  });
-  auto session = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
-  session->set_error_handler([this](zx_status_t error) {
-    FX_LOGS(WARNING) << "Session died with error " << zx_status_get_string(error)
                      << ". Killing RootPresenter.";
     Exit();
   });
@@ -80,13 +68,25 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
     }
   }
 
+  // Set up root session.
+  // Create session and session listener.
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fuchsia::ui::views::FocuserPtr focuser_ptr;
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> session_listener;
+  auto session_request = session_ptr.NewRequest();
+
+  // Wrap root session for convenience and create valid session listener.
+  auto session =
+      std::make_unique<scenic::Session>(std::move(session_ptr), session_listener.NewRequest());
+
+  // Create scenic session.
+  scenic_->CreateSession2(std::move(session_request), session_listener.Bind(),
+                          focuser_ptr.NewRequest());
+
   presentation_ = std::make_unique<Presentation>(
       inspector_.root().CreateChild(inspector_.root().UniqueName("presentation-")),
-      component_context, scenic_.get(), std::move(session), display_startup_rotation_adjustment,
-      /*request_focus*/
-      [this](fuchsia::ui::views::ViewRef view_ref) {
-        RequestFocus(std::move(view_ref), [](auto) {});
-      });
+      component_context, scenic_.get(), std::move(session), std::move(focuser_ptr),
+      display_startup_rotation_adjustment);
 
   for (auto& it : devices_by_id_) {
     presentation_->OnDeviceAdded(it.second.get());
@@ -168,23 +168,6 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);
   presentation_->OnReport(input_device->id(), std::move(report));
-}
-
-void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
-  FX_DCHECK(view_focuser_);
-  if (focuser_binding_.is_bound()) {
-    FX_LOGS(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
-  }
-  focuser_binding_.Bind(std::move(view_focuser));
-}
-
-void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) {
-  if (!view_ref.reference.is_valid()) {
-    callback(fpromise::error(fuchsia::ui::views::Error::DENIED));
-    return;
-  }
-  FX_DCHECK(view_focuser_);
-  view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
 }
 
 }  // namespace root_presenter

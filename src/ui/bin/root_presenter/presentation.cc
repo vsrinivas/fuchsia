@@ -48,8 +48,8 @@ void ChattyEventLog(const fuchsia::ui::input::InputEvent& event) {
 Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
                            fuchsia::ui::scenic::Scenic* scenic,
                            std::unique_ptr<scenic::Session> session,
-                           int32_t display_startup_rotation_adjustment,
-                           fit::function<void(fuchsia::ui::views::ViewRef)> request_focus)
+                           fuchsia::ui::views::FocuserPtr focuser,
+                           int32_t display_startup_rotation_adjustment)
     : inspect_node_(std::move(inspect_node)),
       input_report_inspector_(inspect_node_.CreateChild("input_reports")),
       input_event_inspector_(inspect_node_.CreateChild("input_events")),
@@ -69,9 +69,9 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
       safe_presenter_root_(root_session_.get()),
       safe_presenter_injector_(&injector_session_),
       safe_presenter_proxy_(&proxy_session_),
+      view_focuser_(std::move(focuser)),
       color_transform_handler_(component_context, compositor_.id(), root_session_.get(),
-                               &safe_presenter_root_),
-      request_focus_(std::move(request_focus)) {
+                               &safe_presenter_root_) {
   FX_DCHECK(component_context);
   component_context->outgoing()->AddPublicService(presenter_bindings_.GetHandler(this));
   component_context->outgoing()->AddPublicService<fuchsia::ui::accessibility::view::Registry>(
@@ -224,7 +224,7 @@ void Presentation::UpdateGraphState(GraphState updated_state) {
 
     FX_DCHECK(client_view_ref_.has_value());
     FX_LOGS(INFO) << "Transferring focus to client";
-    request_focus_(fidl::Clone(client_view_ref_.value()));
+    view_focuser_->RequestFocus(fidl::Clone(client_view_ref_.value()), [](auto) {});
   }
 
   if (graph_state_.client_view_attached.value() && create_a11y_view_holder_callback_) {

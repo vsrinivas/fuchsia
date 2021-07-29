@@ -40,8 +40,6 @@ namespace root_presenter {
 // Class for serving various input and graphics related APIs.
 class App : public fuchsia::ui::policy::DeviceListenerRegistry,
             public fuchsia::ui::input::InputDeviceRegistry,
-            public fuchsia::ui::views::accessibility::FocuserRegistry,
-            public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
  public:
   App(sys::ComponentContext* component_context, fit::closure quit_callback);
@@ -51,9 +49,6 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
   void OnReport(ui_input::InputDeviceImpl* input_device,
                 fuchsia::ui::input::InputReport report) override;
-
-  // |fuchsia.ui.views.accessibility.FocuserRegistry|
-  void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
   // For testing.
   Presentation* presentation() { return presentation_.get(); }
@@ -78,29 +73,15 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
       fuchsia::ui::input::DeviceDescriptor descriptor,
       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
-  // |fuchsia.ui.views.Focuser|
-  void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
-
   const fit::closure quit_callback_;
   sys::ComponentInspector inspector_;
   InputReportInspector input_report_inspector_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
-  fidl::BindingSet<fuchsia::ui::views::accessibility::FocuserRegistry>
-      a11y_focuser_registry_bindings_;
   ui_input::InputReader input_reader_;
   FactoryResetManager fdr_manager_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-
-  // This is a privileged interface between Root Presenter and Scenic. It forwards the Focuser
-  // requests incoming from accessibility services to Scenic. This Focuser is implicitly associated
-  // with the root view, which gives it access to change the Focus Chain to whatever view that is
-  // part of the hierarchy.
-  fuchsia::ui::views::FocuserPtr view_focuser_;
-  // Binding holding the connection between a11y and Root Presenter. The incoming Focuser calls are
-  // simply forwarded using |view_focuser_|.
-  fidl::Binding<fuchsia::ui::views::Focuser> focuser_binding_;
 
   // Created at construction time.
   std::unique_ptr<Presentation> presentation_;

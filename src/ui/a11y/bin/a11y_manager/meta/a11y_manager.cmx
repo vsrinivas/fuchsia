@@ -19,8 +19,7 @@
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.policy.DisplayBacklight",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.views.accessibility.FocuserRegistry"
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

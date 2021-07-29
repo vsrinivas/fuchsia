@@ -730,48 +730,5 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
   }
 }
 
-// Tests that we can handle both an automatic focus request on startup and a simultaneous one
-// from a11y.
-TEST_F(RootPresenterTest, FocusCollision) {
-  // Set up presentation.
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-  const zx_koid_t child_view_koid = ExtractKoid(view_ref);
-  fuchsia::ui::views::ViewRef clone;
-  fidl::Clone(view_ref, &clone);
-  presentation()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
-  RunLoopUntil([this]() { return presentation()->is_initialized(); });
-
-  // Register a separate focuser.
-  fuchsia::ui::views::FocuserPtr focuser;
-  root_presenter()->RegisterFocuser(focuser.NewRequest());
-  // Use a bogus ViewRef since we don't care if focus actually changes.
-  auto [_, bogus_view_ref] = scenic::ViewRefPair::New();
-  bool focus_callback_fired = false;
-  focuser->RequestFocus(std::move(bogus_view_ref),
-                        [&focus_callback_fired](auto) { focus_callback_fired = true; });
-
-  // Connect to focus chain registry after Scenic has been set up.
-  zx_koid_t focused_view_koid = ZX_KOID_INVALID;
-  SetUpFocusChainListener([&focused_view_koid](fuchsia::ui::focus::FocusChain focus_chain) {
-    if (!focus_chain.focus_chain().empty()) {
-      focused_view_koid = ExtractKoid(focus_chain.focus_chain().back());
-    }
-  });
-
-  // Create and connect child view.
-  fuchsia::ui::scenic::ScenicPtr scenic;
-  context_provider_.context()->svc()->Connect(scenic.NewRequest());
-  scenic::Session session(scenic.get());
-  session.Enqueue({scenic::NewCommand(scenic::NewCreateViewCmd(
-      /*view_id*/ 1, std::move(view_token), std::move(control_ref), std::move(view_ref), ""))});
-  session.Present(0, [](auto) {});
-
-  // Expect both focus requests to be handled.
-  RunLoopUntil([&focus_callback_fired, &focused_view_koid, child_view_koid]() {
-    return focused_view_koid == child_view_koid && focus_callback_fired;
-  });
-}
-
 }  // namespace
 }  // namespace root_presenter

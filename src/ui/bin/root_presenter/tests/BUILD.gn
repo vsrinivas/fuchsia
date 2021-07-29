@@ -19,12 +19,6 @@ fuchsia_component("focus_dispatcher_unittests") {
   manifest = "meta/focus_dispatcher_unittests.cmx"
 }
 
-fuchsia_component("root_presenter_apptests") {
-  testonly = true
-  deps = [ ":root_presenter_apptests_bin" ]
-  manifest = "meta/root_presenter_apptests.cmx"
-}
-
 fuchsia_unittest_component("root_presenter_unittests") {
   deps = [ ":root_presenter_unittests_bin" ]
   manifest = "meta/root_presenter_unittests.cmx"
@@ -32,7 +26,6 @@ fuchsia_unittest_component("root_presenter_unittests") {
 
 fuchsia_test_package("root_presenter_tests") {
   test_components = [
-    ":root_presenter_apptests",
     ":root_presenter_unittests",
     ":focus_dispatcher_unittests",
   ]
@@ -93,29 +86,6 @@ executable("root_presenter_unittests_bin") {
     "//src/ui/lib/key_util",
     "//src/ui/testing:mock_input_device",
     "//third_party/googletest:gmock",
-  ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-executable("root_presenter_apptests_bin") {
-  testonly = true
-  output_name = "root_presenter_apptests"
-
-  sources = [ "accessibility_focuser_registry_test.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//sdk/fidl/fuchsia.ui.policy.accessibility",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/ui/bin/root_presenter:lib",
-    "//src/ui/bin/root_presenter/tests/fakes",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
