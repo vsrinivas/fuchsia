@@ -1,0 +1,220 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.observation;
+
+using fuchsia.math as m;
+using zx;
+
+const BUFFER_SIZE uint32 = 512;
+const MAX_VIEW_COUNT uint32 = 1024;
+
+/// A description of abnormal conditions.
+type Error = flexible enum {
+    /// The number of snapshots exceeded BUFFER_SIZE; pending data is discarded.
+    BUFFER_OVERFLOW = 1;
+};
+
+/// A method of obtaining view tree snapshots for a particular view, the "context
+/// view", and its child views, if any. The returned data is a sequence of
+/// snapshots during the period of observation, which starts at the prior
+/// Watch() call's [`epoch_end`] (or zx.time 0), and ending at the current
+/// [`epoch_end`]. The timebase is ZX_CLOCK_MONOTONIC.
+///
+/// Usage note. With this protocol, a client can watch for changes to the view
+/// tree over which it has authority. For example, if a client owns view A, then
+/// A serves as the context view for A's subtree (i.e., a "root view"), where A
+/// is a parent of view B, and B is a parent of view C. The client can then
+/// observe key lifecycle events in all of A, B, and C, such as newly connected
+/// views, changes to view position and size, etc. In doing so, a client can
+/// gate its actions on changes to the view tree, in a reliable and ergonomic
+/// manner. For example, a client can wait for a descendant view C to become
+/// connected before requesting a focus transfer to C.
+///
+/// Configuration: The context view is determined outside of this protocol.
+///
+/// Frequency: A snapshot is issued at most once per frame, but for relatively
+/// static content, can be issued at a slower rate.
+///
+/// Issuance: If the context view is disconnected from a display, no
+/// frames are issued on behalf of the context view, and a Watch() call will
+/// sit quietly.
+///
+/// Lifecycle: The server endpoint is closed when the context view dies.
+protocol Geometry {
+    /// A method of obtaining view tree snapshots for a particular view.
+    ///
+    /// This call is formulated as a "hanging get" pattern: the client asks for
+    /// a set of recent snapshots, and receives them via the callback. This
+    /// pull-based approach ensures that clients consume events at their own
+    /// pace; events don't clog up the channel in an unbounded manner.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight |Watch| call
+    /// at a time; it is a logical error to have concurrent calls to |Watch|.
+    /// Non-compliance results in channel closure.
+    ///
+    /// Client pacing. The server will dispatch snapshots to the caller on a
+    /// lossless, best-effort basis, but the caller must allocate enough time to
+    /// keep up with new snapshots. If Error.BUFFER_OVERFLOW is returned, the
+    /// client may try again.
+    Watch() -> (struct {
+        epoch_end zx.time;
+        updates vector<ViewTreeSnapshot>:BUFFER_SIZE;
+    }) error Error;
+};
+
+/// A description of the context view and its descendant views, if any.
+type ViewTreeSnapshot = table {
+    /// When the snapshot was taken.
+    1: time zx.time;
+
+    /// The context view (at element 0) and a complete list of its descendant views.
+    ///
+    /// If MAX_VIEW_COUNT is exceeded, this field is left empty. Instead, a best
+    /// effort description of the view tree, starting from the context view, is
+    /// laid out in `incomplete`.
+    2: views vector<ViewDescriptor>:MAX_VIEW_COUNT;
+
+    /// The context view (at element 0) and an incomplete list of its descendant
+    /// views.  Undiscerning clients may log an error, ignore this field, and
+    /// continue receiving snapshots until the view tree can be described
+    /// completely. Discerning clients may try to make sense of the world with
+    /// incomplete data.
+    3: incomplete vector<ViewDescriptor>:MAX_VIEW_COUNT;
+};
+
+/// A view's bounding box, described in the view's own coordinate system.
+/// Concretely, |AlignedExtent| describes the minimal and maximal points of a
+/// view's bounding box, which is rectangular and axis-aligned.
+///
+/// Note: For describing a view's bounding box in another view's coordinate
+/// system, see |RotatableExtent|.
+///
+/// The origin is min.
+/// The size is: (abs(max.x - min.x), abs(max.y - min.y)).
+type AlignedExtent = struct {
+    /// The minimal position of the view's bounding box.
+    min m.PointF;
+
+    /// The maximal position of the view's bounding box.
+    max m.PointF;
+};
+
+/// A view bounding box, described in another view's coordinate system.
+/// Concretely, |RotatableExtent| describes the origin, size, and rotation angle
+/// about the origin, for a view's bounding box.
+///
+/// Note: For describing a view's bounding box in the view's own coordinate
+/// system, see |AlignedExtent|.
+///
+/// We use "V" to refer to the view being described, and "W" to refer to the
+/// view where V is being described.
+///
+/// Note that while |angle| can be arbitrary, typical usage is axis aligned.
+/// To find the bounding box of V in W in clockwise order, starting with
+/// |origin|, where |angle| is 0, 90, 180, or 270, and using o=origin, w=width,
+/// h=height, a=angle:
+/// a=  0: (o.x, o.y), (o.x + w, o.y), (o.x + w, o.y + h), (o.x, o.y + h)
+/// a= 90: (o.x, o.y), (o.x, o.y - w), (o.x + h, o.y - w), (o.x + h, o.y)
+/// a=180: (o.x, o.y), (o.x - w, o.y), (o.x - w, o.y - h), (o.x, o.y - h)
+/// a=270: (o.x, o.y), (o.x, o.y + w), (o.x - h, o.y + w), (o.x - h, o.y)
+/// A formula based on sin a and cos a is readily obtained, but floating point
+/// computation may give only approximate results.
+type RotatableExtent = struct {
+    /// The origin point of V's bounding box, in W's coordinate system.
+    origin m.PointF;
+
+    /// The width of V's bounding box (along the direction where V's x axis
+    /// increases), in W's coordinate system.
+    width float32;
+
+    /// The height of V's bounding box (along the direction where V's y axis
+    /// increases), in W's coordinate system.
+    height float32;
+
+    /// The clockwise rotation about the origin, in degrees.
+    angle float32;
+};
+
+/// The ratio from physical pixels (of a display) to logical pixels (of the
+/// coordinate system of a view).
+/// - The values are placed in (x, y) order.
+alias PixelScale = array<float32, 2>;
+
+/// Geometric data of a view.
+///
+/// Note that these are server-side values, and some graphics APIs do not have
+/// consistency guarantees with UI clients around when these values "take
+/// effect". I.e., the UI client may need to be directly queried to learn what
+/// values they are currently using. However, UI clients are expected to use
+/// these values "immediately", within a few frames.
+type Layout = struct {
+    /// The minimal and maximal points of a view's bounding box, in the
+    /// coordinate system of that view.
+    extent AlignedExtent;
+
+    /// The conversion ratio from physical pixels (of a display) to logical pixels
+    /// (of the coordinate system of the view).
+    pixel_scale PixelScale;
+
+    /// The offset data for the view's bounding box, in the coordinate system of
+    /// that view.
+    inset m.InsetF;
+};
+
+/// The direct descendants of a view.
+type Child = struct {
+    /// The child view's identifier.
+    view_ref_koid zx.koid;
+
+    /// The space occupied within the parent view's coordinate system.
+    /// It does NOT describe the child view's logical size.
+    extent_in_parent RotatableExtent;
+
+    /// The position of this |Child| in the parent |ViewDescriptor|'s |children|
+    /// field.
+    index_in_parent uint32;
+};
+
+/// Data for a particular view: identifier, position, and children.
+type ViewDescriptor = table {
+    /// This view's fuchsia.ui.views.ViewRef koid.
+    1: view_ref_koid zx.koid;
+
+    /// This view's extent, in the context view's coordinate system.
+    ///
+    /// This describes the "ground truth" position of this view within the context
+    /// view, regardless of view tree depth, or specific layout state of
+    /// intermediate views.
+    ///
+    /// Limitations. It does NOT describe whether the view is "visible" (e.g.,
+    /// whether the view has opacity applied, or is not occluded by another view),
+    /// and it does NOT describe whether the view is "hittable" (e.g., whether the
+    /// view is positioned fully inside of every ancestor view's bounding box).
+    2: extent_in_context RotatableExtent;
+
+    /// This view's origin, size, pixel scale, and inset data, in the view's own
+    /// coordinate system.
+    ///
+    /// Limitations. Data consistency between server and client depend on the
+    /// specific graphics API. Some APIs provide weak consistency, where the
+    /// server-side data (this data) and the client-side data (in the view's UI
+    /// client) are allowed to diverge for some time.
+    3: layout Layout;
+
+    /// The identity, position, and size of each child view. Position and size are
+    /// described by the extent of the child view within the parent view's
+    /// coordinate system.
+    ///
+    /// The view tree topology is reliable. A child placed here is equivalent to
+    /// the parent view receiving a "child view connected" signal.
+    ///
+    /// Limitations. A child's extent is described in the parent view's coordinate
+    /// system, which is subject to weak consistency (depending on the graphics
+    /// API). That is, when a parent view has a change in size or metrics, the
+    /// context view may observe a "jump" as the parent view incorporates those
+    /// data. In such cases, a new ViewTreeSnapshot is issued to describe the
+    /// change in position, relative to the context view.
+    4: children vector<Child>:MAX_VIEW_COUNT;
+};

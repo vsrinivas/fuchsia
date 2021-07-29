@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.observation.test;
+
+using fuchsia.ui.observation;
+
+/// *** ONLY FOR USE IN TESTS ***
+/// This is a sensitive protocol. It provides unlimited access to the global
+/// view tree. Hand it out ONLY to test components.
+///
+/// Production uses should obtain observation protocols through a graphics
+/// factory function (such as |fuchsia.ui.scenic.Scenic.CreateSessionT|), which
+/// securely ties observation protocols to a specific graphics client.
+protocol Registry {
+    /// Sets up a channel for receiving global view geometry.
+    ///
+    /// This method may be called multiple times to obtain multiple geometry
+    /// observers, if necesary. However, typical test usage is to obtain just
+    /// one geometry observer in the test component.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight call at a
+    /// time. Subsequent calls must wait until the acknowledgment returns.
+    /// Non-compliance results in channel closure.
+    RegisterGlobalGeometryObserver(resource struct {
+        provider server_end:fuchsia.ui.observation.Geometry;
+    }) -> ();
+};
