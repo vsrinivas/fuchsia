@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_PAGER_TRANSFER_BUFFER_H_
-#define SRC_STORAGE_BLOBFS_PAGER_TRANSFER_BUFFER_H_
+#ifndef SRC_STORAGE_BLOBFS_TRANSFER_BUFFER_H_
+#define SRC_STORAGE_BLOBFS_TRANSFER_BUFFER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -18,13 +18,45 @@
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/storage/blobfs/iterator/block_iterator_provider.h"
+#include "src/storage/blobfs/loader_info.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/node_finder.h"
-#include "src/storage/blobfs/pager/user_pager_info.h"
 #include "src/storage/blobfs/transaction_manager.h"
 
 namespace blobfs {
-namespace pager {
+
+// The size of the transfer buffer for reading from storage.
+//
+// The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
+// available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
+// thread at the moment, so a global buffer should be sufficient.
+//
+// 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
+// destination VMOS.
+constexpr uint64_t kTransferBufferSize = 256 * (1ull << 20);
+
+// The size of the scratch buffer used for decompression.
+//
+// The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
+// available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
+// thread at the moment, so a global buffer should be sufficient.
+//
+// 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
+// destination VMOS.
+constexpr uint64_t kDecompressionBufferSize = 256 * (1ull << 20);
+
+// Make sure blocks are page-aligned.
+static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
+
+// Make sure the pager transfer buffer is block-aligned.
+static_assert(kTransferBufferSize % kBlobfsBlockSize == 0);
+
+// Make sure the decompression scratch buffer is block-aligned.
+static_assert(kDecompressionBufferSize % kBlobfsBlockSize == 0);
+
+// Make sure the pager transfer buffer and decompression buffer are sized per the worst case
+// compression ratio of 1.
+static_assert(kTransferBufferSize >= kDecompressionBufferSize);
 
 // TransferBuffer is an interface representing a transfer buffer which can be loaded with data from
 // the underlying storage device.
@@ -39,16 +71,16 @@ class TransferBuffer {
   // specified by [|offset|, |offset| + |length|).
   // |offset| must be block aligned. |length| may be rounded up to a block-aligned offset.
   [[nodiscard]] virtual zx::status<> Populate(uint64_t offset, uint64_t length,
-                                              const UserPagerInfo& info) = 0;
+                                              const LoaderInfo& info) = 0;
 
   // Accesses the underlying VMO.
   // Must be preceded with a call to |TransferBuffer::Populate()|. The contents of the returned
   // VMO are only defined up to |length| bytes (the value passed to the last call to
   // |TransferBuffer::Populate()|).
-  virtual const zx::vmo& vmo() const = 0;
+  virtual const zx::vmo& GetVmo() const = 0;
 
   // Returns the size of the underlying VMO.
-  virtual size_t size() const = 0;
+  virtual size_t GetSize() const = 0;
 };
 
 // StorageBackedTransferBuffer is an instance of |TransferBuffer| which can be loaded with data from
@@ -64,10 +96,10 @@ class StorageBackedTransferBuffer : public TransferBuffer {
       BlobfsMetrics* metrics);
 
   [[nodiscard]] zx::status<> Populate(uint64_t offset, uint64_t length,
-                                      const UserPagerInfo& info) final;
+                                      const LoaderInfo& info) final;
 
-  const zx::vmo& vmo() const final { return vmo_; }
-  size_t size() const final { return size_; }
+  const zx::vmo& GetVmo() const final { return vmo_; }
+  size_t GetSize() const final { return size_; }
 
  private:
   StorageBackedTransferBuffer(zx::vmo vmo, size_t size, storage::OwnedVmoid vmoid,
@@ -83,7 +115,6 @@ class StorageBackedTransferBuffer : public TransferBuffer {
   BlobfsMetrics* metrics_ = nullptr;
 };
 
-}  // namespace pager
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_PAGER_TRANSFER_BUFFER_H_
+#endif  // SRC_STORAGE_BLOBFS_TRANSFER_BUFFER_H_

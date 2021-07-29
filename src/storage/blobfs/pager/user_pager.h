@@ -20,44 +20,14 @@
 
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
+#include "src/storage/blobfs/loader_info.h"
 #include "src/storage/blobfs/metrics.h"
-#include "src/storage/blobfs/pager/transfer_buffer.h"
-#include "src/storage/blobfs/pager/user_pager_info.h"
 #include "src/storage/blobfs/transaction_manager.h"
+#include "src/storage/blobfs/transfer_buffer.h"
 #include "src/storage/lib/watchdog/include/lib/watchdog/watchdog.h"
 
 namespace blobfs {
 namespace pager {
-
-// The size of the transfer buffer for reading from storage.
-//
-// The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
-// available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
-// thread at the moment, so a global buffer should be sufficient.
-//
-// 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
-// destination VMOS.
-constexpr uint64_t kTransferBufferSize = 256 * (1 << 20);
-
-// The size of the scratch buffer used for decompression.
-//
-// The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
-// available in the future for more fine-grained access. Moreover, the blobfs pager uses a single
-// thread at the moment, so a global buffer should be sufficient.
-//
-// 256 MB; but the size is arbitrary, since pages will become decommitted as they are moved to
-// destination VMOS.
-constexpr uint64_t kDecompressionBufferSize = 256 * (1 << 20);
-
-// Make sure blocks are page-aligned.
-static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
-// Make sure the pager transfer buffer is block-aligned.
-static_assert(kTransferBufferSize % kBlobfsBlockSize == 0);
-// Make sure the decompression scratch buffer is block-aligned.
-static_assert(kDecompressionBufferSize % kBlobfsBlockSize == 0);
-// Make sure the pager transfer buffer and decompression buffer are sized per the worst case
-// compression ratio of 1.
-static_assert(kTransferBufferSize >= kDecompressionBufferSize);
 
 // Wrapper enum for error codes supported by the zx_pager_op_range(ZX_PAGER_OP_FAIL) syscall, used
 // to communicate userpager errors to the kernel, so that the error can be propagated to the
@@ -152,7 +122,7 @@ class UserPager {
   // the page request, e.g. failure while decompressing, or while transferring pages from the
   // transfer buffer etc.
   [[nodiscard]] PagerErrorStatus TransferPages(PageSupplier page_supplier, uint64_t offset,
-                                               uint64_t length, const UserPagerInfo& info);
+                                               uint64_t length, const LoaderInfo& info);
 
  protected:
   // Protected for unit test access.
@@ -176,16 +146,16 @@ class UserPager {
     // actual work to.
     [[nodiscard]] PagerErrorStatus TransferPages(UserPager::PageSupplier page_supplier,
                                                  uint64_t offset, uint64_t length,
-                                                 const UserPagerInfo& info);
+                                                 const LoaderInfo& info);
 
    private:
     Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics);
 
     PagerErrorStatus TransferChunkedPages(UserPager::PageSupplier page_supplier, uint64_t offset,
-                                          uint64_t length, const UserPagerInfo& info);
+                                          uint64_t length, const LoaderInfo& info);
     PagerErrorStatus TransferUncompressedPages(UserPager::PageSupplier page_supplier,
                                                uint64_t offset, uint64_t length,
-                                               const UserPagerInfo& info);
+                                               const LoaderInfo& info);
 
     // Scratch buffer for pager transfers of uncompressed data.
     // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, the VMO owned by this buffer

@@ -55,9 +55,9 @@
 #include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
 #include "src/storage/blobfs/iterator/allocated_node_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
-#include "src/storage/blobfs/pager/transfer_buffer.h"
-#include "src/storage/blobfs/pager/user_pager_info.h"
+#include "src/storage/blobfs/loader_info.h"
 #include "src/storage/blobfs/transaction.h"
+#include "src/storage/blobfs/transfer_buffer.h"
 #include "src/storage/fvm/client.h"
 
 namespace blobfs {
@@ -152,14 +152,14 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   FX_CHECK(options.paging_threads > 0);
   std::vector<std::unique_ptr<pager::UserPager::WorkerResources>> worker_resources;
   for (int i = 0; i < options.paging_threads; ++i) {
-    auto uncompressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
-        pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
+    auto uncompressed_buffer_or = StorageBackedTransferBuffer::Create(
+        kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
     if (!uncompressed_buffer_or.is_ok()) {
       FX_LOGS(ERROR) << "Could not initialize uncompressed pager transfer buffer";
       return uncompressed_buffer_or.take_error();
     }
-    auto compressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
-        pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
+    auto compressed_buffer_or = StorageBackedTransferBuffer::Create(
+        kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
     if (compressed_buffer_or.is_error()) {
       FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
       return compressed_buffer_or.take_error();
@@ -168,7 +168,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
         std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value()));
   }
   auto pager_or =
-      pager::UserPager::Create(std::move(worker_resources), pager::kDecompressionBufferSize,
+      pager::UserPager::Create(std::move(worker_resources), kDecompressionBufferSize,
                                fs_ptr->GetMetrics().get(), options.sandbox_decompression);
   if (pager_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";

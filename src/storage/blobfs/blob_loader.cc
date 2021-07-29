@@ -32,6 +32,7 @@
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
+#include "src/storage/blobfs/transfer_buffer.h"
 #include "storage/operation/operation.h"
 
 namespace blobfs {
@@ -61,7 +62,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                                           std::shared_ptr<BlobfsMetrics> metrics,
                                           bool sandbox_decompression) {
   fzl::OwnedVmoMapper read_mapper;
-  zx_status_t status = read_mapper.CreateAndMap(pager::kTransferBufferSize, "blobfs-loader");
+  zx_status_t status = read_mapper.CreateAndMap(kTransferBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "blobfs: Failed to map read vmo: " << zx_status_get_string(status);
     return zx::error(status);
@@ -69,7 +70,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
   zx::vmo sandbox_vmo;
   std::unique_ptr<ExternalDecompressorClient> decompressor_client = nullptr;
   if (sandbox_decompression) {
-    status = zx::vmo::create(pager::kDecompressionBufferSize, 0, &sandbox_vmo);
+    status = zx::vmo::create(kDecompressionBufferSize, 0, &sandbox_vmo);
     if (status != ZX_OK) {
       return zx::error(status);
     }
@@ -121,21 +122,21 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
     return blob_layout_or.take_error();
   }
   result.layout = std::move(blob_layout_or.value());
-  result.pager_info.identifier = node_index;
-  result.pager_info.data_start_bytes =
+  result.loader_info.node_index = node_index;
+  result.loader_info.data_start_bytes =
       static_cast<uint64_t>(result.layout->DataBlockOffset()) * GetBlockSize();
-  result.pager_info.data_length_bytes = inode->blob_size;
+  result.loader_info.data_length_bytes = inode->blob_size;
 
   if (zx_status_t status =
           InitMerkleVerifier(node_index, *inode.value(), *result.layout, corruption_notifier,
-                             &result.merkle, &result.pager_info.verifier);
+                             &result.merkle, &result.loader_info.verifier);
       status != ZX_OK) {
     return zx::error(status);
   }
 
   if (zx_status_t status =
           InitForDecompression(node_index, *inode.value(), *result.layout,
-                               *result.pager_info.verifier, &result.pager_info.decompressor);
+                               *result.loader_info.verifier, &result.loader_info.decompressor);
       status != ZX_OK) {
     return zx::error(status);
   }

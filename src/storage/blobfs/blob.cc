@@ -772,7 +772,7 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
     return status.error_value();
 
   // Commit the other load information.
-  pager_info_ = std::move(load_result->pager_info);
+  loader_info_ = std::move(load_result->loader_info);
   merkle_mapping_ = std::move(load_result->merkle);
 
   return ZX_OK;
@@ -1108,7 +1108,7 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
         return paged_vfs->SupplyPages(*dest_vmo, offset, length, aux_vmo, aux_offset);
       });
   pager::PagerErrorStatus pager_error_status =
-      blobfs_->pager()->TransferPages(std::move(page_supplier), offset, length, pager_info_);
+      blobfs_->pager()->TransferPages(std::move(page_supplier), offset, length, loader_info_);
   if (pager_error_status != pager::PagerErrorStatus::kOK) {
     FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));

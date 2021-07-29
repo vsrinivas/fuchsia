@@ -39,8 +39,8 @@
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/format_assertions.h"
+#include "src/storage/blobfs/loader_info.h"
 #include "src/storage/blobfs/metrics.h"
-#include "src/storage/blobfs/pager/page_watcher.h"
 #include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {
@@ -265,9 +265,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // When paging we can dynamically notice that a blob is corrupt. The read operation will set this
   // flag if a corruption is encoutered at runtime and future operations will fail.
   //
-  // This is used only in the new pager. In the old pager, this state is kept in
-  // PageWatcher::is_corrupt_.
-  //
   // This value is specifically atomic and not guarded by the mutex. First, it's not critical that
   // this value be synchronized in any particular way if there are multiple simultaneous readers
   // and one notices the blob is corrupt.
@@ -278,8 +275,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // exclusive lock would deadlock.
   std::atomic<bool> is_corrupt_ = false;  // Not __TA_GUARDED, see above.
 
-  // In the old pager this is kepd in the PageWatcher.
-  pager::UserPagerInfo pager_info_ __TA_GUARDED(mutex_);
+  LoaderInfo loader_info_ __TA_GUARDED(mutex_);
 
   bool tearing_down_ __TA_GUARDED(mutex_) = false;
 
@@ -303,7 +299,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // There are some cases where we can't read data into the paged vmo as the kernel requests:
   //
-  //  - Using old compression formats that don't support seeking.
   //  - When accumulating data being written to the blob.
   //  - After writing the complete data but before closing it. (We do not currently support
   //    reading from the blob in this state.)
@@ -325,16 +320,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
   // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_ __TA_GUARDED(mutex_);
-
-  // Keeps a reference to the blob alive (from within itself) until there are no cloned VMOs in
-  // used.
-  //
-  // This RefPtr is only non-null when a client is using a cloned VMO, or there would be a clear
-  // leak of Blob.
-  //
-  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
-  // is complete.
-  fbl::RefPtr<Blob> clone_ref_;
 
   zx::event readable_event_ __TA_GUARDED(mutex_);
 

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/pager/transfer_buffer.h"
+#include "src/storage/blobfs/transfer_buffer.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/trace.h"
 
 namespace blobfs {
-namespace pager {
 
 StorageBackedTransferBuffer::StorageBackedTransferBuffer(zx::vmo vmo, size_t size,
                                                          storage::OwnedVmoid vmoid,
@@ -48,13 +47,13 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
 }
 
 zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,
-                                                   const UserPagerInfo& info) {
+                                                   const LoaderInfo& info) {
   fs::Ticker ticker(metrics_->Collecting());
   if (offset % kBlobfsBlockSize != 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(info.identifier);
+  auto block_iter = block_iter_provider_->BlockIteratorByNodeIndex(info.node_index);
   if (block_iter.is_error()) {
     return block_iter.take_error();
   }
@@ -111,5 +110,4 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   return zx::ok();
 }
 
-}  // namespace pager
 }  // namespace blobfs

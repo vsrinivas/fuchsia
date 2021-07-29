@@ -128,15 +128,17 @@ static_library("blobfs") {
       "fsck.cc",
       "health_check_service.cc",
       "iterator/node_populator.cc",
+      "loader_info.h",
       "metrics.cc",
       "mount.cc",
       "pager/page_watcher.cc",
-      "pager/transfer_buffer.cc",
       "pager/user_pager.cc",
       "query.cc",
       "read_metrics.cc",
       "runner.cc",
       "transaction.cc",
+      "transfer_buffer.cc",
+      "transfer_buffer.h",
       "verification_metrics.cc",
     ]
     public_deps += [

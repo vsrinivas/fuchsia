@@ -26,8 +26,8 @@ namespace pager {
 // detaching the VMO from the pager when done.
 class PageWatcher {
  public:
-  PageWatcher(UserPager* pager, UserPagerInfo info)
-      : page_request_handler_(this), user_pager_(pager), userpager_info_(std::move(info)) {}
+  PageWatcher(UserPager* pager, LoaderInfo info)
+      : page_request_handler_(this), user_pager_(pager), loader_info_(std::move(info)) {}
 
   ~PageWatcher() { DetachPagedVmoSync(); }
 
@@ -36,7 +36,7 @@ class PageWatcher {
   //
   // TODO(fxbug.dev/51111) Remove this class and move these variables to Blob.
   UserPager* user_pager() const { return user_pager_; }
-  const UserPagerInfo& user_pager_info() const { return userpager_info_; }
+  const LoaderInfo& loader_info() const { return loader_info_; }
   bool is_corrupt() const { return is_corrupt_; }
   void set_is_corrupt(bool c) { is_corrupt_ = c; }
 
@@ -107,7 +107,7 @@ class PageWatcher {
 
   // Various bits of information passed on to the user pager, not used directly by the page watcher.
   // Set at time of creation.
-  UserPagerInfo userpager_info_;
+  LoaderInfo loader_info_;
 
   // Indicates whether the data is corrupt. Once a corruption is discovered on any portion of the
   // blob, all further page requests on the entire blob must fail.
