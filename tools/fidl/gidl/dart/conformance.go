@@ -389,6 +389,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:                "fidlStringTooLong",
 	gidlir.TooFewHandles:                "fidlTooFewHandles",
 	gidlir.UnionFieldNotSet:             "unknown",
+	gidlir.InvalidInlineBitInEnvelope:   "fidlInvalidInlineBitInEnvelope",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

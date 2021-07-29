@@ -25,6 +25,7 @@ enum FidlErrorCode {
   fidlNonResourceHandle,
   fidlMissingRequiredHandleRights,
   fidlIncorrectHandleType,
+  fidlInvalidInlineBitInEnvelope,
 }
 
 class FidlError implements Exception {

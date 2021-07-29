@@ -1108,6 +1108,12 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
       }
 
       if (fieldType != null) {
+        if (decoder.wireFormat == WireFormat.v2 &&
+            fieldType.inlineSize(decoder.wireFormat) <= 4) {
+          throw FidlError('envelope contents out-of-line when they should be inline',
+              FidlErrorCode.fidlInvalidInlineBitInEnvelope);
+        }
+
         final fieldOffset = decoder.claimMemory(
             fieldType.inlineSize(decoder.wireFormat), depth);
         final claimedHandles = decoder.countClaimedHandles();
