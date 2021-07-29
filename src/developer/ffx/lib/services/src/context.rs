@@ -5,6 +5,8 @@
 use {
     anyhow::{Context as _, Result},
     async_trait::async_trait,
+    ffx_daemon_core::events::Queue,
+    ffx_daemon_events::{DaemonEvent, TargetEvent},
     fidl::endpoints::Proxy,
     fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics, selectors,
     std::rc::Rc,
@@ -26,6 +28,18 @@ pub trait DaemonServiceProvider {
         target_identifier: Option<String>,
         service_selector: diagnostics::Selector,
     ) -> Result<(bridge::Target, fidl::Channel)>;
+
+    async fn get_target_event_queue(
+        &self,
+        _target_identifier: Option<String>,
+    ) -> Result<(bridge::Target, Queue<TargetEvent>)> {
+        unimplemented!()
+    }
+
+    /// Returns a clone of the daemon event queue.
+    async fn daemon_event_queue(&self) -> Queue<DaemonEvent> {
+        unimplemented!()
+    }
 }
 
 /// A struct containing the current service's active context when invoking the

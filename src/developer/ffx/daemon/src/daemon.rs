@@ -182,6 +182,20 @@ impl DaemonServiceProvider for Daemon {
         Ok(channel)
     }
 
+    async fn get_target_event_queue(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<(bridge::Target, events::Queue<TargetEvent>)> {
+        let target = self
+            .get_target(target_identifier)
+            .await
+            .map_err(|e| anyhow!("{:#?}", e))
+            .context("getting default target")?;
+        target.run_host_pipe();
+        let events = target.events.clone();
+        Ok((target.as_ref().into(), events))
+    }
+
     async fn open_target_proxy_with_info(
         &self,
         target_identifier: Option<String>,
@@ -213,6 +227,10 @@ impl DaemonServiceProvider for Daemon {
             .map_err(|e| anyhow!("{:#?}", e))
             .context("proxy connect")?;
         Ok((target.as_ref().into(), client))
+    }
+
+    async fn daemon_event_queue(&self) -> events::Queue<DaemonEvent> {
+        self.event_queue.clone()
     }
 }
 
