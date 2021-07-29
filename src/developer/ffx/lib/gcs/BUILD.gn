@@ -9,10 +9,16 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
 
-  deps = [ "//third_party/rust_crates:anyhow" ]
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper:fuchsia-hyper",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:url",
+  ]
 
   sources = [
-    "src/download.rs",
+    "src/client.rs",
     "src/lib.rs",
   ]
 }
