@@ -94,7 +94,7 @@ pub fn sys_mmap(
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
             let vmo = file.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
-            let mut clone_flags = zx::VmoChildOptions::COPY_ON_WRITE;
+            let mut clone_flags = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
             }
