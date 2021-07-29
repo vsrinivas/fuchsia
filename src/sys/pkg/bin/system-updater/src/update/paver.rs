@@ -118,7 +118,7 @@ impl Payload<'_> {
     fn clone_buffer(&self) -> Result<Buffer, Status> {
         Ok(Buffer {
             vmo: self.buffer.vmo.create_child(
-                VmoChildOptions::COPY_ON_WRITE | VmoChildOptions::RESIZABLE,
+                VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | VmoChildOptions::RESIZABLE,
                 0,
                 self.buffer.size,
             )?,

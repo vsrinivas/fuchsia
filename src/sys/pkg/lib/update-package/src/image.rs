@@ -203,7 +203,11 @@ pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer
     // VMOs. Fortunately, a copy-on-write child clone of the vmo can be made resizable.
     let vmo = buffer
         .vmo
-        .create_child(VmoChildOptions::COPY_ON_WRITE | VmoChildOptions::RESIZABLE, 0, buffer.size)
+        .create_child(
+            VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | VmoChildOptions::RESIZABLE,
+            0,
+            buffer.size,
+        )
         .map_err(OpenImageError::CloneBuffer)?;
 
     Ok(Buffer { size: buffer.size, vmo })
