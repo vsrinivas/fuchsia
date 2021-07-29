@@ -304,6 +304,7 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 
 // Close the ssh client connections.
 func (c *Conn) Close() error {
+	c.mu.Lock()
 	select {
 	// Only signal we are shutting down if it hasn't already been closed.
 	case <-c.shuttingDown:
@@ -311,7 +312,6 @@ func (c *Conn) Close() error {
 	default:
 		close(c.shuttingDown)
 	}
-	c.mu.Lock()
 	client := c.mu.client
 	c.mu.client = nil
 	c.mu.Unlock()
