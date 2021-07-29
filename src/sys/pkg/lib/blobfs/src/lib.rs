@@ -7,8 +7,10 @@
 //! Typesafe wrappers around the /blob filesystem.
 
 use {
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileObject, FileProxy, NodeInfo,
+        NodeMarker,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_hash::{Hash, ParseHashError},
@@ -57,6 +59,17 @@ impl Client {
             fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         )?;
         Ok(Client { proxy })
+    }
+
+    /// Forward an open request directly to BlobFs.
+    pub fn forward_open(
+        &self,
+        blob: &Hash,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.proxy.open(flags, mode, &blob.to_string(), server_end)
     }
 
     /// Returns an client connected to blobfs from the given blobfs root dir.
