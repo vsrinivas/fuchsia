@@ -17,7 +17,6 @@ use {
     std::fs::read_to_string,
     std::io::{stdin, stdout, Write},
     std::path::PathBuf,
-    std::sync::Arc,
     structopt::StructOpt,
     termion::{
         cursor,
@@ -181,7 +180,7 @@ impl Output {
 
 fn filter_json_schema_by_selectors(
     mut schema: InspectData,
-    selector_vec: &Vec<Arc<Selector>>,
+    selector_vec: &Vec<Selector>,
 ) -> Option<InspectData> {
     // A failure here implies a malformed snapshot. We want to panic.
     let moniker = selectors::parse_path_to_moniker(&schema.moniker)
@@ -197,7 +196,7 @@ fn filter_json_schema_by_selectors(
     }
     let hierarchy = schema.payload.unwrap();
 
-    match selectors::match_component_moniker_against_selectors(&moniker, &selector_vec) {
+    match selectors::match_component_moniker_against_selectors(&moniker, selector_vec.as_slice()) {
         Ok(matched_selectors) => {
             if matched_selectors.is_empty() {
                 return None;
@@ -252,11 +251,8 @@ fn filter_data_to_lines(
     data: &[InspectData],
     requested_name_opt: &Option<String>,
 ) -> Result<Vec<Line>, Error> {
-    let selector_vec: Vec<Arc<Selector>> =
-        selectors::parse_selector_file(&PathBuf::from(selector_file))?
-            .into_iter()
-            .map(Arc::new)
-            .collect();
+    let selector_vec: Vec<Selector> =
+        selectors::parse_selector_file(&PathBuf::from(selector_file))?.into_iter().collect();
 
     // Filter the source data that we diff against to only contain the component
     // of interest.

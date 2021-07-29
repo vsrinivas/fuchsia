@@ -11,10 +11,10 @@ use {
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},
     regex_syntax,
+    std::borrow::Borrow,
     std::fs,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
-    std::sync::Arc,
 };
 // Character used to delimit the different sections of an inspect selector,
 // the component selector, the tree selector, and the property selector.
@@ -85,7 +85,7 @@ pub fn parse_path_to_moniker(path: &str) -> Result<Vec<String>, Error> {
 ///       are escaping.
 ///    4) Require that there are no unescaped selector delimiters, `:`,
 ///       or unescaped path delimiters, `/`.
-fn validate_string_pattern(string_pattern: &String) -> Result<(), Error> {
+fn validate_string_pattern(string_pattern: &str) -> Result<(), Error> {
     lazy_static! {
         static ref STRING_PATTERN_VALIDATOR: RegexSet = RegexSet::new(&[
             // No glob expressions allowed.
@@ -257,7 +257,7 @@ pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
 }
 
 /// Parse a string into a FIDL StringSelector structure.
-fn convert_string_to_string_selector(string_to_convert: &String) -> StringSelector {
+fn convert_string_to_string_selector(string_to_convert: &str) -> StringSelector {
     // TODO(fxbug.dev/4601): Expose the ability to parse selectors from string into "exact_match" mode.
     StringSelector::StringPattern(string_to_convert.to_string())
 }
@@ -323,7 +323,7 @@ pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Ve
 
 /// Converts an unparsed component selector string into a ComponentSelector.
 pub fn parse_component_selector(
-    unparsed_component_selector: &String,
+    unparsed_component_selector: &str,
 ) -> Result<ComponentSelector, Error> {
     if unparsed_component_selector.is_empty() {
         return Err(format_err!("ComponentSelector must have atleast one path node.",));
@@ -349,8 +349,8 @@ pub fn parse_component_selector(
 /// Converts an unparsed node path selector and an unparsed property selector into
 /// a TreeSelector.
 fn parse_tree_selector(
-    unparsed_node_path: &String,
-    unparsed_property_selector: Option<&String>,
+    unparsed_node_path: &str,
+    unparsed_property_selector: Option<&str>,
 ) -> Result<TreeSelector, Error> {
     let node_path_option = if unparsed_node_path.is_empty() {
         None
@@ -666,10 +666,13 @@ pub fn match_moniker_against_component_selector(
 ///
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selector(
-    moniker: &[impl AsRef<str> + std::string::ToString],
-    selector: &Arc<Selector>,
-) -> Result<bool, Error> {
+pub fn match_component_moniker_against_selector<T>(
+    moniker: &[T],
+    selector: &Selector,
+) -> Result<bool, Error>
+where
+    T: AsRef<str> + std::string::ToString,
+{
     validate_selector(selector)?;
 
     if moniker.is_empty() {
@@ -689,32 +692,36 @@ pub fn match_component_moniker_against_selector(
 ///
 /// Requires: hierarchy_path is not empty.
 ///           selectors contains valid Selectors.
-pub fn match_component_moniker_against_selectors(
+pub fn match_component_moniker_against_selectors<'a, T>(
     moniker: &[String],
-    selectors: &[Arc<Selector>],
-) -> Result<Vec<Arc<Selector>>, Error> {
+    selectors: &'a [T],
+) -> Result<Vec<&'a Selector>, Error>
+where
+    T: Borrow<Selector>,
+{
     if moniker.is_empty() {
         return Err(format_err!(
             "Cannot have empty monikers, at least the component name is required."
         ));
     }
 
-    let selectors: Result<Vec<Arc<Selector>>, Error> = selectors
+    let selectors = selectors
         .iter()
         .map(|selector| {
-            validate_selector(selector)?;
-            Ok(selector.clone())
+            let component_selector = selector.borrow();
+            validate_selector(component_selector)?;
+            Ok(component_selector)
         })
-        .collect::<Result<Vec<Arc<Selector>>, Error>>();
+        .collect::<Result<Vec<&Selector>, Error>>();
 
     selectors?
         .iter()
         .filter_map(|selector| {
             match_component_moniker_against_selector(moniker, selector)
-                .map(|is_match| if is_match { Some(selector.clone()) } else { None })
+                .map(|is_match| if is_match { Some(*selector) } else { None })
                 .transpose()
         })
-        .collect::<Result<Vec<Arc<Selector>>, Error>>()
+        .collect::<Result<Vec<&Selector>, Error>>()
 }
 
 /// Evaluates a component moniker against a list of component selectors, returning
@@ -722,23 +729,27 @@ pub fn match_component_moniker_against_selectors(
 ///
 /// Requires: moniker is not empty.
 ///           component_selectors contains valid ComponentSelectors.
-pub fn match_moniker_against_component_selectors(
+pub fn match_moniker_against_component_selectors<'a, T>(
     moniker: &[String],
-    selectors: &[Arc<ComponentSelector>],
-) -> Result<Vec<Arc<ComponentSelector>>, Error> {
+    selectors: &'a [T],
+) -> Result<Vec<&'a ComponentSelector>, Error>
+where
+    T: Borrow<ComponentSelector> + 'a,
+{
     if moniker.is_empty() {
         return Err(format_err!(
             "Cannot have empty monikers, at least the component name is required."
         ));
     }
 
-    let component_selectors: Result<Vec<Arc<ComponentSelector>>, Error> = selectors
+    let component_selectors = selectors
         .iter()
         .map(|selector| {
-            validate_component_selector(selector)?;
-            Ok(selector.clone())
+            let component_selector = selector.borrow();
+            validate_component_selector(component_selector)?;
+            Ok(component_selector)
         })
-        .collect::<Result<Vec<Arc<ComponentSelector>>, Error>>();
+        .collect::<Result<Vec<&ComponentSelector>, Error>>();
 
     component_selectors?
         .iter()
@@ -747,7 +758,7 @@ pub fn match_moniker_against_component_selectors(
                 .map(|is_match| if is_match { Some(selector.clone()) } else { None })
                 .transpose()
         })
-        .collect::<Result<Vec<Arc<ComponentSelector>>, Error>>()
+        .collect::<Result<Vec<&ComponentSelector>, Error>>()
 }
 
 /// Format a |Selector| as a string.
@@ -839,39 +850,39 @@ mod tests {
 
     #[test]
     fn canonical_component_selector_test() {
-        let test_vector: Vec<(String, StringSelector, StringSelector, StringSelector)> = vec![
+        let test_vector = vec![
             (
-                "a/b/c".to_string(),
+                "a/b/c",
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
             (
-                "a/*/c".to_string(),
+                "a/*/c",
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("*".to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
             (
-                "a/b*/c".to_string(),
+                "a/b*/c",
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b*".to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
             (
-                r#"a/b\*/c"#.to_string(),
+                r#"a/b\*/c"#,
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern(r#"b\*"#.to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
             (
-                r#"a/\*/c"#.to_string(),
+                r#"a/\*/c"#,
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern(r#"\*"#.to_string()),
                 StringSelector::StringPattern("c".to_string()),
             ),
             (
-                "a/b/**".to_string(),
+                "a/b/**",
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 StringSelector::StringPattern("**".to_string()),
@@ -932,36 +943,30 @@ mod tests {
 
     #[test]
     fn canonical_tree_selector_test() {
-        let test_vector: Vec<(
-            String,
-            Option<String>,
-            StringSelector,
-            StringSelector,
-            Option<StringSelector>,
-        )> = vec![
+        let test_vector = vec![
             (
-                "a/b".to_string(),
-                Some("c".to_string()),
+                "a/b",
+                Some("c"),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
-                "a/*".to_string(),
-                Some("c".to_string()),
+                "a/*",
+                Some("c"),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("*".to_string()),
                 Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
-                "a/b".to_string(),
-                Some("*".to_string()),
+                "a/b",
+                Some("*"),
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
                 Some(StringSelector::StringPattern("*".to_string())),
             ),
             (
-                "a/b".to_string(),
+                "a/b",
                 None,
                 StringSelector::StringPattern("a".to_string()),
                 StringSelector::StringPattern("b".to_string()),
@@ -977,8 +982,7 @@ mod tests {
             parsed_property,
         ) in test_vector
         {
-            let tree_selector =
-                parse_tree_selector(&test_node_path, test_target_property.as_ref()).unwrap();
+            let tree_selector = parse_tree_selector(test_node_path, test_target_property).unwrap();
             match tree_selector {
                 TreeSelector::SubtreeSelector(tree_selector) => {
                     match tree_selector.node_path.as_slice() {
@@ -1006,25 +1010,24 @@ mod tests {
 
     #[test]
     fn errorful_tree_selector_test() {
-        let test_vector: Vec<(String, Option<String>)> = vec![
+        let test_vector = vec![
             // Not allowed due to empty property selector.
-            ("a/b".to_string(), Some("".to_string())),
+            ("a/b", Some("")),
             // Not allowed due to glob property selector.
-            ("a/b".to_string(), Some("**".to_string())),
+            ("a/b", Some("**")),
             // Not allowed due to escape-char without a thing to escape.
-            (r#"a/b\"#.to_string(), Some("c".to_string())),
+            (r#"a/b\"#, Some("c")),
             // String literals can't have globs.
-            (r#"a/b**"#.to_string(), Some("c".to_string())),
+            (r#"a/b**"#, Some("c")),
             // Property selector string literals cant have globs.
-            (r#"a/b"#.to_string(), Some("c**".to_string())),
-            ("a/b".to_string(), Some("**".to_string())),
+            (r#"a/b"#, Some("c**")),
+            ("a/b", Some("**")),
             // Node path cant have globs.
-            ("a/**".to_string(), Some("c".to_string())),
-            ("".to_string(), Some("c".to_string())),
+            ("a/**", Some("c")),
+            ("", Some("c")),
         ];
         for (test_nodepath, test_target_property) in test_vector {
-            let tree_selector_result =
-                parse_tree_selector(&test_nodepath, test_target_property.as_ref());
+            let tree_selector_result = parse_tree_selector(test_nodepath, test_target_property);
             assert!(tree_selector_result.is_err());
         }
     }
@@ -1379,7 +1382,7 @@ mod tests {
         ];
 
         for (selector, moniker) in passing_test_cases {
-            let parsed_selector = Arc::new(parse_selector(selector).unwrap());
+            let parsed_selector = parse_selector(selector).unwrap();
             assert!(
                 match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
                 "Selector {:?} failed to match {:?}",
@@ -1398,7 +1401,7 @@ mod tests {
         ];
 
         for (selector, moniker) in failing_test_cases {
-            let parsed_selector = Arc::new(parse_selector(selector).unwrap());
+            let parsed_selector = parse_selector(selector).unwrap();
             assert!(
                 !match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
                 "Selector {:?} matched {:?}, but was expected to fail",
@@ -1413,13 +1416,13 @@ mod tests {
         let selectors = vec![r#"*/echo.cmx"#, r#"ab*/echo.cmx"#, r#"abc/m*"#];
         let moniker = vec!["abc".to_string(), "echo.cmx".to_string()];
 
-        let component_selectors: Vec<Arc<ComponentSelector>> = selectors
+        let component_selectors = selectors
             .into_iter()
-            .map(|selector| Arc::new(parse_component_selector(&selector.to_string()).unwrap()))
-            .collect();
+            .map(|selector| parse_component_selector(&selector.to_string()).unwrap())
+            .collect::<Vec<_>>();
 
         let match_res =
-            match_moniker_against_component_selectors(moniker.as_slice(), &component_selectors);
+            match_moniker_against_component_selectors(moniker.as_slice(), &component_selectors[..]);
         assert!(match_res.is_ok());
         assert_eq!(match_res.unwrap().len(), 2);
     }

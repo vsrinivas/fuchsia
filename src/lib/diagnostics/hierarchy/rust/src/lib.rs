@@ -19,6 +19,7 @@ use {
     selectors,
     serde::Deserialize,
     std::{
+        borrow::Borrow,
         cmp::Ordering,
         collections::HashMap,
         convert::{TryFrom, TryInto},
@@ -694,25 +695,26 @@ pub struct InspectHierarchyMatcher {
     pub node_property_selectors: Vec<String>,
 }
 
-impl TryFrom<&Vec<Arc<Selector>>> for InspectHierarchyMatcher {
+impl<T: Borrow<Selector>> TryFrom<&Vec<T>> for InspectHierarchyMatcher {
     type Error = Error;
 
-    fn try_from(selectors: &Vec<Arc<Selector>>) -> Result<Self, Self::Error> {
+    fn try_from(selectors: &Vec<T>) -> Result<Self, Self::Error> {
         selectors[..].try_into()
     }
 }
 
-impl TryFrom<&[Arc<Selector>]> for InspectHierarchyMatcher {
+impl<T: Borrow<Selector>> TryFrom<&[T]> for InspectHierarchyMatcher {
     type Error = Error;
 
-    fn try_from(selectors: &[Arc<Selector>]) -> Result<Self, Self::Error> {
+    fn try_from(selectors: &[T]) -> Result<Self, Self::Error> {
         let (node_path_regexes, property_regexes): (Vec<_>, Vec<_>) = selectors
             .iter()
             .map(|selector| {
-                selectors::validate_selector(selector).map_err(Error::Selectors)?;
+                let component_selector = selector.borrow();
+                selectors::validate_selector(component_selector).map_err(Error::Selectors)?;
 
                 // Unwrapping is safe here since we validate the selector above.
-                match selector.tree_selector.as_ref().unwrap() {
+                match component_selector.tree_selector.as_ref().unwrap() {
                     TreeSelector::SubtreeSelector(subtree_selector) => {
                         Ok((
                             selectors::convert_path_selector_to_regex(
