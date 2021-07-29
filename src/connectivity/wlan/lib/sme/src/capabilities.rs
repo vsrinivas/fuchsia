@@ -127,7 +127,7 @@ impl StaCapabilities {
             fidl_internal::VhtCapabilities { bytes }
         });
         fidl_mlme::NegotiatedCapabilities {
-            channel: channel.to_fidl(),
+            channel: channel.into(),
             capability_info: self.capability_info.raw(),
             rates: self.rates.as_bytes().to_vec(),
             // TODO(fxbug.dev/43938): populate WMM param with actual value

@@ -105,7 +105,7 @@ impl InternalBss<'_> {
     /// BSS to connect to.
     fn score(&self) -> i8 {
         let mut score = self.scanned_bss_info.rssi;
-        let channel = Channel::from_fidl(self.scanned_bss_info.channel);
+        let channel = Channel::from(self.scanned_bss_info.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
         if channel.is_5ghz() && score >= RSSI_CUTOFF_5G_PREFERENCE {
@@ -170,7 +170,7 @@ impl InternalBss<'_> {
     }
 
     fn to_string_without_pii(&self) -> String {
-        let channel = Channel::from_fidl(self.scanned_bss_info.channel);
+        let channel = Channel::from(self.scanned_bss_info.channel);
         let rssi = self.scanned_bss_info.rssi;
         let recent_failure_count = self.recent_failure_count();
         let recent_short_connection_count = self.recent_short_connections();

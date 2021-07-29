@@ -372,7 +372,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
                         iface_id,
                         String::from_utf8_lossy(&serving_ap_info.ssid),
                         MacAddr(serving_ap_info.bssid),
-                        Channel::from_fidl(serving_ap_info.channel),
+                        Channel::from(serving_ap_info.channel),
                         serving_ap_info.rssi_dbm,
                         serving_ap_info.snr_db,
                     );
@@ -679,7 +679,7 @@ fn print_scan_result(bss: &fidl_sme::BssInfo) {
     print_scan_line(
         MacAddr(bss.bssid),
         bss.rssi_dbm,
-        Channel::from_fidl(bss.channel),
+        Channel::from(bss.channel),
         match bss.protection {
             fidl_sme::Protection::Unknown => "Unknown",
             fidl_sme::Protection::Open => "Open",

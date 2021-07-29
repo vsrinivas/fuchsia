@@ -301,15 +301,33 @@ impl Channel {
     pub fn is_dfs(&self) -> bool {
         self.is_unii2a() || self.is_unii2c()
     }
+}
 
-    // TODO(fxbug.dev/80703): Modify these to be implementations of From/To
-    pub fn to_fidl(&self) -> fidl_common::WlanChannel {
-        let (cbw, secondary80) = self.cbw.to_fidl();
-        fidl_common::WlanChannel { primary: self.primary, cbw, secondary80 }
+impl From<Channel> for fidl_common::WlanChannel {
+    fn from(channel: Channel) -> fidl_common::WlanChannel {
+        fidl_common::WlanChannel::from(&channel)
     }
+}
 
-    pub fn from_fidl(c: fidl_common::WlanChannel) -> Self {
-        Channel { primary: c.primary, cbw: Cbw::from_fidl(c.cbw, c.secondary80) }
+impl From<&Channel> for fidl_common::WlanChannel {
+    fn from(channel: &Channel) -> fidl_common::WlanChannel {
+        let (cbw, secondary80) = channel.cbw.to_fidl();
+        fidl_common::WlanChannel { primary: channel.primary, cbw, secondary80 }
+    }
+}
+
+impl From<fidl_common::WlanChannel> for Channel {
+    fn from(fidl_channel: fidl_common::WlanChannel) -> Channel {
+        Channel::from(&fidl_channel)
+    }
+}
+
+impl From<&fidl_common::WlanChannel> for Channel {
+    fn from(fidl_channel: &fidl_common::WlanChannel) -> Channel {
+        Channel {
+            primary: fidl_channel.primary,
+            cbw: Cbw::from_fidl(fidl_channel.cbw, fidl_channel.secondary80),
+        }
     }
 }
 
@@ -515,29 +533,30 @@ mod tests {
 
     #[test]
     fn test_convert_fidl_channel() {
-        let mut f = Channel::new(1, Cbw::Cbw20).to_fidl();
+        let mut f = fidl_common::WlanChannel::from(Channel::new(1, Cbw::Cbw20));
         assert!(
             f.primary == 1 && f.cbw == fidl_common::ChannelBandwidth::Cbw20 && f.secondary80 == 0
         );
 
-        f = Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).to_fidl();
+        f = Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).into();
         assert!(
             f.primary == 36
                 && f.cbw == fidl_common::ChannelBandwidth::Cbw80P80
                 && f.secondary80 == 155
         );
 
-        let mut c = Channel::from_fidl(fidl_common::WlanChannel {
+        let mut c = Channel::from(fidl_common::WlanChannel {
             primary: 11,
             cbw: fidl_common::ChannelBandwidth::Cbw40Below,
             secondary80: 123,
         });
         assert!(c.primary == 11 && c.cbw == Cbw::Cbw40Below);
-        c = Channel::from_fidl(fidl_common::WlanChannel {
+        c = fidl_common::WlanChannel {
             primary: 149,
             cbw: fidl_common::ChannelBandwidth::Cbw80P80,
             secondary80: 42,
-        });
+        }
+        .into();
         assert!(c.primary == 149 && c.cbw == Cbw::Cbw80P80 { secondary80: 42 });
     }
 

@@ -402,9 +402,8 @@ fn scan_result_to_policy_scan_result(
                                 // Get the frequency. On error, default to Some(0) rather than None
                                 // to protect against consumer code that expects this field to
                                 // always be set.
-                                let frequency = Channel::from_fidl(input.channel)
-                                    .get_center_freq()
-                                    .unwrap_or(0);
+                                let frequency =
+                                    Channel::from(input.channel).get_center_freq().unwrap_or(0);
                                 fidl_policy::Bss {
                                     bssid: Some(input.bssid),
                                     rssi: Some(input.rssi),

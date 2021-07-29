@@ -561,7 +561,7 @@ impl Associated {
                 ssid: self.bss.ssid().to_vec(),
                 protection: self.bss.protection(),
                 wsc: self.bss.probe_resp_wsc(),
-                channel: Channel::from_fidl(self.bss.channel),
+                channel: Channel::from(self.bss.channel),
                 disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
@@ -632,7 +632,7 @@ impl Associated {
                     ssid: self.bss.ssid().to_vec(),
                     protection: self.bss.protection(),
                     wsc: self.bss.probe_resp_wsc(),
-                    channel: Channel::from_fidl(self.bss.channel),
+                    channel: Channel::from(self.bss.channel),
                     disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -982,7 +982,7 @@ impl ClientState {
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
         let (channel, capability_info) = match derive_join_channel_and_capabilities(
-            Channel::from_fidl(cmd.bss.channel),
+            Channel::from(cmd.bss.channel),
             cmd.radio_cfg.cbw,
             cmd.bss.rates(),
             &context.device_info,
@@ -1060,7 +1060,7 @@ impl ClientState {
                     ssid: state.bss.ssid().to_vec(),
                     protection: state.bss.protection(),
                     wsc: state.bss.probe_resp_wsc(),
-                    channel: Channel::from_fidl(state.bss.channel),
+                    channel: Channel::from(state.bss.channel),
                     disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -1154,7 +1154,7 @@ impl ClientState {
                         rssi_dbm: associated.last_rssi,
                         snr_db: associated.last_snr,
                         signal_report_time: associated.last_signal_report_time,
-                        channel: Channel::from_fidl(bss_desc.channel),
+                        channel: Channel::from(bss_desc.channel),
                         protection: bss_desc.protection(),
                         ht_cap: bss_desc.raw_ht_cap(),
                         vht_cap: bss_desc.raw_vht_cap(),

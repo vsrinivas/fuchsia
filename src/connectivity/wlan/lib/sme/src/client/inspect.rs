@@ -261,7 +261,7 @@ impl ServingApInfoNode {
         let rssi_dbm = node.create_int("rssi_dbm", ap.rssi_dbm as i64);
         let snr_db = node.create_int("snr_db", ap.snr_db as i64);
         let signal_report_time = node.create_time_at("signal_report_time", ap.signal_report_time);
-        let channel = ChannelNode::new(node.create_child("channel"), ap.channel.to_fidl());
+        let channel = ChannelNode::new(node.create_child("channel"), ap.channel.into());
         let protection = node.create_string("protection", format!("{}", ap.protection));
         let is_wmm_assoc = node.create_bool("is_wmm_assoc", ap.wmm_param.is_some());
         let wmm_param =
@@ -300,7 +300,7 @@ impl ServingApInfoNode {
         self.rssi_dbm.set(ap.rssi_dbm as i64);
         self.snr_db.set(ap.snr_db as i64);
         self.signal_report_time.set_at(ap.signal_report_time);
-        self.channel.update(ap.channel.to_fidl());
+        self.channel.update(ap.channel.into());
         self.protection.set(&format!("{}", ap.protection));
         match &ap.ht_cap {
             Some(ht_cap) => match self.ht_cap.as_mut() {

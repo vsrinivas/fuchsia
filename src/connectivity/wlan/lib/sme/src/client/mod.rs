@@ -272,7 +272,7 @@ impl From<ServingApInfo> for fidl_sme::ServingApInfo {
             ssid: ap.ssid.clone(),
             rssi_dbm: ap.rssi_dbm,
             snr_db: ap.snr_db,
-            channel: ap.channel.to_fidl(),
+            channel: ap.channel.into(),
             protection: ap.protection.into(),
         }
     }

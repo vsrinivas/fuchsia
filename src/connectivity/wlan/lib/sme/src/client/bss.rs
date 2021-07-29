@@ -38,7 +38,7 @@ impl ClientConfig {
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             signal_report_time: zx::Time::ZERO,
-            channel: Channel::from_fidl(bss.channel),
+            channel: Channel::from(bss.channel),
             protection: bss.protection(),
             ht_cap: bss.raw_ht_cap(),
             vht_cap: bss.raw_vht_cap(),
@@ -96,7 +96,7 @@ impl ClientConfig {
         device_info: &fidl_mlme::DeviceInfo,
     ) -> bool {
         derive_join_channel_and_capabilities(
-            Channel::from_fidl(bss.channel),
+            Channel::from(bss.channel),
             None,
             bss.rates(),
             device_info,
