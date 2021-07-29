@@ -618,3 +618,12 @@ type TableWithXUnion = table {
 type StructOfTableWithXUnion = struct {
     value TableWithXUnion;
 };
+
+type TableWithReservedFieldThenUnion = table {
+    1: reserved;
+    2: uv UnionSize8Align4;
+};
+
+type TableWithReservedFieldThenUnionStruct = struct {
+    t TableWithReservedFieldThenUnion;
+};

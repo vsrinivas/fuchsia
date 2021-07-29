@@ -3822,3 +3822,50 @@ success("UnionOfTable") {
         ],
     },
 }
+
+// The coding tables skip table fields that are reserved rather than including
+// all fields in order.
+// This test is designed to detect misimplementations of accesses to coding
+// tables that directly index into them, rather than iterating over the
+// fields that are present.
+// To be useful for checking this, the union value needs to be a "special"
+// value that can't be treated as an unknown value. Here, a union was chosen
+// because it is "special" in the context of the V1 <-> V2 migration.
+success("TableWithReservedFieldThenUnion") {
+    value = TableWithReservedFieldThenUnionStruct {
+        t: TableWithReservedFieldThenUnion {
+            uv: UnionSize8Align4 {
+                variant: 123,
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(2):8, // Table length
+            repeat(0xff):8, // Table presence
+
+            num(0):4, num(0):4, // Table field 1 (absent)
+            repeat(0x00):8,
+
+            num(32):4, num(0):4, // Table field 2 (present)
+            repeat(0xff):8,
+
+            num(3):8, // Union ordinal
+            num(8):4, num(0):4, // Union envelope (present)
+            repeat(0xff):8,
+
+            num(123):8, // Union variant value
+        ],
+        v2 = [
+            num(2):8, // Table length
+            repeat(0xff):8, // Table presence
+
+            num(0):4, num(0):2, num(0):2, // Table field 1 (absent)
+
+            num(16):4, num(0):2, num(0):2, // Table field 2 (present)
+
+            num(3):8, // Union ordinal
+            num(123):4, num(0):2, num(1):2, // Union variant value in envelope
+        ],
+    }
+}

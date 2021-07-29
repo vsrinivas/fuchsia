@@ -562,10 +562,12 @@ class Transformer {
     }
 
     // Process the table body.
+    uint32_t f = 0;
     for (uint32_t i = 0; i < src_table_header.count; i++) {
       const fidl_type_t* field_type = nullptr;
-      if (i < coded_table->field_count) {
-        field_type = coded_table->fields[i].type;
+      if (f < coded_table->field_count && i + 1 == coded_table->fields[f].ordinal) {
+        field_type = coded_table->fields[f].type;
+        f++;
       }
       zx_status_t status = TransformEnvelope(field_type, src_body_offset, dst_body_offset);
       if (status != ZX_OK) {
