@@ -15,6 +15,9 @@ import("//tools/cmc/build/cmc.gni")
 #     extra_cmx (optional)
 #       See audio_core_package and audio_core_test_package
 #
+#     production_extra_cmx (optional)
+#       See audio_core_package
+#
 #     use_prebuilt_coefficient_tables (optional)
 #       See audio_core_package and audio_core_test_package
 #
@@ -31,10 +34,16 @@ template("_audio_core_package") {
     cmx_name = get_path_info(invoker_manifest, "name")
 
     # Merge in extra_cmx
-    if (defined(invoker.extra_cmx)) {
+    if (defined(invoker.extra_cmx) || defined(invoker.production_extra_cmx)) {
       manifest_merge_target = "${target_name}_${cmx_name}_merge"
       cmc_merge(manifest_merge_target) {
-        sources = [ invoker_manifest ] + invoker.extra_cmx
+        sources = [ invoker_manifest ]
+        if (defined(invoker.extra_cmx)) {
+          sources += invoker.extra_cmx
+        }
+        if (defined(invoker.production_extra_cmx)) {
+          sources += invoker.production_extra_cmx
+        }
         output_name = "${manifest_merge_target}.cmx"
       }
       invoker_manifest = get_target_outputs(":$manifest_merge_target")
@@ -211,11 +220,6 @@ template("audio_core_test_package") {
 #       Type: string
 #       Default: ${target_name}
 #
-#     extra_cmx (optional)
-#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
-#       This can be used to add additional services or features that may be needed by different
-#       audio effects.
-#
 #     test_package_name (optional)
 #       The name of the audio_core test package. This package contains manifests that allow
 #       for the component to run in a hermetic test environment. No package will be generated
@@ -223,9 +227,15 @@ template("audio_core_test_package") {
 #       Type: string
 #
 #     extra_cmx (optional)
-#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       Additional CMX manifests that will be merged with the base audio_core.cmx manifest.
 #       This can be used to add additional services or features that may be needed by different
-#       audio effects.
+#       audio effects. Will be forwarded to the test package as well.
+#       Type: list(path)
+#
+#     production_extra_cmx (optional)
+#       Additional CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       This can be used to add additional services or features that may be needed by different
+#       audio effects. Will not be forwarded to the test package.
 #       Type: list(path)
 #
 #     use_prebuilt_coefficient_tables (optional)
@@ -245,6 +255,7 @@ template("audio_core_package") {
                            [
                              "effects",
                              "extra_cmx",
+                             "production_extra_cmx",
                              "package_name",
                              "use_prebuilt_coefficient_tables",
                            ])
