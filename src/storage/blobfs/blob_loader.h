@@ -39,7 +39,6 @@ class BlobLoader {
   struct LoadResult {
     LoaderInfo loader_info;
     std::unique_ptr<BlobLayout> layout;
-    fzl::OwnedVmoMapper merkle;
   };
 
   BlobLoader() = default;
@@ -74,13 +73,11 @@ class BlobLoader {
              std::unique_ptr<ExternalDecompressorClient> decompressor_client);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
-  // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
-  // |verifier_out| is still initialized.)
-  zx_status_t InitMerkleVerifier(uint32_t node_index, const Inode& inode,
-                                 const BlobLayout& blob_layout,
-                                 const BlobCorruptionNotifier* corruption_notifier,
-                                 fzl::OwnedVmoMapper* vmo_out,
-                                 std::unique_ptr<BlobVerifier>* verifier_out);
+  // contents.
+  zx::status<std::unique_ptr<BlobVerifier>> CreateBlobVerifier(
+      uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
+      const BlobCorruptionNotifier* corruption_notifier);
+
   // Prepares |decompressor_out| to decompress the blob contents of |inode|.
   // If |inode| is not compressed, this is a NOP.
   // Depending on the format, some data may be read (e.g. for the CHUNKED format, the header
@@ -88,8 +85,12 @@ class BlobLoader {
   zx_status_t InitForDecompression(uint32_t node_index, const Inode& inode,
                                    const BlobLayout& blob_layout, const BlobVerifier& verifier,
                                    std::unique_ptr<SeekableDecompressor>* decompressor_out);
-  zx_status_t LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
-                         const fzl::OwnedVmoMapper& mapper) const;
+
+  // Loads the blocks from disk that contain the Merkle tree into the given VMO. The result will
+  // be block-aligned so the Merkle tree may start at an offset inside of it (according to the
+  // BlobLayout) and often won't go to the end.
+  zx_status_t LoadMerkleBlocks(uint32_t node_index, const BlobLayout& blob_layout,
+                               const zx::vmo& merkle_blocks_vmo) const;
 
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // into |vmo|.

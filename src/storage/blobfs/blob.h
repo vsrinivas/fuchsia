@@ -311,16 +311,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // This value is only used when !IsPagerBacked().
   zx::vmo unpaged_backing_data_ __TA_GUARDED(mutex_);
 
-  // VMO mappings for the blob's merkle tree and data.
-  // Data is stored in a separate VMO from the merkle tree for several reasons:
-  //   - While data may be paged, the merkle tree (i.e. verification metadata) should always be
-  //     retained.
-  //   - VMO cloning when handing out a copy to read clients is simpler and requires no arithmetic.
-  //   - Makes memory accounting more granular.
-  // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
-  // merkle tree.
-  fzl::OwnedVmoMapper merkle_mapping_ __TA_GUARDED(mutex_);
-
   zx::event readable_event_ __TA_GUARDED(mutex_);
 
   uint64_t blob_size_ __TA_GUARDED(mutex_) = 0;

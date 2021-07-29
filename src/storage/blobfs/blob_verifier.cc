@@ -20,57 +20,62 @@ namespace blobfs {
 BlobVerifier::BlobVerifier(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics)
     : digest_(std::move(digest)), metrics_(std::move(metrics)) {}
 
-zx_status_t BlobVerifier::Create(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
-                                 const void* merkle, size_t merkle_size,
-                                 BlobLayoutFormat blob_layout_format, size_t data_size,
-                                 const BlobCorruptionNotifier* notifier,
-                                 std::unique_ptr<BlobVerifier>* out) {
+zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
+    digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
+    fzl::OwnedVmoMapper merkle_data_blocks, const BlobLayout& layout,
+    const BlobCorruptionNotifier* notifier) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));
   verifier->corruption_notifier_ = notifier;
-  verifier->tree_verifier_.SetUseCompactFormat(
-      ShouldUseCompactMerkleTreeFormat(blob_layout_format));
-  zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
-  if (status != ZX_OK) {
+  verifier->tree_verifier_.SetUseCompactFormat(ShouldUseCompactMerkleTreeFormat(layout.Format()));
+
+  if (zx_status_t status = verifier->tree_verifier_.SetDataLength(layout.FileSize());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to set merkle data length: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
+
   size_t actual_merkle_length = verifier->tree_verifier_.GetTreeLength();
-  if (actual_merkle_length > merkle_size) {
+  if (actual_merkle_length > layout.MerkleTreeSize()) {
     FX_LOGS(ERROR) << "merkle too small for data";
-    return ZX_ERR_BUFFER_TOO_SMALL;
+    return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
-  if ((status = verifier->tree_verifier_.SetTree(
-           merkle, actual_merkle_length, verifier->digest_.get(), verifier->digest_.len())) !=
-      ZX_OK) {
+
+  verifier->merkle_data_blocks_ = std::move(merkle_data_blocks);
+  void* merkle_tree_data = static_cast<uint8_t*>(verifier->merkle_data_blocks_.start()) +
+                           layout.MerkleTreeOffsetWithinBlockOffset();
+
+  if (zx_status_t status = verifier->tree_verifier_.SetTree(
+          merkle_tree_data, actual_merkle_length, verifier->digest_.get(), verifier->digest_.len());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create merkle verifier: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
-  *out = std::move(verifier);
-  return ZX_OK;
+
+  return zx::ok(std::move(verifier));
 }
 
-zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest,
-                                            std::shared_ptr<BlobfsMetrics> metrics,
-                                            size_t data_size,
-                                            const BlobCorruptionNotifier* notifier,
-                                            std::unique_ptr<BlobVerifier>* out) {
+zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::CreateWithoutTree(
+    digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics, size_t data_size,
+    const BlobCorruptionNotifier* notifier) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));
   verifier->corruption_notifier_ = notifier;
-  zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
-  if (status != ZX_OK) {
+
+  if (zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to set merkle data length: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   } else if (verifier->tree_verifier_.GetTreeLength() > 0) {
     FX_LOGS(ERROR) << "Failed to create merkle verifier -- data too big for empty tree";
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  if ((status = verifier->tree_verifier_.SetTree(nullptr, 0, verifier->digest_.get(),
-                                                 verifier->digest_.len())) != ZX_OK) {
+
+  if (zx_status_t status = verifier->tree_verifier_.SetTree(nullptr, 0, verifier->digest_.get(),
+                                                            verifier->digest_.len());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create merkle verifier: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
-  *out = std::move(verifier);
-  return ZX_OK;
+
+  return zx::ok(std::move(verifier));
 }
 
 zx_status_t VerifyTailZeroed(const void* data, size_t data_size, size_t buffer_size) {

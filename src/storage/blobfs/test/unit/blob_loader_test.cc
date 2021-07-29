@@ -147,8 +147,11 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     return algorithm_or.value();
   }
 
-  // Used to access protected Blob members because this class is a friend.
-  const fzl::OwnedVmoMapper& GetBlobMerkleMapper(const Blob* blob) { return blob->merkle_mapping_; }
+  // Used to access protected Blob/BlobVerifier members because this class is a friend.
+  const fzl::OwnedVmoMapper& GetBlobMerkleMapper(const Blob* blob) {
+    std::lock_guard lock(blob->mutex_);
+    return blob->loader_info_.verifier->merkle_data_blocks_;
+  }
 
   void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
     std::unique_ptr<MerkleTreeInfo> merkle_tree = CreateMerkleTree(

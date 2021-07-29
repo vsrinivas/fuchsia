@@ -127,12 +127,11 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
       static_cast<uint64_t>(result.layout->DataBlockOffset()) * GetBlockSize();
   result.loader_info.data_length_bytes = inode->blob_size;
 
-  if (zx_status_t status =
-          InitMerkleVerifier(node_index, *inode.value(), *result.layout, corruption_notifier,
-                             &result.merkle, &result.loader_info.verifier);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
+  auto verifier_or =
+      CreateBlobVerifier(node_index, *inode.value(), *result.layout, corruption_notifier);
+  if (verifier_or.is_error())
+    return verifier_or.take_error();
+  result.loader_info.verifier = std::move(verifier_or.value());
 
   if (zx_status_t status =
           InitForDecompression(node_index, *inode.value(), *result.layout,
@@ -144,14 +143,12 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
   return zx::ok(std::move(result));
 }
 
-zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& inode,
-                                           const BlobLayout& blob_layout,
-                                           const BlobCorruptionNotifier* notifier,
-                                           fzl::OwnedVmoMapper* vmo_out,
-                                           std::unique_ptr<BlobVerifier>* verifier_out) {
+zx::status<std::unique_ptr<BlobVerifier>> BlobLoader::CreateBlobVerifier(
+    uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
+    const BlobCorruptionNotifier* notifier) {
   if (blob_layout.MerkleTreeSize() == 0) {
     return BlobVerifier::CreateWithoutTree(digest::Digest(inode.merkle_root_hash), metrics_,
-                                           inode.blob_size, notifier, verifier_out);
+                                           inode.blob_size, notifier);
   }
 
   fzl::OwnedVmoMapper merkle_mapper;
@@ -160,32 +157,20 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   fbl::StringBuffer<ZX_MAX_NAME_LEN> merkle_vmo_name;
   FormatBlobMerkleVmoName(digest::Digest(inode.merkle_root_hash), &merkle_vmo_name);
 
-  zx_status_t status;
-  if ((status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),
-                                           merkle_vmo_name.c_str())) != ZX_OK) {
+  if (zx_status_t status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),
+                                                      merkle_vmo_name.c_str());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize merkle vmo; error: " << zx_status_get_string(status);
-    return status;
+    return zx::error(status);
   }
 
-  if ((status = LoadMerkle(node_index, blob_layout, merkle_mapper)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = LoadMerkleBlocks(node_index, blob_layout, merkle_mapper.vmo());
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  // The Merkle tree may not start at the beginning of the vmo in the kCompactMerkleTreeAtEnd
-  // format.
-  void* merkle_tree_start = static_cast<uint8_t*>(merkle_mapper.start()) +
-                            blob_layout.MerkleTreeOffsetWithinBlockOffset();
-
-  if ((status = BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), metrics_,
-                                     merkle_tree_start, blob_layout.MerkleTreeSize(),
-                                     blob_layout.Format(), inode.blob_size, notifier, &verifier)) !=
-      ZX_OK) {
-    return status;
-  }
-
-  *vmo_out = std::move(merkle_mapper);
-  *verifier_out = std::move(verifier);
-  return ZX_OK;
+  return BlobVerifier::Create(digest::Digest(inode.merkle_root_hash), metrics_,
+                              std::move(merkle_mapper), blob_layout, notifier);
 }
 
 zx_status_t BlobLoader::InitForDecompression(
@@ -244,11 +229,11 @@ zx_status_t BlobLoader::InitForDecompression(
   return ZX_OK;
 }
 
-zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
-                                   const fzl::OwnedVmoMapper& mapper) const {
+zx_status_t BlobLoader::LoadMerkleBlocks(uint32_t node_index, const BlobLayout& blob_layout,
+                                         const zx::vmo& merkle_blocks_vmo) const {
   fs::Ticker ticker(metrics_->Collecting());
   auto bytes_read = LoadBlocks(node_index, blob_layout.MerkleTreeBlockOffset(),
-                               blob_layout.MerkleTreeBlockCount(), mapper.vmo());
+                               blob_layout.MerkleTreeBlockCount(), merkle_blocks_vmo);
   if (bytes_read.is_error()) {
     FX_LOGS(ERROR) << "Failed to load Merkle tree: " << bytes_read.status_string();
     return bytes_read.error_value();

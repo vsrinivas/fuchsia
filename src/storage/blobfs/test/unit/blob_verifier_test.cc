@@ -17,6 +17,13 @@
 namespace blobfs {
 namespace {
 
+struct BlockMerkleTreeInfo {
+  fzl::OwnedVmoMapper blocks;
+  char* merkle_data = nullptr;  // Points into |blocks|, will be offset according to blob format.
+  uint64_t merkle_tree_size = 0;
+  Digest root;
+};
+
 class TestCorruptionNotifier : public BlobCorruptionNotifier {
  public:
   void NotifyCorruptBlob(const digest::Digest& digest) const override { last_corruption_ = digest; }
@@ -34,8 +41,36 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
 
   void SetUp() override { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
+  // Creates a default blob layout for an uncompressed file of the given size.
+  static std::unique_ptr<BlobLayout> GetBlobLayout(size_t size) {
+    auto layout_or = BlobLayout::CreateFromSizes(GetParam(), size, size, kBlobfsBlockSize);
+    EXPECT_TRUE(layout_or.is_ok());  // Should always succeed in this use.
+    return std::move(*layout_or);
+  }
+
   static std::unique_ptr<MerkleTreeInfo> GenerateTree(const uint8_t* data, size_t len) {
     return CreateMerkleTree(data, len, ShouldUseCompactMerkleTreeFormat(GetParam()));
+  }
+
+  // Like GenerateTree but puts the merkle data into a VMO that will have the merkle data aligned
+  // inside of it as it would on disk according to the given layout.
+  static BlockMerkleTreeInfo GenerateMerkleTreeBlocks(const BlobLayout& layout, const uint8_t* data,
+                                                      size_t len) {
+    std::unique_ptr<MerkleTreeInfo> normal_info = GenerateTree(data, len);
+
+    BlockMerkleTreeInfo block_info;
+    EXPECT_EQ(ZX_OK,
+              block_info.blocks.CreateAndMap(layout.MerkleTreeBlockAlignedSize(), "Merkle blocks"));
+
+    auto start_offset = layout.MerkleTreeOffsetWithinBlockOffset();
+    EXPECT_LE(normal_info->merkle_tree_size + start_offset, block_info.blocks.size());
+
+    block_info.merkle_data = &static_cast<char*>(block_info.blocks.start())[start_offset];
+    block_info.merkle_tree_size = normal_info->merkle_tree_size;
+    memcpy(block_info.merkle_data, normal_info->merkle_tree.get(), block_info.merkle_tree_size);
+
+    block_info.root = normal_info->root;
+    return block_info;
   }
 
  private:
@@ -51,10 +86,10 @@ void FillWithRandom(uint8_t* buf, size_t len) {
 TEST_P(BlobVerifierTest, CreateAndVerify_NullBlob) {
   auto merkle_tree = GenerateTree(nullptr, 0);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(
-      BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), 0ul, nullptr, &verifier),
-      ZX_OK);
+  auto verifier_or = BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), 0ul, nullptr);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
+
   EXPECT_EQ(verifier->Verify(nullptr, 0ul, 0ul), ZX_OK);
   EXPECT_EQ(verifier->VerifyPartial(nullptr, 0ul, 0ul, 0ul), ZX_OK);
 }
@@ -65,10 +100,10 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob) {
 
   auto merkle_tree = GenerateTree(buf, sizeof(buf));
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), nullptr,
-                                            &verifier),
-            ZX_OK);
+  auto verifier_or =
+      BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), nullptr);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf, sizeof(buf), sizeof(buf)), ZX_OK);
 
@@ -92,10 +127,10 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
   // Invert one character
   buf[42] = ~(buf[42]);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), &notifier,
-                                            &verifier),
-            ZX_OK);
+  auto verifier_or =
+      BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), &notifier);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf, sizeof(buf), sizeof(buf)), ZX_ERR_IO_DATA_INTEGRITY);
   EXPECT_EQ(verifier->VerifyPartial(buf, 8192, 0, 8192), ZX_ERR_IO_DATA_INTEGRITY);
@@ -111,16 +146,15 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  auto merkle_tree = GenerateTree(buf.get(), sz);
+  auto layout = GetBlobLayout(sz);
+  BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.get(), sz);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
-                           merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
-      ZX_OK);
+  auto verifier_or =
+      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_OK);
-
   EXPECT_EQ(verifier->VerifyPartial(buf.get(), sz, 0, sz), ZX_OK);
 
   // Block-by-block
@@ -146,19 +180,18 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  auto merkle_tree = GenerateTree(buf.get(), sz);
+  auto layout = GetBlobLayout(sz);
+  BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.get(), sz);
 
   // Invert a char in the first block. All other blocks are still valid.
   buf.get()[42] = ~(buf.get()[42]);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
-                           merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
-      ZX_OK);
+  auto verifier_or =
+      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
-
   EXPECT_EQ(verifier->VerifyPartial(buf.get(), sz, 0, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
   // Block-by-block -- first block fails, rest succeed
@@ -167,7 +200,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
     if (i == 0) {
       EXPECT_EQ(status, ZX_ERR_IO_DATA_INTEGRITY);
       ASSERT_TRUE(notifier.last_corruption());
-      EXPECT_EQ(notifier.last_corruption(), merkle_tree->root);
+      EXPECT_EQ(notifier.last_corruption(), info.root);
 
       // Reset so we can tell it's not called again.
       notifier.ResetLastCorruption();
@@ -185,19 +218,18 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
   fbl::Array<uint8_t> buf(new uint8_t[sz], sz);
   FillWithRandom(buf.get(), sz);
 
-  auto merkle_tree = GenerateTree(buf.get(), sz);
+  auto layout = GetBlobLayout(sz);
+  BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.get(), sz);
 
   // Invert a char in the tree.
-  merkle_tree->merkle_tree.get()[0] = ~(merkle_tree->merkle_tree.get()[0]);
+  info.merkle_data[0] = ~(info.merkle_data[0]);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
-                           merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
-      ZX_OK);
+  auto verifier_or =
+      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, &notifier);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf.get(), sz, sz), ZX_ERR_IO_DATA_INTEGRITY);
-
   EXPECT_EQ(verifier->VerifyPartial(buf.get(), sz, 0, sz), ZX_ERR_IO_DATA_INTEGRITY);
 
   // Block-by-block -- everything fails
@@ -205,7 +237,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
     EXPECT_EQ(verifier->VerifyPartial(buf.get() + i, 8192, i, 8192), ZX_ERR_IO_DATA_INTEGRITY);
 
     ASSERT_TRUE(notifier.last_corruption());
-    EXPECT_EQ(*notifier.last_corruption(), merkle_tree->root);
+    EXPECT_EQ(*notifier.last_corruption(), info.root);
     notifier.ResetLastCorruption();
   }
 }
@@ -219,10 +251,10 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
 
   auto merkle_tree = GenerateTree(buf, kBlobSize);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  EXPECT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), kBlobSize, nullptr,
-                                            &verifier),
-            ZX_OK);
+  auto verifier_or =
+      BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), kBlobSize, nullptr);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   EXPECT_EQ(verifier->Verify(buf, kBlobSize, sizeof(buf)), ZX_OK);
 
@@ -235,13 +267,13 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
   std::vector<uint8_t> buf(fbl::round_up(kBlobSize, kBlobfsBlockSize));
   FillWithRandom(buf.data(), kBlobSize);
 
-  auto merkle_tree = GenerateTree(buf.data(), kBlobSize);
+  auto layout = GetBlobLayout(kBlobSize);
+  BlockMerkleTreeInfo info = GenerateMerkleTreeBlocks(*layout, buf.data(), kBlobSize);
 
-  std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
-                                 merkle_tree->merkle_tree_size, GetParam(), kBlobSize, nullptr,
-                                 &verifier),
-            ZX_OK);
+  auto verifier_or =
+      BlobVerifier::Create(info.root, GetMetrics(), std::move(info.blocks), *layout, nullptr);
+  ASSERT_TRUE(verifier_or.is_ok());
+  BlobVerifier* verifier = verifier_or.value().get();
 
   constexpr int kVerifyOffset = kBlobSize - kBlobSize % kBlobfsBlockSize;
   EXPECT_EQ(verifier->VerifyPartial(&buf[kVerifyOffset], kBlobSize - kVerifyOffset, kVerifyOffset,

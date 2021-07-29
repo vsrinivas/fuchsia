@@ -119,6 +119,7 @@ static_library("blobfs") {
       "blob_data_producer.h",
       "blob_loader.cc",
       "blob_verifier.cc",
+      "blob_verifier.h",
       "blobfs.cc",
       "cache_node.cc",
       "compression/blob_compressor.cc",

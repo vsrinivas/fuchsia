@@ -108,13 +108,11 @@ struct Blob::WriteInfo {
 
 zx_status_t Blob::VerifyNullBlob() const {
   ZX_ASSERT_MSG(blob_size_ == 0, "Inode blob size is not zero :%lu", blob_size_);
-  std::unique_ptr<BlobVerifier> verifier;
-  if (zx_status_t status = BlobVerifier::CreateWithoutTree(
-          digest(), blobfs_->GetMetrics(), 0, &blobfs_->blob_corruption_notifier(), &verifier);
-      status != ZX_OK) {
-    return status;
-  }
-  return verifier->Verify(nullptr, 0, 0);
+  auto verifier_or = BlobVerifier::CreateWithoutTree(digest(), blobfs_->GetMetrics(), 0,
+                                                     &blobfs_->blob_corruption_notifier());
+  if (verifier_or.is_error())
+    return verifier_or.error_value();
+  return verifier_or->Verify(nullptr, 0, 0);
 }
 
 uint64_t Blob::SizeData() const {
@@ -773,7 +771,6 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 
   // Commit the other load information.
   loader_info_ = std::move(load_result->loader_info);
-  merkle_mapping_ = std::move(load_result->merkle);
 
   return ZX_OK;
 }
@@ -905,7 +902,7 @@ void Blob::ActivateLowMemory() {
     pager_reference = FreePagedVmo();
 
     unpaged_backing_data_.reset();
-    merkle_mapping_.Reset();
+    loader_info_ = LoaderInfo();  // Release the verifiers and associated Merkle data.
   }
   // When the pager_reference goes out of scope here, it could delete |this|.
 }
