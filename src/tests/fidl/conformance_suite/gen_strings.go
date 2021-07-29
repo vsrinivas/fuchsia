@@ -23,8 +23,17 @@ type invalidCase struct {
 }
 
 type exclude struct {
-	testCase                  interface{}
-	overrideBindingsAllowlist string
+	testCase   interface{}
+	exclusions []exclusion
+}
+
+type exclusion struct {
+	Binding string
+	Comment string
+}
+
+var defaultSuccessExclusions = []exclusion{
+	{"fuzzer_corpus", "TODO(fxbug.dev/72895): Fix presence indicator validation."},
 }
 
 var cases = []interface{}{
@@ -97,8 +106,10 @@ var cases = []interface{}{
 	validCase{"\xdf\xbf\xef\xbf\xbf\xe1\x80\x80", "mix and match from earlier cases"},
 
 	// UTF-8 BOM
-	// TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM
-	exclude{validCase{"\xef\xbb\xbf", "UTF-8 BOM"}, "[go,rust,]"},
+	exclude{
+		validCase{"\xef\xbb\xbf", "UTF-8 BOM"},
+		[]exclusion{{"dart", "TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM."}},
+	},
 	invalidCase{"\xef", "Partial UTF-8 BOM (1)"},
 	invalidCase{"\xef\xbb", "Partial UTF-8 BOM (2)"},
 
@@ -119,8 +130,10 @@ var cases = []interface{}{
 	validCase{"\xc2\x81", ""},
 	validCase{"\xe1\x80\xbf", ""},
 	validCase{"\xf1\x80\xa0\xbf", ""},
-	// TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM
-	exclude{validCase{"\xef\xbb\xbf", "UTF-8 BOM"}, "[go,rust,]"},
+	exclude{
+		validCase{"\xef\xbb\xbf", "UTF-8 BOM"},
+		[]exclusion{{"dart", "TODO(fxbug.dev/52104): Dart consumes the UTF-8 BOM."}},
+	},
 
 	// always invalid bytes
 	invalidCase{"\xc0", ""},
@@ -166,21 +179,20 @@ var cases = []interface{}{
 	invalidCase{"\xff\xfe", "BOMs in UTF-16 LE"},
 }
 
-// TODO(fxbug.dev/52104): UTF8 encoding and decoding is not conformant in Dart.
-
 var successTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 success("StringsValidCase{{ .index }}") {
-{{- if .overrideBindingsAllowlist }}
-    bindings_allowlist = {{ .overrideBindingsAllowlist }},
-{{- else }}
-    bindings_allowlist = [go,rust,hlcpp,llcpp,dart,],
+{{- if .exclusions }}
+{{- range .exclusions }}
+	// {{ .Comment }}
+{{- end }}
+	bindings_denylist = [{{ range .exclusions }}{{ .Binding }},{{ end }}],
 {{- end }}
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num({{ .lenValue }}):8,
             repeat(0xff):8,
@@ -197,16 +209,12 @@ success("StringsValidCase{{ .index }}") {
 }
 `))
 
-// In Rust, we cannot represent non-UTF8 strings in domain objects since
-// std::string::String validates on construction. We therefore omit Rust
-// from the 'encode_failure' cases since this could not occur.
-//
-// See https://doc.rust-lang.org/std/string/struct.String.html#utf-8
-
 var decodeFailureTmpl = template.Must(template.New("tmpls").Parse(
 	`{{ if .comment }}// {{ .comment }}{{ end }}
 encode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,hlcpp,llcpp,],
+    // TODO(fxbug.dev/52104): UTF8 encoding and decoding is not conformant in Dart.
+    // Rust is excluded since std::string::String is always valid UTF-8.
+    bindings_denylist = [dart, rust],
     value = StringWrapper {
         str: "{{ .escapedValue }}",
     },
@@ -215,10 +223,11 @@ encode_failure("StringsInvalidCase{{ .index }}") {
 
 {{ if .comment }}// {{ .comment }}{{ end }}
 decode_failure("StringsInvalidCase{{ .index }}") {
-    bindings_allowlist = [go,rust,hlcpp,llcpp,],
+    // TODO(fxbug.dev/52104): UTF8 encoding and decoding is not conformant in Dart.
+    bindings_denylist = [dart],
     type = StringWrapper,
     bytes = {
-        v1 = [
+        v1, v2 = [
             // length, present
             num({{ .lenValue }}):8,
             repeat(0xff):8,
@@ -256,15 +265,15 @@ func fidlAlign(len int) int {
 	return (len + 7) & ^7
 }
 
-func toTmplParams(index int, value, comment, overrideBindingsAllowlist string) map[string]interface{} {
+func toTmplParams(index int, value, comment string, exclusions []exclusion) map[string]interface{} {
 	return map[string]interface{}{
-		"index":                     index,
-		"comment":                   comment,
-		"escapedValue":              escapeStr(value),
-		"lenValue":                  len(value),
-		"bytesValue":                []byte(value),
-		"padding":                   fidlAlign(len(value)) - len(value),
-		"overrideBindingsAllowlist": overrideBindingsAllowlist,
+		"index":        index,
+		"comment":      comment,
+		"escapedValue": escapeStr(value),
+		"lenValue":     len(value),
+		"bytesValue":   []byte(value),
+		"padding":      fidlAlign(len(value)) - len(value),
+		"exclusions":   append(defaultSuccessExclusions, exclusions...),
 	}
 }
 
@@ -272,22 +281,22 @@ type printer struct {
 	validIndex, invalidIndex int
 }
 
-func (p *printer) print(testCase interface{}, overrideBindingsAllowlist string) {
+func (p *printer) print(testCase interface{}, exclusions []exclusion) {
 	switch testCase := testCase.(type) {
 	case validCase:
 		if !utf8.ValidString(testCase.value) {
 			panic(fmt.Sprintf("supposedly valid example seems invalid: %+v", testCase))
 		}
 		p.validIndex++
-		p.printValidCase(toTmplParams(p.validIndex, testCase.value, testCase.comment, overrideBindingsAllowlist))
+		p.printValidCase(toTmplParams(p.validIndex, testCase.value, testCase.comment, exclusions))
 	case invalidCase:
 		if utf8.ValidString(testCase.value) {
 			panic(fmt.Sprintf("supposedly invalid example seems valid: %+v", testCase))
 		}
 		p.invalidIndex++
-		p.printInvalidCase(toTmplParams(p.invalidIndex, testCase.value, testCase.comment, overrideBindingsAllowlist))
+		p.printInvalidCase(toTmplParams(p.invalidIndex, testCase.value, testCase.comment, exclusions))
 	case exclude:
-		p.print(testCase.testCase, testCase.overrideBindingsAllowlist)
+		p.print(testCase.testCase, testCase.exclusions)
 	}
 }
 
@@ -320,6 +329,6 @@ func main() {
 `)
 	var p printer
 	for _, testCase := range cases {
-		p.print(testCase, "")
+		p.print(testCase, nil)
 	}
 }
