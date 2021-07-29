@@ -28,7 +28,7 @@ use crate::{
     },
     path::Path,
     test_utils::node::open_get_proxy,
-    test_utils::run_client,
+    test_utils::{build_flag_combinations, run_client},
 };
 
 use {
@@ -37,9 +37,10 @@ use {
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
         NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
         MAX_FILENAME, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-        WATCH_MASK_REMOVED,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
+        WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     fuchsia_async::TestExecutor,
     fuchsia_zircon::{
@@ -361,6 +362,100 @@ fn open_writable_in_subdir() {
             open_read_write_close(&ssh_dir, "sshd_config", "# Empty", "Port 22").await;
         }
     });
+}
+
+/// Ensures that the POSIX flags cannot be used to exceed the rights of a parent connection,
+/// and that the correct rights are expanded when requested.
+#[test]
+fn open_subdir_with_posix_flag_rights_expansion() {
+    let root = {
+        pseudo_directory! {
+            "etc" => pseudo_directory! {
+                "ssh" => pseudo_directory! {}
+            }
+        }
+    };
+
+    // Combinations of flags to test the root directory with.
+    let root_flag_combos =
+        build_flag_combinations(OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE);
+
+    // Combinations of flags to pass in when opening a subdirectory within the root directory.
+    let subdir_flag_combos = build_flag_combinations(
+        OPEN_RIGHT_READABLE,
+        OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE,
+    );
+
+    // Validates that POSIX flags passed when opening a subdirectory against the root directory
+    // result in the correct expanded rights, and that they do not exceed those of the root.
+    fn validate_expanded_rights(
+        root_node_flags: u32,
+        subdir_open_flags: u32,
+        resulting_subdir_flags: u32,
+    ) {
+        // Ensure POSIX flags were removed.
+        assert!(
+            resulting_subdir_flags
+                & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE)
+                == 0,
+            "POSIX flags were not removed!"
+        );
+        // Ensure writable rights were expanded correctly.
+        if subdir_open_flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE) != 0 {
+            if root_node_flags & OPEN_RIGHT_WRITABLE != 0 {
+                assert!(
+                    resulting_subdir_flags & OPEN_RIGHT_WRITABLE != 0,
+                    "Failed to expand writable right!"
+                );
+            } else {
+                assert!(
+                    resulting_subdir_flags & OPEN_RIGHT_WRITABLE == 0,
+                    "Rights violation: improperly expanded writable right!"
+                );
+            }
+        }
+        // Ensure executable rights were expanded correctly.
+        if subdir_open_flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+            if root_node_flags & OPEN_RIGHT_EXECUTABLE != 0 {
+                assert!(
+                    resulting_subdir_flags & OPEN_RIGHT_EXECUTABLE != 0,
+                    "Failed to expand executable right!"
+                );
+            } else {
+                assert!(
+                    resulting_subdir_flags & OPEN_RIGHT_EXECUTABLE == 0,
+                    "Rights violation: improperly expanded executable right!"
+                );
+            }
+        }
+    }
+
+    run_server_client(
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+        root,
+        |root| async move {
+            for root_flags in root_flag_combos {
+                // Clone the root directory with a restricted subset of rights.
+                let root_flags = root_flags | OPEN_FLAG_DESCRIBE;
+                let root_proxy = clone_get_directory_proxy_assert_ok!(&root, root_flags);
+                for subdir_flags in &subdir_flag_combos {
+                    // Open the subdirectory with a set of POSIX flags, and call get_flags to
+                    // determine which set of rights they were expanded to.
+                    let subdir_flags = OPEN_FLAG_DESCRIBE | subdir_flags;
+                    let subdir_proxy =
+                        open_get_directory_proxy_assert_ok!(&root_proxy, subdir_flags, "etc/ssh");
+                    let (_, resulting_subdir_flags) =
+                        subdir_proxy.node_get_flags().await.expect("Failed to get node flags!");
+                    // Ensure resulting rights on the subdirectory are expanded correctly and do
+                    // not exceed those of the cloned root directory connection.
+                    validate_expanded_rights(root_flags, subdir_flags, resulting_subdir_flags);
+                    assert_close!(subdir_proxy);
+                }
+                assert_close!(root_proxy);
+            }
+            assert_close!(root);
+        },
+    );
 }
 
 #[test]

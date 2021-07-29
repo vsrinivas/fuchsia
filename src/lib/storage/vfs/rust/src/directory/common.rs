@@ -111,10 +111,13 @@ pub fn check_child_connection_flags(
         return Err(zx::Status::INVALID_ARGS);
     }
 
-    // Remove POSIX flags when the respective rights are not available ("soft fail").
-    if parent_flags & (OPEN_RIGHT_EXECUTABLE | OPEN_RIGHT_WRITABLE) == 0 {
+    // Expand POSIX flag into new equivalents.
+    // TODO(fxbug.dev/81185): Remove branch when removing OPEN_FLAG_POSIX from fuchsia.io.
+    if flags & OPEN_FLAG_POSIX != 0 {
+        flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
         flags &= !OPEN_FLAG_POSIX;
     }
+    // Remove POSIX flags when the respective rights are not available ("soft fail").
     if parent_flags & OPEN_RIGHT_EXECUTABLE == 0 {
         flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
     }

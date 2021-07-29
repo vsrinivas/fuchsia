@@ -32,9 +32,8 @@ use {
         DirectoryAdminUnmountNodeResponder, DirectoryAdminUnmountResponder,
         DirectoryAdminWatchResponder, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
         INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
@@ -549,20 +548,16 @@ where
                 return;
             }
 
-            // Clone ignores the POSIX flag, but open shouldn't.  The flag would have been stripped
+            // Clone ignores the POSIX flags, but open shouldn't. The flag would have been stripped
             // above by check_child_connection_flags if we had insufficient privileges, so if
             // present, we expand those respective rights and remove the flags.
-            if flags & OPEN_FLAG_POSIX != 0 {
-                flags |= self.flags & OPEN_RIGHT_EXECUTABLE;
-                flags |= self.flags & OPEN_RIGHT_WRITABLE;
-            }
             if flags & OPEN_FLAG_POSIX_EXECUTABLE != 0 {
                 flags |= OPEN_RIGHT_EXECUTABLE;
             }
             if flags & OPEN_FLAG_POSIX_WRITABLE != 0 {
                 flags |= OPEN_RIGHT_WRITABLE;
             }
-            flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+            flags &= !(OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
             self.handle_clone(flags, mode, server_end);
             return;
