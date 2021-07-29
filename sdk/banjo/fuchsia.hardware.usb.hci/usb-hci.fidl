@@ -9,10 +9,14 @@ using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.hubdescriptor;
 using fuchsia.hardware.usb.request;
 
+/// The UsbHci protocol is implemented by a USB Host Controller driver.
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol UsbHci {
     /// Queues a USB request with the HCI driver.
+    /// The client must allocate sufficient space in the request object
+    /// by using the GetRequestSize() method.
+    /// Once the request is queued, the HCI driver owns it until the callback is invoked.
     RequestQueue(resource struct {
         @in_out
         usb_request fuchsia.hardware.usb.request.UsbRequest;
@@ -40,7 +44,7 @@ protocol UsbHci {
     GetCurrentFrame() -> (struct {
         frame uint64;
     });
-    /// Used by the USB hub driver to configure a newly enumerated USB hub.
+    /// Called by the USB hub driver to configure a newly enumerated USB hub.
     ConfigureHub(struct {
         device_id uint32;
         speed fuchsia.hardware.usb.descriptor.UsbSpeed;
@@ -49,7 +53,7 @@ protocol UsbHci {
     }) -> (struct {
         s zx.status;
     });
-    /// Used by the USB hub driver to notify the HCI driver when a new device is attached.
+    /// Called by the USB hub driver when a new device is attached.
     HubDeviceAdded(struct {
         device_id uint32;
         port uint32;
@@ -57,14 +61,14 @@ protocol UsbHci {
     }) -> (struct {
         s zx.status;
     });
-    /// Used by the USB hub driver to notify the HCI driver when a device has been removed.
+    /// Called by the USB hub driver when a device has been removed.
     HubDeviceRemoved(struct {
         device_id uint32;
         port uint32;
     }) -> (struct {
         s zx.status;
     });
-    /// Used by the USB hub driver to notify the HCI driver when a device has been reset.
+    /// Called by the USB hub driver when a device has been reset.
     HubDeviceReset(struct {
         device_id uint32;
         port uint32;
