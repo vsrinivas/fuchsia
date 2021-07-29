@@ -104,19 +104,19 @@ function main {
     # Print all matching patterns with discovered sets.
     printf '%s\n' "${results[@]}"
   else
-    if [[ "$#[package_sets[@]}" -gt 0 ]]; then
+    if [[ ${#package_sets[@]} -gt 0 ]]; then
       fx-error "Flags '--base', '--cache', or '--universe' are not yet supported"
       fx-error "by ffx repository. See http://fxbug.dev/81512 for more details"
       return 1
     fi
 
-    if [[ "$verbose" ]]; then
+    if "$verbose"; then
       fx-error "Flag '--verbose' is not yet supported by ffx repository"
       fx-error "See http://fxbug.dev/81512 for more details"
       return 1
     fi
 
-    fx-command-run ffx --config ffx_repository=true repository packages
+    fx-command-run ffx --config ffx_repository=true repository package list
     err=$?
     if [[ $err -ne 0 ]]; then
       fx-error "Unable to list packages from the repository"

@@ -7,7 +7,7 @@ use {
     chrono::{offset::Utc, DateTime},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
-    ffx_repository_packages_args::PackagesCommand,
+    ffx_repository_packages_args::{ListSubcommand, PackagesCommand, PackagesSubcommand},
     fidl,
     fidl_fuchsia_developer_bridge::{
         ListFields, RepositoryPackagesIteratorMarker, RepositoryRegistryProxy,
@@ -25,11 +25,13 @@ const MAX_HASH: usize = 11;
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
 pub async fn packages(cmd: PackagesCommand, repos: RepositoryRegistryProxy) -> Result<()> {
-    packages_impl(cmd, repos, None, stdout()).await
+    match cmd.subcommand {
+        PackagesSubcommand::List(subcmd) => list_impl(subcmd, repos, None, stdout()).await,
+    }
 }
 
-async fn packages_impl<W: Write>(
-    cmd: PackagesCommand,
+async fn list_impl<W: Write>(
+    cmd: ListSubcommand,
     repos_proxy: RepositoryRegistryProxy,
     table_format: Option<TableFormat>,
     mut writer: W,
@@ -222,7 +224,7 @@ mod test {
         })
     }
 
-    async fn run_impl(cmd: PackagesCommand) -> String {
+    async fn run_impl(cmd: ListSubcommand) -> String {
         let repos = setup_repo_proxy(if cmd.include_components {
             ListFields::Components
         } else {
@@ -232,7 +234,7 @@ mod test {
         let mut out = Vec::<u8>::new();
         timeout::timeout(
             std::time::Duration::from_millis(1000),
-            packages_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), &mut out),
+            list_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), &mut out),
         )
         .await
         .unwrap()
@@ -244,7 +246,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_truncated_hash() {
         assert_eq!(
-            run_impl(PackagesCommand {
+            run_impl(ListSubcommand {
                 repository: Some("devhost".to_string()),
                 full_hash: false,
                 include_components: false
@@ -260,7 +262,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_full_hash() {
         assert_eq!(
-            run_impl(PackagesCommand {
+            run_impl(ListSubcommand {
                 repository: Some("devhost".to_string()),
                 full_hash: true,
                 include_components: false,
@@ -275,7 +277,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_including_components() {
-        assert_eq!(run_impl(PackagesCommand {
+        assert_eq!(run_impl(ListSubcommand {
             repository: Some("devhost".to_string()),
             full_hash: false,
             include_components: true

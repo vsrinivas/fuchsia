@@ -5,11 +5,24 @@
 use {argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command};
 
 #[ffx_command()]
-#[derive(FfxConfigBacked, FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "packages", description = "List the packages inside a repository")]
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "package", description = "List the packages inside a repository")]
 pub struct PackagesCommand {
+    #[argh(subcommand)]
+    pub subcommand: PackagesSubcommand,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum PackagesSubcommand {
+    List(ListSubcommand),
+}
+
+#[derive(FfxConfigBacked, FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "list", description = "Inspect and manage package repositories")]
+pub struct ListSubcommand {
     #[argh(option, short = 'r')]
-    #[ffx_config_default("repository.default")]
+    #[ffx_config_default("repository.server.default")]
     /// list packages from this repository.
     pub repository: Option<String>,
 
