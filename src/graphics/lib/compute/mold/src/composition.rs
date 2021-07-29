@@ -9,7 +9,7 @@ use surpass::{
     self,
     painter::{BufferLayout, LayerProps, Props, Rect},
     rasterizer::{self, Rasterizer},
-    LinesBuilder, TILE_SIZE,
+    LinesBuilder,
 };
 
 use crate::{
@@ -162,11 +162,7 @@ impl Composition {
         crop: Option<Rect>,
     ) {
         if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
-            let tiles_width = (buffer.width + (TILE_SIZE - 1)) / TILE_SIZE;
-            let buffer_height = buffer.buffer.len() / buffer.width;
-            let tiles_height = (buffer_height + (TILE_SIZE - 1)) / TILE_SIZE;
-
-            let tiles_len = tiles_width * tiles_height;
+            let tiles_len = buffer.tiles_len();
 
             if buffer_layer_cache.layers_per_tile.borrow().len() != tiles_len {
                 buffer_layer_cache.layers_per_tile.borrow_mut().resize(tiles_len, None);
