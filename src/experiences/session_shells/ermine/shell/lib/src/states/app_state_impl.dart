@@ -248,16 +248,10 @@ class AppStateImpl with Disposable implements AppState {
   late final Action hideOverlay = setFocusToChildView.asAction();
 
   @override
-  late final Action showAppBar = () {
-    overlayVisibility.value = true;
-    showOverlay();
-  }.asAction();
+  late final Action showAppBar = showOverlay;
 
   @override
-  late final Action showSideBar = () {
-    overlayVisibility.value = true;
-    showOverlay();
-  }.asAction();
+  late final Action showSideBar = showOverlay;
 
   @override
   late final switchView = (ViewState view) {
@@ -268,9 +262,6 @@ class AppStateImpl with Disposable implements AppState {
   @override
   late final switchNext = () {
     if (views.length > 1) {
-      // Set focus to shell view so that we can receive the final Alt key press.
-      setFocusToShellView();
-
       // Start with the top view.
       switchTarget.value ??= topView.value;
 
@@ -279,17 +270,17 @@ class AppStateImpl with Disposable implements AppState {
           ? views.first
           : views[views.indexOf(switchTarget.value) + 1];
 
-      // Display the app switcher.
-      switcherVisible.value = true;
+      // Set focus to shell view so that we can receive the final Alt key press.
+      setFocusToShellView();
+
+      // Display the app switcher after shell has focus.
+      when((_) => shellHasFocus.value, () => switcherVisible.value = true);
     }
   }.asAction();
 
   @override
   late final switchPrev = () {
     if (views.length > 1) {
-      // Set focus to shell view so that we can receive the final Alt key press.
-      setFocusToShellView();
-
       // Start with the top view.
       switchTarget.value ??= topView.value;
 
@@ -297,8 +288,11 @@ class AppStateImpl with Disposable implements AppState {
           ? views.last
           : views[views.indexOf(switchTarget.value) - 1];
 
-      // Display the app switcher.
-      switcherVisible.value = true;
+      // Set focus to shell view so that we can receive the final Alt key press.
+      setFocusToShellView();
+
+      // Display the app switcher after shell has focus.
+      when((_) => shellHasFocus.value, () => switcherVisible.value = true);
     }
   }.asAction();
 
@@ -313,8 +307,8 @@ class AppStateImpl with Disposable implements AppState {
           setFocusToChildView();
         }
 
-        // Dismiss the app switcher
-        switcherVisible.value = false;
+        // Dismiss the app switcher after shell loses focus
+        when((_) => !shellHasFocus.value, () => switcherVisible.value = false);
 
         switchTarget.value = null;
       });

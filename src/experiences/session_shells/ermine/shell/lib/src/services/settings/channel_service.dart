@@ -14,7 +14,7 @@ class ChannelService extends TaskService {
   late final VoidCallback onChanged;
   late final ValueChanged<bool> onConnected;
 
-  final _control = ChannelControlProxy();
+  var _control = ChannelControlProxy();
 
   late String _currentChannel;
   late List<String> _availableChannels;
@@ -63,5 +63,6 @@ class ChannelService extends TaskService {
   @override
   void dispose() {
     _control.ctrl.close();
+    _control = ChannelControlProxy();
   }
 }
