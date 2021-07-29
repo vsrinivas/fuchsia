@@ -429,42 +429,43 @@ remote_rustc_command=("$script_dir"/fuchsia-rbe-action.sh \
   --output_files="$outputs_joined" -- \
   "${rustc_command[@]}")
 
-# Execute the remote command.
 if test "$dry_run" = 1
 then
   echo "[$script: skipped]:" "${remote_rustc_command[@]}"
   dump_vars
-else
-  # Execute the rust command remotely.
-  debug_var "[$script: remote]" "${remote_rustc_command[@]}"
-  "${remote_rustc_command[@]}"
-  status="$?"
+  exit
+fi
 
-  # Scan remote-generated depfile for absolute paths, and reject them.
-  abs_deps=()
-  if test -f "$depfile"
-  then
-    # TEMPORARY WORKAROUND until upstream fix lands:
-    #   https://github.com/pest-parser/pest/pull/522
-    # Rewrite the depfile if it contains any absolute paths from the remote
-    # build; paths should be relative to the root_build_dir.
-    sed -i -e 's|/b/f/w/out/[^/]*/||g' "$depfile"
+# Execute the rust command remotely.
+debug_var "[$script: remote]" "${remote_rustc_command[@]}"
+"${remote_rustc_command[@]}"
+status="$?"
 
-    mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
-    for f in "${remote_depfile_inputs[@]}"
-    do
-      case "$f" in
-        /*) abs_deps+=("$f") ;;
-      esac
-    done
-    test "${#abs_deps[@]}" = 0 || status=1
-    # error message below
-  fi
+# Scan remote-generated depfile for absolute paths, and reject them.
+abs_deps=()
+if test -f "$depfile"
+then
+  # TEMPORARY WORKAROUND until upstream fix lands:
+  #   https://github.com/pest-parser/pest/pull/522
+  # Rewrite the depfile if it contains any absolute paths from the remote
+  # build; paths should be relative to the root_build_dir.
+  sed -i -e 's|/b/f/w/out/[^/]*/||g' "$depfile"
 
-  test "$status" = 0 || {
-    # On any failure, dump debug info, even if it is not related to RBE.
-    verbose=1
-    cat <<EOF
+  mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
+  for f in "${remote_depfile_inputs[@]}"
+  do
+    case "$f" in
+      /*) abs_deps+=("$f") ;;
+    esac
+  done
+  test "${#abs_deps[@]}" = 0 || status=1
+  # error message below
+fi
+
+test "$status" = 0 || {
+  # On any failure, dump debug info, even if it is not related to RBE.
+  verbose=1
+  cat <<EOF
 ======== Remote Rust build action FAILED ========
 This could either be a failure with the original command, or something
 wrong with the remote version of the command.
@@ -478,63 +479,15 @@ If the remote version still fails, file a bug, and CC the Fuchsia Build Team
 with the following info below:
 
 EOF
-    # Identify which target failed by its command, useful in parallel build.
-    debug_var "[$script: FAIL]" "${remote_rustc_command[@]}"
-    dump_vars
+  # Identify which target failed by its command, useful in parallel build.
+  debug_var "[$script: FAIL]" "${remote_rustc_command[@]}"
+  dump_vars
 
-    # Reject absolute paths in depfiles.
-    if test "${#abs_deps[@]}" -ge 1
-    then
-      debug_var "Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
-    fi
+  # Reject absolute paths in depfiles.
+  if test "${#abs_deps[@]}" -ge 1
+  then
+    debug_var "Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
+  fi
+}
 
-    echo
-    tmpdir="${RBE_proxy_log_dir:-/tmp}"
-    reproxy_errors="$tmpdir"/reproxy.ERROR
-    echo "The last lines of $reproxy_errors might explain a remote failure:"
-    if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
-
-    # Attempt to diagnose common symptoms.
-    if grep -q "Fail to dial" "$reproxy_errors"
-    then
-      cat <<EOF
-"Fail to dial" could indicate that reproxy is not running.
-Did you run with 'fx build'?
-If not, you may need to wrap your build command with:
-
-  $project_root/build/rbe/fuchsia-reproxy-wrap.sh -- YOUR-COMMAND
-
-'Proxy started successfully.' indicates that reproxy is running.
-
-EOF
-    fi
-
-    if grep -q "Error connecting to remote execution client: rpc error: code = PermissionDenied" "$reproxy_errors"
-    then
-      cat <<EOF
-You might not have permssion to access the RBE instance.
-Contact fuchsia-build-team@google.com for support.
-
-EOF
-    fi
-
-    mapfile -t local_missing_files < <(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||')
-    test "${#local_missing_files[@]}" = 0 || {
-cat <<EOF
-The following files are expected to exist locally for uploading,
-but were not found:
-
-EOF
-    for f in "${local_missing_files[@]}"
-    do
-      f_rel="$(echo "$f" | sed "s|^$project_root/||")"
-      case "$f_rel" in
-        out/*) echo "  $f_rel (generated file: missing dependency?)" ;;
-        *) echo "  $f_rel (source)" ;;
-      esac
-    done
-    }
-  }
-
-  exit "$status"
-fi
+exit "$status"

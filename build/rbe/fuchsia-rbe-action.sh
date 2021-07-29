@@ -90,3 +90,56 @@ else
   "${rewrapped_command[@]}"
 fi
 
+# Exit normally on success.
+status="$?"
+test "$status" != 0 || exit "$status"
+
+# Diagnostics: Suggest where to look, and possible actions.
+# Look for symptoms inside reproxy's log, where most of the action is.
+tmpdir="${RBE_proxy_log_dir:-/tmp}"
+reproxy_errors="$tmpdir"/reproxy.ERROR
+echo "The last lines of $reproxy_errors might explain a remote failure:"
+if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
+
+if grep -q "Fail to dial" "$reproxy_errors"
+then
+  cat <<EOF
+"Fail to dial" could indicate that reproxy is not running.
+Did you run with 'fx build'?
+If not, you may need to wrap your build command with:
+
+$project_root/build/rbe/fuchsia-reproxy-wrap.sh -- YOUR-COMMAND
+
+'Proxy started successfully.' indicates that reproxy is running.
+
+EOF
+fi
+
+if grep -q "Error connecting to remote execution client: rpc error: code = PermissionDenied" "$reproxy_errors"
+then
+  cat <<EOF
+You might not have permssion to access the RBE instance.
+Contact fuchsia-build-team@google.com for support.
+
+EOF
+fi
+
+mapfile -t local_missing_files < <(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||')
+test "${#local_missing_files[@]}" = 0 || {
+cat <<EOF
+The following files are expected to exist locally for uploading,
+but were not found:
+
+EOF
+for f in "${local_missing_files[@]}"
+do
+  f_rel="$(echo "$f" | sed "s|^$project_root/||")"
+  case "$f_rel" in
+    out/*) echo "  $f_rel (generated file: missing dependency?)" ;;
+    *) echo "  $f_rel (source)" ;;
+  esac
+done
+}
+
+exit "$status"
+
