@@ -433,23 +433,37 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
 }
 
 void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id) {
-  FX_DCHECK(view_tree_snapshot_->view_tree.count(event.context) != 0 &&
-            view_tree_snapshot_->view_tree.count(event.target) != 0)
-      << "Should never allow injection into broken scene graph";
+  if (view_tree_snapshot_->view_tree.count(event.target) == 0 &&
+      view_tree_snapshot_->unconnected_views.count(event.target) == 0) {
+    FX_DCHECK(touch_contenders_.count(event.target) == 0);
+    return;
+  }
+  FX_DCHECK(event.phase == Phase::kCancel ||
+            view_tree_snapshot_->IsDescendant(event.target, event.context))
+      << "Should never allow injection of non-cancel events into broken scene graph";
 
   auto it = touch_contenders_.find(event.target);
   if (it != touch_contenders_.end()) {
     auto& touch_source = it->second.touch_source;
     // Calling EndContest() before the first event causes them to be combined in the first message
     // to the client.
-    if (!touch_source.TracksStream(stream_id)) {
-      touch_source.EndContest(stream_id, /*awarded_win*/ true);
+    if (event.phase == Phase::kAdd) {
+      touch_source.EndContest(stream_id, /*awarded_win=*/true);
     }
-    touch_source.UpdateStream(
-        stream_id, EventWithReceiverFromViewportTransform(event, event.target),
-        /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel,
-        view_tree_snapshot_->view_tree.at(event.target).bounding_box);
+
+    // If the target is not in the view tree then this must be a cancel event and we don't need to
+    // (and can't) supply correct transforms and bounding boxes.
+    if (view_tree_snapshot_->view_tree.count(event.target) == 0) {
+      FX_DCHECK(event.phase == Phase::kCancel);
+      touch_source.UpdateStream(stream_id, event, /*is_end_of_stream=*/true, /*bounding_box=*/{});
+    } else {
+      touch_source.UpdateStream(
+          stream_id, EventWithReceiverFromViewportTransform(event, event.target),
+          /*is_end_of_stream=*/event.phase == Phase::kRemove || event.phase == Phase::kCancel,
+          view_tree_snapshot_->view_tree.at(event.target).bounding_box);
+    }
   } else {
+    // If there is no TouchContender for the target, then we assume it to be a GfxLegacyContender.
     ReportPointerEventToGfxLegacyView(event, event.target,
                                       fuchsia::ui::input::PointerEventType::TOUCH);
   }
@@ -582,22 +596,44 @@ void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, Stream
   const glm::mat4 world_from_viewport_transform = GetWorldFromViewTransform(event.context).value() *
                                                   event.viewport.context_from_viewport_transform;
   for (const auto contender_id : contenders) {
+    auto arena_it = gesture_arenas_.find(stream_id);
+    if (arena_it == gesture_arenas_.end() ||
+        (arena_it->second.contest_has_ended() && !arena_it->second.contains(contender_id))) {
+      // Contest ended with this contender not being the winner. No need to look further.
+      continue;
+    }
+
     auto contender_ptr = contenders_.at(contender_id);
     const zx_koid_t view_ref_koid = contender_ptr->view_ref_koid_;
-
-    // Copy the event and replace the viewport transform with the correct one in relation to the
-    // receiver.
-    InternalPointerEvent event_copy = event;
-    view_tree::BoundingBox view_bounds;
-    // TODO(fxbug.dev/76470, fxbug.dev/50549): |view_ref_koid| should always exist in the view tree
-    // snapshot at this point. This is a workaround until we handle breaking of the scene graph
-    // mid-stream, and to allow the legacy a11y contender to not have a view.
     if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
-      event_copy.viewport.receiver_from_viewport_transform =
-          GetDestinationFromViewportTransform(event, /*destination*/ view_ref_koid);
-      view_bounds = view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box;
+      // Everything is fine. Send as normal.
+      contender_ptr->UpdateStream(
+          stream_id, EventWithReceiverFromViewportTransform(event, /*destination=*/view_ref_koid),
+          is_end_of_stream, view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box);
+    } else if (contender_id == a11y_contender_id_) {
+      // TODO(fxbug.dev/50549): A11yLegacyContender doesn't need correct transforms or view bounds.
+      // Remove this branch when legacy a11y api goes away.
+      contender_ptr->UpdateStream(stream_id, event, is_end_of_stream, /*bounding_box=*/{});
+    } else {
+      // Contender not in the view tree -> cancel the rest of the stream for that contender.
+      auto& arena = arena_it->second;
+      if (!arena.contest_has_ended()) {
+        // Contest ongoing -> just send a no response on behalf of |contender_id|.
+        RecordGestureDisambiguationResponse(stream_id, contender_id, {GestureResponse::kNo});
+        FX_DCHECK(gesture_arenas_.count(stream_id) == 0 || !arena.contains(contender_id));
+      } else {
+        // Contest ended -> Need to send an explicit "cancel" event to the contender.
+        FX_DCHECK(arena.contenders().size() == 1 && arena.contains(contender_id));
+        FX_DCHECK(event.phase != Phase::kAdd);
+        InternalPointerEvent event_copy = event;
+        event_copy.phase = Phase::kCancel;
+        contender_ptr->UpdateStream(stream_id, event_copy, /*is_end_of_stream=*/true,
+                                    /*bounding_box=*/{});
+        // The contest is definitely over, so we can manually destroy the arena here.
+        gesture_arenas_.erase(stream_id);
+        break;
+      }
     }
-    contender_ptr->UpdateStream(stream_id, event_copy, is_end_of_stream, view_bounds);
   }
 
   DestroyArenaIfComplete(stream_id);

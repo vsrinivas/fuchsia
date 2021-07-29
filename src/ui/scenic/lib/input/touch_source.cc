@@ -204,10 +204,14 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
       }
     }
 
-    // Add ViewParameters to the message if the viewport or view bounds have changed (which is
-    // always true for the first message).
-    if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
-        is_first_event_) {
+    if (event.phase == Phase::kCancel) {
+      // For cancel events it's likely we're not in the view tree, so we can't trust viewport
+      // transforms or view bounds. Skip checking them since it's not necessary at the end of a
+      // stream anyway.
+    } else if (current_viewport_ != event.viewport || current_view_bounds_ != view_bounds ||
+               is_first_event_) {
+      // Add ViewParameters to the message if the viewport or view bounds have changed (which is
+      // always true for the first message).
       is_first_event_ = false;
       current_viewport_ = event.viewport;
       current_view_bounds_ = view_bounds;
@@ -230,7 +234,10 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
 void TouchSource::EndContest(StreamId stream_id, bool awarded_win) {
   auto it = ongoing_streams_.find(stream_id);
   if (it == ongoing_streams_.end()) {
-    FX_DCHECK(awarded_win) << "Can't lose a stream before it starts.";
+    if (!awarded_win) {
+      // Lost the stream before the first message.
+      return;
+    }
     const auto [_, success] = won_streams_awaiting_first_message_.emplace(stream_id);
     FX_DCHECK(success) << "Can't have two EndContest() calls for the same stream.";
     return;

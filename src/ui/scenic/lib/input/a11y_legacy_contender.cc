@@ -64,7 +64,10 @@ void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointer
 void A11yLegacyContender::EndContest(StreamId stream_id, bool awarded_win) {
   auto it = ongoing_streams_.find(stream_id);
   if (it == ongoing_streams_.end()) {
-    FX_DCHECK(awarded_win) << "Can't lose a stream before it starts.";
+    if (!awarded_win) {
+      // Lost the stream before the first message.
+      return;
+    }
     const auto [_, success] = won_streams_awaiting_first_message_.emplace(stream_id);
     FX_DCHECK(success) << "Can't have two EndContest() calls for the same stream.";
     return;

@@ -48,8 +48,6 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
                       fuchsia::ui::pointer::TouchResponse response,
                       UpdateResponseCallback callback) override;
 
-  bool TracksStream(StreamId stream_id) const { return ongoing_streams_.count(stream_id) != 0; }
-
   // TODO(fxbug.dev/78951): Implement ANR.
 
  private:

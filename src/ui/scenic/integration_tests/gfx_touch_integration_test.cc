@@ -50,7 +50,13 @@
 
 namespace integration_tests {
 
+using fuchsia::ui::pointer::TouchInteractionStatus;
+using fuchsia::ui::pointerinjector::DispatchPolicy;
+using fupi_EventPhase = fuchsia::ui::pointerinjector::EventPhase;
 using fuchsia::ui::pointer::EventPhase;
+using fuchsia::ui::pointer::TouchEvent;
+using fuchsia::ui::pointer::TouchResponse;
+using fuchsia::ui::pointer::TouchResponseType;
 using fuchsia::ui::views::ViewRef;
 
 namespace {
@@ -220,7 +226,7 @@ class GfxTouchIntegrationTest : public sys::testing::TestWithEnvironment {
     return session_with_touch_source;
   }
 
-  void Inject(float x, float y, fuchsia::ui::pointerinjector::EventPhase phase) {
+  void Inject(float x, float y, fupi_EventPhase phase) {
     FX_CHECK(injector_);
     fuchsia::ui::pointerinjector::Event event;
     event.set_timestamp(0);
@@ -235,13 +241,15 @@ class GfxTouchIntegrationTest : public sys::testing::TestWithEnvironment {
     }
     std::vector<fuchsia::ui::pointerinjector::Event> events;
     events.emplace_back(std::move(event));
-    injector_->Inject(std::move(events), [] {});
+    bool hanging_get_returned = false;
+    injector_->Inject(std::move(events), [&hanging_get_returned] { hanging_get_returned = true; });
+    RunLoopUntil(
+        [this, &hanging_get_returned] { return hanging_get_returned || injector_channel_closed_; });
   }
 
   void RegisterInjector(fuchsia::ui::views::ViewRef context_view_ref,
                         fuchsia::ui::views::ViewRef target_view_ref,
-                        fuchsia::ui::pointerinjector::DispatchPolicy dispatch_policy =
-                            fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
+                        DispatchPolicy dispatch_policy = DispatchPolicy::EXCLUSIVE_TARGET,
                         std::array<float, 9> viewport_to_context_transform = kIdentityMatrix) {
     fuchsia::ui::pointerinjector::Config config;
     config.set_device_id(kDeviceId);
@@ -274,6 +282,34 @@ class GfxTouchIntegrationTest : public sys::testing::TestWithEnvironment {
     ASSERT_FALSE(injector_channel_closed_);
   }
 
+  // Starts a recursive TouchSource::Watch() loop that collects all received events into
+  // |out_events|.
+  void StartWatchLoop(fuchsia::ui::pointer::TouchSourcePtr& touch_source,
+                      std::vector<TouchEvent>& out_events,
+                      TouchResponseType response_type = TouchResponseType::MAYBE) {
+    const size_t index = watch_loops_.size();
+    watch_loops_.emplace_back();
+    watch_loops_.at(index) = [this, &touch_source, &out_events, response_type,
+                              index](std::vector<TouchEvent> events) {
+      std::vector<TouchResponse> responses;
+      for (auto& event : events) {
+        if (event.has_pointer_sample()) {
+          TouchResponse response;
+          response.set_response_type(response_type);
+          responses.emplace_back(std::move(response));
+        } else {
+          responses.emplace_back();
+        }
+      }
+      std::move(events.begin(), events.end(), std::back_inserter(out_events));
+
+      touch_source->Watch(std::move(responses), [this, index](std::vector<TouchEvent> events) {
+        watch_loops_.at(index)(std::move(events));
+      });
+    };
+    touch_source->Watch({}, watch_loops_.at(index));
+  }
+
   bool injector_channel_closed_ = false;
   std::array<std::array<float, 2>, 2> FullScreenExtents() const { return {{{0, 0}, {9, 9}}}; }
 
@@ -284,6 +320,9 @@ class GfxTouchIntegrationTest : public sys::testing::TestWithEnvironment {
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::pointerinjector::RegistryPtr registry_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
+
+  // Holds watch loops so they stay alive through the duration of the test.
+  std::vector<std::function<void(std::vector<TouchEvent>)>> watch_loops_;
 };
 
 // Test for checking that the pointerinjector channel is closed when context and target relationship
@@ -312,8 +351,6 @@ TEST_F(GfxTouchIntegrationTest, InjectorChannel_ShouldClose_WhenSceneBreaks) {
   // Break the scene graph relation that the pointerinjector relies on. Observe the channel close.
   view.DetachChild(holder_2);
   BlockingPresent(*root_session_->session);
-  // TODO(fxbug.dev/50348): Uncomment when this behavior is rolled forward again.
-  // EXPECT_TRUE(injector_channel_closed_);
 }
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation
@@ -423,44 +460,20 @@ TEST_F(GfxTouchIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
   auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
   auto [child_session, child_touch_source] = CreateChildView(
       std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
-  auto& c2 = child_touch_source;
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
 
-  std::optional<std::function<void(std::vector<fuchsia::ui::pointer::TouchEvent> events)>>
-      watch_call;
-  std::vector<fuchsia::ui::pointer::TouchEvent> child_events;
-  watch_call.emplace(
-      [&c2, &watch_call, &child_events](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-        std::vector<fuchsia::ui::pointer::TouchResponse> responses;
-        for (auto& event : events) {
-          if (event.has_pointer_sample()) {
-            fuchsia::ui::pointer::TouchResponse response;
-            response.set_response_type(fuchsia::ui::pointer::TouchResponseType::MAYBE);
-            responses.emplace_back(std::move(response));
-          } else {
-            responses.emplace_back();
-          }
-        }
-
-        std::move(events.begin(), events.end(), std::back_inserter(child_events));
-
-        c2->Watch(std::move(responses),
-                  [&watch_call](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-                    watch_call.value()(std::move(events));
-                  });
-      });
-
-  c2->Watch({}, watch_call.value());
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
 
   // Scene is now set up, send in the input. One event for where each corner of the view was
   // pre-transformation.
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
-  Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);          // A
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);       // C1
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);       // C2
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);       // R
+  Inject(0, 0, fupi_EventPhase::ADD);                                   // A
+  Inject(5, 0, fupi_EventPhase::CHANGE);                                // C1
+  Inject(5, 5, fupi_EventPhase::CHANGE);                                // C2
+  Inject(0, 5, fupi_EventPhase::REMOVE);                                // R
   RunLoopUntil([&child_events] { return child_events.size() == 4u; });  // Succeeds or times out.
 
   // ASSERT for existance checks to avoid UB data reads.
@@ -492,12 +505,12 @@ TEST_F(GfxTouchIntegrationTest, InjectedInput_ShouldBeCorrectlyTransformed) {
   ASSERT_TRUE(child_events[3].has_pointer_sample());
   EXPECT_FALSE(child_events[3].has_interaction_result());
 
-  {  // Check layout validity.
+  {  // Check layout validity.CreateChildView
     EXPECT_EQ(child_events[0].device_info().id(), kDeviceId);
     const auto& interaction_result = child_events[0].interaction_result();
     EXPECT_EQ(interaction_result.interaction.device_id, kDeviceId);
     EXPECT_EQ(interaction_result.interaction.pointer_id, kPointerId);
-    EXPECT_EQ(interaction_result.status, fuchsia::ui::pointer::TouchInteractionStatus::GRANTED);
+    EXPECT_EQ(interaction_result.status, TouchInteractionStatus::GRANTED);
     const auto& view_parameters = child_events[0].view_parameters();
     EXPECT_THAT(view_parameters.view.min, testing::ElementsAre(0.f, 0.f));
     EXPECT_THAT(view_parameters.view.max, testing::ElementsAre(5.f, 5.f));
@@ -606,35 +619,12 @@ TEST_F(GfxTouchIntegrationTest, InjectedInput_ShouldBeCorrectlyViewportTransform
   auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
   auto [child_session, child_touch_source] = CreateChildView(
       std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
-  auto& c2 = child_touch_source;
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
 
-  std::optional<std::function<void(std::vector<fuchsia::ui::pointer::TouchEvent> events)>>
-      watch_call;
-  std::vector<fuchsia::ui::pointer::TouchEvent> child_events;
-  watch_call.emplace(
-      [&c2, &watch_call, &child_events](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-        std::vector<fuchsia::ui::pointer::TouchResponse> responses;
-        for (auto& event : events) {
-          if (event.has_pointer_sample()) {
-            fuchsia::ui::pointer::TouchResponse response;
-            response.set_response_type(fuchsia::ui::pointer::TouchResponseType::MAYBE);
-            responses.emplace_back(std::move(response));
-          } else {
-            responses.emplace_back();
-          }
-        }
-
-        std::move(events.begin(), events.end(), std::back_inserter(child_events));
-
-        c2->Watch(std::move(responses),
-                  [&watch_call](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-                    watch_call.value()(std::move(events));
-                  });
-      });
-  c2->Watch({}, watch_call.value());
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
 
   // Scene is now set up, send in the input. One event for where each corner of the view was
   // pre-transformation.
@@ -650,12 +640,11 @@ TEST_F(GfxTouchIntegrationTest, InjectedInput_ShouldBeCorrectlyViewportTransform
   // clang-format on
 
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref),
-                   fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
-                   kViewportToContextTransform);
-  Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);          // A
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);       // C1
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);       // C2
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);       // R
+                   DispatchPolicy::EXCLUSIVE_TARGET, kViewportToContextTransform);
+  Inject(0, 0, fupi_EventPhase::ADD);                                   // A
+  Inject(5, 0, fupi_EventPhase::CHANGE);                                // C1
+  Inject(5, 5, fupi_EventPhase::CHANGE);                                // C2
+  Inject(0, 5, fupi_EventPhase::REMOVE);                                // R
   RunLoopUntil([&child_events] { return child_events.size() == 4u; });  // Succeeds or times out.
 
   // Check pointer samples.
@@ -722,47 +711,24 @@ TEST_F(GfxTouchIntegrationTest, InjectedInput_OnRotatedChild_ShouldHitEdges) {
   auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
   auto [child_session, child_touch_source] = CreateChildView(
       std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
-  auto& c2 = child_touch_source;
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
 
-  std::optional<std::function<void(std::vector<fuchsia::ui::pointer::TouchEvent> events)>>
-      watch_call;
-  std::vector<fuchsia::ui::pointer::TouchEvent> child_events;
-  watch_call.emplace(
-      [&c2, &watch_call, &child_events](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-        std::vector<fuchsia::ui::pointer::TouchResponse> responses;
-        for (auto& event : events) {
-          if (event.has_pointer_sample()) {
-            fuchsia::ui::pointer::TouchResponse response;
-            response.set_response_type(fuchsia::ui::pointer::TouchResponseType::MAYBE);
-            responses.emplace_back(std::move(response));
-          } else {
-            responses.emplace_back();
-          }
-        }
-
-        std::move(events.begin(), events.end(), std::back_inserter(child_events));
-
-        c2->Watch(std::move(responses),
-                  [&watch_call](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-                    watch_call.value()(std::move(events));
-                  });
-      });
-  c2->Watch({}, watch_call.value());
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
 
   // Scene is now set up, send in the input. One interaction for each corner.
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref),
-                   fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
-  Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
-  Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::ADD);
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::ADD);
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+                   DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(0, 0, fupi_EventPhase::REMOVE);
+  Inject(0, 5, fupi_EventPhase::ADD);
+  Inject(0, 5, fupi_EventPhase::REMOVE);
+  Inject(5, 5, fupi_EventPhase::ADD);
+  Inject(5, 5, fupi_EventPhase::REMOVE);
+  Inject(5, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::REMOVE);
   RunLoopUntil([&child_events] { return child_events.size() == 8u; });  // Succeeds or times out.
 
   {  // Target should receive all events rotated 90 degrees.
@@ -818,43 +784,20 @@ TEST_F(GfxTouchIntegrationTest, ClipSpaceTransformedScene_ShouldHaveNoImpactOnOu
   auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
   auto [child_session, child_touch_source] = CreateChildView(
       std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
-  auto& c2 = child_touch_source;
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
 
-  std::optional<std::function<void(std::vector<fuchsia::ui::pointer::TouchEvent> events)>>
-      watch_call;
-  std::vector<fuchsia::ui::pointer::TouchEvent> child_events;
-  watch_call.emplace(
-      [&c2, &watch_call, &child_events](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-        std::vector<fuchsia::ui::pointer::TouchResponse> responses;
-        for (auto& event : events) {
-          if (event.has_pointer_sample()) {
-            fuchsia::ui::pointer::TouchResponse response;
-            response.set_response_type(fuchsia::ui::pointer::TouchResponseType::MAYBE);
-            responses.emplace_back(std::move(response));
-          } else {
-            responses.emplace_back();
-          }
-        }
-
-        std::move(events.begin(), events.end(), std::back_inserter(child_events));
-
-        c2->Watch(std::move(responses),
-                  [&watch_call](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-                    watch_call.value()(std::move(events));
-                  });
-      });
-  c2->Watch({}, watch_call.value());
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
 
   // Scene is now set up, send in the input. One event for where each corner of the view was
   // pre-transformation.
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
-  Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+  Inject(5, 5, fupi_EventPhase::CHANGE);
+  Inject(0, 5, fupi_EventPhase::REMOVE);
   RunLoopUntil([&child_events] { return child_events.size() == 4u; });  // Succeeds or times out.
 
   // Target should receive identical events to injected, since their coordinate spaces are the same.
@@ -901,52 +844,29 @@ TEST_F(GfxTouchIntegrationTest, InjectionOutsideViewport_ShouldLimitOnADD) {
   auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
   auto [child_session, child_touch_source] = CreateChildView(
       std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
-  auto& c2 = child_touch_source;
   child_touch_source.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
   });
 
-  std::optional<std::function<void(std::vector<fuchsia::ui::pointer::TouchEvent> events)>>
-      watch_call;
-  std::vector<fuchsia::ui::pointer::TouchEvent> child_events;
-  watch_call.emplace(
-      [&c2, &watch_call, &child_events](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-        std::vector<fuchsia::ui::pointer::TouchResponse> responses;
-        for (auto& event : events) {
-          if (event.has_pointer_sample()) {
-            fuchsia::ui::pointer::TouchResponse response;
-            response.set_response_type(fuchsia::ui::pointer::TouchResponseType::MAYBE);
-            responses.emplace_back(std::move(response));
-          } else {
-            responses.emplace_back();
-          }
-        }
-
-        std::move(events.begin(), events.end(), std::back_inserter(child_events));
-
-        c2->Watch(std::move(responses),
-                  [&watch_call](std::vector<fuchsia::ui::pointer::TouchEvent> events) {
-                    watch_call.value()(std::move(events));
-                  });
-      });
-  c2->Watch({}, watch_call.value());
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
 
   // Scene is now set up, send in the input. The initial input is outside the viewport and
   // the stream should therefore not be seen by anyone.
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref),
-                   fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
-  Inject(10, 10, fuchsia::ui::pointerinjector::EventPhase::ADD);  // Outside viewport.
+                   DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  Inject(10, 10, fupi_EventPhase::ADD);  // Outside viewport.
   // Rest inside viewport, but should not be delivered.
-  Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+  Inject(5, 5, fupi_EventPhase::CHANGE);
+  Inject(0, 5, fupi_EventPhase::REMOVE);
 
   // Send in input starting in the viewport and moving outside.
-  Inject(1, 1, fuchsia::ui::pointerinjector::EventPhase::ADD);  // Inside viewport.
+  Inject(1, 1, fupi_EventPhase::ADD);  // Inside viewport.
   // Rest outside viewport, but should still be delivered.
-  Inject(50, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(50, 50, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
-  Inject(0, 50, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+  Inject(50, 0, fupi_EventPhase::CHANGE);
+  Inject(50, 50, fupi_EventPhase::CHANGE);
+  Inject(0, 50, fupi_EventPhase::REMOVE);
   RunLoopUntil([&child_events] { return child_events.size() >= 4u; });  // Succeeds or times out.
   EXPECT_EQ(child_events.size(), 4u);
 
@@ -962,6 +882,269 @@ TEST_F(GfxTouchIntegrationTest, InjectionOutsideViewport_ShouldLimitOnADD) {
     EXPECT_EQ_POINTER(child_events[3].pointer_sample(), viewport_to_view_transform,
                       EventPhase::REMOVE, 0.f, 50.f);
   }
+}
+
+TEST_F(GfxTouchIntegrationTest, Exclusive_TargetDisconnectedMidStream_ShouldCancelStream) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders, one a child of the other.
+  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
+  scenic::View view(root_session_->session, std::move(v1), std::move(root_control_ref),
+                    fidl::Clone(root_view_ref), "root_view");
+  scenic::ViewHolder holder_1(root_session_->session, std::move(vh1), "holder_1");
+  holder_1.SetViewProperties(k5x5x1);
+  root_session_->scene.AddChild(holder_1);
+  scenic::ViewHolder holder_2(root_session_->session, std::move(vh2), "holder_2");
+  holder_2.SetViewProperties(k5x5x1);
+  view.AddChild(holder_2);
+  BlockingPresent(*root_session_->session);
+
+  auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
+  auto [child_session, child_touch_source] = CreateChildView(
+      std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
+  child_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
+
+  // Send in the first events of a stream.
+  RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
+  EXPECT_EQ(child_events.size(), 2u);
+
+  // Disrupt the scene graph.
+  view.DetachChild(holder_2);
+  BlockingPresent(*root_session_->session);
+
+  // Next event should deliver a cancel event to the child (and close the injector since it's the
+  // target)
+  Inject(5, 5, fupi_EventPhase::CHANGE);
+  EXPECT_TRUE(injector_channel_closed_);
+  RunLoopUntil([&child_events] { return child_events.size() >= 3u; });  // Succeeds or times out.
+
+  {
+    ASSERT_EQ(child_events.size(), 3u);
+    ASSERT_TRUE(child_events.back().has_pointer_sample());
+    const auto& sample = child_events.back().pointer_sample();
+    ASSERT_TRUE(sample.has_phase());
+    EXPECT_EQ(sample.phase(), EventPhase::CANCEL);
+  }
+}
+
+TEST_F(GfxTouchIntegrationTest, Exclusive_TargetDyingMidStream_ShouldKillChannel) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders, one a child of the other.
+  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
+  {
+    scenic::View view(root_session_->session, std::move(v1), std::move(root_control_ref),
+                      fidl::Clone(root_view_ref), "root_view");
+    scenic::ViewHolder holder_1(root_session_->session, std::move(vh1), "holder_1");
+    holder_1.SetViewProperties(k5x5x1);
+    root_session_->scene.AddChild(holder_1);
+    scenic::ViewHolder holder_2(root_session_->session, std::move(vh2), "holder_2");
+    holder_2.SetViewProperties(k5x5x1);
+    view.AddChild(holder_2);
+    BlockingPresent(*root_session_->session);
+  }
+
+  auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
+  auto [child_session, child_touch_source] = CreateChildView(
+      std::move(v2), std::move(child_control_ref), fidl::Clone(child_view_ref), "child_view");
+  child_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  std::vector<TouchEvent> child_events;
+  StartWatchLoop(child_touch_source, child_events);
+
+  // Send in the first events of a stream.
+  RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
+  EXPECT_EQ(child_events.size(), 2u);
+
+  // Kill the child.
+  bool child_view_died = false;
+  root_session_->session->set_event_handler(
+      [&child_view_died](std::vector<fuchsia::ui::scenic::Event> events) {
+        for (const auto& event : events) {
+          if (event.is_gfx() && event.gfx().is_view_disconnected())
+            child_view_died = true;
+        }
+      });
+  child_touch_source.Unbind();
+  child_session.reset();
+  RunLoopUntil([&child_view_died] { return child_view_died; });
+
+  // TODO(fxbug.dev/81683): We perform one more present to avoid flakes. Session death causes view
+  // disconnected signals to be sent out-of-sync with the normal Present flow.
+  BlockingPresent(*root_session_->session);
+
+  // Next injection should close the channel.
+  Inject(0, 5, fupi_EventPhase::CHANGE);
+  EXPECT_TRUE(injector_channel_closed_);
+}
+
+// Sets up a scene with three views: Root -> Child1 -> Child2.
+// Injects in HitTest mode, all events delivered to Child1 and Child2.
+// Disconnects Child2 and observes loss from Child2.
+TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedMidContest_ShouldLoseContest) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
+  {
+    scenic::View view(root_session_->session, std::move(v1), std::move(root_control_ref),
+                      fidl::Clone(root_view_ref), "root_view");
+    scenic::ViewHolder holder_1(root_session_->session, std::move(vh1), "holder_1");
+    holder_1.SetViewProperties(k5x5x1);
+    root_session_->scene.AddChild(holder_1);
+    scenic::ViewHolder child1_holder(root_session_->session, std::move(vh2), "child1_holder");
+    child1_holder.SetViewProperties(k5x5x1);
+    view.AddChild(child1_holder);
+    BlockingPresent(*root_session_->session);
+  }
+
+  auto [child1_control_ref, child1_view_ref] = scenic::ViewRefPair::New();
+  auto [child1_session, child1_touch_source] = CreateSessionWithTouchSource(scenic());
+  auto [v3, vh3] = scenic::ViewTokenPair::New();
+  scenic::View view(child1_session.get(), std::move(v2), std::move(child1_control_ref),
+                    fidl::Clone(child1_view_ref), "child1_view");
+  scenic::ViewHolder child2_holder(child1_session.get(), std::move(vh3), "child2_holder");
+  child2_holder.SetViewProperties(k5x5x1);
+  view.AddChild(child2_holder);
+  BlockingPresent(*child1_session);
+  child1_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  auto [child2_control_ref, child2_view_ref] = scenic::ViewRefPair::New();
+  auto [child2_session, child2_touch_source] = CreateChildView(
+      std::move(v3), std::move(child2_control_ref), fidl::Clone(child2_view_ref), "child2_view");
+  child2_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  std::vector<TouchEvent> child1_events;
+  StartWatchLoop(child1_touch_source, child1_events);
+  std::vector<TouchEvent> child2_events;
+  StartWatchLoop(child2_touch_source, child2_events);
+
+  // Send in the first events of a stream.
+  RegisterInjector(std::move(root_view_ref), std::move(child1_view_ref),
+                   DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+  RunLoopUntil([&child2_events] { return child2_events.size() == 2u; });  // Succeeds or times out.
+  EXPECT_EQ(child2_events.size(), 2u);
+
+  // Detach view Child2 from the scene graph.
+  view.DetachChild(child2_holder);
+  BlockingPresent(*child1_session);
+
+  // Next event should deliver cause child 2 to lose the contest and child 1 to win.
+  Inject(5, 5, fupi_EventPhase::CHANGE);
+  Inject(0, 5, fupi_EventPhase::CHANGE);
+  RunLoopUntil([&child2_events] { return child2_events.size() == 3u; });  // Succeeds or times out.
+  RunLoopUntil([&child1_events] { return child1_events.size() == 5u; });  // Succeeds or times out.
+
+  ASSERT_EQ(child2_events.size(), 3u);
+  ASSERT_TRUE(child2_events.back().has_interaction_result());
+  EXPECT_EQ(child2_events.back().interaction_result().status, TouchInteractionStatus::DENIED);
+
+  EXPECT_EQ(child1_events.size(), 5u);
+  EXPECT_TRUE(std::any_of(child1_events.begin(), child1_events.end(), [](const TouchEvent& event) {
+    return event.has_interaction_result() &&
+           event.interaction_result().status == TouchInteractionStatus::GRANTED;
+  }));
+}
+
+// Sets up a scene with three views: Root -> Child1 -> Child2.
+// Injects in HitTest mode, all events delivered to Child1 and Child2.
+// Child2 wins the contest.
+// Disconnects Child2 and observes cancel event delivered to Child2.
+TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedAfterWinning_ShouldCancelStream) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
+  {
+    scenic::View view(root_session_->session, std::move(v1), std::move(root_control_ref),
+                      fidl::Clone(root_view_ref), "root_view");
+    scenic::ViewHolder holder_1(root_session_->session, std::move(vh1), "holder_1");
+    holder_1.SetViewProperties(k5x5x1);
+    root_session_->scene.AddChild(holder_1);
+    scenic::ViewHolder child1_holder(root_session_->session, std::move(vh2), "child1_holder");
+    child1_holder.SetViewProperties(k5x5x1);
+    view.AddChild(child1_holder);
+    BlockingPresent(*root_session_->session);
+  }
+
+  auto [child1_control_ref, child1_view_ref] = scenic::ViewRefPair::New();
+  auto [child1_session, child1_touch_source] = CreateSessionWithTouchSource(scenic());
+  auto [v3, vh3] = scenic::ViewTokenPair::New();
+  scenic::View view(child1_session.get(), std::move(v2), std::move(child1_control_ref),
+                    fidl::Clone(child1_view_ref), "child1_view");
+  scenic::ViewHolder child2_holder(child1_session.get(), std::move(vh3), "child2_holder");
+  child2_holder.SetViewProperties(k5x5x1);
+  view.AddChild(child2_holder);
+  BlockingPresent(*child1_session);
+  child1_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  auto [child2_control_ref, child2_view_ref] = scenic::ViewRefPair::New();
+  auto [child2_session, child2_touch_source] = CreateChildView(
+      std::move(v3), std::move(child2_control_ref), fidl::Clone(child2_view_ref), "child2_view");
+  child2_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  std::vector<TouchEvent> child1_events;
+  StartWatchLoop(child1_touch_source, child1_events, TouchResponseType::NO);
+  std::vector<TouchEvent> child2_events;
+  StartWatchLoop(child2_touch_source, child2_events);
+
+  // Send in the first events of a stream.
+  RegisterInjector(std::move(root_view_ref), std::move(child1_view_ref),
+                   DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  Inject(0, 0, fupi_EventPhase::ADD);
+  Inject(5, 0, fupi_EventPhase::CHANGE);
+
+  // Child2 should win the contest.
+  RunLoopUntil([&child2_events] { return child2_events.size() >= 3u; });  // Succeeds or times out.
+  ASSERT_EQ(child2_events.size(), 3u);
+  EXPECT_TRUE(std::any_of(child2_events.begin(), child2_events.end(), [](const TouchEvent& event) {
+    return event.has_interaction_result() &&
+           event.interaction_result().status == TouchInteractionStatus::GRANTED;
+  }));
+
+  // Detach view Child2 from the scene graph.
+  view.DetachChild(child2_holder);
+  BlockingPresent(*child1_session);
+
+  // Next event should deliver CANCEL to Child2.
+  Inject(5, 5, fupi_EventPhase::CHANGE);
+  RunLoopUntil([&child2_events] { return child2_events.size() >= 4u; });  // Succeeds or times out.
+  ASSERT_EQ(child2_events.size(), 4u);
+  ASSERT_TRUE(child2_events.back().has_pointer_sample());
+  ASSERT_TRUE(child2_events.back().pointer_sample().has_phase());
+  EXPECT_EQ(child2_events.back().pointer_sample().phase(), EventPhase::CANCEL);
+
+  // Future injections should be ignored.
+  child1_events.clear();
+  child2_events.clear();
+  Inject(0, 5, fupi_EventPhase::CHANGE);
+  EXPECT_TRUE(child1_events.empty());
+  EXPECT_TRUE(child2_events.empty());
 }
 
 }  // namespace integration_tests
