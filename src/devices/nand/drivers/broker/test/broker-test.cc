@@ -83,9 +83,9 @@ class NandDevice {
 
   // Wrappers for "queue" operations that take care of preserving the vmo's handle
   // and translating the request to the desired block range on the actual device.
-  zx_status_t Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request);
-  zx_status_t Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request);
-  zx_status_t Erase(const fuchsia_nand_BrokerRequest& request);
+  zx_status_t Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
+  zx_status_t Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
+  zx_status_t Erase(const fuchsia_nand_BrokerRequestData& request);
 
   // Erases a given block number.
   zx_status_t EraseBlock(uint32_t block_num);
@@ -151,8 +151,8 @@ NandDevice::NandDevice() {
   is_valid_ = ValidateNandDevice();
 }
 
-zx_status_t NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request) {
-  fuchsia_nand_BrokerRequest request_copy = request;
+zx_status_t NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
+  fuchsia_nand_BrokerRequestData request_copy = request;
   if (!full_device_) {
     request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
@@ -170,8 +170,8 @@ zx_status_t NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerReques
   return (io_status != ZX_OK) ? io_status : status;
 }
 
-zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequest& request) {
-  fuchsia_nand_BrokerRequest request_copy = request;
+zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
+  fuchsia_nand_BrokerRequestData request_copy = request;
   if (!full_device_) {
     request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
@@ -188,8 +188,8 @@ zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerReque
   return (io_status != ZX_OK) ? io_status : status;
 }
 
-zx_status_t NandDevice::Erase(const fuchsia_nand_BrokerRequest& request) {
-  fuchsia_nand_BrokerRequest request_copy = request;
+zx_status_t NandDevice::Erase(const fuchsia_nand_BrokerRequestData& request) {
+  fuchsia_nand_BrokerRequestData request_copy = request;
   if (!full_device_) {
     request_copy.offset_nand = request.offset_nand + first_block_;
     ZX_DEBUG_ASSERT(request.offset_nand < NumBlocks());
@@ -202,7 +202,7 @@ zx_status_t NandDevice::Erase(const fuchsia_nand_BrokerRequest& request) {
 }
 
 zx_status_t NandDevice::EraseBlock(uint32_t block_num) {
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = 1;
   request.offset_nand = block_num;
   return Erase(request);
@@ -278,7 +278,7 @@ TEST(NandBrokerTest, ReadWriteLimits) {
   ASSERT_OK(mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                 &vmo));
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request));
 
@@ -312,7 +312,7 @@ TEST(NandBrokerTest, EraseLimits) {
   NandDevice device;
   ASSERT_TRUE(device.IsValid());
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase(request));
 
   request.offset_nand = device.NumBlocks();
@@ -342,7 +342,7 @@ TEST(NandBrokerTest, ReadWrite) {
                                 &vmo));
   memset(mapper.start(), 0x55, mapper.size());
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = 4;
   request.offset_nand = 4;
   request.data_vmo = true;
@@ -367,7 +367,7 @@ TEST(NandBrokerTest, ReadWriteOob) {
   const char desired[] = {'a', 'b', 'c', 'd'};
   memcpy(mapper.start(), desired, sizeof(desired));
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = 1;
   request.offset_nand = 2;
   request.oob_vmo = true;
@@ -399,7 +399,7 @@ TEST(NandBrokerTest, ReadWriteDataAndOob) {
   memset(buffer, 0x55, device.PageSize() * 2);
   memset(buffer + device.PageSize() * 2, 0xaa, device.OobSize() * 2);
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = 2;
   request.offset_nand = 2;
   request.offset_oob_vmo = 2;  // OOB is right after data.
@@ -430,7 +430,7 @@ TEST(NandBrokerTest, Erase) {
 
   memset(mapper.start(), 0x55, mapper.size());
 
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = kMinBlockSize;
   request.data_vmo = true;
   request.offset_nand = device.BlockSize();

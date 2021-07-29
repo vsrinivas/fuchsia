@@ -94,7 +94,7 @@ void NandBroker::ShowInfo() const {
 
 bool NandBroker::ReadPages(uint32_t first_page, uint32_t count) const {
   ZX_DEBUG_ASSERT(count <= info_.pages_per_block);
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
 
   request.length = count;
   request.offset_nand = first_page;
@@ -169,7 +169,7 @@ bool NandBroker::DumpPage(uint32_t page) const {
 }
 
 bool NandBroker::EraseBlock(uint32_t block) const {
-  fuchsia_nand_BrokerRequest request = {};
+  fuchsia_nand_BrokerRequestData request = {};
   request.length = 1;
   request.offset_nand = block;
 

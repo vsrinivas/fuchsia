@@ -88,7 +88,7 @@ class Broker : public DeviceType {
 
  private:
   zx_status_t Query(fuchsia_hardware_nand::wire::Info* info);
-  zx_status_t Queue(uint32_t command, fuchsia_nand::wire::BrokerRequest& request,
+  zx_status_t Queue(uint32_t command, fuchsia_nand::wire::BrokerRequestData& request,
                     uint32_t* corrected_bits);
 
   ddk::NandProtocolClient nand_;
@@ -121,7 +121,7 @@ zx_status_t Broker::Query(fuchsia_hardware_nand::wire::Info* info) {
   return ZX_OK;
 }
 
-zx_status_t Broker::Queue(uint32_t command, fuchsia_nand::wire::BrokerRequest& request,
+zx_status_t Broker::Queue(uint32_t command, fuchsia_nand::wire::BrokerRequestData& request,
                           uint32_t* corrected_bits) {
   Operation operation(op_size_);
   nand_operation_t* op = operation.GetOperation();

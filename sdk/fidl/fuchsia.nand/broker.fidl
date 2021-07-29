@@ -7,7 +7,7 @@ using zx;
 
 // Defines a Read/Write/Erase request to be sent to the nand driver.
 @for_deprecated_c_bindings
-type BrokerRequest = resource struct {
+type BrokerRequestData = resource struct {
     vmo zx.handle:<VMO, optional>; // Only used for read and write.
     length uint32; // In pages (read / write) or blocks (erase).
     offset_nand uint32; // In pages (read / write) or blocks (erase).
@@ -31,7 +31,7 @@ protocol Broker {
 
     // Reads from the nand device.
     Read(resource struct {
-        request BrokerRequest;
+        request BrokerRequestData;
     }) -> (struct {
         status zx.status;
         corrected_bit_flips uint32;
@@ -39,14 +39,14 @@ protocol Broker {
 
     // Writes to the nand device.
     Write(resource struct {
-        request BrokerRequest;
+        request BrokerRequestData;
     }) -> (struct {
         status zx.status;
     });
 
     // Erases part of the nand device.
     Erase(resource struct {
-        request BrokerRequest;
+        request BrokerRequestData;
     }) -> (struct {
         status zx.status;
     });
