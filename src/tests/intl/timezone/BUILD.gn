@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/testing/environments.gni")
 
 group("timezone") {
   testonly = true
@@ -131,4 +132,9 @@ fuchsia_unittest_package("timezone-flutter-test") {
     "../timestamp-server-dart:timestamp-server-flutter",
     "//src/intl:icudtl",
   ]
+
+  # TODO(fxbug.dev/81706): Remove to run on NUCs when passing.
+  test_specs = {
+    environments = [ aemu_env ]
+  }
 }
