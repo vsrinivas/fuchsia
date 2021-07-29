@@ -169,6 +169,9 @@ pub enum RepositoryError {
 
     #[error("some unspecified internal error")]
     InternalError,
+
+    #[error("repository metadata is expired")]
+    ExpiredRepositoryMetadata,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -189,6 +192,9 @@ impl From<fidl::RepositoryError> for RepositoryError {
             }
             fidl::RepositoryError::IoError => RepositoryError::IoError,
             fidl::RepositoryError::InternalError => RepositoryError::InternalError,
+            fidl::RepositoryError::ExpiredRepositoryMetadata => {
+                RepositoryError::ExpiredRepositoryMetadata
+            }
         }
     }
 }
@@ -211,6 +217,9 @@ impl From<RepositoryError> for fidl::RepositoryError {
             }
             RepositoryError::IoError => fidl::RepositoryError::IoError,
             RepositoryError::InternalError => fidl::RepositoryError::InternalError,
+            RepositoryError::ExpiredRepositoryMetadata => {
+                fidl::RepositoryError::ExpiredRepositoryMetadata
+            }
         }
     }
 }

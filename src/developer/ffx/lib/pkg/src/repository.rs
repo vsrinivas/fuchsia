@@ -32,7 +32,7 @@ use {
         client::{Client, Config, DefaultTranslator},
         crypto::KeyType,
         interchange::Json,
-        metadata::{MetadataPath, MetadataVersion, RawSignedMetadata},
+        metadata::{MetadataPath, MetadataVersion, RawSignedMetadata, Role},
         repository::{EphemeralRepository, RepositoryProvider},
     },
 };
@@ -129,6 +129,8 @@ pub enum Error {
     #[error("I/O error")]
     Io(#[source] io::Error),
     #[error(transparent)]
+    Tuf(#[from] tuf::Error),
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 
@@ -200,16 +202,14 @@ impl Repository {
         name: &str,
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
-        let client = Arc::new(Mutex::new(
-            Self::get_client(backend.get_tuf_repo().context("getting TUF repo")?)
-                .await
-                .context("getting TUF client")?,
-        ));
+        let tuf_repo = backend.get_tuf_repo()?;
+        let tuf_client = Self::get_tuf_client(tuf_repo).await?;
+
         Ok(Self {
             name: name.to_string(),
             id: RepositoryId::new(),
             backend,
-            client,
+            client: Arc::new(Mutex::new(tuf_client)),
             drop_handlers: Mutex::new(Vec::new()),
         })
     }
@@ -277,14 +277,33 @@ impl Repository {
         mirror_url: &str,
         storage_type: Option<RepositoryStorageType>,
     ) -> Result<RepositoryConfig, Error> {
-        let client = self.client.lock();
+        let mut client = self.client.lock();
+
+        // Update the root metadata to the latest version. We don't care if the other metadata has
+        // expired.
+        //
+        // FIXME: This can be replaced with `client.update_root()` once
+        // https://github.com/heartsucker/rust-tuf/pull/318 lands.
+        match client.update().await {
+            Ok(_) => {}
+            Err(err @ tuf::Error::ExpiredMetadata(Role::Root)) => {
+                return Err(err.into());
+            }
+            Err(tuf::Error::ExpiredMetadata(_)) => {}
+            Err(err) => {
+                return Err(err.into());
+            }
+        }
+
         let root_keys = client
             .trusted_root()
             .root_keys()
             .filter(|k| *k.typ() == KeyType::Ed25519)
             .map(|key| RepositoryKeyConfig::Ed25519Key(key.as_bytes().to_vec()))
             .collect::<Vec<_>>();
+
         let root_version = client.root_version();
+
         Ok(RepositoryConfig {
             repo_url: Some(self.repo_url()),
             root_keys: Some(root_keys),
@@ -297,7 +316,7 @@ impl Repository {
         })
     }
 
-    async fn get_client(
+    async fn get_tuf_client(
         tuf_repo: Box<dyn RepositoryProvider<Json>>,
     ) -> Result<
         Client<
@@ -312,26 +331,21 @@ impl Repository {
 
         let mut md = tuf_repo
             .fetch_metadata(
-                &MetadataPath::new("root").context("fetching root metadata")?,
+                &MetadataPath::from_role(&Role::Root),
                 &MetadataVersion::None,
                 None,
                 None,
             )
-            .await
-            .context("fetching metadata")?;
+            .await?;
+
         let mut buf = Vec::new();
         md.read_to_end(&mut buf).await.context("reading metadata")?;
 
         let raw_signed_meta = RawSignedMetadata::<Json, _>::new(buf);
 
-        let mut client =
+        let client =
             Client::with_trusted_root(Config::default(), &raw_signed_meta, metadata_repo, tuf_repo)
-                .await
-                .context("initializing client")?;
-        client
-            .update()
-            .await
-            .map_err(|e| Error::Other(anyhow::anyhow!("error updating metadata: {}", e)))?;
+                .await?;
 
         Ok(client)
     }
@@ -382,7 +396,11 @@ impl Repository {
         &self,
         include_fields: ListFields,
     ) -> Result<Vec<RepositoryPackage>, Error> {
-        let client = self.client.lock();
+        let mut client = self.client.lock();
+
+        // Get the latest TUF metadata.
+        client.update().await?;
+
         let targets = client.trusted_targets().context("missing target information")?;
         let packages: Result<Vec<RepositoryPackage>, Error> =
             join_all(targets.targets().into_iter().filter_map(|(k, v)| {

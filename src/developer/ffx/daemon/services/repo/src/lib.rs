@@ -6,6 +6,7 @@ use {
     async_lock::{Mutex, RwLock},
     async_trait::async_trait,
     ffx_config::{self, ConfigLevel},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
     fidl_fuchsia_pkg::RepositoryManagerMarker,
@@ -15,7 +16,7 @@ use {
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
-    pkg::repository::{listen_addr, Repository, RepositoryManager, RepositoryServer},
+    pkg::repository::{self, listen_addr, Repository, RepositoryManager, RepositoryServer},
     serde_json::{self, Value},
     services::prelude::*,
     std::{
@@ -211,7 +212,13 @@ impl Repo {
         // Create the repository.
         let repo = Repository::from_repository_spec(name, repo_spec).await.map_err(|err| {
             log::error!("Unable to create repository: {:#?}", err);
-            bridge::RepositoryError::IoError
+
+            match err {
+                repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
+                    bridge::RepositoryError::ExpiredRepositoryMetadata
+                }
+                _ => bridge::RepositoryError::IoError,
+            }
         })?;
 
         if save_config == SaveConfig::Save {
@@ -480,6 +487,68 @@ impl Repo {
 
         Ok(())
     }
+
+    async fn list_packages(
+        &self,
+        name: &str,
+        iterator: ServerEnd<bridge::RepositoryPackagesIteratorMarker>,
+        include_fields: bridge::ListFields,
+    ) -> std::result::Result<(), bridge::RepositoryError> {
+        let mut stream = match iterator.into_stream() {
+            Ok(s) => s,
+            Err(e) => {
+                log::warn!("error converting iterator to stream: {}", e);
+                return Err(bridge::RepositoryError::InternalError);
+            }
+        };
+
+        let repo = if let Some(r) = self.manager.get(&name) {
+            r
+        } else {
+            return Err(bridge::RepositoryError::NoMatchingRepository);
+        };
+
+        let values = repo.list_packages(include_fields).await.map_err(|err| {
+            log::error!("Unable to list packages: {:#?}", err);
+
+            match err {
+                repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
+                    bridge::RepositoryError::ExpiredRepositoryMetadata
+                }
+                _ => bridge::RepositoryError::IoError,
+            }
+        })?;
+
+        fasync::Task::spawn(async move {
+            let mut pos = 0;
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(bridge::RepositoryPackagesIteratorRequest::Next { responder }) => {
+                        let len = values.len();
+                        let chunk = &mut values[pos..]
+                            [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
+                            .into_iter()
+                            .map(|p| p.clone());
+                        pos += MAX_PACKAGES as usize;
+                        pos = std::cmp::min(pos, len);
+
+                        if let Err(e) = responder.send(chunk) {
+                            log::warn!(
+                                "Error responding to RepositoryPackagesIterator request: {}",
+                                e
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Error in RepositoryPackagesIterator request stream: {}", e)
+                    }
+                }
+            }
+        })
+        .detach();
+
+        Ok(())
+    }
 }
 
 impl Default for Repo {
@@ -536,56 +605,10 @@ impl FidlService for Repo {
             bridge::RepositoryRegistryRequest::ListPackages {
                 name,
                 iterator,
-                responder,
                 include_fields,
+                responder,
             } => {
-                let mut stream = match iterator.into_stream() {
-                    Ok(s) => s,
-                    Err(e) => {
-                        log::warn!("error converting iterator to stream: {}", e);
-                        responder.send(&mut Err(bridge::RepositoryError::InternalError))?;
-                        return Ok(());
-                    }
-                };
-                let repo = if let Some(r) = self.manager.get(&name) {
-                    r
-                } else {
-                    responder.send(&mut Err(bridge::RepositoryError::NoMatchingRepository))?;
-                    return Ok(());
-                };
-
-                let values = repo.list_packages(include_fields).await?;
-
-                let mut pos = 0;
-
-                fasync::Task::spawn(async move {
-                    while let Some(request) = stream.next().await {
-                        match request {
-                            Ok(bridge::RepositoryPackagesIteratorRequest::Next { responder }) => {
-                                let len = values.len();
-                                let chunk = &mut values[pos..]
-                                    [..std::cmp::min(len - pos, MAX_PACKAGES as usize)]
-                                    .into_iter()
-                                    .map(|p| p.clone());
-                                pos += MAX_PACKAGES as usize;
-                                pos = std::cmp::min(pos, len);
-
-                                if let Err(e) = responder.send(chunk) {
-                                    log::warn!(
-                                        "Error responding to RepositoryPackagesIterator request: {}",
-                                        e
-                                    );
-                                }
-                            }
-                            Err(e) => {
-                                log::warn!("Error in RepositoryPackagesIterator request stream: {}", e)
-                            }
-                        }
-                    }
-                })
-                .detach();
-
-                responder.send(&mut Ok(()))?;
+                responder.send(&mut self.list_packages(&name, iterator, include_fields).await)?;
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {

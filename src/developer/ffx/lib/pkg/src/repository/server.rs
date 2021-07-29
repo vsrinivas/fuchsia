@@ -350,7 +350,7 @@ async fn read_timestamp_version(repo: Arc<Repository>) -> Option<u32> {
                 }
             },
             Err(err) => {
-                warn!("failed to read timestamp.json: {}", err);
+                warn!("failed to read timestamp.json: {:#?}", err);
             }
         };
 

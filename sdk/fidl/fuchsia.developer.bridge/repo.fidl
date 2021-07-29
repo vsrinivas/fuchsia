@@ -171,4 +171,6 @@ type RepositoryError = strict enum : uint32 {
     IO_ERROR = 8;
     /// Some unspecified internal error occurred.
     INTERNAL_ERROR = 9;
+    /// Repository metadata is expired.
+    EXPIRED_REPOSITORY_METADATA = 10;
 };
