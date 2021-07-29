@@ -4,9 +4,9 @@
 <li>
   {{ macro.pencil_edit_macro(item.term) }}
   <h3 class="add-link">{{ item.term }}</h3>
-    {% if item.short_description != '' %}
+    {% if item.short_description|length %}
     <p>{{ item.short_description }}</p>
-      {% if item.full_description != '' %}
+      {% if item.full_description|length %}
       <devsite-expandable>
         <a href="#{{ item.term }}-full" class="expand-control once">Full description</a>
         <hr>
@@ -14,35 +14,33 @@
       </devsite-expandable>
       {% endif %}
     {% else %}
-      {% if item.full_description != '' %}
+      {% if item.full_description|length %}
          {{ item.full_description }}
       {% endif %}
     {% endif %}
-  {% if item.see_also != [''] %}
-  <devsite-expandable>
-    <a href="#{{ item.term }}-also" class="expand-control once">See also</a>
+  {% if item.see_also[0]|length or item.related_guides[0]|length %}
     <hr>
-    <h4>Information related to {{ item.term }}</h4>
-      <ul class="comma-list">
-      {% for see in item.see_also %}
-      <li>{{ see }}</li>
-      {% endfor %}
-    </ul>
+    <devsite-expandable>
+    <a href="#{{ item.term }}-also" class="expand-control once">Related links</a>
+    {% if item.see_also[0]|length %}
+      <h4>Information related to {{ item.term }}</h4>
+        <ul class="comma-list">
+        {% for see in item.see_also %}
+        <li>{{ see }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if item.related_guides[0]|length %}
+      <h4>Guides related to {{ item.term }}</h4>
+        <ul class="comma-list">
+        {% for guide in item.related_guides %}
+        <li>{{ guide }}</li>
+        {% endfor %}
+      </ul>
+  {% endif %}
   </devsite-expandable>
   {% endif %}
-  {% if item.related_guides != [''] %}
-  <devsite-expandable>
-    <a href="#{{ item.term }}-also" class="expand-control once">Related guides</a>
-    <hr>
-    <h4>Guides related to {{ item.term }}</h4>
-      <ul class="comma-list">
-      {% for guide in item.related_guides %}
-      <li>{{ guide }}</li>
-      {% endfor %}
-    </ul>
-  </devsite-expandable>
-  {% endif %}
-  {% if item.area != [''] %}
+  {% if item.area[0]|length %}
   <!--
     <ul class="comma-list">
       {% for area in item.area %}
