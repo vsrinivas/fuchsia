@@ -59,6 +59,16 @@ class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
   void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
 };
 
+class MethodWithUnion_TestBase
+    : public ::fidl::test::protocols::MethodWithUnion {
+ public:
+  virtual ~MethodWithUnion_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void UnionMethod(::fidl::test::protocols::TheUnion u) override {
+    NotImplemented_("UnionMethod");
+  }
+};
+
 class WithProtocolEnds_TestBase
     : public ::fidl::test::protocols::WithProtocolEnds {
  public:

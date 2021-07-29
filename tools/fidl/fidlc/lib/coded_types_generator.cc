@@ -508,11 +508,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           assert((!message || (message && !message->members.empty())) &&
                  "cannot process empty message payloads");
 
-          auto typeshape = message != nullptr ? message->typeshape(WireFormat::kV1NoEe)
-                                              : TypeShape::ForEmptyPayload();
+          auto typeshape_v1 = message != nullptr ? message->typeshape(WireFormat::kV1NoEe)
+                                                 : TypeShape::ForEmptyPayload();
+          auto typeshape_v2 = message != nullptr ? message->typeshape(WireFormat::kV2)
+                                                 : TypeShape::ForEmptyPayload();
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
-              std::move(message_name), std::vector<coded::StructElement>(), typeshape.InlineSize(),
-              std::move(message_qname)));
+              std::move(message_name), std::vector<coded::StructElement>(),
+              typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), std::move(message_qname)));
         };
         if (method.has_request) {
           CreateMessage(method.maybe_request_payload, types::MessageKind::kRequest);

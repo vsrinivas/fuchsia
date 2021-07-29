@@ -68,7 +68,7 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_union_TestProtocolStrictXU
 static const struct FidlStructElement Fields80fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_union_StrictBoundedXUnionTable)}}
 };
-const struct FidlCodedStruct fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.tag=kFidlTypeStruct, .elements=Fields80fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .element_count=1u, .size_v1=40u, .size_v2=40u, .name="fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse"};
+const struct FidlCodedStruct fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.tag=kFidlTypeStruct, .elements=Fields80fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse"};
 
 __LOCAL extern const struct FidlCodedStruct fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
 const struct FidlCodedStruct fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest"};
@@ -77,7 +77,7 @@ __LOCAL extern const struct FidlCodedStruct fidl_test_union_TestProtocolFlexible
 static const struct FidlStructElement Fields82fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_union_OlderSimpleUnionTable)}}
 };
-const struct FidlCodedStruct fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.tag=kFidlTypeStruct, .elements=Fields82fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .element_count=1u, .size_v1=40u, .size_v2=40u, .name="fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse"};
+const struct FidlCodedStruct fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.tag=kFidlTypeStruct, .elements=Fields82fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse"};
 
 
 static const struct FidlXUnionField Fields21fidl_test_union_Union[] = {

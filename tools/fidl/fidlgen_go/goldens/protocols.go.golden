@@ -578,6 +578,17 @@ func (msg *manyParametersWithCtxFifteenRequest) Marshaler() _bindings.Marshaler 
 	return _mmanyParametersWithCtxFifteenRequest
 }
 
+type methodWithUnionWithCtxUnionMethodRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	U TheUnion `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mmethodWithUnionWithCtxUnionMethodRequest = _bindings.CreateLazyMarshaler(methodWithUnionWithCtxUnionMethodRequest{})
+
+func (msg *methodWithUnionWithCtxUnionMethodRequest) Marshaler() _bindings.Marshaler {
+	return _mmethodWithUnionWithCtxUnionMethodRequest
+}
+
 type I_withErrorSyntaxResponseAsStructResultTag uint64
 
 const (
@@ -800,6 +811,58 @@ func WithErrorSyntaxHandleInResultResultWithErr(err uint32) WithErrorSyntaxHandl
 	var _u WithErrorSyntaxHandleInResultResult
 	_u.SetErr(err)
 	return _u
+}
+
+type I_theUnionTag uint64
+
+const (
+	TheUnion_unknownData = 0 // 0x00000000
+	TheUnionV            = 1 // 0x00000001
+)
+
+type TheUnion struct {
+	I_theUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
+	I_unknownData interface{}
+	V             uint32 `fidl_ordinal:"1"`
+}
+
+func (_m *TheUnion) reset() {
+	switch _m.I_theUnionTag {
+	case 1:
+		var _zeroed uint32
+		_m.V = _zeroed
+	default:
+		var _zeroed interface{}
+		_m.I_unknownData = _zeroed
+	}
+}
+
+func (_m *TheUnion) Which() I_theUnionTag {
+	switch _m.I_theUnionTag {
+	case 1:
+		return TheUnionV
+	default:
+		return TheUnion_unknownData
+	}
+}
+
+func (_m *TheUnion) Ordinal() uint64 {
+	return uint64(_m.I_theUnionTag)
+}
+
+func (_m *TheUnion) SetV(v uint32) {
+	_m.reset()
+	_m.I_theUnionTag = TheUnionV
+	_m.V = v
+}
+
+func TheUnionWithV(v uint32) TheUnion {
+	var _u TheUnion
+	_u.SetV(v)
+	return _u
+}
+func (_m *TheUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 const (
@@ -1579,3 +1642,53 @@ func (s_ *ManyParametersWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 }
 
 type ManyParametersEventProxy _bindings.ChannelProxy
+
+const (
+	MethodWithUnionUnionMethodOrdinal uint64 = 0x5ba125a32d36092a
+)
+
+type MethodWithUnionWithCtxInterface _bindings.ChannelProxy
+
+func (p *MethodWithUnionWithCtxInterface) UnionMethod(ctx_ _bindings.Context, u TheUnion) error {
+	req_ := &methodWithUnionWithCtxUnionMethodRequest{
+		U: u,
+	}
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(MethodWithUnionUnionMethodOrdinal, req_)
+	return err_
+}
+
+type MethodWithUnionWithCtx interface {
+	UnionMethod(ctx_ _bindings.Context, u TheUnion) error
+}
+
+type MethodWithUnionWithCtxTransitionalBase struct{}
+
+type MethodWithUnionWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewMethodWithUnionWithCtxInterfaceRequest() (MethodWithUnionWithCtxInterfaceRequest, *MethodWithUnionWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return MethodWithUnionWithCtxInterfaceRequest(req), (*MethodWithUnionWithCtxInterface)(cli), err
+}
+
+type MethodWithUnionWithCtxStub struct {
+	Impl MethodWithUnionWithCtx
+}
+
+func (s_ *MethodWithUnionWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case MethodWithUnionUnionMethodOrdinal:
+		in_ := methodWithUnionWithCtxUnionMethodRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.UnionMethod(args_.Ctx, in_.U)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type MethodWithUnionEventProxy _bindings.ChannelProxy

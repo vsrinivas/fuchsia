@@ -2552,6 +2552,175 @@ zx_status_t fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
 
 #endif  // __Fuchsia__
 
+auto ::fidl_test_protocols::wire::TheUnion::which() const
+    -> ::fidl_test_protocols::wire::TheUnion::Tag {
+  ZX_ASSERT(!has_invalid_tag());
+  switch (ordinal_) {
+    case ::fidl_test_protocols::wire::TheUnion::Ordinal::kV:
+      return static_cast<::fidl_test_protocols::wire::TheUnion::Tag>(ordinal_);
+    default:
+      return ::fidl_test_protocols::wire::TheUnion::Tag::kUnknown;
+  }
+}
+
+void ::fidl_test_protocols::wire::TheUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(TheUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TheUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TheUnion, envelope_) ==
+                offsetof(fidl_xunion_t, envelope));
+}
+
+namespace fidl_test_protocols {
+[[maybe_unused]] constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal =
+    6602599911470270762lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodResponseTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
+    WireResult(::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+                   _client,
+               ::fidl_test_protocols::wire::TheUnion u) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), u);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+            _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+        ::fidl_test_protocols::wire::TheUnion u) {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), u);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::MethodWithUnion>::UnionMethod(
+        ::fidl_test_protocols::wire::TheUnion u) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res =
+        ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>(
+                _channel->handle()),
+            u);
+    return _res;
+  }
+  return ::fidl::Result::Unbound();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_protocols::MethodWithUnion>::UnionMethod(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl_test_protocols::wire::TheUnion u) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, u);
+    return _res;
+  }
+  return ::fidl::Result::Unbound();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::MethodWithUnion>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::MethodWithUnion>::TryDispatch(
+        ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_protocols::MethodWithUnion::UnionMethod>>
+                decoded{std::move(msg)};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
+            }
+            auto* primary = decoded.PrimaryObject();
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocols::MethodWithUnion::UnionMethod>::Sync
+                completer(txn);
+            reinterpret_cast<
+                ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>*>(
+                interface)
+                ->UnionMethod(primary, completer);
+            return ZX_OK;
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::MethodWithUnion>::Dispatch(
+        ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
+    std::move(msg).CloseHandles();
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_protocols::MethodWithUnion>::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_protocols::MethodWithUnion>::Dispatch(this, std::move(msg),
+                                                        txn);
+}
+#endif  // __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kMethodWithUnion_UnionMethod_Ordinal);
+}
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 void ::fidl_test_protocols::wire::ProtocolEnds::_CloseHandles() {
   client.reset();

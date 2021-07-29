@@ -121,6 +121,14 @@ class Transitional;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
 #endif  // __Fuchsia__
 
+class TheUnion;
+
+#ifdef __Fuchsia__
+
+class MethodWithUnion;
+using MethodWithUnionHandle = ::fidl::InterfaceHandle<MethodWithUnion>;
+#endif  // __Fuchsia__
+
 class ProtocolEnds;
 
 #ifdef __Fuchsia__
@@ -1141,6 +1149,126 @@ class Transitional_ResponseEncoder {
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
+};
+#endif  // __Fuchsia__
+
+class TheUnion final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  TheUnion();
+  ~TheUnion();
+
+  TheUnion(TheUnion&&);
+  TheUnion& operator=(TheUnion&&);
+
+  static TheUnion WithV(uint32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
+
+    kV = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<TheUnion> New() {
+    return ::std::make_unique<TheUnion>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, TheUnion* value, size_t offset);
+  zx_status_t Clone(TheUnion* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_v() const {
+    return tag_ == ::fidl::test::protocols::TheUnion::Tag::kV;
+  }
+
+  uint32_t& v() {
+    EnsureStorageInitialized(::fidl::test::protocols::TheUnion::Tag::kV);
+    return v_;
+  }
+
+  const uint32_t& v() const {
+    ZX_ASSERT(is_v());
+    return v_;
+  }
+  TheUnion& set_v(uint32_t value);
+  TheUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
+                           std::vector<uint8_t> bytes);
+
+  ::fidl::test::protocols::TheUnion::Tag Which() const {
+    switch (tag_) {
+      case ::fidl::test::protocols::TheUnion::Tag::Invalid:
+      case ::fidl::test::protocols::TheUnion::Tag::kV:
+        return ::fidl::test::protocols::TheUnion::Tag(tag_);
+      default:
+        return ::fidl::test::protocols::TheUnion::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::fidl::test::protocols::TheUnion::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::fidl::test::protocols::TheUnion>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::TheUnion::Tag::Invalid);
+  union {
+    uint32_t v_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::fidl::test::protocols::TheUnion& value,
+                         ::fidl::test::protocols::TheUnion* result) {
+  return value.Clone(result);
+}
+
+using TheUnionPtr = ::std::unique_ptr<TheUnion>;
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+
+}  // namespace _internal
+class MethodWithUnion_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage UnionMethod(
+      ::fidl::Encoder* _encoder, ::fidl::test::protocols::TheUnion* u) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, u, 16);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_MethodWithUnionUnionMethodRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+class MethodWithUnion_ResponseEncoder {
+ public:
 };
 #endif  // __Fuchsia__
 
@@ -2343,6 +2471,67 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
     return true;
   }
 };
+template <>
+struct IsFidlXUnion<::fidl::test::protocols::TheUnion> : public std::true_type {
+};
+
+template <>
+struct CodingTraits<::fidl::test::protocols::TheUnion>
+    : public EncodableCodingTraits<::fidl::test::protocols::TheUnion, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::fidl::test::protocols::TheUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(
+      Encoder* encoder,
+      std::unique_ptr<::fidl::test::protocols::TheUnion>* value, size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder,
+                     std::unique_ptr<::fidl::test::protocols::TheUnion>* value,
+                     size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::fidl::test::protocols::TheUnion);
+
+    ::fidl::test::protocols::TheUnion::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::fidl::test::protocols::TheUnion& value,
+                         ::fidl::test::protocols::TheUnion* result) {
+  return ::fidl::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::protocols::TheUnion> {
+  bool operator()(const ::fidl::test::protocols::TheUnion& _lhs,
+                  const ::fidl::test::protocols::TheUnion& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::TheUnion::Tag::Invalid):
+        return true;
+      case ::fidl::test::protocols::TheUnion::Tag::kV:
+        return ::fidl::Equals(_lhs.v_, _rhs.v_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
 #ifdef __Fuchsia__
 
 template <>
@@ -2574,6 +2763,21 @@ namespace internal {
 constexpr uint64_t kTransitional_Request_Ordinal = 0x62d345e621780ee8lu;
 constexpr uint64_t kTransitional_OneWay_Ordinal = 0xf99bc4b26bc9ea5lu;
 constexpr uint64_t kTransitional_Event_Ordinal = 0x53bb9212bcbe8966lu;
+}  // namespace internal
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+using MethodWithUnionPtr = ::fidl::InterfacePtr<MethodWithUnion>;
+class MethodWithUnion_Proxy;
+class MethodWithUnion_Stub;
+class MethodWithUnion_EventSender;
+class MethodWithUnion_Sync;
+using MethodWithUnionSyncPtr = ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
+class MethodWithUnion_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x5ba125a32d36092alu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3023,6 +3227,94 @@ class Transitional_SyncProxy
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Transitional>;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class MethodWithUnion {
+ public:
+  using Proxy_ = ::fidl::test::protocols::MethodWithUnion_Proxy;
+  using Stub_ = ::fidl::test::protocols::MethodWithUnion_Stub;
+  using EventSender_ = ::fidl::test::protocols::MethodWithUnion_EventSender;
+  using Sync_ = ::fidl::test::protocols::MethodWithUnion_Sync;
+  virtual ~MethodWithUnion();
+
+  virtual void UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+};
+
+class MethodWithUnion_RequestDecoder {
+ public:
+  MethodWithUnion_RequestDecoder() = default;
+  virtual ~MethodWithUnion_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  virtual void UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+};
+
+class MethodWithUnion_ResponseDecoder {
+ public:
+  MethodWithUnion_ResponseDecoder() = default;
+  virtual ~MethodWithUnion_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+};
+
+class MethodWithUnion_EventSender {
+ public:
+  virtual ~MethodWithUnion_EventSender();
+};
+
+class MethodWithUnion_Sync {
+ public:
+  using Proxy_ = ::fidl::test::protocols::MethodWithUnion_SyncProxy;
+  virtual ~MethodWithUnion_Sync();
+  virtual zx_status_t UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+};
+
+class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy,
+                                    public MethodWithUnion {
+ public:
+  explicit MethodWithUnion_Proxy(::fidl::internal::ProxyController* controller);
+  ~MethodWithUnion_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  void UnionMethod(::fidl::test::protocols::TheUnion u) override;
+
+ private:
+  MethodWithUnion_Proxy(const ::fidl::test::protocols::MethodWithUnion_Proxy&) =
+      delete;
+  MethodWithUnion_Proxy& operator=(
+      const ::fidl::test::protocols::MethodWithUnion_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class MethodWithUnion_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::protocols::MethodWithUnion_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::MethodWithUnion MethodWithUnion_clazz;
+  explicit MethodWithUnion_Stub(
+      ::fidl::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz*
+          impl);
+  ~MethodWithUnion_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::fidl::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl_;
+};
+
+class MethodWithUnion_SyncProxy
+    : public ::fidl::test::protocols::MethodWithUnion_Sync {
+ public:
+  explicit MethodWithUnion_SyncProxy(::zx::channel channel);
+  ~MethodWithUnion_SyncProxy() override;
+  zx_status_t UnionMethod(::fidl::test::protocols::TheUnion u) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
 };
 #endif  // __Fuchsia__
 

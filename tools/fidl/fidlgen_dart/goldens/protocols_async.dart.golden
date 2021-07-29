@@ -649,6 +649,90 @@ const $fidl.NullableUnionType<WithErrorSyntaxHandleInResultResult>
   resource: true,
 );
 
+enum TheUnionTag {
+  $unknown,
+  v, // 0x1
+}
+
+const Map<int, TheUnionTag> _TheUnionTag_map = {
+  1: TheUnionTag.v,
+};
+
+class TheUnion extends $fidl.XUnion {
+  const TheUnion.withV(int value)
+      : _ordinal = 1,
+        _data = value;
+  const TheUnion.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  TheUnion._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  TheUnionTag get $tag => _TheUnionTag_map[_ordinal] ?? TheUnionTag.$unknown;
+
+  int? get v {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'TheUnion.v(' + v.toString() + ')';
+      default:
+        return r'TheUnion.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static TheUnion _ctor(int ordinal, Object data) {
+    return TheUnion._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<TheUnion> kTheUnion_Type = $fidl.UnionType<TheUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: TheUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<TheUnion> kTheUnion_OptType =
+    $fidl.NullableUnionType<TheUnion>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: TheUnion._ctor,
+  flexible: true,
+  resource: false,
+);
+
 class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
   const WithErrorSyntaxResponseAsStructResponse({
     required this.a,
@@ -3810,6 +3894,129 @@ class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
       default:
         throw $fidl.FidlError(
             r'Unexpected message name for ManyParametersBinding');
+    }
+  }
+}
+
+// unionMethod: (TheUnion u)
+const int _kMethodWithUnion_UnionMethod_Ordinal = 0x5ba125a32d36092a;
+const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
+  request: <$fidl.MemberType>[
+    $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offset: 0),
+  ],
+  response: [],
+  name: r"MethodWithUnion.UnionMethod",
+  requestInlineSize: 24,
+  responseInlineSize: 0,
+);
+
+abstract class MethodWithUnion {
+  $fidl.ServiceData? get $serviceData => MethodWithUnionData();
+  $async.Future<void> unionMethod(TheUnion u);
+}
+
+// TODO: Remove ServiceData for non-service
+class MethodWithUnionData implements $fidl.ServiceData<MethodWithUnion> {
+  const MethodWithUnionData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return MethodWithUnionBinding();
+  }
+}
+
+class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
+    implements MethodWithUnion {
+  MethodWithUnionProxy()
+      : super($fidl.AsyncProxyController<MethodWithUnion>(
+            $interfaceName: r'MethodWithUnion')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> unionMethod(TheUnion u) async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kMethodWithUnion_UnionMethod_Ordinal, 0);
+    final List<$fidl.MemberType> $types =
+        _kMethodWithUnion_UnionMethod_Type.request!;
+    $fidl.encodeMessageWithCallback($encoder,
+        _kMethodWithUnion_UnionMethod_Type.encodingRequestInlineSize(), () {
+      $types[0].encode($encoder, u, $fidl.kMessageHeaderSize, 1);
+    });
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
+  MethodWithUnionBinding() : super(r"MethodWithUnion");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kMethodWithUnion_UnionMethod_Ordinal:
+        final String _name = _kMethodWithUnion_UnionMethod_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types =
+              _kMethodWithUnion_UnionMethod_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kMethodWithUnion_UnionMethod_Type.decodeRequestInlineSize(),
+                  ($fidl.Decoder decoder) {
+            return _impl.unionMethod(
+              $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
+            );
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for MethodWithUnionBinding');
     }
   }
 }

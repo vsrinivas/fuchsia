@@ -100,6 +100,15 @@ fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine [
 fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultHandles [
        response fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles
 ][varlen]
+fidl_test_protocols_TheUnionInLine [
+       v fidl_union_member[1, int32]
+]
+fidl_test_protocols_TheUnionOutOfLine [
+       void void
+][varlen]
+fidl_test_protocols_TheUnionHandles [
+       void void
+][varlen]
 
 
 fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequest {
@@ -534,4 +543,20 @@ resource zx_chan_fidl_test_protocols_ManyParameters_server[zx_chan]
 zx_channel_create$fidl_test_protocols_ManyParameters(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_ManyParameters_client], out1 ptr[out, zx_chan_fidl_test_protocols_ManyParameters_server])
 fdio_service_connect$fidl_test_protocols_ManyParameters(path ptr[in, string["/svc/"]], handle zx_chan_fidl_test_protocols_ManyParameters_server)
 zx_channel_write$fidl_test_protocols_ManyParametersFifteen(handle zx_chan_fidl_test_protocols_ManyParameters_client, options const[0], bytes ptr[in, fidl_test_protocols_ManyParametersFifteenRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_ManyParametersFifteenRequestHandles], num_handles bytesize[handles])
+
+
+fidl_test_protocols_MethodWithUnionUnionMethodRequest {
+       hdr fidl_message_header[6602599911470270762]
+       uInLine fidl_test_protocols_TheUnionInLine
+} [packed]
+fidl_test_protocols_MethodWithUnionUnionMethodRequestHandles {
+       void void
+} [packed]
+
+resource zx_chan_fidl_test_protocols_MethodWithUnion_client[zx_chan]
+resource zx_chan_fidl_test_protocols_MethodWithUnion_server[zx_chan]
+
+zx_channel_create$fidl_test_protocols_MethodWithUnion(options const[0], out0 ptr[out, zx_chan_fidl_test_protocols_MethodWithUnion_client], out1 ptr[out, zx_chan_fidl_test_protocols_MethodWithUnion_server])
+fdio_service_connect$fidl_test_protocols_MethodWithUnion(path ptr[in, string["/svc/"]], handle zx_chan_fidl_test_protocols_MethodWithUnion_server)
+zx_channel_write$fidl_test_protocols_MethodWithUnionUnionMethod(handle zx_chan_fidl_test_protocols_MethodWithUnion_client, options const[0], bytes ptr[in, fidl_test_protocols_MethodWithUnionUnionMethodRequest], num_bytes bytesize[bytes], handles ptr[in, fidl_test_protocols_MethodWithUnionUnionMethodRequestHandles], num_handles bytesize[handles])
 

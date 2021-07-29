@@ -79,6 +79,18 @@ class Transitional_TestBase
   }
 };
 
+class MethodWithUnion_TestBase
+    : public ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion> {
+ public:
+  virtual ~MethodWithUnion_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void UnionMethod(UnionMethodRequestView request,
+                           UnionMethodCompleter::Sync& _completer) override {
+    NotImplemented_("UnionMethod", _completer);
+  }
+};
+
 class WithProtocolEnds_TestBase
     : public ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds> {
  public:

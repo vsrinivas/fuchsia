@@ -179,3 +179,13 @@ protocol ManyParameters {
         p15 bool;
     });
 };
+
+type TheUnion = flexible union {
+    1: v uint32;
+};
+
+protocol MethodWithUnion {
+    UnionMethod(struct {
+        u TheUnion;
+    });
+};

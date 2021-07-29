@@ -284,6 +284,25 @@
 
 
 
+## MethodWithUnion {#MethodWithUnion}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=187)*
+
+
+### UnionMethod {#MethodWithUnion.UnionMethod}
+
+
+#### Request {#MethodWithUnion.UnionMethod_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>u</code></td>
+            <td>
+                <code><a class='link' href='#TheUnion'>TheUnion</a></code>
+            </td>
+        </tr></table>
+
+
+
 ## SyscallProtocol {#SyscallProtocol}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=91)*
 
@@ -802,6 +821,19 @@ Type: <code>uint32</code>
 
 
 ## **UNIONS**
+
+### TheUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#TheUnion data-text="TheUnion"}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=183)*
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
+            <td><code>v</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td></td>
+        </tr></table>
 
 ### WithErrorSyntax_ErrorAsEnum_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ErrorAsEnum_Result data-text="WithErrorSyntax_ErrorAsEnum_Result"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=58)*

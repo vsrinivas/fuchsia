@@ -2,4 +2,4 @@
 
 #include <fidl/test/protocols/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::fidl_test_protocols_decoder_encoders.size() == 50);
+static_assert(::fuzzing::fidl_test_protocols_decoder_encoders.size() == 51);

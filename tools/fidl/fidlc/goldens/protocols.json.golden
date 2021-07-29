@@ -2868,6 +2868,74 @@
           "is_composed": false
         }
       ]
+    },
+    {
+      "name": "fidl.test.protocols/MethodWithUnion",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 187,
+        "column": 10,
+        "length": 15
+      },
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 6602599911470270762,
+          "name": "UnionMethod",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 188,
+            "column": 5,
+            "length": 11
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.protocols/TheUnion",
+                "nullable": false
+              },
+              "name": "u",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 189,
+                "column": 9,
+                "length": 1
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_request_payload": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_request_type_shape_v2": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
     }
   ],
   "service_declarations": [],
@@ -5363,6 +5431,63 @@
       }
     },
     {
+      "name": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+      "maybe_naming_context": [
+        "MethodWithUnion",
+        "UnionMethod"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 188,
+        "column": 17,
+        "length": 34
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/TheUnion",
+            "nullable": false
+          },
+          "name": "u",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 189,
+            "column": 9,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
       "name": "fidl.test.protocols/ProtocolEnds",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -5780,6 +5905,52 @@
         "has_padding": true,
         "has_flexible_envelope": false
       }
+    },
+    {
+      "name": "fidl.test.protocols/TheUnion",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "line": 183,
+        "column": 6,
+        "length": 8
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "v",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 184,
+            "column": 8,
+            "length": 1
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
     }
   ],
   "type_alias_declarations": [],
@@ -5797,6 +5968,8 @@
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
     "fidl.test.protocols/WithAndWithoutRequestResponse",
     "fidl.test.protocols/Transitional",
+    "fidl.test.protocols/TheUnion",
+    "fidl.test.protocols/MethodWithUnion",
     "fidl.test.protocols/SyscallProtocol",
     "fidl.test.protocols/ProtocolEnds",
     "fidl.test.protocols/WithProtocolEnds",
@@ -5821,6 +5994,7 @@
     "fidl.test.protocols/HandleRightsProtocol": "interface",
     "fidl.test.protocols/WithProtocolEnds": "interface",
     "fidl.test.protocols/ManyParameters": "interface",
+    "fidl.test.protocols/MethodWithUnion": "interface",
     "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse": "struct",
     "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest": "struct",
     "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest": "struct",
@@ -5858,10 +6032,12 @@
     "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest": "struct",
     "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse": "struct",
     "fidl.test.protocols/ManyParametersFifteenRequest": "struct",
+    "fidl.test.protocols/MethodWithUnionUnionMethodRequest": "struct",
     "fidl.test.protocols/ProtocolEnds": "struct",
     "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result": "union"
+    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result": "union",
+    "fidl.test.protocols/TheUnion": "union"
   }
 }

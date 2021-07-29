@@ -279,3 +279,13 @@ class ManyParameters$TestBase extends ManyParameters {
         StackTrace.current);
   }
 }
+
+class MethodWithUnion$TestBase extends MethodWithUnion {
+  @override
+  $async.Future<void> unionMethod(TheUnion u) {
+    return $async.Future.error(
+        UnimplementedError(
+            r'unionMethod not implemented on MethodWithUnion test base. Please implement.'),
+        StackTrace.current);
+  }
+}

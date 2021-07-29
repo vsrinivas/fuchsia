@@ -880,6 +880,179 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(
   return ZX_OK;
 }
 
+extern "C" const fidl_type_t fidl_test_protocols_TheUnionTable;
+const fidl_type_t* TheUnion::FidlType = &fidl_test_protocols_TheUnionTable;
+
+TheUnion::TheUnion() {}
+
+TheUnion::~TheUnion() { Destroy(); }
+
+TheUnion::TheUnion(TheUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case ::fidl::test::protocols::TheUnion::Tag::kV:
+      v_ = std::move(other.v_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::TheUnion::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+TheUnion& TheUnion::operator=(TheUnion&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::fidl::test::protocols::TheUnion::Tag::kV:
+        v_ = std::move(other.v_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::TheUnion::Tag::Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+TheUnion TheUnion::WithV(uint32_t&& val) {
+  TheUnion result;
+  result.set_v(std::move(val));
+  return result;
+}
+
+void TheUnion::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case ::fidl::test::protocols::TheUnion::Tag::kV: {
+      envelope_offset = encoder->Alloc(
+          ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &v_, envelope_offset);
+      break;
+    }
+    case ::fidl::test::protocols::TheUnion::Tag::kUnknown:
+      envelope_offset = encoder->Alloc(unknown_data_.size());
+      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_,
+                                         envelope_offset);
+      break;
+    default:
+      break;
+  }
+
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes =
+        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+    xunion->envelope.num_handles =
+        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void TheUnion::Decode(::fidl::Decoder* _decoder, TheUnion* value,
+                      size_t offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
+
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::TheUnion::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
+    case ::fidl::test::protocols::TheUnion::Tag::kV:
+      ::fidl::Decode(_decoder, &value->v_, envelope_offset);
+      break;
+    default:
+
+      value->unknown_data_.resize(xunion->envelope.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         envelope_offset);
+      break;
+  }
+}
+
+zx_status_t TheUnion::Clone(TheUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::fidl::test::protocols::TheUnion::Tag::Invalid:
+      return ZX_OK;
+    case ::fidl::test::protocols::TheUnion::Tag::kV:
+      return ::fidl::Clone(v_, &result->v_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+TheUnion& TheUnion::set_v(uint32_t value) {
+  EnsureStorageInitialized(::fidl::test::protocols::TheUnion::Tag::kV);
+  v_ = std::move(value);
+  return *this;
+}
+TheUnion& TheUnion::SetUnknownData(fidl_xunion_tag_t ordinal,
+                                   std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void TheUnion::Destroy() {
+  switch (tag_) {
+    case ::fidl::test::protocols::TheUnion::Tag::kV:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::protocols::TheUnion::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::protocols::TheUnion::Tag::Invalid);
+}
+
+void TheUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::protocols::TheUnion::Tag::Invalid):
+        break;
+      case ::fidl::test::protocols::TheUnion::Tag::kV:
+        new (&v_) uint32_t();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t fidl_test_protocols_ProtocolEndsTable;

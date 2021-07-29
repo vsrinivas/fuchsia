@@ -289,9 +289,9 @@ struct XUnionType : public Type {
 };
 
 struct MessageType : public Type {
-  MessageType(std::string name, std::vector<StructElement> elements, uint32_t size,
-              std::string qname)
-      : Type(Kind::kMessage, std::move(name), size, size, true, false),
+  MessageType(std::string name, std::vector<StructElement> elements, uint32_t size_v1,
+              uint32_t size_v2, std::string qname)
+      : Type(Kind::kMessage, std::move(name), size_v1, size_v2, true, false),
         elements(std::move(elements)),
         qname(std::move(qname)) {}
 

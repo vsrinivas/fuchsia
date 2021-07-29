@@ -29,6 +29,7 @@ using WithErrorSyntax_ErrorAsPrimitive_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
+using TheUnion = ::fidl::test::protocols::TheUnion;
 using ProtocolEnds = ::fidl::test::protocols::ProtocolEnds;
 using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 using WithErrorSyntax_ErrorAsEnum_Result =
@@ -268,6 +269,35 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Response> {
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<TheUnion> {
+  operator size_t() {
+    size_t sizes[] = {0, MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 1 + 1);
+  }
+};
+template <>
+struct Allocate<TheUnion> {
+  static_assert(1 > 0, "xunion must have at least one member");
+
+  TheUnion operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TheUnion>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    TheUnion out;
+    switch (selector % 1) {
+      case 0: {
+        out.set_v(Allocate<uint32_t>{}(src, size));
+        break;
+      }
+    }
+
     return out;
   }
 };

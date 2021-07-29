@@ -163,6 +163,10 @@ class WithAndWithoutRequestResponse;
 
 class Transitional;
 namespace wire {
+class TheUnion;
+}  // namespace wire
+class MethodWithUnion;
+namespace wire {
 struct ProtocolEnds;
 }  // namespace wire
 class WithProtocolEnds;
@@ -703,6 +707,86 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
   static void SizeAndOffsetAssertionHelper();
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::Ordinal
       ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::Envelope<void> envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_protocols_TheUnionTable;
+
+class TheUnion {
+ public:
+  TheUnion()
+      : ordinal_(::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid),
+        envelope_{} {}
+
+  TheUnion(const TheUnion&) = default;
+  TheUnion& operator=(const TheUnion&) = default;
+  TheUnion(TheUnion&&) = default;
+  TheUnion& operator=(TheUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kV = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::Invalid;
+  }
+
+  bool is_v() const {
+    return ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+  }
+
+  static TheUnion WithV(::fidl::ObjectView<uint32_t> val) {
+    TheUnion result;
+    result.set_v(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static TheUnion WithV(::fidl::AnyAllocator& allocator, Args&&... args) {
+    TheUnion result;
+    result.set_v(
+        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_v(::fidl::ObjectView<uint32_t> elem) {
+    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+    envelope_.data =
+        ::fidl::ObjectView<void>::FromExternal(static_cast<void*>(elem.get()));
+  }
+
+  template <typename... Args>
+  void set_v(::fidl::AnyAllocator& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
+    set_v(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
+  }
+
+  uint32_t& mutable_v() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
+    return *static_cast<uint32_t*>(envelope_.data.get());
+  }
+  const uint32_t& v() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_protocols::wire::TheUnion::Ordinal::kV);
+    return *static_cast<uint32_t*>(envelope_.data.get());
+  }
+  ::fidl_test_protocols::wire::TheUnion::Tag which() const;
+
+  static constexpr const fidl_type_t* Type = &fidl_test_protocols_TheUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kV = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_protocols::wire::TheUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
@@ -7512,6 +7596,421 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
                       OneWayCompleter::Sync& _completer) {
     _completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
+
+ private:
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
+                                          ::fidl::Transaction* txn) final;
+};
+#endif  // __Fuchsia__
+
+namespace fidl_test_protocols {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodResponseTable;
+
+class MethodWithUnion final {
+  MethodWithUnion() = delete;
+
+ public:
+  class UnionMethod final {
+    UnionMethod() = delete;
+  };
+};
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::MethodWithUnion> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocols::MethodWithUnion>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  ::fidl_test_protocols::wire::TheUnion u;
+  explicit WireRequest(zx_txid_t _txid, ::fidl_test_protocols::wire::TheUnion u)
+      : u(u) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_protocols::
+          fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 40;
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 40;
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+  static constexpr bool HasFlexibleEnvelope = true;
+  static constexpr bool HasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          ::fidl_test_protocols::wire::TheUnion u)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                _backing_buffer, _backing_buffer_size, _txid,
+                                u) {}
+    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          ::fidl_test_protocols::wire::TheUnion u)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = _iovec_capacity,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+      FIDL_ALIGNDECL WireRequest _request(_txid, u);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                _backing_buffer, _backing_buffer_size,
+                                request) {}
+    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = _iovec_capacity,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::IovecBuffer iovecs_;
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid,
+                                 ::fidl_test_protocols::wire::TheUnion u)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
+                   u) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        ::fidl_test_protocols::wire::TheUnion u)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), _txid, u) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+                   request) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        WireRequest* request)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<48> backing_buffer_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::MethodWithUnion::UnionMethod>> {
+   public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>>::
+        DecodedMessageBase;
+
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
+
+    ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>*
+    PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::MethodWithUnion::UnionMethod>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the |DecodedMessage| object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion> _client,
+      ::fidl_test_protocols::wire::TheUnion u);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_protocols::MethodWithUnion::UnionMethod>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion> _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity,
+      ::fidl_test_protocols::wire::TheUnion u);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_protocols::MethodWithUnion>|, avoiding setting
+// up a client.
+template <>
+class ::fidl::internal::WireCaller<::fidl_test_protocols::MethodWithUnion>
+    final {
+ public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+          client_end)
+      : client_end_(client_end) {}
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+                  _client_end,
+              ::fidl_test_protocols::wire::TheUnion u) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(_client_end, u);
+  }
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl_test_protocols::wire::TheUnion u) && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(client_end_, u);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+                  _client_end,
+              ::fidl::BufferSpan _request_buffer,
+              ::fidl_test_protocols::wire::TheUnion u) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, u);
+  }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl::BufferSpan _request_buffer,
+              ::fidl_test_protocols::wire::TheUnion u) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, u);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion> client_end_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::MethodWithUnion> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::MethodWithUnion>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::MethodWithUnion> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+          client_end);
+};
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::MethodWithUnion> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::MethodWithUnion>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::MethodWithUnion>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl_test_protocols::wire::TheUnion u) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(this->client_end(),
+                                                             u);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
+  UnionMethod(::fidl::BufferSpan _request_buffer,
+              ::fidl_test_protocols::wire::TheUnion u) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, u);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::MethodWithUnion> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_protocols::MethodWithUnion;
+
+  using UnionMethodCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_protocols::MethodWithUnion::UnionMethod>;
+  using UnionMethodRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_protocols::MethodWithUnion::UnionMethod>;
+
+  virtual void UnionMethod(UnionMethodRequestView request,
+                           UnionMethodCompleter::Sync& _completer) = 0;
 
  private:
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
@@ -16137,6 +16636,31 @@ static_assert(
     offsetof(::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>,
              x) == 16);
 
+template <>
+struct IsFidlType<::fidl_test_protocols::wire::TheUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_protocols::wire::TheUnion> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::fidl_test_protocols::wire::TheUnion>);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_protocols::MethodWithUnion::UnionMethod>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::MethodWithUnion::UnionMethod>::PrimarySize);
+static_assert(offsetof(::fidl::WireRequest<
+                           ::fidl_test_protocols::MethodWithUnion::UnionMethod>,
+                       u) == 16);
+
 #ifdef __Fuchsia__
 
 template <>
@@ -17293,6 +17817,80 @@ class ::fidl::internal::WireWeakEventSender<
 
   std::weak_ptr<
       ::fidl::internal::AsyncServerBinding<::fidl_test_protocols::Transitional>>
+      binding_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::ClientBase {
+ public:
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result UnionMethod(::fidl_test_protocols::wire::TheUnion u);
+
+  // Caller provides the backing storage for FIDL message via request buffer.
+  ::fidl::Result UnionMethod(::fidl::BufferSpan _request_buffer,
+                             ::fidl_test_protocols::wire::TheUnion u);
+
+  WireClientImpl() = default;
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the MethodWithUnion protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::MethodWithUnion> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::fidl_test_protocols::MethodWithUnion> server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::fidl_test_protocols::MethodWithUnion>& server_end()
+      const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_protocols::MethodWithUnion>& server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::fidl_test_protocols::MethodWithUnion> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::MethodWithUnion> {
+ public:
+ private:
+  friend class ::fidl::ServerBindingRef<::fidl_test_protocols::MethodWithUnion>;
+
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::MethodWithUnion>>
+          binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::MethodWithUnion>>
       binding_;
 };
 #endif  // __Fuchsia__
