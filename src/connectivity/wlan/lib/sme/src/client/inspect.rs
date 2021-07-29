@@ -92,10 +92,10 @@ pub struct PulseNode {
     _started: TimeProperty,
     last_updated: TimeProperty,
     last_link_up: Option<TimeProperty>,
-    status: Option<ClientSmeStatusNode>,
+    status_node: Option<ClientSmeStatusNode>,
 
     // Not part of Inspect node. We use it to compare new status against existing status
-    last_status: Option<ClientSmeStatus>,
+    status: Option<ClientSmeStatus>,
 }
 
 impl PulseNode {
@@ -108,8 +108,8 @@ impl PulseNode {
             _started: started,
             last_updated,
             last_link_up: None,
+            status_node: None,
             status: None,
-            last_status: None,
         }
     }
 
@@ -121,7 +121,7 @@ impl PulseNode {
         // no longer connected now, if the client was previously connected, we can conclude
         // that they were connected until now.
         if new_status.is_connected()
-            || self.last_status.as_ref().map(|s| s.is_connected()).unwrap_or(false)
+            || self.status.as_ref().map(|s| s.is_connected()).unwrap_or(false)
         {
             match &self.last_link_up {
                 Some(last_link_up) => last_link_up.set_at(now),
@@ -129,22 +129,24 @@ impl PulseNode {
             }
         }
 
-        // TODO(fxbug.dev/80694): Refactor to remove unwrap()
-        let old_status = self.last_status.replace(new_status);
-        if old_status != self.last_status {
-            // Safe to unwrap because value was inserted two lines above
-            let new_status = self.last_status.as_ref().unwrap();
-            match self.status.as_mut() {
-                Some(status_node) => status_node.update(old_status, new_status, hasher),
-                None => {
-                    self.status = Some(ClientSmeStatusNode::new(
-                        self.node.create_child("status"),
-                        new_status,
-                        hasher,
-                    ))
-                }
+        // Do not update status_node if status is the same.
+        if let Some(status) = &self.status {
+            if *status == new_status {
+                return;
             }
         }
+
+        match self.status_node.as_mut() {
+            Some(status_node) => status_node.update(self.status.as_ref(), &new_status, hasher),
+            None => {
+                self.status_node = Some(ClientSmeStatusNode::new(
+                    self.node.create_child("status"),
+                    &new_status,
+                    hasher,
+                ))
+            }
+        }
+        self.status.replace(new_status);
     }
 }
 
@@ -172,7 +174,7 @@ impl ClientSmeStatusNode {
 
     pub fn update(
         &mut self,
-        old_status: Option<ClientSmeStatus>,
+        old_status: Option<&ClientSmeStatus>,
         new_status: &ClientSmeStatus,
         hasher: &WlanHasher,
     ) {
