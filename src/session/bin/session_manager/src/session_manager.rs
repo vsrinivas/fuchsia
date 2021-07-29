@@ -17,9 +17,6 @@ use {
     },
     fidl_fuchsia_sessionmanager::StartupRequestStream,
     fidl_fuchsia_sys2 as fsys,
-    fidl_fuchsia_ui_accessibility_view::{
-        RegistryMarker, RegistryProxy, RegistryRequest, RegistryRequestStream,
-    },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::macros::fx_log_err,
     fuchsia_zircon as zx,
@@ -38,7 +35,6 @@ enum IncomingRequest {
     Restarter(RestarterRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     Startup(StartupRequestStream),
-    AccessibilityViewRegistry(RegistryRequestStream),
 }
 
 struct SessionManagerState {
@@ -102,8 +98,7 @@ impl SessionManager {
             .add_fidl_service(IncomingRequest::Launcher)
             .add_fidl_service(IncomingRequest::Restarter)
             .add_fidl_service(IncomingRequest::InputDeviceRegistry)
-            .add_fidl_service(IncomingRequest::Startup)
-            .add_fidl_service(IncomingRequest::AccessibilityViewRegistry);
+            .add_fidl_service(IncomingRequest::Startup);
         fs.take_and_serve_directory_handle()?;
 
         fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |request| {
@@ -203,7 +198,6 @@ impl SessionManager {
                     )
                     .context("Failed to connect to InputDeviceRegistry service")?;
                 }
-
                 SessionManager::handle_input_device_registry_request_stream(
                     request_stream,
                     input_device_registry_proxy,
@@ -215,30 +209,6 @@ impl SessionManager {
                 self.handle_startup_request_stream(request_stream)
                     .await
                     .context("Sessionmanager Startup request stream got an error.")?;
-            }
-            IncomingRequest::AccessibilityViewRegistry(request_stream) => {
-                // Connect to AccessibilityViewRegistry served by the session.
-                let (accessibility_view_registry_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<RegistryMarker>()
-                        .context("Failed to create AccessibilityViewRegistryProxy")?;
-                {
-                    let state = self.state.lock().await;
-                    let session_exposed_dir_channel = state.session_exposed_dir_channel.as_ref()
-                        .context("Failed to connect to AccessibilityViewRegistryProxy because no session was started")?;
-                    fdio::service_connect_at(
-                        session_exposed_dir_channel,
-                        "fuchsia.ui.accessibility.view.Registry",
-                        server_end.into_channel(),
-                    )
-                    .context("Failed to connect to AccessibilityViewRegistry service")?;
-                }
-
-                SessionManager::handle_accessibility_view_registry_request_stream(
-                    request_stream,
-                    accessibility_view_registry_proxy,
-                )
-                .await
-                .context("Accessibility view registry request stream got an error.")?;
             }
         }
 
@@ -392,42 +362,6 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Serves a specified [`RegistryRequestStream`].
-    ///
-    /// # Parameters
-    /// - `request_stream`: the AccessibilityViewRegistryRequestStream.
-    /// - `accessibility_view_registry_proxy`: the downstream AccessibilityViewRegistryProxy
-    ///   to which requests will be relayed.
-    ///
-    /// # Errors
-    /// When an error is encountered reading from the request stream.
-    pub async fn handle_accessibility_view_registry_request_stream(
-        mut request_stream: RegistryRequestStream,
-        accessibility_view_registry_proxy: RegistryProxy,
-    ) -> Result<(), Error> {
-        while let Some(request) = request_stream
-            .try_next()
-            .await
-            .context("Error handling accessibility view registry request stream")?
-        {
-            match request {
-                RegistryRequest::CreateAccessibilityViewHolder {
-                    mut a11y_view_ref,
-                    mut a11y_view_token,
-                    responder,
-                    ..
-                } => {
-                    let mut proxy_view_holder_token = accessibility_view_registry_proxy
-                        .create_accessibility_view_holder(&mut a11y_view_ref, &mut a11y_view_token)
-                        .await?;
-
-                    let _ = responder.send(&mut proxy_view_holder_token);
-                }
-            }
-        }
-        Ok(())
-    }
-
     /// Handles calls to Launcher.Launch().
     ///
     /// # Parameters
@@ -496,9 +430,7 @@ mod tests {
             ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
-        fidl_fuchsia_sys2 as fsys,
-        fidl_fuchsia_ui_accessibility_view::{RegistryMarker, RegistryRequest},
-        fuchsia_async as fasync, fuchsia_scenic as scenic,
+        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         futures::prelude::*,
         matches::assert_matches,
     };
@@ -656,59 +588,6 @@ mod tests {
         assert_matches!(local_server_fut.await, Ok(()));
         downstream_server_fut.await;
         assert_eq!(num_devices_registered, 1);
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn handle_accessibility_view_registry_request_stream_propagates_request_to_downstream_service(
-    ) {
-        let (local_proxy, local_request_stream) = create_proxy_and_stream::<RegistryMarker>()
-            .expect("Failed to create local AccessibilityViewRegistry proxy and stream");
-        let (downstream_proxy, mut downstream_request_stream) =
-            create_proxy_and_stream::<RegistryMarker>()
-                .expect("Failed to create downstream AccessibilityViewRegistry proxy and stream");
-        let mut num_create_view_holder_calls = 0;
-
-        let local_server_fut = SessionManager::handle_accessibility_view_registry_request_stream(
-            local_request_stream,
-            downstream_proxy,
-        );
-        let downstream_server_fut = async {
-            while let Some(request) = downstream_request_stream.try_next().await.unwrap() {
-                match request {
-                    RegistryRequest::CreateAccessibilityViewHolder {
-                        a11y_view_ref: _,
-                        a11y_view_token: _,
-                        responder,
-                        ..
-                    } => {
-                        num_create_view_holder_calls += 1;
-                        let mut proxy_view_token_pair =
-                            scenic::ViewTokenPair::new().expect("Failed to create view token pair");
-                        let _ = responder.send(&mut proxy_view_token_pair.view_holder_token);
-                    }
-                }
-            }
-        };
-
-        let create_and_drop_fut = async {
-            // Create a11y ViewRef and proxy ViewToken pairs.
-            let mut a11y_view_token_pair =
-                scenic::ViewTokenPair::new().expect("Failed to create view token pair");
-            let mut a11y_viewref_pair =
-                scenic::ViewRefPair::new().expect("Failed to create view ref pair");
-            let _ = local_proxy
-                .create_accessibility_view_holder(
-                    &mut a11y_viewref_pair.view_ref,
-                    &mut a11y_view_token_pair.view_holder_token,
-                )
-                .await
-                .expect("Failed to create accessibility view holder");
-
-            std::mem::drop(local_proxy); // Drop proxy to terminate `server_fut`.
-        };
-
-        let _ = future::join3(create_and_drop_fut, local_server_fut, downstream_server_fut).await;
-        assert_eq!(num_create_view_holder_calls, 1);
     }
 
     #[fasync::run_until_stalled(test)]
