@@ -92,6 +92,9 @@ static size_t arena_count = 0;
 // Backs mexec's data ZBI.
 static ktl::byte mexec_data_zbi[ZX_PAGE_SIZE];
 
+static ktl::atomic<int> panic_started;
+static ktl::atomic<int> halted;
+
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
 
 zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
@@ -99,8 +102,6 @@ zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
 }
 
 static void halt_other_cpus(void) {
-  static ktl::atomic<int> halted;
-
   if (halted.exchange(1) == 0) {
     // stop the other cpus
     printf("stopping other cpus\n");
@@ -130,8 +131,6 @@ static uint64_t ToMpid(const zbi_topology_processor_t& processor) {
 }
 
 void platform_panic_start(void) {
-  static ktl::atomic<int> panic_started;
-
   arch_disable_ints();
 
   halt_other_cpus();
