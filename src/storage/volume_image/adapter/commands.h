@@ -30,6 +30,7 @@ enum class Command {
   kCreateSparse,
   kPave,
   kExtend,
+  kSize,
   kUnsupported,
 };
 
@@ -192,6 +193,19 @@ struct ExtendParams {
 };
 
 fpromise::result<void, std::string> Extend(const ExtendParams& params);
+
+struct SizeParams {
+  // Returns arguments from |arguments| as a |SizeParams| instance. Validation is done by the
+  // |ExtendParams| consumers.
+  static fpromise::result<SizeParams, std::string> FromArguments(
+      fbl::Span<std::string_view> arguments);
+
+  // Path to the file where the FVM sparse image is contained.
+  std::string image_path;
+
+  // When provided the target image allocated slice count, should fit in a fvm image of |length|.
+  std::optional<uint64_t> length;
+};
 
 }  // namespace storage::volume_image
 

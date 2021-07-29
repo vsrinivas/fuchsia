@@ -467,5 +467,34 @@ TEST(ArgumentTest, ExtendParamsFromArgsIsOk) {
   }
 }
 
+TEST(ArgumentTest, SizeParamsFromArgsIsOk) {
+  auto kArgs = cpp20::to_array<std::string_view>({
+      "fvm",
+      "test_fvm.sparse.blk",
+      "size",
+      "--disk",
+      "10M",
+  });
+
+  {
+    auto params_or = SizeParams::FromArguments(kArgs);
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+
+    EXPECT_EQ(params.image_path, kArgs[1]);
+    EXPECT_EQ(params.length.value(), 10 * kMega);
+  }
+
+  {
+    auto args_without_disk = fbl::Span<std::string_view>(kArgs).subspan(0, kArgs.size() - 2);
+    auto params_or = SizeParams::FromArguments(args_without_disk);
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+
+    EXPECT_EQ(params.image_path, kArgs[1]);
+    EXPECT_FALSE(params.length.has_value());
+  }
+}
+
 }  // namespace
 }  // namespace storage::volume_image

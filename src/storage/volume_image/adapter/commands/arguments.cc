@@ -375,12 +375,33 @@ fpromise::result<ExtendParams, std::string> ExtendParams::FromArguments(
   return fpromise::ok(params);
 }
 
+fpromise::result<SizeParams, std::string> SizeParams::FromArguments(
+    fbl::Span<std::string_view> arguments) {
+  SizeParams params;
+  if (arguments.size() < 3) {
+    return fpromise::error("Not enough arguments for 'size' command.");
+  }
+  auto command = CommandFromString(arguments[2]);
+  if (command != Command::kSize) {
+    return fpromise::error("Size must be invoked with command 'size'.");
+  }
+
+  params.image_path = arguments[1];
+
+  if (auto result = GetSizeArgumentValue(arguments, "--disk", params.length); result.is_error()) {
+    return result.take_error_result();
+  }
+
+  return fpromise::ok(params);
+}
+
 Command CommandFromString(std::string_view command_str) {
   static constexpr auto kCommandStringToCommand = cpp20::to_array({
       std::make_pair("create", Command::kCreate),
       std::make_pair("sparse", Command::kCreateSparse),
       std::make_pair("pave", Command::kPave),
       std::make_pair("extend", Command::kExtend),
+      std::make_pair("size", Command::kSize),
   });
   for (const auto [str, command] : kCommandStringToCommand) {
     if (str == command_str) {
