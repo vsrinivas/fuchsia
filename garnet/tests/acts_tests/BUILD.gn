@@ -65,8 +65,8 @@ foreach(spec, specs) {
     sources = [ "acts_test.dart" ]
 
     deps = [
-      "//third_party/dart-pkg/pub/archive",
       "//third_party/dart-pkg/pub/args",
+      "//third_party/dart-pkg/pub/path",
       "//third_party/dart-pkg/pub/test",
     ]
 
@@ -101,12 +101,19 @@ dart_test("acts_bt_astro_test") {
   sources = [ "acts_test.dart" ]
 
   deps = [
-    "//third_party/dart-pkg/pub/archive",
     "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/test",
   ]
 
-  non_dart_deps = [ ":acts($host_toolchain)" ]
+  non_dart_deps = [
+    ":acts($host_toolchain)",
+    "//build/python:interpreter",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp:bt-avrcp(${target_toolchain})",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp-target:bt-avrcp-target(${target_toolchain})",
+    "//src/sys/tools/run:run(${target_toolchain})",
+    "//src/testing/sl4f(${target_toolchain})",
+  ]
 
   environments = [
     {
