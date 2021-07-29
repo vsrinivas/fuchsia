@@ -39,6 +39,7 @@ void PrintUsage() {
   LogError(" --trace          Output counters to tracing.\n");
   LogError(" --log            Print counters once (in CSV format), then stop.\n");
   LogError(" --log-continuous Repeatedly print counters in CSV format.\n");
+  LogError(" --raw-counters   Use raw names when outputting GPU counters\n");
   LogError(" --period         Time before first log and between logs, in milliseconds.\n");
   LogError(" --wait-for-key   Wait for a key to be pressed before sampling.\n");
   LogError(
@@ -65,6 +66,8 @@ int CapturePerformanceCounters(fxl::CommandLine command_line) {
     PrintUsage();
     return 0;
   }
+
+  bool output_raw_counters = command_line.HasOption("raw-counters");
 
   std::string period = command_line.GetOptionValueWithDefault("period", "1000");
 
@@ -135,16 +138,30 @@ int CapturePerformanceCounters(fxl::CommandLine command_line) {
       auto measurements = pipe.sample();
       uint64_t this_timestamp = pipe.gpu_profiler()->timestamp();
       if (log_once || log_continuous) {
-        for (auto& ctr : *measurements.gpu) {
-          std::string name = CounterNameFromId(ctr.first);
-          Log("%s,%ld,%d\n", name.c_str(), this_timestamp - last_timestamp,
-              ctr.second.get<uint32_t>());
+        if (output_raw_counters) {
+          auto& raw_measurements = pipe.gpu_profiler()->last_raw_sample();
+          for (auto& [name, value] : raw_measurements) {
+            Log("%s,%ld,%ld\n", name.c_str(), this_timestamp - last_timestamp, value);
+          }
+        } else {
+          for (auto& ctr : *measurements.gpu) {
+            std::string name = CounterNameFromId(ctr.first);
+            Log("%s,%ld,%d\n", name.c_str(), this_timestamp - last_timestamp,
+                ctr.second.get<uint32_t>());
+          }
         }
         FlushLog(false);
       } else if (trace) {
-        for (auto& ctr : *measurements.gpu) {
-          TRACE_COUNTER("gfx", CounterNameFromId(ctr.first).c_str(), static_cast<int>(ctr.first),
-                        "value", ctr.second.get<uint32_t>());
+        if (output_raw_counters) {
+          auto& raw_measurements = pipe.gpu_profiler()->last_raw_sample();
+          for (auto& [name, value] : raw_measurements) {
+            TRACE_COUNTER("gfx", name.c_str(), std::hash<std::string>{}(name), "value", value);
+          }
+        } else {
+          for (auto& ctr : *measurements.gpu) {
+            TRACE_COUNTER("gfx", CounterNameFromId(ctr.first).c_str(), static_cast<int>(ctr.first),
+                          "value", ctr.second.get<uint32_t>());
+          }
         }
         TRACE_COUNTER("gfx", "time_difference", 0, "value", this_timestamp - last_timestamp);
       }

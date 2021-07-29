@@ -74,8 +74,5 @@ fuchsia_shell_package("mali-performance-counters-pkg") {
 
 group("mali-performance-counters") {
   testonly = true
-  deps = [
-    ":mali-performance-counters-pkg",
-    ":mali-performance-counters-test",
-  ]
+  deps = [ ":mali-performance-counters-pkg" ]
 }

@@ -10,8 +10,15 @@ group("tools") {
   testonly = true
   deps = [
     ":magma-info",
-    ":magma-info-test",
     "mali-performance-counters",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":magma-info-test",
+    "mali-performance-counters:mali-performance-counters-test",
   ]
 }
 

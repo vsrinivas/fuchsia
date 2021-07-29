@@ -51,6 +51,14 @@ TEST_F(PerfCounterClient, Log) {
   EXPECT_NE(log_output.find("GpuCycles"), std::string::npos);
 }
 
+TEST_F(PerfCounterClient, LogRaw) {
+  fxl::CommandLine command_line =
+      fxl::CommandLineFromInitializerList({kAppName, "--log", "--raw-counters"});
+  EXPECT_EQ(0, CapturePerformanceCounters(command_line));
+  // All current GPU versions have a GPU_ACTIVE counter
+  EXPECT_NE(log_output.find("GPU_ACTIVE"), std::string::npos);
+}
+
 TEST_F(PerfCounterClient, TooManyOptions) {
   EXPECT_NE(0, CapturePerformanceCounters(
                    fxl::CommandLineFromInitializerList({kAppName, "--log", "--log-continuous"})));

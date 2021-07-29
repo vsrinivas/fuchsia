@@ -15,7 +15,7 @@ group("tests") {
     ":magma_nonhardware_tests",
     "codegen",
     "icd_strip",
-    "//src/graphics/lib/magma/src/tools:magma-info-test",
+    "//src/graphics/lib/magma/src/tools:tests",
   ]
 
   # Add driver dependencies:
