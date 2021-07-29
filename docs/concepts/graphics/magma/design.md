@@ -65,7 +65,7 @@ The interface is designed to be useful for implementing an accelerated graphics
 api.  It consists of
 [magma.h](/src/graphics/lib/magma/include/magma_abi/magma.h) plus gpu specific
 headers (example:
-[intel](/src/graphics/drivers/msd-intel-gen/include/msd_intel_gen_query.h)).
+[intel](/src/graphics/drivers/msd-intel-gen/include/magma_intel_gen_defs.h)).
 
 ### Physical devices
 During the Fuchsia boot sequence, a Magma system driver is instantiated for each

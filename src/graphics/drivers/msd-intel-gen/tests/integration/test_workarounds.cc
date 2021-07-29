@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magma_intel_gen_defs.h>
+
 #include <thread>
 #include <vector>
 
@@ -11,7 +13,6 @@
 #include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
-#include "msd_intel_gen_query.h"
 
 namespace {
 
@@ -24,9 +25,9 @@ class TestConnection : public magma::TestDeviceBase {
     magma_create_connection2(device(), &connection_);
 
     magma_status_t status =
-        magma_query2(device(), kMsdIntelGenQueryExtraPageCount, &extra_page_count_);
+        magma_query2(device(), kMagmaIntelGenQueryExtraPageCount, &extra_page_count_);
     if (status != MAGMA_STATUS_OK) {
-      fprintf(stderr, "Failed to query kMsdIntelGenQueryExtraPageCount: %d\n", status);
+      fprintf(stderr, "Failed to query kMagmaIntelGenQueryExtraPageCount: %d\n", status);
       extra_page_count_ = 0;
     }
   }

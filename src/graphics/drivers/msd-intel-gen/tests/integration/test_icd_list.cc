@@ -6,6 +6,7 @@
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+#include <magma_intel_gen_defs.h>
 
 #include <gtest/gtest.h>
 
@@ -13,7 +14,6 @@
 #include "lib/fidl/llcpp/client_end.h"
 #include "magma.h"
 #include "magma_util/macros.h"
-#include "msd_intel_gen_query.h"
 
 namespace {
 

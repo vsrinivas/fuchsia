@@ -7,11 +7,11 @@
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
+#include <magma_intel_gen_defs.h>
 
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "msd_intel_gen_query.h"
 
 // The test build of the MSD runs a bunch of unit tests automatically when it loads. We need to
 // unload the normal MSD to replace it with the test MSD so we can run those tests and query the

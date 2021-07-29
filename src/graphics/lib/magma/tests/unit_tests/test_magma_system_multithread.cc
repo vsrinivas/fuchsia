@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magma_intel_gen_defs.h>
+
 #include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "helper/platform_device_helper.h"
-#include "msd_intel_gen_query.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_context.h"

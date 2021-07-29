@@ -5,8 +5,22 @@
 #ifndef MAGMA_INTEL_GEN_DEFS_H
 #define MAGMA_INTEL_GEN_DEFS_H
 
-// TODO(fxbug.dev/80901) - migrate msd_intel_gen_query.h into this file
-#include "msd_intel_gen_query.h"
+#include "magma_common_defs.h"
+
+#define MAGMA_VENDOR_ID_INTEL 0x8086
+
+// Deprecated, renamed to MagmaIntelGenQuery
+enum MsdIntelGenQuery {
+  kMsdIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
+  kMsdIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
+  kMsdIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+};
+
+enum MagmaIntelGenQuery {
+  kMagmaIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
+  kMagmaIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
+  kMagmaIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+};
 
 enum MagmaIntelGenCommandBufferFlags {
   kMagmaIntelGenCommandBufferForRender = MAGMA_COMMAND_BUFFER_VENDOR_FLAGS_0,
