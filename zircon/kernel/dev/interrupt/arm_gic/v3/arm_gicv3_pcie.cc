@@ -7,6 +7,7 @@
 
 #if WITH_KERNEL_PCIE
 #include <inttypes.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
@@ -18,6 +19,10 @@
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
+static lazy_init::LazyInit<NoMsiPciePlatformInterface, lazy_init::CheckType::None,
+                           lazy_init::Destructor::Disabled>
+    g_platform_pcie_support;
+
 static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
   __UNUSED const dcfg_arm_gicv3_driver_t* driver =
@@ -28,9 +33,9 @@ static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   // system-wide deny list using root_resource_filter_add_deny_region.
 
   // Initialize the PCI platform, claiming no MSI support
-  static NoMsiPciePlatformInterface platform_pcie_support;
+  g_platform_pcie_support.Initialize();
 
-  zx_status_t res = PcieBusDriver::InitializeDriver(platform_pcie_support);
+  zx_status_t res = PcieBusDriver::InitializeDriver(g_platform_pcie_support.Get());
   if (res != ZX_OK) {
     TRACEF(
         "Failed to initialize PCI bus driver (res %d). "
