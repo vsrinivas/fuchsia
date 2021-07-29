@@ -65,7 +65,7 @@ async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember
 
     // Add a mock piconet member.
     let spec = test_harness
-        .add_mock_piconet_member(MOCK_PICONET_MEMBER_MONIKER.to_string())
+        .add_mock_piconet_member(MOCK_PICONET_MEMBER_MONIKER.to_string(), None)
         .await
         .expect("failed to add mock piconet member");
     // Add bt-rfcomm which is under test.

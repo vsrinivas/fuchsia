@@ -27,6 +27,7 @@ rustc_library("lib") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [

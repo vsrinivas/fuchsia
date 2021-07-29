@@ -40,7 +40,7 @@ struct AvrcpIntegrationTest {
 impl AvrcpIntegrationTest {
     async fn new() -> Result<Self, anyhow::Error> {
         let mut piconet = PiconetHarness::new().await;
-        let spec = piconet.add_mock_piconet_member(MOCK_PEER_NAME.to_string()).await.unwrap();
+        let spec = piconet.add_mock_piconet_member(MOCK_PEER_NAME.to_string(), None).await.unwrap();
         let observer = piconet
             .add_profile_with_capabilities(
                 "bt-avrcp-profile".to_string(),
