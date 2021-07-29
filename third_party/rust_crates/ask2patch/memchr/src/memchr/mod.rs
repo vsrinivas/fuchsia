@@ -1,73 +1,26 @@
-/*!
-The `memchr` crate provides heavily optimized routines for searching bytes.
-
-The `memchr` function is traditionally provided by libc, however, the
-performance of `memchr` can vary significantly depending on the specific
-implementation of libc that is used. They can range from manually tuned
-Assembly implementations (like that found in GNU's libc) all the way to
-non-vectorized C implementations (like that found in MUSL).
-
-To smooth out the differences between implementations of libc, at least
-on `x86_64` for Rust 1.27+, this crate provides its own implementation of
-`memchr` that should perform competitively with the one found in GNU's libc.
-The implementation is in pure Rust and has no dependency on a C compiler or an
-Assembler.
-
-Additionally, GNU libc also provides an extension, `memrchr`. This crate
-provides its own implementation of `memrchr` as well, on top of `memchr2`,
-`memchr3`, `memrchr2` and `memrchr3`. The difference between `memchr` and
-`memchr2` is that that `memchr2` permits finding all occurrences of two bytes
-instead of one. Similarly for `memchr3`.
-*/
-
-#![cfg_attr(not(feature = "std"), no_std)]
-#![deny(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/memchr/2.0.0")]
-
-// Supporting 8-bit (or others) would be fine. If you need it, please submit a
-// bug report at https://github.com/BurntSushi/rust-memchr
-#[cfg(not(any(
-    target_pointer_width = "16",
-    target_pointer_width = "32",
-    target_pointer_width = "64"
-)))]
-compile_error!("memchr currently not supported on non-32 or non-64 bit");
-
-#[cfg(feature = "std")]
-extern crate core;
-
-#[cfg(all(test, all(not(miri), feature = "std")))]
-#[macro_use]
-extern crate quickcheck;
-
 use core::iter::Rev;
 
-pub use iter::{Memchr, Memchr2, Memchr3};
+pub use self::iter::{Memchr, Memchr2, Memchr3};
 
 // N.B. If you're looking for the cfg knobs for libc, see build.rs.
 #[cfg(memchr_libc)]
 mod c;
 #[allow(dead_code)]
-mod fallback;
+pub mod fallback;
 mod iter;
-mod naive;
-#[cfg(all(test, all(not(miri), feature = "std")))]
-mod tests;
-#[cfg(all(test, any(miri, not(feature = "std"))))]
-#[path = "tests/miri.rs"]
-mod tests;
+pub mod naive;
 #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
 mod x86;
 
 /// An iterator over all occurrences of the needle in a haystack.
 #[inline]
-pub fn memchr_iter(needle: u8, haystack: &[u8]) -> Memchr {
+pub fn memchr_iter(needle: u8, haystack: &[u8]) -> Memchr<'_> {
     Memchr::new(needle, haystack)
 }
 
 /// An iterator over all occurrences of the needles in a haystack.
 #[inline]
-pub fn memchr2_iter(needle1: u8, needle2: u8, haystack: &[u8]) -> Memchr2 {
+pub fn memchr2_iter(needle1: u8, needle2: u8, haystack: &[u8]) -> Memchr2<'_> {
     Memchr2::new(needle1, needle2, haystack)
 }
 
@@ -78,13 +31,13 @@ pub fn memchr3_iter(
     needle2: u8,
     needle3: u8,
     haystack: &[u8],
-) -> Memchr3 {
+) -> Memchr3<'_> {
     Memchr3::new(needle1, needle2, needle3, haystack)
 }
 
 /// An iterator over all occurrences of the needle in a haystack, in reverse.
 #[inline]
-pub fn memrchr_iter(needle: u8, haystack: &[u8]) -> Rev<Memchr> {
+pub fn memrchr_iter(needle: u8, haystack: &[u8]) -> Rev<Memchr<'_>> {
     Memchr::new(needle, haystack).rev()
 }
 
@@ -94,7 +47,7 @@ pub fn memrchr2_iter(
     needle1: u8,
     needle2: u8,
     haystack: &[u8],
-) -> Rev<Memchr2> {
+) -> Rev<Memchr2<'_>> {
     Memchr2::new(needle1, needle2, haystack).rev()
 }
 
@@ -105,14 +58,15 @@ pub fn memrchr3_iter(
     needle2: u8,
     needle3: u8,
     haystack: &[u8],
-) -> Rev<Memchr3> {
+) -> Rev<Memchr3<'_>> {
     Memchr3::new(needle1, needle2, needle3, haystack).rev()
 }
 
 /// Search for the first occurrence of a byte in a slice.
 ///
 /// This returns the index corresponding to the first occurrence of `needle` in
-/// `haystack`, or `None` if one is not found.
+/// `haystack`, or `None` if one is not found. If an index is returned, it is
+/// guaranteed to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().position(|&b| b == needle)`, `memchr` will use a highly
@@ -174,7 +128,8 @@ pub fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 ///
 /// This returns the index corresponding to the first occurrence of `needle1`
 /// or the first occurrence of `needle2` in `haystack` (whichever occurs
-/// earlier), or `None` if neither one is found.
+/// earlier), or `None` if neither one is found. If an index is returned, it is
+/// guaranteed to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().position(|&b| b == needle1 || b == needle2)`, `memchr2`
@@ -226,7 +181,8 @@ pub fn memchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
 ///
 /// This returns the index corresponding to the first occurrence of `needle1`,
 /// the first occurrence of `needle2`, or the first occurrence of `needle3` in
-/// `haystack` (whichever occurs earliest), or `None` if none are found.
+/// `haystack` (whichever occurs earliest), or `None` if none are found. If an
+/// index is returned, it is guaranteed to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().position(|&b| b == needle1 || b == needle2 ||
@@ -282,7 +238,8 @@ pub fn memchr3(
 /// Search for the last occurrence of a byte in a slice.
 ///
 /// This returns the index corresponding to the last occurrence of `needle` in
-/// `haystack`, or `None` if one is not found.
+/// `haystack`, or `None` if one is not found. If an index is returned, it is
+/// guaranteed to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().rposition(|&b| b == needle)`, `memrchr` will use a highly
@@ -343,9 +300,10 @@ pub fn memrchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 
 /// Like `memrchr`, but searches for either of two bytes instead of just one.
 ///
-/// This returns the index corresponding to the last occurrence of `needle1`
-/// or the last occurrence of `needle2` in `haystack` (whichever occurs later),
-/// or `None` if neither one is found.
+/// This returns the index corresponding to the last occurrence of `needle1` or
+/// the last occurrence of `needle2` in `haystack` (whichever occurs later), or
+/// `None` if neither one is found. If an index is returned, it is guaranteed
+/// to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().rposition(|&b| b == needle1 || b == needle2)`, `memrchr2`
@@ -397,7 +355,8 @@ pub fn memrchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
 ///
 /// This returns the index corresponding to the last occurrence of `needle1`,
 /// the last occurrence of `needle2`, or the last occurrence of `needle3` in
-/// `haystack` (whichever occurs later), or `None` if none are found.
+/// `haystack` (whichever occurs later), or `None` if none are found. If an
+/// index is returned, it is guaranteed to be less than `usize::MAX`.
 ///
 /// While this is operationally the same as something like
 /// `haystack.iter().rposition(|&b| b == needle1 || b == needle2 ||

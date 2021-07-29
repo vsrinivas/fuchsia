@@ -371,7 +371,7 @@ group("maybe-owned") {
 }
 
 group("memchr") {
-  deps = [ ":memchr-v2_3_3" ]
+  deps = [ ":memchr-v2_4_0" ]
 }
 
 group("mockall") {
@@ -985,7 +985,7 @@ rust_library("aho-corasick-v0_7_10") {
   ]
 
   deps = []
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
 
   rustenv = []
 
@@ -1787,7 +1787,7 @@ rust_library("bstr-v0_2_12") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":regex-automata-v0_1_9" ]
   deps += [ ":serde-v1_0_116" ]
 
@@ -1819,7 +1819,7 @@ rust_library("buf_redux-v0_8_1") {
   ]
 
   deps = []
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":safemem-v0_2_0" ]
 
   rustenv = []
@@ -2250,7 +2250,7 @@ rust_library("combine-v4_6_1") {
 
   deps = []
   deps += [ ":bytes-v1_0_1" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
 
   rustenv = []
 
@@ -2791,7 +2791,7 @@ rust_library("csv-core-v0_1_10") {
   ]
 
   deps = []
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
 
   rustenv = []
 
@@ -3757,7 +3757,7 @@ rust_library("futures-lite-v1_11_3") {
   deps += [ ":fastrand-v1_4_0" ]
   deps += [ ":futures-core-v0_3_15" ]
   deps += [ ":futures-io-v0_3_12" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":parking-v2_0_0" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
   deps += [ ":waker-fn-v1_1_0" ]
@@ -3903,7 +3903,7 @@ rust_library("futures-util-v0_3_12") {
   deps += [ ":futures-macro-v0_3_12($host_toolchain)" ]
   deps += [ ":futures-sink-v0_3_12" ]
   deps += [ ":futures-task-v0_3_12" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
   deps += [ ":pin-utils-v0_1_0" ]
   deps += [ ":proc-macro-hack-v0_5_19($host_toolchain)" ]
@@ -5083,10 +5083,10 @@ rust_library("maybe-uninit-v2_0_0") {
   ]
 }
 
-rust_library("memchr-v2_3_3") {
+rust_library("memchr-v2_4_0") {
   crate_name = "memchr"
-  crate_root = "//third_party/rust_crates/forks/memchr/src/lib.rs"
-  output_name = "memchr-523a962cdfbcb111"
+  crate_root = "//third_party/rust_crates/ask2patch/memchr/src/lib.rs"
+  output_name = "memchr-7c7563bbdbb1ab9"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5098,9 +5098,9 @@ rust_library("memchr-v2_3_3") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=523a962cdfbcb111",
-    "-Cextra-filename=-523a962cdfbcb111",
+    "--edition=2018",
+    "-Cmetadata=7c7563bbdbb1ab9",
+    "-Cextra-filename=-7c7563bbdbb1ab9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"use_std\"",
@@ -5407,7 +5407,7 @@ rust_library("nom-v5_0_0") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":regex-v1_3_5" ]
 
   rustenv = []
@@ -5437,7 +5437,7 @@ rust_library("nom_locate-v2_0_0") {
 
   deps = []
   deps += [ ":bytecount-v0_6_0" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":nom-v5_0_0" ]
 
   rustenv = []
@@ -6927,7 +6927,7 @@ rust_library("pulldown-cmark-v0_6_0") {
   deps = []
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":getopts-v0_2_18" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":unicase-v2_5_1" ]
 
   rustenv = []
@@ -7715,7 +7715,7 @@ rust_library("regex-v1_3_5") {
 
   deps = []
   deps += [ ":aho-corasick-v0_7_10" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":regex-syntax-v0_6_17" ]
   deps += [ ":thread_local-v1_0_1" ]
 
@@ -9828,7 +9828,7 @@ rust_library("tokio-v0_2_21") {
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":futures-core-v0_3_15" ]
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
   deps += [ ":pin-project-lite-v0_1_4" ]
 
   rustenv = []
@@ -10274,7 +10274,7 @@ rust_library("twoway-v0_1_8") {
   ]
 
   deps = []
-  deps += [ ":memchr-v2_3_3" ]
+  deps += [ ":memchr-v2_4_0" ]
 
   rustenv = []
 

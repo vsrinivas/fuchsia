@@ -262,6 +262,7 @@ aho-corasick = { path = "ask2patch/aho-corasick" }
 byteorder = { path = "ask2patch/byteorder" }
 csv = { path = "ask2patch/csv" }
 csv-core = { path = "ask2patch/csv-core" }
+memchr = { path = "ask2patch/memchr" }
 same-file = { path = "ask2patch/same-file" }
 walkdir = { path = "ask2patch/walkdir" }
 
@@ -290,7 +291,6 @@ combine = { path = "forks/combine" }
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
 fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
 libm = { path = "forks/libm" }
-memchr = { path = "forks/memchr" }
 nom_locate = { path = "forks/nom_locate" }
 regex-automata = { path = "forks/regex-automata" }
 rustls = { path = "forks/rustls" }
@@ -389,7 +389,7 @@ rustflags = ["--cfg=freebsd11"]
 [gn.package.log."0.4.11"]
 rustflags = ["--cfg=atomic_cas"]
 
-[gn.package.memchr."2.3.3"]
+[gn.package.memchr."2.4.0"]
 rustflags = ["--cfg=memchr_runtime_simd", "--cfg=memchr_runtime_sse2", "--cfg=memchr_runtime_sse42", "--cfg=memchr_runtime_avx"]
 
 [gn.package.mime_guess."1.8.6"]

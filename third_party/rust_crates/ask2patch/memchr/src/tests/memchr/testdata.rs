@@ -1,22 +1,7 @@
 use std::iter::repeat;
 
-mod iter;
-mod memchr;
-
-#[cfg(target_endian = "little")]
-#[test]
-fn byte_order() {
-    eprintln!("LITTLE ENDIAN");
-}
-
-#[cfg(target_endian = "big")]
-#[test]
-fn byte_order() {
-    eprintln!("BIG ENDIAN");
-}
-
 /// Create a sequence of tests that should be run by memchr implementations.
-fn memchr_tests() -> Vec<MemchrTest> {
+pub fn memchr_tests() -> Vec<MemchrTest> {
     let mut tests = Vec::new();
     for statict in MEMCHR_TESTS {
         assert!(!statict.corpus.contains("%"), "% is not allowed in corpora");
@@ -133,7 +118,7 @@ const MEMCHR_TESTS: &[MemchrTestStatic] = &[
 
 /// A description of a test on a memchr like function.
 #[derive(Clone, Debug)]
-struct MemchrTest {
+pub struct MemchrTest {
     /// The thing to search. We use `&str` instead of `&[u8]` because they
     /// are nicer to write in tests, and we don't miss much since memchr
     /// doesn't care about UTF-8.
@@ -156,14 +141,14 @@ struct MemchrTest {
 
 /// Like MemchrTest, but easier to define as a constant.
 #[derive(Clone, Debug)]
-struct MemchrTestStatic {
+pub struct MemchrTestStatic {
     corpus: &'static str,
     needles: &'static [u8],
     positions: &'static [usize],
 }
 
 impl MemchrTest {
-    fn one<F: Fn(u8, &[u8]) -> Option<usize>>(&self, reverse: bool, f: F) {
+    pub fn one<F: Fn(u8, &[u8]) -> Option<usize>>(&self, reverse: bool, f: F) {
         let needles = match self.needles(1) {
             None => return,
             Some(needles) => needles,
@@ -190,7 +175,11 @@ impl MemchrTest {
         }
     }
 
-    fn two<F: Fn(u8, u8, &[u8]) -> Option<usize>>(&self, reverse: bool, f: F) {
+    pub fn two<F: Fn(u8, u8, &[u8]) -> Option<usize>>(
+        &self,
+        reverse: bool,
+        f: F,
+    ) {
         let needles = match self.needles(2) {
             None => return,
             Some(needles) => needles,
@@ -211,7 +200,7 @@ impl MemchrTest {
         }
     }
 
-    fn three<F: Fn(u8, u8, u8, &[u8]) -> Option<usize>>(
+    pub fn three<F: Fn(u8, u8, u8, &[u8]) -> Option<usize>>(
         &self,
         reverse: bool,
         f: F,
@@ -237,7 +226,7 @@ impl MemchrTest {
         }
     }
 
-    fn iter_one<'a, I, F>(&'a self, reverse: bool, f: F)
+    pub fn iter_one<'a, I, F>(&'a self, reverse: bool, f: F)
     where
         F: FnOnce(u8, &'a [u8]) -> I,
         I: Iterator<Item = usize>,
@@ -247,7 +236,7 @@ impl MemchrTest {
         }
     }
 
-    fn iter_two<'a, I, F>(&'a self, reverse: bool, f: F)
+    pub fn iter_two<'a, I, F>(&'a self, reverse: bool, f: F)
     where
         F: FnOnce(u8, u8, &'a [u8]) -> I,
         I: Iterator<Item = usize>,
@@ -257,7 +246,7 @@ impl MemchrTest {
         }
     }
 
-    fn iter_three<'a, I, F>(&'a self, reverse: bool, f: F)
+    pub fn iter_three<'a, I, F>(&'a self, reverse: bool, f: F)
     where
         F: FnOnce(u8, u8, u8, &'a [u8]) -> I,
         I: Iterator<Item = usize>,
