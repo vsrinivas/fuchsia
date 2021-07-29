@@ -63,8 +63,8 @@ impl FsNodeOps for TmpfsDirectory {
 
     fn mknod(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
         match child.info_mut().mode.fmt() {
-            FileMode::IFREG => child.set_ops(TmpfsFileNode::new(self.fs.clone())?),
-            FileMode::IFIFO => child.set_ops(TmpfsFifoNode::new(self.fs.clone())),
+            FileMode::IFREG => child.set_ops(VmoFileNode::new()?),
+            FileMode::IFIFO => child.set_ops(FifoNode::new()),
             _ => return Err(EACCES),
         }
         let child = child.into_handle();
@@ -74,7 +74,7 @@ impl FsNodeOps for TmpfsDirectory {
 
     fn mksymlink(&self, mut child: FsNode, target: &FsStr) -> Result<FsNodeHandle, Errno> {
         assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
-        child.set_ops(SymlinkNode::new(self.fs.clone(), target));
+        child.set_ops(SymlinkNode::new(target));
         let child = child.into_handle();
         self.fs.upgrade().unwrap().register(&child);
         Ok(child)
@@ -83,14 +83,12 @@ impl FsNodeOps for TmpfsDirectory {
     fn unlink(
         &self,
         _parent: &FsNode,
-        _child: &FsNodeHandle,
+        child: &FsNodeHandle,
         _kind: UnlinkKind,
     ) -> Result<(), Errno> {
+        // TODO: When we have hard links, we'll need to check the link count.
+        self.fs.upgrade().unwrap().unregister(child);
         Ok(())
-    }
-
-    fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().unwrap().unregister(node);
     }
 }
 
@@ -175,22 +173,19 @@ impl FileOps for DirectoryFileObject {
     }
 }
 
-struct TmpfsFileNode {
-    /// The file system to which this file belongs.
-    fs: Weak<TmpFs>,
-
+struct VmoFileNode {
     /// The memory that backs this file.
     vmo: Arc<zx::Vmo>,
 }
 
-impl TmpfsFileNode {
-    fn new(fs: Weak<TmpFs>) -> Result<TmpfsFileNode, Errno> {
+impl VmoFileNode {
+    fn new() -> Result<VmoFileNode, Errno> {
         let vmo = zx::Vmo::create_with_opts(VmoOptions::RESIZABLE, 0).map_err(|_| ENOMEM)?;
-        Ok(TmpfsFileNode { fs, vmo: Arc::new(vmo) })
+        Ok(VmoFileNode { vmo: Arc::new(vmo) })
     }
 }
 
-impl FsNodeOps for TmpfsFileNode {
+impl FsNodeOps for VmoFileNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
     }
@@ -215,33 +210,22 @@ impl FsNodeOps for TmpfsFileNode {
         }
         Ok(())
     }
-
-    fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().unwrap().unregister(node);
-    }
 }
 
-struct TmpfsFifoNode {
-    /// The file system to which this file belongs.
-    fs: Weak<TmpFs>,
-
+struct FifoNode {
     /// The pipe located at this node.
     pipe: Arc<Mutex<Pipe>>,
 }
 
-impl TmpfsFifoNode {
-    fn new(fs: Weak<TmpFs>) -> TmpfsFifoNode {
-        TmpfsFifoNode { fs, pipe: Pipe::new() }
+impl FifoNode {
+    fn new() -> FifoNode {
+        FifoNode { pipe: Pipe::new() }
     }
 }
 
-impl FsNodeOps for TmpfsFifoNode {
+impl FsNodeOps for FifoNode {
     fn open(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Pipe::open(&self.pipe, flags))
-    }
-
-    fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().unwrap().unregister(node);
     }
 }
 

@@ -152,11 +152,6 @@ pub trait FsNodeOps: Send + Sync {
         Err(ENOTDIR)
     }
 
-    /// This node was unlinked from its parent.
-    ///
-    /// The node might still be referenced by open FileObjects.
-    fn unlinked(&self, _node: &FsNodeHandle) {}
-
     /// Change the length of the file.
     fn truncate(&self, _node: &FsNode, _length: u64) -> Result<(), Errno> {
         Err(EINVAL)
@@ -324,7 +319,7 @@ impl FsNode {
     }
 
     pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
-        let child = {
+        let _child = {
             let mut children = self.children.write();
             let child =
                 children.get(name).and_then(OnceCell::get).ok_or(ENOENT)?.upgrade().unwrap();
@@ -337,7 +332,6 @@ impl FsNode {
         // lock so that we do not trigger a deadlock in the Drop trait for
         // FsNode, which attempts to remove the FsNode from its parent's child
         // list.
-        child.ops().unlinked(&child);
         Ok(())
     }
 
