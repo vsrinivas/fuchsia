@@ -2,6 +2,11 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/sh",
+        args: [
+            "-c",
+            "toybox",
+            "help",
+        ],
         mounts: [ "/:remotefs:root" ],
     },
 }

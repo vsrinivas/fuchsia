@@ -32,5 +32,6 @@
 #include <linux/stat.h>
 #include <linux/time.h>
 #include <linux/uio.h>
+#include <linux/wait.h>
 
 #endif  // SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_

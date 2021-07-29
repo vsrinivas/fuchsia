@@ -340,7 +340,7 @@ pub fn sys_wait4(
     ctx: &SyscallContext<'_>,
     pid: pid_t,
     user_wstatus: UserRef<i32>,
-    _options: i32,
+    options: u32,
     user_rusage: UserRef<rusage>,
 ) -> Result<SyscallResult, Errno> {
     if pid < -1 || pid == 0 {
@@ -350,6 +350,9 @@ pub fn sys_wait4(
     let zombie_task = match ctx.task.get_zombie_task(pid) {
         Some(zombie_task) => zombie_task,
         None => {
+            if options & WNOHANG != 0 {
+                return Ok(SUCCESS);
+            }
             ctx.task
                 .thread_group
                 .kernel
