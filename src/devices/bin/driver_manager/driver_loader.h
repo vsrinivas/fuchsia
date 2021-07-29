@@ -54,10 +54,11 @@ class DriverLoader {
 
   const Driver* LibnameToDriver(std::string_view libname) const;
 
+  const Driver* LoadDriverUrl(const std::string& driver_url);
+
  private:
   bool MatchesLibnameDriverIndex(const std::string& driver_url, std::string_view libname);
 
-  const Driver* LoadDriverUrlDriverIndex(const std::string& driver_url);
 
   // Drivers we cached from the DriverIndex.
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_index_drivers_;

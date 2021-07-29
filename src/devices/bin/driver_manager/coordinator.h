@@ -325,6 +325,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   const Driver* fragment_driver() const { return fragment_driver_; }
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
+  DriverLoader& driver_loader() { return driver_loader_; }
 
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);

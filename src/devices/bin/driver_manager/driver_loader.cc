@@ -98,7 +98,7 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
   }
 }
 
-const Driver* DriverLoader::LoadDriverUrlDriverIndex(const std::string& driver_url) {
+const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url) {
   // Check if we've already loaded this driver. If we have then return it.
   auto driver = LibnameToDriver(driver_url);
   if (driver != nullptr) {
@@ -232,7 +232,10 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
 
-    auto loaded_driver = LoadDriverUrlDriverIndex(driver_url);
+    auto loaded_driver = LoadDriverUrl(driver_url);
+    if (!loaded_driver) {
+      continue;
+    }
     if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
       if (loaded_driver->fallback) {
         if (include_fallback_drivers_ || !config.libname.empty()) {

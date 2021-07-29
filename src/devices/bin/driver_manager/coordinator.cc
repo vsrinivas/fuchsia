@@ -201,6 +201,12 @@ zx_status_t Coordinator::RegisterWithPowerManager(
 }
 
 zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
+  // If the sys device is not a path, then we try to load it like a URL.
+  if (sys_device_driver[0] != '/') {
+    auto string = std::string(sys_device_driver.data());
+    driver_loader_.LoadDriverUrl(string);
+  }
+
   root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
                                              ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;

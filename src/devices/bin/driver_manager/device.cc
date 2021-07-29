@@ -255,6 +255,11 @@ zx_status_t Device::CreateProxy() {
     const char* end = strstr(begin, ".so");
     std::string_view prefix(begin, end == nullptr ? driver_path.size() : end - begin);
     driver_path = fbl::String::Concat({prefix, ".proxy.so"});
+    // If the proxy is a URL we have to load it first.
+    if (driver_path[0] != '/') {
+      std::string string(driver_path.data());
+      coordinator->driver_loader().LoadDriverUrl(string);
+    }
   }
 
   auto dev =
