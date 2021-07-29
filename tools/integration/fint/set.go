@@ -79,9 +79,6 @@ func runSteps(
 		},
 		EnableRbe: staticSpec.EnableRbe,
 	}
-	if contextSpec.ArtifactDir != "" {
-		artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
-	}
 
 	var skipGen bool
 	if staticSpec.AutomaticGen {
@@ -97,6 +94,9 @@ func runSteps(
 		}
 	}
 	if !skipGen {
+		if contextSpec.ArtifactDir != "" {
+			artifacts.GnTracePath = filepath.Join(contextSpec.ArtifactDir, "gn_trace.json")
+		}
 		genStdout, err := runGen(ctx, runner, staticSpec, contextSpec, platform, artifacts.GnTracePath, genArgs)
 		if err != nil {
 			artifacts.FailureSummary = genStdout
