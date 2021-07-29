@@ -173,7 +173,7 @@ fidl_compatibility_tests = [
   },
   {
     name = "union"
-    filter = "Xunion.*"
+    filter = "Union.*"
   },
 ]
 
