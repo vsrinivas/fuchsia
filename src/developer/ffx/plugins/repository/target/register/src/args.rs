@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_bridge::RepositoryStorageType};
+use {
+    argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command,
+    fidl_fuchsia_developer_bridge::RepositoryStorageType,
+};
 
 #[ffx_command()]
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(FfxConfigBacked, FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "register", description = "")]
 pub struct RegisterCommand {
+    #[argh(option, short = 'r')]
+    #[ffx_config_default("repository.default")]
+    /// register this repository, rather than the default.
+    pub repository: Option<String>,
+
     /// enable persisting this repository across reboots.
     #[argh(option, from_str_fn(parse_storage_type))]
     pub storage_type: Option<RepositoryStorageType>,
-
-    /// repositories will be named `NAME`. Defaults to `devhost`.
-    #[argh(positional, default = "\"devhost\".to_string()")]
-    pub name: String,
 
     /// set up a rewrite rule mapping each `alias` host to
     /// to the repository identified by `name`.

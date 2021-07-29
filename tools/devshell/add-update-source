@@ -163,11 +163,10 @@ function main {
       source_name="`basename ${FUCHSIA_BUILD_DIR} | tr '_' '-'`"
     fi
 
-    register_args=( --alias fuchsia.com )
+    register_args=( --repository "$source_name" --alias fuchsia.com )
     if [[ -z "{persist}" ]]; then
       register_args+=( --storage-type persistent )
     fi
-    register_args+=( "$source_name" )
 
     fx-command-run ffx --config ffx_repository=true repository add-from-pm "$source_name" "${FUCHSIA_BUILD_DIR}/amber-files"
     err=$?
@@ -189,7 +188,6 @@ function main {
 
     fx-command-run ffx --config ffx_repository=true \
       repository target register \
-      --repository "$source_name" \
       "${register_args[@]}"
     err=$?
     if [[ $err -ne 0 ]]; then

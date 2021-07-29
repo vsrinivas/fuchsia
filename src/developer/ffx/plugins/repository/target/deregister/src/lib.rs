@@ -26,13 +26,18 @@ async fn deregister(
     cmd: DeregisterCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
-    if cmd.name.is_empty() {
-        ffx_bail!("error: repository name must not be empty.")
-    }
+    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+        repo_name
+    } else {
+        ffx_bail!(
+            "Either a default repository must be set, or the --repository flag must be provided.\n\
+            You can set a default repository using: `ffx repository default set <name>`."
+        )
+    };
 
     repos
         .deregister_target(
-            &cmd.name,
+            &repo_name,
             target_str.as_deref(),
         )
         .await
@@ -50,10 +55,14 @@ async fn deregister(
 mod test {
     use super::*;
     use {
+        ffx_config::ConfigLevel,
         fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };
+
+    const REPO_NAME: &str = "some-name";
+    const TARGET_NAME: &str = "some-target";
 
     async fn setup_fake_server() -> (RepositoryRegistryProxy, Receiver<(String, Option<String>)>) {
         let (sender, receiver) = channel();
@@ -77,14 +86,32 @@ mod test {
         let (repos, receiver) = setup_fake_server().await;
 
         deregister(
-            Some("target_str".to_string()),
-            DeregisterCommand { name: "some_name".to_string() },
+            Some(TARGET_NAME.to_string()),
+            DeregisterCommand { repository: Some(REPO_NAME.to_string()) },
             repos,
         )
         .await
         .unwrap();
         let got = receiver.await.unwrap();
-        assert_eq!(got, ("some_name".to_string(), Some("target_str".to_string()),));
+        assert_eq!(got, (REPO_NAME.to_string(), Some(TARGET_NAME.to_string()),));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_deregister_default_repository() {
+        ffx_config::init_config_test().unwrap();
+
+        let default_repo_name = "default-repo";
+        ffx_config::set(("repository.default", ConfigLevel::User), default_repo_name.into())
+            .await
+            .unwrap();
+
+        let (repos, receiver) = setup_fake_server().await;
+
+        deregister(Some(TARGET_NAME.to_string()), DeregisterCommand { repository: None }, repos)
+            .await
+            .unwrap();
+        let got = receiver.await.unwrap();
+        assert_eq!(got, (default_repo_name.to_string(), Some(TARGET_NAME.to_string()),));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -101,8 +128,8 @@ mod test {
         });
 
         assert!(deregister(
-            Some("target_str".to_string()),
-            DeregisterCommand { name: "some_name".to_string() },
+            Some(TARGET_NAME.to_string()),
+            DeregisterCommand { repository: Some(REPO_NAME.to_string()) },
             repos,
         )
         .await

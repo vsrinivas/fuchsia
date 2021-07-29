@@ -8,7 +8,7 @@ use {
     ffx_repository_default_args::{RepositoryDefaultCommand, SubCommand},
 };
 
-pub(crate) const CONFIG_KEY_DEFAULT: &str = "repository.server.default";
+pub(crate) const CONFIG_KEY_DEFAULT: &str = "repository.default";
 
 #[ffx_plugin("ffx_repository")]
 pub async fn exec_repository_default(cmd: RepositoryDefaultCommand) -> Result<()> {

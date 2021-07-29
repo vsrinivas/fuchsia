@@ -22,13 +22,18 @@ async fn register(
     cmd: RegisterCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
-    if cmd.name.is_empty() {
-        ffx_bail!("error: repository name must not be empty.")
-    }
+    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+        repo_name
+    } else {
+        ffx_bail!(
+            "Either a default repository must be set, or the --repository flag must be provided.\n\
+            You can set a default repository using: `ffx repository default set <name>`."
+        )
+    };
 
     repos
         .register_target(RepositoryTarget {
-            repo_name: Some(cmd.name),
+            repo_name: Some(repo_name),
             target_identifier: target_str,
             aliases: Some(cmd.alias),
             storage_type: cmd.storage_type,
@@ -49,10 +54,14 @@ async fn register(
 mod test {
     use super::*;
     use {
+        ffx_config::ConfigLevel,
         fidl_fuchsia_developer_bridge::{RepositoryRegistryRequest, RepositoryStorageType},
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };
+
+    const REPO_NAME: &str = "some-name";
+    const TARGET_NAME: &str = "some-target";
 
     async fn setup_fake_server() -> (RepositoryRegistryProxy, Receiver<RepositoryTarget>) {
         let (sender, receiver) = channel();
@@ -71,11 +80,11 @@ mod test {
     async fn test_register() {
         let (repos, receiver) = setup_fake_server().await;
 
-        let aliases = vec![String::from("my_alias")];
+        let aliases = vec![String::from("my-alias")];
         register(
-            Some("target_str".to_string()),
+            Some(TARGET_NAME.to_string()),
             RegisterCommand {
-                name: "some_name".to_string(),
+                repository: Some(REPO_NAME.to_string()),
                 alias: aliases.clone(),
                 storage_type: None,
             },
@@ -87,9 +96,40 @@ mod test {
         assert_eq!(
             got,
             RepositoryTarget {
-                repo_name: Some("some_name".to_string()),
-                target_identifier: Some("target_str".to_string()),
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: Some(TARGET_NAME.to_string()),
                 aliases: Some(aliases),
+                storage_type: None,
+                ..RepositoryTarget::EMPTY
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_default_repository() {
+        ffx_config::init_config_test().unwrap();
+
+        let default_repo_name = "default-repo";
+        ffx_config::set(("repository.default", ConfigLevel::User), default_repo_name.into())
+            .await
+            .unwrap();
+
+        let (repos, receiver) = setup_fake_server().await;
+
+        register(
+            None,
+            RegisterCommand { repository: None, alias: vec![], storage_type: None },
+            repos,
+        )
+        .await
+        .unwrap();
+        let got = receiver.await.unwrap();
+        assert_eq!(
+            got,
+            RepositoryTarget {
+                repo_name: Some(default_repo_name.to_string()),
+                target_identifier: None,
+                aliases: Some(vec![]),
                 storage_type: None,
                 ..RepositoryTarget::EMPTY
             }
@@ -100,11 +140,11 @@ mod test {
     async fn test_register_storage_type() {
         let (repos, receiver) = setup_fake_server().await;
 
-        let aliases = vec![String::from("my_alias")];
+        let aliases = vec![String::from("my-alias")];
         register(
-            Some("target_str".to_string()),
+            Some(TARGET_NAME.to_string()),
             RegisterCommand {
-                name: "some_name".to_string(),
+                repository: Some(REPO_NAME.to_string()),
                 alias: aliases.clone(),
                 storage_type: Some(RepositoryStorageType::Persistent),
             },
@@ -116,8 +156,8 @@ mod test {
         assert_eq!(
             got,
             RepositoryTarget {
-                repo_name: Some("some_name".to_string()),
-                target_identifier: Some("target_str".to_string()),
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: Some(TARGET_NAME.to_string()),
                 aliases: Some(aliases),
                 storage_type: Some(RepositoryStorageType::Persistent),
                 ..RepositoryTarget::EMPTY
@@ -130,8 +170,12 @@ mod test {
         let (repos, receiver) = setup_fake_server().await;
 
         register(
-            Some("target_str".to_string()),
-            RegisterCommand { name: "some_name".to_string(), alias: vec![], storage_type: None },
+            Some(TARGET_NAME.to_string()),
+            RegisterCommand {
+                repository: Some(REPO_NAME.to_string()),
+                alias: vec![],
+                storage_type: None,
+            },
             repos,
         )
         .await
@@ -140,8 +184,8 @@ mod test {
         assert_eq!(
             got,
             RepositoryTarget {
-                repo_name: Some("some_name".to_string()),
-                target_identifier: Some("target_str".to_string()),
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: Some(TARGET_NAME.to_string()),
                 aliases: Some(vec![]),
                 storage_type: None,
                 ..RepositoryTarget::EMPTY
@@ -159,8 +203,12 @@ mod test {
         });
 
         assert!(register(
-            Some("target_str".to_string()),
-            RegisterCommand { name: "some_name".to_string(), alias: vec![], storage_type: None },
+            Some(TARGET_NAME.to_string()),
+            RegisterCommand {
+                repository: Some(REPO_NAME.to_string()),
+                alias: vec![],
+                storage_type: None
+            },
             repos,
         )
         .await
