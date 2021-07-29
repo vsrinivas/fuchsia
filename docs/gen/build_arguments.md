@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/51911a68cea2b50be59d08cd2d6a54aed12758b1/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/873f453c3cd1122dda5dfe3219e3f21523725005/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/51911a68cea2b50be59d08cd2d6a54aed12758b1/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/873f453c3cd1122dda5dfe3219e3f21523725005/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -3821,6 +3821,13 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 **Current value (from the default):** `true`
 
 From //src/media/lib/ffmpeg/BUILD.gn:40
+
+### use_spinel_for_carnelian_examples
+Include a config in the example packages to attempt to use Spinel
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/carnelian/BUILD.gn:25
 
 ### use_swiftshader_vulkan_icd_on_host
 
