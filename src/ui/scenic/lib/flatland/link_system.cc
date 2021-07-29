@@ -103,6 +103,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         // figure out a way to set the previous GraphLinkImpl's size here.
         LayoutInfo layout_info;
         layout_info.set_logical_size(info.initial_logical_size);
+        layout_info.set_pixel_scale({1, 1});
         impl->UpdateLayoutInfo(std::move(layout_info));
 
         ref->graph_link_map_[*graph_link_map_key] =
