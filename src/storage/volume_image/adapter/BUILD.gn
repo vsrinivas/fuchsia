@@ -63,6 +63,7 @@ source_set("commands") {
     "commands/create.cc",
     "commands/extend.cc",
     "commands/pave.cc",
+    "commands/size.cc",
   ]
   public = [ "commands.h" ]
 
@@ -303,6 +304,7 @@ source_set("adapter-tests") {
     "commands/create_test.cc",
     "commands/extend_test.cc",
     "commands/pave_test.cc",
+    "commands/size_test.cc",
     "empty_partition_test.cc",
     "minfs_partition_test.cc",
   ]

@@ -207,6 +207,14 @@ struct SizeParams {
   std::optional<uint64_t> length;
 };
 
+// Returns the allocated data size(metadata and slices) within a sparse image.
+//
+// If |length| is set an error is returned if the sparse image cannot be paved in a disk size of
+// |length|.
+//
+// On error returns a string describing the error.
+fpromise::result<uint64_t, std::string> Size(const SizeParams& params);
+
 }  // namespace storage::volume_image
 
 #endif  // SRC_STORAGE_VOLUME_IMAGE_ADAPTER_COMMANDS_H_
