@@ -192,7 +192,18 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
     }
   }
 
-  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.MouseSource.
+  if (endpoints.has_mouse_source()) {
+    if (register_mouse_source_) {
+      on_view_created_callbacks.emplace_back(
+          [this, mouse_source = std::move(*endpoints.mutable_mouse_source())](
+              zx_koid_t view_ref_koid) mutable {
+            register_mouse_source_(std::move(mouse_source), view_ref_koid);
+          });
+    } else if (!register_mouse_source_) {
+      FX_LOGS(ERROR) << "Failed to register fuchsia.ui.pointer.MouseSource request.";
+    }
+  }
+
   {
     const auto it = dispatchers.find(System::kGfx);
     if (it != dispatchers.end()) {

@@ -152,15 +152,18 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       [this](const InternalPointerEvent& event, StreamId stream_id) {
         InjectTouchEventHitTested(event, stream_id);
       },
-      // TODO(fxbug.dev/64379): Add fuchsia.ui.pointer mouse support.
       /*inject_mouse_exclusive=*/
-      [](const InternalMouseEvent& event, StreamId stream_id) {},
+      [this](const InternalMouseEvent& event, StreamId stream_id) {
+        InjectMouseEventExclusive(event, stream_id);
+      },
       /*inject_mouse_hit_tested=*/
-      [](const InternalMouseEvent& event, StreamId stream_id) {},
+      [this](const InternalMouseEvent& event, StreamId stream_id) {
+        InjectMouseEventHitTested(event, stream_id);
+      },
       // Explicit call necessary to cancel mouse stream, because mouse stream itself does not track
       // phase.
       /*cancel_mouse_stream=*/
-      [](StreamId stream_id) {},
+      [this](StreamId stream_id) { CancelMouseStream(stream_id); },
       this->context()->inspect_node()->CreateChild("PointerinjectorRegistry"));
 
   this->context()->app_context()->outgoing()->AddPublicService(

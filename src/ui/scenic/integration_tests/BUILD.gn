@@ -107,6 +107,23 @@ fuchsia_test_component("gfx_touch_integration_test") {
   deps = [ ":gfx_touch_integration_test_bin" ]
 }
 
+executable("gfx_mouse_integration_test_bin") {
+  testonly = true
+  sources = [ "gfx_mouse_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.pointer",
+    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//src/ui/lib/glm_workaround",
+  ]
+}
+
+fuchsia_test_component("gfx_mouse_integration_test") {
+  component_name = "gfx_mouse_integration_test"
+  manifest = "meta/gfx_mouse_integration_test.cmx"
+  deps = [ ":gfx_mouse_integration_test_bin" ]
+}
+
 executable("gfx_view_ref_installed_integration_test_bin") {
   testonly = true
   sources = [ "gfx_view_ref_installed_integration_test.cc" ]
@@ -127,6 +144,7 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_focus_integration_test",
     ":gfx_legacy_coordinate_transform_test",
     ":gfx_legacy_coordinate_transform_test2",
+    ":gfx_mouse_integration_test",
     ":gfx_startup_input_test",
     ":gfx_touch_integration_test",
     ":gfx_view_ref_installed_integration_test",

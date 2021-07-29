@@ -151,9 +151,9 @@ class GfxFocusIntegrationTest : public sys::testing::TestWithEnvironment,
   void BlockingPresent(scenic::Session& session) {
     bool presented = false;
     session.set_on_frame_presented_handler([&presented](auto) { presented = true; });
-    fuchsia::ui::scenic::Present2Args args;
     session.Present2(0, 0, [](auto) {});
     RunLoopUntil([&presented] { return presented; });
+    session.set_on_frame_presented_handler([](auto) {});
   }
 
   void AttachToScene(fuchsia::ui::views::ViewHolderToken token) {
