@@ -9,6 +9,7 @@
 #include <ddktl/device.h>
 #include <gtest/gtest.h>
 
+#include "device/test_session.h"
 #include "device/test_util.h"
 #include "mac/test_util.h"
 #include "src/lib/testing/predicates/status.h"
@@ -107,7 +108,7 @@ TEST_F(NetDeviceDriverTest, TestOpenSession) {
   ASSERT_OK(connect_result.status_value());
   fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
   ASSERT_OK(session.Open(netdevice, "test-session"));
-  ASSERT_OK(session.AttachPort(port_impl_));
+  ASSERT_OK(AttachSessionPort(session, port_impl_));
   ASSERT_OK(device_impl_.events().wait_one(kEventStart, zx::deadline_after(kTestTimeout), nullptr));
   UnbindDeviceSync();
   ASSERT_OK(session.WaitClosed(zx::deadline_after(kTestTimeout)));

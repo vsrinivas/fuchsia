@@ -60,6 +60,8 @@ test("driver-test") {
   testonly = true
   output_name = "network-device-test"
   sources = [
+    "device/test_session.cc",
+    "device/test_session.h",
     "device/test_util.cc",
     "device/test_util.h",
     "mac/test_util.cc",

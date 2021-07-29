@@ -25,6 +25,7 @@ test_list = [
   "kernel_boot_stats_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
+  "network_device_microbenchmarks_test",
   "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",
@@ -195,6 +196,9 @@ group("package_deps") {
     # These are used by netstack benchmarks.
     "//src/connectivity/network/tests/benchmarks",
     "//third_party/iperf",
+
+    # Used by network device benchmarks.
+    "//src/connectivity/network/drivers/network-device/device:network-device-microbenchmarks",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/sys/activity",

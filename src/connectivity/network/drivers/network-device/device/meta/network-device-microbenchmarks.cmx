@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/network-device-microbenchmarks"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}
