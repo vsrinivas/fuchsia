@@ -12,58 +12,269 @@ macro_rules! log_if_err {
     };
 }
 
-/// Waits for a file at the given path to exist using fdio Watcher APIs. The provided `path` is
-/// split into a directory path and a file name, then a watcher is set up on the directory path. If
-/// the directory path itself does not exist, then this function is called recursively to wait for
-/// it to be created as well.
-fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
-    use {anyhow::format_err, fuchsia_zircon as zx};
+/// Export the `connect_to_driver` function to be used throughout the crate.
+pub use connect_to_driver::connect_to_driver;
+mod connect_to_driver {
+    use anyhow::{format_err, Context, Error};
+    use fidl::endpoints::Proxy as _;
+    use fidl_fuchsia_io::{
+        DirectoryProxy, NodeProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    };
+    use fuchsia_vfs_watcher::{WatchEvent, Watcher};
+    use futures::TryStreamExt as _;
+    use std::path::Path;
 
-    let svc_dir = path.parent().ok_or(format_err!("Invalid service path"))?;
-    let svc_name = path.file_name().ok_or(format_err!("Invalid service name"))?;
-    match fdio::watch_directory(
-        &std::fs::File::open(&svc_dir)
-            .map_err(|e| anyhow::format_err!("Failed to open service path: {}", e))?,
-        zx::sys::ZX_TIME_INFINITE,
-        |_event, found| if found == svc_name { Err(zx::Status::STOP) } else { Ok(()) },
-    ) {
-        zx::Status::STOP => Ok(()),
-        zx::Status::PEER_CLOSED => wait_for_path(svc_dir),
-        e => Err(format_err!(
-            "Failed to find {:?} at path {} (watch_directory result = {})",
-            svc_name,
-            svc_dir.display(),
-            e
-        )),
+    /// Waits for a file with `name` in the given `dir` to exist. In this context, a "file" can be
+    /// either an actual file entry or a directory. We refer to both as a "file" here to be
+    /// consistent with the Watcher API.
+    async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), Error> {
+        let mut watcher = Watcher::new(io_util::clone_directory(dir, OPEN_RIGHT_READABLE)?).await?;
+        while let Some(msg) = watcher.try_next().await? {
+            match msg.event {
+                WatchEvent::ADD_FILE | WatchEvent::EXISTING => {
+                    if msg.filename.to_str().context("Failed to convert filename to string")?
+                        == name
+                    {
+                        return Ok(());
+                    }
+                }
+                _ => {}
+            }
+        }
+        unreachable!();
     }
-}
 
-/// Creates a FIDL proxy and connects its ServerEnd to the driver at the specified path.
-pub async fn connect_to_driver<T: fidl::endpoints::ProtocolMarker>(
-    path: &String,
-) -> Result<T::Proxy, anyhow::Error> {
-    let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
-    connect_channel_to_driver(server_end, path).await?;
-    Ok(proxy)
-}
+    /// Recursively tries to open the file with `name`. This function is described as "recursive"
+    /// because it will verify that each directory in the `name` path exists, starting in
+    /// `initial_dir`.
+    ///
+    /// Shamelessly copied (then modified) from src/devices/tests/ddk-firmware-test/test.rs.
+    async fn recursive_open_node(
+        initial_dir: &DirectoryProxy,
+        name: &str,
+    ) -> Result<NodeProxy, Error> {
+        let mut dir =
+            io_util::clone_directory(initial_dir, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)?;
 
-/// Connects a ServerEnd to the driver at the specified path. Calls `wait_for_path` to ensure the
-/// path exists before attempting a connection.
-pub async fn connect_channel_to_driver<T: fidl::endpoints::ProtocolMarker>(
-    server_end: fidl::endpoints::ServerEnd<T>,
-    path: &String,
-) -> Result<(), anyhow::Error> {
-    // Verify the path exists before attempting to connect to it. We do this because when connecting
-    // to drivers, a connection to a missing driver path would succeed but calls to it would fail.
-    // So instead of requiring us to implement logic at a higher layer to poll repeatedly until a
-    // driver is present, just verify the path exists here using the appropriate watcher APIs.
-    let path_clone = path.clone();
-    fuchsia_async::unblock(move || wait_for_path(&std::path::Path::new(&path_clone))).await?;
+        let mut components = Path::new(name)
+            .components()
+            .map(|c| match c {
+                std::path::Component::Normal(file) => Ok(file),
+                component => Err(format_err!("Invalid component {:?}", component)),
+            })
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter();
+        let last_component =
+            components.next_back().ok_or(format_err!("Failed to get last component"))?;
 
-    fdio::service_connect(path, server_end.into_channel())
-        .map_err(|s| anyhow::format_err!("Failed to connect to driver at {}: {}", path, s))?;
+        for component in components {
+            wait_for_file(
+                &dir,
+                component.to_str().ok_or(format_err!("Failed to convert component to string"))?,
+            )
+            .await?;
+            dir = io_util::open_directory(
+                &dir,
+                Path::new(component),
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )?;
+        }
 
-    Ok(())
+        wait_for_file(
+            &dir,
+            last_component.to_str().ok_or(format_err!("Failed to convert component to string"))?,
+        )
+        .await?;
+        io_util::open_node(
+            &dir,
+            Path::new(&last_component),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_SERVICE,
+        )
+    }
+
+    /// Returns a NodeProxy opened at `path`. The path is guaranteed to exist before the connection
+    /// is opened.
+    async fn connect_channel(path: &str) -> Result<NodeProxy, Error> {
+        recursive_open_node(
+            &io_util::open_directory_in_namespace(
+                "/dev",
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )?,
+            path,
+        )
+        .await
+    }
+
+    /// Connects to the driver at `path`, returning a proxy of the specified type. The path is
+    /// guaranteed to exist before the connection is opened.
+    ///
+    /// TODO(fxbug.dev/81378): factor this function out to a common library
+    pub async fn connect_to_driver<T: fidl::endpoints::ProtocolMarker>(
+        path: &str,
+    ) -> Result<T::Proxy, Error> {
+        match path.strip_prefix("/dev/") {
+            Some(path) => fidl::endpoints::ClientEnd::<T>::new(
+                connect_channel(path)
+                    .await?
+                    .into_channel()
+                    .map_err(|_| format_err!("into_channel failed on NodeProxy"))?
+                    .into_zx_channel(),
+            )
+            .into_proxy()
+            .map_err(Into::into),
+            None => Err(format_err!("Path must start with /dev/")),
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use async_utils::PollExt as _;
+        use fidl::endpoints::{create_proxy, Proxy, ServerEnd};
+        use fidl_fuchsia_io::{
+            DirectoryMarker, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_WRITABLE,
+        };
+        use fuchsia_async as fasync;
+        use std::sync::Arc;
+        use vfs::{
+            directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
+            execution_scope::ExecutionScope, file::vmo::read_only_static, pseudo_directory,
+        };
+
+        fn bind_to_dev(dir: Arc<dyn DirectoryEntry>) {
+            let (dir_proxy, dir_server) = create_proxy::<DirectoryMarker>().unwrap();
+            let scope = ExecutionScope::new();
+            dir.open(
+                scope,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                vfs::path::Path::dot(),
+                ServerEnd::new(dir_server.into_channel()),
+            );
+            let ns = fdio::Namespace::installed().unwrap();
+            ns.bind("/dev", dir_proxy.into_channel().unwrap().into_zx_channel()).unwrap();
+        }
+
+        /// Tests that `connect_to_driver` returns success for the valid existing path.
+        #[fasync::run_singlethreaded(test)]
+        async fn test_connect_to_driver_success() {
+            bind_to_dev(pseudo_directory! {
+                "class" => pseudo_directory!{
+                    "thermal" => pseudo_directory! {
+                        "000" => read_only_static("string beans")
+                    }
+                }
+            });
+
+            connect_to_driver::<NodeMarker>("/dev/class/thermal/000").await.unwrap();
+        }
+
+        /// Tests that `connect_to_driver` doesn't return until the required path is added.
+        #[test]
+        fn test_connect_to_driver_late_add() {
+            let mut executor = fasync::TestExecutor::new().unwrap();
+
+            let thermal_dir = pseudo_directory! {
+                "000" => read_only_static("string cheese (cheddar)")
+            };
+            bind_to_dev(pseudo_directory! {
+                "class" => pseudo_directory!{
+                    "thermal" => thermal_dir.clone()
+                }
+            });
+
+            let connect_future =
+                &mut Box::pin(connect_to_driver::<NodeMarker>("/dev/class/thermal/001"));
+
+            // The required path is initially not present
+            assert!(executor.run_until_stalled(connect_future).is_pending());
+
+            // Add the required path
+            thermal_dir.add_entry("001", read_only_static("string cheese (mozzarella)")).unwrap();
+
+            // Verify the wait future now returns successfully
+            assert!(executor.run_until_stalled(connect_future).unwrap().is_ok());
+        }
+
+        /// Tests that `connect_to_driver` correctly waits even if the required parent directory
+        /// does not yet exist.
+        #[test]
+        fn test_connect_to_driver_nonexistent_parent_dir() {
+            let mut executor = fasync::TestExecutor::new().unwrap();
+
+            bind_to_dev(pseudo_directory! {
+                "class" => pseudo_directory!{
+                    "cpu" => pseudo_directory! {
+                        "000" => read_only_static("shoestring fries")
+                    }
+                }
+            });
+
+            assert!(executor
+                .run_until_stalled(&mut Box::pin(connect_to_driver::<NodeMarker>(
+                    "/dev/class/thermal/000"
+                )))
+                .is_pending());
+        }
+
+        /// Tests that the proxy returned by `connect_to_driver` is usable for sending a FIDL
+        /// request.
+        #[fasync::run_singlethreaded(test)]
+        async fn test_connect_to_driver_gives_usable_proxy() {
+            use fidl_fuchsia_device as fdev;
+
+            // Create a pseudo directory with a fuchsia.device.Controller FIDL server hosted at
+            // class/fake_dev_controller and bind it to our /dev
+            bind_to_dev(pseudo_directory! {
+                "class" => pseudo_directory! {
+                    "fake_dev_controller" => vfs::service::host(
+                        move |mut stream: fdev::ControllerRequestStream| {
+                            async move {
+                                match stream.try_next().await.unwrap() {
+                                    Some(fdev::ControllerRequest::GetCurrentPerformanceState {
+                                        responder
+                                    }) => {
+                                        let _ = responder.send(8);
+                                    }
+                                    e => panic!("Unexpected request: {:?}", e),
+                                }
+                            }
+                        }
+                    )
+                }
+            });
+
+            // Connect to the driver and call GetCurrentPerformanceState on it
+            let result = crate::utils::connect_to_driver::<fdev::ControllerMarker>(
+                "/dev/class/fake_dev_controller",
+            )
+            .await
+            .expect("Failed to connect to driver")
+            .get_current_performance_state()
+            .await
+            .expect("get_current_performance_state FIDL failed");
+
+            // Verify we receive the expected result
+            assert_eq!(result, 8);
+        }
+
+        /// Verifies that invalid arguments are rejected while valid ones are accepted.
+        #[fasync::run_singlethreaded(test)]
+        async fn test_connect_to_driver_valid_path() {
+            bind_to_dev(pseudo_directory! {
+                "class" => pseudo_directory!{
+                    "cpu" => pseudo_directory! {
+                        "000" => read_only_static("stringtown population 1")
+                    }
+                }
+            });
+
+            connect_to_driver::<NodeMarker>("/svc/fake_service").await.unwrap_err();
+            connect_to_driver::<NodeMarker>("/dev/class/cpu/000").await.unwrap();
+        }
+    }
 }
 
 /// The number of nanoseconds since the system was powered on.
@@ -151,9 +362,7 @@ pub fn test_each_node_config_file(
 
     let config_files = fs::read_dir("/config/data")
         .unwrap()
-        .filter(|f| {
-            f.as_ref().unwrap().file_name().into_string().unwrap().ends_with("node_config.json")
-        })
+        .filter(|f| f.as_ref().unwrap().file_name().to_str().unwrap().ends_with("node_config.json"))
         .map(|f| {
             let path = f.unwrap().path();
             let file_path = path.to_str().unwrap().to_string();

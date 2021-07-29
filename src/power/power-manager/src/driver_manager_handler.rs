@@ -527,7 +527,6 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::utils::connect_channel_to_driver;
     use inspect::assert_data_tree;
     use matches::assert_matches;
     use std::cell::Cell;
@@ -816,18 +815,16 @@ pub mod tests {
             .await
             .unwrap();
 
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fdevicemgr::SystemStateTransitionMarker>().unwrap();
-
-        // Use `connect_channel_to_driver` instead of using `connect_to_driver` directly because
-        // `connect_to_driver` requires an Executor (when `into_proxy` is called on the ClientEnd).
-        connect_channel_to_driver(server_end, &"/dev/class/fake".to_string()).await.unwrap();
-
         // Verify we can make a FIDL call to the fake driver and get a successful response
-        assert!(proxy
-            .set_termination_system_state(fpowerstatecontrol::SystemPowerState::Reboot)
-            .await
-            .is_ok());
+        crate::utils::connect_to_driver::<fdevicemgr::SystemStateTransitionMarker>(
+            &"/dev/class/fake".to_string(),
+        )
+        .await
+        .expect("Failed to connect to driver")
+        .set_termination_system_state(fpowerstatecontrol::SystemPowerState::Reboot)
+        .await
+        .expect("set_termination_system_state FIDL failed")
+        .expect("set_termination_system_state returned error");
     }
 
     /// Tests that the DriverManagerHandler correctly processes the SetTerminationState message by
