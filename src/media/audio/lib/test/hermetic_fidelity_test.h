@@ -43,6 +43,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
         : channel(chan), freq_resp_lower_limits_db(freqs), sinad_lower_limits_db(sinads) {}
   };
 
+  struct EffectConfig {
+    std::string name;
+    std::string config;
+  };
+
   // This struct includes all the configuration info for this full-spectrum test.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
@@ -60,6 +65,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
 
     TypedFormat<OutputFormat> output_format;
     const std::set<ChannelMeasurement> channels_to_measure;
+    std::vector<EffectConfig> effect_configs;
   };
 
   void SetUp() override;

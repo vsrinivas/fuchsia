@@ -339,6 +339,12 @@ void HermeticFidelityTest::Run(
     }
   }
 
+  for (auto ec : tc.effect_configs) {
+    fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
+    auto status = effects_controller()->UpdateEffect(ec.name, ec.config, &result);
+    ASSERT_EQ(status, ZX_OK);
+  }
+
   // Generate rate-specific internal frequency values for our power-of-two-sized analysis buffer.
   TranslateReferenceFrequencies(tc.output_format.frames_per_second());
 
