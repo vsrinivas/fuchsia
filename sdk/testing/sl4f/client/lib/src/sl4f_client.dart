@@ -74,7 +74,7 @@ class Sl4f {
   static const _sl4fHttpDefaultPort = 80;
   static final _portSuffixRe = RegExp(r':\d+$');
 
-  final HttpClient _client;
+  HttpClient _client;
 
   /// Authority (IP, hostname, etc.) of the device under test.
   String get target {
@@ -254,7 +254,10 @@ class Sl4f {
   /// Closes the underlying HTTP client.
   ///
   /// If clients remain unclosed, the dart process might not terminate.
-  void close() => _client.close(force: true);
+  void close() {
+    _client?.close(force: true);
+    _client = null;
+  }
 
   /// Sends a JSON-RPC request to SL4F.
   ///
@@ -299,6 +302,9 @@ class Sl4f {
       throw ArgumentError.value(tries, 'tries', 'Must be a positive integer');
     }
 
+    // Open a new HTTP client if it has been previously closed.
+    _client = _client ?? HttpClient();
+
     for (var attempt = 0; attempt < tries; attempt++) {
       if (attempt > 0) {
         // TODO(isma): We should limit the wait time to as much delay.
@@ -341,7 +347,8 @@ class Sl4f {
     throw Sl4fException('Sl4f has not started.');
   }
 
-  /// SSHs into the device and kills the SL4F server.
+  /// SSHs into the device and kills the SL4F server. Closes the underlying
+  /// HTTP client.
   ///
   /// This should be called in the [tearDown] or [tearDownAll] of your test to
   /// ensure that an SL4F server is not lingering after the test is done.
@@ -349,6 +356,7 @@ class Sl4f {
     if ((await ssh.run('killall $_sl4fComponentName')).exitCode != 0) {
       _log.warning('Could not stop sl4f. Continuing.');
     }
+    close();
   }
 
   /// Restarts the device under test.
