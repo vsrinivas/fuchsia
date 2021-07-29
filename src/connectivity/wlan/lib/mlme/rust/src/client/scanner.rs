@@ -47,6 +47,8 @@ pub enum ScanError {
     StartHwScanFails(zx::Status),
     #[error("hw scan aborted")]
     HwScanAborted,
+    #[error("invalid arg: scanning only supports bss_type_selector ANY")]
+    UnsupportedBssTypeSelector,
 }
 
 impl From<ScanError> for zx::Status {
@@ -56,7 +58,8 @@ impl From<ScanError> for zx::Status {
             ScanError::EmptyChannelList
             | ScanError::ChannelListTooLarge
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong => zx::Status::INVALID_ARGS,
+            | ScanError::SsidTooLong
+            | ScanError::UnsupportedBssTypeSelector => zx::Status::INVALID_ARGS,
             ScanError::StartHwScanFails(status) => status,
             ScanError::HwScanAborted => zx::Status::INTERNAL,
         }
@@ -70,7 +73,8 @@ impl From<ScanError> for fidl_mlme::ScanResultCode {
             ScanError::EmptyChannelList
             | ScanError::ChannelListTooLarge
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong => fidl_mlme::ScanResultCode::InvalidArgs,
+            | ScanError::SsidTooLong
+            | ScanError::UnsupportedBssTypeSelector => fidl_mlme::ScanResultCode::InvalidArgs,
             ScanError::StartHwScanFails(..) | ScanError::HwScanAborted => {
                 fidl_mlme::ScanResultCode::InternalError
             }
@@ -140,6 +144,11 @@ impl<'a> BoundScanner<'a> {
                 send_scan_end($txn_id, error.into(), &mut $self.ctx.device);
                 return Err($scan_error);
             }};
+        }
+
+        if !matches!(req.bss_type_selector, fidl_internal::BSS_TYPE_SELECTOR_ANY) {
+            error!("scanning only supports bss_type_selector ANY");
+            send_scan_end_and_return!(req.txn_id, ScanError::UnsupportedBssTypeSelector, self);
         }
 
         if self.scanner.ongoing_scan.is_some() {
@@ -418,7 +427,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
@@ -571,6 +580,40 @@ mod tests {
         assert_eq!(
             scan_end,
             fidl_mlme::ScanEnd { txn_id: 1338, code: fidl_mlme::ScanResultCode::NotSupported }
+        );
+    }
+
+    #[test]
+    fn test_handle_scan_req_reject_if_bad_bss_type_selector() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut scanner = Scanner::new(IFACE_MAC);
+
+        scanner
+            .bind(&mut ctx)
+            .on_sme_scan(
+                scan_req(),
+                m.listener_state.create_channel_listener_fn(),
+                &mut m.chan_sched,
+            )
+            .expect("expect scan req accepted");
+        let scan_req = fidl_mlme::ScanRequest {
+            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+            ..scan_req()
+        };
+        let result = scanner.bind(&mut ctx).on_sme_scan(
+            scan_req,
+            m.listener_state.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(result, Err(ScanError::UnsupportedBssTypeSelector));
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
         );
     }
 
