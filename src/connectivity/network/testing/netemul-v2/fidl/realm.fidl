@@ -198,4 +198,16 @@ protocol ManagedRealm {
     GetDevfs(resource struct {
         devfs server_end:fuchsia.io.Directory;
     });
+    /// Stops the specified child component in this realm. Stopping an already
+    /// stopped child component is a no-op and returns success.
+    ///
+    /// + request `child_name` the name of the child component to be stopped.
+    /// * error `ZX_ERR_NOT_FOUND` if `child_name` is not a child component in
+    ///     this realm.
+    /// * error `ZX_ERR_INVALID_ARGS` if `child_name` cannot be composed into a
+    ///     well-formed moniker.
+    /// * error `ZX_ERR_INTERNAL` if the call to the service dependency fails.
+    StopChildComponent(struct {
+        child_name fuchsia.component.name;
+    }) -> (struct {}) error zx.status;
 };

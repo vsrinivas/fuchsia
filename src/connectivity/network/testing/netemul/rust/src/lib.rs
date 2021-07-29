@@ -242,6 +242,15 @@ impl<'a> TestRealm<'a> {
         self.realm.get_moniker().await.context("failed to call get moniker")
     }
 
+    /// Stops the specified child component of the managed realm.
+    pub async fn stop_child_component(&self, child_name: &str) -> Result {
+        self.realm
+            .stop_child_component(child_name)
+            .await?
+            .map_err(zx::Status::from_raw)
+            .with_context(|| format!("failed to stop child component '{}'", child_name))
+    }
+
     /// Like [`join_network_with`], but uses default endpoint configurations.
     pub async fn join_network<E, S>(
         &self,

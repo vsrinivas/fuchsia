@@ -12,7 +12,8 @@ use {
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
     fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_process as fprocess,
-    fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
+    fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys2,
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         self as fcomponent,
@@ -43,6 +44,7 @@ const REALM_COLLECTION_NAME: &str = "netemul";
 const NETEMUL_SERVICES_COMPONENT_NAME: &str = "netemul-services";
 const DEVFS: &str = "dev";
 const DEVFS_PATH: &str = "/dev";
+const HUB: &str = "hub";
 
 #[derive(Error, Debug)]
 enum CreateRealmError {
@@ -329,14 +331,22 @@ async fn create_realm_instance(
         };
         let () = realm.set_component(&moniker, decl).await?;
     }
+    let mut decl = realm.get_decl(&fcomponent::Moniker::root()).await?;
+    let cm_rust::ComponentDecl { offers, exposes, .. } = &mut decl;
+    let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+        source: cm_rust::ExposeSource::Framework,
+        source_name: cm_rust::CapabilityName(HUB.to_string()),
+        target: cm_rust::ExposeTarget::Parent,
+        target_name: cm_rust::CapabilityName(HUB.to_string()),
+        rights: Some(fio2::R_STAR_DIR),
+        subdir: None,
+    }));
     // Mark all dependencies between components in the test realm as weak, to allow for dependency
     // cycles.
     //
     // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
     // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
     // configuration.
-    let mut decl = realm.get_decl(&fcomponent::Moniker::root()).await?;
-    let cm_rust::ComponentDecl { offers, .. } = &mut decl;
     for offer in offers {
         match offer {
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
@@ -399,7 +409,7 @@ impl ManagedRealm {
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
                 ManagedRealmRequest::GetMoniker { responder } => {
-                    let moniker = format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name());
+                    let moniker = moniker(&realm);
                     let () =
                         responder.send(&moniker).context("responding to GetMoniker request")?;
                 }
@@ -509,10 +519,72 @@ impl ManagedRealm {
                         .send(&mut response.map_err(zx::Status::into_raw))
                         .context("responding to RemoveDevice request")?;
                 }
+                ManagedRealmRequest::StopChildComponent { child_name, responder } => {
+                    let realm_ref = &realm;
+                    let stop_child = || async move {
+                        let lifecycle =
+                            fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
+                                fsys2::LifecycleControllerMarker,
+                            >(
+                                realm_ref.root.get_exposed_dir(),
+                                &format!(
+                                    "hub/debug/{}",
+                                    fsys2::LifecycleControllerMarker::PROTOCOL_NAME
+                                ),
+                            )
+                            .map_err(|e: anyhow::Error| {
+                                error!("failed to open proxy to lifecycle controller: {}", e);
+                                Err(zx::Status::INTERNAL)
+                            })?;
+                        let () = lifecycle
+                            .stop(&format!("./{}:0", child_name), true)
+                            .await
+                            .map_err(|e: fidl::Error| {
+                                error!("fidl call to LifecycleController/Stop failed: {}", e);
+                                Err(zx::Status::INTERNAL)
+                            })?
+                            .map_err(|e: fidl_fuchsia_component::Error| {
+                                warn!("failed to stop child component '{}': {:?}", child_name, e);
+                                match e {
+                                    fidl_fuchsia_component::Error::InstanceNotFound => {
+                                        Err(zx::Status::INVALID_ARGS)
+                                    }
+                                    // LifecycleController returns Internal when supplied with a
+                                    // non-existent, but formally valid, component name.
+                                    // TODO(https://fxbug.dev/81729): Replace Error::Internal with
+                                    // correct Error variant.
+                                    fidl_fuchsia_component::Error::Internal => {
+                                        Err(zx::Status::NOT_FOUND)
+                                    }
+                                    fidl_fuchsia_component::Error::InvalidArguments
+                                    | fidl_fuchsia_component::Error::Unsupported
+                                    | fidl_fuchsia_component::Error::AccessDenied
+                                    | fidl_fuchsia_component::Error::InstanceAlreadyExists
+                                    | fidl_fuchsia_component::Error::InstanceCannotStart
+                                    | fidl_fuchsia_component::Error::InstanceCannotResolve
+                                    | fidl_fuchsia_component::Error::CollectionNotFound
+                                    | fidl_fuchsia_component::Error::ResourceUnavailable
+                                    | fidl_fuchsia_component::Error::InstanceDied
+                                    | fidl_fuchsia_component::Error::ResourceNotFound => {
+                                        Err(zx::Status::INTERNAL)
+                                    }
+                                }
+                            })?;
+                        Ok(())
+                    };
+                    let response = stop_child().await;
+                    let () = responder
+                        .send(&mut response.map_err(zx::Status::into_raw))
+                        .context("responding to StopChildComponent request")?;
+                }
             }
         }
         Ok(())
     }
+}
+
+fn moniker(realm: &fuchsia_component_test::RealmInstance) -> String {
+    format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name())
 }
 
 fn route_devfs_to_component(
@@ -2083,5 +2155,64 @@ mod tests {
             counter_without_storage.open_storage_at(DATA_PATH).await.unwrap(),
             Err(fuchsia_zircon::Status::NOT_FOUND.into_raw())
         )
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn stop_child_component_stops_child(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_protocol::<CounterMarker>();
+        assert_eq!(counter.increment().await.unwrap(), 1);
+        let TestRealm { realm } = realm;
+        assert_eq!(
+            realm
+                .stop_child_component(COUNTER_COMPONENT_NAME)
+                .await
+                .expect("stop child component failed")
+                .map_err(fuchsia_zircon::Status::from_raw),
+            Ok(())
+        );
+        matches::assert_matches!(
+            counter.increment().await,
+            Err(fidl::Error::ClientChannelClosed { status, protocol_name })
+                if status == fuchsia_zircon::Status::PEER_CLOSED &&
+                    protocol_name == CounterMarker::PROTOCOL_NAME
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn stop_child_component_without_child(sandbox: fnetemul::SandboxProxy) {
+        let TestRealm { realm } =
+            TestRealm::new(&sandbox, fnetemul::RealmOptions { ..fnetemul::RealmOptions::EMPTY });
+        assert_eq!(
+            realm
+                .stop_child_component(COUNTER_COMPONENT_NAME)
+                .await
+                .expect("stop child component failed")
+                .map_err(fuchsia_zircon::Status::from_raw),
+            Err(fuchsia_zircon::Status::NOT_FOUND)
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn stop_child_component_with_invalid_component_name(sandbox: fnetemul::SandboxProxy) {
+        let TestRealm { realm } =
+            TestRealm::new(&sandbox, fnetemul::RealmOptions { ..fnetemul::RealmOptions::EMPTY });
+        assert_eq!(
+            realm
+                .stop_child_component("com/.\\/\\.ponent")
+                .await
+                .expect("stop child component failed")
+                .map_err(fuchsia_zircon::Status::from_raw),
+            Err(fuchsia_zircon::Status::INVALID_ARGS)
+        );
     }
 }

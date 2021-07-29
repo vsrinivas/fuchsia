@@ -16,12 +16,14 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/lib/fidl/rust/fidl",
