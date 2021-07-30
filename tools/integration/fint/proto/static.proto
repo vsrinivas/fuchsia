@@ -142,4 +142,7 @@ message Static {
   // Whether to let Ninja determine when to run gn gen instead of
   // unconditionally running it.
   bool automatic_gen = 33;
+
+  // Whether to skip ninja -t cleandead.
+  bool no_cleandead = 34;
 }

@@ -92,7 +92,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
 
-	if staticSpec.Incremental {
+	if staticSpec.Incremental && !staticSpec.NoCleandead {
 		// If we're building incrementally, we need to clean out any stale files
 		// in the build directory.
 		if err := ninjaCleanDead(ctx, runner); err != nil {
