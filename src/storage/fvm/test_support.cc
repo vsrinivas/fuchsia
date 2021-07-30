@@ -30,7 +30,7 @@ namespace fvm {
 namespace {
 
 constexpr char kRamdiskCtlPath[] = "sys/platform/00:00:2d/ramctl";
-constexpr zx::duration kDeviceWaitTime = zx::sec(3);
+constexpr zx::duration kDeviceWaitTime = zx::sec(20);
 
 zx_status_t RebindBlockDevice(DeviceRef* device) {
   // We need to create a DirWatcher to wait for the block device's child to disappear.
