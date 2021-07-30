@@ -10,7 +10,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/storage/blobfs/pager/user_pager.h"
 #include "src/storage/blobfs/query.h"
 
 namespace blobfs {
@@ -27,7 +26,7 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
     return status.take_error();
 
   // All of our pager threads get the deadline profile for scheduling.
-  blobfs::pager::SetDeadlineProfile(runner->GetPagerThreads());
+  SetDeadlineProfile(runner->GetPagerThreads());
 
   auto blobfs_or = Blobfs::Create(loop->dispatcher(), std::move(device), runner.get(), options,
                                   std::move(vmex_resource));

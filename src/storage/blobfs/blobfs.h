@@ -54,7 +54,7 @@
 #include "src/storage/blobfs/iterator/extent_iterator.h"
 #include "src/storage/blobfs/metrics.h"
 #include "src/storage/blobfs/mount.h"
-#include "src/storage/blobfs/pager/user_pager.h"
+#include "src/storage/blobfs/page_loader.h"
 #include "src/storage/blobfs/transaction.h"
 #include "src/storage/blobfs/transaction_manager.h"
 
@@ -87,8 +87,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // The Vfs object associated with this Blobfs instance, if any. The Vfs will exist only when
   // running on the target and will be null otherwise.
   fs::PagedVfs* vfs() const { return vfs_; }
-
-  pager::UserPager* pager() const { return pager_.get(); }
 
   // TransactionManager's fs::TransactionHandler interface.
   //
@@ -189,6 +187,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   const zx::resource& vmex_resource() const { return vmex_resource_; }
 
   BlobLoader& loader() { return loader_; }
+  PageLoader& page_loader() { return *page_loader_; }
 
   zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& operations) override;
 
@@ -337,7 +336,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   std::shared_ptr<BlobfsMetrics> metrics_;  // Guaranteed non-null.
 
-  std::unique_ptr<pager::UserPager> pager_;
+  std::unique_ptr<PageLoader> page_loader_;  // Guaranteed non-null after Create() succeeds.
   std::optional<CachePolicy> pager_backed_cache_policy_;
 
   BlobLoader loader_;

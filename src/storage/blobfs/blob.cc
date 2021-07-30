@@ -1099,14 +1099,14 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
     return;
   }
 
-  auto page_supplier = pager::UserPager::PageSupplier(
+  auto page_supplier = PageLoader::PageSupplier(
       [paged_vfs = paged_vfs(), dest_vmo = &paged_vmo()](
           uint64_t offset, uint64_t length, const zx::vmo& aux_vmo, uint64_t aux_offset) {
         return paged_vfs->SupplyPages(*dest_vmo, offset, length, aux_vmo, aux_offset);
       });
-  pager::PagerErrorStatus pager_error_status =
-      blobfs_->pager()->TransferPages(std::move(page_supplier), offset, length, loader_info_);
-  if (pager_error_status != pager::PagerErrorStatus::kOK) {
+  PagerErrorStatus pager_error_status =
+      blobfs_->page_loader().TransferPages(std::move(page_supplier), offset, length, loader_info_);
+  if (pager_error_status != PagerErrorStatus::kOK) {
     FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
     if (auto error_result = paged_vfs()->ReportPagerError(
@@ -1125,7 +1125,7 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
     // the kernel, since zx_pager_op_range() requires a valid pager VMO handle. Without being able
     // to make a call to zx_pager_op_range() to indicate a failed page request, the faulting thread
     // would hang indefinitely.
-    if (pager_error_status == pager::PagerErrorStatus::kErrDataIntegrity)
+    if (pager_error_status == PagerErrorStatus::kErrDataIntegrity)
       is_corrupt_ = true;
   }
 }

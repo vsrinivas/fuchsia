@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOBFS_PAGER_USER_PAGER_H_
-#define SRC_STORAGE_BLOBFS_PAGER_USER_PAGER_H_
+#ifndef SRC_STORAGE_BLOBFS_PAGE_LOADER_H_
+#define SRC_STORAGE_BLOBFS_PAGE_LOADER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -27,7 +27,6 @@
 #include "src/storage/lib/watchdog/include/lib/watchdog/watchdog.h"
 
 namespace blobfs {
-namespace pager {
 
 // Wrapper enum for error codes supported by the zx_pager_op_range(ZX_PAGER_OP_FAIL) syscall, used
 // to communicate userpager errors to the kernel, so that the error can be propagated to the
@@ -70,9 +69,9 @@ constexpr PagerErrorStatus ToPagerErrorStatus(zx_status_t status) {
 void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads);
 
 // Encapsulates a user pager, its associated thread and transfer buffer.
-class UserPager {
+class PageLoader {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(UserPager);
+  DISALLOW_COPY_ASSIGN_AND_MOVE(PageLoader);
 
   // Resources needed for each worker thread.
   struct WorkerResources {
@@ -88,28 +87,20 @@ class UserPager {
   using PageSupplier = std::function<zx::status<>(uint64_t offset, uint64_t length,
                                                   const zx::vmo& aux_vmo, uint64_t aux_offset)>;
 
-  // Creates an instance of UserPager.
+  // Creates an instance of PageLoader.
   // A new thread is created and started to process page fault requests.
   // |uncompressed_buffer| is used to retrieve and buffer uncompressed data from the underlying
   // storage. |resources| is a set of resources needed for each individual |Worker| so only as many
   // pager threads are supported as there are sets of resources. |decompression_buffer_size| is the
   // size of the scratch buffer to use for decompression.
-  // TODO(fxbug.dev/67659): Update this to take a vector of |Worker| when actually prepared to
-  // handle multiple threads.
-  [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
+  [[nodiscard]] static zx::status<std::unique_ptr<PageLoader>> Create(
       std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
       BlobfsMetrics* metrics, bool sandbox_decompression);
 
-  // Returns the pager handle.
-  const zx::pager& Pager() const { return pager_; }
-
-  // Returns the pager dispatcher.
-  async_dispatcher_t* Dispatcher() const { return pager_loop_.dispatcher(); }
-
-  // Invoked by the |PageWatcher| on a read request. Reads in the requested byte range
-  // [|offset|, |offset| + |length|) for the inode associated with |info->identifier| into the
-  // |transfer_buffer_|, and then moves those pages to the destination |vmo|. If |verifier_info| is
-  // not null, uses it to verify the pages prior to transferring them to the destination vmo.
+  // Invoked on a read request. Reads in the requested byte range [|offset|, |offset| + |length|)
+  // for the inode associated with |info->identifier| into the |transfer_buffer_|, and then moves
+  // those pages to the destination |vmo|. If |verifier_info| is not null, uses it to verify the
+  // pages prior to transferring them to the destination vmo.
   //
   // How the pages are supplied to the caller is defined by the PageSupplier callback parameter.
   //
@@ -123,10 +114,6 @@ class UserPager {
   // transfer buffer etc.
   [[nodiscard]] PagerErrorStatus TransferPages(PageSupplier page_supplier, uint64_t offset,
                                                uint64_t length, const LoaderInfo& info);
-
- protected:
-  // Protected for unit test access.
-  zx::pager pager_;
 
  private:
   class Worker {
@@ -142,18 +129,18 @@ class UserPager {
         std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
         BlobfsMetrics* metrics, bool sandbox_decompression);
 
-    // See |UserPager::TransferPages()| which simply selects which Worker to delegate the
+    // See |PageLoader::TransferPages()| which simply selects which Worker to delegate the
     // actual work to.
-    [[nodiscard]] PagerErrorStatus TransferPages(UserPager::PageSupplier page_supplier,
+    [[nodiscard]] PagerErrorStatus TransferPages(PageLoader::PageSupplier page_supplier,
                                                  uint64_t offset, uint64_t length,
                                                  const LoaderInfo& info);
 
    private:
     Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics);
 
-    PagerErrorStatus TransferChunkedPages(UserPager::PageSupplier page_supplier, uint64_t offset,
+    PagerErrorStatus TransferChunkedPages(PageLoader::PageSupplier page_supplier, uint64_t offset,
                                           uint64_t length, const LoaderInfo& info);
-    PagerErrorStatus TransferUncompressedPages(UserPager::PageSupplier page_supplier,
+    PagerErrorStatus TransferUncompressedPages(PageLoader::PageSupplier page_supplier,
                                                uint64_t offset, uint64_t length,
                                                const LoaderInfo& info);
 
@@ -194,7 +181,7 @@ class UserPager {
     BlobfsMetrics* metrics_ = nullptr;
   };
 
-  explicit UserPager(std::vector<std::unique_ptr<Worker>> workers);
+  explicit PageLoader(std::vector<std::unique_ptr<Worker>> workers);
 
   // Watchdog which triggers if any page faults exceed a threshold deadline.  This *must* come
   // before the loop below so that the loop, whose threads might have references to the watchdog, is
@@ -213,12 +200,8 @@ class UserPager {
   std::mutex worker_allocation_lock_;
   // Incremented on the first call within each pager thread to allocate a worker.
   uint32_t worker_id_allocator_ __TA_GUARDED(worker_allocation_lock_) = 0;
-
-  // Async loop for pager requests.
-  async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
-}  // namespace pager
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_PAGER_USER_PAGER_H_
+#endif  // SRC_STORAGE_BLOBFS_PAGE_LOADER_H_

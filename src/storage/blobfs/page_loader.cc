@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/pager/user_pager.h"
+#include "src/storage/blobfs/page_loader.h"
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -23,7 +23,6 @@
 #include "src/storage/lib/watchdog/include/lib/watchdog/operations.h"
 
 namespace blobfs {
-namespace pager {
 
 struct ReadRange {
   uint64_t offset;
@@ -140,10 +139,10 @@ void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads) {
   }
 }
 
-UserPager::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics)
+PageLoader::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics)
     : decompression_buffer_size_(decompression_buffer_size), metrics_(metrics) {}
 
-zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
+zx::status<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
     std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, bool sandbox_decompression) {
   ZX_DEBUG_ASSERT(metrics != nullptr && resources->uncompressed_buffer != nullptr &&
@@ -160,10 +159,10 @@ zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  TRACE_DURATION("blobfs", "UserPager::Worker::Create");
+  TRACE_DURATION("blobfs", "PageLoader::Worker::Create");
 
-  auto worker =
-      std::unique_ptr<UserPager::Worker>(new UserPager::Worker(decompression_buffer_size, metrics));
+  auto worker = std::unique_ptr<PageLoader::Worker>(
+      new PageLoader::Worker(decompression_buffer_size, metrics));
   worker->uncompressed_transfer_buffer_ = std::move(resources->uncompressed_buffer);
   worker->compressed_transfer_buffer_ = std::move(resources->compressed_buffer);
 
@@ -200,9 +199,9 @@ zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
   return zx::ok(std::move(worker));
 }
 
-PagerErrorStatus UserPager::Worker::TransferPages(UserPager::PageSupplier page_supplier,
-                                                  uint64_t offset, uint64_t length,
-                                                  const LoaderInfo& info) {
+PagerErrorStatus PageLoader::Worker::TransferPages(PageLoader::PageSupplier page_supplier,
+                                                   uint64_t offset, uint64_t length,
+                                                   const LoaderInfo& info) {
   size_t end;
   if (add_overflow(offset, length, &end)) {
     FX_LOGS(ERROR) << "pager transfer range would overflow (off=" << offset << ", len=" << length
@@ -224,17 +223,16 @@ PagerErrorStatus UserPager::Worker::TransferPages(UserPager::PageSupplier page_s
 // The assumption here is that the transfer buffer is sized per the alignment requirements for
 // Merkle tree verification. We have static asserts in place to check this assumption - the transfer
 // buffer (256MB) is 8k block aligned.
-PagerErrorStatus UserPager::Worker::TransferUncompressedPages(UserPager::PageSupplier page_supplier,
-                                                              uint64_t requested_offset,
-                                                              uint64_t requested_length,
-                                                              const LoaderInfo& info) {
+PagerErrorStatus PageLoader::Worker::TransferUncompressedPages(
+    PageLoader::PageSupplier page_supplier, uint64_t requested_offset, uint64_t requested_length,
+    const LoaderInfo& info) {
   ZX_DEBUG_ASSERT(!info.decompressor);
 
   const auto [start_offset, total_length] =
       GetBlockAlignedExtendedRange(info, requested_offset, requested_length);
 
-  TRACE_DURATION("blobfs", "UserPager::TransferUncompressedPages", "offset", start_offset, "length",
-                 total_length);
+  TRACE_DURATION("blobfs", "PageLoader::TransferUncompressedPages", "offset", start_offset,
+                 "length", total_length);
 
   uint64_t offset = start_offset;
   uint64_t length_remaining = total_length;
@@ -340,15 +338,15 @@ PagerErrorStatus UserPager::Worker::TransferUncompressedPages(UserPager::PageSup
 // transfer buffer should work with the worst case compression ratio of 1. We have static asserts in
 // place to check both these assumptions - the transfer buffer is the same size as the decompression
 // buffer (256MB), and both these buffers are 8k block aligned.
-PagerErrorStatus UserPager::Worker::TransferChunkedPages(UserPager::PageSupplier page_supplier,
-                                                         uint64_t requested_offset,
-                                                         uint64_t requested_length,
-                                                         const LoaderInfo& info) {
+PagerErrorStatus PageLoader::Worker::TransferChunkedPages(PageLoader::PageSupplier page_supplier,
+                                                          uint64_t requested_offset,
+                                                          uint64_t requested_length,
+                                                          const LoaderInfo& info) {
   ZX_DEBUG_ASSERT(info.decompressor);
 
   const auto [offset, length] = GetBlockAlignedReadRange(info, requested_offset, requested_length);
 
-  TRACE_DURATION("blobfs", "UserPager::TransferChunkedPages", "offset", offset, "length", length);
+  TRACE_DURATION("blobfs", "PageLoader::TransferChunkedPages", "offset", offset, "length", length);
 
   fbl::String merkle_root_hash = info.verifier->digest().ToString();
 
@@ -482,44 +480,24 @@ PagerErrorStatus UserPager::Worker::TransferChunkedPages(UserPager::PageSupplier
   return PagerErrorStatus::kOK;
 }
 
-UserPager::UserPager(std::vector<std::unique_ptr<Worker>> workers) : workers_(std::move(workers)) {}
+PageLoader::PageLoader(std::vector<std::unique_ptr<Worker>> workers)
+    : workers_(std::move(workers)) {}
 
-zx::status<std::unique_ptr<UserPager>> UserPager::Create(
+zx::status<std::unique_ptr<PageLoader>> PageLoader::Create(
     std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, bool sandbox_decompression) {
-  std::vector<std::unique_ptr<UserPager::Worker>> workers;
+  std::vector<std::unique_ptr<PageLoader::Worker>> workers;
   ZX_ASSERT(!resources.empty());
   for (auto& res : resources) {
-    auto worker_or = UserPager::Worker::Create(std::move(res), decompression_buffer_size, metrics,
-                                               sandbox_decompression);
+    auto worker_or = PageLoader::Worker::Create(std::move(res), decompression_buffer_size, metrics,
+                                                sandbox_decompression);
     if (worker_or.is_error()) {
       return worker_or.take_error();
     }
     workers.push_back(std::move(worker_or.value()));
   }
 
-  auto pager = std::unique_ptr<UserPager>(new UserPager(std::move(workers)));
-
-  // Create the pager object.
-  zx_status_t status = zx::pager::create(0, &pager->pager_);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot initialize pager";
-    return zx::error(status);
-  }
-
-  // Start the worker thread.
-  thrd_t thread;
-  status = pager->pager_loop_.StartThread("blobfs-pager-thread", &thread);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not start pager thread";
-    return zx::error(status);
-  }
-
-  // Set a scheduling deadline profile for the blobfs-pager-thread. This is purely a performance
-  // optimization, and failure to do so is not fatal. So in the case of an error encountered
-  // in any of the steps within |SetDeadlineProfile|, we log a warning, and successfully return the
-  // UserPager instance.
-  SetDeadlineProfile({zx::unowned_thread(thrd_get_zx_handle(thread))});
+  auto pager = std::unique_ptr<PageLoader>(new PageLoader(std::move(workers)));
 
   // Initialize and start the watchdog.
   pager->watchdog_ = fs_watchdog::CreateWatchdog();
@@ -532,14 +510,14 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   return zx::ok(std::move(pager));
 }
 
-uint32_t UserPager::AllocateWorker() {
+uint32_t PageLoader::AllocateWorker() {
   std::lock_guard l(worker_allocation_lock_);
   ZX_DEBUG_ASSERT(worker_id_allocator_ < workers_.size());
   return worker_id_allocator_++;
 }
 
-PagerErrorStatus UserPager::TransferPages(PageSupplier page_supplier, uint64_t offset,
-                                          uint64_t length, const LoaderInfo& info) {
+PagerErrorStatus PageLoader::TransferPages(PageSupplier page_supplier, uint64_t offset,
+                                           uint64_t length, const LoaderInfo& info) {
   static const fs_watchdog::FsOperationType kOperation(
       fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
   [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
@@ -549,5 +527,4 @@ PagerErrorStatus UserPager::TransferPages(PageSupplier page_supplier, uint64_t o
   return workers_[worker_id]->TransferPages(std::move(page_supplier), offset, length, info);
 }
 
-}  // namespace pager
 }  // namespace blobfs

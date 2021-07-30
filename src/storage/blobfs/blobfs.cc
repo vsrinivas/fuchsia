@@ -150,7 +150,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 
   auto fs_ptr = fs.get();
   FX_CHECK(options.paging_threads > 0);
-  std::vector<std::unique_ptr<pager::UserPager::WorkerResources>> worker_resources;
+  std::vector<std::unique_ptr<PageLoader::WorkerResources>> worker_resources;
   for (int i = 0; i < options.paging_threads; ++i) {
     auto uncompressed_buffer_or = StorageBackedTransferBuffer::Create(
         kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
@@ -164,17 +164,17 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
       FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
       return compressed_buffer_or.take_error();
     }
-    worker_resources.push_back(std::make_unique<pager::UserPager::WorkerResources>(
+    worker_resources.push_back(std::make_unique<PageLoader::WorkerResources>(
         std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value()));
   }
-  auto pager_or =
-      pager::UserPager::Create(std::move(worker_resources), kDecompressionBufferSize,
-                               fs_ptr->GetMetrics().get(), options.sandbox_decompression);
-  if (pager_or.is_error()) {
+  auto page_loader_or =
+      PageLoader::Create(std::move(worker_resources), kDecompressionBufferSize,
+                         fs_ptr->GetMetrics().get(), options.sandbox_decompression);
+  if (page_loader_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
-    return pager_or.take_error();
+    return page_loader_or.take_error();
   }
-  fs->pager_ = std::move(pager_or).value();
+  fs->page_loader_ = std::move(page_loader_or).value();
   FX_LOGS(INFO) << "Initialized user pager";
 
   if (options.metrics) {
@@ -872,8 +872,8 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // Waits for all pending writeback operations to complete or fail.
   journal_.reset();
 
-  // Reset |pager_| which owns a VMO that is attached to the block FIFO.
-  pager_ = nullptr;
+  // Reset the PageLoader which owns a VMO that is attached to the block FIFO.
+  page_loader_ = nullptr;
 
   // Flushes the underlying block device.
   this->Flush();
