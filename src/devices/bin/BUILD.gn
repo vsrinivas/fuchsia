@@ -4,9 +4,17 @@
 
 group("bin") {
   deps = [
+    "acpidump",
     "driver-index",
+    "driver-registrar",
     "driver_host",
+    "driver_host2",
     "driver_manager",
+    "driverctl",
+    "lsdev",
+    "register-util",
+    "tee-test",
+    "unbind",
   ]
 }
 

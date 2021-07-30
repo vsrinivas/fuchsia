@@ -120,10 +120,12 @@ group("utils") {
     # utils should not be included in user build which does not have shell
     # access.
     "//build/validate:non_production_tag",
+    "//src/devices/bin/acpidump",
     "//src/devices/bin/driver-info:driverinfo",
     "//src/devices/bin/driver-registrar",
     "//src/devices/bin/driverctl",
     "//src/devices/bin/lsdev",
+    "//src/devices/bin/register-util",
     "//src/devices/bin/unbind",
     "//src/devices/block/bin/gpt",
     "//src/devices/block/bin/lsblk",
