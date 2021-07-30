@@ -53,7 +53,6 @@ class AppStateImpl with Disposable implements AppState {
     required this.preferencesService,
     required this.pointerEventsService,
   }) : localeStream = startupService.stream.asObservable() {
-    _focusedView = startupService.hostView.asObservable();
     focusService.onFocusMoved = _onFocusMoved;
     presenterService
       ..onPresenterDisposed = dispose
@@ -388,8 +387,12 @@ class AppStateImpl with Disposable implements AppState {
         'screenSaver': showScreenSaver,
       };
 
-  late final Observable<ViewHandle> _focusedView;
+  final _focusedView = Observable<ViewHandle?>(null);
   void _onFocusMoved(ViewHandle viewHandle) {
+    if (_focusedView.value == viewHandle) {
+      return;
+    }
+
     runInAction(() {
       _focusedView.value = viewHandle;
 
