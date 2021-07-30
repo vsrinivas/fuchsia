@@ -112,6 +112,7 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     return LOG_STATUS(DEBUG, ZX_ERR_INVALID_ARGS, "%u", bar_id);
   }
 
+#ifdef ENABLE_MSIX
   // If this device supports MSIX then we need to deny access to the BARs it
   // uses.
   // TODO(fxbug.dev/32978): It is technically possible for a device to place the pba/mask
@@ -122,6 +123,7 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   if (msix && (msix->table_bar() == bar_id || msix->pba_bar() == bar_id)) {
     return LOG_STATUS(DEBUG, ZX_ERR_ACCESS_DENIED, "%u", bar_id);
   }
+#endif
 
   // Both unused BARs and BARs that are the second half of a 64 bit
   // BAR have a size of zero.

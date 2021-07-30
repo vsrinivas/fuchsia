@@ -229,9 +229,11 @@ TEST_F(PciProtocolTests, GetBar1) {
 }
 
 TEST_F(PciProtocolTests, GetBar2) {
+#ifdef ENABLE_MSIX
   pci_bar_t info = {};
   // BAR 2 contains MSI-X registers and should be denied
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, pci().GetBar(2, &info));
+#endif
 }
 
 TEST_F(PciProtocolTests, GetBar3) {
