@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <poll.h>
 #include <sys/eventfd.h>
 #include <sys/select.h>
@@ -26,7 +27,7 @@
 // If you see this method in your stack, it is usually an indication that you
 // should include fdio in your build.
 static void __attribute__((noinline)) libc_io_functions_not_implemented_use_fdio_instead(void) {
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 static ssize_t stub_read(int fd, void* buf, size_t count) {

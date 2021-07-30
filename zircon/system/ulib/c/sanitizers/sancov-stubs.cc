@@ -4,6 +4,7 @@
 
 #include "sancov-stubs.h"
 
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <zircon/compiler.h>
 
 // This file defines all the entry points that -fsanitize-coverage=...
@@ -23,7 +24,7 @@
 // This should never be called, because the runtime should have been
 // loaded before any module initializers get called.
 [[gnu::weak]] __EXPORT extern "C" void __sanitizer_cov_trace_pc_guard_init(uint32_t*, uint32_t*) {
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 // This is called only from __asan_early_init, which is the only thing
@@ -33,7 +34,7 @@
 // aren't getting here after module initializers have run.
 [[gnu::weak]] __EXPORT extern "C" void __sanitizer_cov_trace_pc_guard(uint32_t* guard) {
   if (*guard != 0) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
 }
 

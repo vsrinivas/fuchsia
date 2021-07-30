@@ -10,6 +10,7 @@
 #include <lib/processargs/processargs.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zircon-internal/default_stack_size.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <limits.h>
 #include <link.h>
 #include <pthread.h>
@@ -667,7 +668,6 @@ __NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso, const Phdr
   }
   return false;
 }
-
 
 // Format the markup elements by hand to avoid using large and complex code
 // like the printf engine.
@@ -1575,7 +1575,7 @@ __NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
 
   zx_status_t status = zxr_thread_adopt(thread_self, &td->zxr_thread);
   if (status != ZX_OK)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 
   zxr_tp_set(thread_self, pthread_to_tp(td));
 
@@ -1670,7 +1670,7 @@ __NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden"))) dl_start_return
     }
   }
   if (addend_rel_cnt >= ADDEND_LIMIT)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   size_t addends[addend_rel_cnt];
   saved_addends = addends;
 
@@ -1900,7 +1900,7 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
   // TODO(44088) : See this bug for options which might allow us to avoid the
   // need for variable length arrays of any form at this stage.
   if ((nbytes == 0) || (nhandles == 0)) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
     _exit(1);
   }
 
@@ -1999,7 +1999,7 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     }
   } else if (ldso.global <= 0) {
     // This should be impossible.
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
 
 #ifdef __aarch64__
@@ -2200,7 +2200,7 @@ static void* dlopen_internal(zx_handle_t vmo, const char* file, int mode) {
 
   if (p == NULL) {
     if (!(mode & RTLD_NOLOAD))
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
     error("Library %s is not already loaded", file);
     goto fail;
   }
@@ -2618,7 +2618,7 @@ __NO_SAFESTACK __attribute__((__visibility__("hidden"))) void _dl_log_write(cons
       }
       zx_status_t status = _zx_debuglog_write(logger, 0, buffer, chunk);
       if (status != ZX_OK) {
-        __builtin_trap();
+        CRASH_WITH_UNIQUE_BACKTRACE();
       }
       buffer += chunk;
       len -= chunk;
@@ -2626,7 +2626,7 @@ __NO_SAFESTACK __attribute__((__visibility__("hidden"))) void _dl_log_write(cons
   } else {
     zx_status_t status = _zx_debug_write(buffer, len);
     if (status != ZX_OK) {
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
     }
   }
 }
@@ -2685,7 +2685,7 @@ zx_status_t __sanitizer_change_code_protection(uintptr_t addr, size_t len, bool 
 
   if (!KEEP_DSO_VMAR) {
     __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
 
   struct dso* p;

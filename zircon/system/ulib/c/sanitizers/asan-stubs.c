@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zircon-internal/unique-backtrace.h>
+
 #include "asan_impl.h"
 
 // In the ASan build, this file provides weak definitions for all the
@@ -50,7 +52,7 @@ ASAN_SET_SHADOW_XX(f8)
 // Everything else is trap stubs.  They should never be called.
 
 #define TRAP_STUB(decl) \
-  __EXPORT __WEAK __NO_SAFESTACK decl { __builtin_trap(); }
+  __EXPORT __WEAK __NO_SAFESTACK decl { CRASH_WITH_UNIQUE_BACKTRACE(); }
 
 // These are only called when a bug is found.  So unless there's
 // an actual bug in code that's on the dynamic linker startup path,

@@ -13,12 +13,15 @@
 // the runtime.  The set of function signatures here was culled from the
 // LLVM sources for the runtime (see compiler-rt/lib/ubsan/*).
 
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <zircon/compiler.h>
 
 #if __has_feature(undefined_behavior_sanitizer)
 
-#define STUB_HANDLER(name, ...) \
-  [[gnu::weak]] __EXPORT extern "C" void __ubsan_handle_##name(__VA_ARGS__) { __builtin_trap(); }
+#define STUB_HANDLER(name, ...)                                               \
+  [[gnu::weak]] __EXPORT extern "C" void __ubsan_handle_##name(__VA_ARGS__) { \
+    CRASH_WITH_UNIQUE_BACKTRACE();                                            \
+  }
 
 #define UNRECOVERABLE(name, ...) STUB_HANDLER(name)
 #define RECOVERABLE(name, ...) \

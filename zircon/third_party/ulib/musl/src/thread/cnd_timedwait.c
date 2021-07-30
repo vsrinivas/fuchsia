@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <lib/sync/internal/mutex-internal.h>
 #include <lib/sync/mutex.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stdalign.h>
 #include <threads.h>
 
@@ -160,6 +161,6 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
       return thrd_timedout;
     default:
       // No other error values are permissible from __timedwait_cp();
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
   }
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <limits.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -24,7 +25,7 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
   zx_status_t status =
       _zx_object_get_info(__zircon_vmar_root_self, ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL);
   if (status != ZX_OK)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 
   // Find the top of the accessible address space.
   uintptr_t top = info.base + info.len;
@@ -52,7 +53,7 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
       ZX_VM_SPECIFIC | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0,
       shadow_virtual_size - info.base, &shadow_vmar, &shadow_addr);
   if (status != ZX_OK || shadow_addr != info.base)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 
   // The actual shadow that needs to be mapped starts at the top of
   // the shadow of the shadow, and has a page of shadow for each
@@ -66,20 +67,20 @@ __NO_SAFESTACK NO_ASAN void __asan_early_init(void) {
   // to allow decommit of shadow memory later, see below.
   status = _zx_vmo_create(shadow_used_size, 0, &shadow_vmo);
   if (status != ZX_OK)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   _zx_object_set_property(shadow_vmo, ZX_PROP_NAME, SHADOW_VMO_NAME, sizeof(SHADOW_VMO_NAME) - 1);
 
   status =
       _zx_vmar_map(shadow_vmar, ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
                    shadow_shadow_size - info.base, shadow_vmo, 0, shadow_used_size, &shadow_addr);
   if (status != ZX_OK || shadow_addr != shadow_shadow_size)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 
   // Drop the VMAR handle.
   // The mappings in the shadow region can never be changed.
   status = _zx_handle_close(shadow_vmar);
   if (status != ZX_OK)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 
   // Store the values to be exported to the sanitizer runtime library.
   shadow_bounds.shadow_base = shadow_shadow_size;
@@ -109,7 +110,7 @@ NO_ASAN static void decommit_if_zero(uintptr_t page) {
       _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT, page - shadow_bounds.shadow_base,
                        _zx_system_get_page_size(), NULL, 0);
   if (status != ZX_OK) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
 }
 
@@ -117,7 +118,7 @@ __EXPORT
 NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, size_t threshold) {
   const uintptr_t shadow_base = base >> ASAN_SHADOW_SHIFT;
   if (shadow_base < shadow_bounds.shadow_base) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
   const size_t shadow_size = size >> ASAN_SHADOW_SHIFT;
   const size_t kPageSize = _zx_system_get_page_size();
@@ -142,7 +143,7 @@ NO_ASAN void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value,
         _zx_vmo_op_range(shadow_vmo, ZX_VMO_OP_DECOMMIT, page_start - shadow_bounds.shadow_base,
                          page_end - page_start, NULL, 0);
     if (status != ZX_OK) {
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
     }
   } else {
     __unsanitized_memset((void *)shadow_base, value, shadow_size);
@@ -159,13 +160,13 @@ static const char kBadDepsMessage[] =
 __EXPORT
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
   __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 __EXPORT
 void __sanitizer_fill_shadow(uintptr_t base, size_t size, uint8_t value, uintptr_t threshold) {
   __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 #endif  // __has_feature(address_sanitizer)

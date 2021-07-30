@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stdint.h>
 #include <time.h>
 #include <zircon/syscalls.h>
@@ -12,7 +13,7 @@
 
 static int gettime_finish(zx_status_t syscall_status, zx_time_t now, struct timespec* ts) {
   if (syscall_status != ZX_OK) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
 
   ts->tv_sec = now / ZX_SEC(1);

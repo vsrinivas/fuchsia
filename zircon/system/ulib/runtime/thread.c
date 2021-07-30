@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/elf-psabi/sp.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/syscalls.h>
@@ -84,7 +85,7 @@ static _Noreturn void exit_non_detached(zxr_internal_thread_t* thread) {
   // completely unrelated, well, that's why futex_wait can always have
   // spurious wakeups.
   _zx_futex_wake_handle_close_thread_exit(&thread->state, 1, DONE, handle);
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
@@ -106,7 +107,7 @@ static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
 
   // Cannot be in DONE, EXITING, or DETACHED and reach here.  For DETACHED, it
   // is the responsibility of a higher layer to ensure this is not reached.
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 _Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if_detached)(void*),
@@ -129,7 +130,7 @@ _Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if
   }
 
   // Cannot be in DONE or the EXITING and reach here.
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 // Local implementation so libruntime does not depend on libc.
@@ -180,14 +181,14 @@ static void wait_for_done(zxr_internal_thread_t* thread, int32_t old_state) {
         old_state = atomic_load_explicit(&thread->state, memory_order_acquire);
         break;
       default:
-        __builtin_trap();
+        CRASH_WITH_UNIQUE_BACKTRACE();
     }
     // Wait until we reach the DONE state, even if we observe the
     // intermediate EXITING state.
   } while (old_state == JOINED || old_state == EXITING);
 
   if (old_state != DONE)
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
 zx_status_t zxr_thread_join(zxr_thread_t* external_thread) {
@@ -212,7 +213,7 @@ zx_status_t zxr_thread_join(zxr_thread_t* external_thread) {
       case DONE:
         break;
       default:
-        __builtin_trap();
+        CRASH_WITH_UNIQUE_BACKTRACE();
     }
   }
 
@@ -242,7 +243,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
         zx_status_t ret = zxr_thread_join(thread);
         if (unlikely(ret != ZX_OK)) {
           if (unlikely(ret != ZX_ERR_INVALID_ARGS)) {
-            __builtin_trap();
+            CRASH_WITH_UNIQUE_BACKTRACE();
           }
           return ret;
         }
@@ -252,7 +253,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
       case DONE:
         return ZX_ERR_BAD_STATE;
       default:
-        __builtin_trap();
+        CRASH_WITH_UNIQUE_BACKTRACE();
     }
   }
 

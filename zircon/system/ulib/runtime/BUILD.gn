@@ -15,6 +15,7 @@ zx_library("runtime") {
   deps = [
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/elf-psabi",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # This code is used in early startup, where safe-stack is not ready yet.

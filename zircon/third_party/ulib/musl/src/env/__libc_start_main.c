@@ -1,5 +1,6 @@
 #include <elf.h>
 #include <lib/processargs/processargs.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stdatomic.h>
 #include <string.h>
 #include <zircon/sanitizer.h>
@@ -178,7 +179,7 @@ __EXPORT NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t boo
     status = processargs_read(bootstrap, buffer, p.nbytes, handles, p.nhandles, &p.procargs,
                               &p.handle_info);
     if (status != ZX_OK) {
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
     }
     _zx_handle_close(bootstrap);
     zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
@@ -313,5 +314,5 @@ __EXPORT NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t boo
 #endif
   }
 
-  __builtin_trap();
+  CRASH_WITH_UNIQUE_BACKTRACE();
 }

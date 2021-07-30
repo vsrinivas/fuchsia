@@ -1,8 +1,10 @@
 // -*- C++ -*-
-#pragma once
+#ifndef ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_THREADS_IMPL_H_
+#define ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_THREADS_IMPL_H_
 
 #include <assert.h>
 #include <errno.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <limits.h>
 #include <locale.h>
 #include <pthread.h>
@@ -190,7 +192,7 @@ static inline int pthread_mutex_tid_to_uncontested_state(pid_t h) {
   // For now, let's incur the cost of this sanity check, but consider relaxing
   // it so that it is only performed in debug builds.
   if ((h & ZX_HANDLE_FIXED_BITS_MASK) != ZX_HANDLE_FIXED_BITS_MASK) {
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
   return ((int)h);
 }
@@ -375,3 +377,5 @@ struct ScopedThreadList : public LockedThreadList {
 
 }  // namespace
 #endif
+
+#endif  // ZIRCON_THIRD_PARTY_ULIB_MUSL_SRC_INTERNAL_THREADS_IMPL_H_

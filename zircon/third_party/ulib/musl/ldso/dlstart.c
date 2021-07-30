@@ -1,3 +1,4 @@
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <zircon/compiler.h>
@@ -39,7 +40,7 @@ __LOCAL dl_start_return_t _dl_start(void* start_arg, void* vdso) {
         break;
       case DT_RELRENT:
         if (d->d_un.d_val != sizeof(relr[0])) {
-          __builtin_trap();
+          CRASH_WITH_UNIQUE_BACKTRACE();
         }
         break;
     }

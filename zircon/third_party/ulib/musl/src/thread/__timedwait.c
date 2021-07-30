@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <time.h>
 #include <zircon/syscalls.h>
 
@@ -27,6 +28,6 @@ int __timedwait_assign_owner(atomic_int* futex, int val, clockid_t clk, const st
       return ETIMEDOUT;
     case ZX_ERR_INVALID_ARGS:
     default:
-      __builtin_trap();
+      CRASH_WITH_UNIQUE_BACKTRACE();
   }
 }

@@ -1,4 +1,5 @@
 #include <langinfo.h>
+#include <lib/zircon-internal/unique-backtrace.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -17,7 +18,7 @@ char* __asctime(const struct tm* restrict tm, char* restrict buf) {
      * application developers that they may not be so lucky
      * on other implementations (e.g. stack smashing..).
      */
-    __builtin_trap();
+    CRASH_WITH_UNIQUE_BACKTRACE();
   }
   return buf;
 }
