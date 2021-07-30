@@ -59,10 +59,7 @@ impl RunBuilderConnector {
     }
 }
 
-#[ffx_plugin(
-    "cmd-test.experimental",
-    ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query"
-)]
+#[ffx_plugin(ftest_manager::QueryProxy = "core/test_manager:expose:fuchsia.test.manager.Query")]
 pub async fn test(
     query_proxy: ftest_manager::QueryProxy,
     remote_control: fremotecontrol::RemoteControlProxy,
@@ -94,15 +91,34 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
     let count = std::num::NonZeroU16::new(count)
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
 
-    let output_directory = match (cmd.disable_output_directory, cmd.output_directory) {
-        (true, _) => None, // output to directory is disabled.
-        (false, Some(directory)) => Some(directory.into()), // an override directory is specified.
-        (false, None) => {
-            // default to using a managed directory.
-            let mut directory_manager = get_directory_manager().await?;
-            Some(directory_manager.new_directory()?)
-        }
-    };
+    // Whether or not the experimental structured output is enabled.
+    // When the experiment is disabled and the user attempts to use a strucutured output option,
+    // we bail.
+    let structured_output_experiment =
+        match ffx_config::get("test.experimental_structured_output").await {
+            Ok(true) => true,
+            Ok(false) | Err(_) => false,
+        };
+    let output_directory =
+        match (cmd.disable_output_directory, cmd.output_directory, structured_output_experiment) {
+            (true, _, _) => None, // user explicitly disabled output.
+            (false, Some(directory), true) => Some(directory.into()), // an override directory is specified.
+            // user specified an override, but output is disabled by experiment flag.
+            (false, Some(_), false) => {
+                ffx_bail!(
+                    "Structured output is experimental and is subject to breaking changes. \
+                To enable structured output run \
+                'ffx config set test.experimental_structured_output true'"
+                )
+            }
+            // Default to a managed directory when structured output is enabled.
+            (false, None, true) => {
+                let mut directory_manager = get_directory_manager().await?;
+                Some(directory_manager.new_directory()?)
+            }
+            // Default to nothing when structured output is disabled.
+            (false, None, false) => None,
+        };
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
@@ -170,6 +186,15 @@ async fn result_command<W: Write>(
     ResultCommand { subcommand }: ResultCommand,
     mut writer: W,
 ) -> Result<()> {
+    match ffx_config::get("test.experimental_structured_output").await {
+        Ok(true) => (),
+        Ok(false) | Err(_) => ffx_bail!(
+            "The result subcommand relies on structured output, which is experimental \
+            and subject to breaking changes. \
+            To enable structured output run 'ffx config set test.experimental_structured_output true'
+        ")
+    }
+
     match subcommand {
         ResultSubCommand::Show(ShowResultCommand { directory, index, name }) => {
             let directory_to_display = if let Some(directory_override) = directory {

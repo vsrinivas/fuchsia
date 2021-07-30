@@ -56,7 +56,9 @@ pub async fn test(
     remote_control: fremotecontrol::RemoteControlProxy,
     cmd: TestCommand,
 ) -> Result<(), Error> {
-    let writer = Box::new(stdout());
+    let mut writer = Box::new(stdout());
+    writeln!(writer, "WARNING: ffx component test is deprecated and will soon be removed.")?;
+    writeln!(writer, "Use ffx test run instead.")?;
     let count = cmd.count.unwrap_or(1);
     let count = std::num::NonZeroU16::new(count)
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
