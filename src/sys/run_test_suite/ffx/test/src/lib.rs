@@ -127,7 +127,7 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             test_filters: if cmd.test_filter.len() == 0 { None } else { Some(cmd.test_filter) },
             also_run_disabled_tests: cmd.run_disabled,
             parallel: cmd.parallel,
-            test_args: vec![],
+            test_args: cmd.test_args,
             builder_connector: builder_connector,
         },
         diagnostics::LogCollectionOptions {

@@ -228,7 +228,7 @@ void main() {
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message,
-          'shell run-test-suite fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz');
+          'ffx test run --disable-output-directory fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz');
     });
 
     test('when there are pass-thru commands for component tests', () async {
@@ -528,8 +528,8 @@ void main() {
       expect(testsConfig.flags.runDisabledTests, true);
       expect(testsConfig.runnerTokens[TestType.suite],
           isNot(contains('--test-filter')));
-      expect(testsConfig.runnerTokens[TestType.suite],
-          contains('--also-run-disabled-tests'));
+      expect(
+          testsConfig.runnerTokens[TestType.suite], contains('--run-disabled'));
     });
   });
 

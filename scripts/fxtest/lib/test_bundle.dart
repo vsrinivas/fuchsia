@@ -212,7 +212,8 @@ class TestBundle {
           flags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
           break;
         case TestType.suite:
-          flags.add('--max-severity-logs ${testDefinition.maxLogSeverity}');
+          flags.add('--max-severity-logs');
+          flags.add(testDefinition.maxLogSeverity);
           break;
         default:
           break;

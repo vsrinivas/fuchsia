@@ -142,8 +142,13 @@ class ExecutionHandle {
   /// Handler for `tests.json` entries containing the `packageUrl` key ending
   /// in ".cm".
   CommandTokens _getSuiteTokens(List<String> runnerFlags) {
-    List<String> subCommand = ['shell', 'run-test-suite']
-      ..addAll(runnerFlags.map((flag) => "'$flag'"));
+    // Structured output is disabled until we understand how fx will interact with it.
+    List<String> subCommand = [
+      'ffx',
+      'test',
+      'run',
+      '--disable-output-directory'
+    ]..addAll(runnerFlags.map((flag) => "'$flag'"));
     return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
 

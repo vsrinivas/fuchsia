@@ -29,14 +29,14 @@ pub enum TestSubcommand {
 #[argh(
     subcommand,
     name = "run",
-    description = "Run test suite",
+    description = "Entry point for executing tests",
     note = "Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
 
 Note that if running multiple iterations of a test and an iteration times
 out, no further iterations will be executed."
 )]
 pub struct RunCommand {
-    /// test timeout
+    /// test timeout in seconds
     #[argh(option, short = 't')]
     pub timeout: Option<u32>,
 
@@ -44,24 +44,27 @@ pub struct RunCommand {
     #[argh(positional)]
     pub test_url: String,
 
-    /// glob pattern for matching tests. Can be specified multiple times to pass in multiple
-    /// patterns. example: --test-filter glob1 --test-filter glob2.
+    /// test filter. Glob pattern for matching tests. Can be
+    /// specified multiple times to pass in multiple patterns.
+    /// example: --test-filter glob1 --test-filter glob2.
     #[argh(option)]
     pub test_filter: Vec<String>,
 
-    /// run tests that have been marked disabled/ignored
+    /// whether to also run tests that have been marked disabled/ignored
+    /// by the test author.
     #[argh(switch)]
     pub run_disabled: bool,
 
-    /// filter ANSI escape sequences from output
+    /// whether to filter ANSI escape sequences from output
     #[argh(switch)]
     pub filter_ansi: bool,
 
-    /// run tests in parallel
+    /// run tests in parallel, up to the number provided.
     #[argh(option)]
     pub parallel: Option<u16>,
 
-    /// number of times to run the test [default = 1]
+    /// number of times to run the test. By default run 1 time. If an iteration
+    /// of the test times out, no further iterations are executed.
     #[argh(option)]
     pub count: Option<u16>,
 
@@ -80,6 +83,10 @@ pub struct RunCommand {
     /// when set, disables structured output to a directory.
     #[argh(switch)]
     pub disable_output_directory: bool,
+
+    /// arguments passed to tests, following `--`.
+    #[argh(positional)]
+    pub test_args: Vec<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

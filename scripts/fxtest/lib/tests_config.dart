@@ -239,7 +239,7 @@ class TestsConfig {
     // We do not add the parallel option here, as it may also be specified via
     // test spec. Instead, it is added later.
     if (flags.runDisabledTests) {
-      v2runnerTokens.add('--also-run-disabled-tests');
+      v2runnerTokens.add('--run-disabled');
     }
     if (flags.timeout > 0) {
       v2runnerTokens..add('--timeout')..add(flags.timeout.toString());
