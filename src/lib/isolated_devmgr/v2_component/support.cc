@@ -4,11 +4,9 @@
 
 // To get drivermanager to run in a test environment, we need to fake boot-arguments & root-job.
 
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/driver/framework/llcpp/fidl.h>
-#include <fuchsia/kernel/c/fidl.h>
 #include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -16,9 +14,14 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/svc/dir.h>
+#include <lib/svc/outgoing.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/global.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -33,6 +36,7 @@
 
 #include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "zircon/system/public/zircon/device/vfs.h"
 
 namespace {
 
@@ -147,19 +151,22 @@ class FakePowerRegistration
   fidl::ClientEnd<fuchsia_io::Directory> dir_;
 };
 
-zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
-  zx::vmo vmo;
-  uint32_t length = 0;
-  std::vector<board_test::DeviceEntry> entries = {};
-  zx_status_t status = GetBootItem(entries, type, extra, &vmo, &length);
-  if (status != ZX_OK) {
-    return status;
+class FakeBootItems final : public fidl::WireServer<fuchsia_boot::Items> {
+  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+    zx::vmo vmo;
+    uint32_t length = 0;
+    std::vector<board_test::DeviceEntry> entries = {};
+    zx_status_t status = GetBootItem(entries, request->type, request->extra, &vmo, &length);
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, nullptr, "Failed to get boot items: %d", status);
+    }
+    completer.Reply(std::move(vmo), length);
   }
-  return fuchsia_boot_ItemsGet_reply(txn, vmo.release(), length);
-}
 
-constexpr fuchsia_boot_Items_ops kItemsOps = {
-    .Get = ItemsGet,
+  void GetBootloaderFile(GetBootloaderFileRequestView request,
+                         GetBootloaderFileCompleter::Sync& completer) override {
+    completer.Reply(zx::vmo());
+  }
 };
 
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
@@ -177,67 +184,81 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
   }
 };
 
-}  // namespace
-
-static zx_status_t RootJobGet(void* ctx, fidl_txn_t* txn) {
-  zx_handle_t out;
-  zx_status_t status = zx_handle_duplicate(zx_job_default(), ZX_RIGHT_SAME_RIGHTS, &out);
-  if (status != ZX_OK) {
-    return status;
+class FakeRootJob final : public fidl::WireServer<fuchsia_kernel::RootJob> {
+  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+    zx::job job;
+    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
+    if (status != ZX_OK) {
+      FX_LOGF(ERROR, nullptr, "Failed to duplicate job: %d", status);
+    }
+    completer.Reply(std::move(job));
   }
-  return fuchsia_kernel_RootJobGet_reply(txn, out);
-}
-
-constexpr fuchsia_kernel_RootJob_ops kRootJobOps = {
-    .Get = RootJobGet,
 };
+
+}  // namespace
 
 int main(void) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  svc::Outgoing outgoing(loop.dispatcher());
+  zx_status_t status = outgoing.ServeFromStartupInfo();
 
   mock_boot_arguments::Server boot_arguments;
-  context->outgoing()->AddPublicService(
-      std::make_unique<vfs::Service>(
-          [&boot_arguments](zx::channel request, async_dispatcher_t* dispatcher) {
-            fidl::BindSingleInFlightOnly(dispatcher, std::move(request), &boot_arguments);
-          }),
-      fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>);
+  status = outgoing.svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
+      fbl::MakeRefCounted<fs::Service>(
+          [&boot_arguments, dispatcher = loop.dispatcher()](
+              fidl::ServerEnd<fuchsia_boot::Arguments> request) mutable {
+            fidl::BindServer(dispatcher, std::move(request), &boot_arguments);
+            return ZX_OK;
+          }));
+
   FakePowerRegistration fake_power_registration;
-  context->outgoing()->AddPublicService(
-      std::make_unique<vfs::Service>(
-          [&fake_power_registration](zx::channel request, async_dispatcher_t* dispatcher) {
-            fidl::BindSingleInFlightOnly(dispatcher, std::move(request), &fake_power_registration);
-          }),
-      fidl::DiscoverableProtocolName<fuchsia_power_manager::DriverManagerRegistration>);
-  context->outgoing()->AddPublicService(
-      std::make_unique<vfs::Service>([](zx::channel request, async_dispatcher_t* dispatcher) {
-        auto boot_items_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
-        fidl_bind(dispatcher, request.release(), boot_items_dispatch, nullptr, &kItemsOps);
-      }),
-      fidl::DiscoverableProtocolName<fuchsia_boot::Items>);
+  status = outgoing.svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_power_manager::DriverManagerRegistration>,
+      fbl::MakeRefCounted<fs::Service>(
+          [&fake_power_registration, dispatcher = loop.dispatcher()](
+              fidl::ServerEnd<fuchsia_power_manager::DriverManagerRegistration> request) mutable {
+            fidl::BindServer(dispatcher, std::move(request), &fake_power_registration);
+            return ZX_OK;
+          }));
 
-  context->outgoing()->AddPublicService(
-      std::make_unique<vfs::Service>([](zx::channel request, async_dispatcher_t* dispatcher) {
-        auto root_job_dispatch =
-            reinterpret_cast<fidl_dispatch_t*>(fuchsia_kernel_RootJob_dispatch);
-        fidl_bind(dispatcher, request.release(), root_job_dispatch, nullptr, &kRootJobOps);
-      }),
-      fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>);
+  FakeBootItems boot_items;
+  status = outgoing.svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_boot::Items>,
+      fbl::MakeRefCounted<fs::Service>([&boot_items, dispatcher = loop.dispatcher()](
+                                           fidl::ServerEnd<fuchsia_boot::Items> request) mutable {
+        fidl::BindServer(dispatcher, std::move(request), &boot_items);
+        return ZX_OK;
+      }));
 
-  FakeDriverIndex driver_index;
-  context->outgoing()->AddPublicService(
-      std::make_unique<vfs::Service>([&driver_index](zx::channel request,
-                                                     async_dispatcher_t* dispatcher) {
-        fidl::BindServer(dispatcher,
-                         fidl::ServerEnd<fuchsia_driver_framework::DriverIndex>(std::move(request)),
-                         &driver_index);
-      }),
-      fidl::DiscoverableProtocolName<fuchsia_driver_framework::DriverIndex>);
+  FakeRootJob root_job;
+  status = outgoing.svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>,
+      fbl::MakeRefCounted<fs::Service>(
+          [&root_job, dispatcher = loop.dispatcher()](
+              fidl::ServerEnd<fuchsia_kernel::RootJob> request) mutable {
+            fidl::BindServer(dispatcher, std::move(request), &root_job);
+            return ZX_OK;
+          }));
 
-  context->outgoing()->root_dir()->AddEntry("system", std::make_unique<vfs::PseudoDir>());
-  context->outgoing()->root_dir()->AddEntry("pkgfs", std::make_unique<vfs::PseudoDir>());
+  outgoing.root_dir()->AddEntry("system", fbl::MakeRefCounted<fs::PseudoDir>());
+  outgoing.root_dir()->AddEntry("pkgfs", fbl::MakeRefCounted<fs::PseudoDir>());
+
+  zx::channel dir, server;
+  status = zx::channel::create(0, &dir, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_open("/pkg", ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                     server.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  outgoing.root_dir()->AddEntry(
+      "boot",
+      fbl::MakeRefCounted<fs::RemoteDir>(fidl::ClientEnd<fuchsia_io::Directory>(std::move(dir))));
 
   loop.Run();
   return 0;

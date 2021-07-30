@@ -5,7 +5,7 @@
     children: [
         {
             name: "driver-manager",
-            url: "#meta/driver-manager.cm",
+            url: "#meta/driver-manager-test.cm",
         },
         {
             name: "driver-manager-support",
@@ -59,6 +59,11 @@
         {
             directory: "system-delayed",
             from: "parent",
+            to: [ "#driver-manager" ],
+        },
+        {
+            directory: "boot",
+            from: "#driver-manager-support",
             to: [ "#driver-manager" ],
         },
         {

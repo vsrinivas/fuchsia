@@ -8,14 +8,12 @@ executable("support") {
   testonly = true
   sources = [ "support.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.boot",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_llcpp",
+    "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
@@ -25,12 +23,8 @@ executable("support") {
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/svc",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_component("driver-manager-test") {

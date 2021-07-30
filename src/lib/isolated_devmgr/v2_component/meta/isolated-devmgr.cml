@@ -15,12 +15,17 @@
             name: "driver-manager-support",
             url: "#meta/driver-manager-support.cm",
         },
+        {
+            name: "driver-index",
+            url: "#meta/driver-index.cm",
+        },
     ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#driver-index",
                 "#driver-manager-support",
                 "#driver-manager-test",
             ],
@@ -37,11 +42,15 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
-                "fuchsia.driver.framework.DriverIndex",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",
             ],
             from: "#driver-manager-support",
+            to: [ "#driver-manager-test" ],
+        },
+        {
+            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            from: "#driver-index",
             to: [ "#driver-manager-test" ],
         },
         {
@@ -53,6 +62,20 @@
             directory: "system-delayed",
             from: "#driver-manager-support",
             to: [ "#driver-manager-test" ],
+        },
+        {
+            directory: "pkgfs-packages-delayed",
+            from: "#driver-manager-support",
+            to: [ "#driver-index" ],
+        },
+        {
+            directory: "boot",
+            from: "#driver-manager-support",
+            to: [
+                "#driver-index",
+                "#driver-manager-test",
+            ],
+            rights: [ "rx*" ],
         },
     ],
     expose: [

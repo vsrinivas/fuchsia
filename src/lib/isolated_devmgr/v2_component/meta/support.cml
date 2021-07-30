@@ -23,9 +23,19 @@
             path: "/pkgfs",
         },
         {
+            directory: "pkgfs-packages-delayed",
+            rights: [ "r*" ],
+            path: "/pkgfs",
+        },
+        {
             directory: "system-delayed",
             rights: [ "rx*" ],
             path: "/pkgfs",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
         },
     ],
     expose: [
@@ -44,7 +54,15 @@
             from: "self",
         },
         {
+            directory: "pkgfs-packages-delayed",
+            from: "self",
+        },
+        {
             directory: "system-delayed",
+            from: "self",
+        },
+        {
+            directory: "boot",
             from: "self",
         },
     ],

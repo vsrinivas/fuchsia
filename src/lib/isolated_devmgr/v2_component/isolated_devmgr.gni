@@ -9,6 +9,7 @@ isolated_devmgr_v2_deps = rebase_path([
                                         ":driver-manager-support",
                                         ":driver-manager-test",
                                       ])
+isolated_devmgr_v2_deps += [ "//src/devices/bin/driver-index:component" ]
 
 # Produces a (testonly) component with an isolated driver manager to launch drivers. The component
 # name will always be `isolated-devmgr`.

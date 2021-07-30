@@ -7,8 +7,9 @@
         runner: "elf",
         binary: "bin/driver_manager",
         args: [
-            "--path-prefix",
-            "/pkg/",
+            "--use-driver-index",
+            "--sys-device-driver",
+            "fuchsia-boot:///#driver/platform-bus.so",
         ],
     },
     capabilities: [
@@ -35,6 +36,11 @@
             directory: "pkgfs-delayed",
             rights: [ "rx*" ],
             path: "/pkgfs",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
         },
         {
             protocol: [
