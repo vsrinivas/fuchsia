@@ -67,7 +67,7 @@ def main(args_list=None):
 
     response_file = []
 
-    response_file.append('--experimental allow_new_syntax')
+    response_file.append('--experimental new_syntax_only')
 
     if args.json:
         response_file.append("--json %s" % args.json)

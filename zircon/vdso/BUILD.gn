@@ -22,7 +22,7 @@ zx_host_tool_action("zx") {
   inputs = []
   args = [
     "--experimental",
-    "allow_new_syntax",
+    "new_syntax_only",
     "--name",
     target_name,
     "--json",

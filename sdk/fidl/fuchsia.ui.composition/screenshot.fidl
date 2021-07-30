@@ -1,13 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.ui.composition;
 
 alias ImageId = uint64;
 
 /// The enum of possible errors following a [`CreateImage`] call.
-enum CreateImageError {
+type CreateImageError = strict enum {
     /// One or more arguments are missing in [`CreateImageArgs`].
     MISSING_ARGS = 1;
     /// A general error occurred in [`CreateImage`].
@@ -16,23 +15,23 @@ enum CreateImageError {
 
 /// The table of arguments passed into the [`CreateImage`] call. Note that all
 /// fields are necessary.
-resource table CreateImageArgs {
+type CreateImageArgs = resource table {
     /// The image ID for the image about to be created. It must be unique, and
     /// may not be 0, which is invalid.
-    1: ImageId image_id;
+    1: image_id ImageId;
     /// The import token referencing a BufferCollection registered with
     /// Allocator. This function will fail unless all clients of the specified
     /// BufferCollection have set their constraints.
-    2: BufferCollectionImportToken import_token;
+    2: import_token BufferCollectionImportToken;
     /// The VMO index must be valid and in the range of constraints of the specified
     /// BufferCollection.
-    3: uint32 vmo_index;
+    3: vmo_index uint32;
     /// image_width must be valid and in the range of constraints of the specified
     /// BufferCollection.
-    4: uint32 image_width;
+    4: image_width uint32;
     /// image_height must be valid and in the range of constraints of the specified
     /// BufferCollection.
-    5: uint32 image_height;
+    5: image_height uint32;
 };
 
 /// This protocol provides a low-level Screenshot API for clients to use.
@@ -47,5 +46,7 @@ protocol Screenshot {
     /// rendered to using this method.
     ///
     /// Finally, clients can use their specified `ImageId` in TakeScreenshot().
-    CreateImage(CreateImageArgs args) -> () error CreateImageError;
+    CreateImage(resource struct {
+        args CreateImageArgs;
+    }) -> (struct {}) error CreateImageError;
 };

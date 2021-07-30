@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fidl/new_formatter.h>
+#include <fidl/utils.h>
 #include <zxtest/zxtest.h>
 
 #include "test_library.h"
@@ -67,6 +68,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test that an alias declaration gets wrapped properly.
@@ -87,6 +89,7 @@ alias MyAlias_Abcdefghijklmnopqrs
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added and spaced out.
@@ -116,6 +119,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to AliasFormatted.  The only difference is that the
@@ -131,6 +135,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to AliasFormatted, except that every token is on a newline.
@@ -154,6 +159,7 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/78236): more tests need to be added here once multiple arguments are supported for
@@ -177,6 +183,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, AttributesSingle) {
@@ -193,6 +200,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Attributes with arguments should overflow gracefully, while attributes without them should not.
@@ -213,6 +221,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 TEST(NewFormatterTests, AttributesWithComment) {
   // ---------------40---------------- |
@@ -236,6 +245,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, AttributesWithDocComment) {
@@ -259,6 +269,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to AttributesFormatted.  The only difference is that
@@ -276,6 +287,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, AttributesMaximalNewLines) {
@@ -301,6 +313,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, AttributesWeird) {
@@ -327,6 +340,7 @@ protocol MyProtocol {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted bits declaration is not modified by another run
@@ -353,6 +367,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, BitsOverflow) {
@@ -380,6 +395,7 @@ type MyBits_Abcdefghijklmnopqrst
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, BitsUnformatted) {
@@ -403,6 +419,7 @@ type MyBits_Abcdefghij = flexible bits {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, BitsWithAllAnnotations) {
@@ -444,6 +461,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
@@ -466,6 +484,7 @@ type MyBits_Abcdefghijklmnopqrstu =bits{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to BitsFormatted, except that every token is on a newline.
@@ -506,6 +525,7 @@ type MyBits_Abcdefghijklmnopqrs = bits {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that already properly formatted const declarations are not modified by another run
@@ -544,6 +564,7 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 TEST(NewFormatterTests, ConstUnformatted) {
   // ---------------40---------------- |
@@ -582,6 +603,7 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // The const declaration has two levels of subspanning: the first is split at the equal sign, while
@@ -624,6 +646,7 @@ const MY_REF_ABCD uint64
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Tests cases where even the nested subspan to the left of the equal sign is longer than the
@@ -672,6 +695,7 @@ const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added and spaced out.
@@ -701,6 +725,7 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to ConstFormatted.  The only difference is that the
@@ -724,6 +749,7 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to ConstFormatted, except that every token is on a newline.
@@ -807,6 +833,7 @@ const MY_REF_ABCD uint64 = MY_UINT64_AB;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted enum declaration is not modified by another run
@@ -839,6 +866,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, EnumOverflow) {
@@ -873,6 +901,7 @@ type MyEnum_Abcdefghijk
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, EnumUnformatted) {
@@ -902,6 +931,7 @@ type MyEnum_Abc = strict enum : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, EnumWithAllAnnotations) {
@@ -949,6 +979,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
@@ -973,6 +1004,7 @@ type MyEnum_Abcdefghij =enum:uint32{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to EnumFormatted, except that every token is on a newline.
@@ -1024,6 +1056,7 @@ type MyEnum_Abcdefghij = enum : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted library declaration is not modified by another run
@@ -1040,6 +1073,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test that the library declaration is never wrapped.
@@ -1055,6 +1089,7 @@ library my.overlong.severely.overflowing.name;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // No overflow, but incorrect leading spacing and newlines.
@@ -1072,6 +1107,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added and spaced out.
@@ -1097,6 +1133,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to LibraryFormatted.  The only difference is that the
@@ -1111,6 +1148,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to LibraryFormatted, except that every token is on a newline.
@@ -1130,6 +1168,7 @@ library foo.bar;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted resource declaration is not modified by another run
@@ -1172,6 +1211,7 @@ resource_definition subtype_a : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // No part of a resource_definition should wrap on overflow.
@@ -1213,6 +1253,7 @@ resource_definition subtype_ab : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ResourceUnormatted) {
@@ -1252,6 +1293,7 @@ resource_definition subtype_a : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ResourceWithAllAnnotations) {
@@ -1316,6 +1358,7 @@ resource_definition subtype_a : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
@@ -1344,6 +1387,7 @@ resource_definition subtype_a : uint32{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to ResourceFormatted, except that every token is on a newline.
@@ -1407,6 +1451,7 @@ resource_definition subtype_a : uint32 {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted service declaration is not modified by another run
@@ -1437,6 +1482,7 @@ service MyPopulatedService_Abcdefghik {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // No part of the service should wrap if it overflows.
@@ -1466,6 +1512,7 @@ service MyPopulatedService_Abcdefghikl {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ServiceUnformatted) {
@@ -1495,6 +1542,7 @@ service MyPopulatedService_Abcdefghikl {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added and spaced out.
@@ -1543,6 +1591,7 @@ service MyPopulatedService_Abcdefghikl {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
@@ -1565,6 +1614,7 @@ service MyPopulatedService_Abcdefghikl{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to ServiceFormatted, except that every token is on a newline.
@@ -1617,6 +1667,7 @@ service MyPopulatedService_Abcdefghikl {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted struct declaration is not modified by another run
@@ -1657,6 +1708,7 @@ type MyPopulatedStruct_Abcdef = struct {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolNoArgumentsFormatted) {
@@ -1715,6 +1767,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Aside from the contents of the request/response layouts themselves, nothing in a protocol
@@ -1775,6 +1828,7 @@ protocol Populated_Abcdefghijklmnopqrst {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolNoArgumentsUnformatted) {
@@ -1836,6 +1890,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolNoArgumentsWithAllAnnotations) {
@@ -1935,6 +1990,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
@@ -1968,6 +2024,7 @@ protocol Populated_Abcdefghijklmnopqrs{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to ProtocolNoArgumentsFormatted, except that every token is on a newline.
@@ -2096,6 +2153,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolWithArgumentsFormatted) {
@@ -2188,6 +2246,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolWithArgumentsOverflow) {
@@ -2292,6 +2351,7 @@ protocol Populated_Abcdefghijklmnopqrst {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolWithArgumentsUnformatted) {
@@ -2385,6 +2445,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ProtocolWithArgumentsWithAllAnnotations) {
@@ -2518,6 +2579,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly.  This should
@@ -2568,6 +2630,7 @@ protocol Populated_Abcdefghijklmnopqrs{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to ProtocolWithArgumentsFormatted, except that every token is on a newline.
@@ -2741,6 +2804,7 @@ protocol Populated_Abcdefghijklmnopqrs {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // fxbug.dev/78688
@@ -2772,6 +2836,7 @@ protocol MyProtocol {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, StructOverflow) {
@@ -2817,6 +2882,7 @@ type MyPopulatedStruct_Abcdefg
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, StructUnformatted) {
@@ -2857,6 +2923,7 @@ type MyStruct_Abcdef = resource struct {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added.
@@ -2920,6 +2987,7 @@ type MyPopulatedStruct_Abcdef = struct {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
@@ -2947,6 +3015,7 @@ type MyPopulatedStruct_Abcdef =struct{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to StructFormatted, except that every token is on a newline.
@@ -3015,6 +3084,7 @@ type MyPopulatedStruct_Abcdef = struct {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted table declaration is not modified by another run
@@ -3053,6 +3123,7 @@ type MyPopulatedTable_Abcdefgh = table {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, TableOverflow) {
@@ -3092,6 +3163,7 @@ type MyPopulatedTable_Abcdefghi
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, TableUnformatted) {
@@ -3130,6 +3202,7 @@ type MyPopulatedTable_Abcdefgh = table {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test is not technically valid FIDL (ordinals must be dense), but it does parse successfully,
@@ -3203,6 +3276,7 @@ type MyTable = table {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added.
@@ -3265,6 +3339,7 @@ type MyPopulatedTable_Abcdefgh = table {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
@@ -3291,6 +3366,7 @@ type MyPopulatedTable_Abcdefgh =table{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to TableFormatted, except that every token is on a newline.
@@ -3362,6 +3438,7 @@ type MyPopulatedTable_Abcdefgh = table {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted union declaration is not modified by another run
@@ -3396,6 +3473,7 @@ type MyUnion_Abcdefghijklmnopq = union {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, UnionOverflow) {
@@ -3432,6 +3510,7 @@ type MyUnion_Abcdefghijklmnopqr
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, UnionUnformatted) {
@@ -3466,6 +3545,7 @@ type MyUnion_A = strict resource union {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test is not technically valid FIDL (ordinals must be dense), but it does parse successfully,
@@ -3540,6 +3620,7 @@ type MyUnion = flexible resource union {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added.
@@ -3597,6 +3678,7 @@ type MyUnion_Abcdefgh = resource union {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // TODO(fxbug.dev/77861): multi-token blocks of text are currently not spaced properly, so
@@ -3622,6 +3704,7 @@ type MyUnion_Abcdefghijklmnopq =union{
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to UnionFormatted, except that every token is on a newline.
@@ -3683,6 +3766,7 @@ type MyUnion_Abcdefghijklmnopq = union {
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted using declaration is not modified by another run
@@ -3703,6 +3787,7 @@ using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, UsingUnformatted) {
@@ -3722,6 +3807,7 @@ using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test that a using declaration with no alias does not get wrapped.
@@ -3741,6 +3827,7 @@ using imported.abcdefhijklmnopqrstubwxyz;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test with comments, doc comments, and attributes added and spaced out.
@@ -3770,6 +3857,7 @@ using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to UsingFormatted.  The only difference is that the
@@ -3785,6 +3873,7 @@ using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to UsingFormatted, except that every token is on a newline.
@@ -3808,6 +3897,7 @@ using imported.abcdefhijklmnopqrstubwxy;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that an already properly formatted aliased using declaration is not modified by another
@@ -3828,6 +3918,7 @@ using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, UsingWithAliasUnformatted) {
@@ -3847,6 +3938,7 @@ using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Test that the aliased using declaration is properly wrapped
@@ -3867,6 +3959,7 @@ using baz.qux
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // This test's input is semantically identical to UsingWithAliasFormatted.  The only difference is
@@ -3882,6 +3975,7 @@ using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Input is identical to UsingWithAliasFormatted, except that every token is on a newline.
@@ -3907,6 +4001,7 @@ using baz.qux as abcdefghijklmnopqrstuv;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // What happens when we have both an inline and standalone comment surrounding each token?
@@ -3984,6 +4079,7 @@ using // F
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, CommentsNormal) {
@@ -4004,6 +4100,7 @@ using baz.qux; // C4
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // Ensure that overlong comments are not wrapped.
@@ -4025,6 +4122,7 @@ using baz.qux; // C4
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, CommentsMultiline) {
@@ -4163,6 +4261,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, CommentsWeird) {
@@ -4249,6 +4348,7 @@ type // C8
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, DocCommentsMultiline) {
@@ -4383,6 +4483,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, DocCommentsThenComments) {
@@ -4517,6 +4618,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, DocCommentsThenAttributes) {
@@ -4651,6 +4753,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, DocCommentsThenAttributesThenInlineComments) {
@@ -4785,6 +4888,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, DocCommentsThenAttributesThenStandaloneComments) {
@@ -4949,6 +5053,7 @@ service MyService { // C32
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, NewlinesAbsent) {
@@ -4976,6 +5081,7 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 // For this test and the one below, new lines are generally expected to be retained.  An exception
@@ -5019,6 +5125,7 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, NewlinesDouble) {
@@ -5072,6 +5179,7 @@ const MY_TRUE_ABCDEFGHIJKLM bool = true;
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 TEST(NewFormatterTests, ListSpacing) {
@@ -5094,6 +5202,7 @@ alias constrained_handle
 )FIDL";
 
   ASSERT_STR_EQ(formatted, Format(unformatted));
+  ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
 }  // namespace

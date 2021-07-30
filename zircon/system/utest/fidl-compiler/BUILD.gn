@@ -6,19 +6,7 @@ import("//build/test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 # The generation depends only on the source, so do it only once.
-if (current_toolchain == default_toolchain) {
-  action("gen-examples") {
-    visibility = [ ":examples" ]
-    outputs = [ "$target_gen_dir/examples.cc" ]
-    script = "gen-examples.sh"
-    sources = [
-      "testdata/badformat.fidl.noformat",
-      "testdata/goodformat.test.fidl",
-    ]
-    args = rebase_path(outputs, root_build_dir) +
-           rebase_path(sources, root_build_dir)
-  }
-} else {
+if (current_toolchain != default_toolchain) {
   test("fidl-compiler") {
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
@@ -44,7 +32,6 @@ if (current_toolchain == default_toolchain) {
       "errors_tests.cc",
       "flat_ast_tests.cc",
       "flexible_tests.cc",
-      "formatter_tests.cc",
       "handle_tests.cc",
       "json_diagnostics_tests.cc",
       "json_findings_tests.cc",
@@ -77,18 +64,9 @@ if (current_toolchain == default_toolchain) {
       "visitor_unittests.cc",
     ]
     deps = [
-      ":examples",
       "//third_party/boringssl",
       "//tools/fidl/fidlc:fidl",
       "//zircon/public/lib/zxtest",
     ]
-  }
-
-  source_set("examples") {
-    gen_label = ":gen-examples($default_toolchain)"
-    gen_dir = get_label_info(gen_label, "target_gen_dir")
-    include_dirs = [ "." ]
-    sources = [ "$gen_dir/examples.cc" ]
-    deps = [ gen_label ]
   }
 }

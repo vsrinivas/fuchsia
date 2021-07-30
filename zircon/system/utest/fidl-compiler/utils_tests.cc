@@ -6,7 +6,6 @@
 
 #include <fidl/utils.h>
 
-#include "examples.h"
 #include "unittest_helpers.h"
 
 namespace fidl {
@@ -503,21 +502,137 @@ TEST(UtilsTests, IsValidFullyQualifiedMethodIdentifier) {
 }
 
 TEST(UtilsTests, IsOnlyWhitespace) {
-  std::string good_output;
-  std::string bad_output;
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+/// C1a
+/// C1b
+library foo.bar;  // C2
 
-  for (auto element : Examples::map()) {
-    if (element.first.find("testdata/goodformat.test.fidl") != std::string::npos) {
-      good_output = Examples::map()[element.first];
-    } else if (element.first.find("testdata/badformat.fidl") != std::string::npos) {
-      bad_output = Examples::map()[element.first];
-    }
-  }
+/// C3a
+/// C3b
+using baz.qux;  // C4
 
-  ASSERT_GT(good_output.size(), 0);
-  ASSERT_GT(bad_output.size(), 0);
+/// C5a
+/// C5b
+resource_definition thing : uint8 {  // C6
+    properties {  // C8
+/// C9a
+/// C9b
+        stuff rights;  // C10
+    };
+};
 
-  ASSERT_TRUE(OnlyWhitespaceChanged(bad_output, good_output));
+/// C11a
+/// C11b
+const MY_CONST string = "abc";  // C12
+
+/// C13a
+/// C13b
+type MyEnum = enum {  // C14
+/// C15a
+/// C17b
+    MY_VALUE = 1;  // C16
+};
+
+/// C17a
+/// C17b
+type MyTable = resource table {  // C18
+/// C19a
+/// C19b
+    1: field thing;  // C20
+};
+
+/// C21a
+/// C21b
+alias MyAlias = MyStruct;  // C22
+
+/// C23a
+/// C23b
+protocol MyProtocol {  // C24
+/// C25a
+/// C25b
+    MyMethod(resource struct {  // C26
+/// C27a
+/// C27b
+        data MyTable;  // C28
+    }) -> () error MyEnum;  // C29
+};  // 30
+
+/// C29a
+/// C29b
+service MyService {  // C32
+/// C31a
+/// C31b
+    my_protocol client_end:MyProtocol;  // C34
+};  // C35
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+/// C1a
+/// C1b
+library foo.bar; // C2
+
+/// C3a
+/// C3b
+using baz.qux; // C4
+
+/// C5a
+/// C5b
+resource_definition thing : uint8 { // C6
+    properties { // C8
+        /// C9a
+        /// C9b
+        stuff rights; // C10
+    };
+};
+
+/// C11a
+/// C11b
+const MY_CONST string = "abc"; // C12
+
+/// C13a
+/// C13b
+type MyEnum = enum { // C14
+    /// C15a
+    /// C17b
+    MY_VALUE = 1; // C16
+};
+
+/// C17a
+/// C17b
+type MyTable = resource table { // C18
+    /// C19a
+    /// C19b
+    1: field thing; // C20
+};
+
+/// C21a
+/// C21b
+alias MyAlias = MyStruct; // C22
+
+/// C23a
+/// C23b
+protocol MyProtocol { // C24
+    /// C25a
+    /// C25b
+    MyMethod(resource struct { // C26
+        /// C27a
+        /// C27b
+        data MyTable; // C28
+    }) -> () error MyEnum; // C29
+}; // 30
+
+/// C29a
+/// C29b
+service MyService { // C32
+    /// C31a
+    /// C31b
+    my_protocol client_end:MyProtocol; // C34
+}; // C35
+)FIDL";
+
+  ASSERT_TRUE(OnlyWhitespaceChanged(unformatted, formatted));
 }
 
 TEST(UtilsTests, CanonicalForm) {

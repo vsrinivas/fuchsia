@@ -78,25 +78,55 @@ std::string targeted_diff(const char* expected, const char* actual, size_t size)
 // Test that the AST visitor works: ensure that if you visit a file, you can
 // reconstruct its original contents.
 TEST(VisitorTests, ReadAndWriteDirectTest) {
-  for (auto element : Examples::map()) {
-    fidl::ExperimentalFlags experimental_flags;
-    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-    TestLibrary library(element.first, element.second, experimental_flags);
-    std::unique_ptr<fidl::raw::File> ast;
-    bool is_parse_success = library.Parse(&ast);
-    EXPECT_TRUE(is_parse_success);
+  // ---------------40---------------- |
+  std::string contents = R"FIDL(
+/// C1
+library foo.bar; // C2
 
-    if (is_parse_success) {
-      NoopTreeVisitor visitor;
-      visitor.OnFile(ast);
-      std::string expected(library.source_file().data());
-      std::string output = visitor.output();
-      const char* actual = output.c_str();
-      std::string d = targeted_diff(expected.c_str(), actual, output.size());
-      d = element.first + ": " + d;
+using baz.qux; // C3
 
-      EXPECT_STR_EQ(expected.c_str(), actual, "%s", d.c_str());
-    }
+/// C4
+type MyEnum = enum { // C5
+    /// C6
+    MY_VALUE = 1; // C7
+};
+
+/// C8
+type MyTable = table { // C9
+    /// C10
+    1: field thing; // C11
+};
+
+/// C12
+alias MyAlias = MyStruct; // C13
+
+/// C14
+protocol MyProtocol { // C15
+    /// C16
+    MyMethod(struct { // C17
+        /// C18
+        data MyTable; // C19
+    }) -> () error MyEnum; // C20
+};
+)FIDL";
+
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", contents, experimental_flags);
+  std::unique_ptr<fidl::raw::File> ast;
+  bool is_parse_success = library.Parse(&ast);
+      ;
+
+  if (is_parse_success) {
+    NoopTreeVisitor visitor;
+    visitor.OnFile(ast);
+    std::string expected(library.source_file().data());
+    std::string output = visitor.output();
+    const char* actual = output.c_str();
+    std::string d = targeted_diff(expected.c_str(), actual, output.size());
+    d = "example.fidl: " + d;
+
+    EXPECT_STR_EQ(expected.c_str(), actual, "%s", d.c_str());
   }
 }
 
