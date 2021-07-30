@@ -316,11 +316,13 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchOn) {
   node.set_role(Role::TOGGLE_SWITCH);
   node.mutable_states()->set_toggled_state(fuchsia::accessibility::semantics::ToggledState::ON);
   mock_message_formatter_ptr_->SetMessageForId(
-      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_ON), "foo switch on");
+      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_ON), "switch on");
   auto result = screen_reader_message_generator_->DescribeNode(&node);
-  ASSERT_EQ(result.size(), 1u);
+  ASSERT_EQ(result.size(), 2u);
   ASSERT_TRUE(result[0].utterance.has_message());
-  ASSERT_EQ(result[0].utterance.message(), "foo switch on");
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "switch on");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchOff) {
@@ -329,11 +331,13 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchOff) {
   node.set_role(Role::TOGGLE_SWITCH);
   node.mutable_states()->set_toggled_state(fuchsia::accessibility::semantics::ToggledState::OFF);
   mock_message_formatter_ptr_->SetMessageForId(
-      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_OFF), "foo switch off");
+      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_OFF), "switch off");
   auto result = screen_reader_message_generator_->DescribeNode(&node);
-  ASSERT_EQ(result.size(), 1u);
+  ASSERT_EQ(result.size(), 2u);
   ASSERT_TRUE(result[0].utterance.has_message());
-  ASSERT_EQ(result[0].utterance.message(), "foo switch off");
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "switch off");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchIndeterminate) {
@@ -343,11 +347,13 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchIndeterminate) {
   node.mutable_states()->set_toggled_state(
       fuchsia::accessibility::semantics::ToggledState::INDETERMINATE);
   mock_message_formatter_ptr_->SetMessageForId(
-      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_OFF), "foo switch off");
+      static_cast<uint64_t>(MessageIds::ELEMENT_TOGGLED_OFF), "switch off");
   auto result = screen_reader_message_generator_->DescribeNode(&node);
-  ASSERT_EQ(result.size(), 1u);
+  ASSERT_EQ(result.size(), 2u);
   ASSERT_TRUE(result[0].utterance.has_message());
-  ASSERT_EQ(result[0].utterance.message(), "foo switch off");
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "switch off");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchEmptyLabel) {

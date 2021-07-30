@@ -108,28 +108,33 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
+  // TODO(fxbug.dev/81707): Refactor screen reader message generator method to describe nodes.
   std::vector<UtteranceAndContext> description;
   {
+    const std::string label = node->has_attributes() && node->attributes().has_label() &&
+                                      !node->attributes().label().empty()
+                                  ? node->attributes().label()
+                                  : "";
+
     // If this node is a radio button, slider-like object, or toggle switch, the label is part of
     // the whole message that describes it.
     if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
       description.emplace_back(DescribeRadioButton(node));
     } else if (node->has_role() &&
                node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
+      if (!label.empty()) {
+        Utterance utterance;
+        utterance.set_message(label);
+        description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+      }
       description.emplace_back(DescribeToggleSwitch(node));
     } else if (node->has_states() && node->states().has_range_value()) {
       Utterance utterance;
       utterance.set_message(GetSliderLabelAndRangeMessage(node));
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-    } else if (node->has_attributes() && node->attributes().has_label() &&
-               !node->attributes().label().empty()) {
+    } else if (!label.empty()) {
       Utterance utterance;
-      utterance.set_message(node->attributes().label());
-
-      // Note that empty descriptions (no labels), are allowed. It is common for developers forget
-      // to add accessible labels to their UI elements, which causes them to not have one. It is
-      // desirable still to tell the user what the node is (a button). But because our TTS does not
-      // support empty utterances we only send the string for "button" in this case.
+      utterance.set_message(label);
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     }
   }
@@ -231,14 +236,7 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
               node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
           ? MessageIds::ELEMENT_TOGGLED_ON
           : MessageIds::ELEMENT_TOGGLED_OFF;
-  const auto name_value =
-      node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
-
-  if (!name_value.empty()) {
-    return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
-                                        {name_value});
-  }
-  return GenerateUtteranceByMessageId(message_id);
+  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)));
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext
