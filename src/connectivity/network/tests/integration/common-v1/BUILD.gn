@@ -62,7 +62,6 @@ rustc_library("netstack_testing_common") {
   # CFv2, remove this allowlist.
   visibility = [
     "//src/connectivity/network/tests/integration:compile",
-    "//src/connectivity/network/tests/integration/dhcp",
     "//src/connectivity/network/tests/integration/dns",
     "//src/connectivity/network/tests/integration/management",
   ]

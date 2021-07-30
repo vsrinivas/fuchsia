@@ -24,7 +24,6 @@ group("compile") {
 }
 
 tests = [
-  "dhcp",
   "dns",
   "management",
 ]
@@ -76,6 +75,7 @@ fuchsia_test_package("netstack-integration-tests") {
 }
 
 tests_v2 = [
+  "dhcp",
   "fidl",
   "filter",
   "inspect",
@@ -120,6 +120,12 @@ fuchsia_test_package("netstack-integration-tests-v2") {
 
     # stash_secure is used by dhcpd and netstack.
     "//src/sys/stash:stash_secure_v2",
+
+    # dhcpd is used to test DHCP address acquisition.
+    "//src/connectivity/network/dhcp:component",
+
+    # dns_resolver integration with netstack is tested.
+    "//src/connectivity/network/dns:component-v2",
   ]
 }
 

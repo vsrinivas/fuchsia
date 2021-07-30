@@ -62,7 +62,7 @@ impl NetstackVersion {
 pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
     SecureStash,
-    DhcpServer,
+    DhcpServer { persistent: bool },
     Dhcpv6Client,
     LookupAdmin,
     Reachability,
@@ -85,8 +85,7 @@ pub mod constants {
     }
     pub mod dhcp_server {
         pub const COMPONENT_NAME: &str = "dhcpd";
-        pub const COMPONENT_URL: &str =
-            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dhcp server";
+        pub const COMPONENT_URL: &str = "#meta/dhcpd.cm";
     }
     pub mod dhcpv6_client {
         pub const COMPONENT_NAME: &str = "dhcpv6-client";
@@ -94,9 +93,8 @@ pub mod constants {
             "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dhcpv6 client";
     }
     pub mod dns_resolver {
-        pub const COMPONENT_NAME: &str = "dns-resolver";
-        pub const COMPONENT_URL: &str =
-            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dns resolver";
+        pub const COMPONENT_NAME: &str = "dns_resolver";
+        pub const COMPONENT_URL: &str = "#meta/dns_resolver.cm";
     }
     pub mod reachability {
         pub const COMPONENT_NAME: &str = "reachability";
@@ -135,10 +133,17 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 name: Some(constants::secure_stash::COMPONENT_NAME.to_string()),
                 url: Some(constants::secure_stash::COMPONENT_URL.to_string()),
                 exposes: Some(vec![fstash::SecureStoreMarker::PROTOCOL_NAME.to_string()]),
-                uses: use_log_sink(),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                        variant: Some(fnetemul::StorageVariant::Data),
+                        path: Some("/data".to_string()),
+                        ..fnetemul::StorageDep::EMPTY
+                    }),
+                ])),
                 ..fnetemul::ChildDef::EMPTY
             },
-            KnownServiceProvider::DhcpServer => fnetemul::ChildDef {
+            KnownServiceProvider::DhcpServer { persistent } => fnetemul::ChildDef {
                 name: Some(constants::dhcp_server::COMPONENT_NAME.to_string()),
                 url: Some(constants::dhcp_server::COMPONENT_URL.to_string()),
                 exposes: Some(
@@ -161,6 +166,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                         constants::secure_stash::COMPONENT_NAME,
                     )),
                 ])),
+                program_args: if *persistent {
+                    Some(vec![String::from("--persistent")])
+                } else {
+                    None
+                },
                 ..fnetemul::ChildDef::EMPTY
             },
             KnownServiceProvider::Dhcpv6Client => fnetemul::ChildDef {

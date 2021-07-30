@@ -11,7 +11,9 @@ use fuchsia_async::TimeoutExt as _;
 use futures::future::TryFutureExt as _;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip_v4, fidl_mac};
-use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
+use netstack_testing_common::realms::{
+    constants, KnownServiceProvider, Netstack2, TestSandboxExt as _,
+};
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
 use std::cell::RefCell;
@@ -129,7 +131,7 @@ struct TestServerConfig<'a> {
     settings: Settings<'a>,
 }
 
-struct TestNetstackEnvConfig<'a> {
+struct TestNetstackRealmConfig<'a> {
     clients: &'a [DhcpTestEndpointConfig<'a>],
     servers: &'a mut [TestServerConfig<'a>],
 }
@@ -167,15 +169,15 @@ async fn set_server_settings(
     Ok(())
 }
 
-async fn assert_client_aquires_addr(
-    client_env: &netemul::TestEnvironment<'_>,
+async fn assert_client_acquires_addr(
+    client_realm: &netemul::TestRealm<'_>,
     client_interface: &netemul::TestInterface<'_>,
     expected_acquired: fidl_fuchsia_net::Subnet,
     cycles: usize,
     client_renews: bool,
 ) {
-    let client_interface_state = client_env
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+    let client_interface_state = client_realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to client fuchsia.net.interfaces/State");
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
@@ -190,7 +192,7 @@ async fn assert_client_aquires_addr(
         let () = client_interface.stop_dhcp().await.expect("failed to stop DHCP");
         let () = client_interface.set_link_up(true).await.expect("failed to bring link up");
         matches::assert_matches!(
-            bind(&client_env, expected_acquired).await,
+            bind(&client_realm, expected_acquired).await,
             Err(e @ anyhow::Error {..})
                 if e.downcast_ref::<std::io::Error>()
                     .expect("bind() did not return std::io::Error")
@@ -200,7 +202,7 @@ async fn assert_client_aquires_addr(
         let () = client_interface.start_dhcp().await.expect("failed to start DHCP");
 
         let () = assert_interface_assigned_addr(
-            client_env,
+            client_realm,
             expected_acquired,
             &watcher,
             &mut properties,
@@ -213,7 +215,7 @@ async fn assert_client_aquires_addr(
         // and trigger the subsequent interface changed event.
         if client_renews {
             let () = assert_interface_assigned_addr(
-                client_env,
+                client_realm,
                 expected_acquired,
                 &watcher,
                 &mut properties,
@@ -252,7 +254,7 @@ async fn assert_client_aquires_addr(
 }
 
 async fn assert_interface_assigned_addr(
-    client_env: &netemul::TestEnvironment<'_>,
+    client_realm: &netemul::TestRealm<'_>,
     expected_acquired: fidl_fuchsia_net::Subnet,
     watcher: &fidl_fuchsia_net_interfaces::WatcherProxy,
     mut properties: &mut fidl_fuchsia_net_interfaces_ext::InterfaceState,
@@ -295,17 +297,17 @@ async fn assert_interface_assigned_addr(
 
     // Address acquired; bind is expected to succeed.
     let _: std::net::UdpSocket =
-        bind(&client_env, expected_acquired).await.expect("binding to UDP socket failed");
+        bind(&client_realm, expected_acquired).await.expect("binding to UDP socket failed");
 }
 
 fn bind<'a>(
-    client_env: &'a netemul::TestEnvironment<'_>,
+    client_realm: &'a netemul::TestRealm<'_>,
     fidl_fuchsia_net::Subnet { addr, prefix_len: _ }: fidl_fuchsia_net::Subnet,
 ) -> impl futures::Future<Output = Result<std::net::UdpSocket>> + 'a {
-    use netemul::EnvironmentUdpSocket as _;
+    use netemul::RealmUdpSocket as _;
 
     let fidl_fuchsia_net_ext::IpAddress(ip_address) = addr.into();
-    std::net::UdpSocket::bind_in_env(client_env, std::net::SocketAddr::new(ip_address, 0))
+    std::net::UdpSocket::bind_in_realm(client_realm, std::net::SocketAddr::new(ip_address, 0))
 }
 
 struct Settings<'a> {
@@ -322,7 +324,7 @@ async fn test_acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
         name,
         &sandbox,
         &mut [
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[DhcpTestEndpointConfig {
                     ep_type: DhcpEndpointType::Client {
                         expected_acquired: DEFAULT_TEST_CONFIG.expected_acquired(),
@@ -331,7 +333,7 @@ async fn test_acquire_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                 }],
                 servers: &mut [],
             },
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[],
                 servers: &mut [TestServerConfig {
                     bound_endpoints: &[DhcpTestEndpointConfig {
@@ -374,7 +376,7 @@ async fn test_acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(n
         name,
         &sandbox,
         &mut [
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[DhcpTestEndpointConfig {
                     ep_type: DhcpEndpointType::Client {
                         expected_acquired: DEFAULT_TEST_CONFIG.expected_acquired(),
@@ -383,7 +385,7 @@ async fn test_acquire_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(n
                 }],
                 servers: &mut [],
             },
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[],
                 servers: &mut [TestServerConfig {
                     bound_endpoints: &[DhcpTestEndpointConfig {
@@ -437,14 +439,14 @@ async fn test_acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
         name,
         &sandbox,
         &mut [
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[DhcpTestEndpointConfig {
                     ep_type: DhcpEndpointType::Client { expected_acquired: expected_addr },
                     network: &network,
                 }],
                 servers: &mut [],
             },
-            TestNetstackEnvConfig {
+            TestNetstackRealmConfig {
                 clients: &[],
                 servers: &mut [TestServerConfig {
                     bound_endpoints: &[
@@ -486,7 +488,7 @@ async fn test_acquire_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
 fn test_dhcp<'a, E: netemul::Endpoint>(
     test_name: &'a str,
     sandbox: &'a netemul::TestSandbox,
-    netstack_configs: &'a mut [TestNetstackEnvConfig<'a>],
+    netstack_configs: &'a mut [TestNetstackRealmConfig<'a>],
     dhcp_loop_cycles: usize,
     expect_client_renews: bool,
 ) -> impl futures::Future<Output = ()> + 'a {
@@ -494,17 +496,18 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
         let dhcp_objects = stream::iter(netstack_configs.into_iter())
             .enumerate()
             .then(|(id, netstack)| async move {
-                let TestNetstackEnvConfig { servers, clients } = netstack;
-                let netstack_env = sandbox
-                    .create_netstack_environment_with::<Netstack2, _, _>(
+                let TestNetstackRealmConfig { servers, clients } = netstack;
+                let netstack_realm = sandbox
+                    .create_netstack_realm_with::<Netstack2, _, _>(
                         format!("netstack_env_{}_{}", test_name, id),
-                        &[KnownServices::SecureStash],
+                        &[
+                            KnownServiceProvider::DhcpServer { persistent: false },
+                            KnownServiceProvider::LookupAdmin,
+                            KnownServiceProvider::SecureStash,
+                        ],
                     )
                     .context("failed to create netstack environment")?;
-                let netstack_env_ref = &netstack_env;
-
-                let launcher = netstack_env.get_launcher().context("failed to create launcher")?;
-                let launcher_ref = &launcher;
+                let netstack_realm_ref = &netstack_realm;
 
                 let servers = stream::iter(servers.into_iter())
                     .then(|server| async move {
@@ -513,14 +516,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             settings: Settings { options, parameters },
                         } = server;
 
-                        let dhcpd = fuchsia_component::client::launch(
-                            launcher_ref,
-                            KnownServices::DhcpServer.get_url().to_string(),
-                            None,
-                        )
-                        .context("failed to start dhcpd")?;
-
-                        let dhcp_server = dhcpd
+                        let dhcp_server = netstack_realm_ref
                             .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
                             .context("failed to connect to DHCP server")?;
 
@@ -532,7 +528,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                                     .create_endpoint::<E>()
                                     .await
                                     .expect("failed to create endpoint");
-                                let iface = netstack_env_ref
+                                let iface = netstack_realm_ref
                                     .install_endpoint(endpoint, &netemul::InterfaceConfig::None)
                                     .await
                                     .context("failed to install server endpoint")?;
@@ -560,7 +556,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             .context("failed to call dhcp/Server.StartServing")?
                             .map_err(fuchsia_zircon::Status::from_raw)
                             .context("dhcp/Server.StartServing returned error")?;
-                        Result::Ok((dhcpd, ifaces))
+                        Result::Ok((dhcp_server, ifaces))
                     })
                     .try_collect::<Vec<_>>()
                     .await?;
@@ -572,7 +568,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             .create_endpoint::<E>()
                             .await
                             .expect("failed to create endpoint");
-                        let iface = netstack_env_ref
+                        let iface = netstack_realm_ref
                             .install_endpoint(endpoint, &&netemul::InterfaceConfig::None)
                             .await
                             .context("failed to install client endpoint")?;
@@ -587,22 +583,25 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                     .try_collect::<Vec<_>>()
                     .await?;
 
-                Result::Ok((netstack_env, servers, clients))
+                Result::Ok((netstack_realm, servers, clients))
             })
             .try_collect::<Vec<_>>()
             .await
             .expect("failed to create DHCP domain objects");
 
-        for (netstack_env, _, clients) in dhcp_objects {
+        for (netstack_realm, servers, clients) in dhcp_objects {
             for (client, expected_acquired) in clients {
-                assert_client_aquires_addr(
-                    &netstack_env,
+                assert_client_acquires_addr(
+                    &netstack_realm,
                     &client,
                     *expected_acquired,
                     dhcp_loop_cycles,
                     expect_client_renews,
                 )
                 .await;
+            }
+            for (server, _) in servers {
+                let () = server.stop_serving().await.expect("failed to stop server");
             }
         }
     }
@@ -624,13 +623,6 @@ impl std::fmt::Display for PersistenceMode {
 }
 
 impl PersistenceMode {
-    fn dhcpd_args(&self) -> Option<Vec<String>> {
-        match self {
-            Self::Persistent => Some(vec![String::from("--persistent")]),
-            Self::Ephemeral => None,
-        }
-    }
-
     fn dhcpd_params_after_restart(
         &self,
     ) -> Result<Vec<(fidl_fuchsia_net_dhcp::ParameterName, fidl_fuchsia_net_dhcp::Parameter)>> {
@@ -744,50 +736,36 @@ async fn acquire_ephemeral_dhcp_server_after_restart<E: netemul::Endpoint>(name:
     Ok(acquire_dhcp_server_after_restart::<E>(&format!("{}_{}", name, mode), mode).await?)
 }
 
-fn setup_component_proxy(
-    mode: PersistenceMode,
-    server_env: &netemul::TestEnvironment<'_>,
-) -> Result<(fuchsia_component::client::App, fidl_fuchsia_net_dhcp::Server_Proxy)> {
-    let dhcpd = fuchsia_component::client::launch(
-        &server_env.get_launcher().context("failed to create launcher")?,
-        KnownServices::DhcpServer.get_url().to_string(),
-        mode.dhcpd_args(),
-    )
-    .context("failed to start dhcpd")?;
-    let dhcp_server = dhcpd
-        .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
-        .context("failed to connect to DHCP server")?;
-    Ok((dhcpd, dhcp_server))
-}
-
-async fn cleanup_component(dhcpd: &mut fuchsia_component::client::App) -> Result {
-    let () = dhcpd.kill().context("failed to kill dhcpd component")?;
-    assert_eq!(
-        dhcpd.wait().await.context("failed to await dhcpd component exit")?.code(),
-        fuchsia_zircon::sys::ZX_TASK_RETCODE_SYSCALL_KILL
-    );
-    Ok(())
-}
-
 async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     name: &str,
     mode: PersistenceMode,
 ) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
-    let server_env = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let server_realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_server", name),
-            &[KnownServices::SecureStash],
+            &[
+                match mode {
+                    PersistenceMode::Ephemeral => {
+                        KnownServiceProvider::DhcpServer { persistent: false }
+                    }
+                    PersistenceMode::Persistent => {
+                        KnownServiceProvider::DhcpServer { persistent: true }
+                    }
+                },
+                KnownServiceProvider::LookupAdmin,
+                KnownServiceProvider::SecureStash,
+            ],
         )
-        .context("failed to create server environment")?;
+        .context("failed to create server Realm")?;
 
-    let client_env = sandbox
-        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
-        .context("failed to create client environment")?;
+    let client_realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+        .context("failed to create client Realm")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let _server_ep = server_env
+    let _server_ep = server_realm
         .join_network::<E, _>(
             &network,
             "server-ep",
@@ -795,7 +773,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
         )
         .await
         .context("failed to create server network endpoint")?;
-    let client_ep = client_env
+    let client_ep = client_realm
         .join_network::<E, _>(&network, "client-ep", &netemul::InterfaceConfig::None)
         .await
         .context("failed to create client network endpoint")?;
@@ -803,7 +781,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // Complete initial DHCP transaction in order to store a lease record in the server's
     // persistent storage.
     {
-        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server =
+            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let () =
             set_server_settings(&dhcp_server, &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), &mut [])
                 .await?;
@@ -813,8 +792,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
             .context("failed to call dhcp/Server.StartServing")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("dhcp/Server.StartServing returned error")?;
-        let () = assert_client_aquires_addr(
-            &client_env,
+        let () = assert_client_acquires_addr(
+            &client_realm,
             &client_ep,
             DEFAULT_TEST_CONFIG.expected_acquired(),
             1,
@@ -823,7 +802,10 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
         .await;
         let () =
             dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
-        let () = cleanup_component(&mut dhcpd).await?;
+        let () = server_realm
+            .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
+            .await
+            .context("failed to stop dhcpd")?;
     }
 
     // Restart the server in an attempt to force the server's persistent storage into an
@@ -831,7 +813,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // the server's address pool. If the server is in ephemeral mode, it will fail at the call to
     // start_serving() since it will not have retained its parameters.
     {
-        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server =
+            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let () = match mode {
             PersistenceMode::Persistent => {
                 let () = dhcp_server
@@ -856,7 +839,10 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                 );
             }
         };
-        let () = cleanup_component(&mut dhcpd).await?;
+        let () = server_realm
+            .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
+            .await
+            .context("failed to stop dhcpd")?;
     }
 
     // Restart the server again in order to load the inconsistent state into the server's runtime
@@ -865,7 +851,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // ephemeral mode, it will fail at the call to start_serving() since it will not have retained
     // its parameters.
     {
-        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server =
+            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let () = match mode {
             PersistenceMode::Persistent => {
                 let () = dhcp_server
@@ -896,7 +883,10 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                 );
             }
         };
-        let () = cleanup_component(&mut dhcpd).await?;
+        let () = server_realm
+            .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
+            .await
+            .context("failed to stop dhcpd")?;
     }
 
     Ok(())
@@ -920,15 +910,26 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
 ) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
-    let server_env = sandbox
-        .create_netstack_environment_with::<Netstack2, _, _>(
+    let server_realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
             format!("{}_server", name),
-            &[KnownServices::SecureStash],
+            &[
+                match mode {
+                    PersistenceMode::Ephemeral => {
+                        KnownServiceProvider::DhcpServer { persistent: false }
+                    }
+                    PersistenceMode::Persistent => {
+                        KnownServiceProvider::DhcpServer { persistent: true }
+                    }
+                },
+                KnownServiceProvider::LookupAdmin,
+                KnownServiceProvider::SecureStash,
+            ],
         )
-        .context("failed to create server environment")?;
+        .context("failed to create server Realm")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let _server_ep = server_env
+    let _server_ep = server_realm
         .join_network::<E, _>(
             &network,
             "server-ep",
@@ -940,15 +941,20 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
     // Configure the server with parameters and then restart it.
     {
         let mut settings = test_dhcpd_parameters().context("failed to create test dhcpd params")?;
-        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server =
+            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let () = set_server_settings(&dhcp_server, &mut settings, &mut []).await?;
-        let () = cleanup_component(&mut dhcpd).await?;
+        let () = server_realm
+            .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
+            .await
+            .context("failed to stop dhcpd")?;
     }
 
     // Assert that configured parameters after the restart correspond to the persistence mode of the
     // server.
     {
-        let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
+        let dhcp_server =
+            server_realm.connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
         let dhcp_server = &dhcp_server;
         let mut params = mode
             .dhcpd_params_after_restart()
@@ -973,7 +979,10 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
             })
             .await
             .context("failed to get server parameters")?;
-        let () = cleanup_component(&mut dhcpd).await?;
+        let () = server_realm
+            .stop_child_component(constants::dhcp_server::COMPONENT_NAME)
+            .await
+            .context("failed to stop dhcpd")?;
     }
     Ok(())
 }
