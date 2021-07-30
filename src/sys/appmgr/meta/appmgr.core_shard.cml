@@ -8,6 +8,7 @@
         {
             name: "appmgr",
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
+            on_terminate: "reboot",
         },
     ],
     offer: [

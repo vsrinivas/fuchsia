@@ -345,6 +345,11 @@
                 ],
             },
         ],
+        child_policy: {
+            reboot_on_terminate: [
+                "/core/appmgr",
+            ],
+        },
         debug_registration_policy: [
             {
                 debug: "protocol",
