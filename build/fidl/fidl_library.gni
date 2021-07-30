@@ -7,6 +7,7 @@ import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/testing/golden_file.gni")
 
 declare_args() {
   # Whether libraries under //vendor should be linted.
@@ -23,6 +24,7 @@ declare_args() {
 #   - sdk_category;
 #   - sources.
 #   - experimental_api_summary
+#   - lenient_api_summary
 #
 #   should_lint (optional, boolean)
 #     If set to false, the linting step is skipped.
@@ -53,6 +55,19 @@ template("fidl_library") {
         generate_api_summary || invoker.experimental_api_summary
     summarization_target_name = "${target_name}_api_summarize"
     summarization_target_name_json = "${target_name}_api_summarize_json"
+
+    is_sdk_publishable =
+        defined(invoker.sdk_category) && invoker.sdk_category != "internal" &&
+        invoker.sdk_category != "experimental"
+    if (is_sdk_publishable) {
+      verify_api_summary_target_name = "${target_name}_verify_api_summary"
+
+      # A kill switch for API summarization
+      lenient_api_summary = false
+      if (defined(invoker.lenient_api_summary)) {
+        lenient_api_summary = invoker.lenient_api_summary
+      }
+    }
   }
 
   response_file = "$target_gen_dir/$target_name.args"
@@ -269,6 +284,7 @@ template("fidl_library") {
       deps = [ ":$compilation_target_name" ]
     }
 
+    # JSON summary file
     summary_file_json = "${summary_file}.json"
     compiled_action(summarization_target_name_json) {
       forward_variables_from(invoker, [ "testonly" ])
@@ -290,6 +306,17 @@ template("fidl_library") {
       outputs = [ summary_file_json ]
 
       deps = [ ":$compilation_target_name" ]
+    }
+
+    # Enforce summary checks only for the FIDL files in the SDK.
+    if (is_sdk_publishable) {
+      golden_file(verify_api_summary_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        warn_on_changes = lenient_api_summary
+        golden = "${library_name}.api_summary"
+        current = "${target_gen_dir}/${library_name}.api_summary"
+        deps = [ ":${summarization_target_name}" ]
+      }
     }
   }  # generate_api_summary
 
@@ -354,10 +381,11 @@ template("fidl_library") {
 
     deps = [ ":$verification_target_name" ]
     if (generate_api_summary) {
-      deps += [
-        ":${summarization_target_name_json}",
-        ":${summarization_target_name}",
-      ]
+      deps += [ ":${summarization_target_name}" ]
+
+      if (is_sdk_publishable) {
+        deps += [ ":${verify_api_summary_target_name}" ]
+      }
     }
   }
 
@@ -485,7 +513,10 @@ template("fidl_library") {
         ":$meta_target_name",
       ]
       if (generate_api_summary) {
-        non_sdk_deps += [ ":${summarization_target_name}" ]
+        non_sdk_deps += [
+          ":${summarization_target_name_json}",
+          ":${summarization_target_name}",
+        ]
       }
 
       deps = []

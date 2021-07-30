@@ -1,3 +1,6 @@
+struct/member fuchsia.wlan.ieee80211/CSsid.data array<uint8,32>
+struct/member fuchsia.wlan.ieee80211/CSsid.len uint8
+struct fuchsia.wlan.ieee80211/CSsid
 const fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN uint8 32
 const fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN uint8 32
 enum/member fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED 47
