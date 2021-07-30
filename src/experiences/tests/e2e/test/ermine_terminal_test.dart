@@ -131,7 +131,7 @@ void main() {
     // Verify that terminal buffer contains result of ping.
     final result = await waitForBuffer();
     print('ping response: $result');
-    expect(result.contains('bytes from localhost'), isTrue);
+    expect(result, contains('bytes from localhost'));
   });
 
   test('ls /hub', () async {
@@ -144,8 +144,8 @@ void main() {
     await inject('ls /hub', delay: Duration(seconds: 2));
 
     final result = await waitForBuffer();
-    expect(result.contains('job'), isTrue);
-    expect(result.contains('svc'), isTrue);
+    expect(result, contains('job'));
+    expect(result, contains('svc'));
   });
 
   test('Navigate filesystem: ls, cd, pwd', () async {
@@ -158,8 +158,8 @@ void main() {
     await inject('ls /', delay: Duration(seconds: 2));
 
     var result = await waitForBuffer();
-    expect(result.contains('bin'), isTrue);
-    expect(result.contains('boot'), isTrue);
+    expect(result, contains('bin'));
+    expect(result, contains('boot'));
 
     // Inject 'cd pkg' + ENTER
     await inject('cd /pkg');
@@ -169,7 +169,7 @@ void main() {
 
     // Verify that terminal buffer contains result of ping.
     result = await waitForBuffer();
-    expect(result.contains('/pkg'), isTrue);
+    expect(result, contains('/pkg'));
   });
 
   test('dm reboot', () async {
