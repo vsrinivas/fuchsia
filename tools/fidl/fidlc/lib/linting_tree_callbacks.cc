@@ -252,6 +252,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         callback(*element);
       }
       DeclarationOrderTreeVisitor::OnLayout(element);
+      for (auto& callback : callbacks_.exit_layout_callbacks_) {
+        callback(*element);
+      }
       ProcessGapText(element->end_);
     }
     void OnTypeDecl(std::unique_ptr<raw::TypeDecl> const& element) override {

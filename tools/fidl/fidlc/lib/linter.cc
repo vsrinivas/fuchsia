@@ -48,6 +48,26 @@ std::string to_string(const std::unique_ptr<SourceElementSubtype>& element_ptr) 
   return to_string(*element_ptr);
 }
 
+std::string name_layout_kind(const raw::Layout& layout) {
+  switch (layout.kind) {
+    case raw::Layout::kBits: {
+      return "bitfield";
+    }
+    case raw::Layout::kEnum: {
+      return "enum";
+    }
+    case raw::Layout::kStruct: {
+      return "struct";
+    }
+    case raw::Layout::kTable: {
+      return "table";
+    }
+    case raw::Layout::kUnion: {
+      return "union";
+    }
+  }
+}
+
 }  // namespace
 
 std::string Linter::MakeCopyrightBlock() {
@@ -761,69 +781,39 @@ Linter::Linter()
       [&linter = *this]
       //
       (const raw::TypeDecl& element) {
-        std::string context_type;
-        const auto& layout =
-            static_cast<raw::InlineLayoutReference*>(element.type_ctor->layout_ref.get())->layout;
-        switch (layout->kind) {
-          case raw::Layout::kBits: {
-            context_type = "bitfield";
-            break;
-          }
-          case raw::Layout::kEnum: {
-            context_type = "enum";
-            break;
-          }
-          case raw::Layout::kStruct: {
-            context_type = "struct";
-            break;
-          }
-          case raw::Layout::kTable: {
-            context_type = "table";
-            break;
-          }
-          case raw::Layout::kUnion: {
-            context_type = "union";
-            break;
-          }
-        }
-
-        linter.CheckCase(context_type + "s", element.identifier,
-                         linter.invalid_case_for_decl_name(), linter.decl_case_type_for_style());
-        linter.EnterContext(context_type);
+        auto* inline_layout =
+            static_cast<raw::InlineLayoutReference*>(element.type_ctor->layout_ref.get());
+        std::string layout_kind = name_layout_kind(*inline_layout->layout);
+        linter.CheckCase(layout_kind + "s", element.identifier, linter.invalid_case_for_decl_name(),
+                         linter.decl_case_type_for_style());
       });
   callbacks_.OnLayout(
       [&linter = *this, explict_flexible_modifier_check = explict_flexible_modifier,
        modifiers_order_check = modifiers_order]
       //
       (const raw::Layout& element) {
-        std::string parent_type = linter.type_stack_.top();
-        // The "parent_type" for type declarations is set in the OnTypeDecl callback.  This callback
-        // is not invoked in the case of protocol request/response parameter lists, resulting a
-        // "protocol" naming context instead.  However, since protocol request/response parameter
-        // lists are always structs, we can just treat "protocol" as a "struct" for the purposes of
-        // ths lint.
-        if (parent_type == "protocol")
-          parent_type = "struct";
+        std::string layout_kind = name_layout_kind(element);
+        linter.EnterContext(layout_kind);
 
         // All strictness-carrying declarations (bits, enums, unions) must specify the strictness
         // explicitly.
-        if (parent_type != "table" && parent_type != "struct" &&
+        if (layout_kind != "table" && layout_kind != "struct" &&
             (element.modifiers == nullptr || element.modifiers->maybe_strictness == std::nullopt)) {
           linter.AddFinding(element, explict_flexible_modifier_check,
                             {
-                                {"TYPE", parent_type},
+                                {"TYPE", layout_kind},
                             },
                             "add 'flexible' modifier before ${TYPE} keyword", "");
         }
 
         // Only union declarations can successfully parse with both modifiers attached.
-        if ((parent_type == "bitfield" || parent_type == "enum" || parent_type == "union") &&
+        if ((layout_kind == "bitfield" || layout_kind == "enum" || layout_kind == "union") &&
             element.modifiers != nullptr && element.modifiers->maybe_strictness != std::nullopt &&
             element.modifiers->resourceness_comes_first) {
           linter.AddFinding(
               element, modifiers_order_check,
               {
-                  {"TYPE", parent_type},
+                  {"TYPE", layout_kind},
                   {"STRICTNESS",
                    std::string(element.modifiers->maybe_strictness_token->span().data())},
               },
@@ -858,9 +848,9 @@ Linter::Linter()
         std::string parent_type = linter.type_stack_.top();
         linter.CheckCase(parent_type + " members", element.identifier, case_check, case_type);
       });
-  callbacks_.OnExitTypeDecl([&linter = *this]
-                            //
-                            (const raw::TypeDecl& element) { linter.ExitContext(); });
+  callbacks_.OnExitLayout([&linter = *this]
+                          //
+                          (const raw::Layout& element) { linter.ExitContext(); });
 
   // clang-format off
   callbacks_.OnIdentifierLayoutParameter(

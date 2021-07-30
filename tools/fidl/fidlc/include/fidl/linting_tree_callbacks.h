@@ -163,6 +163,9 @@ class LintingTreeCallbacks {
   void OnLayout(fit::function<void(const raw::Layout&)> callback) {
     layout_callbacks_.push_back(std::move(callback));
   }
+  void OnExitLayout(fit::function<void(const raw::Layout&)> callback) {
+    exit_layout_callbacks_.push_back(std::move(callback));
+  }
   void OnTypeDecl(fit::function<void(const raw::TypeDecl&)> callback) {
     type_decl_callbacks_.push_back(std::move(callback));
   }
@@ -238,6 +241,7 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::StructLayoutMember&)>> struct_layout_member_callbacks_;
   std::vector<fit::function<void(const raw::ValueLayoutMember&)>> value_layout_member_callbacks_;
   std::vector<fit::function<void(const raw::Layout&)>> layout_callbacks_;
+  std::vector<fit::function<void(const raw::Layout&)>> exit_layout_callbacks_;
   std::vector<fit::function<void(const raw::IdentifierLayoutParameter&)>>
       identifier_layout_parameter_callbacks_;
   std::vector<fit::function<void(const raw::TypeDecl&)>> type_decl_callbacks_;

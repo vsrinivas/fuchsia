@@ -478,6 +478,27 @@ type MyUnion = ${TEST}resource union {
   1: member bool;
 };
 )FIDL"},
+      {"union", R"FIDL(
+library fidl.a;
+
+type MyStruct = struct{
+  inner ${TEST}resource union {
+    1: member bool;
+  };
+};
+)FIDL"},
+      {"bitfield", R"FIDL(
+library fidl.a;
+
+protocol Foo {
+  Bar(struct {
+    options ${TEST}bits {
+      OPTION_A = 1;
+      OPTION_B = 2;
+    }
+  });
+};
+)FIDL"},
   };
 
   for (auto const& named_template : named_templates) {
@@ -853,32 +874,41 @@ bits Uint32Bitfield : uint32 {
 
 TEST(LintFindingsTests, InvalidCaseForDeclMember) {
   std::map<std::string, std::string> named_templates = {
-      {"parameters", R"FIDL(
+      {"struct members", R"FIDL(
 library fidl.a;
 
 protocol TestProtocol {
-    SomeMethod(string:64 ${TEST});
+    SomeMethod(struct { ${TEST} string:64; });
 };
 )FIDL"},
       {"struct members", R"FIDL(
 library fidl.a;
 
-struct DeclName {
-    string:64 ${TEST};
+type DeclName = struct {
+    ${TEST} string:64;
 };
 )FIDL"},
       {"table members", R"FIDL(
 library fidl.a;
 
-table DeclName {
-    1: string:64 ${TEST};
+type DeclName = table {
+    1: ${TEST} string:64;
 };
 )FIDL"},
       {"union members", R"FIDL(
 library fidl.a;
 
-union DeclName {
-    1: string:64 ${TEST};
+type DeclName = flexible union {
+    1: ${TEST} string:64;
+};
+)FIDL"},
+      {"union members", R"FIDL(
+library fidl.a;
+
+type DeclName = struct {
+    decl_member flexible union {
+        1: ${TEST} string:64;
+    };
 };
 )FIDL"},
   };
@@ -886,6 +916,7 @@ union DeclName {
   for (auto const& named_template : named_templates) {
     LintTest test;
     test.check_id("invalid-case-for-decl-member")
+        .source_syntax(utils::Syntax::kNew)
         .message(named_template.first + " must be named in lower_snake_case")
         .source_template(named_template.second);
 
