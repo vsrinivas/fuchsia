@@ -7,7 +7,7 @@ use {
         accessor::PerformanceConfig,
         constants,
         container::{ReadSnapshot, SnapshotData},
-        diagnostics::ConnectionStats,
+        diagnostics::BatchIteratorConnectionStats,
         inspect::container::UnpopulatedInspectDataContainer,
         moniker_rewriter::OutputRewriter,
     },
@@ -113,7 +113,7 @@ impl ReaderServer {
         performance_configuration: PerformanceConfig,
         selectors: Option<Vec<Arc<Selector>>>,
         output_rewriter: Option<OutputRewriter>,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
         let server = Self { selectors, output_rewriter };
 
@@ -360,7 +360,7 @@ mod tests {
         crate::{
             accessor::BatchIterator,
             container::ComponentIdentity,
-            diagnostics,
+            diagnostics::AccessorStats,
             events::types::{ComponentIdentifier, InspectData},
             pipeline::Pipeline,
             repository::DataRepo,
@@ -817,11 +817,9 @@ mod tests {
                 let root = inspector.root();
                 let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
 
-                let test_accessor_stats =
-                    Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
-                let test_batch_iterator_stats1 = Arc::new(
-                    diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()),
-                );
+                let test_accessor_stats = Arc::new(AccessorStats::new(test_archive_accessor_node));
+                let test_batch_iterator_stats1 =
+                    Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
                 let _result_json = read_snapshot_verify_batch_count_and_batch_size(
                     pipeline_wrapper.clone(),
@@ -889,65 +887,87 @@ mod tests {
 
         assert_data_tree!(inspector, root: {test_archive_accessor_node: {}});
 
-        let test_accessor_stats =
-            Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
+        let test_accessor_stats = Arc::new(AccessorStats::new(test_archive_accessor_node));
 
-        let test_batch_iterator_stats1 =
-            Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
+        let test_batch_iterator_stats1 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
         assert_data_tree!(inspector, root: {
             test_archive_accessor_node: {
-                archive_accessor_connections_closed: 0u64,
-                archive_accessor_connections_opened: 0u64,
-                inspect_batch_iterator_connection0:{
-                    inspect_batch_iterator_terminal_responses: 0u64,
-                    inspect_batch_iterator_get_next_responses: 0u64,
-                    inspect_batch_iterator_get_next_requests: 0u64,
+                connections_closed: 0u64,
+                connections_opened: 0u64,
+                inspect: {
+                    batch_iterator_connections: {
+                        "0": {
+                            get_next: {
+                                terminal_responses: 0u64,
+                                responses: 0u64,
+                                requests: 0u64,
+                            }
+                        }
+                    },
+                    batch_iterator: {
+                        connections_closed: 0u64,
+                        connections_opened: 0u64,
+                        get_next: {
+                            time_usec: AnyProperty,
+                            errors: 0u64,
+                            requests: 0u64,
+                            responses: 0u64,
+                            result_count: 0u64,
+                            result_errors: 0u64,
+                        }
+                    },
+                    component_timeouts_count: 0u64,
+                    reader_servers_constructed: 1u64,
+                    reader_servers_destroyed: 0u64,
+                    schema_truncation_count: 0u64,
+                    max_snapshot_sizes_bytes: AnyProperty,
+                    snapshot_schema_truncation_percentage: AnyProperty,
                 },
-                inspect_batch_iterator_connections_closed: 0u64,
-                inspect_batch_iterator_connections_opened: 0u64,
-                inspect_batch_iterator_get_next_errors: 0u64,
-                inspect_batch_iterator_get_next_requests: 0u64,
-                inspect_batch_iterator_get_next_responses: 0u64,
-                inspect_batch_iterator_get_next_result_count: 0u64,
-                inspect_batch_iterator_get_next_result_errors: 0u64,
-                inspect_component_timeouts_count: 0u64,
-                inspect_reader_servers_constructed: 1u64,
-                inspect_reader_servers_destroyed: 0u64,
-                inspect_schema_truncation_count: 0u64,
-                inspect_batch_iterator_get_next_time_usec: AnyProperty,
-                inspect_max_snapshot_sizes_bytes: AnyProperty,
-                inspect_snapshot_schema_truncation_percentage: AnyProperty,
-                lifecycle_batch_iterator_connections_closed: 0u64,
-                lifecycle_batch_iterator_connections_opened: 0u64,
-                lifecycle_batch_iterator_get_next_errors: 0u64,
-                lifecycle_batch_iterator_get_next_requests: 0u64,
-                lifecycle_batch_iterator_get_next_responses: 0u64,
-                lifecycle_batch_iterator_get_next_result_count: 0u64,
-                lifecycle_batch_iterator_get_next_result_errors: 0u64,
-                lifecycle_component_timeouts_count: 0u64,
-                lifecycle_reader_servers_constructed: 0u64,
-                lifecycle_reader_servers_destroyed: 0u64,
-                lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
-                lifecycle_max_snapshot_sizes_bytes: AnyProperty,
-                lifecycle_snapshot_schema_truncation_percentage: AnyProperty,
-                lifecycle_schema_truncation_count: 0u64,
-                logs_batch_iterator_connections_closed: 0u64,
-                logs_batch_iterator_connections_opened: 0u64,
-                logs_batch_iterator_get_next_errors: 0u64,
-                logs_batch_iterator_get_next_requests: 0u64,
-                logs_batch_iterator_get_next_responses: 0u64,
-                logs_batch_iterator_get_next_result_count: 0u64,
-                logs_batch_iterator_get_next_result_errors: 0u64,
-                logs_component_timeouts_count: 0u64,
-                logs_reader_servers_constructed: 0u64,
-                logs_reader_servers_destroyed: 0u64,
-                logs_batch_iterator_get_next_time_usec: AnyProperty,
-                logs_max_snapshot_sizes_bytes: AnyProperty,
-                logs_snapshot_schema_truncation_percentage: AnyProperty,
-                logs_schema_truncation_count: 0u64,
+                lifecycle: {
+                    batch_iterator_connections: {},
+                    batch_iterator: {
+                        connections_closed: 0u64,
+                        connections_opened: 0u64,
+                        get_next: {
+                            errors: 0u64,
+                            requests: 0u64,
+                            responses: 0u64,
+                            result_count: 0u64,
+                            result_errors: 0u64,
+                            time_usec: AnyProperty,
+                        }
+                    },
+                    component_timeouts_count: 0u64,
+                    reader_servers_constructed: 0u64,
+                    reader_servers_destroyed: 0u64,
+                    max_snapshot_sizes_bytes: AnyProperty,
+                    snapshot_schema_truncation_percentage: AnyProperty,
+                    schema_truncation_count: 0u64,
+                },
+                logs: {
+                    batch_iterator_connections: {},
+                    batch_iterator: {
+                        connections_closed: 0u64,
+                        connections_opened: 0u64,
+                        get_next: {
+                            errors: 0u64,
+                            requests: 0u64,
+                            responses: 0u64,
+                            result_count: 0u64,
+                            result_errors: 0u64,
+                            time_usec: AnyProperty,
+                        }
+                    },
+                    component_timeouts_count: 0u64,
+                    reader_servers_constructed: 0u64,
+                    reader_servers_destroyed: 0u64,
+                    max_snapshot_sizes_bytes: AnyProperty,
+                    snapshot_schema_truncation_percentage: AnyProperty,
+                    schema_truncation_count: 0u64,
+                },
                 stream_diagnostics_requests: 0u64,
-            }
+            },
         });
 
         let inspector_arc = Arc::new(inspector);
@@ -1003,64 +1023,84 @@ mod tests {
             // which isn't running in this unit test.
             assert_data_tree!(inspector_arc.clone(), root: {
                 test_archive_accessor_node: {
-                    archive_accessor_connections_closed: 0u64,
-                    archive_accessor_connections_opened: 0u64,
-                    inspect_batch_iterator_connections_closed: 1u64,
-                    inspect_batch_iterator_connections_opened: 1u64,
-                    inspect_batch_iterator_get_next_errors: 0u64,
-                    inspect_batch_iterator_get_next_requests: 2u64,
-                    inspect_batch_iterator_get_next_responses: 2u64,
-                    inspect_batch_iterator_get_next_result_count: 1u64,
-                    inspect_batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-                    inspect_component_timeouts_count: 0u64,
-                    inspect_reader_servers_constructed: 1u64,
-                    inspect_reader_servers_destroyed: 1u64,
-                    inspect_batch_iterator_get_next_time_usec: AnyProperty,
-                    inspect_max_snapshot_sizes_bytes: AnyProperty,
-                    inspect_snapshot_schema_truncation_percentage: AnyProperty,
-                    inspect_component_time_usec: AnyProperty,
-                    inspect_schema_truncation_count:0u64,
-                    inspect_longest_processing_times: contains {
-                        "test_component.cmx": contains {
-                            "@time": AnyProperty,
-                            "duration_seconds": AnyProperty
-                        }
+                    connections_closed: 0u64,
+                    connections_opened: 0u64,
+                    inspect: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 1u64,
+                            connections_opened: 1u64,
+                            get_next: {
+                                time_usec: AnyProperty,
+                                errors: 0u64,
+                                requests: 2u64,
+                                responses: 2u64,
+                                result_count: 1u64,
+                                result_errors: expected_get_next_result_errors,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        component_time_usec: AnyProperty,
+                        reader_servers_constructed: 1u64,
+                        reader_servers_destroyed: 1u64,
+                        schema_truncation_count: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        longest_processing_times: contains {
+                            "test_component.cmx": contains {
+                                "@time": AnyProperty,
+                                duration_seconds: AnyProperty,
+                            }
+                        },
                     },
-                    lifecycle_batch_iterator_connections_closed: 0u64,
-                    lifecycle_batch_iterator_connections_opened: 0u64,
-                    lifecycle_batch_iterator_get_next_errors: 0u64,
-                    lifecycle_batch_iterator_get_next_requests: 0u64,
-                    lifecycle_batch_iterator_get_next_responses: 0u64,
-                    lifecycle_batch_iterator_get_next_result_count: 0u64,
-                    lifecycle_batch_iterator_get_next_result_errors: 0u64,
-                    lifecycle_component_timeouts_count: 0u64,
-                    lifecycle_reader_servers_constructed: 0u64,
-                    lifecycle_reader_servers_destroyed: 0u64,
-                    lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
-                    lifecycle_max_snapshot_sizes_bytes: AnyProperty,
-                    lifecycle_snapshot_schema_truncation_percentage: AnyProperty,
-                    lifecycle_schema_truncation_count:0u64,
-                    logs_batch_iterator_connections_closed: 0u64,
-                    logs_batch_iterator_connections_opened: 0u64,
-                    logs_batch_iterator_get_next_errors: 0u64,
-                    logs_batch_iterator_get_next_requests: 0u64,
-                    logs_batch_iterator_get_next_responses: 0u64,
-                    logs_batch_iterator_get_next_result_count: 0u64,
-                    logs_batch_iterator_get_next_result_errors: 0u64,
-                    logs_component_timeouts_count: 0u64,
-                    logs_reader_servers_constructed: 0u64,
-                    logs_reader_servers_destroyed: 0u64,
-                    logs_batch_iterator_get_next_time_usec: AnyProperty,
-                    logs_max_snapshot_sizes_bytes: AnyProperty,
-                    logs_snapshot_schema_truncation_percentage: AnyProperty,
-                    logs_schema_truncation_count:0u64,
+                    lifecycle: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
+                    },
+                    logs: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
+                    },
                     stream_diagnostics_requests: 0u64,
-                }
+                },
             });
         }
 
-        let test_batch_iterator_stats2 =
-            Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
+        let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
         inspect_repo.write().mark_stopped(&identity.unique_key);
         pipeline_wrapper.write().remove(&identity.relative_moniker);
@@ -1077,66 +1117,87 @@ mod tests {
 
             assert_data_tree!(inspector_arc.clone(), root: {
                 test_archive_accessor_node: {
-                    archive_accessor_connections_closed: 0u64,
-                    archive_accessor_connections_opened: 0u64,
-                    inspect_batch_iterator_connections_closed: 2u64,
-                    inspect_batch_iterator_connections_opened: 2u64,
-                    inspect_batch_iterator_get_next_errors: 0u64,
-                    inspect_batch_iterator_get_next_requests: 3u64,
-                    inspect_batch_iterator_get_next_responses: 3u64,
-                    inspect_batch_iterator_get_next_result_count: 1u64,
-                    inspect_batch_iterator_get_next_result_errors: expected_get_next_result_errors,
-                    inspect_component_timeouts_count: 0u64,
-                    inspect_reader_servers_constructed: 2u64,
-                    inspect_reader_servers_destroyed: 2u64,
-                    inspect_batch_iterator_get_next_time_usec: AnyProperty,
-                    inspect_max_snapshot_sizes_bytes: AnyProperty,
-                    inspect_snapshot_schema_truncation_percentage: AnyProperty,
-                    inspect_component_time_usec: AnyProperty,
-                    inspect_schema_truncation_count: 0u64,
-                    inspect_longest_processing_times: contains {
-                        "test_component.cmx": contains {
-                            "@time": AnyProperty,
-                            "duration_seconds": AnyProperty,
-                        }
+                    connections_closed: 0u64,
+                    connections_opened: 0u64,
+                    inspect: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 2u64,
+                            connections_opened: 2u64,
+                            get_next: {
+                                time_usec: AnyProperty,
+                                errors: 0u64,
+                                requests: 3u64,
+                                responses: 3u64,
+                                result_count: 1u64,
+                                result_errors: expected_get_next_result_errors,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        component_time_usec: AnyProperty,
+                        reader_servers_constructed: 2u64,
+                        reader_servers_destroyed: 2u64,
+                        schema_truncation_count: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        longest_processing_times: contains {
+                            "test_component.cmx": contains {
+                                "@time": AnyProperty,
+                                duration_seconds: AnyProperty,
+                            }
+                        },
                     },
-                    lifecycle_batch_iterator_connections_closed: 0u64,
-                    lifecycle_batch_iterator_connections_opened: 0u64,
-                    lifecycle_batch_iterator_get_next_errors: 0u64,
-                    lifecycle_batch_iterator_get_next_requests: 0u64,
-                    lifecycle_batch_iterator_get_next_responses: 0u64,
-                    lifecycle_batch_iterator_get_next_result_count: 0u64,
-                    lifecycle_batch_iterator_get_next_result_errors: 0u64,
-                    lifecycle_component_timeouts_count: 0u64,
-                    lifecycle_reader_servers_constructed: 0u64,
-                    lifecycle_reader_servers_destroyed: 0u64,
-                    lifecycle_schema_truncation_count: 0u64,
-                    lifecycle_batch_iterator_get_next_time_usec: AnyProperty,
-                    lifecycle_max_snapshot_sizes_bytes: AnyProperty,
-                    lifecycle_snapshot_schema_truncation_percentage: AnyProperty,
-                    logs_batch_iterator_connections_closed: 0u64,
-                    logs_batch_iterator_connections_opened: 0u64,
-                    logs_batch_iterator_get_next_errors: 0u64,
-                    logs_batch_iterator_get_next_requests: 0u64,
-                    logs_batch_iterator_get_next_responses: 0u64,
-                    logs_batch_iterator_get_next_result_count: 0u64,
-                    logs_batch_iterator_get_next_result_errors: 0u64,
-                    logs_component_timeouts_count: 0u64,
-                    logs_reader_servers_constructed: 0u64,
-                    logs_reader_servers_destroyed: 0u64,
-                    logs_batch_iterator_get_next_time_usec: AnyProperty,
-                    logs_max_snapshot_sizes_bytes: AnyProperty,
-                    logs_snapshot_schema_truncation_percentage: AnyProperty,
-                    logs_schema_truncation_count: 0u64,
+                    lifecycle: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
+                    },
+                    logs: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
+                    },
                     stream_diagnostics_requests: 0u64,
-                }
+                },
             });
         }
     }
 
     fn start_snapshot(
         inspect_pipeline: Arc<RwLock<Pipeline>>,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let test_performance_config = PerformanceConfig {
             batch_timeout_sec: BATCH_RETRIEVAL_TIMEOUT_SECONDS,
@@ -1175,7 +1236,7 @@ mod tests {
     async fn read_snapshot(
         inspect_pipeline: Arc<RwLock<Pipeline>>,
         _test_inspector: Arc<Inspector>,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, server) = start_snapshot(inspect_pipeline, stats);
 
@@ -1212,7 +1273,7 @@ mod tests {
     async fn read_snapshot_verify_batch_count_and_batch_size(
         inspect_repo: Arc<RwLock<Pipeline>>,
         expected_batch_sizes: Vec<usize>,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, server) = start_snapshot(inspect_repo, stats);
 

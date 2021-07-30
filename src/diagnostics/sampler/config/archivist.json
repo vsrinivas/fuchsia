@@ -3,7 +3,7 @@
   "poll_rate_sec": 60,
   "metrics": [
         {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -12,7 +12,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/logs/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -21,7 +21,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:lifecycle_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/lifecycle/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -30,7 +30,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -39,7 +39,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/logs/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -48,7 +48,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:lifecycle_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/lifecycle/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -57,7 +57,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -66,7 +66,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -75,7 +75,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:lifecycle_batch_iterator_get_next_requests",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/lifecycle/batch_iterator/get_next:requests",
       "metric_id": 1,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -84,7 +84,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -93,7 +93,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/logs/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -102,7 +102,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:lifecycle_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/lifecycle/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -111,7 +111,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -120,7 +120,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/logs/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -129,7 +129,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:lifecycle_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/lifecycle/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -138,7 +138,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -147,7 +147,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -156,7 +156,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:lifecycle_batch_iterator_get_next_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/lifecycle/batch_iterator/get_next:errors",
       "metric_id": 2,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -165,7 +165,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -174,7 +174,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/logs/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -183,7 +183,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:lifecycle_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/lifecycle/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -192,7 +192,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -201,7 +201,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/logs/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -210,7 +210,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:lifecycle_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/lifecycle/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -219,7 +219,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -228,7 +228,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -237,7 +237,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:lifecycle_batch_iterator_get_next_result_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/lifecycle/batch_iterator/get_next:result_count",
       "metric_id": 3,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -246,7 +246,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -255,7 +255,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:logs_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/logs/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -264,7 +264,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:lifecycle_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/lifecycle/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -273,7 +273,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -282,7 +282,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:logs_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/logs/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -291,7 +291,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:lifecycle_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/lifecycle/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -300,7 +300,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -309,7 +309,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:logs_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -318,7 +318,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:lifecycle_batch_iterator_get_next_result_errors",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/lifecycle/batch_iterator/get_next:result_errors",
       "metric_id": 4,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -327,7 +327,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -336,7 +336,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:log_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/logs:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -345,7 +345,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:lifecycle_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/lifecycle:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -354,7 +354,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -363,7 +363,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:log_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/logs:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -372,7 +372,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:lifecycle_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/lifecycle:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -381,7 +381,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -390,7 +390,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:log_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/logs:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -399,7 +399,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:lifecycle_component_timeouts_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/lifecycle:component_timeouts_count",
       "metric_id": 5,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -408,7 +408,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:archive_accessor_connections_opened",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all:connections_opened",
       "metric_id": 6,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -417,7 +417,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:archive_accessor_connections_opened",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback:connections_opened",
       "metric_id": 6,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -426,7 +426,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:archive_accessor_connections_opened",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics:connections_opened",
       "metric_id": 6,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -442,7 +442,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/all_archive_accessor:inspect_schema_truncation_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/all/inspect:schema_truncation_count",
       "metric_id": 8,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -451,7 +451,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/feedback_archive_accessor:inspect_schema_truncation_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/feedback/inspect:schema_truncation_count",
       "metric_id": 8,
       "metric_type": "Occurrence",
       "event_codes": [
@@ -460,7 +460,7 @@
       "use_legacy_cobalt": true
     },
     {
-      "selector": "bootstrap/archivist:root/legacy_metrics_archive_accessor:inspect_schema_truncation_count",
+      "selector": "bootstrap/archivist:root/archive_accessor_stats/legacy_metrics/inspect:schema_truncation_count",
       "metric_id": 8,
       "metric_type": "Occurrence",
       "event_codes": [

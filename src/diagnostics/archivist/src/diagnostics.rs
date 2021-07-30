@@ -7,24 +7,76 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
         component, health::Reporter, ExponentialHistogramParams, HistogramProperty,
-        LinearHistogramParams, Node, NumericProperty, UintExponentialHistogramProperty,
-        UintLinearHistogramProperty, UintProperty,
+        LinearHistogramParams, Node, NumericProperty, StringReference,
+        UintExponentialHistogramProperty, UintLinearHistogramProperty, UintProperty,
     },
     fuchsia_zircon::{self as zx, Duration},
+    lazy_static::lazy_static,
     parking_lot::Mutex,
-    std::collections::BTreeMap,
-    std::sync::Arc,
+    std::{
+        collections::BTreeMap,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    },
 };
+
+lazy_static! {
+    static ref BATCH_ITERATOR : StringReference<'static> = "batch_iterator".into();
+    static ref BATCH_ITERATOR_CONNECTIONS : StringReference<'static> = "batch_iterator_connections".into();
+    static ref COMPONENT_TIME_USEC : StringReference<'static> = "component_time_usec".into();
+    static ref COMPONENT_TIMEOUTS_COUNT : StringReference<'static> = "component_timeouts_count".into();
+    static ref CONNECTIONS_OPENED : StringReference<'static> = "connections_opened".into();
+    static ref CONNECTIONS_CLOSED : StringReference<'static> = "connections_closed".into();
+    static ref DURATION_SECONDS : StringReference<'static> = "duration_seconds".into();
+    static ref ERRORS : StringReference<'static> = "errors".into();
+    static ref GET_NEXT : StringReference<'static> = "get_next".into();
+    static ref LONGEST_PROCESSING_TIMES : StringReference<'static> = "longest_processing_times".into();
+    static ref MAX_SNAPSHOT_SIZE_BYTES : StringReference<'static> = "max_snapshot_sizes_bytes".into();
+    static ref READER_SERVERS_CONSTRUCTED : StringReference<'static> = "reader_servers_constructed".into();
+    static ref READER_SERVERS_DESTROYED : StringReference<'static> = "reader_servers_destroyed".into();
+    static ref REQUESTS : StringReference<'static> = "requests".into();
+    static ref RESPONSES : StringReference<'static> = "responses".into();
+    static ref RESULT_COUNT : StringReference<'static> = "result_count".into();
+    static ref RESULT_ERRORS : StringReference<'static> = "result_errors".into();
+    static ref SCHEMA_TRUNCATION_COUNT : StringReference<'static> = "schema_truncation_count".into();
+    static ref SNAPSHOT_SCHEMA_TRUNCATION_PERCENTAGE : StringReference<'static> =
+        "snapshot_schema_truncation_percentage".into();
+    static ref TIME_USEC : StringReference<'static> = "time_usec".into();
+    static ref TERMINAL_RESPONSES : StringReference<'static> = "terminal_responses".into();
+    static ref TIME : StringReference<'static> = "@time".into();
+
+    // Exponential histograms for time in microseconds contains power-of-two intervals
+    static ref TIME_USEC_PARAMS : ExponentialHistogramParams<u64> = ExponentialHistogramParams {
+        floor: 0,
+        initial_step: 1,
+        step_multiplier: 2,
+        buckets: 26,
+    };
+
+    // Linear histogram for max snapshot size in bytes requested by clients.
+    // Divide configs into 10kb buckets, from 0mb to 1mb.
+    static ref MAX_SNAPSHOT_SIZE_BYTES_PARAMS : LinearHistogramParams<u64> = LinearHistogramParams {
+        floor: 0,
+        step_size: 10000,
+        buckets: 100,
+    };
+
+    // Linear histogram tracking percent of schemas truncated for a given snapshot.
+    // Divide configs into 5% buckets, from 0% to 100%.
+    static ref SNAPSHOT_SCHEMA_TRUNCATION_PARAMS : LinearHistogramParams<u64> = LinearHistogramParams {
+        floor: 0,
+        step_size: 5,
+        buckets: 20,
+    };
+}
 
 const INSPECTOR_SIZE: usize = 2 * 1024 * 1024 /* 2MB */;
 
 pub fn init() {
     component::init_inspector_with_size(INSPECTOR_SIZE);
     component::health().set_starting_up();
-}
-
-pub fn root() -> &'static Node {
-    component::inspector().root()
 }
 
 pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
@@ -35,118 +87,87 @@ pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Err
 
 pub struct AccessorStats {
     /// Inspect node for tracking usage/health metrics of diagnostics platform.
-    pub archive_accessor_node: Node,
+    pub node: Node,
 
     /// Metrics aggregated across all client connections.
     pub global_stats: Arc<GlobalAccessorStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating inspect data.
-    pub global_inspect_stats: Arc<GlobalConnectionStats>,
+    pub inspect_stats: Arc<GlobalConnectionStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating lifecycle data.
-    pub global_lifecycle_stats: Arc<GlobalConnectionStats>,
+    pub lifecycle_stats: Arc<GlobalConnectionStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating logs.
-    pub global_logs_stats: Arc<GlobalConnectionStats>,
+    pub logs_stats: Arc<GlobalConnectionStats>,
 }
 
 pub struct GlobalAccessorStats {
     /// Property tracking number of opening connections to any archive_accessor instance.
-    pub archive_accessor_connections_opened: UintProperty,
+    pub connections_opened: UintProperty,
     /// Property tracking number of closing connections to any archive_accessor instance.
-    pub archive_accessor_connections_closed: UintProperty,
+    pub connections_closed: UintProperty,
     /// Number of requests to a single ArchiveAccessor to StreamDiagnostics, starting a
     /// new inspect ReaderServer.
     pub stream_diagnostics_requests: UintProperty,
 }
 
 impl AccessorStats {
-    pub fn new(mut archive_accessor_node: Node) -> Self {
-        let archive_accessor_connections_opened =
-            archive_accessor_node.create_uint("archive_accessor_connections_opened", 0);
-        let archive_accessor_connections_closed =
-            archive_accessor_node.create_uint("archive_accessor_connections_closed", 0);
+    pub fn new(node: Node) -> Self {
+        let connections_opened = node.create_uint(&*CONNECTIONS_OPENED, 0);
+        let connections_closed = node.create_uint(&*CONNECTIONS_CLOSED, 0);
 
-        let stream_diagnostics_requests =
-            archive_accessor_node.create_uint("stream_diagnostics_requests", 0);
+        let stream_diagnostics_requests = node.create_uint("stream_diagnostics_requests", 0);
 
-        let global_inspect_stats =
-            Arc::new(GlobalConnectionStats::for_inspect(&mut archive_accessor_node));
-
-        let global_lifecycle_stats =
-            Arc::new(GlobalConnectionStats::for_lifecycle(&mut archive_accessor_node));
-
-        let global_logs_stats =
-            Arc::new(GlobalConnectionStats::for_logs(&mut archive_accessor_node));
+        let inspect_stats = Arc::new(GlobalConnectionStats::new(node.create_child("inspect")));
+        let lifecycle_stats = Arc::new(GlobalConnectionStats::new(node.create_child("lifecycle")));
+        let logs_stats = Arc::new(GlobalConnectionStats::new(node.create_child("logs")));
 
         AccessorStats {
-            archive_accessor_node,
+            node,
             global_stats: Arc::new(GlobalAccessorStats {
-                archive_accessor_connections_opened,
-                archive_accessor_connections_closed,
+                connections_opened,
+                connections_closed,
                 stream_diagnostics_requests,
             }),
-            global_inspect_stats,
-            global_lifecycle_stats,
-            global_logs_stats,
+            inspect_stats,
+            lifecycle_stats,
+            logs_stats,
         }
+    }
+
+    pub fn new_inspect_batch_iterator(&self) -> BatchIteratorConnectionStats {
+        self.inspect_stats.new_batch_iterator_connection()
+    }
+
+    pub fn new_lifecycle_batch_iterator(&self) -> BatchIteratorConnectionStats {
+        self.lifecycle_stats.new_batch_iterator_connection()
+    }
+
+    pub fn new_logs_batch_iterator(&self) -> BatchIteratorConnectionStats {
+        self.logs_stats.new_batch_iterator_connection()
     }
 }
 
-// Exponential histograms for time in microseconds contains power-of-two intervals
-const EXPONENTIAL_HISTOGRAM_USEC_FLOOR: u64 = 0;
-const EXPONENTIAL_HISTOGRAM_USEC_STEP: u64 = 1;
-const EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER: u64 = 2;
-const EXPONENTIAL_HISTOGRAM_USEC_BUCKETS: u64 = 26;
-
-// Linear histogram for max snapshot size in bytes requested by clients.
-// Divide configs into 10kb buckets, from 0mb to 1mb.
-const LINEAR_HISTOGRAM_BYTES_FLOOR: u64 = 0;
-const LINEAR_HISTOGRAM_BYTES_STEP: u64 = 10000;
-const LINEAR_HISTOGRAM_BYTES_BUCKETS: u64 = 100;
-
-// Linear histogram tracking percent of schemas truncated for a given snapshot.
-// Divide configs into 5% buckets, from 0% to 100%.
-const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_FLOOR: u64 = 0;
-const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_STEP: u64 = 5;
-const LINEAR_HISTOGRAM_TRUNCATION_PERCENT_BUCKETS: u64 = 20;
-
 pub struct GlobalConnectionStats {
-    /// The name of the diagnostics source being tracked by this struct.
-    diagnostics_source: &'static str,
     /// Weak clone of the node that stores stats, used for on-demand population.
-    connection_node: Node,
+    node: Node,
     /// Number of DiagnosticsServers created in response to an StreamDiagnostics
     /// client request.
     reader_servers_constructed: UintProperty,
     /// Number of DiagnosticsServers destroyed in response to falling out of scope.
     reader_servers_destroyed: UintProperty,
-    /// Property tracking number of opening connections to any batch iterator instance.
-    batch_iterator_connections_opened: UintProperty,
-    /// Property tracking number of closing connections to any batch iterator instance.
-    batch_iterator_connections_closed: UintProperty,
+    /// Stats about BatchIterator connections.
+    batch_iterator: GlobalBatchIteratorStats,
     /// Property tracking number of times a future to retrieve diagnostics data for a component
     /// timed out.
     component_timeouts_count: UintProperty,
-    /// Number of times "GetNext" was called
-    batch_iterator_get_next_requests: UintProperty,
-    /// Number of times a "GetNext" response was sent
-    batch_iterator_get_next_responses: UintProperty,
-    /// Number of times "GetNext" resulted in an error
-    batch_iterator_get_next_errors: UintProperty,
-    /// Number of items returned in batches from "GetNext"
-    batch_iterator_get_next_result_count: UintProperty,
-    /// Number of items returned in batches from "GetNext" that contained errors
-    batch_iterator_get_next_result_errors: UintProperty,
     /// Number of times a diagnostics schema had to be truncated because it would otherwise
     /// cause a component to exceed its configured size budget.
     schema_truncation_count: UintProperty,
-
-    /// Histogram of processing times for overall "GetNext" requests.
-    batch_iterator_get_next_time_usec: UintExponentialHistogramProperty,
     /// Optional histogram of processing times for individual components in GetNext
     component_time_usec: Mutex<Option<UintExponentialHistogramProperty>>,
     /// Histogram of max aggregated snapshot sizes for overall Snapshot requests.
@@ -155,101 +176,54 @@ pub struct GlobalConnectionStats {
     snapshot_schema_truncation_percentage: UintLinearHistogramProperty,
     /// Longest processing times for individual components, with timestamps.
     processing_time_tracker: Mutex<Option<ProcessingTimeTracker>>,
+    /// Node under which the batch iterator connections stats are created.
+    batch_iterator_connections: Node,
+    /// The id of the next BatchIterator connection.
+    next_connection_id: AtomicUsize,
 }
 
 impl GlobalConnectionStats {
-    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
-    //              named properties under different nodes for each diagnostics source.
-    pub fn for_inspect(archive_accessor_node: &mut Node) -> Self {
-        GlobalConnectionStats::new(archive_accessor_node, "inspect")
-    }
+    fn new(node: Node) -> Self {
+        let reader_servers_constructed = node.create_uint(&*READER_SERVERS_CONSTRUCTED, 0);
+        let reader_servers_destroyed = node.create_uint(&*READER_SERVERS_DESTROYED, 0);
 
-    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
-    //              named properties under different nodes for each diagnostics source.
-    pub fn for_lifecycle(archive_accessor_node: &mut Node) -> Self {
-        GlobalConnectionStats::new(archive_accessor_node, "lifecycle")
-    }
+        let batch_iterator = GlobalBatchIteratorStats::new(&node);
+        let component_timeouts_count = node.create_uint(&*COMPONENT_TIMEOUTS_COUNT, 0);
 
-    // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
-    //              named properties under different nodes for each diagnostics source.
-    pub fn for_logs(archive_accessor_node: &mut Node) -> Self {
-        GlobalConnectionStats::new(archive_accessor_node, "logs")
-    }
-
-    fn new(connection_node: &mut Node, diagnostics_source: &'static str) -> Self {
-        let reader_servers_constructed = connection_node
-            .create_uint(format!("{}_reader_servers_constructed", diagnostics_source), 0);
-        let reader_servers_destroyed = connection_node
-            .create_uint(format!("{}_reader_servers_destroyed", diagnostics_source), 0);
-        let batch_iterator_connections_opened = connection_node
-            .create_uint(format!("{}_batch_iterator_connections_opened", diagnostics_source), 0);
-        let batch_iterator_connections_closed = connection_node
-            .create_uint(format!("{}_batch_iterator_connections_closed", diagnostics_source), 0);
-        let component_timeouts_count = connection_node
-            .create_uint(format!("{}_component_timeouts_count", diagnostics_source), 0);
-        let batch_iterator_get_next_requests = connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_requests", diagnostics_source), 0);
-        let batch_iterator_get_next_responses = connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_responses", diagnostics_source), 0);
-        let batch_iterator_get_next_errors = connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_errors", diagnostics_source), 0);
-        let batch_iterator_get_next_result_count = connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_result_count", diagnostics_source), 0);
-        let batch_iterator_get_next_result_errors = connection_node.create_uint(
-            format!("{}_batch_iterator_get_next_result_errors", diagnostics_source),
-            0,
-        );
-        let batch_iterator_get_next_time_usec = connection_node.create_uint_exponential_histogram(
-            format!("{}_batch_iterator_get_next_time_usec", diagnostics_source),
-            ExponentialHistogramParams {
-                floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
-                initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
-                step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
-                buckets: EXPONENTIAL_HISTOGRAM_USEC_BUCKETS as usize,
-            },
+        let max_snapshot_sizes_bytes = node.create_uint_linear_histogram(
+            &*MAX_SNAPSHOT_SIZE_BYTES,
+            MAX_SNAPSHOT_SIZE_BYTES_PARAMS.clone(),
         );
 
-        let max_snapshot_sizes_bytes = connection_node.create_uint_linear_histogram(
-            format!("{}_max_snapshot_sizes_bytes", diagnostics_source),
-            LinearHistogramParams {
-                floor: LINEAR_HISTOGRAM_BYTES_FLOOR,
-                step_size: LINEAR_HISTOGRAM_BYTES_STEP,
-                buckets: LINEAR_HISTOGRAM_BYTES_BUCKETS as usize,
-            },
+        let snapshot_schema_truncation_percentage = node.create_uint_linear_histogram(
+            &*SNAPSHOT_SCHEMA_TRUNCATION_PERCENTAGE,
+            SNAPSHOT_SCHEMA_TRUNCATION_PARAMS.clone(),
         );
 
-        let snapshot_schema_truncation_percentage = connection_node.create_uint_linear_histogram(
-            format!("{}_snapshot_schema_truncation_percentage", diagnostics_source),
-            LinearHistogramParams {
-                floor: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_FLOOR,
-                step_size: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_STEP,
-                buckets: LINEAR_HISTOGRAM_TRUNCATION_PERCENT_BUCKETS as usize,
-            },
-        );
-
-        let schema_truncation_count = connection_node
-            .create_uint(format!("{}_schema_truncation_count", diagnostics_source), 0);
+        let schema_truncation_count = node.create_uint(&*SCHEMA_TRUNCATION_COUNT, 0);
+        let batch_iterator_connections = node.create_child(&*BATCH_ITERATOR_CONNECTIONS);
 
         GlobalConnectionStats {
-            diagnostics_source,
-            connection_node: connection_node.clone_weak(),
+            node,
             reader_servers_constructed,
             reader_servers_destroyed,
-            batch_iterator_connections_opened,
-            batch_iterator_connections_closed,
+            batch_iterator,
+            batch_iterator_connections,
             component_timeouts_count,
-            batch_iterator_get_next_requests,
-            batch_iterator_get_next_responses,
-            batch_iterator_get_next_errors,
-            batch_iterator_get_next_result_count,
-            batch_iterator_get_next_result_errors,
-            batch_iterator_get_next_time_usec,
             max_snapshot_sizes_bytes,
             snapshot_schema_truncation_percentage,
             schema_truncation_count,
             component_time_usec: Mutex::new(None),
             processing_time_tracker: Mutex::new(None),
+            next_connection_id: AtomicUsize::new(0),
         }
+    }
+
+    fn new_batch_iterator_connection(self: &Arc<Self>) -> BatchIteratorConnectionStats {
+        let node = self
+            .batch_iterator_connections
+            .create_child(self.next_connection_id.fetch_add(1, Ordering::Relaxed).to_string());
+        BatchIteratorConnectionStats::new(node, self.clone())
     }
 
     pub fn add_timeout(&self) {
@@ -268,7 +242,7 @@ impl GlobalConnectionStats {
     pub fn record_batch_duration(&self, duration: Duration) {
         let micros = duration.into_micros();
         if micros >= 0 {
-            self.batch_iterator_get_next_time_usec.insert(micros as u64);
+            self.batch_iterator.get_next.time_usec.insert(micros as u64);
         }
     }
 
@@ -280,30 +254,71 @@ impl GlobalConnectionStats {
 
             let mut component_time_usec = self.component_time_usec.lock();
             if component_time_usec.is_none() {
-                *component_time_usec =
-                    Some(self.connection_node.create_uint_exponential_histogram(
-                        format!("{}_component_time_usec", self.diagnostics_source),
-                        ExponentialHistogramParams {
-                            floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
-                            initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
-                            step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
-                            buckets: EXPONENTIAL_HISTOGRAM_USEC_BUCKETS as usize,
-                        },
-                    ));
+                *component_time_usec = Some(self.node.create_uint_exponential_histogram(
+                    &*COMPONENT_TIME_USEC,
+                    TIME_USEC_PARAMS.clone(),
+                ));
             }
 
             let mut processing_time_tracker = self.processing_time_tracker.lock();
             if processing_time_tracker.is_none() {
-                *processing_time_tracker =
-                    Some(ProcessingTimeTracker::new(self.connection_node.create_child(format!(
-                        "{}_longest_processing_times",
-                        self.diagnostics_source
-                    ))));
+                *processing_time_tracker = Some(ProcessingTimeTracker::new(
+                    self.node.create_child(&*LONGEST_PROCESSING_TIMES),
+                ));
             }
 
             component_time_usec.as_ref().unwrap().insert(nanos as u64 / 1000);
             processing_time_tracker.as_mut().unwrap().track(moniker, nanos as u64);
         }
+    }
+}
+
+struct GlobalBatchIteratorStats {
+    _node: Node,
+    /// Property tracking number of opening connections to any batch iterator instance.
+    connections_opened: UintProperty,
+    /// Property tracking number of closing connections to any batch iterator instance.
+    connections_closed: UintProperty,
+    get_next: GlobalBatchIteratorGetNextStats,
+}
+
+impl GlobalBatchIteratorStats {
+    fn new(parent: &Node) -> Self {
+        let node = parent.create_child(&*BATCH_ITERATOR);
+        let connections_opened = node.create_uint(&*CONNECTIONS_OPENED, 0);
+        let connections_closed = node.create_uint(&*CONNECTIONS_CLOSED, 0);
+        let get_next = GlobalBatchIteratorGetNextStats::new(&node);
+        Self { _node: node, connections_opened, connections_closed, get_next }
+    }
+}
+
+struct GlobalBatchIteratorGetNextStats {
+    _node: Node,
+    /// Number of times "GetNext" was called
+    requests: UintProperty,
+    /// Number of times a "GetNext" response was sent
+    responses: UintProperty,
+    /// Number of times "GetNext" resulted in an error
+    errors: UintProperty,
+    /// Number of items returned in batches from "GetNext"
+    result_count: UintProperty,
+    /// Number of items returned in batches from "GetNext" that contained errors
+    result_errors: UintProperty,
+    /// Histogram of processing times for overall "GetNext" requests.
+    time_usec: UintExponentialHistogramProperty,
+}
+
+impl GlobalBatchIteratorGetNextStats {
+    fn new(parent: &Node) -> Self {
+        let node = parent.create_child(&*GET_NEXT);
+        let requests = node.create_uint(&*REQUESTS, 0);
+        let responses = node.create_uint(&*RESPONSES, 0);
+        let errors = node.create_uint(&*ERRORS, 0);
+        let result_count = node.create_uint(&*RESULT_COUNT, 0);
+        let result_errors = node.create_uint(&*RESULT_ERRORS, 0);
+        let time_usec =
+            node.create_uint_exponential_histogram(&*TIME_USEC, TIME_USEC_PARAMS.clone());
+        Self { _node: node, requests, responses, errors, result_count, result_errors, time_usec }
     }
 }
 
@@ -339,8 +354,8 @@ impl ProcessingTimeTracker {
 
         let make_entry = || {
             let n = parent_node.create_child(moniker.to_string());
-            n.record_int("@time", zx::Time::get_monotonic().into_nanos());
-            n.record_double("duration_seconds", time_ns as f64 / 1e9);
+            n.record_int(&*TIME, zx::Time::get_monotonic().into_nanos());
+            n.record_double(&*DURATION_SECONDS, time_ns as f64 / 1e9);
             (time_ns, n)
         };
 
@@ -376,112 +391,84 @@ impl ProcessingTimeTracker {
     }
 }
 
-pub struct ConnectionStats {
+pub struct BatchIteratorConnectionStats {
     /// Inspect node for tracking usage/health metrics of a single connection to a batch iterator.
-    _batch_iterator_connection_node: Node,
-
+    _node: Node,
     /// Global stats for connections to the BatchIterator protocol.
     global_stats: Arc<GlobalConnectionStats>,
-
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
-    batch_iterator_get_next_requests: UintProperty,
+    get_next_requests: UintProperty,
     /// Property tracking number of responses from the BatchIterator instance this struct is tracking.
-    batch_iterator_get_next_responses: UintProperty,
+    get_next_responses: UintProperty,
     /// Property tracking number of times the batch iterator has served a terminal batch signalling that
     /// the client has reached the end of the iterator and should terminate their connection.
-    batch_iterator_terminal_responses: UintProperty,
+    get_next_terminal_responses: UintProperty,
 }
 
-impl ConnectionStats {
+impl BatchIteratorConnectionStats {
+    fn new(node: Node, global_stats: Arc<GlobalConnectionStats>) -> Self {
+        // we'll decrement these on drop
+        global_stats.reader_servers_constructed.add(1);
+
+        let get_next = node.create_child(&*GET_NEXT);
+        let get_next_requests = get_next.create_uint(&*REQUESTS, 0);
+        let get_next_responses = get_next.create_uint(&*RESPONSES, 0);
+        let get_next_terminal_responses = get_next.create_uint(&*TERMINAL_RESPONSES, 0);
+        node.record(get_next);
+
+        Self {
+            _node: node,
+            global_stats,
+            get_next_requests,
+            get_next_responses,
+            get_next_terminal_responses,
+        }
+    }
+
     pub fn open_connection(&self) {
-        self.global_stats.batch_iterator_connections_opened.add(1);
+        self.global_stats.batch_iterator.connections_opened.add(1);
     }
 
     pub fn close_connection(&self) {
-        self.global_stats.batch_iterator_connections_closed.add(1);
+        self.global_stats.batch_iterator.connections_closed.add(1);
     }
 
     pub fn global_stats(&self) -> &Arc<GlobalConnectionStats> {
         &self.global_stats
     }
 
-    pub fn add_request(self: &Arc<Self>) {
-        self.global_stats.batch_iterator_get_next_requests.add(1);
-        self.batch_iterator_get_next_requests.add(1);
+    pub fn add_request(&self) {
+        self.global_stats.batch_iterator.get_next.requests.add(1);
+        self.get_next_requests.add(1);
     }
 
-    pub fn add_response(self: &Arc<Self>) {
-        self.global_stats.batch_iterator_get_next_responses.add(1);
-        self.batch_iterator_get_next_responses.add(1);
+    pub fn add_response(&self) {
+        self.global_stats.batch_iterator.get_next.responses.add(1);
+        self.get_next_responses.add(1);
     }
 
-    pub fn add_terminal(self: &Arc<Self>) {
-        self.batch_iterator_terminal_responses.add(1);
+    pub fn add_terminal(&self) {
+        self.get_next_terminal_responses.add(1);
     }
 
     pub fn add_result(&self) {
-        self.global_stats.batch_iterator_get_next_result_count.add(1);
+        self.global_stats.batch_iterator.get_next.result_count.add(1);
     }
 
     pub fn add_error(&self) {
-        self.global_stats.batch_iterator_get_next_errors.add(1);
+        self.global_stats.batch_iterator.get_next.errors.add(1);
     }
 
     pub fn add_result_error(&self) {
-        self.global_stats.batch_iterator_get_next_result_errors.add(1);
+        self.global_stats.batch_iterator.get_next.result_errors.add(1);
     }
 
     pub fn add_schema_truncated(&self) {
         self.global_stats.schema_truncation_count.add(1);
     }
-
-    pub fn for_inspect(archive_accessor_stats: Arc<AccessorStats>) -> Self {
-        let global_inspect = archive_accessor_stats.global_inspect_stats.clone();
-        ConnectionStats::new(archive_accessor_stats, global_inspect, "inspect")
-    }
-
-    pub fn for_lifecycle(archive_accessor_stats: Arc<AccessorStats>) -> Self {
-        let global_lifecycle = archive_accessor_stats.global_lifecycle_stats.clone();
-        ConnectionStats::new(archive_accessor_stats, global_lifecycle, "lifecycle")
-    }
-
-    pub fn for_logs(archive_accessor_stats: Arc<AccessorStats>) -> Self {
-        let global_logs = archive_accessor_stats.global_logs_stats.clone();
-        ConnectionStats::new(archive_accessor_stats, global_logs, "logs")
-    }
-
-    fn new(
-        archive_accessor_stats: Arc<AccessorStats>,
-        global_stats: Arc<GlobalConnectionStats>,
-        prefix: &str,
-    ) -> Self {
-        // we'll decrement these on drop
-        global_stats.reader_servers_constructed.add(1);
-
-        // TODO(fxbug.dev/59454) add this to a "list node" instead of using numeric suffixes
-        let batch_iterator_connection_node =
-            archive_accessor_stats.archive_accessor_node.create_child(
-                fuchsia_inspect::unique_name(&format!("{}_batch_iterator_connection", prefix)),
-            );
-
-        let batch_iterator_get_next_requests = batch_iterator_connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_requests", prefix), 0);
-        let batch_iterator_get_next_responses = batch_iterator_connection_node
-            .create_uint(format!("{}_batch_iterator_get_next_responses", prefix), 0);
-        let batch_iterator_terminal_responses = batch_iterator_connection_node
-            .create_uint(format!("{}_batch_iterator_terminal_responses", prefix), 0);
-
-        ConnectionStats {
-            _batch_iterator_connection_node: batch_iterator_connection_node,
-            global_stats,
-            batch_iterator_get_next_requests,
-            batch_iterator_get_next_responses,
-            batch_iterator_terminal_responses,
-        }
-    }
 }
 
-impl Drop for ConnectionStats {
+impl Drop for BatchIteratorConnectionStats {
     fn drop(&mut self) {
         self.global_stats.reader_servers_destroyed.add(1);
     }

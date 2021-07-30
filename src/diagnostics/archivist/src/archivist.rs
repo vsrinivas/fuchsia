@@ -7,7 +7,7 @@ use {
         accessor::ArchiveAccessor,
         configs, constants,
         container::ComponentIdentity,
-        diagnostics,
+        diagnostics::{self, AccessorStats},
         events::{
             source_registry::EventSourceRegistry,
             sources::{StaticEventStream, UnattributedLogSinkSource},
@@ -92,6 +92,9 @@ pub struct ArchivistBuilder {
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
+
+    /// Accessor stats that should remain alive for the whole execution of the archivist.
+    _stats: Vec<Arc<AccessorStats>>,
 }
 
 impl ArchivistBuilder {
@@ -105,7 +108,7 @@ impl ArchivistBuilder {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
-        let pipelines_node = diagnostics::root().create_child("pipelines");
+        let pipelines_node = component::inspector().root().create_child("pipelines");
         let feedback_pipeline_node = pipelines_node.create_child("feedback");
         let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
         let feedback_path =
@@ -129,7 +132,7 @@ impl ArchivistBuilder {
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs.max_cached_original_bytes);
-        let diagnostics_repo = DataRepo::new(&logs_budget, diagnostics::root());
+        let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root());
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -191,28 +194,27 @@ impl ArchivistBuilder {
             logs_budget,
         )?;
 
-        let all_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
-            component::inspector().root().create_child("all_archive_accessor"),
-        ));
+        let stats_node = component::inspector().root().create_child("archive_accessor_stats");
+        let all_accessor_stats = Arc::new(AccessorStats::new(stats_node.create_child("all")));
 
-        let feedback_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
-            component::inspector().root().create_child("feedback_archive_accessor"),
-        ));
-
-        let legacy_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
-            component::inspector().root().create_child("legacy_metrics_archive_accessor"),
-        ));
-
+        let feedback_accessor_stats =
+            Arc::new(AccessorStats::new(stats_node.create_child("feedback")));
+        let legacy_accessor_stats =
+            Arc::new(AccessorStats::new(stats_node.create_child("legacy_metrics")));
+        component::inspector().root().record(stats_node);
         let legacy_moniker_rewriter = Arc::new(MonikerRewriter::new());
 
         let sender_for_accessor = listen_sender.clone();
         let sender_for_feedback = listen_sender.clone();
         let sender_for_legacy = listen_sender.clone();
+        let feedback_stats_for_server = feedback_accessor_stats.clone();
+        let all_stats_for_server = all_accessor_stats.clone();
+        let legacy_stats_for_server = legacy_accessor_stats.clone();
         fs.dir("svc")
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.diagnostics.ArchiveAccessor connection");
                 let all_archive_accessor =
-                    ArchiveAccessor::new(all_access_pipeline.clone(), all_accessor_stats.clone());
+                    ArchiveAccessor::new(all_access_pipeline.clone(), all_stats_for_server.clone());
                 all_archive_accessor
                     .spawn_archive_accessor_server(stream, sender_for_accessor.clone());
             })
@@ -220,7 +222,7 @@ impl ArchivistBuilder {
                 debug!("fuchsia.diagnostics.FeedbackArchiveAccessor connection");
                 let feedback_archive_accessor = ArchiveAccessor::new(
                     feedback_pipeline.clone(),
-                    feedback_accessor_stats.clone(),
+                    feedback_stats_for_server.clone(),
                 );
                 feedback_archive_accessor
                     .spawn_archive_accessor_server(chan, sender_for_feedback.clone());
@@ -229,14 +231,14 @@ impl ArchivistBuilder {
                 debug!("fuchsia.diagnostics.LegacyMetricsAccessor connection");
                 let legacy_archive_accessor = ArchiveAccessor::new(
                     legacy_metrics_pipeline.clone(),
-                    legacy_accessor_stats.clone(),
+                    legacy_stats_for_server.clone(),
                 )
                 .add_moniker_rewriter(legacy_moniker_rewriter.clone());
                 legacy_archive_accessor
                     .spawn_archive_accessor_server(chan, sender_for_legacy.clone());
             });
 
-        let events_node = diagnostics::root().create_child("event_stats");
+        let events_node = component::inspector().root().create_child("event_stats");
         Ok(Self {
             fs,
             archivist,
@@ -249,6 +251,7 @@ impl ArchivistBuilder {
             _pipeline_configs: vec![feedback_config, legacy_config],
             event_source_registry: EventSourceRegistry::new(events_node),
             stop_recv: None,
+            _stats: vec![feedback_accessor_stats, legacy_accessor_stats, all_accessor_stats],
         })
     }
 

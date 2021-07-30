@@ -72,7 +72,7 @@ mod tests {
         crate::{
             accessor::BatchIterator,
             container::ComponentIdentity,
-            diagnostics::{self, ConnectionStats},
+            diagnostics::{self, BatchIteratorConnectionStats},
             events::types::ComponentIdentifier,
             inspect::collector::InspectDataCollector,
             repository::DataRepo,
@@ -182,7 +182,7 @@ mod tests {
             Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
 
         let test_batch_iterator_stats1 =
-            Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
+            Arc::new(test_accessor_stats.new_lifecycle_batch_iterator());
         {
             let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats1).await;
@@ -195,7 +195,7 @@ mod tests {
         pipeline_wrapper.write().remove(&identity.relative_moniker);
 
         let test_batch_iterator_stats2 =
-            Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
+            Arc::new(test_accessor_stats.new_lifecycle_batch_iterator());
 
         {
             let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
@@ -208,7 +208,7 @@ mod tests {
 
     async fn read_snapshot(
         reader_server: LifecycleServer,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();

@@ -911,7 +911,8 @@ where
 }
 
 /// The parameters of an exponential histogram.
-pub struct ExponentialHistogramParams<T> {
+#[derive(Clone)]
+pub struct ExponentialHistogramParams<T: Clone> {
     /// The floor of the exponential histogram.
     pub floor: T,
 
@@ -927,7 +928,8 @@ pub struct ExponentialHistogramParams<T> {
 }
 
 /// The parameters of a linear histogram.
-pub struct LinearHistogramParams<T> {
+#[derive(Clone)]
+pub struct LinearHistogramParams<T: Clone> {
     /// The floor of the linear histogram.
     pub floor: T,
 

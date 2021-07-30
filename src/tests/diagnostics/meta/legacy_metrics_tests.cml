@@ -5,7 +5,7 @@
         timeout_seconds: "60",
         cases: [
             // Archivist stats are not present, because legacy metrics filters are active.
-            "bootstrap/archivist:root/all_archive_accessor:archive_accessor_connections_opened WHERE [a] Missing(a)",
+            "bootstrap/archivist:root/archive_accessor_stats/all:connections_opened WHERE [a] Missing(a)",
 
             // Power manager exposes historical CPU data.
             "bootstrap/power_manager:root/platform_metrics/historical_max_cpu_temperature_c:* WHERE [a] Not(Missing(a))",

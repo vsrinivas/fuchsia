@@ -5,7 +5,7 @@
 use {
     crate::{
         constants::{self, FORMATTED_CONTENT_CHUNK_SIZE_TARGET},
-        diagnostics::{AccessorStats, ConnectionStats},
+        diagnostics::{AccessorStats, BatchIteratorConnectionStats},
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
@@ -102,7 +102,7 @@ impl ArchiveAccessor {
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
-                let stats = Arc::new(ConnectionStats::for_inspect(accessor_stats));
+                let stats = Arc::new(accessor_stats.new_inspect_batch_iterator());
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
@@ -158,7 +158,7 @@ impl ArchiveAccessor {
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
-                let stats = Arc::new(ConnectionStats::for_lifecycle(accessor_stats));
+                let stats = Arc::new(accessor_stats.new_lifecycle_batch_iterator());
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
@@ -173,7 +173,7 @@ impl ArchiveAccessor {
                 BatchIterator::new(events, requests, mode, stats, None)?.run().await
             }
             DataType::Logs => {
-                let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
+                let stats = Arc::new(accessor_stats.new_logs_batch_iterator());
                 let logs = pipeline.read().logs(mode);
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
@@ -192,7 +192,7 @@ impl ArchiveAccessor {
         let batch_iterator_task_sender = task_sender.clone();
         task_sender
             .unbounded_send(fasync::Task::spawn(async move {
-                self.archive_accessor_stats.global_stats.archive_accessor_connections_opened.add(1);
+                self.archive_accessor_stats.global_stats.connections_opened.add(1);
                 while let Ok(Some(ArchiveAccessorRequest::StreamDiagnostics {
                     result_stream,
                     stream_parameters,
@@ -230,7 +230,7 @@ impl ArchiveAccessor {
                         }))
                         .ok();
                 }
-                self.archive_accessor_stats.global_stats.archive_accessor_connections_closed.add(1);
+                self.archive_accessor_stats.global_stats.connections_closed.add(1);
             }))
             .ok();
     }
@@ -249,7 +249,7 @@ impl SchemaTruncationCounter {
 
 pub struct BatchIterator {
     requests: BatchIteratorRequestStream,
-    stats: Arc<ConnectionStats>,
+    stats: Arc<BatchIteratorConnectionStats>,
     data: FormattedStream,
     truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
 }
@@ -276,7 +276,7 @@ impl BatchIterator {
         data: Items,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
         per_component_byte_limit_opt: Option<usize>,
     ) -> Result<Self, AccessorError>
     where
@@ -345,7 +345,7 @@ impl BatchIterator {
         data: S,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
     ) -> Result<Self, AccessorError>
     where
         D: Serialize,
@@ -359,7 +359,7 @@ impl BatchIterator {
     fn new_inner(
         data: FormattedStream,
         requests: BatchIteratorRequestStream,
-        stats: Arc<ConnectionStats>,
+        stats: Arc<BatchIteratorConnectionStats>,
         truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
     ) -> Result<Self, AccessorError> {
         stats.open_connection();

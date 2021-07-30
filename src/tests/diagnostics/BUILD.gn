@@ -30,6 +30,7 @@ group("tests") {
       ":appmgr-cpu-stats-tests",
       ":archivist-feedback-health-tests",
       ":archivist-pipeline-metrics-tests",
+      ":archivist-sampler-metrics-tests",
       ":component-manager-cpu-stats-tests",
       ":component-manager-status-tests",
       ":diagnostics-kcounter-inspect-tests",
@@ -117,6 +118,21 @@ fuchsia_unittest_package("archivist-feedback-health-tests") {
 
 fuchsia_unittest_package("archivist-pipeline-metrics-tests") {
   manifest = "meta/archivist_pipeline_metrics_tests.cml"
+
+  test_specs = {
+    environments = [
+      emu_env,
+      {
+        dimensions = {
+          device_type = "Astro"
+        }
+      },
+    ]
+  }
+}
+
+fuchsia_unittest_package("archivist-sampler-metrics-tests") {
+  manifest = "meta/archivist_sampler_metrics_tests.cml"
 
   test_specs = {
     environments = [
