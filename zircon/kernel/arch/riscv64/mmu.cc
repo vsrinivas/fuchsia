@@ -364,9 +364,9 @@ static bool page_table_is_clear(volatile pte_t* page_table) {
 // use the appropriate TLB flush instruction to globally flush the modified entry
 // terminal is set when flushing at the final level of the page table.
 void Riscv64ArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
-   __asm__ __volatile__ ("sfence.vma  %0, %1" :: "r"(vaddr), "r"(asid_) : "memory");
-   unsigned long hart_mask = 0b1111;
-   sbi_remote_sfence_vma_asid(&hart_mask,  vaddr, PAGE_SIZE, asid_);
+  __asm__ __volatile__ ("sfence.vma  %0, %1" :: "r"(vaddr), "r"(asid_) : "memory");
+  unsigned long hart_mask = -1; // TODO(all): Flush vaddr only, on other harts only 
+  sbi_remote_sfence_vma_asid(&hart_mask, 0, 0, -1, asid_);
 }
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
@@ -997,7 +997,9 @@ zx_status_t Riscv64ArchVmAspace::Destroy() {
   DEBUG_ASSERT(page);
   pmm_free_page(page);
 
-/*  RISCV64_TLBI(ASIDE1IS, asid_); */
+  __asm("sfence.vma  zero, %0" :: "r"(asid_) : "memory");
+  unsigned long hart_mask = -1; // TODO(all): Flush other harts only
+  sbi_remote_sfence_vma_asid(&hart_mask, 0, 0, -1, asid_);
   asid.Free(asid_);
   asid_ = MMU_RISCV64_UNUSED_ASID;
 
