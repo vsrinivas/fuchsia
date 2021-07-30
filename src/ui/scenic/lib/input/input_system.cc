@@ -103,9 +103,14 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
                          fit::function<void(zx_koid_t)> request_focus)
     : System(std::move(context)),
       scene_graph_(scene_graph),
-      request_focus_(std::move(request_focus)) {
+      request_focus_(std::move(request_focus)),
+      contender_inspector_(System::context()->inspect_node()->CreateChild("GestureContenders")),
+      hit_test_stats_node_(System::context()->inspect_node()->CreateChild("HitTestStats")),
+      num_empty_hit_tests_(hit_test_stats_node_.CreateUint("num_empty_hit_tests", 0)),
+      hits_outside_viewport_(hit_test_stats_node_.CreateUint("hit_outside_viewport", 0)),
+      context_view_missing_(hit_test_stats_node_.CreateUint("context_view_missing", 0)) {
   a11y_pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
-      this->context()->app_context(),
+      System::context()->app_context(),
       /*on_register=*/
       [this] {
         FX_CHECK(!a11y_legacy_contender_)
@@ -121,7 +126,8 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
               auto a11y_event = CreateAccessibilityEvent(event);
               ChattyA11yLog(a11y_event);
               accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
-            });
+            },
+            contender_inspector_);
         FX_LOGS(INFO) << "A11yLegacyContender created.";
         contenders_.emplace(a11y_contender_id_, a11y_legacy_contender_.get());
 
@@ -164,7 +170,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       // phase.
       /*cancel_mouse_stream=*/
       [this](StreamId stream_id) { CancelMouseStream(stream_id); },
-      this->context()->inspect_node()->CreateChild("PointerinjectorRegistry"));
+      System::context()->inspect_node()->CreateChild("PointerinjectorRegistry"));
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));
@@ -238,7 +244,8 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
       [this, contender_id] {
         contenders_.erase(contender_id);
         gfx_legacy_contenders_.erase(contender_id);
-      });
+      },
+      contender_inspector_);
   FX_DCHECK(success);
   contenders_.emplace(contender_id, &contender_it->second);
   return contender_id;
@@ -252,6 +259,7 @@ void InputSystem::RegisterTouchSource(
 
   // Note: These closure must'nt be called in the constructor, since they depend on the
   // |contenders_| map, which isn't filled until after construction completes.
+  auto& inspect_node = *System::context()->inspect_node();
   const auto [it, success1] = touch_contenders_.try_emplace(
       client_view_ref_koid, client_view_ref_koid, contender_id, std::move(touch_source_request),
       /*respond*/
@@ -263,7 +271,8 @@ void InputSystem::RegisterTouchSource(
         // Erase from |contenders_| first to avoid re-entry.
         contenders_.erase(contender_id);
         touch_contenders_.erase(client_view_ref_koid);
-      });
+      },
+      contender_inspector_);
   FX_DCHECK(success1);
   const auto [_, success2] = contenders_.emplace(contender_id, &it->second.touch_source);
   FX_DCHECK(success2);
@@ -307,13 +316,15 @@ void InputSystem::RegisterListener(
 std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
                                             const glm::vec2 position_in_viewport,
                                             const zx_koid_t context, const zx_koid_t target,
-                                            const bool semantic_hit_test) const {
+                                            const bool semantic_hit_test) {
   if (IsOutsideViewport(viewport, position_in_viewport)) {
     return {};
   }
 
   const std::optional<glm::mat4> world_from_context_transform = GetWorldFromViewTransform(context);
   if (!world_from_context_transform) {
+    num_empty_hit_tests_.Add(1);
+    context_view_missing_.Add(1);
     return {};
   }
 
@@ -321,7 +332,11 @@ std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
       world_from_context_transform.value() * viewport.context_from_viewport_transform;
   const auto world_space_point =
       utils::TransformPointerCoords(position_in_viewport, world_from_viewport_transform);
-  return view_tree_snapshot_->HitTest(target, world_space_point, semantic_hit_test);
+  auto hits = view_tree_snapshot_->HitTest(target, world_space_point, semantic_hit_test);
+  if (hits.empty()) {
+    num_empty_hit_tests_.Add(1);
+  }
+  return hits;
 }
 
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
@@ -874,9 +889,9 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
 }
 
-void InputSystem::ReportPointerEventToGfxLegacyView(
-    const InternalPointerEvent& event, zx_koid_t view_ref_koid,
-    fuchsia::ui::input::PointerEventType type) const {
+void InputSystem::ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event,
+                                                    zx_koid_t view_ref_koid,
+                                                    fuchsia::ui::input::PointerEventType type) {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   if (!scene_graph_)
     return;
@@ -909,6 +924,7 @@ void InputSystem::ReportPointerEventToGfxLegacyView(
   }
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   ChattyGfxLog(input_event);
+  contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
   event_reporter->EnqueueEvent(std::move(input_event));
 }
 

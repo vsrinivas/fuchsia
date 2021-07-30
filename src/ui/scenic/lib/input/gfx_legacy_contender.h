@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/input/gesture_contender.h"
+#include "src/ui/scenic/lib/input/gesture_contender_inspector.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl::input {
@@ -21,7 +22,7 @@ class GfxLegacyContender : public GestureContender {
   GfxLegacyContender(
       zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
       fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client,
-      fit::function<void()> self_destruct);
+      fit::function<void()> self_destruct, GestureContenderInspector& inspector);
   ~GfxLegacyContender() = default;
 
   void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
@@ -37,6 +38,9 @@ class GfxLegacyContender : public GestureContender {
   const fit::function<void(GestureResponse)> respond_;
   const fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client_;
   const fit::function<void()> self_destruct_;
+
+  // Saved by reference since |inspector_| is guaranteed to outlive the contender.
+  GestureContenderInspector& inspector_;
 };
 
 }  // namespace scenic_impl::input

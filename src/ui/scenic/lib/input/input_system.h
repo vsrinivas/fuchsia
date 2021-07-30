@@ -119,17 +119,17 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
   // from geometrically closest to furthest from the |event|.
   std::vector<zx_koid_t> HitTest(const Viewport& viewport, glm::vec2 position_in_viewport,
-                                 zx_koid_t context, zx_koid_t target, bool semantic_hit_test) const;
+                                 zx_koid_t context, zx_koid_t target, bool semantic_hit_test);
 
   template <typename T>
-  std::vector<zx_koid_t> HitTest(const T& event, bool semantic_hit_test) const {
+  std::vector<zx_koid_t> HitTest(const T& event, bool semantic_hit_test) {
     return HitTest(event.viewport, event.position_in_viewport, event.context, event.target,
                    semantic_hit_test);
   }
 
   // Returns the koid of the top hit, or ZX_KOID_INVALID if there is none.
   template <typename T>
-  zx_koid_t TopHitTest(const T& event, bool semantic_hit_test) const {
+  zx_koid_t TopHitTest(const T& event, bool semantic_hit_test) {
     const auto hits = HitTest(event, semantic_hit_test);
     return hits.empty() ? ZX_KOID_INVALID : hits.front();
   }
@@ -140,7 +140,7 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
-                                         fuchsia::ui::input::PointerEventType type) const;
+                                         fuchsia::ui::input::PointerEventType type);
 
   // Locates and sends an event to the MouseSource identified by |receiver|, if one exists.
   void SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent& event, StreamId stream_id,
@@ -209,6 +209,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   const RequestFocusFunc request_focus_;
 
+  // An inspector that tracks all GestureContenders, so data can persist past contender lifetimes.
+  // Must outlive all contenders.
+  GestureContenderInspector contender_inspector_;
+
   std::unique_ptr<A11yPointerEventRegistry> a11y_pointer_event_registry_;
   std::unique_ptr<PointerinjectorRegistry> pointerinjector_registry_;
 
@@ -242,10 +246,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
     TouchContender(zx_koid_t view_ref_koid, ContenderId id,
                    fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
                    fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
-                   fit::function<void()> error_handler)
+                   fit::function<void()> error_handler, GestureContenderInspector& inspector)
         : contender_id(id),
           touch_source(view_ref_koid, std::move(event_provider), std::move(respond),
-                       std::move(error_handler)) {}
+                       std::move(error_handler), inspector) {}
   };
 
   // Each gesture arena tracks one touch event stream and a set of contenders.
@@ -289,6 +293,12 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // and each stream is captured in either |current_mouse_receivers_| or
   // |current_exclusive_mouse_receivers_|.
   std::unordered_map<zx_koid_t, MouseSource> mouse_sources_;
+
+  // Inspect data.
+  inspect::Node hit_test_stats_node_;
+  inspect::UintProperty num_empty_hit_tests_;
+  inspect::UintProperty hits_outside_viewport_;
+  inspect::UintProperty context_view_missing_;
 };
 
 }  // namespace scenic_impl::input

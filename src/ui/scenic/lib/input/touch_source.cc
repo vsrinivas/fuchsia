@@ -135,11 +135,12 @@ bool IsHold(fuchsia::ui::pointer::TouchResponseType response) {
 TouchSource::TouchSource(zx_koid_t view_ref_koid,
                          fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
                          fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
-                         fit::function<void()> error_handler)
+                         fit::function<void()> error_handler, GestureContenderInspector& inspector)
     : GestureContender(view_ref_koid),
       binding_(this, std::move(event_provider)),
       respond_(std::move(respond)),
-      error_handler_(std::move(error_handler)) {
+      error_handler_(std::move(error_handler)),
+      inspector_(inspector) {
   binding_.set_error_handler([this](zx_status_t) { error_handler_(); });
 }
 
@@ -232,6 +233,8 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
 }
 
 void TouchSource::EndContest(StreamId stream_id, bool awarded_win) {
+  inspector_.OnContestDecided(view_ref_koid_, awarded_win);
+
   auto it = ongoing_streams_.find(stream_id);
   if (it == ongoing_streams_.end()) {
     if (!awarded_win) {
@@ -421,6 +424,7 @@ void TouchSource::SendPendingIfWaiting() {
   FX_DCHECK(!events.empty());
   FX_DCHECK(events.size() == return_tickets_.size());
 
+  inspector_.OnInjectedEvents(view_ref_koid_, events.size());
   pending_callback_(std::move(events));
   pending_callback_ = nullptr;
 }

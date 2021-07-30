@@ -24,13 +24,15 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedAtSweep) {
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
   std::vector<InternalPointerEvent> events_sent_to_client;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
       [&events_sent_to_client](const InternalPointerEvent& event) {
         events_sent_to_client.emplace_back(event);
-      });
+      },
+      inspector);
 
   // Start a stream. No events shuld get responses until the client makes a decision,
   // and all events should be forwarded to client.
@@ -66,13 +68,15 @@ TEST(A11yLegacyContenderTest, SingleStream_ConsumedMidContest) {
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
   std::vector<InternalPointerEvent> events_sent_to_client;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
       [&events_sent_to_client](const InternalPointerEvent& event) {
         events_sent_to_client.emplace_back(event);
-      });
+      },
+      inspector);
 
   // Start a stream. No events should get responses until the client makes a decision,
   // and all events should be forwarded to client.
@@ -114,13 +118,15 @@ TEST(A11yLegacyContenderTest, SingleStream_Rejected) {
   constexpr uint32_t kPointerId1 = 4;
   std::vector<GestureResponse> responses;
   std::vector<InternalPointerEvent> events_sent_to_client;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses.push_back(response); },
       /*deliver_events_to_client*/
       [&events_sent_to_client](const InternalPointerEvent& event) {
         events_sent_to_client.emplace_back(event);
-      });
+      },
+      inspector);
 
   contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
                          kViewBoundsEmpty);
@@ -143,6 +149,7 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
   std::vector<GestureResponse> responses;
   std::vector<InternalPointerEvent> events_sent_to_client;
   A11yLegacyContender* contender_ptr;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses, &contender_ptr](StreamId id, GestureResponse response) {
@@ -152,7 +159,8 @@ TEST(A11yLegacyContenderTest, ContestEndedOnResponse) {
       /*deliver_events_to_client*/
       [&events_sent_to_client](const InternalPointerEvent& event) {
         events_sent_to_client.emplace_back(event);
-      });
+      },
+      inspector);
   contender_ptr = &contender;
 
   contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId1}, kStreamOngoing,
@@ -183,13 +191,15 @@ TEST(A11yLegacyContenderTest, MultipleStreams) {
   constexpr uint32_t kPointerId1 = 4, kPointerId2 = 5, kPointerId3 = 6;
   std::unordered_map<StreamId, std::vector<GestureResponse>> responses;
   std::vector<InternalPointerEvent> events_sent_to_client;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses[id].push_back(response); },
       /*deliver_events_to_client*/
       [&events_sent_to_client](const InternalPointerEvent& event) {
         events_sent_to_client.emplace_back(event);
-      });
+      },
+      inspector);
 
   // Start three streams and make sure they're all handled correctly individually.
   EXPECT_EQ(events_sent_to_client.size(), 0u);
@@ -265,11 +275,12 @@ TEST(A11yLegacyContenderTest, MultipleStreams_WithSamePointer) {
   constexpr StreamId kId1 = 1, kId2 = 2, kId3 = 3;
   constexpr uint32_t kPointerId = 4;
   std::unordered_map<StreamId, std::vector<GestureResponse>> responses;
+  scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
   auto contender = A11yLegacyContender(
       /*respond*/
       [&responses](StreamId id, GestureResponse response) { responses[id].push_back(response); },
       /*deliver_events_to_client*/
-      [](auto) {});
+      [](auto) {}, inspector);
 
   // Create three streams and end them.
   contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, kStreamEnding, {});
@@ -302,11 +313,12 @@ TEST(A11yLegacyContenderTest, EndOngoingStreamsOnDestruction) {
   std::unordered_map<StreamId, std::vector<GestureResponse>> responses;
 
   {
+    scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
     auto contender = A11yLegacyContender(
         /*respond*/
         [&responses](StreamId id, GestureResponse response) { responses[id].push_back(response); },
         /*deliver_events_to_client*/
-        [](auto) {});
+        [](auto) {}, inspector);
 
     // Starting 6 streams to test all combinations that cause ongoing or ended streams.
 
@@ -358,11 +370,12 @@ TEST(A11yLegacyContenderTest, ContestsEndingOutOfOrder) {
   std::unordered_map<StreamId, std::vector<GestureResponse>> responses;
 
   {
+    scenic_impl::input::GestureContenderInspector inspector(inspect::Node{});
     auto contender = A11yLegacyContender(
         /*respond*/
         [&responses](StreamId id, GestureResponse response) { responses[id].push_back(response); },
         /*deliver_events_to_client*/
-        [](auto) {});
+        [](auto) {}, inspector);
 
     // Start three streams for the same pointer.
     contender.UpdateStream(kId1, /*event*/ {.pointer_id = kPointerId}, kStreamOngoing,

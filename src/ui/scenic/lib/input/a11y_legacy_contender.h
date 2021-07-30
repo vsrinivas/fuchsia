@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "src/ui/scenic/lib/input/gesture_contender.h"
+#include "src/ui/scenic/lib/input/gesture_contender_inspector.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
 namespace scenic_impl::input {
@@ -21,7 +22,8 @@ namespace scenic_impl::input {
 class A11yLegacyContender final : public GestureContender {
  public:
   A11yLegacyContender(fit::function<void(StreamId, GestureResponse)> respond,
-                      fit::function<void(const InternalPointerEvent& event)> deliver_to_client);
+                      fit::function<void(const InternalPointerEvent& event)> deliver_to_client,
+                      GestureContenderInspector& inspector);
   ~A11yLegacyContender();
 
   void UpdateStream(StreamId stream_id, const InternalPointerEvent& event, bool is_end_of_stream,
@@ -60,6 +62,9 @@ class A11yLegacyContender final : public GestureContender {
 
   const fit::function<void(StreamId, GestureResponse)> respond_;
   const fit::function<void(const InternalPointerEvent& event)> deliver_to_client_;
+
+  // Saved by reference since |inspector_| is guaranteed to outlive the contender.
+  GestureContenderInspector& inspector_;
 };
 
 }  // namespace scenic_impl::input

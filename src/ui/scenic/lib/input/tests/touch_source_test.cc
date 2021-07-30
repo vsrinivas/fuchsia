@@ -86,7 +86,7 @@ class TouchSourceTest : public gtest::TestLoopFixture {
           std::copy(responses.begin(), responses.end(),
                     std::back_inserter(received_responses_[stream_id]));
         },
-        /*error_handler*/ [this] { internal_error_handler_fired_ = true; });
+        /*error_handler*/ [this] { internal_error_handler_fired_ = true; }, inspector_);
   }
 
   bool internal_error_handler_fired_ = false;
@@ -95,6 +95,8 @@ class TouchSourceTest : public gtest::TestLoopFixture {
 
   fuchsia::ui::pointer::TouchSourcePtr client_ptr_;
   std::optional<TouchSource> touch_source_;
+  scenic_impl::input::GestureContenderInspector inspector_ =
+      scenic_impl::input::GestureContenderInspector(inspect::Node());
 };
 
 TEST_F(TouchSourceTest, Watch_WithNoPendingMessages_ShouldNeverReturn) {
@@ -725,7 +727,7 @@ TEST_F(TouchSourceTest, ReentryOnDestruction_ShouldNotCauseUseAfterFreeErrors) {
         respond_called = true;
         touch_source_->EndContest(stream_id, /*awarded_win*/ false);
       },
-      /*error_handler*/ [] {});
+      /*error_handler*/ [] {}, inspector_);
 
   touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd),
                               /*end_of_stream*/ false, kEmptyBoundingBox);

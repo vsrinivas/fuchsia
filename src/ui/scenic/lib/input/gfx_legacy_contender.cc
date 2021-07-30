@@ -13,11 +13,12 @@ namespace scenic_impl::input {
 GfxLegacyContender::GfxLegacyContender(
     zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
     fit::function<void(const std::vector<InternalPointerEvent>&)> deliver_events_to_client,
-    fit::function<void()> self_destruct)
+    fit::function<void()> self_destruct, GestureContenderInspector& inspector)
     : GestureContender(view_ref_koid),
       respond_(std::move(respond)),
       deliver_events_to_client_(std::move(deliver_events_to_client)),
-      self_destruct_(std::move(self_destruct)) {}
+      self_destruct_(std::move(self_destruct)),
+      inspector_(inspector) {}
 
 void GfxLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
                                       bool is_end_of_stream, view_tree::BoundingBox) {
@@ -37,6 +38,10 @@ void GfxLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerE
 }
 
 void GfxLegacyContender::EndContest(StreamId stream_id, bool awarded_win) {
+  // Only need to add contest decisions to inspector. |deliver_events_to_client_| handles the rest
+  // of the logging, since it also handles the exclusive injection case.
+  inspector_.OnContestDecided(view_ref_koid_, awarded_win);
+
   if (awarded_win) {
     awarded_win_ = true;
     deliver_events_to_client_(undelivered_events_);

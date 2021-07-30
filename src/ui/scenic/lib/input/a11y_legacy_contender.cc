@@ -13,10 +13,12 @@ namespace input {
 
 A11yLegacyContender::A11yLegacyContender(
     fit::function<void(StreamId, GestureResponse)> respond,
-    fit::function<void(const InternalPointerEvent& event)> deliver_to_client)
+    fit::function<void(const InternalPointerEvent& event)> deliver_to_client,
+    GestureContenderInspector& inspector)
     : GestureContender(ZX_KOID_INVALID),
       respond_(std::move(respond)),
-      deliver_to_client_(std::move(deliver_to_client)) {}
+      deliver_to_client_(std::move(deliver_to_client)),
+      inspector_(inspector) {}
 
 A11yLegacyContender::~A11yLegacyContender() {
   // Reject all ongoing streams.
@@ -33,6 +35,7 @@ A11yLegacyContender::~A11yLegacyContender() {
 
 void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
                                        bool is_end_of_stream, view_tree::BoundingBox) {
+  inspector_.OnInjectedEvents(view_ref_koid_, 1);
   deliver_to_client_(event);
 
   const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;
@@ -62,6 +65,7 @@ void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointer
 }
 
 void A11yLegacyContender::EndContest(StreamId stream_id, bool awarded_win) {
+  inspector_.OnContestDecided(view_ref_koid_, awarded_win);
   auto it = ongoing_streams_.find(stream_id);
   if (it == ongoing_streams_.end()) {
     if (!awarded_win) {

@@ -8,12 +8,15 @@
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/inspect/cpp/inspect.h>
 
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
 
+#include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/input/gesture_contender.h"
+#include "src/ui/scenic/lib/input/gesture_contender_inspector.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
@@ -26,7 +29,7 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   TouchSource(zx_koid_t view_ref_koid,
               fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
               fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
-              fit::function<void()> error_handler);
+              fit::function<void()> error_handler, GestureContenderInspector& inspector);
 
   ~TouchSource() override;
 
@@ -124,6 +127,9 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   std::unordered_set<StreamId> won_streams_awaiting_first_message_;
 
   WatchCallback pending_callback_ = nullptr;
+
+  // Saved by reference since |inspector_| is guaranteed to outlive the contender.
+  GestureContenderInspector& inspector_;
 };
 
 }  // namespace scenic_impl::input

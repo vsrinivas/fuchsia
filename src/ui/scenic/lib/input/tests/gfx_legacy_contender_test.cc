@@ -9,6 +9,7 @@
 namespace lib_ui_input_tests {
 namespace {
 
+using scenic_impl::input::GestureContenderInspector;
 using scenic_impl::input::GestureResponse;
 using scenic_impl::input::GfxLegacyContender;
 using scenic_impl::input::InternalPointerEvent;
@@ -19,6 +20,7 @@ constexpr StreamId kStreamId = 1;
 
 TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
   uint64_t num_responses = 0;
+  auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/
@@ -27,7 +29,7 @@ TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
         EXPECT_EQ(response, GestureResponse::kYes);
       },
       /*deliver_events_to_client*/ [](auto) {},
-      /*self_destruct*/ [] {});
+      /*self_destruct*/ [] {}, inspector);
 
   EXPECT_EQ(num_responses, 0u);
   contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false, {});
@@ -41,13 +43,14 @@ TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
 TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
   constexpr StreamId kStreamId = 1;
   std::vector<InternalPointerEvent> last_delivered_events;
+  auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/ [](auto) {}, /*deliver_events_to_client*/
       [&last_delivered_events](const std::vector<InternalPointerEvent>& events) {
         last_delivered_events = events;
       },
-      /*self_destruct*/ [] {});
+      /*self_destruct*/ [] {}, inspector);
 
   // No events delivered before being awarded a win.
   contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
@@ -70,11 +73,12 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
 TEST(GfxLegacyContenderTest, ShouldSelfDestructOnLoss) {
   bool deliver_called = false;
   bool self_destruct_called = false;
+  auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/ [&deliver_called](auto) { deliver_called = true; },
-      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
+      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; }, inspector);
 
   contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_FALSE(deliver_called);
@@ -90,12 +94,13 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnStreamEndAfterWin) {
   uint64_t num_delivered_events = 0;
 
   bool self_destruct_called = false;
+  auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
-      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
+      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; }, inspector);
 
   contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false, {});
   EXPECT_EQ(num_delivered_events, 0u);
@@ -121,12 +126,13 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnWinAfterStreamEnd) {
   uint64_t num_delivered_events = 0;
 
   bool self_destruct_called = false;
+  auto inspector = GestureContenderInspector(inspect::Node());
   auto contender = GfxLegacyContender(
       kViewRefKoid,
       /*respond*/ [](auto) {},
       /*deliver_events_to_client*/
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
-      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
+      /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; }, inspector);
 
   contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true, {});
   EXPECT_EQ(num_delivered_events, 0u);

@@ -13,6 +13,8 @@ source_set("input") {
     "gesture_arena.cc",
     "gesture_arena.h",
     "gesture_contender.h",
+    "gesture_contender_inspector.cc",
+    "gesture_contender_inspector.h",
     "gfx_legacy_contender.cc",
     "gfx_legacy_contender.h",
     "helper.cc",
