@@ -1510,19 +1510,6 @@
   submitted: '2021-06-16'
   reviewed: '2021-07-21'
 
-- name: 'RFC-0117'
-  title: 'System-absolute paths considered harmful'
-  short_description: 'Enacting a policy to use relative paths everywhere wherever possible.'
-  authors: ['shayba@google.com']
-  file: '0117_system_absolute_paths_considered_harmful.md'
-  area: ['Build']
-  issue: ['79082']
-  gerrit_change_id: ['545707']
-  status: 'Accepted'
-  reviewers: ['aaronwood@google.com', 'jsankey@google.com', 'jayzhuang@google.com', 'raggi@google.com', 'fangism@google.com', 'abarth@google.com', 'maruel@google.com']
-  submitted: '2021-06-20'
-  reviewed: '2021-070-28'
-
 - name: 'RFC-0118'
   title: 'SWD policy at image assembly'
   short_description: 'Short-term change to apply SWD policy at image assembly time.'
@@ -1535,3 +1522,16 @@
   reviewers: ['aaronwood@google.com', 'abarth@google.com', 'ampearce@google.com', 'dhobsd@google.com']
   submitted: '2021-06-28'
   reviewed: '2021-07-28'
+
+- name: 'RFC-0119'
+  title: 'System-absolute paths considered harmful'
+  short_description: 'Enacting a policy to use relative paths everywhere wherever possible.'
+  authors: ['shayba@google.com']
+  file: '0119_system_absolute_paths_considered_harmful.md'
+  area: ['Build']
+  issue: ['79082']
+  gerrit_change_id: ['545707']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'jsankey@google.com', 'jayzhuang@google.com', 'raggi@google.com', 'fangism@google.com', 'abarth@google.com', 'maruel@google.com']
+  submitted: '2021-06-20'
+  reviewed: '2021-070-28'
