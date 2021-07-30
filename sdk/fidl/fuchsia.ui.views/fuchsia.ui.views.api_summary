@@ -14,6 +14,9 @@ protocol/member fuchsia.ui.views/View.Present(fuchsia.ui.views/ViewToken view_to
 protocol fuchsia.ui.views/View
 struct/member fuchsia.ui.views/ViewHolderToken.value zx/handle:EVENTPAIR
 resource struct fuchsia.ui.views/ViewHolderToken
+struct/member fuchsia.ui.views/ViewIdentityOnCreation.view_ref fuchsia.ui.views/ViewRef
+struct/member fuchsia.ui.views/ViewIdentityOnCreation.view_ref_control fuchsia.ui.views/ViewRefControl
+resource struct fuchsia.ui.views/ViewIdentityOnCreation
 struct/member fuchsia.ui.views/ViewRef.reference zx/handle:EVENTPAIR
 resource struct fuchsia.ui.views/ViewRef
 struct/member fuchsia.ui.views/ViewRefControl.reference zx/handle:EVENTPAIR

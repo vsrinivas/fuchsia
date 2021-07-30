@@ -47,3 +47,26 @@ type ViewRef = resource struct {
 type ViewRefControl = resource struct {
     reference zx.handle:EVENTPAIR;
 };
+
+/// Convenience data type to self-identify the view, during view creation.
+///
+/// A ViewRef is used to identify the view, and can be freely cloned and
+/// distributed to other components.
+///
+/// A ViewRefControl is used to implement lifecycle notification, and must not
+/// be cloned, and cannot be distributed to other components. Scenic binds the
+/// ViewRefControl object to the view, so when the view is destroyed, the
+/// destruction of the ViewRefControl triggers a `ZX_EVENTPAIR_PEER_CLOSED`
+/// signal to all ViewRef holders, thus notifying view death.
+///
+/// Usage: When creating a view, place a ViewRef and ViewRefControl together in
+/// this struct, so that they travel as a unit to the destination component.
+/// This convenience struct allows a protocol author to describe this traveling
+/// pair as one argument. It improves readability and reduces mishandling.
+type ViewIdentityOnCreation = resource struct {
+    /// Stable identifier for the view to be created.
+    view_ref ViewRef;
+
+    /// A mechanism for lifecycle notification.
+    view_ref_control ViewRefControl;
+};
