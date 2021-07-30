@@ -1472,7 +1472,7 @@ if (use_gigaboot) {
           bootserver_pave = [ "--bootloader" ]
           bootserver_pave_zedboot = [ "--bootloader" ]
           fastboot_flash = [ "fuchsia-esp" ]
-          name = "efi"
+          name = "fuchsia.esp"
           path = "fuchsia.esp.blk"
           type = "blk"
         },
