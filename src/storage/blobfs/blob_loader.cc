@@ -89,10 +89,8 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                            std::move(decompressor_client)));
 }
 
-zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
-    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
-  LoadResult result;
-
+zx::status<LoaderInfo> BlobLoader::LoadBlob(uint32_t node_index,
+                                            const BlobCorruptionNotifier* corruption_notifier) {
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
   if (inode.is_error()) {
@@ -121,21 +119,20 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
                    << zx_status_get_string(blob_layout_or.error_value());
     return blob_layout_or.take_error();
   }
+  ZX_ASSERT(blob_layout_or->FileSize() == inode->blob_size);
+
+  LoaderInfo result;
+  result.node_index = node_index;
   result.layout = std::move(blob_layout_or.value());
-  result.loader_info.node_index = node_index;
-  result.loader_info.data_start_bytes =
-      static_cast<uint64_t>(result.layout->DataBlockOffset()) * GetBlockSize();
-  result.loader_info.data_length_bytes = inode->blob_size;
 
   auto verifier_or =
       CreateBlobVerifier(node_index, *inode.value(), *result.layout, corruption_notifier);
   if (verifier_or.is_error())
     return verifier_or.take_error();
-  result.loader_info.verifier = std::move(verifier_or.value());
+  result.verifier = std::move(verifier_or.value());
 
-  if (zx_status_t status =
-          InitForDecompression(node_index, *inode.value(), *result.layout,
-                               *result.loader_info.verifier, &result.loader_info.decompressor);
+  if (zx_status_t status = InitForDecompression(node_index, *inode.value(), *result.layout,
+                                                *result.verifier, &result.decompressor);
       status != ZX_OK) {
     return zx::error(status);
   }

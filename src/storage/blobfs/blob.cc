@@ -759,18 +759,18 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
     set_overridden_cache_policy(*cache_policy);
   }
 
-  zx::status<BlobLoader::LoadResult> load_result =
+  zx::status<LoaderInfo> load_info_or =
       blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
-  if (load_result.is_error())
-    return load_result.error_value();
+  if (load_info_or.is_error())
+    return load_info_or.error_value();
 
   // Make the vmo.
-  if (auto status = EnsureCreatePagedVmo(load_result->layout->FileBlockAlignedSize());
+  if (auto status = EnsureCreatePagedVmo(load_info_or->layout->FileBlockAlignedSize());
       status.is_error())
     return status.error_value();
 
   // Commit the other load information.
-  loader_info_ = std::move(load_result->loader_info);
+  loader_info_ = std::move(*load_info_or);
 
   return ZX_OK;
 }

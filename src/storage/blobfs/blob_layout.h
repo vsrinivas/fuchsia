@@ -63,6 +63,8 @@ class BlobLayout {
   static_assert(
       std::is_same<BlockSizeType, std::remove_const<decltype(kBlobfsBlockSize)>::type>::value);
 
+  BlockSizeType blobfs_block_size() const { return blobfs_block_size_; }
+
   // The uncompressed size of the file.
   ByteCountType FileSize() const;
   // The uncompressed size of the file rounded up to the next multiple of the block size.
@@ -77,9 +79,14 @@ class BlobLayout {
   ByteCountType DataBlockAlignedSize() const;
   // The number of blocks that the data spans.
   BlockCountType DataBlockCount() const;
-  // The first block of the blob containing part of the blob's data.  The rest of the blob's data
-  // will be in the following |DataBlockCount| - 1 blocks.
+
+  // The data may not start at the beginning of the blob contents but it will always be on a
+  // block-aligned offset. The rest of the blob's data will be in the following |DataBlockCount| - 1
+  // blocks.
   virtual BlockCountType DataBlockOffset() const = 0;
+  ByteCountType DataOffset() const {
+    return static_cast<ByteCountType>(DataBlockOffset()) * blobfs_block_size_;
+  }
 
   // The number of bytes required to store the Merkle tree.
   ByteCountType MerkleTreeSize() const;
@@ -129,8 +136,6 @@ class BlobLayout {
  protected:
   BlobLayout(ByteCountType file_size, ByteCountType data_size, ByteCountType merkle_tree_size,
              BlockSizeType blobfs_block_size);
-
-  BlockSizeType blobfs_block_size() const { return blobfs_block_size_; }
 
  private:
   // The uncompressed size of the file.

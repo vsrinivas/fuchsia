@@ -48,8 +48,13 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
 
 zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,
                                                    const LoaderInfo& info) {
+  // Currently our block size is saved as a variable in some places and uses a constant in others.
+  // These should always match.
+  ZX_ASSERT(info.layout->blobfs_block_size() == kBlobfsBlockSize);
+
   fs::Ticker ticker(metrics_->Collecting());
   if (offset % kBlobfsBlockSize != 0) {
+    // The block math below relies on the offset being block-aligned.
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -58,7 +63,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return block_iter.take_error();
   }
 
-  auto start_block = static_cast<uint32_t>((offset + info.data_start_bytes) / kBlobfsBlockSize);
+  auto start_block = static_cast<uint32_t>((info.layout->DataOffset() + offset) / kBlobfsBlockSize);
   auto block_count =
       static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 

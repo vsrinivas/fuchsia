@@ -83,7 +83,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
   }
   if (info->block_size != kBlobfsBlockSize) {
     if (!quiet)
-      FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported" << *info;
+      FX_LOGS(ERROR) << "block_size " << info->block_size << " unsupported" << *info;
     return ZX_ERR_INVALID_ARGS;
   }
 

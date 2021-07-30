@@ -47,9 +47,10 @@ struct ReadRange {
 // |..data_block..|..data_block..|..data_block..|
 //                |........output_range.........|
 ReadRange GetBlockAlignedReadRange(const LoaderInfo& info, uint64_t offset, uint64_t length) {
-  ZX_DEBUG_ASSERT(offset < info.data_length_bytes);
+  uint64_t uncompressed_byte_length = info.layout->FileSize();
+  ZX_DEBUG_ASSERT(offset < uncompressed_byte_length);
   // Clamp the range to the size of the blob.
-  length = std::min(length, info.data_length_bytes - offset);
+  length = std::min(length, uncompressed_byte_length - offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   zx_status_t status = info.verifier->Align(&offset, &length);
@@ -59,7 +60,7 @@ ReadRange GetBlockAlignedReadRange(const LoaderInfo& info, uint64_t offset, uint
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
   ZX_DEBUG_ASSERT(offset % kBlobfsBlockSize == 0);
-  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == info.data_length_bytes);
+  ZX_DEBUG_ASSERT(length % kBlobfsBlockSize == 0 || offset + length == uncompressed_byte_length);
 
   return {.offset = offset, .length = length};
 }
@@ -84,7 +85,7 @@ ReadRange GetBlockAlignedExtendedRange(const LoaderInfo& info, uint64_t offset, 
 
   size_t read_ahead_offset = offset;
   size_t read_ahead_length = std::max(kReadAheadClusterSize, length);
-  read_ahead_length = std::min(read_ahead_length, info.data_length_bytes - read_ahead_offset);
+  read_ahead_length = std::min(read_ahead_length, info.layout->FileSize() - read_ahead_offset);
 
   // Align to the block size for verification. (In practice this means alignment to 8k).
   return GetBlockAlignedReadRange(info, read_ahead_offset, read_ahead_length);

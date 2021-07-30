@@ -34,13 +34,6 @@ namespace blobfs {
 // contents as needed.
 class BlobLoader {
  public:
-  // TODO(fxbug.dev/79611) Consider folding this all into LoaderInfo so we don't have to have two
-  // levels of structs.
-  struct LoadResult {
-    LoaderInfo loader_info;
-    std::unique_ptr<BlobLayout> layout;
-  };
-
   BlobLoader() = default;
   BlobLoader(BlobLoader&& o) = default;
   BlobLoader& operator=(BlobLoader&& o) = default;
@@ -63,7 +56,7 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx::status<LoadResult> LoadBlob(uint32_t node_index,
+  zx::status<LoaderInfo> LoadBlob(uint32_t node_index,
                                   const BlobCorruptionNotifier* corruption_notifier);
 
  private:

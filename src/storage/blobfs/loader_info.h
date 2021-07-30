@@ -21,11 +21,7 @@ struct LoaderInfo {
   // Inode index for the blob.
   uint32_t node_index = 0;
 
-  // Block offset (in bytes) the data starts at.
-  uint64_t data_start_bytes = 0;
-
-  // Total length of the data. The |verifier| must be set up to verify this length.
-  uint64_t data_length_bytes = 0;
+  std::unique_ptr<BlobLayout> layout;
 
   // Used to verify the pages as they are read in.
   // TODO(fxbug.dev/44742): Make BlobVerifier movable, unwrap from unique_ptr.
