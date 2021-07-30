@@ -18,7 +18,9 @@ use crate::{
 use crate::{
     directory::{
         entry::{DirectoryEntry, EntryInfo},
+        entry_container::{AsyncGetEntry, Directory},
         helper::DirectlyMutable,
+        immutable::Simple,
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
@@ -42,7 +44,7 @@ use {
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
         WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
-    fuchsia_async::TestExecutor,
+    fuchsia_async::{self as fasync, TestExecutor},
     fuchsia_zircon::{
         sys::{self, ZX_OK},
         Status,
@@ -720,6 +722,32 @@ fn directories_restrict_nested_write_permissions() {
 
         assert_close!(root);
     });
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn directories_remove_nested() {
+    // Test dynamic removal of a subdirectory under another directory.
+    let root = pseudo_directory! {
+        "dir" => pseudo_directory! {
+            "subdir" => pseudo_directory! {},   // To be removed below.
+        },
+    };
+    let dir_entry = match root.get_entry("dir".to_string()) {
+        AsyncGetEntry::Immediate(result) => result,
+        AsyncGetEntry::Future(result) => result.await,
+    }
+    .expect("Failed to get directory entry!");
+    // Remove subdir from dir.
+    let downcasted_dir = dir_entry.into_any().downcast::<Simple>().expect("Downcast failed!");
+    downcasted_dir.remove_entry("subdir", true).expect("Failed to remove directory entry!");
+
+    // Ensure it was actually removed.
+    let subdir_entry = match downcasted_dir.get_entry("subdir".to_string()) {
+        AsyncGetEntry::Immediate(result) => result,
+        AsyncGetEntry::Future(result) => result.await,
+    }
+    .err();
+    assert_eq!(subdir_entry, Some(Status::NOT_FOUND));
 }
 
 #[test]
