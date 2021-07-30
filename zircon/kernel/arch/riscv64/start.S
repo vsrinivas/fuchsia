@@ -103,10 +103,8 @@ FUNCTION(_start)
     lla     t0, __code_start
     sub     t0, s10, t0
 
-    // fix up the gp, stack pointer, and return address
-    add     gp, gp, t0
+    // fix up the stack pointer
     add     sp, sp, t0
-    add     ra, ra, t0
 
     // jump to high memory
     lla     t1, .Lmmu_on_vaddr

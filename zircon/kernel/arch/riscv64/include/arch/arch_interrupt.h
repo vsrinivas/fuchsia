@@ -19,7 +19,7 @@ typedef bool interrupt_saved_state_t;
 
 __WARN_UNUSED_RESULT
 static inline interrupt_saved_state_t arch_interrupt_save(void) {
-  /* disable interrupts by clearing the MIE bit while atomically saving the old state */
+  /* disable interrupts by clearing the SIE bit while atomically saving the old state */
   return riscv64_csr_read_clear(RISCV64_CSR_SSTATUS, RISCV64_CSR_SSTATUS_IE) & RISCV64_CSR_SSTATUS_IE;
 }
 

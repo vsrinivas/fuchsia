@@ -32,7 +32,7 @@
 #include <zircon/compiler.h>
 
 // Registers saved on entering the kernel via architectural exception.
-// Each field in this structure has a corresponding #define offset below.
+// Each field in this structure has a corresponding #define offset above.
 // They must be kept in sync.
 struct iframe_t {
   unsigned long scratch;

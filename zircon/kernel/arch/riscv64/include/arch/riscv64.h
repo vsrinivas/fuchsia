@@ -152,7 +152,7 @@ __END_CDECLS
   __val; \
 })
 
-// Register state layout used by arm64_context_switch().
+// Register state layout used by riscv64_context_switch().
 struct riscv64_context_switch_frame {
   unsigned long ra; // return address (x1)
 

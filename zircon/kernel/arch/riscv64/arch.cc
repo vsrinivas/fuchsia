@@ -112,8 +112,8 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
 
 extern "C" void riscv64_uspace_entry(iframe_t *iframe, vaddr_t tp);
 
-// Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
-// the top of the kernel stack.
+// Switch to user mode, set the user stack pointer to user_stack_top, save the
+// top of the kernel stack pointer.
 void arch_enter_uspace(iframe_t* iframe) {
   Thread* ct = Thread::Current::Get();
 

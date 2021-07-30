@@ -120,7 +120,19 @@ FUNCTION(riscv64_uspace_entry)
     ld     t6, IFRAME_T_OFFSET_T(6)(a0)
     ld     a0, IFRAME_T_OFFSET_A(0)(a0)
 
-    // TODO(revest): zero out remaining registers ?
+    li     s0, 0
+    li     s1, 0
+    li     s2, 0
+    li     s3, 0
+    li     s4, 0
+    li     s5, 0
+    li     s6, 0
+    li     s7, 0
+    li     s8, 0
+    li     s9, 0
+    li     s10, 0
+    li     s11, 0
+    li     s11, 0
 
     sret
 END_FUNCTION(riscv64_uspace_entry)
@@ -386,7 +398,7 @@ FUNCTION(riscv64_syscall_dispatcher)
 
     ld     t1, IFRAME_T_OFFSET_EPC(a0)
     ld     t0, IFRAME_T_OFFSET_T(0)(a0)
-    // Load a0 last since it pointers to the iframe_t.
+    // Load a0 last since it points to the iframe_t.
     ld     a1, IFRAME_T_OFFSET_A(1)(a0)
     ld     a2, IFRAME_T_OFFSET_A(2)(a0)
     ld     a3, IFRAME_T_OFFSET_A(3)(a0)
