@@ -32,9 +32,7 @@ type exclusion struct {
 	Comment string
 }
 
-var defaultSuccessExclusions = []exclusion{
-	{"fuzzer_corpus", "TODO(fxbug.dev/72895): Fix presence indicator validation."},
-}
+var defaultSuccessExclusions = []exclusion{}
 
 var cases = []interface{}{
 	// All the following test cases check boundary conditions of code units

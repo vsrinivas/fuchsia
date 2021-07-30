@@ -69,8 +69,6 @@ success("UnionMigration_SingleVariant") {
 }
 
 success("ReverseOrdinalUnion") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = ReverseOrdinalUnionStruct {
         u: ReverseOrdinalUnion {
             x: 42,
@@ -98,8 +96,6 @@ success("ReverseOrdinalUnion") {
 
 // Regression test for fxbug.dev/72895.
 decode_failure("UnionWithInvalidPresenceIndicator") {
-    // TODO(fxbug.dev/72895): Fix in C/C++ bindings.
-    bindings_denylist = [c, hlcpp, llcpp],
     type = XUnionWithStructStruct,
     bytes = {
         v1 = [
@@ -359,8 +355,6 @@ success("UnionEnvelopeInlining_SmallValue_Inlined") {
 }
 
 success("UnionEnvelopeInlining_LargeValue_Outlined") {
-    // TODO(fxbug.dev/80658) Determine why this test is failing in the fuzzer.
-    bindings_denylist = [fuzzer_corpus],
     value = EnvelopeInliningTestUnionStruct {
         u: EnvelopeInliningTestUnion {
             large: 100,

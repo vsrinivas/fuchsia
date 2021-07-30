@@ -1369,8 +1369,6 @@ success("Sandwich7Case1WithHdr") {
 }
 
 success("Sandwich7Case2") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Sandwich7 {
         before: 0x14131211,
         after: 0x24232221,
@@ -1388,8 +1386,6 @@ success("Sandwich7Case2") {
 }
 
 success("Sandwich7Case2WithHdr") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Sandwich7Message {
         header: TransactionHeader {
             tx_id: 0xf3f2f1f0,
@@ -1420,8 +1416,6 @@ success("Sandwich7Case2WithHdr") {
 }
 
 success("Regression1") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Regression1 {
         f1: 0x01,
         f2: 0x02,
@@ -1516,8 +1510,6 @@ success("Regression3Present") {
 }
 
 success("Size5Alignment1Array") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Size5Alignment1Array {
         a: [
             Size5Alignment1 {
@@ -1543,8 +1535,6 @@ success("Size5Alignment1Array") {
 
 
 success("Size5Alignment4Array") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Size5Alignment4Array {
         a: [
             Size5Alignment4 {
@@ -1599,8 +1589,6 @@ success("Size5Alignment1Vector") {
 }
 
 success("Size5Alignment4Vector") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Size5Alignment4Vector {
         v: [
             Size5Alignment4 {
@@ -2055,8 +2043,6 @@ success("TransformerEmptyStruct") {
 }
 
 success("EmptyStructUnion") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus,],
     value = EmptyStructUnionStruct {
         u: EmptyStructUnion {
             es: TransformerEmptyStruct {},
@@ -2581,8 +2567,6 @@ success("OutOfLineSandwich1WithOptUnionAbsent") {
 }
 
 success("Regression4") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Regression4 {
         f1: 1,
         f2: 2,
@@ -3016,8 +3000,6 @@ success("Regression8TableWithUnionSize12Aligned4") {
 }
 
 success("Regression9Response") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus,],
     value = Regression9Message {
         header: TransactionHeader {
             tx_id: 1,

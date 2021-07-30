@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 success("3ByteObjectAlignmentInStruct") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = ThreeByteInStruct {
         elem1: ThreeByte {
             elem1: 0x01,
@@ -31,8 +29,6 @@ success("3ByteObjectAlignmentInStruct") {
 }
 
 success("5ByteObjectAlignmentInStruct") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = FiveByteInStruct {
         elem1: FiveByte {
             elem1: 0x01020304,
@@ -115,8 +111,6 @@ success("5ByteObjectAlignmentInVector") {
 }
 
 success("3ByteObjectAlignmentInArray") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = ThreeByteInArray{
         elems: [
             ThreeByte {
@@ -145,8 +139,6 @@ success("3ByteObjectAlignmentInArray") {
 }
 
 success("5ByteObjectAlignmentInArray") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = FiveByteInArray{
         elems: [
             FiveByte {

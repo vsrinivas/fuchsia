@@ -117,6 +117,10 @@ class FidlDecoder final : public BaseVisitor<Byte> {
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
+    if (unlikely(reinterpret_cast<uintptr_t>(*object_ptr_ptr) != FIDL_ALLOC_PRESENT)) {
+      SetError("invalid presence marker");
+      return Status::kMemoryError;
+    }
     uint32_t new_offset;
     if (unlikely(!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset))) {
       SetError("overflow updating out-of-line offset");

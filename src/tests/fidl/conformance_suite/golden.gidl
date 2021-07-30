@@ -85,8 +85,6 @@ success("GoldenNullableStringStructNonNull") {
     },
 }
 success("GoldenNullableStringStructNull") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = GoldenNullableStringStruct {
         v: null,
     },
@@ -375,8 +373,6 @@ encode_failure("GoldenStringWithMaxSize2") {
 }
 
 decode_failure("GoldenStringStructNullBody") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     type = GoldenStringStruct,
     bytes = {
         v1, v2= [

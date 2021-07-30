@@ -53,8 +53,6 @@ success("Uint8Uint16Uint32Uint64") {
 }
 
 success("Uint64Uint32Uint16Uint8") {
-    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
-    bindings_denylist = [fuzzer_corpus],
     value = Uint64Uint32Uint16Uint8 {
         f1: 0x08090a0b0c0d0e0f,
         f2: 0x04050607,
