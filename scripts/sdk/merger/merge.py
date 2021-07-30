@@ -223,7 +223,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
             meta['target_files'].update(meta_two['target_files'])
     elif type in ('cc_source_library', 'dart_library', 'fidl_library',
                   'documentation', 'device_profile', 'config', 'license',
-                  'component_manifest'):
+                  'component_manifest', 'bind_library'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
