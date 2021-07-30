@@ -84,6 +84,9 @@ class MsdIntelDevice : public msd_device_t,
   void DumpToString(std::vector<std::string>& dump_out);
   void DumpStatusToLog();
 
+  // Sends a timestamp request to the device thread and waits for completion.
+  magma::Status QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer);
+
  private:
   MsdIntelDevice();
 
@@ -146,6 +149,7 @@ class MsdIntelDevice : public msd_device_t,
                                   uint32_t render_interrupt_status,
                                   uint32_t video_interrupt_status);
   magma::Status ProcessDumpStatusToLog();
+  magma::Status ProcessTimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer);
 
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
@@ -210,6 +214,7 @@ class MsdIntelDevice : public msd_device_t,
   class ReleaseBufferRequest;
   class InterruptRequest;
   class DumpRequest;
+  class TimestampRequest;
 
   // Thread-shared data members
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;

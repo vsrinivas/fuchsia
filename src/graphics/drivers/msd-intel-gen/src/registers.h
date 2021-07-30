@@ -141,6 +141,24 @@ class ExeclistStatus {
   }
 };
 
+// intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part2_0.pdf p.748
+class Timestamp {
+ public:
+  static constexpr uint32_t kOffset = 0x358;
+
+  static uint64_t read(magma::RegisterIo* reg_io, uint32_t mmio_base) {
+    uint64_t upper = reg_io->Read32(mmio_base + kOffset + 4);
+    uint64_t lower = reg_io->Read32(mmio_base + kOffset);
+    uint64_t upper_check = reg_io->Read32(mmio_base + kOffset + 4);
+    if (upper_check != upper) {
+      // Assume rollover
+      lower = reg_io->Read32(mmio_base + kOffset);
+      upper = upper_check;
+    }
+    return (upper << 32 | lower);
+  }
+};
+
 // from intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.1
 class ActiveHeadPointer {
  public:

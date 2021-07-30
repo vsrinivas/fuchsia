@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magma_intel_gen_defs.h>
+
 #include <gtest/gtest.h>
 
 #include "device_request.h"
@@ -411,6 +413,38 @@ class TestMsdIntelDevice : public testing::Test {
       EXPECT_EQ(23u, eu_total);
   }
 
+  void QueryTimestamp() {
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
+    ASSERT_NE(platform_device, nullptr);
+
+    std::unique_ptr<MsdIntelDevice> device =
+        MsdIntelDevice::Create(platform_device->GetDeviceHandle(), kEnableDeviceThread);
+    EXPECT_NE(device, nullptr);
+
+    uint64_t last_timestamp = 0;
+
+    for (uint32_t i = 0; i < 10; i++) {
+      auto buffer = std::shared_ptr<magma::PlatformBuffer>(
+          magma::PlatformBuffer::Create(magma::page_size(), "timestamp test"));
+      ASSERT_TRUE(buffer);
+
+      ASSERT_EQ(MAGMA_STATUS_OK, device->ProcessTimestampRequest(buffer).get());
+
+      void* ptr;
+      ASSERT_TRUE(buffer->MapCpu(&ptr));
+
+      auto query = reinterpret_cast<magma_intel_gen_timestamp_query*>(ptr);
+
+      constexpr uint64_t kMask = (1ull << 36) - 1;  // from spec hw timestamp is 36bits
+      EXPECT_EQ(0u, query->device_timestamp & ~kMask);
+
+      EXPECT_GT(query->device_timestamp, last_timestamp);
+      last_timestamp = query->device_timestamp;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+
   class FakeSemaphore : public magma::PlatformSemaphore {
    public:
     uint64_t id() override { return 1; }
@@ -519,6 +553,8 @@ TEST_F(TestMsdIntelDevice, ProcessRequest) { TestMsdIntelDevice::ProcessRequest(
 TEST_F(TestMsdIntelDevice, MaxFreq) { TestMsdIntelDevice::MaxFreq(); }
 
 TEST_F(TestMsdIntelDevice, QuerySliceInfo) { TestMsdIntelDevice::QuerySliceInfo(); }
+
+TEST_F(TestMsdIntelDevice, QueryTimestamp) { TestMsdIntelDevice::QueryTimestamp(); }
 
 class TestMsdIntelDevice_RenderCommandStreamer : public TestMsdIntelDevice {};
 

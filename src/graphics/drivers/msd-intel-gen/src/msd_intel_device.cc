@@ -83,6 +83,18 @@ class MsdIntelDevice::DumpRequest : public DeviceRequest {
   }
 };
 
+class MsdIntelDevice::TimestampRequest : public DeviceRequest {
+ public:
+  TimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer) : buffer_(std::move(buffer)) {}
+
+ protected:
+  magma::Status Process(MsdIntelDevice* device) override {
+    return device->ProcessTimestampRequest(std::move(buffer_));
+  }
+
+  std::shared_ptr<magma::PlatformBuffer> buffer_;
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
@@ -827,6 +839,50 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
   }
 }
 
+magma::Status MsdIntelDevice::QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer) {
+  auto request = std::make_unique<TimestampRequest>(std::move(buffer));
+  auto reply = request->GetReply();
+
+  EnqueueDeviceRequest(std::move(request));
+
+  constexpr uint32_t kWaitTimeoutMs = 1000;
+  magma::Status status = reply->Wait(kWaitTimeoutMs);
+  if (!status.ok())
+    return DRET_MSG(status.get(), "reply wait failed");
+
+  return MAGMA_STATUS_OK;
+}
+
+static uint64_t get_ns_monotonic(bool raw) {
+  struct timespec time;
+  int ret = clock_gettime(raw ? CLOCK_MONOTONIC_RAW : CLOCK_MONOTONIC, &time);
+  if (ret < 0)
+    return 0;
+  return static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + time.tv_nsec;
+}
+
+magma::Status MsdIntelDevice::ProcessTimestampRequest(
+    std::shared_ptr<magma::PlatformBuffer> buffer) {
+  magma_intel_gen_timestamp_query* query;
+  {
+    void* ptr;
+    if (!buffer->MapCpu(&ptr))
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to map query buffer");
+    query = reinterpret_cast<magma_intel_gen_timestamp_query*>(ptr);
+  }
+
+  // The monotonic raw timestamps represent the start/end of the sample interval.
+  query->monotonic_raw_timestamp[0] = get_ns_monotonic(true);
+  query->monotonic_timestamp = get_ns_monotonic(false);
+  query->device_timestamp =
+      registers::Timestamp::read(register_io_.get(), render_engine_cs()->mmio_base());
+  query->monotonic_raw_timestamp[1] = get_ns_monotonic(true);
+
+  buffer->UnmapCpu();
+
+  return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id_t client_id) {
@@ -870,7 +926,19 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 
 magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
                                                uint32_t* buffer_out) {
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  switch (id) {
+    case kMagmaIntelGenQueryTimestamp: {
+      auto buffer = magma::PlatformBuffer::Create(magma::page_size(), "timestamps");
+      if (!buffer)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to create timestamp buffer");
+
+      if (!buffer->duplicate_handle(buffer_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to dupe timestamp buffer");
+
+      return MsdIntelDevice::cast(device)->QueryTimestamp(std::move(buffer)).get();
+    }
+  }
+  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {

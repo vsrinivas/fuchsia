@@ -37,6 +37,8 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
 
   const char* Name() const;
 
+  uint32_t mmio_base() const { return mmio_base_; }
+
   GpuProgress* progress() { return &progress_; }
 
   GlobalHardwareStatusPage* hardware_status_page() { return &hw_status_page_; }
@@ -78,8 +80,6 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   static constexpr uint32_t kVideoEngineMmioBase = 0x12000;
 
   magma::RegisterIo* register_io() { return owner_->register_io(); }
-
-  uint32_t mmio_base() const { return mmio_base_; }
 
   Sequencer* sequencer() { return owner_->sequencer(); }
 

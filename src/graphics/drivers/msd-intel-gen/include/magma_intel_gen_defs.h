@@ -20,7 +20,14 @@ enum MagmaIntelGenQuery {
   kMagmaIntelGenQuerySubsliceAndEuTotal = MAGMA_QUERY_VENDOR_PARAM_0,
   kMagmaIntelGenQueryGttSize = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
   kMagmaIntelGenQueryExtraPageCount = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+  kMagmaIntelGenQueryTimestamp = MAGMA_QUERY_VENDOR_PARAM_0 + 3,
 };
+
+struct magma_intel_gen_timestamp_query {
+  uint64_t monotonic_raw_timestamp[2];  // start and end of sample interval
+  uint64_t monotonic_timestamp;
+  uint64_t device_timestamp;
+} __attribute__((packed));
 
 enum MagmaIntelGenCommandBufferFlags {
   kMagmaIntelGenCommandBufferForRender = MAGMA_COMMAND_BUFFER_VENDOR_FLAGS_0,
