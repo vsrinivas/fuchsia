@@ -10,7 +10,7 @@
 
 namespace audio {
 
-void audio_stream_format_fidl_from_banjo(const audio_types_audio_stream_format_range_t& source,
+inline void audio_stream_format_fidl_from_banjo(const audio_types_audio_stream_format_range_t& source,
                                          audio_stream_format_range* destination) {
   destination->sample_formats = source.sample_formats;
   destination->min_frames_per_second = source.min_frames_per_second;
