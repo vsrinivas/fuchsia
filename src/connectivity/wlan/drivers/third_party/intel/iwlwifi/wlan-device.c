@@ -461,7 +461,6 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
 
   // TODO(43218): support multiple interfaces. Need to port iwl_mvm_update_quotas() in mvm/quota.c.
   // TODO(56093): support low latency in struct iwl_time_quota_data.
-  ZX_DEBUG_ASSERT(!iwl_mvm_has_quota_low_latency(mvmvif->mvm));
 
 unlock:
   mtx_unlock(&mvmvif->mvm->mutex);
