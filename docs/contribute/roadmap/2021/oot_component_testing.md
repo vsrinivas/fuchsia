@@ -312,7 +312,7 @@ exploration of this topic deserves a separate focused effort.
 [botanist]: /tools/botanist/
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
 [cfv2-roadmap-2020]: /docs/contribute/roadmap/2020/overview.md#components_v2
-[components]: /docs/concepts/components/v2/README.md
+[components]: /docs/concepts/components/v2/introduction.md
 [components-build]: /docs/development/components/build.md
 [components-test]: /docs/concepts/testing/v2/README.md
 [covargs]: /tools/debug/covargs/

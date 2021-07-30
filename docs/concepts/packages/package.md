@@ -6,7 +6,7 @@ A Fuchsia package is a term representing a unit of distribution, though unlike m
 other package systems, that unit is composed of parts and is not a single binary `BLOB`.
 
 Note: For more information on components, see
-[Introduction to the Fuchsia component framework](/docs/concepts/components/v2/README.md).
+[Introduction to the Fuchsia component framework](/docs/concepts/components/v2/introduction.md).
 
 Packages are downloaded from the Fuchsia package server in `BLOB`s. The Fuchsia
 package server is a HTTP(s) server. These `BLOB`s are uniquely defined by a Merkle

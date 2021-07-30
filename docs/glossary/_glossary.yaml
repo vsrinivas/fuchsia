@@ -157,7 +157,7 @@
   the <a href=\"/docs/glossary#parent-component-instance\">parent</a>."
   full_description: ""
   see_also: ["<a href=\"/docs/glossary#component\">Component</a>",
-             "<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+             "<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -166,7 +166,7 @@
   full_description: "A component is a unit of executable software on Fuchsia. Components support
   <a href=\"/docs/glossary#capability-routing\">capability routing</a>, software composition,
   isolation boundaries, continuity between executions, and introspection."
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -177,7 +177,7 @@
   <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a> whose
   children are dynamically instantiated rather than statically defined in a
   <a href=\"/docs/glossary#component-manifest\">component manifest</a>."
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -190,7 +190,7 @@
   <a href=\"/docs/glossary#expose\">exposes</a>, <a href=\"/docs/glossary#offer\">offers</a>,
   and <a href=\"/docs/glossary#use\">uses</a>, and
   <a href=\"/docs/glossary#component-manifest-facet\">facets</a>."
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -199,7 +199,7 @@
   <a href=\"/docs/glossary#component\">components</a>,
   consisting of build tools, APIs, conventions, and system services."
   full_description: ""
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -207,14 +207,14 @@
   short_description: "One of possibly many instances of a particular
   <a href=\"/docs/glossary#component\">components</a> at runtime."
   full_description: ""
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
 - term: "Component instance tree"
   short_description: "A tree structure that represents the runtime state of parent-child relationships
   <a href=\"/docs/glossary#component-instance\">component instances</a>."
-  full_description: "Component instance tree is a <a href=\"/docs/concepts/components/v2/README.md\">components v2</a> concept. A tree
+  full_description: "Component instance tree is a <a href=\"/docs/concepts/components/v2/introduction.md\">components v2</a> concept. A tree
   structure that represents the runtime state of parent-child relationships
   between <a href=\"/docs/glossary#component-instance\">component instances</a>. If instance
   A launches instance B then in the tree A will be the parent of B. The component instance
@@ -222,7 +222,7 @@
   capabilities to their children to <a href=\"/docs/glossary#use\">use</a>, and children can
   <a href=\"/docs/glossary#expose\">expose</a> capabilities for their parents to expose to
   their parents or offer to other children."
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -237,7 +237,7 @@
   thus implementing the <a href=\"/docs/glossary#component-instance-tree\">component instancetree</a>.
   Component manager is the system service that implements the
   <a href=\"/docs/glossary#components-v2\">components v2</a> runtime."
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -290,7 +290,7 @@
   instance's moniker may change, its instance ID remains the same.
   <p>Instance IDs are assigned to component instances using a
    <a href=\"/docs/development/components/component_id_index.md\">component ID index</a>.</p>"
-  see_also: ["<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 
@@ -965,7 +965,7 @@ environment to form a full SDK."
   <a href=\"/docs/glossary#child-component-instance\">child component instances</a>"
   full_description: ""
   see_also: ["<a href=\"/docs/glossary#component\">",
-             "<a href=\"/docs/concepts/components/v2/README.md\">Components</a>"]
+             "<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
   area: ["Components"]
 

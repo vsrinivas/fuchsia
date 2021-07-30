@@ -15,4 +15,4 @@ You can find more information below:
 *   [Complex topologies and integration testing](integration_testing.md):
     testing interactions between multiple components.
 
-[cfv2]: /docs/concepts/components/v2/README.md
+[cfv2]: /docs/concepts/components/v2/introduction.md
