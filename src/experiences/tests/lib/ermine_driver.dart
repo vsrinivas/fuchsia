@@ -288,6 +288,10 @@ class ErmineDriver {
       await browserDriver.waitFor(find.text('NEW TAB'),
           timeout: Duration(seconds: 10));
       print('Opened a new tab');
+    } else {
+      await browserDriver.waitFor(find.text('     SEARCH'),
+          timeout: Duration(seconds: 10));
+      print('The first tab is ready.');
     }
 
     return browserDriver;

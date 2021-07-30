@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:async';
 import 'dart:math';
 
@@ -79,15 +81,17 @@ void main() {
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
     if (await ermine.isRunning(testserverUrl, timeout: _timeoutTenSec)) {
-      FlutterDriver browser = await ermine.launchAndWaitForSimpleBrowser();
+      FlutterDriver browser =
+          await ermine.launchAndWaitForSimpleBrowser(openNewTab: false);
       const stopUrl = 'http://127.0.0.1:8080/stop';
       await browser.requestData(stopUrl);
       await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
       await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
+      print('Waiting for the test server to stop...');
       expect(await ermine.isStopped(testserverUrl), isTrue);
       print('Stopped the test server');
-      await browser.close();
 
+      await browser.close();
       await ermine.driver.requestData('close');
       await ermine.driver
           .waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
@@ -307,7 +311,8 @@ void main() {
     print('Clicked the popup.html link');
 
     await browser.close();
-    await ermine.driver.requestData('close');
+    // Close the simple browser view.
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);

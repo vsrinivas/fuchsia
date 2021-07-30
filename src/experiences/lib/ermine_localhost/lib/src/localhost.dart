@@ -6,6 +6,16 @@ import 'dart:io';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:mime/mime.dart';
 
+const htmlPrefix = '''
+<html>
+  <body bgcolor="#fff" text="#000">
+''';
+
+const htmlSuffix = '''
+  </body>
+</html>
+''';
+
 /// An object that serves a static local website for testing purpose.
 ///
 /// Following is the example code that shows how to use this library.
@@ -80,11 +90,10 @@ class Localhost {
 
         if (fileName == _stopKeyword) {
           req.response
-            ..headers.contentType = ContentType.text
-            ..write('Stopped the server.');
+            ..headers.contentType = ContentType.html
+            ..write('${htmlPrefix}Stopped the server.$htmlSuffix');
           await req.response.close();
           stopServer();
-          break;
         }
 
         final targetFile = _pages[fileName];
@@ -92,8 +101,9 @@ class Localhost {
         if (mimeType == null) {
           log.warning('Unsupported type of file: $fileName. ');
           req.response
-            ..headers.contentType = ContentType.text
-            ..write('$fileName is not a supported type of file.');
+            ..headers.contentType = ContentType.html
+            ..write(
+                '$htmlPrefix$fileName is not a supported type of file.$htmlSuffix');
         } else if (targetFile != null && targetFile.existsSync()) {
           log.info('Serving $fileName');
           req.response.headers.contentType = ContentType.parse(mimeType);
@@ -108,8 +118,8 @@ class Localhost {
               'Check if you passed necessary files to your Localhost using '
               'passWebFiles().');
           req.response
-            ..headers.contentType = ContentType.text
-            ..write('Missing file: $fileName');
+            ..headers.contentType = ContentType.html
+            ..write('${htmlPrefix}Missing file: $fileName$htmlSuffix');
         }
         await req.response.close();
       }

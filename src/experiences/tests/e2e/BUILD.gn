@@ -32,12 +32,45 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
 
     #    "ermine_session_shell_ask_test.dart",
     #    "ermine_session_shell_quicksettings_test.dart",
-    #    "ermine_session_shell_simple_browser_test.dart",
     #    "ermine_shell_shortcut_test.dart",
     #    "ermine_shell_test.dart",
     #    "ermine_spinning_square_view_test.dart",
     "ermine_terminal_test.dart",
   ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [ ":runtime_deps" ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+dart_test("experiences_ermine_simple_browser_e2e_test") {
+  null_safe = true
+  sources = [ "ermine_session_shell_simple_browser_test.dart" ]
 
   deps = [
     ":scuba_goldens",
@@ -122,6 +155,7 @@ group("test") {
     # Chromedriver prebuilt is only available for linux-x64
     deps = [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+      ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
     ]
   }
