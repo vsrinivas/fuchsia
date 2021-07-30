@@ -31,7 +31,6 @@
 
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
-#include <dev/hw_watchdog.h>
 #include <dev/interrupt.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
@@ -405,10 +404,6 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
 
   const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
   dlog_shutdown(dlog_deadline);
-
-  // Give the watchdog one last pet to hold it off until the new image has booted far enough to pet
-  // the dog itself (or disable it).
-  hw_watchdog_pet();
 
   arch_disable_ints();
 
