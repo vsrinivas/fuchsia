@@ -9,6 +9,7 @@ import argparse
 import errno
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -219,7 +220,12 @@ def main():
                 if os.path.isdir(src):
                     os.symlink(src, dstdir)
                 else:
-                    os.link(src, dstdir)
+                    try:
+                        os.link(src, dstdir)
+                    except OSError:
+                        # Hardlinking may fail, for example if `src` is in a
+                        # separate filesystem on a mounted device.
+                        shutil.copyfile(src, dstdir)
                 link_to_source[dstdir] = src
             else:
                 # Map individual files since the dependency is only on the
