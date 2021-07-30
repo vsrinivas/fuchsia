@@ -57,7 +57,6 @@ rustc_library("lib") {
     "//src/connectivity/network/tests/integration/common-v1:netstack_testing_common",
     "//src/connectivity/network/tests/integration/dhcp",
     "//src/connectivity/network/tests/integration/dns",
-    "//src/connectivity/network/tests/integration/ipv6",
     "//src/connectivity/network/tests/integration/management",
   ]
 }

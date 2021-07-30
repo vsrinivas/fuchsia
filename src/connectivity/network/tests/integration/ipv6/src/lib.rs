@@ -11,9 +11,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_netstack_ext::RouteTable;
-use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
-use fuchsia_component::client::{AppBuilder, ExitStatus};
 use fuchsia_zircon as zx;
 use test_case::test_case;
 
@@ -27,10 +25,12 @@ use net_types::{
     LinkLocalAddress as _, MulticastAddress as _, SpecifiedAddress as _, Witness as _,
 };
 use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use netstack_testing_common::environments::{KnownServices, Netstack, Netstack2};
+use netstack_testing_common::realms::{
+    constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt,
+};
 use netstack_testing_common::{
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
-    EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    EthertapName as _, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
@@ -77,16 +77,12 @@ const DAD_IDGEN_DELAY: zx::Duration = zx::Duration::from_seconds(1);
 /// the launched netstack will still be terminated, but no guarantees are made
 /// about when that will happen.
 async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
+    realm: &netemul::TestRealm<'_>,
     endpoint: &netemul::TestEndpoint<'_>,
-    launcher: &sys::LauncherProxy,
     name: String,
 ) -> Result<Vec<net::Subnet>> {
-    // Launch the netstack service.
-
-    let mut app = AppBuilder::new(N::VERSION.get_url())
-        .spawn(launcher)
-        .context("failed to spawn netstack")?;
-    let netstack = app
+    // Connect to the netstack service, causing the netstack to start.
+    let netstack = realm
         .connect_to_protocol::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
 
@@ -110,7 +106,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .context("add_ethernet_device FIDL error")?
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_ethernet_device error")?;
-    let interface_state = app
+    let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State service")?;
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
@@ -142,13 +138,11 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     .await
     .context("failed to observe interface addition")?;
 
-    // Kill the netstack.
-    //
-    // Note, simply dropping `component_controller` would also kill the netstack
-    // but we explicitly kill it and wait for the terminated event before
-    // proceeding.
-    let () = app.kill().context("failed to kill app")?;
-    let _: ExitStatus = app.wait().await.context("failed to observe netstack termination")?;
+    // Stop the netstack.
+    let () = realm
+        .stop_child_component(constants::netstack::COMPONENT_NAME)
+        .await
+        .context("failed to stop netstack")?;
 
     Ok(ipv6_addresses)
 }
@@ -158,10 +152,9 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 #[variants_test]
 async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let env = sandbox
-        .create_environment(name, &[KnownServices::SecureStash])
-        .expect("failed to create environment");
-    let launcher = env.get_launcher().expect("failed to get launcher");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(name, &[KnownServiceProvider::SecureStash])
+        .expect("failed to create realm");
     let endpoint = sandbox
         .create_endpoint::<netemul::Ethernet, _>(name.ethertap_compatible_name())
         .await
@@ -169,15 +162,15 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
 
     // Make sure netstack uses the same addresses across runs for a device.
     let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
+        &realm,
         &endpoint,
-        &launcher,
         name.to_string(),
     )
     .await
     .expect("error running netstack and getting addresses for the first time");
     let second_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
+        &realm,
         &endpoint,
-        &launcher,
         name.to_string(),
     )
     .await
@@ -199,12 +192,12 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(
     let name = name.as_str();
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, environment, _netstack, _iface, fake_ep) =
+    let (_network, realm, _netstack, _iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
-        let stack = environment
-            .connect_to_service::<net_stack::StackMarker>()
+        let stack = realm
+            .connect_to_protocol::<net_stack::StackMarker>()
             .expect("failed to get stack proxy");
         let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
     }
@@ -320,12 +313,12 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
     let name = format!("{}_{}", test_name, sub_test_name);
     let name = name.as_str();
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, environment, _netstack, iface, fake_ep) =
+    let (_network, realm, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
-        let stack = environment
-            .connect_to_service::<net_stack::StackMarker>()
+        let stack = realm
+            .connect_to_protocol::<net_stack::StackMarker>()
             .expect("failed to get stack proxy");
         let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
     }
@@ -390,8 +383,8 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
     //
     // We expect two addresses for the SLAAC prefixes to be assigned to the NIC as the
     // netstack should generate both a stable and temporary SLAAC address.
-    let interface_state = environment
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
     let expected_addrs = 2;
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
@@ -594,7 +587,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     }
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, environment, _netstack, iface, fake_ep) =
+    let (_network, realm, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
 
     // Add an address and expect it to fail DAD because we simulate another node
@@ -608,8 +601,8 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     // Add the address, and make sure it gets assigned.
     let () = add_address_for_dad(&iface, &fake_ep, |_, _| async {}).await;
 
-    let interface_state = environment
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
@@ -693,12 +686,12 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
     let name = name.as_str();
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, environment, netstack, iface, fake_ep) =
+    let (_network, realm, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("failed to setup network");
 
     if forwarding {
-        let stack = environment
-            .connect_to_service::<net_stack::StackMarker>()
+        let stack = realm
+            .connect_to_protocol::<net_stack::StackMarker>()
             .expect("failed to get stack proxy");
         let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
     }
@@ -815,8 +808,8 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     }
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, environment, _netstack, iface, fake_ep) =
-        setup_network_with::<E, _, _>(&sandbox, name, &[KnownServices::SecureStash])
+    let (_network, realm, _netstack, iface, fake_ep) =
+        setup_network_with::<E, _, _>(&sandbox, name, &[KnownServiceProvider::SecureStash])
             .await
             .expect("error setting up network");
 
@@ -872,8 +865,8 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
     // We expect two addresses for the SLAAC prefixes to be assigned to the NIC as the
     // netstack should generate both a stable and temporary SLAAC address.
     let expected_addrs = 2;
-    let interface_state = environment
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state).expect("error getting interfaces state event stream"),
@@ -933,7 +926,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
 #[variants_test]
 async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("error creating sandbox");
-    let (_network, _environment, _netstack, iface, fake_ep) =
+    let (_network, _realm, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up networking");
 
     // Add an address so we join the address's solicited node multicast group.

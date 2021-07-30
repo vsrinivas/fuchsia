@@ -80,9 +80,8 @@ pub mod constants {
         pub const COMPONENT_NAME: &str = "netstack";
     }
     pub mod secure_stash {
-        pub const COMPONENT_NAME: &str = "stash-secure";
-        pub const COMPONENT_URL: &str =
-            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for secure stash";
+        pub const COMPONENT_NAME: &str = "stash_secure";
+        pub const COMPONENT_URL: &str = "#meta/stash_secure.cm";
     }
     pub mod dhcp_server {
         pub const COMPONENT_NAME: &str = "dhcpd";
