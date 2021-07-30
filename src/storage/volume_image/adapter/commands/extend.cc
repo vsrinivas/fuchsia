@@ -83,7 +83,8 @@ fit::result<void, std::string> Extend(const ExtendParams& params) {
   options.target_volume_size = target_volume_size;
 
   // We create a temporary file to protect source image from IO errors.
-  std::string base = std::filesystem::temp_directory_path().generic_string() + "/tmp_XXXXXXX";
+  std::string base =
+      std::filesystem::path(params.image_path).parent_path().string() + "/tmp_XXXXXXX";
 
   fbl::unique_fd tmp_file(mkstemp(base.data()));
   if (!tmp_file.is_valid()) {
