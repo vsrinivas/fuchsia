@@ -403,6 +403,7 @@ impl SimpleAllocator {
                 &mut transaction,
                 self.object_id(),
                 HandleOptions::default(),
+                Some(0),
             )
             .await?;
             transaction.commit().await?;
@@ -957,6 +958,7 @@ impl Mutations for SimpleAllocator {
             &root_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
+            Some(0),
         )
         .await?;
         let object_id = layer_object_handle.object_id();

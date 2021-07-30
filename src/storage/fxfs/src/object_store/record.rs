@@ -221,18 +221,19 @@ pub enum Checksums {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExtentValue {
     /// The device offset for the extent. A value of None indicates a deleted extent; that is, the
-    /// logical range described by the extent key is considered to be deleted.
-    pub device_offset: Option<(u64, Checksums)>,
+    /// logical range described by the extent key is considered to be deleted.  The device offset
+    /// is accompanied with the checksums and key ID for the extent.
+    pub device_offset: Option<(/* device-offset= */ u64, Checksums, /* key-id= */ u64)>,
 }
 
 impl ExtentValue {
     pub fn new(device_offset: u64) -> ExtentValue {
-        ExtentValue { device_offset: Some((device_offset, Checksums::None)) }
+        ExtentValue { device_offset: Some((device_offset, Checksums::None, 0)) }
     }
 
     /// Creates an ExtentValue with a checksum
     pub fn with_checksum(device_offset: u64, checksum: Checksums) -> ExtentValue {
-        ExtentValue { device_offset: Some((device_offset, checksum)) }
+        ExtentValue { device_offset: Some((device_offset, checksum, 0)) }
     }
 
     /// Creates an ObjectValue for a deletion of an object extent.
@@ -245,7 +246,7 @@ impl ExtentValue {
     pub fn offset_by(&self, amount: u64, extent_len: u64) -> Self {
         match &self.device_offset {
             None => Self { device_offset: None },
-            Some((device_offset, checksum)) => {
+            Some((device_offset, checksum, key_id)) => {
                 if let Checksums::Fletcher(checksums) = checksum {
                     if checksums.len() > 0 {
                         let index = (amount / (extent_len / checksums.len() as u64)) as usize;
@@ -253,11 +254,12 @@ impl ExtentValue {
                             device_offset: Some((
                                 device_offset + amount,
                                 Checksums::Fletcher(checksums[index..].to_vec()),
+                                *key_id,
                             )),
                         };
                     }
                 }
-                Self { device_offset: Some((device_offset + amount, Checksums::None)) }
+                Self { device_offset: Some((device_offset + amount, Checksums::None, *key_id)) }
             }
         }
     }
@@ -266,7 +268,7 @@ impl ExtentValue {
     pub fn shrunk(&self, original_len: u64, new_len: u64) -> Self {
         match &self.device_offset {
             None => Self { device_offset: None },
-            Some((device_offset, checksum)) => {
+            Some((device_offset, checksum, key_id)) => {
                 if let Checksums::Fletcher(checksums) = checksum {
                     if checksums.len() > 0 {
                         let checksum_len =
@@ -275,11 +277,12 @@ impl ExtentValue {
                             device_offset: Some((
                                 *device_offset,
                                 Checksums::Fletcher(checksums[..checksum_len].to_vec()),
+                                *key_id,
                             )),
                         };
                     }
                 }
-                Self { device_offset: Some((*device_offset, Checksums::None)) }
+                Self { device_offset: Some((*device_offset, Checksums::None, *key_id)) }
             }
         }
     }
@@ -325,12 +328,33 @@ pub enum ObjectKind {
         refs: u64,
         /// The number of bytes allocated to all extents across all attributes for this file.
         allocated_size: u64,
+        /// The encryption keys for the file.
+        keys: EncryptionKeys,
     },
     Directory {
         /// The number of sub-directories in this directory.
         sub_dirs: u64,
     },
     Graveyard,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub enum EncryptionKeys {
+    None,
+    AES256XTS(AES256XTSKeys),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct AES256XTSKeys {
+    /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
+    /// unwrapping.
+    pub wrapping_key_id: u64,
+
+    /// The keys (wrapped).  To support key rolling and clones, there can be more than one key.
+    /// Each of the keys is given an identifier.  The identifier is unique to the object.  AES 256
+    /// requires a 512 bit key, which is made of two 256 bit keys, one for the data and one for the
+    /// tweak.  Both those keys are derived from the single 256 bit key we have here.
+    pub keys: Vec<(/* id= */ u64, [u8; 32])>,
 }
 
 /// Object-level attributes.  Note that these are not the same as "attributes" in the
@@ -370,9 +394,10 @@ impl ObjectValue {
         allocated_size: u64,
         creation_time: Timestamp,
         modification_time: Timestamp,
+        keys: EncryptionKeys,
     ) -> ObjectValue {
         ObjectValue::Object {
-            kind: ObjectKind::File { refs, allocated_size },
+            kind: ObjectKind::File { refs, allocated_size, keys },
             attributes: ObjectAttributes { creation_time, modification_time },
         }
     }

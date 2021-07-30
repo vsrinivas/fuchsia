@@ -50,7 +50,7 @@ impl Handle {
         match item {
             ItemRef {
                 key: ExtentKey { object_id, attribute_id: DEFAULT_DATA_ATTRIBUTE_ID, range },
-                value: ExtentValue { device_offset: Some((device_offset, _)) },
+                value: ExtentValue { device_offset: Some((device_offset, _, _)) },
                 ..
             } if *object_id == self.object_id => {
                 if self.extents.is_empty() {

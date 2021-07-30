@@ -577,6 +577,7 @@ impl Journal {
             &mut transaction,
             SUPER_BLOCK_A_OBJECT_ID,
             HandleOptions::default(),
+            None,
         )
         .await
         .context("create super block")?;
@@ -589,6 +590,7 @@ impl Journal {
             &mut transaction,
             SUPER_BLOCK_B_OBJECT_ID,
             HandleOptions::default(),
+            None,
         )
         .await
         .context("create super block")?;
@@ -598,10 +600,14 @@ impl Journal {
             .context("extend super block")?;
 
         // the journal object...
-        journal_handle =
-            ObjectStore::create_object(&root_parent, &mut transaction, journal_handle_options())
-                .await
-                .context("create journal")?;
+        journal_handle = ObjectStore::create_object(
+            &root_parent,
+            &mut transaction,
+            journal_handle_options(),
+            None,
+        )
+        .await
+        .context("create journal")?;
         journal_handle
             .preallocate_range(&mut transaction, 0..self.chunk_size())
             .await
@@ -1128,9 +1134,14 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed");
             transaction.commit().await.expect("commit failed");
         }
         fs.close().await.expect("Close failed");

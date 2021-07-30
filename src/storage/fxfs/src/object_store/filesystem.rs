@@ -8,6 +8,7 @@ use {
         errors::FxfsError,
         object_store::{
             allocator::Allocator,
+            crypt::Crypt,
             journal::{super_block::SuperBlock, Journal},
             object_manager::ObjectManager,
             trace_duration,
@@ -60,6 +61,10 @@ pub trait Filesystem: TransactionHandler {
 
     /// Returns filesystem information.
     fn get_info(&self) -> Info;
+
+    /// Returns the crypt interface.
+    // TODO(csuter): This is going to need to be per-store eventually.
+    fn crypt(&self) -> &Crypt;
 }
 
 #[async_trait]
@@ -143,6 +148,7 @@ pub struct FxFilesystem {
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
     read_only: bool,
+    crypt: Crypt,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -167,6 +173,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: false,
+            crypt: Crypt::new(),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
@@ -191,6 +198,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: options.read_only,
+            crypt: Crypt::new(),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
@@ -287,6 +295,10 @@ impl Filesystem for FxFilesystem {
             used_bytes: self.object_manager().allocator().get_allocated_bytes(),
             block_size: self.block_size(),
         }
+    }
+
+    fn crypt(&self) -> &Crypt {
+        &self.crypt
     }
 }
 

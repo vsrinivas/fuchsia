@@ -143,7 +143,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         name: &str,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let handle =
-            ObjectStore::create_object(&self.owner, transaction, HandleOptions::default()).await?;
+            ObjectStore::create_object(&self.owner, transaction, HandleOptions::default(), Some(0))
+                .await?;
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(

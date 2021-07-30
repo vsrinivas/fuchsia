@@ -207,11 +207,11 @@ impl Fsck {
         let mut iter = merger.seek(Bound::Unbounded).await?;
         while let Some(ItemRef {
             key: ExtentKey { range, .. },
-            value: ExtentValue { device_offset },
+            value: ExtentValue { device_offset, .. },
             ..
         }) = iter.get()
         {
-            if let Some((device_offset, _)) = device_offset {
+            if let Some((device_offset, _, _)) = device_offset {
                 let item = Item::new(
                     AllocatorKey {
                         device_range: *device_offset..*device_offset + range.end - range.start,
@@ -403,9 +403,14 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
-            .await
-            .expect("create_object failed");
+        ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await
+        .expect("create_object failed");
         transaction.commit().await.expect("commit failed");
 
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));

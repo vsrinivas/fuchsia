@@ -4,6 +4,7 @@
 
 mod allocator;
 mod constants;
+pub mod crypt;
 pub mod directory;
 pub mod filesystem;
 pub mod fsck;
@@ -37,8 +38,8 @@ use {
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             record::{
-                Checksums, ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData,
-                ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+                Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectItem, ObjectKey,
+                ObjectKeyData, ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, ObjectStoreMutation,
@@ -233,6 +234,7 @@ impl ObjectStore {
             transaction,
             object_id,
             HandleOptions::default(),
+            Some(0),
         )
         .await?;
         let fs = self.filesystem.upgrade().unwrap();
@@ -249,6 +251,22 @@ impl ObjectStore {
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
+        let keys = if let Item {
+            value: ObjectValue::Object { kind: ObjectKind::File { keys, .. }, .. },
+            ..
+        } =
+            store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
+        {
+            match keys {
+                EncryptionKeys::None => None,
+                EncryptionKeys::AES256XTS(keys) => {
+                    Some(store.filesystem().crypt().unwrap(&keys, object_id)?)
+                }
+            }
+        } else {
+            bail!(FxfsError::Inconsistent);
+        };
+
         let item = store
             .tree
             .find(&ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID))
@@ -258,6 +276,7 @@ impl ObjectStore {
             Ok(StoreObjectHandle::new(
                 owner.clone(),
                 object_id,
+                keys,
                 DEFAULT_DATA_ATTRIBUTE_ID,
                 size,
                 options,
@@ -273,9 +292,17 @@ impl ObjectStore {
         transaction: &mut Transaction<'_>,
         object_id: u64,
         options: HandleOptions,
+        wrapping_key_id: Option<u64>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
+        let (keys, unwrapped_keys) = if let Some(wrapping_key_id) = wrapping_key_id {
+            let (keys, unwrapped_keys) =
+                store.filesystem().crypt().create_key(wrapping_key_id, object_id)?;
+            (EncryptionKeys::AES256XTS(keys), Some(unwrapped_keys))
+        } else {
+            (EncryptionKeys::None, None)
+        };
         // If the object ID was specified i.e. this hasn't come via create_object, then we
         // should update last_object_id in case the caller wants to create more objects in
         // the same transaction.
@@ -285,7 +312,7 @@ impl ObjectStore {
             store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::object(object_id),
-                ObjectValue::file(1, 0, now.clone(), now),
+                ObjectValue::file(1, 0, now.clone(), now, keys),
             ),
         );
         transaction.add(
@@ -298,6 +325,7 @@ impl ObjectStore {
         Ok(StoreObjectHandle::new(
             owner.clone(),
             object_id,
+            unwrapped_keys,
             DEFAULT_DATA_ATTRIBUTE_ID,
             0,
             options,
@@ -309,9 +337,17 @@ impl ObjectStore {
         owner: &Arc<S>,
         mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
+        wrapping_key_id: Option<u64>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let object_id = owner.as_ref().as_ref().get_next_object_id();
-        ObjectStore::create_object_with_id(owner, &mut transaction, object_id, options).await
+        ObjectStore::create_object_with_id(
+            owner,
+            &mut transaction,
+            object_id,
+            options,
+            wrapping_key_id,
+        )
+        .await
     }
 
     /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
@@ -411,14 +447,14 @@ impl ObjectStore {
         // Loop over the extents and deallocate them.
         while let Some(ItemRef {
             key: ExtentKey { object_id, attribute_id, range },
-            value: ExtentValue { device_offset },
+            value: ExtentValue { device_offset, .. },
             ..
         }) = iter.get()
         {
             if *object_id != search_key.object_id {
                 break;
             }
-            if let Some((device_offset, _)) = device_offset {
+            if let Some((device_offset, _, _)) = device_offset {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
                 allocator.deallocate(transaction, device_range).await?;
                 delete_extent_mutation = Some(Mutation::extent(
@@ -605,7 +641,7 @@ impl ObjectStore {
     ) -> Result<bool, Error> {
         if let Mutation::Extent(ExtentMutation(
             ExtentKey { range, .. },
-            ExtentValue { device_offset: Some((device_offset, Checksums::Fletcher(checksums))) },
+            ExtentValue { device_offset: Some((device_offset, Checksums::Fletcher(checksums), _)) },
         )) = mutation
         {
             if checksums.len() == 0 {
@@ -773,6 +809,7 @@ impl Mutations for ObjectStore {
             parent_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
+            Some(0),
         )
         .await?;
         let new_object_tree_layer_object_id = new_object_tree_layer.object_id();
@@ -786,6 +823,7 @@ impl Mutations for ObjectStore {
             parent_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
+            Some(0),
         )
         .await?;
         let new_extent_tree_layer_object_id = new_extent_tree_layer.object_id();
@@ -975,7 +1013,7 @@ mod tests {
             .expect("new_transaction failed");
         let store = fs.root_store();
         object1 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
                 .await
                 .expect("create_object failed"),
         );
@@ -986,7 +1024,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object2 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
                 .await
                 .expect("create_object failed"),
         );
@@ -1000,7 +1038,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         object3 = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
                 .await
                 .expect("create_object failed"),
         );
@@ -1105,7 +1143,7 @@ mod tests {
             .await
             .expect("new_transaction failed");
         let object = Arc::new(
-            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default(), Some(0))
                 .await
                 .expect("create_object failed"),
         );
@@ -1160,10 +1198,14 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            let child =
-                ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
-                    .await
-                    .expect("create_child failed");
+            let child = ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                Some(0),
+            )
+            .await
+            .expect("create_child failed");
             transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.
@@ -1200,10 +1242,14 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            let child =
-                ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
-                    .await
-                    .expect("create_child failed");
+            let child = ObjectStore::create_object(
+                &root_store,
+                &mut transaction,
+                HandleOptions::default(),
+                Some(0),
+            )
+            .await
+            .expect("create_child failed");
             transaction.commit().await.expect("commit failed");
 
             // Allocate an extent in the file.

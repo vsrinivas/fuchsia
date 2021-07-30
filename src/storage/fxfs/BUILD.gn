@@ -49,6 +49,7 @@ fxfs_sources = [
   "src/object_store/allocator.rs",
   "src/object_store/allocator/merge.rs",
   "src/object_store/constants.rs",
+  "src/object_store/crypt.rs",
   "src/object_store/directory.rs",
   "src/object_store/filesystem.rs",
   "src/object_store/fsck.rs",

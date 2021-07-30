@@ -363,6 +363,7 @@ mod tests {
             &mut transaction,
             SUPER_BLOCK_A_OBJECT_ID,
             journal_handle_options(),
+            None,
         )
         .await
         .expect("create_object_with_id failed");
@@ -375,6 +376,7 @@ mod tests {
             &mut transaction,
             SUPER_BLOCK_B_OBJECT_ID,
             journal_handle_options(),
+            None,
         )
         .await
         .expect("create_object_with_id failed");
@@ -406,6 +408,7 @@ mod tests {
                 &fs.object_manager().root_parent_store(),
                 &mut transaction,
                 HandleOptions::default(),
+                None,
             )
             .await
             .expect("create_object failed");
