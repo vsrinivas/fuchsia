@@ -162,9 +162,9 @@ zx_status_t riscv64_free_secondary_stack(cpu_num_t cpu_num) {
 
 extern "C" void riscv64_secondary_entry(uint hart_id, uint cpu_num) {
   // basic bootstrapping of this cpu
+  percpu[cpu_num].cpu_num = cpu_num;
+  percpu[cpu_num].hart_id = hart_id;
   riscv64_set_percpu(&percpu[cpu_num]);
-  riscv64_get_percpu()->cpu_num = cpu_num;
-  riscv64_get_percpu()->hart_id = hart_id;
   arch_register_hart(cpu_num, hart_id);
   wmb();
 

@@ -60,10 +60,6 @@ bool arch_install_exception_context(Thread* thread, const arch_exception_context
 
 void arch_remove_exception_context(Thread* thread) { }
 
-static inline void riscv64_restore_percpu_pointer() {
-  riscv64_set_percpu(arch_get_current_thread()->arch().current_percpu_ptr);
-}
-
 static const char *cause_to_string(long cause) {
   if (cause < 0) {
     switch (cause & LONG_MAX) {
@@ -243,8 +239,6 @@ static void riscv64_syscall_handler(struct iframe_t *frame) {
 }
 
 extern "C" void riscv64_exception_handler(long cause, struct iframe_t *frame) {
-  riscv64_restore_percpu_pointer();
-
   LTRACEF("hart %u cause %s epc %#lx status %#lx\n",
           arch_curr_cpu_num(), cause_to_string(cause), frame->epc, frame->status);
 

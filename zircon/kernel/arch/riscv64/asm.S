@@ -88,22 +88,19 @@ END_FUNCTION(riscv64_context_switch)
 // void riscv64_uspace_entry(iframe_t* iframe, void *sp) __NO_RETURN;
 // Where |sp| is the kernel stack pointer.
 FUNCTION(riscv64_uspace_entry)
-    // Save the thread pointer at the top of the stack.
+    // Save the thread pointer and percpu pointer at the top of the stack.
     sd     tp, -REGOFF(1)(a1)
+    sd     gp, -REGOFF(2)(a1)
 
-    // Save the kernel stack pointer in iframe->scratch and the sscratch register
-    sd     a1, IFRAME_T_OFFSET_SCRATCH(a0)
+    // Save the kernel stack pointer in the sscratch register
     csrw   sscratch, a1
 
     // Load the iframe
-    ld     sp, IFRAME_T_OFFSET_SP(a0)
     ld     t0, IFRAME_T_OFFSET_EPC(a0)
     csrw   sepc, t0
     ld     t0, IFRAME_T_OFFSET_STATUS(a0)
     csrw   sstatus, t0
-    ld     ra, IFRAME_T_OFFSET_RA(a0)
-    ld     tp, IFRAME_T_OFFSET_TP(a0)
-    // Load a0 last since it points to the iframe_t.
+
     ld     a1, IFRAME_T_OFFSET_A(1)(a0)
     ld     a2, IFRAME_T_OFFSET_A(2)(a0)
     ld     a3, IFRAME_T_OFFSET_A(3)(a0)
@@ -118,6 +115,11 @@ FUNCTION(riscv64_uspace_entry)
     ld     t4, IFRAME_T_OFFSET_T(4)(a0)
     ld     t5, IFRAME_T_OFFSET_T(5)(a0)
     ld     t6, IFRAME_T_OFFSET_T(6)(a0)
+    ld     sp, IFRAME_T_OFFSET_SP(a0)
+    ld     ra, IFRAME_T_OFFSET_RA(a0)
+    ld     gp, IFRAME_T_OFFSET_GP(a0)
+    ld     tp, IFRAME_T_OFFSET_TP(a0)
+    // Load a0 last since it points to the iframe_t.
     ld     a0, IFRAME_T_OFFSET_A(0)(a0)
 
     li     s0, 0
@@ -137,97 +139,53 @@ FUNCTION(riscv64_uspace_entry)
     sret
 END_FUNCTION(riscv64_uspace_entry)
 
-// top level exception handler for riscv64 in non vectored mode
-.balign 4
-FUNCTION(riscv64_exception_entry)
-    // swap the scratch system register with the current stack pointer
-    csrrw  sp, sscratch, sp
-    // if we took the exception from kernelspace, sscratch was set to 0. if we
-    // took if from userspace, sscratch was set to the thread's kernel stack
-    bnez   sp, taken_from_userspace
-
-    // the following two blocks:
-    // 1- ensure they have a kernel stack based on where the exception was taken
-    // 2- create an iframe on that kernel stack
-    // 3- save the previous sscratch on that iframe
-    // 4- save the previous sp on that iframe
-    // 5- save t0 on that iframe (necessary to retrieve sp in the user case)
-    // 6- save the previous thread pointer on that iframe
-    // 7- restore the kernel thread pointer
-taken_from_kernelspace:
-    // 1- we were already running in kernelspace, we just keep the previous sp
-    csrrw  sp, sscratch, sp
-    // 4- save the existing sp in an iframe on the stack.
-    sd     sp, -(SIZEOF_IFRAME_T - IFRAME_T_OFFSET_SP)(sp)
-    // 2- reserve an iframe_t on the stack
+.macro save_regs, user
     addi   sp, sp, -SIZEOF_IFRAME_T
-    // 3- sscratch was 0 so we store zero in the iframe's field for sscratch
-    sd     zero, IFRAME_T_OFFSET_SCRATCH(sp)
-    // 5- save the t0 register
-    sd     t0, IFRAME_T_OFFSET_T(0)(sp)
-    // 6- save the tp register
+.if \user == 1
+    // recover tp from the top of the stack (we saved it here before)
     sd     tp, IFRAME_T_OFFSET_TP(sp)
-    // 7- tp is already set to the kernel version of the thread pointer
-    j      save_rest_of_iframe
+    ld     tp, (SIZEOF_IFRAME_T-REGOFF(1))(sp) // this is where the top of the stack used to be
 
-taken_from_userspace:
-    // 1- we just got the current thread's kernel stack out of sscratch
-    // 3- sscratch was our current stack, we store it in an iframe on the stack
-    sd     sp, -SIZEOF_IFRAME_T(sp)
-    // 2- reserve an iframe_t on the stack
-    addi   sp, sp, -SIZEOF_IFRAME_T
-    // 5- save the t0 register before we need to overwrite it with sscratch
+    // also recover gp from the top of the stack
+    sd     gp, IFRAME_T_OFFSET_GP(sp)
+    // save the user stack and zero scratch register
+    csrrw  gp, sscratch, zero
+    sd     gp, IFRAME_T_OFFSET_SP(sp)
+    ld     gp, (SIZEOF_IFRAME_T-REGOFF(2))(sp)
+.endif
+    sd     t6, IFRAME_T_OFFSET_T(6)(sp)
+    sd     t5, IFRAME_T_OFFSET_T(5)(sp)
+    sd     t4, IFRAME_T_OFFSET_T(4)(sp)
+    sd     t3, IFRAME_T_OFFSET_T(3)(sp)
+    sd     t2, IFRAME_T_OFFSET_T(2)(sp)
+    sd     t1, IFRAME_T_OFFSET_T(1)(sp)
     sd     t0, IFRAME_T_OFFSET_T(0)(sp)
-    // 4a- retrieve the previous sp in t0. use this opportunity to also set
-    // sscratch to 0, in on our convention this means that we are in kernelspace
-    csrrw  t0, sscratch, 0
-    // 4b- save the existing sp in an iframe on the stack
-    sd     t0, IFRAME_T_OFFSET_SP(sp)
-    // 6- save the tp register
-    sd     tp, IFRAME_T_OFFSET_TP(sp)
-    // 7- restore kernel tp, saved at the top of the stack by
-    // riscv64_uspace_entry.
-    // NOTE: See TODO in riscv64_uspace_entry.
-    ld     tp, (SIZEOF_IFRAME_T-REGOFF(1))(sp)
-
-    // this is shared by both cases, we store all the callee trashed regs
-save_rest_of_iframe:
-    // sscratch is already saved
-    // sp is already saved
+    sd     a7, IFRAME_T_OFFSET_A(7)(sp)
+    sd     a6, IFRAME_T_OFFSET_A(6)(sp)
+    sd     a5, IFRAME_T_OFFSET_A(5)(sp)
+    sd     a4, IFRAME_T_OFFSET_A(4)(sp)
+    sd     a3, IFRAME_T_OFFSET_A(3)(sp)
+    sd     a2, IFRAME_T_OFFSET_A(2)(sp)
+    sd     a1, IFRAME_T_OFFSET_A(1)(sp)
+    sd     a0, IFRAME_T_OFFSET_A(0)(sp)
+    sd     ra, IFRAME_T_OFFSET_RA(sp)
     csrr   t0, sepc
     sd     t0, IFRAME_T_OFFSET_EPC(sp)
     csrr   t0, sstatus
     sd     t0, IFRAME_T_OFFSET_STATUS(sp)
-    sd     ra, IFRAME_T_OFFSET_RA(sp)
-    // tp is already saved
-    sd     a0, IFRAME_T_OFFSET_A(0)(sp)
-    sd     a1, IFRAME_T_OFFSET_A(1)(sp)
-    sd     a2, IFRAME_T_OFFSET_A(2)(sp)
-    sd     a3, IFRAME_T_OFFSET_A(3)(sp)
-    sd     a4, IFRAME_T_OFFSET_A(4)(sp)
-    sd     a5, IFRAME_T_OFFSET_A(5)(sp)
-    sd     a6, IFRAME_T_OFFSET_A(6)(sp)
-    sd     a7, IFRAME_T_OFFSET_A(7)(sp)
-    // sd     t0, IFRAME_T_T0_OFFSET(sp)  already saved above.
-    sd     t1, IFRAME_T_OFFSET_T(1)(sp)
-    sd     t2, IFRAME_T_OFFSET_T(2)(sp)
-    sd     t3, IFRAME_T_OFFSET_T(3)(sp)
-    sd     t4, IFRAME_T_OFFSET_T(4)(sp)
-    sd     t5, IFRAME_T_OFFSET_T(5)(sp)
-    sd     t6, IFRAME_T_OFFSET_T(6)(sp)
 
     // If the floating point registers are dirty, save them too.
     // Note: t0 at this time holds the value of CSR sstatus.
     srli   t1, t0, 13              // Put FS[1:0] into t1[1:0].
     andi   t1, t1, 3               // Mask out all bits but t1[1:0].
-    addi   t2, zero, 3             // Load "dirty" value (3) into t2.
-    bne    t1, t2, call_c_handler  // Skip saving fp registers if not "dirty".
+    li     t2, 3                   // Load "dirty" value (3) into t2.
+    bne    t1, t2, 1f              // Skip saving fp registers if not "dirty".
 
     slli   t2, t2, 13              // Move t2[1:0] into FS[1:0] position in t2.
     not    t2, t2                  // Create a mask except for FS[1:0] field.
     and    t0, t0, t2              // Clear FS[1:0] in t0.
 
-    addi   t2, zero, 2             // Load "clean" value (2) into t2.
+    li     t2, 2                   // Load "clean" value (2) into t2.
     slli   t2, t2, 13              // Move t2[1:0] into FS[1:0] position in t2.
     or     t0, t0, t2              // Set FS[1:0] in t0 to "clean".
 
@@ -259,14 +217,16 @@ save_rest_of_iframe:
     fsd    ft10, IFRAME_T_OFFSET_FT(10)(sp)
     fsd    ft11, IFRAME_T_OFFSET_FT(11)(sp)
 
-call_c_handler:
+1:
     csrr   a0, scause
     mv     a1, sp
-    jal    riscv64_exception_handler
+    // args are set up for a call into riscv64_exception_handler()
+    // a0 = scause
+    // a1 = sp
+.endm
 
-restore_iframe:
-    ld     t0, IFRAME_T_OFFSET_SCRATCH(sp)
-    csrw   sscratch, t0
+.macro restore_regs, user
+    // put everything back
     ld     t0, IFRAME_T_OFFSET_EPC(sp)
     csrw   sepc, t0
     ld     t0, IFRAME_T_OFFSET_STATUS(sp)
@@ -282,7 +242,7 @@ restore_iframe:
 
     // If state is "off" then no floating point registers are in use.
     // Skip to restoring the integer registers.
-    beq    t1, zero, restore_non_fp_state  // Branch if state is "off".
+    beq    t1, zero, 2f           // Branch if state is "off".
 
     // Restore floating point control register.
     ld     t0, IFRAME_T_OFFSET_FCSR(sp)
@@ -290,8 +250,8 @@ restore_iframe:
 
     // If state is "initial" then floating point registers are in use
     // and must be set to the known initial state.
-    addi   t2, zero, 1             // Load "initial" value (1) into t2.
-    beq    t1, t2, fp_set_initial  // Branch if state is "initial".
+    li     t2, 1                  // Load "initial" value (1) into t2.
+    beq    t1, t2, 1f             // Branch if state is "initial".
 
     // At this point assume the value is "clean" and not "dirty".
     // TODO: Do we want to check for "dirty" and panic or something?
@@ -315,9 +275,9 @@ restore_iframe:
     fld    ft9, IFRAME_T_OFFSET_FT(9)(sp)
     fld    ft10, IFRAME_T_OFFSET_FT(10)(sp)
     fld    ft11, IFRAME_T_OFFSET_FT(11)(sp)
-    j      restore_non_fp_state
+    j      2f
 
-fp_set_initial:
+1:
     // Set all floating point registers to zero.
     fcvt.d.l fa0, zero
     fcvt.d.l fa1, zero
@@ -340,7 +300,7 @@ fp_set_initial:
     fcvt.d.l ft10, zero
     fcvt.d.l ft11, zero
 
-restore_non_fp_state:
+2:
     ld     ra, IFRAME_T_OFFSET_RA(sp)
     ld     a0, IFRAME_T_OFFSET_A(0)(sp)
     ld     a1, IFRAME_T_OFFSET_A(1)(sp)
@@ -357,14 +317,56 @@ restore_non_fp_state:
     ld     t4, IFRAME_T_OFFSET_T(4)(sp)
     ld     t5, IFRAME_T_OFFSET_T(5)(sp)
     ld     t6, IFRAME_T_OFFSET_T(6)(sp)
-    // now save the kernelspace's thread pointer at the top of the stack.
+
+.if \user == 1
+    // before we run out of registers, save tp and gp to the top of the kernel
+    // stack and put the kernel stack in the scratch register
     sd     tp, (SIZEOF_IFRAME_T - REGOFF(1))(sp)
-    // and restore the iframe's thread pointer
+    sd     gp, (SIZEOF_IFRAME_T - REGOFF(2))(sp)
+
+    addi   gp, sp, SIZEOF_IFRAME_T
+    csrw   sscratch, gp
+
     ld     tp, IFRAME_T_OFFSET_TP(sp)
-    // finish by restoring the stack (because it overwrites our iframe pointer)
+    ld     gp, IFRAME_T_OFFSET_GP(sp)
     ld     sp, IFRAME_T_OFFSET_SP(sp)
+.else
+    addi   sp, sp, SIZEOF_IFRAME_T
+.endif
+.endm
+
+LOCAL_FUNCTION(kernel_exception_entry)
+    // we came from kernel space so tp and gp are okay
+    save_regs 0
+    jal    riscv64_exception_handler
+    restore_regs 0
 
     sret
+END_FUNCTION(kernel_exception_entry)
+
+LOCAL_FUNCTION(user_exception_entry)
+    // we came from user space, assume gp and tp have been trashed
+    save_regs 1
+    jal    riscv64_exception_handler
+    restore_regs 1
+
+    sret
+END_FUNCTION(user_exception_entry)
+
+// top level exception handler for riscv in non vectored mode
+.balign 4
+FUNCTION(riscv64_exception_entry)
+    // check to see if we came from user space
+    csrrw   sp, sscratch, sp
+    bnez    sp, 1f
+
+    // put the stack back
+    csrrw   sp, sscratch, sp
+    j       kernel_exception_entry
+
+1:
+    // came from user space
+    j       user_exception_entry
 END_FUNCTION(riscv64_exception_entry)
 
 //

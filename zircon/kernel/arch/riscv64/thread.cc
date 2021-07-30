@@ -42,19 +42,12 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
 }
 
 __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
-  // make sure the thread saves a copy of the current cpu pointer
-  t->arch().current_percpu_ptr = riscv64_get_percpu();
 }
 
 __NO_SAFESTACK void arch_context_switch(Thread* oldthread, Thread* newthread) {
   DEBUG_ASSERT(arch_ints_disabled());
 
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name(), newthread, newthread->name());
-
-  /* set the current cpu pointer in the new thread's structure so it can be
-   * restored on exception entry.
-   */
-  newthread->arch().current_percpu_ptr = riscv64_get_percpu();
 
   riscv64_context_switch(&oldthread->arch().sp, newthread->arch().sp);
 }

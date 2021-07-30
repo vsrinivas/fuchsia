@@ -113,7 +113,7 @@ FUNCTION(_start)
 
 .Lmmu_on_vaddr:
     // Set up the percpu structure for the logical CPU 0
-    lla     x31, percpu
+    lla     gp, percpu
 
     // call main
     jal     lk_main

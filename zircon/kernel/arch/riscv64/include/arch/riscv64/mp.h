@@ -29,22 +29,8 @@ struct riscv64_percpu {
   uint32_t num_spinlocks;
 } __ALIGNED(MAX_CACHE_LINE);
 
-register struct riscv64_percpu *__riscv64_percpu __asm("x31");
-
 static inline void riscv64_set_percpu(struct riscv64_percpu *ptr) {
-  __riscv64_percpu = ptr;
-}
-
-static inline struct riscv64_percpu *riscv64_get_percpu(void) {
-  return __riscv64_percpu;
-}
-
-static inline cpu_num_t arch_curr_cpu_num(void) {
-  return riscv64_get_percpu()->cpu_num;
-}
-
-static inline cpu_num_t riscv64_curr_hart_id(void) {
-  return riscv64_get_percpu()->hart_id;
+  __asm__ volatile("mv gp, %0" :: "r"(ptr));
 }
 
 // TODO(ZX-3068) get num_cpus from topology.
@@ -68,16 +54,24 @@ static inline uint32_t riscv64_read_percpu_u32(size_t offset) {
   // mark as volatile to force a read of the field to make sure
   // the compiler always emits a read when asked and does not cache
   // a copy between
-  __asm__ volatile("lw %[val], %[offset](x31)" : [val] "=r"(val) : [offset] "Ir"(offset));
+  __asm__ volatile("lw %[val], %[offset](gp)" : [val] "=r"(val) : [offset] "Ir"(offset));
   return val;
 }
 
 static inline void riscv64_write_percpu_u32(size_t offset, uint32_t val) {
-  __asm__("sw %[val], %[offset](x31)" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
+  __asm__("sw %[val], %[offset](gp)" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
 }
 
 #define READ_PERCPU_FIELD32(field) riscv64_read_percpu_u32(offsetof(struct riscv64_percpu, field))
 #define WRITE_PERCPU_FIELD32(field, value) riscv64_write_percpu_u32(offsetof(struct riscv64_percpu, field), (value))
+
+static inline cpu_num_t arch_curr_cpu_num(void) {
+  return READ_PERCPU_FIELD32(cpu_num);
+}
+
+static inline cpu_num_t riscv64_curr_hart_id(void) {
+  return READ_PERCPU_FIELD32(hart_id);
+}
 
 __END_CDECLS
 

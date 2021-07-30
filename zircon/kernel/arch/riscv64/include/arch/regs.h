@@ -11,14 +11,14 @@
 #define REGOFF(x) ((x) * 8)
 
 // Byte offsets corresponding to the fields of iframe_t.
-#define IFRAME_T_OFFSET_SCRATCH REGOFF(0)
-#define IFRAME_T_OFFSET_SP REGOFF(1)
-#define IFRAME_T_OFFSET_EPC REGOFF(2)
-#define IFRAME_T_OFFSET_STATUS REGOFF(3)
-#define IFRAME_T_OFFSET_RA REGOFF(4)
-#define IFRAME_T_OFFSET_TP REGOFF(5)
-#define IFRAME_T_OFFSET_A(n) REGOFF(6 + n)
-#define IFRAME_T_OFFSET_T(n) REGOFF(14 + n)
+#define IFRAME_T_OFFSET_EPC REGOFF(0)
+#define IFRAME_T_OFFSET_STATUS REGOFF(1)
+#define IFRAME_T_OFFSET_RA REGOFF(2)
+#define IFRAME_T_OFFSET_A(n) REGOFF(3 + n)
+#define IFRAME_T_OFFSET_T(n) REGOFF(11 + n)
+#define IFRAME_T_OFFSET_TP REGOFF(18)
+#define IFRAME_T_OFFSET_GP REGOFF(19)
+#define IFRAME_T_OFFSET_SP REGOFF(20)
 #define IFRAME_T_OFFSET_FCSR REGOFF(21)
 #define IFRAME_T_OFFSET_FA(n) REGOFF(22 + n)
 #define IFRAME_T_OFFSET_FT(n) REGOFF(30 + n)
@@ -35,12 +35,9 @@
 // Each field in this structure has a corresponding #define offset above.
 // They must be kept in sync.
 struct iframe_t {
-  unsigned long scratch;
-  unsigned long sp;
   unsigned long epc;
   unsigned long status;
   unsigned long ra;
-  unsigned long tp;
   unsigned long a0;
   unsigned long a1;
   unsigned long a2;
@@ -56,6 +53,11 @@ struct iframe_t {
   unsigned long t4;
   unsigned long t5;
   unsigned long t6;
+
+  // if we came from user space these are valid
+  unsigned long tp;
+  unsigned long gp;
+  unsigned long sp;
 
   // Floating point state.
   unsigned long fcsr;
@@ -84,14 +86,14 @@ struct iframe_t {
 // Registers saved on entering the kernel via syscall.
 using syscall_regs_t = iframe_t;
 
-static_assert(__offsetof(iframe_t, scratch) == IFRAME_T_OFFSET_SCRATCH, "");
-static_assert(__offsetof(iframe_t, sp) == IFRAME_T_OFFSET_SP, "");
 static_assert(__offsetof(iframe_t, epc) == IFRAME_T_OFFSET_EPC, "");
 static_assert(__offsetof(iframe_t, status) == IFRAME_T_OFFSET_STATUS, "");
 static_assert(__offsetof(iframe_t, ra) == IFRAME_T_OFFSET_RA, "");
-static_assert(__offsetof(iframe_t, tp) == IFRAME_T_OFFSET_TP, "");
 static_assert(__offsetof(iframe_t, a0) == IFRAME_T_OFFSET_A(0), "");
 static_assert(__offsetof(iframe_t, t0) == IFRAME_T_OFFSET_T(0), "");
+static_assert(__offsetof(iframe_t, tp) == IFRAME_T_OFFSET_TP, "");
+static_assert(__offsetof(iframe_t, gp) == IFRAME_T_OFFSET_GP, "");
+static_assert(__offsetof(iframe_t, sp) == IFRAME_T_OFFSET_SP, "");
 static_assert(__offsetof(iframe_t, fcsr) == IFRAME_T_OFFSET_FCSR, "");
 static_assert(__offsetof(iframe_t, fa0) == IFRAME_T_OFFSET_FA(0), "");
 static_assert(__offsetof(iframe_t, ft0) == IFRAME_T_OFFSET_FT(0), "");
