@@ -40,7 +40,9 @@ fn setup_request(selected: Option<CodecId>) -> ProcedureRequest {
 fn select_codec(supported: Vec<CodecId>) -> CodecId {
     // Prefer SBD over CVSD if it is supported, as it's higher quality.
     if supported.contains(&CodecId::MSBC) {
-        CodecId::MSBC
+        // TODO(fxbug.dev/81374): Re-enable MSBC when it's working again.
+        // CodecId::MSBC
+        CodecId::CVSD
     } else {
         CodecId::CVSD
     }
@@ -153,7 +155,8 @@ mod tests {
 
     #[test]
     fn codec_negotiation_chooses_best_supported() {
-        expect_codec_negotiation_codec(vec![CodecId::MSBC, CodecId::CVSD], CodecId::MSBC);
+        // TODO(fxbug.dev/81374): This should request MSBC if it's supported
+        expect_codec_negotiation_codec(vec![CodecId::MSBC, CodecId::CVSD], CodecId::CVSD);
         expect_codec_negotiation_codec(vec![CodecId::CVSD, 0xf0.into()], CodecId::CVSD);
     }
 
@@ -193,16 +196,17 @@ mod tests {
         let mut procedure = CodecConnectionSetupProcedure::new();
 
         let request = procedure.hf_update(at::Command::Bcc {}, &mut slc_state);
+        // TODO(fxbug.dev/81374): This should request MSBC if it's supported
         let expected_messages =
-            vec![at::Response::Ok, at::success(at::Success::Bcs { codec: CodecId::MSBC.into() })];
+            vec![at::Response::Ok, at::success(at::Success::Bcs { codec: CodecId::CVSD.into() })];
         assert_matches!(request, ProcedureRequest::SendMessages(m) if m == expected_messages);
 
         let request =
-            procedure.hf_update(at::Command::Bcs { codec: CodecId::MSBC.into() }, &mut slc_state);
+            procedure.hf_update(at::Command::Bcs { codec: CodecId::CVSD.into() }, &mut slc_state);
         assert_matches!(
             request,
             ProcedureRequest::Request(SlcRequest::SynchronousConnectionSetup {
-                selected: Some(CodecId::MSBC),
+                selected: Some(CodecId::CVSD),
                 ..
             })
         );
