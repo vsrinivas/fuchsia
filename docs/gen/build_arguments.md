@@ -3908,7 +3908,7 @@ Whether libraries under //vendor should be linted.
 
 **Current value (from the default):** `false`
 
-From //build/fidl/fidl_library.gni:13
+From //build/fidl/fidl_library.gni:14
 
 ### verbose_image_assembly
 Enable verbose output from `ffx assembly image`, this creates non-silent
