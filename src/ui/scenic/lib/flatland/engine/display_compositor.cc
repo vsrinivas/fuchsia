@@ -48,11 +48,13 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
 DisplayCompositor::DisplayCompositor(
     async_dispatcher_t* dispatcher,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-    const std::shared_ptr<Renderer>& renderer, fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+    const std::shared_ptr<Renderer>& renderer, fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
+    BufferCollectionImportMode import_mode)
     : display_controller_(std::move(display_controller)),
       renderer_(renderer),
       release_fence_manager_(dispatcher),
       sysmem_allocator_(std::move(sysmem_allocator)),
+      import_mode_(import_mode),
       weak_factory_(this) {
   FX_DCHECK(dispatcher);
   FX_DCHECK(renderer_);
@@ -82,43 +84,8 @@ bool DisplayCompositor::ImportBufferCollection(
   // Create a duped renderer token.
   auto sync_token = token.BindSync();
   fuchsia::sysmem::BufferCollectionTokenSyncPtr renderer_token;
-  zx_status_t status =
-      sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), renderer_token.NewRequest());
+  zx_status_t status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, renderer_token.NewRequest());
   FX_DCHECK(status == ZX_OK);
-
-  // Create attach token for display.
-  // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
-  sysmem_allocator->BindSharedCollection(std::move(sync_token),
-                                         buffer_collection_sync_ptr.NewRequest());
-  status = buffer_collection_sync_ptr->Sync();
-  FX_DCHECK(status == ZX_OK);
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr attach_token;
-  status = buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, attach_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-  status = buffer_collection_sync_ptr->Close();
-  FX_DCHECK(status == ZX_OK);
-
-  // Duplicate attach token to check later if attach token can be used in the allocated buffers.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
-  status =
-      attach_token->Duplicate(std::numeric_limits<uint32_t>::max(), display_token.NewRequest());
-  FX_DCHECK(status == ZX_OK);
-  status = attach_token->Sync();
-  FX_DCHECK(status == ZX_OK);
-  fuchsia::sysmem::BufferCollectionSyncPtr attach_token_sync_ptr;
-  sysmem_allocator->BindSharedCollection(std::move(attach_token),
-                                         attach_token_sync_ptr.NewRequest());
-  {
-    // Intentionally empty constraints. |attach_token_sync_ptr| is used to detect logical
-    // allocation completion and success or failure, as seen by the |renderer_token|, because
-    // |attach_token_sync_ptr| and |renderer_token| are in the same sysmem failure domain (child
-    // domain of |buffer_collection_sync_ptr|).
-    fuchsia::sysmem::BufferCollectionConstraints constraints;
-    status = attach_token_sync_ptr->SetConstraints(false, constraints);
-    FX_DCHECK(status == ZX_OK);
-  }
-  attach_tokens_for_display_[collection_id] = std::move(attach_token_sync_ptr);
 
   // Import the collection to the renderer.
   if (!renderer_->ImportBufferCollection(collection_id, sysmem_allocator,
@@ -127,11 +94,62 @@ bool DisplayCompositor::ImportBufferCollection(
     return false;
   }
 
+  if (import_mode_ == BufferCollectionImportMode::RendererOnly) {
+    status = sync_token->Close();
+    FX_DCHECK(status == ZX_OK);
+    return true;
+  }
+
+  // Create token for display. In EnforceDisplayConstraints mode, duplicate a token and pass it to
+  // display. The allocation will fail if it the allocation is not directly displayable. In
+  // AttemptDisplayConstraints mode, instead of passing a real token, we pass an AttachToken to
+  // display. This way, display does not affect the allocation and we directly display if it happens
+  // to work. In RendererOnly mode, we dont attempt directly displaying and fallback to renderer.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token;
+  if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
+    status = sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+    status = sync_token->Close();
+    FX_DCHECK(status == ZX_OK);
+  } else if (import_mode_ == BufferCollectionImportMode::AttemptDisplayConstraints) {
+    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_sync_ptr;
+    sysmem_allocator->BindSharedCollection(std::move(sync_token),
+                                           buffer_collection_sync_ptr.NewRequest());
+    status = buffer_collection_sync_ptr->Sync();
+    FX_DCHECK(status == ZX_OK);
+    // TODO(fxbug.dev/74423): Replace with prunable token when it is available.
+    status =
+        buffer_collection_sync_ptr->AttachToken(ZX_RIGHT_SAME_RIGHTS, display_token.NewRequest());
+    FX_DCHECK(status == ZX_OK);
+    status = buffer_collection_sync_ptr->Close();
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  // Duplicate display token to check later if attach token can be used in the allocated buffers.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr display_token_dup;
+  status = display_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, display_token_dup.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+  status = display_token->Sync();
+  FX_DCHECK(status == ZX_OK);
+  fuchsia::sysmem::BufferCollectionSyncPtr display_token_sync_ptr;
+  sysmem_allocator->BindSharedCollection(std::move(display_token),
+                                         display_token_sync_ptr.NewRequest());
+  {
+    // Intentionally empty constraints. |display_token_sync_ptr| is used to detect logical
+    // allocation completion and success or failure, as seen by the |renderer_token|, because
+    // |display_token_sync_ptr| and |renderer_token| are in the same sysmem failure domain (child
+    // domain of |buffer_collection_sync_ptr|).
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    status = display_token_sync_ptr->SetConstraints(false, constraints);
+    FX_DCHECK(status == ZX_OK);
+  }
+  display_tokens_[collection_id] = std::move(display_token_sync_ptr);
+
   // The pixel format doesn't matter here when importing to the display.
   fuchsia::hardware::display::ImageConfig image_config;
   std::unique_lock<std::mutex> lock(lock_);
   auto result = scenic_impl::ImportBufferCollection(collection_id, *display_controller_.get(),
-                                                    std::move(display_token), image_config);
+                                                    std::move(display_token_dup), image_config);
 
   return result;
 }
@@ -142,7 +160,7 @@ void DisplayCompositor::ReleaseBufferCollection(
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   renderer_->ReleaseBufferCollection(collection_id);
-  attach_tokens_for_display_.erase(collection_id);
+  display_tokens_.erase(collection_id);
   buffer_collection_supports_display_.erase(collection_id);
 }
 
@@ -170,20 +188,32 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     return false;
   }
 
+  if (import_mode_ == BufferCollectionImportMode::RendererOnly) {
+    buffer_collection_supports_display_[metadata.collection_id] = false;
+    return true;
+  }
+
   if (buffer_collection_supports_display_.find(metadata.collection_id) ==
       buffer_collection_supports_display_.end()) {
     zx_status_t allocation_status = ZX_OK;
-    auto status = attach_tokens_for_display_[metadata.collection_id]->CheckBuffersAllocated(
-        &allocation_status);
+    auto status =
+        display_tokens_[metadata.collection_id]->CheckBuffersAllocated(&allocation_status);
     buffer_collection_supports_display_[metadata.collection_id] =
         status == ZX_OK && allocation_status == ZX_OK;
 
-    status = attach_tokens_for_display_[metadata.collection_id]->Close();
-    attach_tokens_for_display_.erase(metadata.collection_id);
+    status = display_tokens_[metadata.collection_id]->Close();
+    display_tokens_.erase(metadata.collection_id);
   }
 
-  if (!buffer_collection_supports_display_[metadata.collection_id])
-    return true;
+  if (!buffer_collection_supports_display_[metadata.collection_id]) {
+    if (import_mode_ == BufferCollectionImportMode::AttemptDisplayConstraints) {
+      // We fallback to renderer and continue if display isn't supported in
+      // AttemptDisplayConstraints mode.
+      return true;
+    } else if (import_mode_ == BufferCollectionImportMode::EnforceDisplayConstraints) {
+      return false;
+    }
+  }
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want
   // to have to rely on this kDefaultImageFormat.

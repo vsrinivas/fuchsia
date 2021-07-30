@@ -30,6 +30,7 @@ scenic_impl::ConfigValues ReadConfig() {
   scenic_impl::ConfigValues values;
 
   std::string config_string;
+  std::string flatland_buffer_collection_import_mode_str;
   if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
     FX_LOGS(INFO) << "Found config file at /config/data/scenic_config";
 
@@ -58,6 +59,14 @@ scenic_impl::ConfigValues ReadConfig() {
       FX_CHECK(val.IsBool()) << "pointer_auto_focus must be a boolean";
       values.pointer_auto_focus_on = val.GetBool();
     }
+
+    if (document.HasMember("flatland_buffer_collection_import_mode")) {
+      auto& val = document["flatland_buffer_collection_import_mode"];
+      FX_CHECK(val.IsString()) << "flatland_buffer_collection_import_mode must be a string";
+      flatland_buffer_collection_import_mode_str = val.GetString();
+      values.flatland_buffer_collection_import_mode =
+          flatland::StringToBufferCollectionImportMode(flatland_buffer_collection_import_mode_str);
+    }
   } else {
     FX_LOGS(INFO) << "No config file found at /config/data/scenic_config; using default values";
   }
@@ -66,6 +75,10 @@ scenic_impl::ConfigValues ReadConfig() {
                 << values.min_predicted_frame_duration.to_usecs();
   FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
   FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
+  FX_LOGS(INFO) << "flatland_buffer_collection_import_mode: "
+                << (flatland_buffer_collection_import_mode_str.empty()
+                        ? "attempt_display_constraints"
+                        : flatland_buffer_collection_import_mode_str);
 
   return values;
 }
@@ -343,7 +356,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
     flatland_compositor_ = std::make_shared<flatland::DisplayCompositor>(
         async_get_default_dispatcher(), display_manager_->default_display_controller(),
-        flatland_renderer, utils::CreateSysmemAllocatorSyncPtr("flatland::DisplayCompositor"));
+        flatland_renderer, utils::CreateSysmemAllocatorSyncPtr("flatland::DisplayCompositor"),
+        config_values_.flatland_buffer_collection_import_mode);
   }
 
   // Flatland manager depends on compositor, and is required by engine.

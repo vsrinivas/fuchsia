@@ -152,7 +152,8 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   auto [escher, renderer] = NewVkRenderer();
   auto display_compositor = std::make_unique<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
-      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"));
+      utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
+      BufferCollectionImportMode::AttemptDisplayConstraints);
 
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();

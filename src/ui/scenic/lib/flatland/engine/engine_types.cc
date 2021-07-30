@@ -29,4 +29,16 @@ DisplaySrcDstFrames DisplaySrcDstFrames::New(escher::Rectangle2D rectangle,
   return {.src = src_frame, .dst = dst_frame};
 }
 
+BufferCollectionImportMode StringToBufferCollectionImportMode(const std::string& str) {
+  if (str == "enforce_display_constraints") {
+    return BufferCollectionImportMode::EnforceDisplayConstraints;
+  } else if (str == "attempt_display_constraints") {
+    return BufferCollectionImportMode::AttemptDisplayConstraints;
+  } else if (str == "renderer_only") {
+    return BufferCollectionImportMode::RendererOnly;
+  }
+  FX_LOGS(ERROR) << "Received unexpected string for flatland_buffer_collection_import_mode";
+  return BufferCollectionImportMode::AttemptDisplayConstraints;
+}
+
 }  // namespace flatland

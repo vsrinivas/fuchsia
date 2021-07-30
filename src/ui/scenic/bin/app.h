@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
+#include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -57,6 +58,8 @@ struct ConfigValues {
       scheduling::DefaultFrameScheduler::kMinPredictedFrameDuration;
   bool enable_allocator_for_flatland = true;
   bool pointer_auto_focus_on = true;
+  flatland::BufferCollectionImportMode flatland_buffer_collection_import_mode =
+      flatland::BufferCollectionImportMode::AttemptDisplayConstraints;
 };
 
 class App {

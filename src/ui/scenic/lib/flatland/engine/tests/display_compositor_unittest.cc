@@ -58,7 +58,8 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
 
     display_compositor_ = std::make_unique<flatland::DisplayCompositor>(
         dispatcher(), std::move(shared_display_controller), renderer_,
-        utils::CreateSysmemAllocatorSyncPtr("display_compositor_unittest"));
+        utils::CreateSysmemAllocatorSyncPtr("display_compositor_unittest"),
+        BufferCollectionImportMode::AttemptDisplayConstraints);
   }
 
   void TearDown() override {
@@ -82,6 +83,10 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
     display_compositor_->buffer_collection_supports_display_[id] = is_supported;
   }
 
+  void SetBufferCollectionImportMode(BufferCollectionImportMode import_mode) {
+    display_compositor_->import_mode_ = import_mode;
+  }
+
  protected:
   const zx_pixel_format_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
   std::unique_ptr<flatland::MockDisplayController> mock_display_controller_;
@@ -90,7 +95,12 @@ class DisplayCompositorTest : public DisplayCompositorTestBase {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
-TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
+class ParameterizedDisplayCompositorTest
+    : public DisplayCompositorTest,
+      public ::testing::WithParamInterface<BufferCollectionImportMode> {};
+
+TEST_P(ParameterizedDisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
+  SetBufferCollectionImportMode(GetParam());
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
   std::thread server([&mock]() mutable {
@@ -108,7 +118,7 @@ TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
-          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
              MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
   EXPECT_CALL(*mock_display_controller_.get(),
               SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
@@ -117,9 +127,14 @@ TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
              MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
             callback(ZX_OK);
           }));
-
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce(Return(true));
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
 
@@ -141,6 +156,10 @@ TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
   server.join();
 }
 
+INSTANTIATE_TEST_SUITE_P(BufferCollectionImportModes, ParameterizedDisplayCompositorTest,
+                         ::testing::Values(BufferCollectionImportMode::EnforceDisplayConstraints,
+                                           BufferCollectionImportMode::AttemptDisplayConstraints));
+
 TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
   auto mock = mock_display_controller_.get();
   // Set the mock display controller functions and wait for messages.
@@ -158,7 +177,7 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
   // Import buffer collection.
   EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
-          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
              MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
   EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
@@ -166,8 +185,14 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
              MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
             callback(ZX_OK);
           }));
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce(Return(true));
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
   SetDisplaySupported(kGlobalBufferCollectionId, true);
@@ -220,7 +245,7 @@ TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
-          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
              MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
 
   EXPECT_CALL(*mock_display_controller_.get(),
@@ -230,9 +255,14 @@ TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
              MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
             callback(ZX_OK);
           }));
-
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce(Return(true));
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
 
   // Set the mock display controller functions and wait for messages.
   auto mock = mock_display_controller_.get();
@@ -455,7 +485,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
-          [](uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
              MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
   EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
       .WillOnce(testing::Invoke(
@@ -463,10 +493,14 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
              MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
             callback(ZX_OK);
           }));
-
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce(Return(true));
-
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
   SetDisplaySupported(kGlobalBufferCollectionId, true);
@@ -561,6 +595,47 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   display_compositor_.reset();
 
+  server.join();
+}
+
+// Tests that RenderOnly mode does not attempt to ImportBufferCollection() to display.
+TEST_F(DisplayCompositorTest, RendererOnly_ImportAndReleaseBufferCollectionTest) {
+  SetBufferCollectionImportMode(BufferCollectionImportMode::RendererOnly);
+
+  auto mock = mock_display_controller_.get();
+  // Set the mock display controller functions and wait for messages.
+  std::thread server([&mock]() mutable {
+    // Wait once for call to ReleaseBufferCollection and once for the deleter.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 2; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  const allocation::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
+
+  EXPECT_CALL(*mock_display_controller_.get(),
+              ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .Times(0);
+  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(Return(true));
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
+
+  EXPECT_CALL(*mock_display_controller_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
+      .WillOnce(Return());
+  EXPECT_CALL(*renderer_.get(), ReleaseBufferCollection(kGlobalBufferCollectionId))
+      .WillOnce(Return());
+  display_compositor_->ReleaseBufferCollection(kGlobalBufferCollectionId);
+
+  EXPECT_CALL(*mock_display_controller_.get(), CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+  display_compositor_.reset();
   server.join();
 }
 

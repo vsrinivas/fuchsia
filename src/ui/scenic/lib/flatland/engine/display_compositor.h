@@ -43,8 +43,8 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   DisplayCompositor(
       async_dispatcher_t* dispatcher,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
-      const std::shared_ptr<Renderer>& renderer,
-      fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
+      const std::shared_ptr<Renderer>& renderer, fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
+      BufferCollectionImportMode import_mode);
 
   ~DisplayCompositor() override;
 
@@ -187,11 +187,11 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // that display in both the hardware and software composition paths.
   std::unordered_map<uint64_t, DisplayEngineData> display_engine_data_map_;
 
-  // Maps a buffer collection ID to a BufferCollection. This is used as a bridge between
-  // ImportBufferCollection() and ImportBufferImage() calls, so that we can check if the attach
+  // Maps a buffer collection ID to a BufferCollectionSyncPtr. This is used as a bridge between
+  // ImportBufferCollection() and ImportBufferImage() calls, so that we can check if the display
   // token can be used on the existing allocation.
   std::unordered_map<allocation::GlobalBufferCollectionId, fuchsia::sysmem::BufferCollectionSyncPtr>
-      attach_tokens_for_display_;
+      display_tokens_;
 
   // Maps a buffer collection ID to a boolean indicating if it can be imported into display.
   std::unordered_map<allocation::GlobalBufferCollectionId, bool>
@@ -200,6 +200,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   ReleaseFenceManager release_fence_manager_;
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
+
+  // See BufferCollectionImportMode definition for what each mode means. by default, we add display
+  // constraints as AttachTokens.
+  BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
 
   // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
   // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet
