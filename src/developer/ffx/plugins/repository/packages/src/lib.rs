@@ -38,13 +38,17 @@ async fn list_impl<W: Write>(
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryPackagesIteratorMarker>()?;
 
-    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+    let repo_name = if let Some(repo_name) = cmd.repository.clone() {
         repo_name
     } else {
-        ffx_bail!(
-            "Either a default repository must be set, or the --repository flag must be provided.\n\
-            You can set a default repository using: `ffx repository default set <name>`."
-        )
+        if let Some(repo_name) = pkg::config::get_default_repository().await? {
+            repo_name
+        } else {
+            ffx_bail!(
+                "Either a default repository must be set, or the --repository flag must be provided.\n\
+                You can set a default repository using: `ffx repository default set <name>`."
+            )
+        }
     };
 
     match repos_proxy

@@ -10,6 +10,7 @@ ffx_plugin("ffx_repository_target_deregister") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//src/developer/ffx/lib/pkg",
     "//third_party/rust_crates:futures",
   ]
 

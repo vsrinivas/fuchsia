@@ -71,6 +71,7 @@ rustc_library("pkg") {
   ]
 
   sources = [
+    "src/config.rs",
     "src/lib.rs",
     "src/repository.rs",
     "src/repository/file_system.rs",

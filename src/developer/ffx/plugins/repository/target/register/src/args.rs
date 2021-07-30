@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command,
-    fidl_fuchsia_developer_bridge::RepositoryStorageType,
-};
+use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_bridge::RepositoryStorageType};
 
 #[ffx_command()]
-#[derive(FfxConfigBacked, FromArgs, PartialEq, Debug)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "register", description = "")]
 pub struct RegisterCommand {
     #[argh(option, short = 'r')]
-    #[ffx_config_default("repository.default")]
     /// register this repository, rather than the default.
     pub repository: Option<String>,
 

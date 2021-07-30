@@ -5,7 +5,6 @@
 use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
-    ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_repository_target_register_args::RegisterCommand,
     fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy, RepositoryTarget},
@@ -13,8 +12,12 @@ use {
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
 pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoryRegistryProxy) -> Result<()> {
-    register(get("target.default").await.context("getting default target from config")?, cmd, repos)
-        .await
+    register(
+        ffx_config::get("target.default").await.context("getting default target from config")?,
+        cmd,
+        repos,
+    )
+    .await
 }
 
 async fn register(
@@ -22,13 +25,17 @@ async fn register(
     cmd: RegisterCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
-    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+    let repo_name = if let Some(repo_name) = cmd.repository {
         repo_name
     } else {
-        ffx_bail!(
-            "Either a default repository must be set, or the --repository flag must be provided.\n\
-            You can set a default repository using: `ffx repository default set <name>`."
-        )
+        if let Some(repo_name) = pkg::config::get_default_repository().await? {
+            repo_name
+        } else {
+            ffx_bail!(
+                "Either a default repository must be set, or the --repository flag must be provided.\n\
+                You can set a default repository using: `ffx repository default set <name>`."
+            )
+        }
     };
 
     repos

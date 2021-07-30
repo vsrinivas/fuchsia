@@ -35,7 +35,7 @@ async fn list_impl<W: Write>(
         table.set_format(fmt);
     }
 
-    let default_repo: Option<String> = ffx_config::get("repository.default").await?;
+    let default_repo = pkg::config::get_default_repository().await?;
 
     let mut rows = vec![];
     loop {

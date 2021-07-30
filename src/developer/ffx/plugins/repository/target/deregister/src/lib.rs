@@ -5,7 +5,6 @@
 use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_error},
-    ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_repository_target_deregister_args::DeregisterCommand,
     fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy},
@@ -14,7 +13,7 @@ use {
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
 pub async fn deregister_cmd(cmd: DeregisterCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     deregister(
-        get("target.default").await.context("getting default target from config")?,
+        ffx_config::get("target.default").await.context("getting default target from config")?,
         cmd,
         repos,
     )
@@ -26,13 +25,17 @@ async fn deregister(
     cmd: DeregisterCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
-    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+    let repo_name = if let Some(repo_name) = cmd.repository {
         repo_name
     } else {
-        ffx_bail!(
-            "Either a default repository must be set, or the --repository flag must be provided.\n\
-            You can set a default repository using: `ffx repository default set <name>`."
-        )
+        if let Some(repo_name) = pkg::config::get_default_repository().await? {
+            repo_name
+        } else {
+            ffx_bail!(
+                "Either a default repository must be set, or the --repository flag must be provided.\n\
+                You can set a default repository using: `ffx repository default set <name>`."
+            )
+        }
     };
 
     repos
@@ -55,7 +58,6 @@ async fn deregister(
 mod test {
     use super::*;
     use {
-        ffx_config::ConfigLevel,
         fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
@@ -101,9 +103,7 @@ mod test {
         ffx_config::init_config_test().unwrap();
 
         let default_repo_name = "default-repo";
-        ffx_config::set(("repository.default", ConfigLevel::User), default_repo_name.into())
-            .await
-            .unwrap();
+        pkg::config::set_default_repository(default_repo_name).await.unwrap();
 
         let (repos, receiver) = setup_fake_server().await;
 

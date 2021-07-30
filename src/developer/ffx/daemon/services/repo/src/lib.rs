@@ -5,7 +5,6 @@ use {
     anyhow::{anyhow, Context as _, Result},
     async_lock::{Mutex, RwLock},
     async_trait::async_trait,
-    ffx_config::{self, ConfigLevel},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
@@ -17,7 +16,6 @@ use {
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
     pkg::repository::{self, listen_addr, Repository, RepositoryManager, RepositoryServer},
-    serde_json::{self, Value},
     services::prelude::*,
     std::{
         collections::HashMap,
@@ -34,18 +32,6 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 const MAX_PACKAGES: i64 = 512;
 const MAX_REGISTERED_TARGETS: i64 = 512;
-
-const CONFIG_KEY_REPOSITORIES: &str = "repository.repositories";
-const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
-const CONFIG_KEY_DEFAULT: &str = "repository.default";
-
-fn repository_query(repo_name: &str) -> String {
-    format!("{}.{}", CONFIG_KEY_REPOSITORIES, repo_name)
-}
-
-fn registration_query(repo_name: &str, target_nodename: &str) -> String {
-    format!("{}.{}.{}", CONFIG_KEY_REGISTRATIONS, repo_name, target_nodename)
-}
 
 struct ServerInfo {
     server: RepositoryServer,
@@ -104,32 +90,7 @@ impl Repo {
     }
 
     async fn load_repositories_from_config(&self) {
-        let value = match ffx_config::get::<Value, _>(CONFIG_KEY_REPOSITORIES).await {
-            Ok(value) => value,
-            Err(err) => {
-                log::warn!("failed to load repositories: {:?}", err);
-                return;
-            }
-        };
-
-        let repos = match value {
-            Value::Object(repos) => repos,
-            _ => {
-                log::warn!("expected {} to be a map, not {}", CONFIG_KEY_REPOSITORIES, value);
-                return;
-            }
-        };
-
-        for (name, entry) in repos.into_iter() {
-            // Parse the repository spec.
-            let repo_spec = match serde_json::from_value(entry) {
-                Ok(repo_spec) => repo_spec,
-                Err(err) => {
-                    log::warn!("failed to parse repository {:?}: {:?}", name, err);
-                    continue;
-                }
-            };
-
+        for (name, repo_spec) in pkg::config::get_repositories().await {
             // Add the repository.
             if let Err(err) = self.add_repository(&name, repo_spec, SaveConfig::DoNotSave).await {
                 log::warn!("failed to add the repository {:?}: {:?}", name, err);
@@ -139,96 +100,47 @@ impl Repo {
     }
 
     async fn load_registrations_from_config(&self, cx: &Context) {
-        let value = match ffx_config::get::<Value, _>(CONFIG_KEY_REGISTRATIONS).await {
-            Ok(value) => value,
-            Err(err) => {
-                log::warn!("failed to load registrations: {:?}", err);
-                return;
-            }
-        };
-
-        let registrations = match value {
-            Value::Object(registrations) => registrations,
-            _ => {
-                log::warn!("expected {} to be a map, not {}", CONFIG_KEY_REGISTRATIONS, value);
-                return;
-            }
-        };
-
-        for (repo_name, targets) in registrations.into_iter() {
-            let targets = match targets {
-                Value::Object(targets) => targets,
-                _ => {
-                    log::warn!(
-                        "repository {:?} targets should be a map, not {}",
-                        repo_name,
-                        targets
-                    );
-                    continue;
-                }
-            };
-
-            for (target_nodename, target_info) in targets.into_iter() {
-                let target_info = match serde_json::from_value(target_info) {
-                    Ok(target_info) => target_info,
-                    Err(err) => {
-                        log::warn!(
-                            "failed to parse registration {:?} {:?}: {:?}",
-                            repo_name,
-                            target_nodename,
-                            err
-                        );
-                        continue;
-                    }
-                };
-
-                if let Err(err) = self.register_target(cx, target_info, SaveConfig::DoNotSave).await
-                {
-                    log::warn!(
-                        "failed to register target {:?} {:?}: {:?}",
-                        repo_name,
-                        target_nodename,
-                        err
-                    );
-                    continue;
-                }
+        for ((repo_name, target_nodename), target_info) in pkg::config::get_registrations().await {
+            if let Err(err) = self.register_target(cx, target_info, SaveConfig::DoNotSave).await {
+                log::warn!(
+                    "failed to register target {:?} {:?}: {:?}",
+                    repo_name,
+                    target_nodename,
+                    err
+                );
+                continue;
             }
         }
     }
 
     async fn add_repository(
         &self,
-        name: &str,
+        repo_name: &str,
         repo_spec: RepositorySpec,
         save_config: SaveConfig,
     ) -> std::result::Result<(), bridge::RepositoryError> {
-        log::info!("Adding repository {} {:?}", name, repo_spec);
-
-        let json_repo_spec = serde_json::to_value(repo_spec.clone()).map_err(|err| {
-            log::error!("Unable to serialize repository spec {:?}: {:#?}", repo_spec, err);
-            bridge::RepositoryError::InternalError
-        })?;
+        log::info!("Adding repository {} {:?}", repo_name, repo_spec);
 
         // Create the repository.
-        let repo = Repository::from_repository_spec(name, repo_spec).await.map_err(|err| {
-            log::error!("Unable to create repository: {:#?}", err);
+        let repo = Repository::from_repository_spec(repo_name, repo_spec.clone()).await.map_err(
+            |err| {
+                log::error!("Unable to create repository: {:#?}", err);
 
-            match err {
-                repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
-                    bridge::RepositoryError::ExpiredRepositoryMetadata
+                match err {
+                    repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
+                        bridge::RepositoryError::ExpiredRepositoryMetadata
+                    }
+                    _ => bridge::RepositoryError::IoError,
                 }
-                _ => bridge::RepositoryError::IoError,
-            }
-        })?;
+            },
+        )?;
 
         if save_config == SaveConfig::Save {
             // Save the filesystem configuration.
-            ffx_config::set((&repository_query(name), ConfigLevel::User), json_repo_spec)
-                .await
-                .map_err(|err| {
-                    log::error!("Failed to save repository: {:#?}", err);
-                    bridge::RepositoryError::IoError
-                })?;
+            pkg::config::set_repository(repo_name, &repo_spec).await.map_err(|err| {
+                log::error!("Failed to save repository: {:#?}", err);
+                bridge::RepositoryError::IoError
+            })?;
         }
 
         // Finally add the repository.
@@ -240,18 +152,15 @@ impl Repo {
     async fn remove_repository(&self, repo_name: &str) -> bool {
         log::info!("Removing repository {:?}", repo_name);
 
-        if let Err(err) =
-            ffx_config::remove((&repository_query(repo_name), ConfigLevel::User)).await
-        {
+        if let Err(err) = pkg::config::remove_repository(repo_name).await {
             log::warn!("Failed to remove repository from config: {:#?}", err);
         }
 
         // If we are removing the default repository, make sure to remove it from the configuration
         // as well.
-        match ffx_config::get::<Option<String>, _>(CONFIG_KEY_DEFAULT).await {
+        match pkg::config::get_default_repository().await {
             Ok(Some(default_repo_name)) if repo_name == default_repo_name => {
-                if let Err(err) = ffx_config::remove((CONFIG_KEY_DEFAULT, ConfigLevel::User)).await
-                {
+                if let Err(err) = pkg::config::unset_default_repository().await {
                     log::warn!("failed to remove default repository: {:#?}", err);
                 }
             }
@@ -275,11 +184,6 @@ impl Repo {
             target_info.repo_name,
             target_info.target_identifier
         );
-
-        let json_target_info = serde_json::to_value(&target_info).map_err(|err| {
-            log::error!("Unable to serialize registration info {:?}: {:#?}", target_info, err);
-            bridge::RepositoryError::InternalError
-        })?;
 
         let repo = self
             .manager
@@ -381,12 +285,7 @@ impl Repo {
         }
 
         if save_config == SaveConfig::Save {
-            ffx_config::set(
-                (&registration_query(repo.name(), &target_nodename), ConfigLevel::User),
-                json_target_info,
-            )
-            .await
-            .map_err(|err| {
+            pkg::config::set_registration(&target_nodename, &target_info).await.map_err(|err| {
                 log::warn!("Failed to save registration to config: {:#?}", err);
                 bridge::RepositoryError::InternalError
             })?;
@@ -476,12 +375,10 @@ impl Repo {
             }
         }
 
-        ffx_config::remove((&registration_query(&repo_name, &target_nodename), ConfigLevel::User))
-            .await
-            .map_err(|err| {
-                log::warn!("Failed to remove registration from config: {:#?}", err);
-                bridge::RepositoryError::InternalError
-            })?;
+        pkg::config::remove_registration(&repo_name, &target_nodename).await.map_err(|err| {
+            log::warn!("Failed to remove registration from config: {:#?}", err);
+            bridge::RepositoryError::InternalError
+        })?;
 
         registered_targets.remove(&(repo_name, target_nodename));
 
@@ -739,10 +636,11 @@ impl FidlService for Repo {
 mod tests {
     use {
         super::*,
+        ffx_config::ConfigLevel,
         fidl::{self, endpoints::Request},
+        fidl_fuchsia_developer_bridge_ext::RepositoryStorageType,
         fidl_fuchsia_pkg::{
             MirrorConfig, RepositoryConfig, RepositoryKeyConfig, RepositoryManagerRequest,
-            RepositoryStorageType,
         },
         fidl_fuchsia_pkg_rewrite::{
             EditTransactionRequest, EngineMarker, EngineRequest, RuleIteratorRequest,
@@ -782,7 +680,7 @@ mod tests {
                 33, 10, 154, 26, 130, 117, 157, 125, 88, 175, 214, 109, 113,
             ])]),
             root_version: Some(1),
-            storage_type: Some(RepositoryStorageType::Ephemeral),
+            storage_type: Some(fidl_fuchsia_pkg::RepositoryStorageType::Ephemeral),
             ..RepositoryConfig::EMPTY
         }
     }
@@ -1013,15 +911,10 @@ mod tests {
         ffx_config::init_config_test().unwrap();
 
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
-            // Since ffx_config is global, it's possible to leave behind entrie
+            // Since ffx_config is global, it's possible to leave behind entries
             // across tests. Lets clean them up.
-            let _ = ffx_config::remove((&repository_query(REPO_NAME), ConfigLevel::User)).await;
-
-            let _ = ffx_config::remove((
-                &registration_query(REPO_NAME, TARGET_NODENAME),
-                ConfigLevel::User,
-            ))
-            .await;
+            let _ = pkg::config::remove_repository(REPO_NAME).await;
+            let _ = pkg::config::remove_registration(REPO_NAME, TARGET_NODENAME).await;
 
             fut.await
         })
@@ -1247,13 +1140,13 @@ mod tests {
 
             // We should have saved the registration to the config.
             assert_matches!(
-                ffx_config::get::<Value, _>(&registration_query(REPO_NAME, TARGET_NODENAME)).await,
-                Ok(reg) if reg == serde_json::json!({
-                    "repo_name": "some-repo",
-                    "target_identifier": "some-target",
-                    "aliases": ["fuchsia.com", "example.com"],
-                    "storage_type": "ephemeral",
-                })
+                pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
+                Ok(Some(reg)) if reg == RepositoryTarget {
+                    repo_name: "some-repo".to_string(),
+                    target_identifier: Some("some-target".to_string()),
+                    aliases: vec!["fuchsia.com".to_string(), "example.com".to_string()],
+                    storage_type: Some(RepositoryStorageType::Ephemeral),
+                }
             );
 
             proxy
@@ -1269,7 +1162,7 @@ mod tests {
 
             // The registration should have been cleared from the config.
             assert_matches!(
-                ffx_config::get::<Value, _>(&registration_query(REPO_NAME, TARGET_NODENAME)).await,
+                pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
                 Err(_)
             );
         })
@@ -1358,25 +1251,20 @@ mod tests {
             add_repo(&proxy, REPO_NAME).await;
 
             let default_repo_name = "default-repo";
-            ffx_config::set((CONFIG_KEY_DEFAULT, ConfigLevel::User), default_repo_name.into())
-                .await
-                .unwrap();
+            pkg::config::set_default_repository(default_repo_name).await.unwrap();
 
             add_repo(&proxy, default_repo_name).await;
 
             // Remove the non-default repo, which shouldn't change the default repo.
             assert!(proxy.remove_repository(REPO_NAME).await.unwrap());
             assert_eq!(
-                ffx_config::get::<String, _>(CONFIG_KEY_DEFAULT).await.unwrap(),
-                default_repo_name
+                pkg::config::get_default_repository().await.unwrap(),
+                Some(default_repo_name.to_string())
             );
 
             // Removing the default repository should also remove the config setting.
             assert!(proxy.remove_repository(default_repo_name).await.unwrap());
-            assert_eq!(
-                ffx_config::get::<Option<String>, _>(CONFIG_KEY_DEFAULT).await.unwrap(),
-                None
-            );
+            assert_eq!(pkg::config::get_default_repository().await.unwrap(), None);
         })
     }
 
@@ -1571,7 +1459,7 @@ mod tests {
 
             // Make sure nothing was saved to the config.
             assert_matches!(
-                ffx_config::get::<Value, _>(&registration_query(REPO_NAME, TARGET_NODENAME)).await,
+                pkg::config::get_registration(REPO_NAME, TARGET_NODENAME).await,
                 Err(_)
             );
         });
