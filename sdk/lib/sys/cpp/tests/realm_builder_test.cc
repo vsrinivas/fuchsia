@@ -50,62 +50,64 @@ class RealmBuilderTest : public ::testing::Test {
 };
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"echo_server"},
-                             Component{.source = ComponentUrl{kEchoServerUrl}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"echo_server"},
+  realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoSyncPtr echo_proxy;
-  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
   fidl::StringPtr response;
-  ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromGrandchild) {
+  static constexpr auto kEchoServer = Moniker{"parent/echo_server"};
+
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"parent/echo_server"},
-                             Component{.source = ComponentUrl{kEchoServerUrl}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"parent/echo_server"},
+  realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoSyncPtr echo_proxy;
-  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
   fidl::StringPtr response;
-  ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"echo_server"},
+  realm_builder.AddComponent(kEchoServer,
                              Component{.source = LegacyComponentUrl{kEchoServerLegacyUrl}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"echo_server"},
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoSyncPtr echo_proxy;
-  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
   fidl::StringPtr response;
-  ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromRelativeChild) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"echo_server"},
+  realm_builder.AddComponent(kEchoServer,
                              Component{.source = ComponentUrl{kEchoServerRelativeUrl}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"echo_server"},
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoSyncPtr echo_proxy;
-  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
   fidl::StringPtr response;
-  ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
@@ -136,19 +138,20 @@ class MockEchoServer : public test::placeholders::Echo, public MockComponent {
 };
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromMockComponent) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
   MockEchoServer mock_echo_server(loop());
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"mock_echo_server"}, Component{
-                                                              .source = Mock{&mock_echo_server},
-                                                              .eager = false,
-                                                          });
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"mock_echo_server"},
+  realm_builder.AddComponent(kEchoServer, Component{
+                                              .source = Mock{&mock_echo_server},
+                                              .eager = false,
+                                          });
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
                                          .targets = {AboveRoot()}});
   auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoPtr echo_proxy;
-  ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
-  echo_proxy->EchoString("hello", [](fidl::StringPtr _) {});
+  test::placeholders::EchoPtr echo;
+  ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
+  echo->EchoString("hello", [](fidl::StringPtr _) {});
 
   loop().Run();
   EXPECT_TRUE(mock_echo_server.WasCalled());
@@ -161,10 +164,10 @@ class MockEchoClient : public MockComponent {
   void Start(std::unique_ptr<MockHandles> mock_handles) override {
     mock_handles_ = std::move(mock_handles);
     auto svc = mock_handles_->svc();
-    test::placeholders::EchoSyncPtr echo_proxy;
-    ASSERT_EQ(svc.Connect<test::placeholders::Echo>(echo_proxy.NewRequest()), ZX_OK);
+    test::placeholders::EchoSyncPtr echo;
+    ASSERT_EQ(svc.Connect<test::placeholders::Echo>(echo.NewRequest()), ZX_OK);
     fidl::StringPtr response;
-    ASSERT_EQ(echo_proxy->EchoString("milk", &response), ZX_OK);
+    ASSERT_EQ(echo->EchoString("milk", &response), ZX_OK);
     ASSERT_EQ(response, fidl::StringPtr("milk"));
     called_ = true;
     loop_.Quit();
@@ -179,17 +182,19 @@ class MockEchoClient : public MockComponent {
 };
 
 TEST_F(RealmBuilderTest, RoutesProtocolToMockComponent) {
+  static constexpr auto kEchoClient = Moniker{"echo_client"};
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
   MockEchoClient mock_echo_client(loop());
   auto realm_builder = Realm::Builder::New(context());
-  realm_builder.AddComponent(Moniker{"mock_echo_client"}, Component{
-                                                              .source = Mock{&mock_echo_client},
-                                                              .eager = true,
-                                                          });
-  realm_builder.AddComponent(Moniker{"echo_server"},
-                             Component{.source = ComponentUrl{kEchoServerUrl}});
-  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
-                                         .source = Moniker{"echo_server"},
-                                         .targets = {Moniker{"mock_echo_client"}}});
+  realm_builder.AddComponent(kEchoClient, Component{
+                                              .source = Mock{&mock_echo_client},
+                                              .eager = true,
+                                          });
+  realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
+                                         .targets = {kEchoClient}});
   auto realm = realm_builder.Build(dispatcher());
   loop().Run();
   EXPECT_TRUE(mock_echo_client.WasCalled());

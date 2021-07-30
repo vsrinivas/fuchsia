@@ -5,16 +5,11 @@
 #ifndef LIB_SYS_CPP_TESTING_INTERNAL_SCOPED_INSTANCE_H_
 #define LIB_SYS_CPP_TESTING_INTERNAL_SCOPED_INSTANCE_H_
 
-// #include <fuchsia/io2/cpp/fidl.h>
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-// #include <zircon/system/public/zircon/types.h>
-
-// #include <memory>
-// #include <string>
-// #include <utility>
-// #include <variant>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <src/lib/fxl/macros.h>
 
@@ -44,9 +39,46 @@ class ScopedInstance {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedInstance);
 
+  // Connect to an interface in the exposed directory of the child component.
+  //
+  // The discovery name of the interface is inferred from the C++ type of the
+  // interface. Callers can supply an interface name explicitly to override
+  // the default name.
+  //
+  // This overload for |ConnectAtExposedDir| panics if the connection operation
+  // doesn't return ZX_OK. Callers that wish to receive that status should use
+  // one of the other overloads that returns a |zx_status_t|.
+  //
+  // # Example
+  //
+  // ```
+  // auto echo = instance.Connect<test::placeholders::Echo>();
+  // ```
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> Connect(
+      const std::string& interface_name = Interface::Name_) const {
+    fidl::InterfacePtr<Interface> result;
+    zx_status_t status = Connect<Interface>(result.NewRequest());
+    ZX_ASSERT_MSG(status == ZX_OK, "Connect to protocol %s on the exposed dir of %s failed: %s",
+                  interface_name.c_str(), child_ref_.name.c_str(), zx_status_get_string(status));
+    return std::move(result);
+  }
+
+  // SynchronousInterfacePtr method overload of |ConnectAtExposedDir|. See
+  // method above for more details.
+  template <typename Interface>
+  fidl::SynchronousInterfacePtr<Interface> ConnectSync(
+      const std::string& interface_name = Interface::Name_) const {
+    fidl::SynchronousInterfacePtr<Interface> result;
+    ZX_ASSERT_MSG(Connect<Interface>(result.NewRequest()) == ZX_OK,
+                  "Connect to protocol %s on the exposed dir of %s failed", interface_name.c_str(),
+                  child_ref_.name.c_str());
+    return std::move(result);
+  }
+
   // Connect to exposed directory of the child component.
   template <typename Interface>
-  zx_status_t ConnectAtExposedDir(fidl::InterfaceRequest<Interface> request) const {
+  zx_status_t Connect(fidl::InterfaceRequest<Interface> request) const {
     return exposed_dir_.Connect<Interface>(std::move(request));
   }
 

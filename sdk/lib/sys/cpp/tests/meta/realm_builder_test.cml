@@ -10,4 +10,11 @@
         // Needed for gTest Death Tests.
         { protocol: "fuchsia.process.Launcher" },
     ],
+    offer: [
+        {
+            protocol: [ "test.placeholders.Echo" ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
 }

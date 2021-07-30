@@ -18,6 +18,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <src/lib/fxl/macros.h>
 
@@ -40,10 +41,39 @@ class Realm {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 
+  // Connect to an interface in the exposed directory of the root component.
+  //
+  // The discovery name of the interface is inferred from the C++ type of the
+  // interface. Callers can supply an interface name explicitly to override
+  // the default name.
+  //
+  // This overload for |Connect| panics if the connection operation
+  // doesn't return ZX_OK. Callers that wish to receive that status should use
+  // one of the other overloads that returns a |zx_status_t|.
+  //
+  // # Example
+  //
+  // ```
+  // auto echo = realm.Connect<test::placeholders::Echo>();
+  // ```
+  template <typename Interface>
+  fidl::InterfacePtr<Interface> Connect(
+      const std::string& interface_name = Interface::Name_) const {
+    return root_.Connect<Interface>(interface_name);
+  }
+
+  // SynchronousInterfacePtr method overload of |Connect|. See
+  // method above for more details.
+  template <typename Interface>
+  fidl::SynchronousInterfacePtr<Interface> ConnectSync(
+      const std::string& interface_name = Interface::Name_) const {
+    return root_.ConnectSync<Interface>(interface_name);
+  }
+
   // Connect to exposed directory of the root component.
   template <typename Interface>
   zx_status_t Connect(fidl::InterfaceRequest<Interface> request) const {
-    return root_.ConnectAtExposedDir<Interface>(std::move(request));
+    return root_.Connect<Interface>(std::move(request));
   }
 
   // Get the child name of the root component.

@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <variant>
 
 // This file contains structs used by the RealmBuilder library to create realms.
@@ -34,7 +35,7 @@ namespace sys::testing {
 //
 // There is no leading slash.
 struct Moniker {
-  std::string path;
+  std::string_view path;
 };
 
 // Endpoint to root above the created Realm. This endpoint is used to route
@@ -48,22 +49,22 @@ using Endpoint = std::variant<AboveRoot, Moniker>;
 // e.g. `fuchsia.logger.LogSink`.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/protocol.
 struct Protocol {
-  std::string name;
+  std::string_view name;
 };
 
 // A directory capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/directory.
 struct Directory {
-  std::string name;
-  std::string path;
+  std::string_view name;
+  std::string_view path;
   fuchsia::io2::Operations rights;
 };
 
 // A storage capability.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/storage.
 struct Storage {
-  std::string name;
-  std::string path;
+  std::string_view name;
+  std::string_view path;
 };
 
 // A capability to be routed from one component to another.
@@ -80,13 +81,13 @@ struct CapabilityRoute {
 // A reference to a component via its component URL.
 // For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cm`.
 struct ComponentUrl {
-  std::string url;
+  std::string_view url;
 };
 
 // A reference to a component via its legacy component URL.
 // For example, `fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx`.
 struct LegacyComponentUrl {
-  std::string url;
+  std::string_view url;
 };
 
 // Handles provided to mock component.
@@ -111,7 +112,7 @@ class MockHandles {
   OutgoingDirectory* outgoing();
 
   // Convenience method to construct a ServiceDirectory by opening a handle to
-  // "/svc" in the namespace object returned by `namespace()`.
+  // "/svc" in the namespace object returned by `ns()`.
   ServiceDirectory svc();
 
  private:

@@ -106,6 +106,7 @@ source_set("realm_builder") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys2",
