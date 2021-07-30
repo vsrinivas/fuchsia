@@ -1138,12 +1138,13 @@ zx_status_t iwl_mvm_config_scan(struct iwl_mvm* mvm) {
   return ret;
 }
 
-static int iwl_mvm_scan_uid_by_status(struct iwl_mvm* mvm, uint32_t status) {
-  uint16_t i;
+static zx_status_t iwl_mvm_scan_uid_by_status(struct iwl_mvm* mvm, uint32_t status, uint16_t* idx) {
+  ZX_ASSERT(idx);
 
-  for (i = 0; i < mvm->max_scans; i++)
+  for (uint16_t i = 0; i < mvm->max_scans; i++)
     if (mvm->scan_uid_status[i] == status) {
-      return i;
+      *idx = i;
+      return ZX_OK;
     }
 
   return ZX_ERR_NOT_FOUND;
@@ -1340,14 +1341,15 @@ static uint16_t iwl_mvm_scan_umac_flags(struct iwl_mvm* mvm, struct iwl_mvm_scan
   return flags;
 }
 
-static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params,
+static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_scan_params* params,
                                      int type) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_scan_req_umac* cmd = mvm->scan_cmd;
   struct iwl_scan_umac_chan_param* chan_param;
   void* cmd_data = iwl_mvm_get_scan_req_umac_data(mvm);
   struct iwl_scan_req_umac_tail* sec_part =
       cmd_data + sizeof(struct iwl_scan_channel_cfg_umac) * mvm->fw->ucode_capa.n_scan_channels;
-  int uid;
+  uint16_t uid;
   uint32_t ssid_bitmap = 0;
   uint8_t channel_flags = 0;
   uint16_t gen_flags = 0;
@@ -1360,9 +1362,9 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm* mvm, struct iwl_mvm_scan_pa
     if (WARN_ON(params->n_scan_plans > IWL_MAX_SCHED_SCAN_PLANS)) { return -EINVAL; }
 #endif  // NEEDS_PORTING
 
-  uid = iwl_mvm_scan_uid_by_status(mvm, 0);
-  if (uid < 0) {
-    return uid;
+  zx_status_t status;
+  if ((status = iwl_mvm_scan_uid_by_status(mvm, 0, &uid)) != ZX_OK) {
+    return status;
   }
 
   memset(cmd, 0, iwl_mvm_scan_size(mvm));
@@ -1385,8 +1387,9 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm* mvm, struct iwl_mvm_scan_pa
     cmd->v8.general_flags2 = IWL_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER;
   }
 
-  // TODO: find scan vif id.
-  cmd->scan_start_mac_id = 0;
+  // The mvm->scan_vif is not assigned at this point (will be assigned after this function).
+  // Thus we retrieve the id from mvmvif directly.
+  cmd->scan_start_mac_id = mvmvif->id;
 
   if (type == IWL_MVM_SCAN_SCHED || type == IWL_MVM_SCAN_NETDETECT) {
     cmd->flags = cpu_to_le32(IWL_UMAC_SCAN_FLAG_PREEMPTIVE);
@@ -1445,7 +1448,7 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm* mvm, struct iwl_mvm_scan_pa
   sec_part->delay = cpu_to_le16(params->delay);
   sec_part->preq = params->preq;
 
-  return 0;
+  return ZX_OK;
 }
 
 #if 0  // NEEDS_PORTING
@@ -1648,7 +1651,7 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
     hcmd.id = iwl_cmd_id(SCAN_REQ_UMAC, IWL_ALWAYS_LONG_GROUP, 0);
-    ret = iwl_mvm_scan_umac(mvm, &params, IWL_MVM_SCAN_REGULAR);
+    ret = iwl_mvm_scan_umac(mvmvif, &params, IWL_MVM_SCAN_REGULAR);
   } else {
     hcmd.id = SCAN_OFFLOAD_REQUEST_CMD;
     ret = iwl_mvm_scan_lmac(mvm, &params);
