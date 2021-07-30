@@ -100,6 +100,8 @@ rustc_binary("bin") {
     "src/sco_connector.rs",
     "src/service_definitions.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 # A default configuration for bt-hfp-audio-gateway. There is no stability guarantee

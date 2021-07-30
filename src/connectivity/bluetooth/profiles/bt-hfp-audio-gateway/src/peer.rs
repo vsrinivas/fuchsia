@@ -300,7 +300,7 @@ mod tests {
         assert_eq!(peer.id(), id);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn profile_event_request_respawns_task_successfully() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -320,7 +320,7 @@ mod tests {
         let task = std::mem::replace(&mut peer.task, fasync::Task::local(async move {}));
         let cancelation = task.cancel();
         pin_mut!(cancelation);
-        exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
+        let _ = exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
 
         // create profile_event_fut in a block to limit its lifetime
         {
@@ -339,7 +339,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut task).is_pending());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn manager_request_returns_error_when_task_is_stopped() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -359,7 +359,7 @@ mod tests {
         let cancelation =
             std::mem::replace(&mut peer.task, fasync::Task::local(async move {})).cancel();
         pin_mut!(cancelation);
-        exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
+        let _ = exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
 
         let build_handler_fut = peer.build_handler();
         pin_mut!(build_handler_fut);

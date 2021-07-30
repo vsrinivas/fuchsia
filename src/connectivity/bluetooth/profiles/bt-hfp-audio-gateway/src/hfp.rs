@@ -85,7 +85,7 @@ impl Hfp {
                     self.handle_test_request(request).await?;
                 }
                 removed = self.peers.next() => {
-                    removed.map(|id| debug!("Peer removed: {}", id));
+                    let _ = removed.map(|id| debug!("Peer removed: {}", id));
                 }
                 complete => {
                     break;
@@ -315,7 +315,7 @@ mod tests {
         let id = PeerId(0);
         let (mut peer_receiver, peer) = PeerFake::new(id);
 
-        hfp.peers.insert(id, Box::new(peer));
+        let _ = hfp.peers.insert(id, Box::new(peer));
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Make a new fidl request by creating a channel and sending the request over the channel.
@@ -355,7 +355,7 @@ mod tests {
         let id = PeerId(0);
         let (mut peer_receiver, peer) = PeerFake::new(id);
 
-        hfp.peers.insert(id, Box::new(peer));
+        let _ = hfp.peers.insert(id, Box::new(peer));
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Make a new fidl request by creating a channel and sending the request over the channel.

@@ -478,6 +478,7 @@ impl PeerTask {
             return Err(Error::OutOfRange);
         }
 
+        info!("Pausing A2DP Audio to setup Audio Connection: {}", self.id);
         let pause_token = match self.a2dp_control.pause(Some(self.id)).await {
             Err(e) => {
                 warn!("Couldn't pause A2DP Audio: {:?}", e);
@@ -485,6 +486,7 @@ impl PeerTask {
             }
             Ok(token) => Some(token),
         };
+        info!("Connecting SCO to {}: {:?}", self.id, codec_id);
         let try_codecs = codec_id.map_or(vec![CodecId::MSBC, CodecId::CVSD], |c| vec![c]);
         let connection = self.sco_connector.connect(self.id.clone(), try_codecs).await?;
 
@@ -803,7 +805,7 @@ mod tests {
         drop(sender);
 
         // Test that `run()` completes.
-        peer.run(receiver).await;
+        let _ = peer.run(receiver).await;
     }
 
     /// Expects a message to be received by the peer. This expectation does not validate the
@@ -1111,7 +1113,7 @@ mod tests {
         };
         let mut buf = Vec::new();
         at::Command::serialize(&mut buf, &vec![battery_level_cmd]).expect("serialization is ok");
-        remote.as_ref().write(&buf[..]).expect("channel write is ok");
+        let _ = remote.as_ref().write(&buf[..]).expect("channel write is ok");
 
         // Run the main future - the task should receive the HF indicator and report it.
         let (battery_level, _run_fut) = run_while(&mut exec, run_fut, stream.next());
@@ -1172,7 +1174,7 @@ mod tests {
 
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
-        exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+        let _ = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
     }
 
     #[fuchsia::test]
@@ -1390,7 +1392,8 @@ mod tests {
         // should be an error.
         {
             let mut lock = audio_control.lock();
-            lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
+            let _ = lock
+                .start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
                 .expect_err("shouldn't be able to start, already started");
         }
 
@@ -1398,7 +1401,7 @@ mod tests {
         let audio_connection_fut = peer.setup_audio_connection(None);
         pin_mut!(audio_connection_fut);
         let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
-        res.expect_err("can't start when already started");
+        let _ = res.expect_err("can't start when already started");
     }
 
     #[fuchsia::test]
@@ -1435,7 +1438,8 @@ mod tests {
         // Should have started up the test audio control.
         {
             let mut lock = audio_control.lock();
-            lock.start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
+            let _ = lock
+                .start(PeerId(0), bredr::ScoConnectionParameters::EMPTY)
                 .expect_err("shouldn't be able to start, already started");
         }
 

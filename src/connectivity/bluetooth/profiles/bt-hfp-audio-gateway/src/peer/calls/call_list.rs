@@ -144,9 +144,9 @@ mod tests {
         let i2 = list.insert(2);
         let i3 = list.insert(3);
         let i4 = list.insert(4);
-        list.remove(i2);
-        list.remove(i1);
-        list.remove(i3);
+        assert!(list.remove(i2).is_some());
+        assert!(list.remove(i1).is_some());
+        assert!(list.remove(i3).is_some());
         let i5 = list.insert(5);
         assert_eq!(i5, i1, "i5 is the lowest possible index (i1) even though i1 was not the first or last index removed");
         assert_eq!(list.get(i5), Some(&5), "The value at i5 is correct");
@@ -169,7 +169,7 @@ mod tests {
         let i2 = list.insert(2);
         let i3 = list.insert(3);
         let i4 = list.insert(4);
-        list.remove(i2);
+        assert!(list.remove(i2).is_some());
         let actual: Vec<_> = list.calls().collect();
         let expected = vec![(i1, &1), (i3, &3), (i4, &4)];
         assert_eq!(actual, expected);

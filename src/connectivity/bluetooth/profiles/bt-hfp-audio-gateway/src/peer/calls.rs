@@ -189,7 +189,9 @@ impl Calls {
         let proxy = call.proxy.clone();
         let index = self.current_calls.insert(call);
         let call_state = HangingGetStream::new(Box::new(move || Some(proxy.watch_state())));
-        self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index));
+        if self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index)).is_some() {
+            warn!("Replaced call at {} with a new call?", index)
+        }
         self.terminated = false;
         Ok(index)
     }
@@ -300,8 +302,8 @@ impl Calls {
 
     /// Remove all references to the call assigned to `index`.
     fn remove_call(&mut self, index: CallIdx) {
-        self.call_updates.remove(&index);
-        self.current_calls.remove(index);
+        drop(self.call_updates.remove(&index));
+        drop(self.current_calls.remove(index));
     }
 
     /// Iterator over all calls in `state`.
@@ -636,7 +638,7 @@ mod tests {
         let num = Number::from("1");
         let mut next_call = new_next_call_fidl(client_end, num.clone());
         next_call.state = Some(CallState::IncomingRinging);
-        calls.handle_new_call(next_call).expect("success handling new call");
+        let _ = calls.handle_new_call(next_call).expect("success handling new call");
         let expected = CallIndicators {
             call: types::Call::None,
             callsetup: types::CallSetup::Incoming,
@@ -654,10 +656,10 @@ mod tests {
         let (mut calls, mut peer_handler, mut call_stream, _idx, _num) = setup_ongoing_call();
         assert!(calls.should_ring());
 
-        assert_calls_indicators(&mut exec, &mut calls);
+        let _ = assert_calls_indicators(&mut exec, &mut calls);
 
         update_call(&mut exec, &mut call_stream, CallState::OngoingActive);
-        assert_calls_indicators(&mut exec, &mut calls);
+        let _ = assert_calls_indicators(&mut exec, &mut calls);
 
         // Call is no longer ringing after call state has changed
         assert!(!calls.should_ring());
@@ -869,15 +871,11 @@ mod tests {
     /// Poll the calls  driving async execution, until there are no more updates and and we receive
     /// Pending.  Returns the most recent indicators if any were sent.
     #[track_caller]
-    fn poll_calls_until_pending(
-        exec: &mut fasync::TestExecutor,
-        calls: &mut Calls,
-    ) -> Option<CallIndicatorsUpdates> {
-        let mut indicators = None;
+    fn poll_calls_until_pending(exec: &mut fasync::TestExecutor, calls: &mut Calls) {
         loop {
             match exec.run_until_stalled(&mut calls.next()) {
-                Poll::Ready(Some(ind)) => indicators = Some(ind),
-                Poll::Pending => return indicators,
+                Poll::Ready(Some(_ind)) => return,
+                Poll::Pending => return,
                 Poll::Ready(None) => panic!("Calls terminated before expected!"),
             }
         }

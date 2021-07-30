@@ -7,7 +7,7 @@ use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
-use tracing::trace;
+use tracing::{info, trace};
 
 use crate::error::ScoConnectError;
 use crate::features::CodecId;
@@ -84,6 +84,7 @@ impl ScoConnector {
         let (client, mut requests) =
             fidl::endpoints::create_request_stream::<bredr::ScoConnectionReceiverMarker>()?;
 
+        info!("Initiating SCO connection for {}: {:?}", peer_id, params);
         proxy.connect_sco(&mut peer_id.into(), true, params.clone(), client)?;
 
         let socket = match requests.next().await {

@@ -368,7 +368,7 @@ impl ServiceLevelConnection {
     fn check_and_cleanup_procedure(&mut self, procedure: &ProcedureMarker) -> bool {
         let is_terminated = self.procedures.get(procedure).map_or(false, |p| p.is_terminated());
         if is_terminated {
-            self.procedures.remove(procedure);
+            drop(self.procedures.remove(procedure));
 
             // Special case of the SLCI Procedure - once this is complete, the channel is
             // considered initialized.
@@ -880,10 +880,10 @@ pub(crate) mod tests {
         let set_speaker_gain_part_one = b"AT+VG";
         let set_speaker_gain_part_two = b"S=1\r";
 
-        remote.as_ref().write(set_speaker_gain_part_one).expect("Sending part one.");
+        let _ = remote.as_ref().write(set_speaker_gain_part_one).expect("Sending part one.");
         expect_slc_pending(&mut exec, &mut slc);
 
-        remote.as_ref().write(set_speaker_gain_part_two).expect("Sending part two.");
+        let _ = remote.as_ref().write(set_speaker_gain_part_two).expect("Sending part two.");
         let slc_volume_request = SlcRequest::SpeakerVolumeSynchronization {
             level: Gain::try_from(0 as u8).unwrap(),
             response: Box::new(|| AgUpdate::Ok),
@@ -900,7 +900,7 @@ pub(crate) mod tests {
 
         let set_speaker_gain_send_dtmf = b"AT+VGS=1\rAT+VTS=#\r";
 
-        remote.as_ref().write(set_speaker_gain_send_dtmf).expect("Sending.");
+        let _ = remote.as_ref().write(set_speaker_gain_send_dtmf).expect("Sending.");
 
         let slc_volume_request = SlcRequest::SpeakerVolumeSynchronization {
             level: Gain::try_from(0 as u8).unwrap(),

@@ -251,7 +251,7 @@ mod tests {
     #[fuchsia::test]
     fn new_gain_control_succeeds() {
         let _exec = fasync::TestExecutor::new().unwrap();
-        GainControl::new().expect("a success value");
+        let _ = GainControl::new().expect("a success value");
     }
 
     #[fuchsia::test]
@@ -261,11 +261,11 @@ mod tests {
         let mut control = GainControl::new().expect("a success value");
         assert!(control.client_end.is_some());
 
-        control.get_client_end().expect("success in taking client end");
+        let _ = control.get_client_end().expect("success in taking client end");
         assert!(control.client_end.is_none());
 
         // taking a second time creates a new gain control and still takes the client_end
-        control.get_client_end().expect("success in taking client end");
+        let _ = control.get_client_end().expect("success in taking client end");
         assert!(control.client_end.is_none());
     }
 

@@ -72,8 +72,8 @@ pub async fn run_services(
     call_manager: Sender<CallManagerProxy>,
     test_requests: Sender<HfpTestRequest>,
 ) -> Result<(), Error> {
-    fs.dir("svc").add_fidl_service(Services::Hfp).add_fidl_service(Services::HfpTest);
-    fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
+    let _ = fs.dir("svc").add_fidl_service(Services::Hfp).add_fidl_service(Services::HfpTest);
+    let _ = fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
     fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |connection| match connection {
         Services::Hfp(stream) => handle_hfp_client_connection(stream, call_manager.clone()).boxed(),
         Services::HfpTest(stream) => {
