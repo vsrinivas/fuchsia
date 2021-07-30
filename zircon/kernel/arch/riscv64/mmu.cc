@@ -51,6 +51,7 @@ uint64_t kernel_relocated_base = 0xffffffff10000000;
 #endif
 
 // The main translation table.
+paddr_t riscv64_kernel_translation_table_phys;
 pte_t riscv64_kernel_translation_table[RISCV64_MMU_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
 
 pte_t* riscv64_get_kernel_ptable() { return riscv64_kernel_translation_table; }
@@ -945,7 +946,7 @@ zx_status_t Riscv64ArchVmAspace::Init() {
     DEBUG_ASSERT(size_ == KERNEL_ASPACE_SIZE);
 
     tt_virt_ = riscv64_get_kernel_ptable();
-    tt_phys_ = vaddr_to_paddr(const_cast<pte_t*>(tt_virt_));
+    tt_phys_ = riscv64_kernel_translation_table_phys;
     asid_ = (uint16_t)MMU_RISCV64_GLOBAL_ASID;
   } else {
     if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
@@ -1011,18 +1012,20 @@ void Riscv64ArchVmAspace::ContextSwitch(Riscv64ArchVmAspace* old_aspace, Riscv64
     LTRACEF("aspace %p\n", aspace);
   }
 
+  uint64_t satp;
   if (aspace) {
     aspace->canary_.Assert();
     DEBUG_ASSERT((aspace->flags_ & (ARCH_ASPACE_FLAG_KERNEL | ARCH_ASPACE_FLAG_GUEST)) == 0);
 
-    uint64_t satp = ((uint64_t)RISCV64_SATP_MODE_SV48 << RISCV64_SATP_MODE_SHIFT) |
-                     ((uint64_t)aspace->asid_ << RISCV64_SATP_ASID_SHIFT) |
-                     (aspace->tt_phys_ >> PAGE_SIZE_SHIFT);
-
-    riscv64_csr_write(RISCV64_CSR_SATP, satp);
-
-    __asm("sfence.vma  zero, zero");
+    satp = ((uint64_t)RISCV64_SATP_MODE_SV48 << RISCV64_SATP_MODE_SHIFT) |
+            ((uint64_t)aspace->asid_ << RISCV64_SATP_ASID_SHIFT) |
+            (aspace->tt_phys_ >> PAGE_SIZE_SHIFT);
+  } else {
+    satp = ((uint64_t)RISCV64_SATP_MODE_SV48 << RISCV64_SATP_MODE_SHIFT) |
+            (riscv64_kernel_translation_table_phys >> PAGE_SIZE_SHIFT);
   }
+  riscv64_csr_write(RISCV64_CSR_SATP, satp);
+  __asm("sfence.vma  zero, zero");
 }
 
 void arch_zero_page(void* _ptr) {

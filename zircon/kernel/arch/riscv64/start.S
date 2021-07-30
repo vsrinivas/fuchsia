@@ -56,6 +56,9 @@ FUNCTION(_start)
 
     // void riscv64_boot_map(pte_t* kernel_table0, vaddr_t vaddr, paddr_t paddr, size_t len, pte_t flags);
     lla     a0, riscv64_kernel_translation_table
+    // Store the physical address of the pgtable for future use
+    lla     a1, riscv64_kernel_translation_table_phys
+    sd      a0, (a1)
     li      a1, 0
     li      a2, 0
     li      a3, ARCH_PHYSMAP_SIZE
