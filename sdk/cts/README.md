@@ -207,7 +207,7 @@ on).
 
 The allowlist for non-SDK code can be found in
 `//sdk/cts/build/allowed_cts_deps.gni`.  Test authors who believe they need an
-additional inclusion should reach out to the OWNERS of this directory.
+additional inclusion should file a bug in the [CTS bug component].
 
 ### Running example tests
 
@@ -229,12 +229,38 @@ header.  C headers currently target C11 and C++11 and above.  C++ headers
 currently target C++14 and above.  This policy may change as we build a larger
 test corpus and decide how to enforce C++14 compatibility.
 
-All tests that target API must be written in a language that is supported for
+All tests that target API should be written in a language that is supported for
 end developers per the [Fuchsia language policy].  The CTS currently only
 provides direct support for C++ for tests that target API.
 
-In the future, we plan on supporting ABI-only tests that can be written in
-different languages (e.g., Rust) and delivered as prebuilts into the CTS.
+Tests that are only intended to exercise ABI may be written in any language
+supported for use in the Fuchsia Platform Source Tree, including Rust.  This
+may, for example, include tests that check startup handles or the format of the
+VDSO.
+
+For the most part, tests that exercise FIDL definitions and other APIs shipped
+with SDKs are API tests that should be written in C++.  However, if this places
+an undue burden on test authorship (e.g., there are large frameworks needed for
+the test or a substantial body of appropriate existing tests that are written in
+Rust), we can make exceptions. Note the following:
+
+* If you do not use C++, your API will not undergo build time compatibility
+  testing.  This places a burden on anyone trying to deploy an SDK, because
+  changes to your API are more likely to break compilation of petal code.
+
+* If there are large test frameworks or libraries that you need to use to write
+  tests for public APIs, and they are only written in a language that we don't
+  support for SDK users, that means that there is a form of testing that you
+  need for exercising developer use cases that you are not providing to
+  developers.  Consider whether those test frameworks should be provided in a
+  language that is supported for end-developers.
+
+* There will be a high bar for language exceptions for teams that wish to use
+  other languages only because of unfamiliarity with C++.  We encourage API
+  developers to understand how end-developers use their APIs.
+
+For information about exceptions to the C++-only policy, file a bug in the [CTS
+bug component].
 
 ##### Host-side tests
 
@@ -252,7 +278,8 @@ new dependencies on first-party code.
 In order to avoid relying on third party use of the SDK to test the SDK, CTS
 tests that run on-device do not rely on third party frameworks that rely on the
 SDK to build.  This is why we use `zxtest` instead of `gtest`.  If you want to
-include a third party dependency, contact the OWNERS of `//sdk/cts/`.
+include a third party dependency, file a bug in the [CTS bug component] to reach
+out to the team to discuss it.
 
 Code that runs on the host does not have this restriction.
 
@@ -290,13 +317,10 @@ Where will CTS tests run? Emulator? Devices?
 
   * Initially, CTS tests will be automatically run on Emulators in CQ.  Developers will also be able to run the tests locally as part of their traditional workflows.  Over time, tests are likely to be run on all devices as part of qualification.
 
-How do we get started as a rust service? Why does language matter? What level of effort might it be to get rust tests to work?
-
-  * CTS tests are limited to C++ because part of the goal of CTS is to ensure that code targeted to SDKs continues to build and execute correctly.   Because there is currently no Rust support in SDKs, Rust-based tests do not capture the behavior of code that targets SDKs.  Depending on the level of demand from Rust-based teams, we may consider binary-only Rust tests, which can capture accurate execution, but not build.  We will have to balance the need to provide source based tests with the pain of having to write tests in C++.  Please reach out to the team with questions.
-
 ### Additional questions
 
-For questions and clarification on this document, please reach out to the
-directory's owners.
+For questions and clarification on this document, please reach out to this
+directory's owners or file a bug in the [CTS bug component].
 
 [Fuchsia language policy]: https://fuchsia.dev/fuchsia-src/contribute/governance/policy/programming_languages
+[CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
