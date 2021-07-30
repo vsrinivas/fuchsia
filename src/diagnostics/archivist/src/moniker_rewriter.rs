@@ -2,29 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/80913): Update this code to a more general solution.
-// This code currently only supports fxbug.dev/81282.
+use {fidl_fuchsia_diagnostics::Selector, lazy_static::lazy_static};
 
-use fidl_fuchsia_diagnostics::Selector;
-
-// Note: These are unparsed strings, not separated into moniker segments.
-// TODO(fxbug.dev/80913): legacy / v1 monikers can contain slashes and would need to be matched
-// piecewise.
-const LEGACY_MEMORY_MONIKER_STR: &str = "memory_monitor.cmx";
-const MODERN_MEMORY_MONIKER_STR: &str = "core/memory_monitor";
+lazy_static! {
+    #[derive(Clone)]
+    static ref MONIKERS_TO_REWRITE: Vec<MonikerRewritePair> = vec![MonikerRewritePair {
+        // Note: These are unparsed strings, not separated into moniker segments.
+        // legacy_str cannot contain slashes but modern_str can.
+        legacy_str: "memory_monitor.cmx",
+        modern_str: "core/memory_monitor",
+    }];
+}
 
 pub struct MonikerRewriter {
+    monikers: Vec<MonikerRewritePair>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MonikerRewritePair {
     legacy_str: &'static str,
     modern_str: &'static str,
 }
 
 impl MonikerRewriter {
     pub(crate) fn new() -> Self {
-        Self { legacy_str: LEGACY_MEMORY_MONIKER_STR, modern_str: MODERN_MEMORY_MONIKER_STR }
+        Self { monikers: MONIKERS_TO_REWRITE.to_vec() }
     }
-
-    // TODO(fxbug.dev/80913): Add a chained-initializer function to add (legacy, modern) pairs
-    // to the struct. (Also, elsewhere, infrastructure to load those pairs from a config file.)
 
     /// Checks whether any of the selectors needs rewriting. If so, it returns an OutputRewriter
     /// that makes the corresponding change on the output. Otherwise, it returns None for the
@@ -33,20 +36,22 @@ impl MonikerRewriter {
         &self,
         mut selectors: Vec<Selector>,
     ) -> (Option<Vec<Selector>>, Option<OutputRewriter>) {
-        let mut rewrote = false;
+        let mut monikers_rewritten = Vec::new();
         for s in selectors.iter_mut() {
-            // Not expecting an error here, but if we get one, don't make any changes.
-            if selectors::match_component_moniker_against_selector(&[self.legacy_str], &s)
-                .unwrap_or(false)
-            {
-                if let Ok(selector) = selectors::parse_component_selector(self.modern_str) {
-                    s.component_selector = Some(selector);
-                    rewrote = true;
+            for pair in &self.monikers {
+                // Not expecting an error here, but if we get one, don't make any changes.
+                if selectors::match_component_moniker_against_selector(&[pair.legacy_str], &s)
+                    .unwrap_or(false)
+                {
+                    if let Ok(selector) = selectors::parse_component_selector(pair.modern_str) {
+                        s.component_selector = Some(selector);
+                        monikers_rewritten.push(pair.clone());
+                    }
                 }
             }
         }
-        let rewriter = if rewrote {
-            Some(OutputRewriter { legacy: self.legacy_str, modern_str: self.modern_str })
+        let rewriter = if monikers_rewritten.len() > 0 {
+            Some(OutputRewriter { monikers: monikers_rewritten })
         } else {
             None
         };
@@ -56,17 +61,17 @@ impl MonikerRewriter {
 
 #[derive(Debug)]
 pub struct OutputRewriter {
-    legacy: &'static str,
-    modern_str: &'static str,
+    monikers: Vec<MonikerRewritePair>,
 }
 
 impl OutputRewriter {
     pub(crate) fn rewrite_moniker(&self, moniker: String) -> String {
-        if self.modern_str == moniker {
-            self.legacy.to_string()
-        } else {
-            moniker
+        for pair in &self.monikers {
+            if pair.modern_str == moniker {
+                return pair.legacy_str.to_string();
+            }
         }
+        return moniker;
     }
 }
 
@@ -74,6 +79,21 @@ impl OutputRewriter {
 mod test {
     use super::*;
     use fidl_fuchsia_diagnostics::StringSelector;
+
+    macro_rules! extract_moniker {
+        ($selector:expr) => {
+            extract_moniker!($selector, 0)
+        };
+        ($selectors:expr, $index:expr) => {
+            $selectors.as_ref().unwrap()[$index]
+                .component_selector
+                .as_ref()
+                .unwrap()
+                .moniker_segments
+                .as_ref()
+                .unwrap()
+        };
+    }
 
     #[test]
     fn moniker_rewriter_works() {
@@ -88,39 +108,21 @@ mod test {
             rewriter.rewrite_selectors(vec![irrelevant_selector]);
 
         assert_eq!(
-            rewritten_legacy.unwrap()[0]
-                .component_selector
-                .as_ref()
-                .unwrap()
-                .moniker_segments
-                .as_ref()
-                .unwrap(),
+            extract_moniker!(rewritten_legacy),
             &vec![
                 StringSelector::StringPattern("core".to_string()),
                 StringSelector::StringPattern("memory_monitor".to_string())
             ]
         );
         assert_eq!(
-            rewritten_new.unwrap()[0]
-                .component_selector
-                .as_ref()
-                .unwrap()
-                .moniker_segments
-                .as_ref()
-                .unwrap(),
+            extract_moniker!(rewritten_new),
             &vec![
                 StringSelector::StringPattern("core".to_string()),
                 StringSelector::StringPattern("memory_monitor".to_string())
             ]
         );
         assert_eq!(
-            rewritten_irrelevant.unwrap()[0]
-                .component_selector
-                .as_ref()
-                .unwrap()
-                .moniker_segments
-                .as_ref()
-                .unwrap(),
+            extract_moniker!(rewritten_irrelevant),
             &vec![
                 StringSelector::StringPattern("foo".to_string()),
                 StringSelector::StringPattern("bar.baz".to_string())
@@ -139,5 +141,47 @@ mod test {
             rewriter.rewrite_moniker("core/memory_monitor".to_string()),
             "memory_monitor.cmx".to_string()
         );
+    }
+
+    #[test]
+    fn array_logic_works() {
+        let rewriter = MonikerRewriter {
+            monikers: vec![
+                MonikerRewritePair { legacy_str: "legacy1", modern_str: "modern1" },
+                MonikerRewritePair { legacy_str: "legacy2", modern_str: "modern2" },
+            ],
+        };
+        let legacy_selector1 = selectors::parse_selector("legacy1:path/to:data").unwrap();
+        let legacy_selector2 = selectors::parse_selector("legacy2:path/to:data").unwrap();
+        let irrelevant_selector = selectors::parse_selector("irrelevant:path/to:data").unwrap();
+
+        let (rewritten_1_i, rewriter_1_i) =
+            rewriter.rewrite_selectors(vec![legacy_selector1.clone(), irrelevant_selector.clone()]);
+        let (rewritten_2_1, rewriter_2_1) =
+            rewriter.rewrite_selectors(vec![legacy_selector2.clone(), legacy_selector1.clone()]);
+        let rewriter_1_i = rewriter_1_i.unwrap();
+        let rewriter_2_1 = rewriter_2_1.unwrap();
+
+        assert_eq!(
+            extract_moniker!(rewritten_1_i, 0),
+            &vec![StringSelector::StringPattern("modern1".to_string()),]
+        );
+        assert_eq!(
+            extract_moniker!(rewritten_1_i, 1),
+            &vec![StringSelector::StringPattern("irrelevant".to_string()),]
+        );
+        assert_eq!(
+            extract_moniker!(rewritten_2_1, 0),
+            &vec![StringSelector::StringPattern("modern2".to_string()),]
+        );
+        assert_eq!(
+            extract_moniker!(rewritten_2_1, 1),
+            &vec![StringSelector::StringPattern("modern1".to_string()),]
+        );
+
+        assert_eq!(rewriter_1_i.rewrite_moniker("modern1".to_string()), "legacy1".to_string());
+        assert_eq!(rewriter_1_i.rewrite_moniker("modern2".to_string()), "modern2".to_string());
+        assert_eq!(rewriter_2_1.rewrite_moniker("modern1".to_string()), "legacy1".to_string());
+        assert_eq!(rewriter_2_1.rewrite_moniker("modern2".to_string()), "legacy2".to_string());
     }
 }
