@@ -63,7 +63,7 @@ pub async fn build_ssh_command_base(
     if setup_repository_tunnel {
         match listen_addr().await {
             Ok(addr) => {
-                c.arg("-R").arg(addr.port().to_string());
+                c.arg("-R").arg(format!("{}:localhost:{}", addr.port(), addr.port()));
             }
             Err(e) => {
                 log::error!(
