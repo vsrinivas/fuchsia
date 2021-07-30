@@ -35,6 +35,8 @@ type Rectangle = struct {
 /// Inter-protocol redundancy. Some of these parameters may also be sent over an
 /// independent channel dedicated to view control; the client is responsible for
 /// correct use of asynchronously received parameters.
+///
+/// TODO(fxbug.dev/81798): Rename viewport, it is used in Flatland.
 type ViewParameters = struct {
     /// The view's area of content, placed in the coordinate system of the view.
     ///
