@@ -61,19 +61,11 @@ function run_test {
   return $status
 }
 
-function test_empty_fvm_fails {
-  tmpfile=$(mktemp ${TEMP_DIR}/fvm-XXXXX.blk)
-  expect_fail "${FVM_CMD} ${tmpfile} create --slice 32k"
-  rm "${tmpfile}"
-  return 0
-}
-
 function test_fvm_with_blobfs {
   blobfs=$(mktemp ${TEMP_DIR}/blob-XXXXX.blk)
   expect "${BLOBFS_CMD} ${blobfs} create"
   tmpfile=$(mktemp ${TEMP_DIR}/fvm-XXXXX.blk)
   expect "${FVM_CMD} ${tmpfile} create --slice 32k --blob ${blobfs}"
-  expect "${FVM_CMD} ${tmpfile} verify"
   rm "${tmpfile}"
   rm "${blobfs}"
   return 0
@@ -84,12 +76,10 @@ function test_fvm_with_blobfs_and_reserved_part {
   expect "${BLOBFS_CMD} ${blobfs} create"
   tmpfile=$(mktemp ${TEMP_DIR}/fvm-XXXXX.blk)
   expect "${FVM_CMD} ${tmpfile} create --slice 32k --blob ${blobfs} --reserve-slices 2"
-  expect "${FVM_CMD} ${tmpfile} verify"
   rm "${tmpfile}"
   rm "${blobfs}"
   return 0
 }
 
-run_test test_empty_fvm_fails
 run_test test_fvm_with_blobfs
 run_test test_fvm_with_blobfs_and_reserved_part

@@ -66,9 +66,6 @@ int usage(void) {
   fprintf(stderr, "Commands:\n");
   fprintf(stderr, " create : Creates an FVM partition\n");
   fprintf(stderr,
-          " add : Adds a Minfs or Blobfs partition to an FVM (input path is"
-          " required)\n");
-  fprintf(stderr,
           " extend : Extends an FVM container to the specified size (length is"
           " required)\n");
   fprintf(stderr,
@@ -77,9 +74,6 @@ int usage(void) {
   fprintf(stderr, " sparse : Creates a sparse file. One or more input paths are required.\n");
   fprintf(stderr, " pave : Creates an FVM container from a sparse file.\n");
   fprintf(stderr,
-          " verify : Report basic information about sparse/fvm files and run fsck on"
-          " contained partitions.\n");
-  fprintf(stderr,
           " check : verifies that the |--sparse| image provided is valid. if |--max_disk_size| is "
           "provided check that the maximum disk size is set to such value in the sparse image.\n");
   fprintf(stderr,
@@ -87,15 +81,6 @@ int usage(void) {
           " If the --disk flag is provided, instead checks that the paved sparse file"
           " will fit within a disk of this size. On success, no information is"
           " outputted\n");
-  fprintf(stderr,
-          " used-data-size : Prints sum of the space, in bytes, used by data on \n"
-          " different partitions. This does not include blocks used internally for \n"
-          " superblock, bitmaps, inodes, or for journal,\n");
-  fprintf(stderr, " used-inodes : Prints the sum of used inodes on different partitions.\n");
-  fprintf(stderr,
-          " used-size : Prints sum of the space, in bytes, used by data and by\n"
-          " superblock, bitmaps, inodes, and journal different partitions. All of the\n"
-          " reservations for non-data blocks are considered as used.\n");
   fprintf(stderr,
           " decompress : Decompresses a compressed sparse/raw file. --sparse/lz4/default input "
           "path is required. If option is set to --default, the tool will attempt to detect the "
@@ -797,19 +782,6 @@ int main(int argc, char** argv) {
       std::cout << result.error() << std::endl;
       return -1;
     }
-  } else if (!strcmp(command, "add")) {
-    std::unique_ptr<FvmContainer> fvmContainer;
-    if (FvmContainer::CreateExisting(path, offset, &fvmContainer) != ZX_OK) {
-      return -1;
-    }
-
-    if (add_partitions(fvmContainer.get(), argc - i, argv + i) < 0) {
-      return -1;
-    }
-
-    if (fvmContainer->Commit() != ZX_OK) {
-      return -1;
-    }
   } else if (!strcmp(command, "extend")) {
     auto extend_params_or = storage::volume_image::ExtendParams::FromArguments(arguments);
     if (extend_params_or.is_error()) {
@@ -830,17 +802,6 @@ int main(int argc, char** argv) {
 
     if (auto result = storage::volume_image::Create(create_params_or.value()); result.is_error()) {
       std::cout << result.error() << std::endl;
-      return -1;
-    }
-  } else if (!strcmp(command, "verify")) {
-    std::unique_ptr<Container> container_data;
-    if (Container::Create(path, offset, flags, &container_data) != ZX_OK) {
-      return -1;
-    }
-
-    zx_status_t status = container_data->Verify();
-    if (status != ZX_OK) {
-      fprintf(stderr, "Verification failed: %d\n", status);
       return -1;
     }
   } else if (!strcmp(command, "decompress")) {
@@ -907,43 +868,6 @@ int main(int argc, char** argv) {
     if (!size_params_or.value().length.has_value()) {
       std::cout << size_or.value() << std::endl;
     }
-
-  } else if (!strcmp(command, "used-data-size")) {
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
-      return -1;
-    }
-
-    uint64_t size;
-
-    if (sparseContainer->UsedDataSize(&size) != ZX_OK) {
-      return -1;
-    }
-    printf("%" PRIu64 "\n", size);
-  } else if (!strcmp(command, "used-inodes")) {
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
-      return -1;
-    }
-
-    uint64_t used_inodes;
-
-    if (sparseContainer->UsedInodes(&used_inodes) != ZX_OK) {
-      return -1;
-    }
-    printf("%" PRIu64 "\n", used_inodes);
-  } else if (!strcmp(command, "used-size")) {
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
-      return -1;
-    }
-
-    uint64_t size;
-
-    if (sparseContainer->UsedSize(&size) != ZX_OK) {
-      return -1;
-    }
-    printf("%" PRIu64 "\n", size);
   } else if (!strcmp(command, "pave")) {
     auto pave_params_or = storage::volume_image::PaveParams::FromArguments(arguments);
     if (pave_params_or.is_error()) {
