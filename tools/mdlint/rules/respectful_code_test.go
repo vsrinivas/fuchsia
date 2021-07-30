@@ -23,6 +23,9 @@ func TestRespectifulCode(t *testing.T) {
 			"end_of_setence.md": `
 			I'm «insane.»
 			`,
+			"broken_word.md": `
+			I'm a «man-in-the-middle.»
+			`,
 		},
 	}.runOverTokens(t, newRespectfulCode)
 }

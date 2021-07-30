@@ -6,6 +6,8 @@ package rules
 
 import (
 	"bytes"
+	_ "embed"
+	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -14,7 +16,16 @@ import (
 
 var matchAvoidWords *regexp.Regexp
 
+//go:embed respectful_code_words.json
+var respectfulWordsBytes []byte
+
 func init() {
+
+	// Load external JSON of non-inclusive words
+	if err := json.Unmarshal(respectfulWordsBytes, &avoidWords); err != nil {
+		panic(err)
+	}
+
 	var (
 		buf  bytes.Buffer
 		keys []string
@@ -26,7 +37,6 @@ func init() {
 	buf.WriteString(strings.Join(keys, "|"))
 	buf.WriteString(")[^a-zA-Z0-9_]*$")
 	matchAvoidWords = regexp.MustCompile(buf.String())
-
 	core.RegisterLintRuleOverTokens(respectfulCodeName, newRespectfulCode)
 }
 
@@ -43,21 +53,12 @@ func newRespectfulCode(reporter core.Reporter) core.LintRuleOverTokens {
 	return &respectfulCode{reporter: reporter}
 }
 
-var avoidWords = map[string]string{
-	"master":    "primary, controller, leader, host",
-	"slave":     "replica, subordinate, secondary, follower, device, peripheral",
-	"whitelist": "allowlist, exception list, inclusion list",
-	"blacklist": "denylist, blocklist, exclusion list",
-	"insane":    "unexpected, catastrophic, incoherent",
-	"sane":      "expected, appropriate, sensible, valid",
-	"crazy":     "unexpected, catastrophic, incoherent",
-	"redline":   "priority line, limit, soft limit",
-}
+var avoidWords map[string]string
 
+// The lexer only supports matching against one word
 func (rule *respectfulCode) OnNext(tok core.Token) {
 	if tok.Kind == core.Text {
 		match := matchAvoidWords.FindStringSubmatch(tok.Content)
-
 		if match != nil && len(match) > 1 {
 			match_lower := strings.ToLower(match[1])
 			alternatives := avoidWords[match_lower]

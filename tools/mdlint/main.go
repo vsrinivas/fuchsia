@@ -59,7 +59,7 @@ var (
 )
 
 func init() {
-	flag.Var(&rootDir, "root-dir", "(required) Path to root directory containing Mardown files")
+	flag.Var(&rootDir, "root-dir", "(required) Path to root directory containing Markdown files")
 	flag.StringVar(&reportFilenamesMatching, "filter-filenames", "", "Regex to filter warnings by their filenames")
 	flag.BoolVar(&jsonOutput, "json", false, "Enable JSON output")
 
