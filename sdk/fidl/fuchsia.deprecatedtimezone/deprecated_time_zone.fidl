@@ -18,6 +18,7 @@ protocol Timezone {
     /// Returns local timezone offset (in minutes from UTC. Can be negative) for
     /// the supplied number of milliseconds since the Unix epoch. Returns a
     /// non-zero DST offset when appropriate.
+    @deprecated("use the ICU library to compute the time zone offset")
     GetTimezoneOffsetMinutes(struct {
         milliseconds_since_epoch int64;
     }) -> (struct {
@@ -26,6 +27,7 @@ protocol Timezone {
     });
 
     /// Sets the timezone for the machine based on an ICU ID.
+    @deprecated("use fuchsia.settings.Intl instead")
     SetTimezone(struct {
         timezone_id string;
     }) -> (struct {
@@ -33,16 +35,19 @@ protocol Timezone {
     });
 
     /// Gets the timezone ID string.
+    @deprecated("use fuchsia.intl.PropertyProvider instead")
     GetTimezoneId() -> (struct {
         timezone_id string;
     });
 
     /// Watches for updates to the timezone ID.
+    @deprecated("use fuchsia.settings.Intl instead")
     Watch(resource struct {
         watcher client_end:TimezoneWatcher;
     });
 };
 
+@deprecated("use fuchsia.intl.PropertyProvider")
 protocol TimezoneWatcher {
     /// When the timezone changes, returns the new timezone ID.
     OnTimezoneOffsetChange(struct {
