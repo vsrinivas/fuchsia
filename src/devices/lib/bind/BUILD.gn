@@ -42,6 +42,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:nom_locate",
     "//third_party/rust_crates:num-derive",
@@ -86,7 +87,10 @@ rustc_library("lib") {
     "src/parser/mod.rs",
     "src/test.rs",
   ]
-  inputs = [ "tests_schema.json" ]
+  inputs = [
+    "composite_tests_schema.json",
+    "tests_schema.json",
+  ]
 }
 
 rustc_fuzzer("bind_rules_bytecode_fuzzer") {

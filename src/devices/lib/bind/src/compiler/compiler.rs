@@ -199,7 +199,10 @@ pub fn compile<'a>(
 ) -> Result<CompiledBindRules<'a>, CompilerError> {
     if bind_composite::Ast::try_from(rules_str).is_ok() {
         return Ok(CompiledBindRules::CompositeBind(compile_bind_composite(
-            rules_str, libraries, lint,
+            rules_str,
+            libraries,
+            lint,
+            use_new_bytecode,
         )?));
     }
 
@@ -238,12 +241,17 @@ pub fn compile_bind_composite<'a>(
     rules_str: &'a str,
     libraries: &[String],
     lint: bool,
+    use_new_bytecode: bool,
 ) -> Result<CompositeBindRules<'a>, CompilerError> {
     let ast = bind_composite::Ast::try_from(rules_str).map_err(CompilerError::BindParserError)?;
     let symbol_table = get_symbol_table_from_libraries(&ast.using, libraries, lint)?;
     let primary_node = CompositeNode {
         name: ast.primary_node.name,
-        instructions: compile_statements(ast.primary_node.statements, &symbol_table, true)?,
+        instructions: compile_statements(
+            ast.primary_node.statements,
+            &symbol_table,
+            use_new_bytecode,
+        )?,
     };
     let additional_nodes = ast
         .nodes

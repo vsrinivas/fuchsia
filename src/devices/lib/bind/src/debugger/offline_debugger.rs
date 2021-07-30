@@ -4,7 +4,9 @@
 
 use crate::bytecode_encoder::encode_v1::encode_symbol;
 use crate::compiler::instruction::{InstructionDebug, RawAstLocation};
-use crate::compiler::{self, BindRules, Symbol, SymbolTable, SymbolicInstruction};
+use crate::compiler::{
+    self, BindRules, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionInfo,
+};
 use crate::debugger::device_specification::{DeviceSpecification, Property};
 use crate::errors::UserError;
 use crate::parser::bind_rules::{Condition, ConditionOp, Statement};
@@ -114,14 +116,19 @@ pub fn debug_from_str<'a>(
     let device_specification =
         DeviceSpecification::from_str(device_file).map_err(DebuggerError::ParserError)?;
 
-    debug_from_device_specification(bind_rules, device_specification)
+    debug_from_device_specification(
+        &bind_rules.symbol_table,
+        &bind_rules.instructions,
+        device_specification,
+    )
 }
 
 pub fn debug_from_device_specification<'a>(
-    bind_rules: &BindRules,
+    symbol_table: &SymbolTable,
+    instructions: &Vec<SymbolicInstructionInfo<'a>>,
     device_specification: DeviceSpecification,
 ) -> Result<bool, DebuggerError> {
-    let mut debugger = Debugger::new(&device_specification.properties, bind_rules)?;
+    let mut debugger = Debugger::new(&device_specification.properties, symbol_table, instructions)?;
     let binds = debugger.evaluate_bind_rules()?;
     debugger.log_output()?;
     Ok(binds)
@@ -129,16 +136,20 @@ pub fn debug_from_device_specification<'a>(
 
 struct Debugger<'a> {
     device_properties: DevicePropertyMap,
-    bind_rules: &'a BindRules<'a>,
+    symbol_table: &'a SymbolTable,
+    instructions: &'a Vec<SymbolicInstructionInfo<'a>>,
     output: Vec<DebuggerOutput<'a>>,
 }
 
 impl<'a> Debugger<'a> {
-    fn new(properties: &[Property], bind_rules: &'a BindRules<'a>) -> Result<Self, DebuggerError> {
-        let device_properties =
-            Debugger::construct_property_map(properties, &bind_rules.symbol_table)?;
+    fn new(
+        properties: &[Property],
+        symbol_table: &'a SymbolTable,
+        instructions: &'a Vec<SymbolicInstructionInfo<'a>>,
+    ) -> Result<Self, DebuggerError> {
+        let device_properties = Debugger::construct_property_map(properties, &symbol_table)?;
         let output = Vec::new();
-        Ok(Debugger { device_properties, bind_rules, output })
+        Ok(Debugger { device_properties, symbol_table, instructions, output })
     }
 
     /// Constructs a map of the device's properties. The keys are of type Symbol, and only keys
@@ -193,7 +204,7 @@ impl<'a> Debugger<'a> {
     }
 
     fn evaluate_bind_rules(&mut self) -> Result<bool, DebuggerError> {
-        let mut instructions = self.bind_rules.instructions.iter();
+        let mut instructions = self.instructions.iter();
 
         while let Some(mut instruction) = instructions.next() {
             let mut jump_label = None;
@@ -395,7 +406,6 @@ impl<'a> Debugger<'a> {
 
         // Get the value identifier from the device specification (or None for a literal value).
         let key_symbol = self
-            .bind_rules
             .symbol_table
             .get(identifier)
             .ok_or(DebuggerError::UnknownKey(identifier.clone()))?;
@@ -462,7 +472,6 @@ impl<'a> Debugger<'a> {
         key_identifier: &CompoundIdentifier,
     ) -> Result<String, DebuggerError> {
         let key_symbol = self
-            .bind_rules
             .symbol_table
             .get(key_identifier)
             .ok_or(DebuggerError::UnknownKey(key_identifier.clone()))?;
@@ -517,15 +526,6 @@ mod test {
     use crate::parser::bind_rules::{Condition, ConditionOp, Statement};
     use crate::parser::common::{CompoundIdentifier, Span};
 
-    fn compile<'a>(symbol_table: SymbolTable, statements: Vec<Statement<'a>>) -> BindRules<'a> {
-        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
-        BindRules {
-            instructions: instructions,
-            symbol_table: symbol_table,
-            use_new_bytecode: false,
-        }
-    }
-
     #[test]
     fn duplicate_key() {
         let symbol_table = HashMap::new();
@@ -556,12 +556,13 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules = compile(symbol_table.clone(), statements);
+
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Binds when the device has the correct property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -573,7 +574,7 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) },
             Property { key: make_identifier!("xyz"), value: Value::BoolLiteral(true) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -583,7 +584,7 @@ mod test {
         // Doesn't bind when the device has the wrong value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -592,7 +593,7 @@ mod test {
 
         // Doesn't bind when the property is not present in the device.
         let properties = Vec::new();
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -617,12 +618,12 @@ mod test {
             make_identifier!("abc"),
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Binds when the device has a different value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -631,7 +632,7 @@ mod test {
 
         // Binds when the property is not present in the device.
         let properties = Vec::new();
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -641,7 +642,7 @@ mod test {
         // Doesn't bind when the device has the property in the condition statement.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -662,12 +663,12 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Binds when the device has one of the accepted values for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -682,7 +683,7 @@ mod test {
         // Doesn't bind when the device has a different value for the property.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(5) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -694,7 +695,7 @@ mod test {
 
         // Doesn't bind when the device is missing the property.
         let properties = Vec::new();
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -775,14 +776,14 @@ mod test {
             Symbol::Key("xyz".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Binds when the if clause is satisfied.
         let properties = vec![
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(1) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -797,7 +798,7 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(2) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(2) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -811,7 +812,7 @@ mod test {
         // Binds when the else clause is satisfied.
         let properties =
             vec![Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(3) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -827,7 +828,7 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(42) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -840,7 +841,7 @@ mod test {
 
         // Doesn't bind when the properties are missing in the device.
         let properties = Vec::new();
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -862,12 +863,12 @@ mod test {
             Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Doesn't bind when abort statement is present.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -937,7 +938,7 @@ mod test {
             Symbol::Key("VALUE".to_string(), bind_library::ValueType::Number),
         );
 
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Binds when other properties are present as well.
         let properties = vec![
@@ -952,7 +953,7 @@ mod test {
                 value: Value::Identifier(make_identifier!("VALUE")),
             },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
     }
 
@@ -1009,12 +1010,12 @@ mod test {
             make_identifier!("pqr"),
             Symbol::Key("pqr".to_string(), bind_library::ValueType::Number),
         );
-        let bind_rules = compile(symbol_table, statements);
+        let instructions = compiler::compile_statements(statements, &symbol_table, false).unwrap();
 
         // Aborts because if condition is true.
         let properties =
             vec![Property { key: make_identifier!("abc"), value: Value::NumericLiteral(42) }];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -1029,7 +1030,7 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(43) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -1053,7 +1054,7 @@ mod test {
             Property { key: make_identifier!("abc"), value: Value::NumericLiteral(43) },
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(3) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,
@@ -1072,7 +1073,7 @@ mod test {
             Property { key: make_identifier!("xyz"), value: Value::NumericLiteral(1) },
             Property { key: make_identifier!("pqr"), value: Value::BoolLiteral(true) },
         ];
-        let mut debugger = Debugger::new(&properties, &bind_rules).unwrap();
+        let mut debugger = Debugger::new(&properties, &symbol_table, &instructions).unwrap();
         assert!(!debugger.evaluate_bind_rules().unwrap());
         assert_eq!(
             debugger.output,

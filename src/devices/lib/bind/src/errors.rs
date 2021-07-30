@@ -579,6 +579,12 @@ impl From<test::TestError> for UserError {
                 None,
                 false,
             ),
+            test::TestError::CompositeNodeMissing(node) => UserError::new(
+                "E404",
+                &format!("The composite node {} is not included in the bind rules.", node),
+                None,
+                false,
+            ),
             test::TestError::JsonParserError(error) => {
                 UserError::new("E403", &format!("Failed to parse JSON: {}.", error), None, false)
             }
