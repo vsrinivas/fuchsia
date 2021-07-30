@@ -528,5 +528,32 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
   EXPECT_TRUE(compact_blob_info->IsCompressed());
 }
 
+TEST(BlobfsHostTest, WriteBlobThatRequiresMultipleExtentsIsCorrect) {
+  constexpr uint64_t data_block_count = kInlineMaxExtents * kBlockCountMax + 1;
+  constexpr uint64_t extent_count = kInlineMaxExtents + 1;
+  BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+
+  std::unique_ptr<Blobfs> blobfs = CreateBlobfs(
+      /*block_count=*/500 + data_block_count, CreateFilesystemOptions(blob_layout_format));
+
+  // Filling a 500MB file with random data takes a long time so use an empty file instead.
+  auto file = CreateEmptyFile(data_block_count * kBlobfsBlockSize);
+  auto blob_info = BlobInfo::CreateUncompressed(file->fd(), blob_layout_format);
+  ASSERT_TRUE(blob_info.is_ok());
+  EXPECT_TRUE(blobfs->AddBlob(*blob_info).is_ok());
+  Inode inode = FindInodeByMerkleDigest(*blobfs, blob_info->GetDigest()).value();
+
+  EXPECT_EQ(inode.extent_count, extent_count);
+
+  auto extent_container = blobfs->GetNode(inode.header.next_node);
+  ASSERT_TRUE(extent_container.is_ok());
+  ASSERT_TRUE(extent_container->header.IsAllocated());
+  ASSERT_TRUE(extent_container->header.IsExtentContainer());
+  EXPECT_EQ(extent_container->AsExtentContainer()->extent_count, 1);
+
+  BlobfsChecker checker(blobfs.get());
+  EXPECT_TRUE(checker.Check());
+}
+
 }  // namespace
 }  // namespace blobfs
