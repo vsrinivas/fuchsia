@@ -17,7 +17,7 @@
 
 #define DISPLAY_WIDTH 1024
 #define DISPLAY_HEIGHT 768
-#define DISPLAY_FORMAT ZX_PIXEL_FORMAT_RGB_565
+#define DISPLAY_FORMAT ZX_PIXEL_FORMAT_RGB_x888
 
 #define bochs_vbe_dispi_read(base, reg) MmioRead16(base + (0x500 + (reg << 1)))
 #define bochs_vbe_dispi_write(base, reg, val) MmioWrite16(val, base + (0x500 + (reg << 1)))
