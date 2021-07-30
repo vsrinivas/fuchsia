@@ -46,7 +46,7 @@ static zx_status_t handle_dup_replace(bool is_replace, zx_handle_t handle_value,
 
   auto up = ProcessDispatcher::GetCurrent();
 
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{up->handle_table().get_lock()};
+  Guard<Mutex> guard{up->handle_table().get_lock()};
   auto source = up->handle_table().GetHandleLocked(handle_value);
   if (!source)
     return ZX_ERR_BAD_HANDLE;

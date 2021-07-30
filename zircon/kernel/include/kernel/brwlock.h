@@ -204,9 +204,22 @@ class TA_CAP("mutex") BrwLock {
       // TODO(maniscalco): Ideally, we'd use a ktl::atomic/std::atomic here, but that's not easy to
       // do. Once we have std::atomic_ref, raw_state can become a struct and we can stop using the
       // compiler builtin without triggering UB.
+#ifndef __riscv
       success = __atomic_compare_exchange_n(raw_state, &expected, desired, /*weak=*/false,
                                             /*success_memmodel=*/__ATOMIC_ACQUIRE,
                                             /*failure_memmodel=*/__ATOMIC_RELAXED);
+#else
+      // This code should never run! On RISC-V we do not have 128 bit atomic
+      // instructions so implementing this BrwLock is a perileous endeavour.
+      // As part of the proof of concept, we currently just replace all BrwLock
+      // usages with Mutexes which is bad for performance but at least it runs.
+      if (*raw_state == expected) {
+        *raw_state = desired;
+        success = true;
+      } else {
+        success = false;
+      }
+#endif
 
     } else {
       success = state_.state_.compare_exchange_strong(expected_state_bits, kBrwLockWriter,

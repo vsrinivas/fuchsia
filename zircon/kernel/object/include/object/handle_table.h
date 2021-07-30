@@ -126,7 +126,7 @@ class HandleTable {
   // returning the error value.
   template <typename T>
   zx_status_t ForEachHandle(T func) const {
-    Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     return ForEachHandleLocked(func);
   }
 
@@ -174,7 +174,7 @@ class HandleTable {
   void Clean();
 
   // accessors
-  Lock<BrwLockPi>* get_lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<Mutex>* get_lock() const TA_RET_CAP(lock_) { return &lock_; }
 
  private:
   using HandleList = fbl::DoublyLinkedListCustomTraits<Handle*, Handle::NodeListTraits>;
@@ -233,7 +233,7 @@ class HandleTable {
 
     {
       // Scope utilized to reduce lock duration.
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+      Guard<Mutex> guard{&lock_};
       Handle* handle = GetHandleLocked(handle_value, skip_policy);
       if (!handle)
         return ZX_ERR_BAD_HANDLE;
@@ -266,7 +266,7 @@ class HandleTable {
   // TODO(fxbug.dev/54938): Allow multiple handle table locks to be acquired at once.
   // Right now, this is required when a process closes the last handle to
   // another process, during the destruction of the handle table.
-  mutable DECLARE_BRWLOCK_PI(HandleTable, lockdep::LockFlagsMultiAcquire) lock_;
+  mutable DECLARE_MUTEX(HandleTable) lock_;
 
   // Each handle table provides pseudorandom userspace handle
   // values. This is the per-handle-table pseudorandom state.
@@ -308,7 +308,7 @@ zx_status_t HandleTable::ForEachHandleBatched(Func&& func) {
     // Gather a batch of arguments while holding the handle table lock.
     size_t count = 0;
     {
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+      Guard<Mutex> guard{&lock_};
       for (; count < kMaxBatchSize; ++count) {
         Handle* handle = cursor.Next();
         if (!handle) {

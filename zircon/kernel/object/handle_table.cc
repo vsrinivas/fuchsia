@@ -58,7 +58,7 @@ HandleTable::~HandleTable() {
 void HandleTable::Clean() {
   HandleList to_clean;
   {
-    Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
+    Guard<Mutex> guard{&lock_};
     for (auto& cursor : cursors_) {
       cursor.Invalidate();
     }
@@ -101,12 +101,12 @@ Handle* HandleTable::GetHandleLocked(zx_handle_t handle_value, bool skip_policy)
 }
 
 uint32_t HandleTable::HandleCount() const {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return count_;
 }
 
 void HandleTable::AddHandle(HandleOwner handle) {
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   AddHandleLocked(ktl::move(handle));
 }
 
@@ -130,7 +130,7 @@ HandleOwner HandleTable::RemoveHandleLocked(Handle* handle) {
 }
 
 HandleOwner HandleTable::RemoveHandle(zx_handle_t handle_value) {
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return RemoveHandleLocked(handle_value);
 }
 
@@ -143,7 +143,7 @@ HandleOwner HandleTable::RemoveHandleLocked(zx_handle_t handle_value) {
 
 zx_status_t HandleTable::RemoveHandles(ktl::span<const zx_handle_t> handles) {
   zx_status_t status = ZX_OK;
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{get_lock()};
+  Guard<Mutex> guard{get_lock()};
 
   for (zx_handle_t handle_value : handles) {
     if (handle_value == ZX_HANDLE_INVALID)
@@ -156,7 +156,7 @@ zx_status_t HandleTable::RemoveHandles(ktl::span<const zx_handle_t> handles) {
 }
 
 zx_koid_t HandleTable::GetKoidForHandle(zx_handle_t handle_value) {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   Handle* handle = GetHandleLocked(handle_value);
   if (!handle)
     return ZX_KOID_INVALID;
@@ -166,7 +166,7 @@ zx_koid_t HandleTable::GetKoidForHandle(zx_handle_t handle_value) {
 zx_status_t HandleTable::GetDispatcherInternal(zx_handle_t handle_value,
                                                fbl::RefPtr<Dispatcher>* dispatcher,
                                                zx_rights_t* rights) {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   Handle* handle = GetHandleLocked(handle_value);
   if (!handle)
     return ZX_ERR_BAD_HANDLE;
@@ -189,7 +189,7 @@ zx_status_t HandleTable::GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* ha
     }
 
     {
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+      Guard<Mutex> guard{&lock_};
       if (count != count_) {
         continue;
       }
@@ -207,12 +207,12 @@ zx_status_t HandleTable::GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* ha
 }
 
 bool HandleTable::IsHandleValid(zx_handle_t handle_value) {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&lock_};
+  Guard<Mutex> guard{&lock_};
   return (GetHandleLocked(handle_value) != nullptr);
 }
 
 HandleTable::HandleCursor::HandleCursor(HandleTable* handle_table) : handle_table_(handle_table) {
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_->lock_};
+  Guard<Mutex> guard{&handle_table_->lock_};
   if (!handle_table_->handles_.is_empty()) {
     iter_ = handle_table_->handles_.begin();
   } else {
@@ -224,7 +224,7 @@ HandleTable::HandleCursor::HandleCursor(HandleTable* handle_table) : handle_tabl
 }
 
 HandleTable::HandleCursor::~HandleCursor() {
-  Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_->lock_};
+  Guard<Mutex> guard{&handle_table_->lock_};
   handle_table_->cursors_.erase(*this);
 }
 
