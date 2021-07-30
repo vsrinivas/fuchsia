@@ -382,7 +382,7 @@ mod tests {
     use matches::assert_matches;
 
     /// A vec of responses converts to the expected request
-    #[test]
+    #[fuchsia::test]
     fn at_responses_to_procedure_request_conversion() {
         let messages = vec![at::Response::Ok, at::Response::Error];
         let request: ProcedureRequest = messages.into();
@@ -393,7 +393,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn match_conditional_commands_based_on_slci() {
         let command = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         let marker = ProcedureMarker::match_command(&command, false).expect("command to match");

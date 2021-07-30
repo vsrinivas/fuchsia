@@ -227,7 +227,7 @@ impl CallIndicatorsUpdates {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn find_call() {
         let states = vec![];
         let call = Call::find(states.into_iter());
@@ -254,7 +254,7 @@ mod tests {
         assert_eq!(call, Call::Some);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_callsetup() {
         let states = vec![];
         let setup = CallSetup::find(states.into_iter());
@@ -291,7 +291,7 @@ mod tests {
         assert_eq!(setup, CallSetup::Incoming);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_call_held() {
         let states = vec![];
         let held = CallHeld::find(states.into_iter());
@@ -322,7 +322,7 @@ mod tests {
         assert_eq!(held, CallHeld::HeldAndActive);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn find_call_indicators() {
         let states = vec![];
         let ind = CallIndicators::find(states.into_iter());
@@ -339,7 +339,7 @@ mod tests {
         assert_eq!(ind, expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_indicators_differences() {
         let a = CallIndicators::default();
         let b = CallIndicators { ..a };
@@ -386,7 +386,7 @@ mod tests {
         assert_eq!(a.difference(b), expected);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_indicator_updates_is_empty() {
         let mut updates = CallIndicatorsUpdates::default();
         assert!(updates.is_empty());
@@ -407,7 +407,7 @@ mod tests {
         assert!(!updates.is_empty());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn call_indicator_updates_to_vec() {
         let mut updates = CallIndicatorsUpdates::default();
         assert_eq!(updates.to_vec(), vec![]);

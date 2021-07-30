@@ -47,7 +47,7 @@ impl From<FidlNumber> for Number {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn number_type_in_valid_range() {
         let number = Number::from("1234567");
         // type values must be in range 128-175.
@@ -55,7 +55,7 @@ mod tests {
         assert!(number.type_() <= 175);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn number_str_roundtrip() {
         let number = Number::from("1234567");
         assert_eq!(number.clone(), Number::from(&*String::from(number)));

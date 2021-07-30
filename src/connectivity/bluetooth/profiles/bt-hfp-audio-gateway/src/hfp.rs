@@ -200,7 +200,7 @@ mod tests {
 
     use crate::audio::TestAudioControl;
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn profile_error_propagates_error_from_hfp_run() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
         // dropping the server is expected to produce an error from Hfp::run
@@ -224,7 +224,7 @@ mod tests {
     /// Tests the HFP main run loop from a blackbox perspective by asserting on the FIDL messages
     /// sent and received by the services that Hfp interacts with: A bredr profile server and
     /// a call manager.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn new_profile_event_initiates_connections_to_profile_and_call_manager_() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
         let (proxy, stream) =
@@ -295,7 +295,7 @@ mod tests {
         Ok(server)
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn battery_level_request_is_propagated() {
         let (profile, profile_svc, _server) = setup_profile_and_test_server();
         let (_call_mgr_tx, call_mgr_rx) = mpsc::channel(1);
@@ -335,7 +335,7 @@ mod tests {
         matches::assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn connection_behavior_request_is_propagated() {
         let (profile, profile_svc, _server) = setup_profile_and_test_server();
         let (_call_mgr_tx, call_mgr_rx) = mpsc::channel(1);

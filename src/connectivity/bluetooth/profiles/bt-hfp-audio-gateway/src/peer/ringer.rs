@@ -90,7 +90,7 @@ mod tests {
     use futures::StreamExt;
     use matches::assert_matches;
 
-    #[test]
+    #[fuchsia::test]
     fn ringer_fused_stream_implementation() {
         let mut ringer = Ringer::default();
         assert!(ringer.is_terminated());
@@ -103,7 +103,7 @@ mod tests {
         assert!(!ringer.ringing());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn ring_stream_output_frequency() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(0));

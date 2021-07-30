@@ -248,13 +248,13 @@ mod tests {
         fuchsia_async as fasync, matches::assert_matches,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn new_gain_control_succeeds() {
         let _exec = fasync::TestExecutor::new().unwrap();
         GainControl::new().expect("a success value");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_client_end_leaves_field_empty() {
         let _exec = fasync::TestExecutor::new().unwrap();
 
@@ -269,7 +269,7 @@ mod tests {
         assert!(control.client_end.is_none());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn stream_returns_pending_without_client_interaction() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -278,7 +278,7 @@ mod tests {
         assert!(result.is_pending());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn stream_is_terminated_when_client_end_is_closed() {
         let mut ctrl = GainControl::new().unwrap();
         let client_end = ctrl.get_client_end().unwrap();
@@ -290,7 +290,7 @@ mod tests {
         assert!(ctrl.is_terminated());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn stream_error_returns_none_and_terminates() {
         let mut ctrl = GainControl::new().unwrap();
         let client_end = ctrl.get_client_end().unwrap();
@@ -308,7 +308,7 @@ mod tests {
         assert!(ctrl.is_terminated());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn stream_interaction_returns_valid_values() {
         let mut ctrl = GainControl::new().unwrap();
         let proxy = ctrl.get_client_end().unwrap().into_proxy().unwrap();
@@ -324,7 +324,7 @@ mod tests {
         assert!(!ctrl.is_terminated());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn invalid_gain_request_returns_none_and_terminates_with_epitaph() {
         let mut ctrl = GainControl::new().unwrap();
         let proxy = ctrl.get_client_end().unwrap().into_proxy().unwrap();
@@ -341,7 +341,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn speaker_hanging_get_produces_values() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -379,7 +379,7 @@ mod tests {
         assert_matches!(result, Ok(2));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn microphone_hanging_get_produces_values() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 

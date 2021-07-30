@@ -45,7 +45,7 @@ impl AudioGatewayFeatureSupport {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn successful_deserialization_of_configuration_file() {
         let config = AudioGatewayFeatureSupport::load().expect("Parse config file correctly");
         assert!(!config.reject_incoming_voice_call);
@@ -62,7 +62,7 @@ mod tests {
         assert!(!config.enhanced_voice_recognition_with_text);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn unsuccessful_deserialization_of_malformed_config_data() {
         let invalid_json = br#"
         {
