@@ -1,5 +1,5 @@
-Note: This document pertains to modern components with a [manifest][glossary.component manifest source]
-that ends in `.cml`.
+Note: This document pertains to modern components with a
+[manifest][glossary.component manifest source] that ends in `.cml`.
 The Fuchsia platform team is currently [migrating legacy components][migration]
 to the modern component framework.
 
