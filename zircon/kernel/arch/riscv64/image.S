@@ -69,7 +69,7 @@ END_DATA(kernel_image)
 // TODO(revest): Use IMAGE_LOAD_START when LLVM supports it
 // This constant was found in the boot-shim logs with the formula:
 //   "Kernel to 0000000089180000" - "Kernel at 0000000088200000"
-#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0xf80000)
+#define FIXUP_LOCATION(addr) (addr - KERNEL_BASE + 0xf70000)
 
 // This code must be purely position-independent and have no relocs.
 // This is called with the physical address of __code_start in a0 and the
