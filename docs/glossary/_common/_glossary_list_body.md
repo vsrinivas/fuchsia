@@ -18,11 +18,11 @@
          {{ item.full_description }}
       {% endif %}
     {% endif %}
-  {% if item.see_also[0]|length or item.related_guides[0]|length %}
+  {% if item.see_also!= [''] or item.related_guides!= [''] %}
     <hr>
     <devsite-expandable>
     <a href="#{{ item.term }}-also" class="expand-control once">Related links</a>
-    {% if item.see_also[0]|length %}
+    {% if item.see_also!= [''] %}
       <h4>Information related to {{ item.term }}</h4>
         <ul class="comma-list">
         {% for see in item.see_also %}
@@ -30,7 +30,7 @@
         {% endfor %}
       </ul>
     {% endif %}
-    {% if item.related_guides[0]|length %}
+    {% if item.related_guides!= [''] %}
       <h4>Guides related to {{ item.term }}</h4>
         <ul class="comma-list">
         {% for guide in item.related_guides %}
@@ -40,7 +40,7 @@
   {% endif %}
   </devsite-expandable>
   {% endif %}
-  {% if item.area[0]|length %}
+  {% if item.area!= [''] %}
   <!--
     <ul class="comma-list">
       {% for area in item.area %}
