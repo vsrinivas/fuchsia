@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/config/linker.gni")
+import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("zircon-internal") {
@@ -21,6 +24,7 @@ zx_library("zircon-internal") {
     "lib/zircon-internal/macros.h",
     "lib/zircon-internal/mtrace.h",
     "lib/zircon-internal/paths.h",
+    "lib/zircon-internal/unique-backtrace.h",
     "lib/zircon-internal/xorshiftrand.h",
   ]
 
@@ -28,4 +32,58 @@ zx_library("zircon-internal") {
   host = true
   static = true
   sources = []
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":zircon-internal-tests",
+    ":zircon-internal-unittests($host_toolchain)",
+  ]
+}
+
+test("zircon-internal-unittests") {
+  sources = [ "unique-backtrace-tests.cc" ]
+
+  # Ensure aggressive ICF is enabled regardless of optimization defaults.
+  configs += [ "//build/config/zircon:default_icf" ]
+  configs -= [ "//build/config/zircon:default_icf" ]
+  configs += [ "//build/config:icf" ]
+  configs -= [ "//build/config:icf" ]
+  configs += [ "//build/config:icf" ]
+
+  # The code-generation switches required for linker GC are also required for
+  # ICF, so make sure those are also enabled regardless of optimization.
+  configs += [ "//build/config:default_linker_gc" ]
+  configs -= [ "//build/config:default_linker_gc" ]
+  configs += [ "//build/config:linker_gc" ]
+  configs -= [ "//build/config:linker_gc" ]
+  configs += [ "//build/config:linker_gc" ]
+
+  # Instrumentation can prevent ICF that would otherwise happen in normal
+  # compilation, so the test code needs to know whether to test that ICF
+  # actually happened when expected or not.  (It tests that as a baseline to
+  # verify that its test of preventing ICF is actually meaningful.)
+  icf_works =
+      (linker == "lld" || linker == "gold") && !toolchain_variant.instrumented
+  defines = [ "ICF_WORKS=$icf_works" ]
+
+  deps = [
+    ":zircon-internal",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//zircon/system/ulib/elf-psabi",
+      "//zircon/system/ulib/zx",
+    ]
+  }
+}
+
+fuchsia_unittest_package("zircon-internal-tests") {
+  deps = [
+    ":zircon-internal-unittests",
+    "//src/sys/testing/elftest",
+  ]
 }
