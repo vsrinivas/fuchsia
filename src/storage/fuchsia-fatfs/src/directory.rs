@@ -601,9 +601,9 @@ impl DirectoryEntry for FatDirectory {
 
 #[async_trait]
 impl Directory for FatDirectory {
-    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
+    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
         let mut closer = Closer::new(&self.filesystem);
-        match self.open_child(&name, 0, 0, &mut closer) {
+        match self.open_child(name, 0, 0, &mut closer) {
             Ok(FatNode::Dir(child)) => {
                 AsyncGetEntry::Immediate(Ok(child as Arc<dyn DirectoryEntry>))
             }
@@ -806,8 +806,7 @@ mod tests {
         let dir = fs.get_fatfs_root();
         dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
         defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
-        if let AsyncGetEntry::Immediate { 0: entry } = dir.clone().get_entry("test_file".to_owned())
-        {
+        if let AsyncGetEntry::Immediate { 0: entry } = dir.clone().get_entry("test_file") {
             let entry = entry.expect("Getting test file");
 
             assert_eq!(

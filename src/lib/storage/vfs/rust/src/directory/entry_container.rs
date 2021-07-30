@@ -22,25 +22,25 @@ use {
 
 pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
 
-pub enum AsyncGetEntry {
+pub enum AsyncGetEntry<'a> {
     Immediate(GetEntryResult),
-    Future(BoxFuture<'static, GetEntryResult>),
+    Future(BoxFuture<'a, GetEntryResult>),
 }
 
-impl From<Status> for AsyncGetEntry {
-    fn from(status: Status) -> AsyncGetEntry {
+impl<'a> From<Status> for AsyncGetEntry<'a> {
+    fn from(status: Status) -> AsyncGetEntry<'a> {
         AsyncGetEntry::Immediate(Err(status))
     }
 }
 
-impl From<Arc<dyn DirectoryEntry>> for AsyncGetEntry {
-    fn from(entry: Arc<dyn DirectoryEntry>) -> AsyncGetEntry {
+impl<'a> From<Arc<dyn DirectoryEntry>> for AsyncGetEntry<'a> {
+    fn from(entry: Arc<dyn DirectoryEntry>) -> AsyncGetEntry<'a> {
         AsyncGetEntry::Immediate(Ok(entry))
     }
 }
 
-impl From<BoxFuture<'static, GetEntryResult>> for AsyncGetEntry {
-    fn from(future: BoxFuture<'static, GetEntryResult>) -> AsyncGetEntry {
+impl<'a> From<BoxFuture<'a, GetEntryResult>> for AsyncGetEntry<'a> {
+    fn from(future: BoxFuture<'a, GetEntryResult>) -> AsyncGetEntry<'a> {
         AsyncGetEntry::Future(future)
     }
 }
@@ -50,7 +50,7 @@ impl From<BoxFuture<'static, GetEntryResult>> for AsyncGetEntry {
 #[async_trait]
 pub trait Directory: Any + Send + Sync {
     /// Returns a reference to a contained directory entry.  Used when linking entries.
-    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry;
+    fn get_entry(self: Arc<Self>, name: &str) -> AsyncGetEntry;
 
     /// Reads directory entries starting from `pos` by adding them to `sink`.
     /// Once finished, should return a sealed sink.

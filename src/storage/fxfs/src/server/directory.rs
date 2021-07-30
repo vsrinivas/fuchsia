@@ -513,7 +513,7 @@ impl DirectoryEntry for FxDirectory {
 
 #[async_trait]
 impl Directory for FxDirectory {
-    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
+    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
         AsyncGetEntry::Future(
             async move {
                 self.lookup(0, 0, Path::validate_and_split(name)?)

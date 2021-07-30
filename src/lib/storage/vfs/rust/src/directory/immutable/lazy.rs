@@ -65,7 +65,7 @@ pub trait LazyDirectory: Sync + Send + 'static {
         sink: Box<dyn dirents_sink::Sink>,
     ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status>;
 
-    async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status>;
+    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, Status>;
 }
 
 /// Creates a lazy directory, with no watcher stream attached.  Watchers will not be able to attach
@@ -204,7 +204,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
         let task = Box::pin({
             let scope = scope.clone();
             async move {
-                match self.inner.get_entry(name).await {
+                match self.inner.get_entry(&name).await {
                     Ok(entry) => entry.open(scope, flags, mode, path, server_end),
                     Err(status) => send_on_open_with_error(flags, server_end, status),
                 }
@@ -226,7 +226,7 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
 
 #[async_trait]
 impl<T: LazyDirectory> Directory for Lazy<T> {
-    fn get_entry(self: Arc<Self>, name: String) -> entry_container::AsyncGetEntry {
+    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> entry_container::AsyncGetEntry<'a> {
         // Can not use `into()` here.  Could not find a good `From` definition to be provided in
         // `directory/entry_container.rs` so that just a plain `.into()` would work here.
         entry_container::AsyncGetEntry::Future(

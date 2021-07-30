@@ -251,7 +251,7 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
 #[async_trait]
 impl vfs::directory::entry_container::Directory for RootDir {
     // Used for linking which is not supported.
-    fn get_entry(self: Arc<Self>, _: String) -> AsyncGetEntry {
+    fn get_entry<'a>(self: Arc<Self>, _: &'a str) -> AsyncGetEntry<'a> {
         AsyncGetEntry::from(vfs_status::NOT_SUPPORTED)
     }
 
@@ -615,7 +615,7 @@ mod tests {
 
         let root_dir = Arc::new(RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap());
 
-        match root_dir.get_entry("".to_string()) {
+        match root_dir.get_entry("") {
             AsyncGetEntry::Future(_fut) => panic!("should have given the other thing"),
             AsyncGetEntry::Immediate(res) => {
                 assert_eq!(res.map(|_| ()).unwrap_err(), vfs_status::NOT_SUPPORTED)

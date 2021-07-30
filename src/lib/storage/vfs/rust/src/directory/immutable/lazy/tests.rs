@@ -48,17 +48,17 @@ use {
 struct Entries {
     entries: Box<[(TraversalPosition, EntryInfo)]>,
     get_entry_fn:
-        Box<dyn Fn(String) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>,
+        Box<dyn Fn(&str) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>,
 }
 
-fn not_found(_name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+fn not_found(_name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
     Err(Status::NOT_FOUND)
 }
 
 const DOT: (u8, &'static str) = (DIRENT_TYPE_DIRECTORY, ".");
 
 impl Entries {
-    fn new<F: Fn(String) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>(
+    fn new<F: Fn(&str) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>(
         mut entries: Vec<(u8, &'static str)>,
         get_entry_fn: F,
     ) -> Self {
@@ -113,7 +113,7 @@ impl LazyDirectory for Entries {
         Ok((TraversalPosition::End, sink.seal()))
     }
 
-    async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
         (self.get_entry_fn)(name)
     }
 }
@@ -185,8 +185,7 @@ fn static_entries() {
         (DIRENT_TYPE_FILE, "three"),
     ];
 
-    let get_entry = |name: String| {
-        let name = name.clone();
+    let get_entry = |name: &str| {
         let content = format!("File {} content", name);
         let bytes = content.into_bytes();
         Ok(read_only_static(bytes) as Arc<dyn DirectoryEntry>)
@@ -210,7 +209,7 @@ fn static_entries() {
 fn static_entries_with_traversal() {
     let entries = vec![DOT, (DIRENT_TYPE_DIRECTORY, "etc"), (DIRENT_TYPE_FILE, "files")];
 
-    let get_entry = |name: String| match &*name {
+    let get_entry = |name: &str| match name {
         "etc" => {
             let etc = pseudo_directory! {
                 "fstab" => read_only_static(b"/dev/fs /"),
@@ -300,7 +299,7 @@ impl LazyDirectory for DynamicEntries {
         result
     }
 
-    async fn get_entry(&self, _name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+    async fn get_entry(&self, _name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
         Err(Status::NOT_FOUND)
     }
 }
@@ -352,14 +351,14 @@ fn dynamic_entries() {
     let entries = vec![DOT, (DIRENT_TYPE_FILE, "file1"), (DIRENT_TYPE_FILE, "file2")];
 
     let count = Arc::new(AtomicU8::new(0));
-    let get_entry = move |name: String| {
+    let get_entry = move |name: &str| {
         let entry = |count: u8| {
             let content = format!("Content: {}", count);
 
             Ok(read_only_const(content.as_bytes()) as Arc<dyn DirectoryEntry>)
         };
 
-        match &*name {
+        match name {
             "file1" => {
                 let count = count.fetch_add(1, Ordering::Relaxed) + 1;
                 entry(count)
@@ -729,7 +728,7 @@ fn link_from_lazy_into_mutable() {
     let entries = vec![DOT, (DIRENT_TYPE_FILE, "passwd")];
 
     let count = Arc::new(AtomicU8::new(0));
-    let get_entry = move |name: String| {
+    let get_entry = move |name: &str| {
         assert_eq!(name, "passwd");
 
         let count = count.fetch_add(1, Ordering::Relaxed) + 1;

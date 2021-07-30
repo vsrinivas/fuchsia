@@ -238,14 +238,14 @@ impl<Connection> Directory for Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
 {
-    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
+    fn get_entry<'a>(self: Arc<Self>, name: &'a str) -> AsyncGetEntry<'a> {
         assert_eq_size!(u64, usize);
         if name.len() as u64 > MAX_NAME_LENGTH {
             return Status::INVALID_ARGS.into();
         }
 
         let this = self.inner.lock();
-        match this.entries.get(&name) {
+        match this.entries.get(name) {
             Some(entry) => entry.clone().into(),
             None => Status::NOT_FOUND.into(),
         }

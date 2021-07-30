@@ -458,7 +458,7 @@ where
             }
             BaseDirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Link");
-                self.handle_link(src, dst_parent_token, dst, |status| {
+                self.handle_link(&src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
@@ -606,7 +606,7 @@ where
 
     async fn handle_link<R>(
         &self,
-        src: String,
+        src: &str,
         dst_parent_token: Handle,
         dst: String,
         responder: R,

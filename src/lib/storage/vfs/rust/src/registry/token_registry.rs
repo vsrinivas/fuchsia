@@ -317,7 +317,7 @@ mod tests {
 
         #[async_trait]
         impl Directory for MockDirectory {
-            fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
+            fn get_entry<'a>(self: Arc<Self>, _name: &'a str) -> AsyncGetEntry<'a> {
                 panic!("Not implemented!")
             }
 

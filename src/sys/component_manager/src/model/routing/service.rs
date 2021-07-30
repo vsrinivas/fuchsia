@@ -181,7 +181,7 @@ struct ServiceCollectionDirectory {
 
 #[async_trait]
 impl lazy::LazyDirectory for ServiceCollectionDirectory {
-    async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+    async fn get_entry(&self, name: &str) -> Result<Arc<dyn DirectoryEntry>, Status> {
         // Parse the entry name into its (component,instance) parts.
         let (component, instance) = name.split_once(',').ok_or(Status::NOT_FOUND)?;
         Ok(Arc::new(ServiceInstanceDirectoryEntry {

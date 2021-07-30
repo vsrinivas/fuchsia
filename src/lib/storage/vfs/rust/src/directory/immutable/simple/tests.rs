@@ -732,7 +732,7 @@ async fn directories_remove_nested() {
             "subdir" => pseudo_directory! {},   // To be removed below.
         },
     };
-    let dir_entry = match root.get_entry("dir".to_string()) {
+    let dir_entry = match root.get_entry("dir") {
         AsyncGetEntry::Immediate(result) => result,
         AsyncGetEntry::Future(result) => result.await,
     }
@@ -742,7 +742,7 @@ async fn directories_remove_nested() {
     downcasted_dir.remove_entry("subdir", true).expect("Failed to remove directory entry!");
 
     // Ensure it was actually removed.
-    let subdir_entry = match downcasted_dir.get_entry("subdir".to_string()) {
+    let subdir_entry = match downcasted_dir.get_entry("subdir") {
         AsyncGetEntry::Immediate(result) => result,
         AsyncGetEntry::Future(result) => result.await,
     }
