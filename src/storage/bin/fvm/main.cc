@@ -890,17 +890,24 @@ int main(int argc, char** argv) {
       return -1;
     }
   } else if (!strcmp(command, "size")) {
-    std::unique_ptr<SparseContainer> sparseContainer;
-    if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
+    auto size_params_or = storage::volume_image::SizeParams::FromArguments(arguments);
+    if (size_params_or.is_error()) {
+      std::cout << size_params_or.error() << std::endl;
       return -1;
     }
 
-    if (disk_size == 0) {
-      printf("%" PRIu64 "\n", sparseContainer->CalculateDiskSize());
-    } else if (sparseContainer->CheckDiskSize(disk_size) != ZX_OK) {
-      fprintf(stderr, "Sparse container will not fit in target disk size\n");
+    auto size_or = storage::volume_image::Size(size_params_or.value());
+    if (size_or.is_error()) {
+      std::cout << size_or.error() << std::endl;
       return -1;
     }
+
+    // If we are not doing a check of whether this image fits in a specified size, print the minimum
+    // allocated size.
+    if (!size_params_or.value().length.has_value()) {
+      std::cout << size_or.value() << std::endl;
+    }
+
   } else if (!strcmp(command, "used-data-size")) {
     std::unique_ptr<SparseContainer> sparseContainer;
     if (SparseContainer::CreateExisting(path, &sparseContainer) != ZX_OK) {
