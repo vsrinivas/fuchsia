@@ -68,7 +68,8 @@ enum sbi_return_code {
 #define SBI_EXT_RFENCE              0x52464e43
 #define SBI_EXT_HSM                 0x0048534d
 
-#define SBI_EXT_RFENCE_VMA_ASID     SBI_EXT_RFENCE, 0x1
+#define SBI_EXT_RFENCE_VMA          SBI_EXT_RFENCE, 0x1
+#define SBI_EXT_RFENCE_VMA_ASID     SBI_EXT_RFENCE, 0x2
 
 #define SBI_EXT_HSM_HART_START      SBI_EXT_HSM, 0x0
 
@@ -88,17 +89,25 @@ static inline uint64_t riscv64_get_time(void) {
   return riscv64_csr_read(RISCV64_CSR_TIME);
 }
 
-static inline struct sbiret sbi_hart_start(unsigned long hart_id,
-                                           unsigned long start_addr,
-                                           unsigned long priv) {
+static inline sbiret sbi_hart_start(unsigned long hart_id,
+                                    unsigned long start_addr,
+                                    unsigned long priv) {
   return sbi_call(SBI_EXT_HSM_HART_START, hart_id, start_addr, priv);
 }
 
-static inline void sbi_remote_sfence_vma_asid(const unsigned long *hart_mask,
-                                              unsigned long start,
-                                              unsigned long size,
-                                              unsigned long asid) {
-  sbi_call(SBI_EXT_RFENCE_VMA_ASID, hart_mask, start, size, asid);
+static inline sbiret sbi_remote_sfence_vma(const unsigned long *hart_mask,
+                                           unsigned long hart_mask_base,
+                                           unsigned long start,
+                                           unsigned long size) {
+  return sbi_call(SBI_EXT_RFENCE_VMA, hart_mask, hart_mask_base, start, size);
+}
+
+static inline sbiret sbi_remote_sfence_vma_asid(const unsigned long *hart_mask,
+                                                unsigned long hart_mask_base,
+                                                unsigned long start,
+                                                unsigned long size,
+                                                unsigned long asid) {
+  return sbi_call(SBI_EXT_RFENCE_VMA_ASID, hart_mask, hart_mask_base, start, size, asid);
 }
 
 #endif
