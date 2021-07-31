@@ -7,7 +7,25 @@
 
 #include "src/devices/tests/string-bind-test/child-driver-bind.h"
 
-static zx_status_t bind(void* ctx, zx_device_t* parent) { return ZX_OK; }
+static zx_device_t* dev = nullptr;
+
+static void unbind(void* ctx) { device_unbind_reply(dev); }
+
+static constexpr zx_protocol_device_t dev_ops = []() {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.unbind = unbind;
+  return ops;
+}();
+
+static zx_status_t bind(void* ctx, zx_device_t* parent) {
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "child";
+  args.ops = &dev_ops;
+
+  return device_add(parent, &args, &dev);
+}
 
 static constexpr zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   zx_driver_ops_t ops = {};

@@ -23,7 +23,7 @@ static constexpr zx_protocol_device_t dev_ops = []() {
 static zx_status_t bind(void* ctx, zx_device_t* parent) {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "child";
+  args.name = "parent";
   args.ops = &dev_ops;
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, 3},

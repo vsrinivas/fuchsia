@@ -15,12 +15,9 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-const std::string kDevPrefix = "/dev/";
 const std::string kDriverTestDir = "/boot/driver/test";
-const std::string kDriverLibname = "string-bind-parent.so";
-const std::string kDriverLibPath = kDriverTestDir + "/" + kDriverLibname;
 const std::string kStringBindDriverLibPath = kDriverTestDir + "/string-bind-child.so";
-const std::string kChildDeviceName = "child";
+const std::string kChildDevicePath = "sys/test/parent";
 
 using devmgr_integration_test::IsolatedDevmgr;
 
@@ -36,49 +33,11 @@ class StringBindTest : public testing::Test {
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
-    // Wait for /dev/test/test to appear, then get a channel to it.
-    fbl::unique_fd root_fd;
-    ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                                   "sys/test/test", &root_fd));
-
-    auto root_device_endpoints = fidl::CreateEndpoints<fuchsia_device_test::RootDevice>();
-    ASSERT_EQ(ZX_OK, root_device_endpoints.status_value());
-
-    auto root_device = fidl::BindSyncClient(std::move(root_device_endpoints->client));
-    auto status = fdio_get_service_handle(root_fd.release(),
-                                          root_device.mutable_channel()->reset_and_get_address());
-    ASSERT_EQ(ZX_OK, status);
-
-    auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
-    ASSERT_EQ(ZX_OK, endpoints.status_value());
-
-    // Create the root test device in /dev/test/test, and get its relative path from /dev.
-    auto result = root_device.CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
-                                           endpoints->server.TakeChannel());
-
-    ASSERT_EQ(ZX_OK, result.status());
-
-    ASSERT_GE(result->path.size(), kDevPrefix.size());
-    ASSERT_EQ(strncmp(result->path.data(), kDevPrefix.c_str(), kDevPrefix.size()), 0);
-    relative_device_path_ = std::string(result->path.data() + kDevPrefix.size(),
-                                        result->path.size() - kDevPrefix.size());
-
-    // Bind the test driver to the new device.
-    auto response =
-        fidl::WireCall(endpoints->client).Bind(::fidl::StringView::FromExternal(kDriverLibPath));
-    status = response.status();
-    if (status == ZX_OK) {
-      if (response->result.is_err()) {
-        status = response->result.err();
-      }
-    }
-    ASSERT_EQ(ZX_OK, status);
-
     // Wait for the child device to bind and appear. The child device should bind with its string
     // properties.
     fbl::unique_fd string_bind_fd;
-    status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/test/test/string-bind-parent/child", &string_bind_fd);
+    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(
+        devmgr_.devfs_root(), "sys/test/parent/child", &string_bind_fd);
     ASSERT_EQ(ZX_OK, status);
 
     // Connect to the DriverDevelopment service.
@@ -96,7 +55,6 @@ class StringBindTest : public testing::Test {
 
   IsolatedDevmgr devmgr_;
   fuchsia::driver::development::DriverDevelopmentSyncPtr driver_dev_;
-  std::string relative_device_path_;
 };
 
 // Get the bind program of the test driver and check that it has the expected instructions.
@@ -133,10 +91,8 @@ TEST_F(StringBindTest, DriverBytecode) {
 }
 
 TEST_F(StringBindTest, DeviceProperties) {
-  std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
-
   fuchsia::driver::development::DriverDevelopment_GetDeviceInfo_Result result;
-  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({child_device_path}, &result));
+  ASSERT_EQ(ZX_OK, driver_dev_->GetDeviceInfo({kChildDevicePath}, &result));
 
   ASSERT_TRUE(result.is_response());
 

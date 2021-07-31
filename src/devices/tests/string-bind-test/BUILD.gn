@@ -36,7 +36,6 @@ isolated_devmgr_unittest_package("string-bind-test") {
     ":child-driver",
     ":parent-driver",
     ":test",
-    "//src/devices/misc/drivers/test",
     "//src/devices/misc/drivers/test-parent",
   ]
 }
@@ -48,7 +47,6 @@ bind_library("stringbind.lib") {
 driver_bind_rules("parent-driver-bind") {
   rules = "parent-driver.bind"
   header_output = "parent-driver-bind.h"
-  disable_autobind = true
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
@@ -59,9 +57,6 @@ driver_module("parent-driver-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "parent-driver.cc" ]
   deps = [
     ":parent-driver-bind",
@@ -91,9 +86,6 @@ driver_module("child-driver-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "child-driver.cc" ]
   deps = [
     ":child-driver-bind",
