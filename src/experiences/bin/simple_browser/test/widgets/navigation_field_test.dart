@@ -95,6 +95,7 @@ Future<void> _setUpNavigationField(
       home: Scaffold(
         body: NavigationField(
           bloc: bloc,
+          focus: FocusNode(),
         ),
       ),
     ),

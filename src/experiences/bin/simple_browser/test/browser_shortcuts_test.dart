@@ -32,24 +32,7 @@ void main() {
     mockTabsBloc = MockTabsBloc();
   });
 
-  test('''Should use the default action map
-    when there is no action input for BrowserShortcuts''', () {
-    BrowserShortcuts bs = BrowserShortcuts(
-      tabsBloc: mockTabsBloc, //tabsBloc,
-      shortcutRegistry: mockRegistryProxy,
-    );
-
-    expect(bs.actions.length, 7, reason: '''Expected 7 shortcuts,
-        but actually ${bs.actions.length} shortcuts.''');
-
-    for (String key in defaultKeys) {
-      expect(bs.actions.containsKey(key), true,
-          reason: 'Expected to have $key, but does not.');
-    }
-  });
-
-  test('Should use the input action map when it is given for BrowserShortcuts',
-      () {
+  test('Should apply the given action map to BrowserShortcuts', () {
     Map<String, VoidCallback> testActions = {
       'action1': () {},
       'action2': () {},

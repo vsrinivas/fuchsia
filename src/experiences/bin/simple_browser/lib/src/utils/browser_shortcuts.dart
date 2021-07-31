@@ -12,51 +12,44 @@ import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 
-import '../models/tabs_action.dart';
-import '../models/webpage_action.dart';
-
 const path = '/pkg/data/keyboard_shortcuts.json';
 
 class BrowserShortcuts {
   final TabsBloc tabsBloc;
   late ui_shortcut.RegistryProxy registryProxy;
-  late Map<String, VoidCallback> actions;
+  final Map<String, VoidCallback> actions;
 
   factory BrowserShortcuts({
     required TabsBloc tabsBloc,
+    required Map<String, VoidCallback> actions,
     ui_shortcut.RegistryProxy? shortcutRegistry,
-    Map<String, VoidCallback>? actions,
   }) {
     if (shortcutRegistry == null) {
       return BrowserShortcuts._fromStartupContext(
         tabsBloc: tabsBloc,
-        actionMap: actions,
+        actions: actions,
       );
     }
     return BrowserShortcuts._afterStartupContext(
       tabsBloc: tabsBloc,
-      actionMap: actions,
+      actions: actions,
     );
   }
 
   BrowserShortcuts._fromStartupContext({
     required this.tabsBloc,
-    Map<String, VoidCallback>? actionMap,
+    required this.actions,
   }) {
     registryProxy = ui_shortcut.RegistryProxy();
     Incoming.fromSvcPath()
       ..connectToService(registryProxy)
       ..close();
-
-    actions = actionMap ?? defaultActions();
   }
 
   BrowserShortcuts._afterStartupContext({
     required this.tabsBloc,
-    Map<String, VoidCallback>? actionMap,
-  }) {
-    actions = actionMap ?? defaultActions();
-  }
+    required this.actions,
+  });
 
   KeyboardShortcuts? activateShortcuts(ViewRef viewRef) {
     File file = File(path);
@@ -71,58 +64,5 @@ class BrowserShortcuts {
       log.shout('$err: Failed to activate keyboard shortcuts.');
     });
     return null;
-  }
-
-  Map<String, VoidCallback> defaultActions() {
-    return {
-      'newTab': _newTab,
-      'closeTab': _closeTab,
-      'goBack': _goBack,
-      'goForward': _goForward,
-      'refresh': _refresh,
-      'previousTab': _previousTab,
-      'nextTab': _nextTab,
-    };
-  }
-
-  void _newTab() => tabsBloc.request.add(NewTabAction());
-
-  void _closeTab() {
-    if (tabsBloc.isOnlyTab) {
-      return;
-    }
-    tabsBloc.request.add(RemoveTabAction(tab: tabsBloc.currentTab!));
-  }
-
-  void _goBack() {
-    if (tabsBloc.currentTab!.backState) {
-      tabsBloc.currentTab!.request.add(GoBackAction());
-      return;
-    }
-    return;
-  }
-
-  void _goForward() {
-    if (tabsBloc.currentTab!.forwardState) {
-      tabsBloc.currentTab!.request.add(GoForwardAction());
-      return;
-    }
-    return;
-  }
-
-  void _refresh() => tabsBloc.currentTab!.request.add(RefreshAction());
-
-  void _previousTab() {
-    if (tabsBloc.isOnlyTab || tabsBloc.previousTab == null) {
-      return;
-    }
-    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.previousTab!));
-  }
-
-  void _nextTab() {
-    if (tabsBloc.isOnlyTab || tabsBloc.nextTab == null) {
-      return;
-    }
-    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.nextTab!));
   }
 }

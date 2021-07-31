@@ -20,7 +20,6 @@ import 'src/models/app_model.dart';
 import 'src/models/tabs_action.dart';
 import 'src/models/webpage_action.dart';
 import 'src/services/simple_browser_web_service.dart';
-import 'src/utils/browser_shortcuts.dart';
 import 'src/utils/tld_checker.dart';
 
 final _handler = MethodChannel('flutter_driver/handler');
@@ -71,12 +70,8 @@ void main() {
 
   tabsBloc.request.add(NewTabAction());
 
-  final kShortcuts = BrowserShortcuts(tabsBloc: tabsBloc)
-      .activateShortcuts(ScenicContext.hostViewRef());
-
   final appModel = AppModel.fromStartupContext(
     tabsBloc: tabsBloc,
-    keyboardShortcuts: kShortcuts,
   );
 
   runApp(App(appModel));

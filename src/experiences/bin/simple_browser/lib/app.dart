@@ -88,8 +88,10 @@ class App extends StatelessWidget {
                         AnimatedBuilder(
                           animation: model.tabsBloc.currentTabNotifier,
                           builder: (_, __) => NavigationBar(
-                              bloc: model.tabsBloc.currentTab,
-                              newTab: model.newTab),
+                            bloc: model.tabsBloc.currentTab,
+                            newTab: model.newTab,
+                            fieldFocus: model.fieldFocus,
+                          ),
                         ),
                         TabsWidget(bloc: model.tabsBloc),
                         Expanded(child: _buildContent()),

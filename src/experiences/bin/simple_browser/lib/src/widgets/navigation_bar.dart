@@ -16,8 +16,13 @@ enum _LayoutId { historyButtons, url, addTabButton }
 class NavigationBar extends StatelessWidget {
   final WebPageBloc? bloc;
   final VoidCallback newTab;
+  final FocusNode _fieldFocus;
 
-  const NavigationBar({required this.bloc, required this.newTab});
+  const NavigationBar({
+    required this.bloc,
+    required this.newTab,
+    required FocusNode fieldFocus,
+  }) : _fieldFocus = fieldFocus;
 
   @override
   Widget build(BuildContext context) => Material(
@@ -62,7 +67,9 @@ class NavigationBar extends StatelessWidget {
         ),
         LayoutId(
           id: _LayoutId.url,
-          child: bloc != null ? NavigationField(bloc: bloc!) : Container(),
+          child: bloc != null
+              ? NavigationField(bloc: bloc!, focus: _fieldFocus)
+              : Container(),
         ),
         LayoutId(
           id: _LayoutId.addTabButton,

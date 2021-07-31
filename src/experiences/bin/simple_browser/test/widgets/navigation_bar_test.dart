@@ -151,6 +151,7 @@ Future<void> _setUpNavigationBar(
         body: NavigationBar(
           bloc: bloc,
           newTab: callback,
+          fieldFocus: FocusNode(),
         ),
       ),
     ),

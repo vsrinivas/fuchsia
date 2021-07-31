@@ -9,21 +9,21 @@ import '../blocs/webpage_bloc.dart';
 import '../models/webpage_action.dart';
 
 class NavigationField extends StatefulWidget {
-  const NavigationField({required this.bloc});
+  const NavigationField({required this.bloc, required this.focus});
   final WebPageBloc bloc;
+  final FocusNode focus;
 
   @override
   _NavigationFieldState createState() => _NavigationFieldState();
 }
 
 class _NavigationFieldState extends State<NavigationField> {
-  final _focusNode = FocusNode();
   final _controller = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_onFocusChange);
+    widget.focus.addListener(_onFocusChange);
     _setupBloc(null, widget);
   }
 
@@ -31,7 +31,7 @@ class _NavigationFieldState extends State<NavigationField> {
   void dispose() {
     _setupBloc(widget, null);
     _controller.dispose();
-    _focusNode
+    widget.focus
       ..removeListener(_onFocusChange)
       ..dispose();
     super.dispose();
@@ -56,14 +56,14 @@ class _NavigationFieldState extends State<NavigationField> {
 
   void _updateFocus() {
     if (_controller.text.isEmpty) {
-      FocusScope.of(context).requestFocus(_focusNode);
+      FocusScope.of(context).requestFocus(widget.focus);
     } else {
-      _focusNode.unfocus();
+      widget.focus.unfocus();
     }
   }
 
   void _onFocusChange() {
-    if (_focusNode.hasFocus) {
+    if (widget.focus.hasFocus) {
       _controller.selection =
           TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
     }
@@ -76,7 +76,7 @@ class _NavigationFieldState extends State<NavigationField> {
 
   @override
   Widget build(BuildContext context) => TextField(
-        focusNode: _focusNode,
+        focusNode: widget.focus,
         autofocus: _controller.text.isEmpty,
         controller: _controller,
         cursorWidth: 8,
