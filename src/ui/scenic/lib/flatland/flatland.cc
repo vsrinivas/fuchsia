@@ -294,7 +294,16 @@ void Flatland::CreateView(ViewCreationToken token,
   parent_link_ = std::move(link);
 }
 
-void Flatland::ReleaseView(fuchsia::ui::composition::Flatland::ReleaseViewCallback callback) {
+void Flatland::CreateView2(ViewCreationToken token,
+                           fuchsia::ui::views::ViewIdentityOnCreation view_identity,
+                           fuchsia::ui::composition::ViewBoundProtocols protocols,
+                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
+  // TODO(fxb/81795): Implement viewref and protocol hookup.
+  CreateView(std::move(token), std::move(parent_viewport_watcher));
+}
+
+void Flatland::ReleaseView(
+    std::function<void(fuchsia::ui::composition::ViewCreationToken)> callback) {
   if (!parent_link_) {
     error_reporter_->ERROR() << "ReleaseView failed, no existing parent Link";
     ReportBadOperationError();

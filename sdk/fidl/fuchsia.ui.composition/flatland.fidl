@@ -5,6 +5,8 @@ library fuchsia.ui.composition;
 
 using fuchsia.math;
 using fuchsia.scenic.scheduling;
+using fuchsia.ui.pointer;
+using fuchsia.ui.views;
 using zx;
 
 /// The set of error codes returned in [`OnNextFrameBegin`]. Everything except NO_ERROR, causes
@@ -220,6 +222,30 @@ type OnNextFrameBeginValues = table {
     2: future_presentation_infos FuturePresentationInfos;
 };
 
+/// The protocol endpoints bound to a Flatland GraphLink. These protocols operate on the view
+/// (GraphLink) created in the Flatland session.
+type ViewBoundProtocols = resource table {
+    /// Learn when a view gains focus.
+    ///
+    /// Server-bound ViewRef. The [`view_ref_focused`] client does not specify the ViewRef
+    /// explicitly; instead, the server implementation uses the ViewRef used in view creation for
+    /// reporting focus movement on/off this view.
+    1: view_ref_focused server_end:fuchsia.ui.views.ViewRefFocused;
+
+    /// Enable a view to request focus transfer to a child (target) view.
+    ///
+    /// Server-bound ViewRef. The [`view_focuser`] client does not specify the "requestor" ViewRef
+    /// explicitly, only the "target" ViewRef. Instead, the server implementation uses the ViewRef
+    /// used in view creation as the "requestor" ViewRef.
+    2: view_focuser server_end:fuchsia.ui.views.Focuser;
+
+    /// Receive touch events that are associated with a view.
+    3: touch_source server_end:fuchsia.ui.pointer.TouchSource;
+
+    /// Receive mouse events that are associated with a view.
+    4: mouse_source server_end:fuchsia.ui.pointer.MouseSource;
+};
+
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
 /// (specifically, the directed acyclic graph starting at the root transform) to be presented as
@@ -339,19 +365,32 @@ protocol Flatland {
         parent_viewport_watcher server_end:ParentViewportWatcher;
     });
 
-    /// Releases the View, which disconnects this Flatland instance from its parent Flatland
-    /// instance. It also returns the ViewCreationToken used to establish the View. This token can
-    /// then be used to establish a new View with the Parent Viewport.
-    ///
-    /// To clear the existing content from the screen without releasing the current View, use
-    /// SetRootTransform(0) instead.
-    ///
-    /// Despite having a return type, this function is still feed-forward Like [`CreateView`] and
-    /// requires a call to [`Present`] to be executed. The ViewCreationToken will be returned after
-    /// the presented operations have been executed.
-    ReleaseView() -> (resource struct {
+    /// Identical to [`CreateView`], except it allows association of view identity (ViewRef) and
+    /// view-bound protocols.
+    @transitional
+    CreateView2(resource struct {
         token ViewCreationToken;
+        /// The ViewRef to strongly associate with [`token`].
+        view_identity fuchsia.ui.views.ViewIdentityOnCreation;
+        /// The protocol endpoints that are strongly bound to the ViewRef in [`view_identity`].
+        protocols ViewBoundProtocols;
+        parent_viewport_watcher server_end:ParentViewportWatcher;
     });
+
+    // Releases the View, which disconnects this Flatland instance from its parent Flatland
+    // instance. It also returns the ViewCreationToken used to establish the View. This token can
+    // then be used to establish a new View with the Parent Viewport.
+    //
+    // To clear the existing content from the screen without releasing the current View, use
+    // SetRootTransform(0) instead.
+    //
+    // Despite having a return type, this function is still feed-forward Like [`CreateView`] and
+    // requires a call to [`Present`] to be executed. The ViewCreationToken will be returned after
+    // the presented operations have been executed.
+    // TODO(fxbug.dev/81576): Re-enable this method.
+    // ReleaseView() -> (resource struct {
+    //     token ViewCreationToken;
+    // });
 
     /// This function will reset all state on this interface. This includes destroying all existing
     /// View and Viewports without returning the associated Token to the caller.
@@ -443,7 +482,7 @@ protocol Flatland {
     /// applied over the whole.
     ///
     /// TODO (fxbug.dev/44255): The implementation for group opacity is not complete, so at
-    /// the moment |SetOpacity| is only valid when called on a leaf transform. Flatland will
+    /// the moment [`SetOpacity`] is only valid when called on a leaf transform. Flatland will
     /// report an error if the opacity is changed to be anything other than 1.0 on a non-leaf
     /// node, or if a child is added to an existing leaf node with an opacity value < 1.0.
     SetOpacity(struct {
@@ -506,15 +545,14 @@ protocol Flatland {
         properties ImageProperties;
     });
 
-    /// This function is used to determine the region (in texel space) of an image that will be
-    /// used by Flatland when rendering. The image to be sampled is referenced by |image_id| and
-    /// the sample region is specified by |rect| which itself is comprised of an origin point (x,y)
-    /// as well as a width and height, in unnormalized coordinates. It is illegal to call this
-    /// function on non-image content, or to sample a region outside of the texel space of the
-    /// image. In other words, the region specifed by |rect| must not exceed the ranges
-    /// (0, image_width) and (0, image_height). If (rect.x + rect.width > image_width) or
-    /// (rect.y + rect.height > image_height) or if any of the values are negative, this will
-    /// result in an error.
+    /// This function is used to determine the region (in texel space) of an image that will be used
+    /// by Flatland when rendering. The image to be sampled is referenced by [`image_id`] and the
+    /// sample region is specified by [`rect`] which itself is comprised of an origin point (x,y) as
+    /// well as a width and height, in unnormalized coordinates. It is illegal to call this function
+    /// on non-image content, or to sample a region outside of the texel space of the image. In
+    /// other words, the region specifed by [`rect`] must not exceed the ranges (0, image_width) and
+    /// (0, image_height). If (rect.x + rect.width > image_width) or (rect.y + rect.height >
+    /// image_height) or if any of the values are negative, this will result in an error.
     SetImageSampleRegion(struct {
         image_id ContentId;
         rect fuchsia.math.RectF;
@@ -603,9 +641,9 @@ protocol Flatland {
         image_id ContentId;
     });
 
-    /// Set debug name of the current client that can be used by Flatland to print as a prefix
-    /// to logs to help client distinguish what is theirs. |name| can be an arbitrary string, but
-    /// the current process name (see fsl::GetCurrentProcessName()) is a good default.
+    /// Set debug name of the current client that can be used by Flatland to print as a prefix to
+    /// logs to help client distinguish what is theirs. [`name`] can be an arbitrary string, but the
+    /// current process name (see fsl::GetCurrentProcessName()) is a good default.
     SetDebugName(struct {
         name string:64;
     });

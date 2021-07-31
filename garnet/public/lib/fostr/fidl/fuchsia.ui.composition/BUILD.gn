@@ -11,5 +11,7 @@ fostr_fidl("fuchsia.ui.composition") {
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.scenic.scheduling",
     "//garnet/public/lib/fostr/fidl/fuchsia.sysmem",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.pointer",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
   ]
 }

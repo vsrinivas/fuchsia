@@ -17,6 +17,8 @@ fidl("fuchsia.ui.composition") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.views",
     "//zircon/vdso/zx",
   ]
 }

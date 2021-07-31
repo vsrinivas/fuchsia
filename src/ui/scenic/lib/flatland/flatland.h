@@ -85,8 +85,14 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void CreateView(fuchsia::ui::composition::ViewCreationToken token,
                   fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
                       parent_viewport_watcher) override;
+  void CreateView2(fuchsia::ui::composition::ViewCreationToken token,
+                   fuchsia::ui::views::ViewIdentityOnCreation view_identity,
+                   fuchsia::ui::composition::ViewBoundProtocols protocols,
+                   fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
+                       parent_viewport_watcher) override;
   // |fuchsia::ui::composition::Flatland|
-  void ReleaseView(fuchsia::ui::composition::Flatland::ReleaseViewCallback callback) override;
+  // TODO(fxb/81576): Reenable. The signature is adjusted to allow compilation.
+  void ReleaseView(std::function<void(fuchsia::ui::composition::ViewCreationToken)> callback);
   // |fuchsia::ui::composition::Flatland|
   void Clear() override;
   // |fuchsia::ui::composition::Flatland|

@@ -1464,7 +1464,8 @@ TEST_F(FlatlandTest, ParentViewportWatcherUnbindsImmediatelyWithInvalidToken) {
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
+// TODO(fxb/81576): Reenable.
+TEST_F(FlatlandTest, DISABLED_GraphUnlinkFailsWithoutLink) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   flatland->ReleaseView([](ViewCreationToken token) { EXPECT_TRUE(false); });
@@ -1472,7 +1473,8 @@ TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
+// TODO(fxb/81576): Reenable.
+TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ViewportCreationToken parent_token;
@@ -1502,7 +1504,8 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   EXPECT_FALSE(parent_viewport_watcher2.is_bound());
 }
 
-TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
+// TODO(fxb/81576): Reenable.
+TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ViewportCreationToken parent_token;
@@ -2855,7 +2858,8 @@ TEST_F(FlatlandTest, ClearChildLink) {
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
-TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
+// TODO(fxb/81576): Reenable.
+TEST_F(FlatlandTest, DISABLED_RelinkUnlinkedParentSameToken) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
