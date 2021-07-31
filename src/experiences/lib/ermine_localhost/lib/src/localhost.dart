@@ -91,7 +91,7 @@ class Localhost {
         if (fileName == _stopKeyword) {
           req.response
             ..headers.contentType = ContentType.html
-            ..write('${htmlPrefix}Stopped the server.$htmlSuffix');
+            ..write('Stopped the server.');
           await req.response.close();
           stopServer();
         }
