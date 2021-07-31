@@ -49,7 +49,7 @@ struct Service {
 enum MessageInternal {
     ControllerRequest(ControllerRequest),
     FlatlandEvent(flatland::FlatlandEvent),
-    GraphLinkGetLayout(flatland::LayoutInfo),
+    ParentViewportWatcherGetLayout(flatland::LayoutInfo),
 }
 
 // Represents a grid of uniformly-sized rectangular cells.
@@ -104,27 +104,31 @@ impl Service {
     ) -> Service {
         let mut link_tokens =
             flatland::LinkTokenPair::new().expect("failed to create LinkTokenPair");
-        let (_, content_link_request) = create_proxy::<flatland::ContentLinkMarker>()
-            .expect("failed to create ContentLink endpoints");
+        let (_, child_view_watcher_request) = create_proxy::<flatland::ChildViewWatcherMarker>()
+            .expect("failed to create ChildViewWatcher endpoints");
         display
-            .set_content(&mut link_tokens.content_link_token, content_link_request)
+            .set_content(&mut link_tokens.viewport_creation_token, child_view_watcher_request)
             .expect("fidl error");
 
-        let (graph_link_proxy, graph_link_request) = create_proxy::<flatland::GraphLinkMarker>()
-            .expect("failed to create GraphLink endpoints");
+        let (parent_viewport_watcher_proxy, parent_viewport_watcher_request) =
+            create_proxy::<flatland::ParentViewportWatcherMarker>()
+                .expect("failed to create ParentViewportWatcher endpoints");
         session
-            .link_to_parent(&mut link_tokens.graph_link_token, graph_link_request)
+            .create_view(&mut link_tokens.view_creation_token, parent_viewport_watcher_request)
             .expect("fidl error");
 
         fasync::Task::spawn(async move {
-            let mut layout_info_stream =
-                HangingGetStream::new(Box::new(move || Some(graph_link_proxy.get_layout())));
+            let mut layout_info_stream = HangingGetStream::new(Box::new(move || {
+                Some(parent_viewport_watcher_proxy.get_layout())
+            }));
 
             while let Some(result) = layout_info_stream.next().await {
                 match result {
                     Ok(layout_info) => {
                         internal_sender
-                            .unbounded_send(MessageInternal::GraphLinkGetLayout(layout_info))
+                            .unbounded_send(MessageInternal::ParentViewportWatcherGetLayout(
+                                layout_info,
+                            ))
                             .expect("failed to send MessageInternal.");
                     }
                     Err(fidl_error) => {
@@ -167,7 +171,7 @@ impl Service {
         let mut view_ref_pair = ViewRefPair::new()?;
         view_provider
             .create_view(
-                &mut link_tokens.graph_link_token,
+                &mut link_tokens.view_creation_token,
                 &mut view_ref_pair.control_ref,
                 &mut view_ref_pair.view_ref,
             )
@@ -180,21 +184,21 @@ impl Service {
         let tile_count: u32 = self.tiles.len().try_into().unwrap();
         let GridSpec { column_width, row_height, .. } =
             GridSpec::new(tile_count + 1, self.logical_width, self.logical_height);
-        let link_properties = flatland::LinkProperties {
+        let link_properties = flatland::ViewportProperties {
             logical_size: Some(fmath::SizeU { width: column_width, height: row_height }),
-            ..flatland::LinkProperties::EMPTY
+            ..flatland::ViewportProperties::EMPTY
         };
 
-        let (_, content_link_request) = create_proxy::<flatland::ContentLinkMarker>()
-            .expect("failed to create ContentLink endpoints");
+        let (_, child_view_watcher_request) = create_proxy::<flatland::ChildViewWatcherMarker>()
+            .expect("failed to create ChildViewWatcher endpoints");
 
         self.session.create_transform(&mut transform_id).expect("fidl error");
         self.session
-            .create_link(
+            .create_viewport(
                 &mut link_id,
-                &mut link_tokens.content_link_token,
+                &mut link_tokens.viewport_creation_token,
                 link_properties,
-                content_link_request,
+                child_view_watcher_request,
             )
             .expect("fidl error");
         self.session.set_content(&mut transform_id, &mut link_id).expect("fidl error");
@@ -232,7 +236,7 @@ impl Service {
             self.session.release_transform(&mut transform_id).expect("fidl error");
 
             // When removing a tile, we don't intend to reparent it, so we drop the returned future.
-            let _ = self.session.release_link(&mut link_id);
+            let _ = self.session.release_viewport(&mut link_id);
 
             self.relayout();
         } else {
@@ -284,11 +288,13 @@ impl Service {
                 .expect("fidl error");
 
             let mut link_id = flatland::ContentId { value: id.clone().into() };
-            let link_properties = flatland::LinkProperties {
+            let link_properties = flatland::ViewportProperties {
                 logical_size: Some(fmath::SizeU { width: column_width, height: row_height }),
-                ..flatland::LinkProperties::EMPTY
+                ..flatland::ViewportProperties::EMPTY
             };
-            self.session.set_link_properties(&mut link_id, link_properties).expect("fidl error");
+            self.session
+                .set_viewport_properties(&mut link_id, link_properties)
+                .expect("fidl error");
         }
 
         self.pending_present = true;
@@ -409,7 +415,7 @@ async fn main() -> Result<(), Error> {
                     error!("OnPresentProcessed({:?})", error);
                 }
             },
-            MessageInternal::GraphLinkGetLayout(layout_info) => {
+            MessageInternal::ParentViewportWatcherGetLayout(layout_info) => {
                 if let Some(logical_size) = layout_info.logical_size {
                     service.logical_width = logical_size.width;
                     service.logical_height = logical_size.height;

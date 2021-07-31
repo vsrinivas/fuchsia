@@ -28,11 +28,11 @@ type Orientation = strict enum {
 
 /// The return type of [`GetLayout`]. This table contains most of the information necessary
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
-/// provided to the client before the command that creates the Link is presented, so that the client
-/// may lay out content properly before their first call to [`Present`].
+/// provided to the client before the command that creates the View is presented, so that the
+/// client may lay out content properly before their first call to [`Present`].
 type LayoutInfo = table {
-    /// The layout size of a Graph in logical pixels, defined by the parent's call to
-    /// [`SetLinkProperties`]. Clients should re-layout their content when this value changes.
+    /// The layout size of a View in logical pixels, defined by the parent's call to
+    /// [`SetViewportProperties`]. Clients should re-layout their content when this value changes.
     1: logical_size fuchsia.math.SizeU;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
     /// transforms of the parent. Clients should not necessarily re-layout their content when this
@@ -40,90 +40,95 @@ type LayoutInfo = table {
     2: pixel_scale fuchsia.math.SizeU;
 };
 
-/// GraphLinks will be informed when they are actively attached to a output display (either
-/// directly, or through a chain of parent links) and when they are not. Until they are connected to
-/// a display, some pieces of information (such as pixel scale) may be unavailable.
-type GraphLinkStatus = strict enum {
+/// ParentViewportWatchers will be informed when they are actively attached to a output display
+/// (either directly, or through a chain of parent Viewports) and when they are not. Until they are
+/// connected to a display, some pieces of information (such as pixel scale) may be unavailable.
+type ParentViewportStatus = strict enum {
     CONNECTED_TO_DISPLAY = 1;
     DISCONNECTED_FROM_DISPLAY = 2;
 };
 
-/// A protocol that provides information about a particular Link to the child client. Each Flatland
-/// instance may only specify a single root transform, so other objects in the graph can only be
-/// children of a single GraphLink. However, more than one GraphLink protocol may be active at a
-/// time for a particular Flatland instance. Specifically, when a Flatland instance is transitioning
-/// from using one Link to another, each Link will have a separate protocol instance, and more than
-/// one protocol may receive certain updates.
-protocol GraphLink {
+/// A protocol that provides information about a particular Viewport to the child client. Each
+/// Flatland instance may only specify a single root transform, so each object in this scene graph
+/// can only be the child of at most one Viewport. However, more than one ParentViewportWatcher
+/// protocol may be active at a time for a particular Flatland instance. Specifically, when a
+/// Flatland instance is transitioning from using one Viewport to another, each Viewport will have a
+/// separate protocol instance, and more than one protocol may receive certain updates.
+protocol ParentViewportWatcher {
     /// A hanging get for receiving layout information. Clients may receive layout information
-    /// before the GraphLink operation has been presented. This allows children to layout their
-    /// content before their first call to [`Present`]. In transition cases where two GraphLink
-    /// channels exist at the same time, both protocol instances will be receiving different layout
-    /// information.
+    /// before the ParentViewportWatcher operation has been presented. This allows children to
+    /// layout their content before their first call to [`Present`]. In transition cases where two
+    /// ParentViewportWatcher channels exist at the same time, both protocol instances will be
+    /// receiving different layout information.
     ///
     /// This hanging get will only fire when the LayoutInfo is different than the previously
     /// returned LayoutInfo. Note that, since LayoutInfo is a table, only some fields may have
     /// changed.
     ///
     /// It is invalid to call `GetLayout` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
+    /// cause both this channel and the Flatland channel that handed out ParentViewportWatcher to be
+    /// closed.
     GetLayout() -> (struct {
         info LayoutInfo;
     });
 
-    /// A hanging get for receiving the status of the Link. This provides global connectivity
-    /// information to the child.
+    /// A hanging get for receiving the status of the parent Viewport. This provides global
+    /// connectivity information to the child.
     ///
-    /// This hanging get will only fire when the GraphLinkStatus is different than the previously
-    /// returned GraphLinkStatus.
+    /// This hanging get will only fire when the ParentViewportStatus is different than the
+    /// previously returned ParentViewportStatus.
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
+    /// cause both this channel and the Flatland channel that handed out ParentViewportWatcher to be
+    /// closed.
     GetStatus() -> (struct {
-        status GraphLinkStatus;
+        status ParentViewportStatus;
     });
 };
 
-type ContentLinkStatus = strict enum {
-    /// The underlying Graph has connected its Link, called [`Present`], and the acquisition fences
-    /// of the [`Present`] call have all be reached, indicating that it has some content ready to be
-    /// displayed.
+type ChildViewStatus = strict enum {
+    /// The underlying Flatland instance has connected its View, called [`Present`], and the
+    /// acquisition fences of the [`Present`] call have all be reached, indicating that it has some
+    /// content ready to be displayed.
     CONTENT_HAS_PRESENTED = 1;
 };
 
-/// A protocol that provides information about a particular Link to the parent client. Flatland
-/// instances may contain any number of ContentLinks, each of which may or may not be attached to
-/// the Root Transform. Each ContentLink has its own protocol instance.
-protocol ContentLink {
-    /// A hanging get for receiving the status of a Link. This provides information to the parent,
-    /// such as whether or not the child has successfully presented content through this Link.
+/// A protocol that provides information about a particular View to the parent client. Flatland
+/// instances may contain any number of ChildViewWatchers, each of which may or may not be attached
+/// to a transform. Each ChildViewWatcher has its own protocol instance.
+protocol ChildViewWatcher {
+    /// A hanging get for receiving the status of a View. This provides information to the parent,
+    /// such as whether or not the child has successfully presented content through this View.
     ///
-    /// This hanging get will only fire when the ContentLinkStatus is different than the previously
-    /// returned ContentLinkStatus.
+    /// This hanging get will only fire when the ChildViewStatus is different than the previously
+    /// returned ChildViewStatus.
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
-    /// cause both this channel and the Flatland channel that handed out ContentLink to be closed.
+    /// cause both this channel and the Flatland channel that handed out ChildViewWatcher to be
+    /// closed.
     GetStatus() -> (struct {
-        status ContentLinkStatus;
+        status ChildViewStatus;
     });
 };
 
-/// A typed wrapper for a channel, representing the child endpoint of a Link. No messages will be
-/// sent over this channel, because it is only used as an unclonable object with peer.
-type GraphLinkToken = resource struct {
+/// A typed wrapper for a channel, representing the child endpoint of the connection between two
+/// Flatland instances. No messages will be sent over this channel, because it is only used as an
+/// unclonable object with peer.
+type ViewCreationToken = resource struct {
     value zx.handle:CHANNEL;
 };
 
-/// A typed wrapper for a channel, representing the parent endpoint of a Link. No messages will be
-/// sent over this channel, because it is only used as an unclonable object with peer.
-type ContentLinkToken = resource struct {
+/// A typed wrapper for a channel, representing the parent endpoint of the connection between two
+/// Flatlands. No messages will be sent over this channel, because it is only used as an unclonable
+/// object with peer.
+type ViewportCreationToken = resource struct {
     value zx.handle:CHANNEL;
 };
 
-/// The properties of a Link as defined by the parent. This data, along with the set of attached
-/// Transforms, will be used to compute the LayoutInfo for the child of the Link.
-type LinkProperties = table {
-    /// The size of the Link in logical pixels. This maps directly to the logical_size field in
+/// The properties of a Viewport as defined by the parent. This data, along with the set of attached
+/// Transforms, will be used to compute the LayoutInfo for the View of the Viewport.
+type ViewportProperties = table {
+    /// The size of the Viewport in logical pixels. This maps directly to the logical_size field in
     /// LayoutInfo.
     1: logical_size fuchsia.math.SizeU;
 };
@@ -142,7 +147,7 @@ type TransformId = struct {
 };
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
-/// (e.g. [`CreateLink`], [`CreateImage`]) for more information.
+/// (e.g. [`CreateViewport`], [`CreateImage`]) for more information.
 type ContentId = struct {
     value uint64;
 };
@@ -172,9 +177,9 @@ type PresentArgs = resource table {
     ///
     1: requested_presentation_time zx.time;
 
-    /// Flatland will wait until all of a session's `acquire_fences` are ready before it will
-    /// execute the presented commands. Not signaling `acquire_fences` will block the current [`Present`]
-    /// as well as the following ones even if their `acquire_fences` are signaled.
+    /// Flatland will wait until all of a Flatland instance's `acquire_fences` are ready before it
+    /// will execute the presented commands. Not signaling `acquire_fences` will block the current
+    /// [`Present`] as well as the following ones even if their `acquire_fences` are signaled.
     ///
     /// The default `acquire_fences` value is the empty vector.
     2: acquire_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
@@ -221,7 +226,7 @@ type OnNextFrameBeginValues = table {
 /// content to some kind of output -- usually, a display.
 ///
 /// Flatland Graphs are both hierarchical, and distributed. Graphs from different Flatland instances
-/// may be linked together, allowing multiple processes to be involved in authoring content for a
+/// may be connected together, allowing multiple processes to be involved in authoring content for a
 /// particular output.
 ///
 /// All functions in this protocol are feed-forward. The operations they represent are not fully
@@ -230,130 +235,127 @@ type OnNextFrameBeginValues = table {
 protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
-    /// If executing an operation produces an error (e.g., CreateTransform(0)),
-    /// an [`OnError`] event is emitted. Operations that produce errors are ignored and
-    /// the channel is closed.
+    /// If executing an operation produces an error (e.g., CreateTransform(0)), an [`OnError`] event
+    /// is emitted. Operations that produce errors are ignored and the channel is closed.
     ///
     /// If the execution is completed successfully, [`OnNextFrameBegin`] emits NO_ERROR along
     /// with other valid fields.
     ///
-    /// The client may only call [`Present`] when they have a non-zero number
-    /// of present credits, which are tracked by the server. The server may
-    /// increment the number of credits when it fires the [`OnNextFrameBegin`] event, which
-    /// informs the client when it receives additional present credits. Each [`Present`]
-    /// call uses one present credit and decrements the server count by one. If
-    /// the client calls [`Present`] with no present credits, the server will return a
-    /// `NO_PRESENTS_REMAINING` error.
+    /// The client may only call [`Present`] when they have a non-zero number of present credits,
+    /// which are tracked by the server. The server may increment the number of credits when it
+    /// fires the [`OnNextFrameBegin`] event, which informs the client when it receives additional
+    /// present credits. Each [`Present`] call uses one present credit and decrements the server
+    /// count by one. If the client calls [`Present`] with no present credits, the server will
+    /// return a `NO_PRESENTS_REMAINING` error.
     ///
-    /// The client should assume that prior to receiving any [`OnNextFrameBegin`]
-    /// events, they have one present credit.
+    /// The client should assume that prior to receiving any [`OnNextFrameBegin`] events, they have
+    /// one present credit.
     ///
     /// Every [`Present`] call results in one [`OnNextFrameBegin`] event, and one
     /// [`OnFramePresented`] event, typically in that order.
     ///
-    /// When the commands flushed by [`Present`] make it to display, an
-    /// [`OnFramePresented`] event is fired. This event includes information
-    /// pertaining to all [`Present`]s that had content that were part of that
-    /// frame.
+    /// When the commands flushed by [`Present`] make it to display, an [`OnFramePresented`] event
+    /// is fired. This event includes information pertaining to all [`Present`]s that had content
+    /// that were part of that frame.
     ///
-    /// See [`fuchsia.ui.composition/PresentArgs`] documentation above for
-    /// more detailed information on what arguments are passed in and their
-    /// role.
+    /// See [`fuchsia.ui.composition/PresentArgs`] documentation above for more detailed information
+    /// on what arguments are passed in and their role.
     Present(resource struct {
         args PresentArgs;
     });
 
-    /// This event is fired when clients should expect minimal resource
-    /// contention. Clients may use the timing of this event to begin their
-    /// rendering work, using the information returned to inform their
-    /// scheduling decisions.
+    /// This event is fired when clients should expect minimal resource contention. Clients may use
+    /// the timing of this event to begin their rendering work, using the information returned to
+    /// inform their scheduling decisions.
     ///
-    /// Importantly, OnNextFrameBegin is only fired when the client has one or
-    /// more present credits, including what is returned in this event. It is
-    /// therefore safe to present once every time this event fires.
+    /// Importantly, OnNextFrameBegin is only fired when the client has one or more present credits,
+    /// including what is returned in this event. It is therefore safe to present once every time
+    /// this event fires.
     ///
-    /// - response `values` the table of information a client needs to produce
-    /// its next frame. See [`OnNextFrameBeginValues`] for more information.
+    /// - response `values` the table of information a client needs to produce its next frame. See
+    /// [`OnNextFrameBeginValues`] for more information.
     -> OnNextFrameBegin(struct {
         values OnNextFrameBeginValues;
     });
 
-    /// This event is fired whenever a set of one or more [`Present`]s are
-    /// presented simultaneously, and are therefore no longer in flight.
+    /// This event is fired whenever a set of one or more [`Present`]s are presented simultaneously,
+    /// and are therefore no longer in flight.
     ///
-    /// This event signifies that the commands enqueued before the [`Present`]
-    /// have taken effect in the scene graph, and are globally visible.
+    /// This event signifies that the commands enqueued before the [`Present`] have taken effect in
+    /// the scene graph, and are globally visible.
     ///
-    /// Clients do NOT have to implement a handler for this event for basic
-    /// frame scheduling, unless they explicitly want feedback on prior frame
-    /// presentation. All future frame information is given in the [`OnNextFrameBegin`]
-    /// event.
+    /// Clients do NOT have to implement a handler for this event for basic frame scheduling, unless
+    /// they explicitly want feedback on prior frame presentation. All future frame information is
+    /// given in the [`OnNextFrameBegin`] event.
     ///
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
     -> OnFramePresented(struct {
         frame_presented_info fuchsia.scenic.scheduling.FramePresentedInfo;
     });
 
-    /// If an error occurrs after a [`Present`], an `OnError` event will fire
-    /// with associated information.
+    /// If an error occurrs after a [`Present`], an `OnError` event will fire with associated
+    /// information.
     ///
     /// FlatlandErrors will close the connection with the client.
     ///
-    /// - response `error` the error a client may receive after performing some
-    /// invalid operations.
+    /// - response `error` the error a client may receive after performing some invalid operations.
     -> OnError(struct {
         error FlatlandError;
     });
 
-    // ***** Graph management *****
+    // ***** View management *****
 
-    /// A Link is a connection between the objects authored in this Graph, and the objects in
-    /// the Graph of another process. The parent process has control over how the linked content is
-    /// integrated into their Graph.
+    /// Two Flatland instances may be connected in a parent-child relationship. The parent endpoint
+    /// is held in a Viewport, and the child endpoint is held in a View. The parent Flatland
+    /// instance that creates a Viewport has control over how the child's View is integrated into
+    /// its own View.
     ///
-    /// A link starts with two endpoints of channel objects: a ContentLinkToken and GraphLinkToken.
-    /// Out-of-band protocols pass the ContentLinkToken to the parent, which calls [`CreateLink`], and
-    /// the GraphLinkToken to the child, which calls [`LinkToParent`].
+    /// The lifecycle of a parent-child connection starts with two endpoints of a channel object:
+    /// a ViewportCreationToken and a ViewCreationToken. Out-of-band protocols pass the
+    /// ViewportCreationToken to the parent, which calls [`CreateViewport`], and the
+    /// ViewCreationToken to the child, which calls [`CreateView`].
     ///
-    /// Only nodes connected to the Root Transform in this Flatland instance will be rendered as
-    /// part of the parent's Graph.
+    /// Only nodes connected to the Root Transform in this Flatland instance will be rendered into
+    /// the parent's Viewport.
     ///
-    /// Calling [`LinkToParent`] a second time will disconnect the Root Transform from the existing
-    /// parent's Graph, and attach it to a new parent's Graph. Each Graph can only have one parent.
+    /// Calling [`CreateView`] a second time will disconnect the Root Transform from the existing
+    /// parent's Viewport, and attach it to a new parent's Viewport. In other words, each View can
+    /// only have one parent.
     ///
     /// This function is queued, meaning that the Root Transform will not be attached to the
-    /// parent Graph until [`Present`] is called. However, clients will receive information through
-    /// their GraphLink (e.g., LayoutInfo) immediately after calling this function, even if they
-    /// have not called [`Present`] or [`SetRootTransform`]. This allows clients to wait for layout
-    /// information from their parent before calling [`Present`].
+    /// parent Viewport until [`Present`] is called. However, clients will receive information
+    /// through their ParentViewportWatcher (e.g., LayoutInfo) immediately after calling this
+    /// function, even if they have not called [`Present`] or [`SetRootTransform`]. This allows
+    /// clients to wait for layout information from their parent before calling [`Present`].
     ///
-    /// Any illegal operations on GraphLink will cause both GraphLink channel and this Flatland
-    /// channel to be torn down.
+    /// Any illegal operations on ParentViewportWatcher will cause both ParentViewportWatcher
+    /// channel and this Flatland channel to be torn down.
     ///
-    /// Lifecycle note. The lifetime of the GraphLink channel is bound by the peer ContentLinkToken.
-    /// When the ContentLinkToken dies, this GraphLink channel is destroyed.
-    LinkToParent(resource struct {
-        token GraphLinkToken;
-        graph_link server_end:GraphLink;
+    /// Lifecycle note. The lifetime of the ParentViewportWatcher channel is bound by the peer
+    /// ViewportCreationToken. When the ViewportCreationToken dies, this ParentViewportWatcher
+    /// channel is destroyed.
+    CreateView(resource struct {
+        token ViewCreationToken;
+        parent_viewport_watcher server_end:ParentViewportWatcher;
     });
 
-    /// Disconnects this Graph from its parent Graph and returns the GraphLinkToken used to
-    /// establish the link. This token can then be used to establish a new link with the Parent
-    /// graph.
+    /// Releases the View, which disconnects this Flatland instance from its parent Flatland
+    /// instance. It also returns the ViewCreationToken used to establish the View. This token can
+    /// then be used to establish a new View with the Parent Viewport.
     ///
-    /// To clear the existing content from the screen without unlinking the current Graph, use
+    /// To clear the existing content from the screen without releasing the current View, use
     /// SetRootTransform(0) instead.
     ///
-    /// Despite having a return type, this function is still feed-forward Like [`LinkToParent`] and
-    /// requires a call to [`Present`] to be executed. The GraphLinkToken will be returned after the
-    /// presented operations have been executed.
-    UnlinkFromParent() -> (resource struct {
-        token GraphLinkToken;
+    /// Despite having a return type, this function is still feed-forward Like [`CreateView`] and
+    /// requires a call to [`Present`] to be executed. The ViewCreationToken will be returned after
+    /// the presented operations have been executed.
+    ReleaseView() -> (resource struct {
+        token ViewCreationToken;
     });
 
     /// This function will reset all state on this interface. This includes destroying all existing
-    /// Links without returning the associated Token to the caller.
-    ClearGraph();
+    /// View and Viewports without returning the associated Token to the caller.
+    Clear();
 
     // ***** Transforms *****
 
@@ -365,7 +367,8 @@ protocol Flatland {
     /// unreleased Transform, or the Root Transform.
     ///
     /// Each Transform can have a single piece of attached Content. Common types of Content include
-    /// bitmaps, asynchronous streams of images, and links to Transforms in other processes.
+    /// bitmaps, asynchronous streams of images, and Viewports to Views hosted in other Flatland
+    /// instances.
     ///
     /// Transforms have attributes. Child Transforms inherit the combined attributes of their
     /// parents. Content attached to a Transform is also affected by that Transform's attributes.
@@ -420,9 +423,9 @@ protocol Flatland {
 
     /// Sets the Root Transform for the graph.
     ///
-    /// The sub-graph defined by the Root Transform and its children will be rendered as Content
-    /// in the linked parent Graph (see [`LinkToParent`]). Any parents of the Root Transform in this
-    /// Graph will be ignored.
+    /// The sub-graph defined by the Root Transform and its children will be rendered as View
+    /// in the connected parent's Viewport (see [`CreateView`]). Any parents of the Root Transform
+    /// in this Graph will be ignored.
     ///
     /// The Root Transform, and all children of the Root Transform, are kept alive if they are
     /// released (see [`ReleaseTransform`] for more details).
@@ -458,29 +461,30 @@ protocol Flatland {
     // Content is contained within a unit rectangle, with the top-left corner at the origin of the
     // coordinate space defined by the attached Transform.
 
-    /// A Link is a connection between the objects authored in this Graph, and the objects in
-    /// another process. The parent process has control over how the linked Content is integrated
-    /// into their Graph through this Link object, and the object's associated Link properties.
+    /// The Viewport and View pair, together, represent the connection between two Flatland
+    /// instances. The Viewport is created in the parent, and the View is created in the child. The
+    /// parent has control over how the child's View is integrated into its own View.
     ///
-    /// Any illegal operations on ContentLink will cause both ContentLink channel and this Flatland
-    /// channel to be torn down.
+    /// Any illegal operations on ChildViewWatcher will cause both ChildViewWatcher channel and this
+    /// Flatland channel to be torn down.
     ///
-    /// `LinkProperties` must have logical_size set. This is the initial size that will drive the
-    /// layout of the child. The logical_size is also used as the default Content size, but
+    /// `ViewportProperties` must have logical_size set. This is the initial size that will drive
+    /// the layout of the child. The logical_size is also used as the default Content size, but
     /// subsequent changes to the logical_size will have no effect on the Content size.
     ///
     /// The logical_size must have positive X and Y components.
     ///
-    /// Zero is not a valid Link id. All other values are valid, assuming they are not already
-    /// in use for another piece of Content (see [`ReleaseLink`] for more details).
+    /// Zero is not a valid ContentId. All other values are valid, assuming they are not already
+    /// in use for another piece of Content (see [`RemoveViewport`] for more details).
     ///
-    /// Lifecycle note. The lifetime of the ContentLink channel is bound by the peer GraphLinkToken.
-    /// When the GraphLinkToken dies, this ContentLink channel is destroyed.
-    CreateLink(resource struct {
-        link_id ContentId;
-        token ContentLinkToken;
-        properties LinkProperties;
-        content_link server_end:ContentLink;
+    /// Lifecycle note. The lifetime of the ChildViewWatcher channel is bound by the peer
+    /// ViewCreationToken. When the ViewCreationToken dies, this ChildViewWatcher channel is
+    /// destroyed.
+    CreateViewport(resource struct {
+        viewport_id ContentId;
+        token ViewportCreationToken;
+        properties ViewportProperties;
+        child_view_watcher server_end:ChildViewWatcher;
     });
 
     /// An Image is a bitmap backed by a specific VMO in a BufferCollection.
@@ -544,14 +548,14 @@ protocol Flatland {
 
     // ***** Content mutators *****
 
-    /// Transforms are usually sufficient to change how Content is presented. Links, however, have
-    /// special properties that are not part of the Transform hierarchy. Those properties can be set
-    /// using this function.
+    /// Transforms are usually sufficient to change how Content is presented. Viewports, however,
+    /// have special properties that are not part of the Transform hierarchy. Those properties can
+    /// be set using this function.
     ///
     /// The logical_size must have positive X and Y components.
-    SetLinkProperties(struct {
-        link_id ContentId;
-        properties LinkProperties;
+    SetViewportProperties(struct {
+        viewport_id ContentId;
+        properties ViewportProperties;
     });
 
     // ***** Cleanup operations *****
@@ -569,20 +573,19 @@ protocol Flatland {
         transform_id TransformId;
     });
 
-    /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
-    /// connected to a Transform. Unlike other resources, Links are garbage collected by the system
-    /// during the next [`Present`] because a released Link is guaranteed to provide no renderable
-    /// content.
+    /// Releases a Viewport from the scene, even if the Viewport is still connected to a Transform.
+    /// Unlike other resources, Viewports are garbage collected by the system during the next
+    /// [`Present`] because a removed Viewport is guaranteed to provide no renderable content.
     ///
-    /// Use SetContent(transform_id, 0) to clean up references to deleted Links.
+    /// Use SetContent(transform_id, 0) to clean up references to released Viewports.
     ///
-    /// Despite having a return type, this function is still feed-forward like [`LinkToParent`] and
-    /// requires a call to [`Present`] to be executed. The ContentLinkToken will be returned after the
-    /// presented operations have been executed.
-    ReleaseLink(struct {
-        link_id ContentId;
+    /// Despite having a return type, this function is still feed-forward like [`CreateView`] and
+    /// requires a call to [`Present`] to be executed. The ViewportCreationToken will be returned
+    /// after the presented operations have been executed.
+    ReleaseViewport(struct {
+        viewport_id ContentId;
     }) -> (resource struct {
-        tokid ContentLinkToken;
+        token ViewportCreationToken;
     });
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
@@ -616,13 +619,13 @@ protocol Flatland {
 @discoverable
 protocol FlatlandDisplay {
     // TODO(fxbug.dev/76643): Consider whether this should be:
-    //   SetLink(ContentLinkToken token) -> (ContentLinkToken? previous_content_token);
+    //   SetContent(ViewportCreationToken token) -> (ViewportCreationToken? previous_token);
     // ... this way, whoever is using the display can keep track of multiple different pieces
     // of content, and choose which to display.  OTOH, an argument could be made that this API
     // should be kept as simple as possible, and if one wanted to do this sort of thing they should
     // create their own Flatland instance and do the content management there.
     SetContent(resource struct {
-        token ContentLinkToken;
-        content_link server_end:ContentLink;
+        token ViewportCreationToken;
+        child_view_watcher server_end:ChildViewWatcher;
     });
 };

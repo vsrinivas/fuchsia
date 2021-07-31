@@ -7,25 +7,25 @@ use {anyhow::Error, fuchsia_zircon as zx};
 pub use {
     fidl_fuchsia_scenic_scheduling::PresentationInfo,
     fidl_fuchsia_ui_composition::{
-        ContentId, ContentLinkMarker, ContentLinkToken, FlatlandDisplayMarker,
-        FlatlandDisplayProxy, FlatlandError, FlatlandEvent, FlatlandEventStream, FlatlandMarker,
-        FlatlandProxy, GraphLinkMarker, GraphLinkProxy, GraphLinkToken, LayoutInfo, LinkProperties,
-        PresentArgs, TransformId,
+        ChildViewWatcherMarker, ContentId, FlatlandDisplayMarker, FlatlandDisplayProxy,
+        FlatlandError, FlatlandEvent, FlatlandEventStream, FlatlandMarker, FlatlandProxy,
+        LayoutInfo, ParentViewportWatcherMarker, ParentViewportWatcherProxy, PresentArgs,
+        TransformId, ViewCreationToken, ViewportCreationToken, ViewportProperties,
     },
 };
 
 // Pair of tokens used to link two Flatland sessions together.
 pub struct LinkTokenPair {
-    pub graph_link_token: GraphLinkToken,
-    pub content_link_token: ContentLinkToken,
+    pub view_creation_token: ViewCreationToken,
+    pub viewport_creation_token: ViewportCreationToken,
 }
 
 impl LinkTokenPair {
     pub fn new() -> Result<LinkTokenPair, Error> {
-        let (graph_link_token, content_link_token) = zx::Channel::create()?;
+        let (view_creation_token, viewport_creation_token) = zx::Channel::create()?;
         Ok(LinkTokenPair {
-            graph_link_token: GraphLinkToken { value: graph_link_token },
-            content_link_token: ContentLinkToken { value: content_link_token },
+            view_creation_token: ViewCreationToken { value: view_creation_token },
+            viewport_creation_token: ViewportCreationToken { value: viewport_creation_token },
         })
     }
 }

@@ -82,14 +82,13 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void Present(fuchsia::ui::composition::PresentArgs args) override;
   // |fuchsia::ui::composition::Flatland|
-  void LinkToParent(
-      fuchsia::ui::composition::GraphLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> graph_link) override;
+  void CreateView(fuchsia::ui::composition::ViewCreationToken token,
+                  fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
+                      parent_viewport_watcher) override;
   // |fuchsia::ui::composition::Flatland|
-  void UnlinkFromParent(
-      fuchsia::ui::composition::Flatland::UnlinkFromParentCallback callback) override;
+  void ReleaseView(fuchsia::ui::composition::Flatland::ReleaseViewCallback callback) override;
   // |fuchsia::ui::composition::Flatland|
-  void ClearGraph() override;
+  void Clear() override;
   // |fuchsia::ui::composition::Flatland|
   void CreateTransform(TransformId transform_id) override;
   // |fuchsia::ui::composition::Flatland|
@@ -104,10 +103,10 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void SetRootTransform(TransformId transform_id) override;
   // |fuchsia::ui::composition::Flatland|
-  void CreateLink(
-      ContentId link_id, fuchsia::ui::composition::ContentLinkToken token,
-      fuchsia::ui::composition::LinkProperties properties,
-      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link) override;
+  void CreateViewport(ContentId viewport_id, fuchsia::ui::composition::ViewportCreationToken token,
+                      fuchsia::ui::composition::ViewportProperties properties,
+                      fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher>
+                          child_view_watcher) override;
   // |fuchsia::ui::composition::Flatland|
   void CreateImage(ContentId image_id,
                    fuchsia::ui::composition::BufferCollectionImportToken import_token,
@@ -122,13 +121,14 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // |fuchsia::ui::composition::Flatland|
   void SetContent(TransformId transform_id, ContentId content_id) override;
   // |fuchsia::ui::composition::Flatland|
-  void SetLinkProperties(ContentId link_id,
-                         fuchsia::ui::composition::LinkProperties properties) override;
+  void SetViewportProperties(ContentId viewport_id,
+                             fuchsia::ui::composition::ViewportProperties properties) override;
   // |fuchsia::ui::composition::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
   // |fuchsia::ui::composition::Flatland|
-  void ReleaseLink(ContentId link_id,
-                   fuchsia::ui::composition::Flatland::ReleaseLinkCallback callback) override;
+  void ReleaseViewport(
+      ContentId viewport_id,
+      fuchsia::ui::composition::Flatland::ReleaseViewportCallback callback) override;
   // |fuchsia::ui::composition::Flatland|
   void ReleaseImage(ContentId image_id) override;
   // |fuchsia::ui::composition::Flatland|
@@ -219,7 +219,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // True if any function has failed since the previous call to Present(), false otherwise.
   bool failure_since_previous_present_ = false;
 
-  // True if there was errors in GraphLink or ContentLink channel provided.
+  // True if there was errors in ParentViewportWatcher or ChildViewWatcher channel provided.
   bool link_protocol_error_ = false;
 
   // The number of Present() calls remaining before the client runs out. This value is potentially
@@ -259,7 +259,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
   struct ChildLinkData {
     LinkSystem::ChildLink link;
-    fuchsia::ui::composition::LinkProperties properties;
+    fuchsia::ui::composition::ViewportProperties properties;
     fuchsia::math::SizeU size;
   };
 

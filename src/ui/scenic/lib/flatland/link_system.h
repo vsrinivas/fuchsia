@@ -32,13 +32,13 @@ namespace flatland {
 
 using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 
-// An implementation of the GraphLink protocol, consisting of hanging gets for various updateable
-// pieces of information.
-class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
+// An implementation of the ParentViewportWatcher protocol, consisting of hanging gets for various
+// updateable pieces of information.
+class ParentViewportWatcherImpl : public fuchsia::ui::composition::ParentViewportWatcher {
  public:
-  explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                         fidl::InterfaceRequest<GraphLink> request,
-                         LinkProtocolErrorCallback error_callback)
+  explicit ParentViewportWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                                     fidl::InterfaceRequest<ParentViewportWatcher> request,
+                                     LinkProtocolErrorCallback error_callback)
       : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
         error_callback_(std::move(error_callback)),
         layout_helper_(dispatcher_holder),
@@ -48,11 +48,11 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
     layout_helper_.Update(std::move(info));
   }
 
-  void UpdateLinkStatus(fuchsia::ui::composition::GraphLinkStatus status) {
+  void UpdateLinkStatus(fuchsia::ui::composition::ParentViewportStatus status) {
     status_helper_.Update(std::move(status));
   }
 
-  // |fuchsia::ui::composition::GraphLink|
+  // |fuchsia::ui::composition::ParentViewportWatcher|
   void GetLayout(GetLayoutCallback callback) override {
     if (layout_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -65,7 +65,7 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
     layout_helper_.SetCallback(std::move(callback));
   }
 
-  // |fuchsia::ui::composition::GraphLink|
+  // |fuchsia::ui::composition::ParentViewportWatcher|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -79,28 +79,28 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
   }
 
  private:
-  fidl::Binding<fuchsia::ui::composition::GraphLink> binding_;
+  fidl::Binding<fuchsia::ui::composition::ParentViewportWatcher> binding_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::LayoutInfo> layout_helper_;
-  HangingGetHelper<fuchsia::ui::composition::GraphLinkStatus> status_helper_;
+  HangingGetHelper<fuchsia::ui::composition::ParentViewportStatus> status_helper_;
 };
 
-// An implementation of the ContentLink protocol, consisting of hanging gets for various updateable
-// pieces of information.
-class ContentLinkImpl : public fuchsia::ui::composition::ContentLink {
+// An implementation of the ChildViewWatcher protocol, consisting of hanging gets for various
+// updateable pieces of information.
+class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
  public:
-  explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                           fidl::InterfaceRequest<ContentLink> request,
-                           LinkProtocolErrorCallback error_callback)
+  explicit ChildViewWatcherImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                                fidl::InterfaceRequest<ChildViewWatcher> request,
+                                LinkProtocolErrorCallback error_callback)
       : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
         error_callback_(std::move(error_callback)),
         status_helper_(std::move(dispatcher_holder)) {}
 
-  void UpdateLinkStatus(fuchsia::ui::composition::ContentLinkStatus status) {
+  void UpdateLinkStatus(fuchsia::ui::composition::ChildViewStatus status) {
     status_helper_.Update(std::move(status));
   }
 
-  // |fuchsia::ui::composition::ContentLink|
+  // |fuchsia::ui::composition::ChildViewWatcher|
   void GetStatus(GetStatusCallback callback) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
@@ -114,9 +114,9 @@ class ContentLinkImpl : public fuchsia::ui::composition::ContentLink {
   }
 
  private:
-  fidl::Binding<fuchsia::ui::composition::ContentLink> binding_;
+  fidl::Binding<fuchsia::ui::composition::ChildViewWatcher> binding_;
   LinkProtocolErrorCallback error_callback_;
-  HangingGetHelper<fuchsia::ui::composition::ContentLinkStatus> status_helper_;
+  HangingGetHelper<fuchsia::ui::composition::ChildViewStatus> status_helper_;
 };
 
 // A system for managing links between Flatland instances. Each Flatland instance creates Links
@@ -144,27 +144,27 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // also supplies its attachment point so that the LinkSystem can create an edge between the two
   // when the link resolves. This allows creation and destruction logic to be paired within a single
   // ObjectLinker endpoint, instead of being spread out between the two endpoints.
-  struct GraphLinkInfo {
+  struct ChildLinkInfo {
+    TransformHandle parent_viewport_watcher_handle;
     TransformHandle link_handle;
-    TransformHandle graph_handle;
     fuchsia::math::SizeU initial_logical_size;
   };
 
-  struct ContentLinkInfo {
-    TransformHandle child_handle;
+  struct ParentLinkInfo {
+    TransformHandle child_view_watcher_handle;
   };
 
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
   // sharing link requests is a clean way to implement that functionality. This will become more
   // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<ContentLinkInfo, GraphLinkInfo>;
+  using ObjectLinker = scenic_impl::gfx::ObjectLinker<ParentLinkInfo, ChildLinkInfo>;
 
   // Destruction of a ChildLink object will trigger deregistration with the LinkSystem.
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
   struct ChildLink {
-    // The handle on which the GraphLinkImpl to the child will live.
-    TransformHandle graph_handle;
+    // The handle on which the ParentViewportWatcherImpl to the child will live.
+    TransformHandle parent_viewport_watcher_handle;
     // The LinkSystem-owned handle that will be a key in the LinkTopologyMap when the link resolves.
     // These handles will never be in calculated global topologies; they are primarily used to
     // signal when to look for a link in GlobalTopologyData::ComputeGlobalTopologyData().
@@ -176,9 +176,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
   struct ParentLink {
-    // The handle that the ContentLinkImpl to the parent will live on and will be a value in the
-    // LinkTopologyMap when the link resolves.
-    TransformHandle link_origin;
+    // The handle that the ChildViewWatcherImpl to the parent will live on and will be a value in
+    // the LinkTopologyMap when the link resolves.
+    TransformHandle child_view_watcher_handle;
     ObjectLinker::ExportLink exporter;
   };
 
@@ -187,17 +187,17 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // ParentLink when the Link is resolved, regardless of whether the parent or the child has called
   // |Flatland::Present()|.
   //
-  // Link handles are excluded from global topologies, so the |graph_handle| is provided by the
-  // parent as the attachment point for the ContentLinkImpl.
+  // Link handles are excluded from global topologies, so the |parent_viewport_watcher_handle| is
+  // provided by the parent as the attachment point for the ChildViewWatcherImpl.
   //
   // |dispatcher_holder| allows hanging-get response-callbacks to be invoked from the appropriate
   // Flatland session thread.
   ChildLink CreateChildLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::composition::ContentLinkToken token,
-      fuchsia::ui::composition::LinkProperties initial_properties,
-      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link,
-      TransformHandle graph_handle, LinkProtocolErrorCallback error_callback);
+      fuchsia::ui::composition::ViewportCreationToken token,
+      fuchsia::ui::composition::ViewportProperties initial_properties,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher,
+      TransformHandle parent_viewport_watcher_handle, LinkProtocolErrorCallback error_callback);
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
   // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
@@ -206,9 +206,10 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Flatland session thread.
   ParentLink CreateParentLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::composition::GraphLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> graph_link,
-      TransformHandle link_origin, LinkProtocolErrorCallback error_callback);
+      fuchsia::ui::composition::ViewCreationToken token,
+      fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
+          parent_viewport_watcher,
+      TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback);
 
   // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
   // TransformHandles to TransformHandles in ParentLinks. The LinkSystem generates Keys for this
@@ -222,7 +223,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   TransformHandle::InstanceId GetInstanceId() const;
 
   // For use by the core processing loop, this function consumes global information, processes it,
-  // and sends all necessary updates to active GraphLink and ContentLink channels.
+  // and sends all necessary updates to active ParentViewportWatcher and ChildViewWatcher channels.
   //
   // This data passed into this function is generated by merging information from multiple Flatland
   // instances. |global_topology| is the TopologyVector of all nodes visible from the (currently
@@ -246,13 +247,15 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // (possibly deadline scheduled) render thread.
   std::mutex map_mutex_;
 
-  // A GraphLinkImpl and the |link_origin| of the child Flatland instance the impl serves.
-  struct GraphLinkData {
-    std::shared_ptr<GraphLinkImpl> impl;
+  // A ParentViewportWatcherImpl and the |link_origin| of the child Flatland instance the impl
+  // serves.
+  struct ParentViewportWatcherData {
+    std::shared_ptr<ParentViewportWatcherImpl> impl;
     TransformHandle child_link_origin;
   };
-  std::unordered_map<TransformHandle, GraphLinkData> graph_link_map_;
-  std::unordered_map<TransformHandle, std::shared_ptr<ContentLinkImpl>> content_link_map_;
+  std::unordered_map<TransformHandle, ParentViewportWatcherData> parent_viewport_watcher_map_;
+  std::unordered_map<TransformHandle, std::shared_ptr<ChildViewWatcherImpl>>
+      child_view_watcher_map_;
   // The set of current link topologies. Access is managed by |map_mutex_|.
   GlobalTopologyData::LinkTopologyMap link_topologies_;
 };

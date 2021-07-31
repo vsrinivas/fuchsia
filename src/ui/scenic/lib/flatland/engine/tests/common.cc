@@ -14,48 +14,48 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkStatus;
-using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::GraphLink;
-using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::ChildViewStatus;
+using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::LinkProperties;
+using fuchsia::ui::composition::ParentViewportWatcher;
+using fuchsia::ui::composition::ViewCreationToken;
+using fuchsia::ui::composition::ViewportCreationToken;
+using fuchsia::ui::composition::ViewportProperties;
 
 namespace flatland {
 
 DisplayCompositorTestBase::FakeFlatlandSession::ChildLink
-DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession& parent_session) {
+DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& parent_session) {
   // Create the tokens.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   EXPECT_EQ(zx::channel::create(0, &parent_token.value, &child_token.value), ZX_OK);
 
   // Create the parent link.
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(), graph_.CreateTransform(),
-      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
+      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
+      graph_.CreateTransform(), [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   // Create the child link.
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size(fuchsia::math::SizeU{1, 2});
   LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      parent_session.graph_.CreateTransform(),
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), parent_session.graph_.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   // Run the loop to establish the link.
   harness_->RunLoopUntilIdle();
 
   parent_link_ = ParentLink({
-      .graph_link = std::move(graph_link),
+      .parent_viewport_watcher = std::move(parent_viewport_watcher),
       .parent_link = std::move(parent_link),
   });
 
   return ChildLink({
-      .content_link = std::move(content_link),
+      .child_view_watcher = std::move(child_view_watcher),
       .child_link = std::move(child_link),
   });
 }
@@ -67,8 +67,9 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopol
 
   // Only use the supplied |local_root| if no there is no ParentLink, otherwise use the
   // |link_origin| from the ParentLink.
-  const TransformHandle root =
-      parent_link_.has_value() ? parent_link_.value().parent_link.link_origin : local_root;
+  const TransformHandle root = parent_link_.has_value()
+                                   ? parent_link_.value().parent_link.child_view_watcher_handle
+                                   : local_root;
 
   // Compute the local topology and place it in the UberStruct.
   auto local_topology_data = graph_.ComputeAndCleanup(root, std::numeric_limits<uint64_t>::max());

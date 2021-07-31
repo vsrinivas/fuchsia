@@ -21,12 +21,12 @@ using flatland::TransformGraph;
 using flatland::TransformHandle;
 using flatland::UberStruct;
 using flatland::UberStructSystem;
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkStatus;
-using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::GraphLink;
-using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::ChildViewStatus;
+using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::ParentViewportWatcher;
+using fuchsia::ui::composition::ViewCreationToken;
+using fuchsia::ui::composition::ViewportCreationToken;
 
 namespace flatland {
 namespace test {
@@ -390,7 +390,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   auto child_session = CreateSession();
 
   // Create a link between the two.
-  auto child_link = child_session.LinkToParent(parent_session);
+  auto child_link = child_session.CreateView(parent_session);
 
   // Create the root handle for the parent and a handle that will have an image attached.
   const TransformHandle parent_root_handle = parent_session.graph().CreateTransform();

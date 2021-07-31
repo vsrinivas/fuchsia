@@ -36,11 +36,11 @@ struct UberStruct {
   // The local topology of this Flatland instance.
   TransformGraph::TopologyVector local_topology;
 
-  // The LinkProperties for each child link of this Flatland instance. Entries in this map will
+  // The ViewportProperties for each child link of this Flatland instance. Entries in this map will
   // have children that are in different Flatland instances.
-  using LinkPropertiesMap =
-      std::unordered_map<TransformHandle, fuchsia::ui::composition::LinkProperties>;
-  LinkPropertiesMap link_properties;
+  using ViewportPropertiesMap =
+      std::unordered_map<TransformHandle, fuchsia::ui::composition::ViewportProperties>;
+  ViewportPropertiesMap link_properties;
 
   // The local (i.e. relative to the parent) geometric transformation matrix of each
   // TransformHandle. Handles with no entry indicate an identity matrix.

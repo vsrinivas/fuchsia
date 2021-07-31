@@ -269,7 +269,7 @@ TEST(TransformGraphTest, ClearOperations) {
   data = graph.ComputeAndCleanup(transforms[0], kLongIterationLength);
   EXPECT_EQ(data.sorted_transforms.size(), 3u);
 
-  // The handle passed into ClearGraph is retained, but all of its state is removed.
+  // The handle passed into Clear is retained, but all of its state is removed.
   graph.ResetGraph(transforms[0]);
   data = graph.ComputeAndCleanup(transforms[0], kLongIterationLength);
   EXPECT_EQ(data.sorted_transforms.size(), 1u);

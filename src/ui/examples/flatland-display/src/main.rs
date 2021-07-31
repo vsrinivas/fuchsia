@@ -43,16 +43,18 @@ async fn main() {
     // them one half of the LinkTokenPair.
     let mut link_tokens = LinkTokenPair::new().expect("failed to create LinkTokenPair");
 
-    let (_content_link_proxy, content_link_request) =
-        create_proxy::<fland::ContentLinkMarker>().expect("failed to create ContentLink endpoints");
+    let (_child_view_watcher_proxy, child_view_watcher_request) =
+        create_proxy::<fland::ChildViewWatcherMarker>()
+            .expect("failed to create ChildViewWatcher endpoints");
     flatland_display
-        .set_content(&mut link_tokens.content_link_token, content_link_request)
+        .set_content(&mut link_tokens.viewport_creation_token, child_view_watcher_request)
         .expect("fidl error");
 
-    let (_graph_link_proxy, graph_link_request) =
-        create_proxy::<fland::GraphLinkMarker>().expect("failed to create GraphLink endpoints");
+    let (_parent_viewport_watcher_proxy, parent_viewport_watcher_request) =
+        create_proxy::<fland::ParentViewportWatcherMarker>()
+            .expect("failed to create ParentViewportWatcher endpoints");
     flatland
-        .link_to_parent(&mut link_tokens.graph_link_token, graph_link_request)
+        .create_view(&mut link_tokens.view_creation_token, parent_viewport_watcher_request)
         .expect("fidl error");
 
     // BufferAllocator is a helper which makes it easier to obtain and set constraints on a

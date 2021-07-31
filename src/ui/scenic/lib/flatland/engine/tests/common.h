@@ -112,20 +112,20 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // Use the TransformGraph API to create and manage transforms and their children.
     TransformGraph& graph() { return graph_; }
 
-    // Returns the link_origin for this session.
+    // Returns the child_view_watcher_handle origin for this session.
     TransformHandle GetLinkOrigin() const {
       EXPECT_TRUE(this->parent_link_.has_value());
-      return this->parent_link_.value().parent_link.link_origin;
+      return this->parent_link_.value().parent_link.child_view_watcher_handle;
     }
 
     // Clears the ParentLink for this session, if one exists.
     void ClearParentLink() { parent_link_.reset(); }
 
-    // Holds the ContentLink and LinkSystem::ChildLink objects since if they fall out of scope,
+    // Holds the ChildViewWatcher and LinkSystem::ChildLink objects since if they fall out of scope,
     // the LinkSystem will delete the link. Tests should add |child_link.link_handle| to their
     // TransformGraphs to use the ChildLink in a topology.
     struct ChildLink {
-      fidl::InterfacePtr<fuchsia::ui::composition::ContentLink> content_link;
+      fidl::InterfacePtr<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
       LinkSystem::ChildLink child_link;
 
       // Returns the handle the parent should add as a child in its local topology to include the
@@ -136,7 +136,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // Links this session to |parent_session| and returns the ChildLink, which should be used with
     // the parent session. If the return value drops out of scope, tests should call
     // ClearParentLink() on this session.
-    ChildLink LinkToParent(FakeFlatlandSession& parent_session);
+    ChildLink CreateView(FakeFlatlandSession& parent_session);
 
     // Allocates a new UberStruct with a local_topology rooted at |local_root|. If this session has
     // a ParentLink, the link_origin of that ParentLink will be used instead.
@@ -161,11 +161,11 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     TransformGraph graph_;
     std::shared_ptr<UberStructSystem::UberStructQueue> queue_;
 
-    // Holds the GraphLink and LinkSystem::ParentLink objects since if they fall out of scope,
-    // the LinkSystem will delete the link. When |parent_link_| has a value, the
+    // Holds the ParentViewportWatcher and LinkSystem::ParentLink objects since if they fall out of
+    // scope, the LinkSystem will delete the link. When |parent_link_| has a value, the
     // |parent_link.link_origin| from this object is used as the root TransformHandle.
     struct ParentLink {
-      fidl::InterfacePtr<fuchsia::ui::composition::GraphLink> graph_link;
+      fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
       LinkSystem::ParentLink parent_link;
     };
     std::optional<ParentLink> parent_link_;

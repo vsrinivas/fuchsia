@@ -23,12 +23,12 @@ using flatland::UberStructSystem;
 using TopologyEntry = flatland::TransformGraph::TopologyEntry;
 using flatland::TransformHandle;
 using fuchsia::math::SizeU;
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::GraphLink;
-using fuchsia::ui::composition::GraphLinkToken;
+using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::LinkProperties;
+using fuchsia::ui::composition::ParentViewportWatcher;
+using fuchsia::ui::composition::ViewCreationToken;
+using fuchsia::ui::composition::ViewportCreationToken;
+using fuchsia::ui::composition::ViewportProperties;
 
 namespace flatland {
 namespace test {
@@ -41,7 +41,7 @@ class LinkSystemTest : public gtest::TestLoopFixture {
         root_graph_(root_instance_id_),
         root_handle_(root_graph_.CreateTransform()) {}
 
-  std::shared_ptr<LinkSystem> CreateLinkSystem() {
+  std::shared_ptr<LinkSystem> CreateViewportSystem() {
     return std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId());
   }
 
@@ -67,89 +67,90 @@ class LinkSystemTest : public gtest::TestLoopFixture {
   std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
 };
 
-TEST_F(LinkSystemTest, UnresolvedGraphLinkDiesOnContentTokenDeath) {
-  auto link_system = CreateLinkSystem();
+TEST_F(LinkSystemTest, UnresolvedParentViewportWatcherDiesOnContentTokenDeath) {
+  auto link_system = CreateViewportSystem();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   TransformHandle handle;
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
-  ChildLink parent_link = link_system->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      handle, [](const std::string& error_log) { GTEST_FAIL() << error_log; });
+  ChildLink parent_link =
+      link_system->CreateChildLink(dispatcher_holder_, std::move(parent_token),
+                                   std::move(properties), child_view_watcher.NewRequest(), handle,
+                                   [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(parent_link.importer.valid());
-  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
 
   child_token.value.reset();
   RunLoopUntilIdle();
 
   EXPECT_FALSE(parent_link.importer.valid());
-  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
 }
 
-TEST_F(LinkSystemTest, UnresolvedContentLinkDiesOnGraphTokenDeath) {
-  auto link_system = CreateLinkSystem();
+TEST_F(LinkSystemTest, UnresolvedChildViewWatcherDiesOnGraphTokenDeath) {
+  auto link_system = CreateViewportSystem();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   TransformHandle handle;
 
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   ParentLink child_link = link_system->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(), handle,
+      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(), handle,
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(child_link.exporter.valid());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   parent_token.value.reset();
   RunLoopUntilIdle();
 
   EXPECT_FALSE(child_link.exporter.valid());
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
 }
 
 TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
-  auto link_system = CreateLinkSystem();
+  auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   ParentLink parent_link = link_system->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
+      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
       child_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
   EXPECT_TRUE(parent_link.exporter.valid());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   ChildLink child_link = link_system->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      parent_graph.CreateTransform(),
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   EXPECT_TRUE(child_link.importer.valid());
-  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
 
   auto links = link_system->GetResolvedTopologyLinks();
   EXPECT_FALSE(links.empty());
   EXPECT_EQ(links.count(child_link.link_handle), 1u);
-  EXPECT_EQ(links[child_link.link_handle], parent_link.link_origin);
+  EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
 
   bool layout_updated = false;
-  graph_link->GetLayout([&](LayoutInfo info) {
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
     EXPECT_EQ(1u, info.logical_size().width);
     EXPECT_EQ(2u, info.logical_size().height);
     layout_updated = true;
@@ -160,33 +161,33 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
 }
 
 TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
-  auto link_system = CreateLinkSystem();
+  auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   ParentLink parent_link = link_system->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
+      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
       child_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   {
-    fidl::InterfacePtr<ContentLink> content_link;
-    LinkProperties properties;
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties properties;
     properties.set_logical_size(SizeU{1, 2});
     ChildLink child_link = link_system->CreateChildLink(
         dispatcher_holder_, std::move(parent_token), std::move(properties),
-        content_link.NewRequest(), parent_graph.CreateTransform(),
+        child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
         [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
     EXPECT_EQ(links.count(child_link.link_handle), 1u);
-    EXPECT_EQ(links[child_link.link_handle], parent_link.link_origin);
+    EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
 
     // |child_link| dies here, which destroys the link topology.
   }
@@ -196,33 +197,33 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
 }
 
 TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
-  auto link_system = CreateLinkSystem();
+  auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   ChildLink child_link = link_system->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      parent_graph.CreateTransform(),
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   {
-    fidl::InterfacePtr<GraphLink> graph_link;
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
     ParentLink parent_link = link_system->CreateParentLink(
-        dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
+        dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
         child_graph.CreateTransform(),
         [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
     EXPECT_EQ(links.count(child_link.link_handle), 1u);
-    EXPECT_EQ(links[child_link.link_handle], parent_link.link_origin);
+    EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
 
     // |parent_link| dies here, which destroys the link topology.
   }
@@ -232,37 +233,37 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
 }
 
 TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
-  auto link_system = CreateLinkSystem();
+  auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
   bool parent_link_returned_error = false;
   ParentLink parent_link = link_system->CreateParentLink(
-      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(),
+      dispatcher_holder_, std::move(child_token), parent_viewport_watcher.NewRequest(),
       child_graph.CreateTransform(),
       [&](const std::string& error_log) { parent_link_returned_error = true; });
 
-  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   bool child_link_returned_error = false;
-  LinkProperties properties;
+  ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   ChildLink child_link = link_system->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
-      parent_graph.CreateTransform(),
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
       [&](const std::string& error_log) { child_link_returned_error = true; });
 
   {
     bool status_updated = false;
-    content_link->GetStatus([&](auto) { status_updated = true; });
+    child_view_watcher->GetStatus([&](auto) { status_updated = true; });
     EXPECT_FALSE(child_link_returned_error);
     EXPECT_FALSE(status_updated);
 
-    content_link->GetStatus([&](auto) {});
+    child_view_watcher->GetStatus([&](auto) {});
     RunLoopUntilIdle();
     EXPECT_TRUE(child_link_returned_error);
     EXPECT_FALSE(status_updated);
@@ -270,7 +271,7 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
 
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](auto) { layout_updated = true; });
+    parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
     RunLoopUntilIdle();
     EXPECT_FALSE(parent_link_returned_error);
     EXPECT_TRUE(layout_updated);
@@ -279,21 +280,22 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
   {
     parent_link_returned_error = false;
     bool layout_updated = false;
-    graph_link->GetLayout([&](auto) { layout_updated = true; });
+    parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
     EXPECT_FALSE(parent_link_returned_error);
     EXPECT_FALSE(layout_updated);
 
-    graph_link->GetLayout([&](auto) {});
+    parent_viewport_watcher->GetLayout([&](auto) {});
     RunLoopUntilIdle();
     EXPECT_TRUE(parent_link_returned_error);
     EXPECT_FALSE(layout_updated);
   }
 }
 
-// LinkSystem::UpdateLinks() requires substantial setup to unit test: GraphLink/ContentLink
-// protocols attached to the correct TransformHandles in a correctly constructed global topology.
-// As a result, LinkSystem::UpdateLinks() is effectively tested in the Flatland unit tests in
-// flatland_unittest.cc, since those tests simplify performing the correct setup.
+// LinkSystem::UpdateLinks() requires substantial setup to unit test:
+// ParentViewportWatcher/ChildViewWatcher protocols attached to the correct TransformHandles in a
+// correctly constructed global topology. As a result, LinkSystem::UpdateLinks() is effectively
+// tested in the Flatland unit tests in flatland_unittest.cc, since those tests simplify performing
+// the correct setup.
 
 }  // namespace test
 }  // namespace flatland

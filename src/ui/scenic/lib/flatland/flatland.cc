@@ -24,16 +24,16 @@
 using fuchsia::math::RectF;
 using fuchsia::math::SizeU;
 using fuchsia::math::Vec;
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkStatus;
-using fuchsia::ui::composition::ContentLinkToken;
+using fuchsia::ui::composition::ChildViewStatus;
+using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::FlatlandError;
-using fuchsia::ui::composition::GraphLink;
-using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::ImageProperties;
-using fuchsia::ui::composition::LinkProperties;
 using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
+using fuchsia::ui::composition::ParentViewportWatcher;
+using fuchsia::ui::composition::ViewCreationToken;
+using fuchsia::ui::composition::ViewportCreationToken;
+using fuchsia::ui::composition::ViewportProperties;
 
 namespace flatland {
 
@@ -187,9 +187,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   uber_struct->local_topology = std::move(data.sorted_transforms);
 
   for (const auto& [link_id, child_link] : child_links_) {
-    LinkProperties initial_properties;
+    ViewportProperties initial_properties;
     fidl::Clone(child_link.properties, &initial_properties);
-    uber_struct->link_properties[child_link.link.graph_handle] = std::move(initial_properties);
+    uber_struct->link_properties[child_link.link.parent_viewport_watcher_handle] =
+        std::move(initial_properties);
   }
 
   for (const auto& [handle, matrix_data] : matrices_) {
@@ -244,11 +245,12 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   FX_DCHECK(!failure_since_previous_present_);
 }
 
-void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLink> graph_link) {
+void Flatland::CreateView(ViewCreationToken token,
+                          fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    error_reporter_->ERROR() << "LinkToParent failed, GraphLinkToken was invalid";
+    error_reporter_->ERROR() << "CreateView failed, ViewCreationToken was invalid";
     ReportBadOperationError();
     return;
   }
@@ -261,7 +263,7 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // layout decisions before their first call to Present().
   auto link_origin = transform_graph_.CreateTransform();
   LinkSystem::ParentLink link = link_system_->CreateParentLink(
-      dispatcher_holder_, std::move(token), std::move(graph_link), link_origin,
+      dispatcher_holder_, std::move(token), std::move(parent_viewport_watcher), link_origin,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
@@ -274,10 +276,12 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // |link_origin| and |local_root_| establishes the Transform hierarchy between the two instances,
   // but the operation will not be visible until the next Present() call includes that topology.
   if (parent_link_.has_value()) {
-    bool child_removed = transform_graph_.RemoveChild(parent_link_->link_origin, local_root_);
+    bool child_removed =
+        transform_graph_.RemoveChild(parent_link_->child_view_watcher_handle, local_root_);
     FX_DCHECK(child_removed);
 
-    bool transform_released = transform_graph_.ReleaseTransform(parent_link_->link_origin);
+    bool transform_released =
+        transform_graph_.ReleaseTransform(parent_link_->child_view_watcher_handle);
     FX_DCHECK(transform_released);
 
     // Delay the destruction of the previous parent link until the next Present().
@@ -285,25 +289,26 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
         [local_link = std::move(parent_link_)]() mutable { local_link.reset(); });
   }
 
-  bool child_added = transform_graph_.AddChild(link.link_origin, local_root_);
+  bool child_added = transform_graph_.AddChild(link.child_view_watcher_handle, local_root_);
   FX_DCHECK(child_added);
   parent_link_ = std::move(link);
 }
 
-void Flatland::UnlinkFromParent(
-    fuchsia::ui::composition::Flatland::UnlinkFromParentCallback callback) {
+void Flatland::ReleaseView(fuchsia::ui::composition::Flatland::ReleaseViewCallback callback) {
   if (!parent_link_) {
-    error_reporter_->ERROR() << "UnlinkFromParent failed, no existing parent Link";
+    error_reporter_->ERROR() << "ReleaseView failed, no existing parent Link";
     ReportBadOperationError();
     return;
   }
 
   // Deleting the old ParentLink's Transform effectively changes this intance's root back to
   // |local_root_|.
-  bool child_removed = transform_graph_.RemoveChild(parent_link_->link_origin, local_root_);
+  bool child_removed =
+      transform_graph_.RemoveChild(parent_link_->child_view_watcher_handle, local_root_);
   FX_DCHECK(child_removed);
 
-  bool transform_released = transform_graph_.ReleaseTransform(parent_link_->link_origin);
+  bool transform_released =
+      transform_graph_.ReleaseTransform(parent_link_->child_view_watcher_handle);
   FX_DCHECK(transform_released);
 
   // Move the old parent link into the delayed operation so that it isn't taken into account when
@@ -315,7 +320,7 @@ void Flatland::UnlinkFromParent(
   // Delay the actual destruction of the Link until the next Present().
   pending_link_operations_.push_back(
       [local_link = std::move(local_link), callback = std::move(callback)]() mutable {
-        GraphLinkToken return_token;
+        ViewCreationToken return_token;
 
         // If the link is still valid, return the original token. If not, create an orphaned
         // zx::channel and return it since the ObjectLinker does not retain the orphaned token.
@@ -332,7 +337,7 @@ void Flatland::UnlinkFromParent(
       });
 }
 
-void Flatland::ClearGraph() {
+void Flatland::Clear() {
   // Clear user-defined mappings and local matrices.
   transforms_.clear();
   content_handles_.clear();
@@ -513,18 +518,20 @@ void Flatland::SetRootTransform(TransformId transform_id) {
   FX_DCHECK(added);
 }
 
-void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
-                          fidl::InterfaceRequest<ContentLink> content_link) {
+void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
+                              ViewportProperties properties,
+                              fidl::InterfaceRequest<ChildViewWatcher> child_view_watcher) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    error_reporter_->ERROR() << "CreateLink failed, ContentLinkToken was invalid";
+    error_reporter_->ERROR() << "CreateViewport failed, ViewportCreationToken was invalid";
     ReportBadOperationError();
     return;
   }
 
   if (!properties.has_logical_size()) {
-    error_reporter_->ERROR() << "CreateLink must be provided a LinkProperties with a logical size";
+    error_reporter_->ERROR()
+        << "CreateViewport must be provided a ViewportProperties with a logical size";
     ReportBadOperationError();
     return;
   }
@@ -532,24 +539,24 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   auto logical_size = properties.logical_size();
   if (logical_size.width == 0 || logical_size.height == 0) {
     error_reporter_->ERROR()
-        << "CreateLink must be provided a logical size with positive width and height values";
+        << "CreateViewport must be provided a logical size with positive width and height values";
     ReportBadOperationError();
     return;
   }
 
   FX_DCHECK(link_system_);
 
-  // The LinkProperties and ContentLinkImpl live on a handle from this Flatland instance.
-  auto graph_handle = transform_graph_.CreateTransform();
+  // The ViewportProperties and ChildViewWatcherImpl live on a handle from this Flatland instance.
+  auto parent_viewport_watcher_handle = transform_graph_.CreateTransform();
 
   // We can initialize the Link importer immediately, since no state changes actually occur before
-  // the feed-forward portion of this method. We also forward the initial LinkProperties through
+  // the feed-forward portion of this method. We also forward the initial ViewportProperties through
   // the LinkSystem immediately, so the child can receive them as soon as possible.
-  LinkProperties initial_properties;
+  ViewportProperties initial_properties;
   fidl::Clone(properties, &initial_properties);
   LinkSystem::ChildLink link = link_system_->CreateChildLink(
-      dispatcher_holder_, std::move(token), std::move(initial_properties), std::move(content_link),
-      graph_handle,
+      dispatcher_holder_, std::move(token), std::move(initial_properties),
+      std::move(child_view_watcher), parent_viewport_watcher_handle,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
         FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
@@ -560,14 +567,14 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
 
   // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (link_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "CreateLink called with ContentId zero";
+    error_reporter_->ERROR() << "CreateViewport called with ContentId zero";
     ReportBadOperationError();
     return;
   }
 
   // TODO(fxbug.dev/76640): probably move this up before creating the child-link.
   if (content_handles_.count(link_id.value)) {
-    error_reporter_->ERROR() << "CreateLink called with existing ContentId " << link_id.value;
+    error_reporter_->ERROR() << "CreateViewport called with existing ContentId " << link_id.value;
     ReportBadOperationError();
     return;
   }
@@ -575,15 +582,16 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   // This is the feed-forward portion of the method. Here, we add the link to the map, and
   // initialize its layout with the desired properties. The Link will not actually result in
   // additions to the Transform hierarchy until it is added to a Transform.
-  bool child_added = transform_graph_.AddChild(link.graph_handle, link.link_handle);
+  bool child_added =
+      transform_graph_.AddChild(link.parent_viewport_watcher_handle, link.link_handle);
   FX_DCHECK(child_added);
 
   // Default the link size to the logical size, which is just an identity scale matrix, so
   // that future logical size changes will result in the correct scale matrix.
   SizeU size = properties.logical_size();
 
-  content_handles_[link_id.value] = link.graph_handle;
-  child_links_[link.graph_handle] = {
+  content_handles_[link_id.value] = link.parent_viewport_watcher_handle;
+  child_links_[link.parent_viewport_watcher_handle] = {
       .link = std::move(link), .properties = std::move(properties), .size = std::move(size)};
 }
 
@@ -799,9 +807,9 @@ void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
   transform_graph_.SetPriorityChild(transform_kv->second, handle_kv->second);
 }
 
-void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
+void Flatland::SetViewportProperties(ContentId link_id, ViewportProperties properties) {
   if (link_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "SetLinkProperties called with link_id zero.";
+    error_reporter_->ERROR() << "SetViewportProperties called with link_id zero.";
     ReportBadOperationError();
     return;
   }
@@ -809,7 +817,7 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   auto content_kv = content_handles_.find(link_id.value);
 
   if (content_kv == content_handles_.end()) {
-    error_reporter_->ERROR() << "SetLinkProperties failed, link_id " << link_id.value
+    error_reporter_->ERROR() << "SetViewportProperties failed, link_id " << link_id.value
                              << " not found";
     ReportBadOperationError();
     return;
@@ -818,19 +826,19 @@ void Flatland::SetLinkProperties(ContentId link_id, LinkProperties properties) {
   auto link_kv = child_links_.find(content_kv->second);
 
   if (link_kv == child_links_.end()) {
-    error_reporter_->ERROR() << "SetLinkProperties failed, content_id " << link_id.value
+    error_reporter_->ERROR() << "SetViewportProperties failed, content_id " << link_id.value
                              << " is not a Link";
     ReportBadOperationError();
     return;
   }
 
-  // Callers do not have to provide a new logical size on every call to SetLinkProperties, but if
-  // they do, it must have positive width and height values.
+  // Callers do not have to provide a new logical size on every call to SetViewportProperties, but
+  // if they do, it must have positive width and height values.
   if (properties.has_logical_size()) {
     auto logical_size = properties.logical_size();
     if (logical_size.width == 0 || logical_size.height == 0) {
       error_reporter_->ERROR()
-          << "SetLinkProperties failed, logical_size components must be positive, "
+          << "SetViewportProperties failed, logical_size components must be positive, "
           << "given (" << logical_size.width << ", " << logical_size.height << ")";
       ReportBadOperationError();
       return;
@@ -868,10 +876,10 @@ void Flatland::ReleaseTransform(TransformId transform_id) {
   transforms_.erase(transform_kv);
 }
 
-void Flatland::ReleaseLink(ContentId link_id,
-                           fuchsia::ui::composition::Flatland::ReleaseLinkCallback callback) {
+void Flatland::ReleaseViewport(
+    ContentId link_id, fuchsia::ui::composition::Flatland::ReleaseViewportCallback callback) {
   if (link_id.value == kInvalidId) {
-    error_reporter_->ERROR() << "ReleaseLink called with link_id zero";
+    error_reporter_->ERROR() << "ReleaseViewport called with link_id zero";
     ReportBadOperationError();
     return;
   }
@@ -879,7 +887,7 @@ void Flatland::ReleaseLink(ContentId link_id,
   auto content_kv = content_handles_.find(link_id.value);
 
   if (content_kv == content_handles_.end()) {
-    error_reporter_->ERROR() << "ReleaseLink failed, link_id " << link_id.value << " not found";
+    error_reporter_->ERROR() << "ReleaseViewport failed, link_id " << link_id.value << " not found";
     ReportBadOperationError();
     return;
   }
@@ -887,19 +895,20 @@ void Flatland::ReleaseLink(ContentId link_id,
   auto link_kv = child_links_.find(content_kv->second);
 
   if (link_kv == child_links_.end()) {
-    error_reporter_->ERROR() << "ReleaseLink failed, content_id " << link_id.value
+    error_reporter_->ERROR() << "ReleaseViewport failed, content_id " << link_id.value
                              << " is not a Link";
     ReportBadOperationError();
     return;
   }
 
-  // Deleting the ChildLink's |graph_handle| effectively deletes the link from the local topology,
-  // even if the link object itself is not deleted.
-  bool child_removed = transform_graph_.RemoveChild(link_kv->second.link.graph_handle,
-                                                    link_kv->second.link.link_handle);
+  // Deleting the ChildLink's |parent_viewport_watcher_handle| effectively deletes the link from the
+  // local topology, even if the link object itself is not deleted.
+  bool child_removed = transform_graph_.RemoveChild(
+      link_kv->second.link.parent_viewport_watcher_handle, link_kv->second.link.link_handle);
   FX_DCHECK(child_removed);
 
-  bool content_released = transform_graph_.ReleaseTransform(link_kv->second.link.graph_handle);
+  bool content_released =
+      transform_graph_.ReleaseTransform(link_kv->second.link.parent_viewport_watcher_handle);
   FX_DCHECK(content_released);
 
   // Move the old child link into the delayed operation so that the ContentId is immeditely free
@@ -911,7 +920,7 @@ void Flatland::ReleaseLink(ContentId link_id,
   // Delay the actual destruction of the link until the next Present().
   pending_link_operations_.push_back(
       [child_link = std::move(child_link), callback = std::move(callback)]() mutable {
-        ContentLinkToken return_token;
+        ViewportCreationToken return_token;
 
         // If the link is still valid, return the original token. If not, create an orphaned
         // zx::channel and return it since the ObjectLinker does not retain the orphaned token.
@@ -994,7 +1003,7 @@ void Flatland::OnFramePresented(const std::map<scheduling::PresentId, zx::time>&
 }
 
 TransformHandle Flatland::GetRoot() const {
-  return parent_link_ ? parent_link_->link_origin : local_root_;
+  return parent_link_ ? parent_link_->child_view_watcher_handle : local_root_;
 }
 
 std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) const {

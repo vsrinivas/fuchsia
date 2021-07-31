@@ -13,9 +13,9 @@ static void ReportError() {
   FX_CHECK(false) << "Crashing on error.";
 }
 
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::LinkProperties;
+using fuchsia::ui::composition::ChildViewWatcher;
+using fuchsia::ui::composition::ViewportCreationToken;
+using fuchsia::ui::composition::ViewportProperties;
 
 namespace flatland {
 
@@ -62,25 +62,25 @@ FlatlandDisplay::FlatlandDisplay(
   FX_DCHECK(status == ZX_OK);
 }
 
-void FlatlandDisplay::SetContent(ContentLinkToken token,
-                                 fidl::InterfaceRequest<ContentLink> content_link) {
+void FlatlandDisplay::SetContent(ViewportCreationToken token,
+                                 fidl::InterfaceRequest<ChildViewWatcher> child_view_watcher) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
-    FX_LOGS(ERROR) << "CreateLink failed, ContentLinkToken was invalid";
+    FX_LOGS(ERROR) << "CreateViewport failed, ViewportCreationToken was invalid";
     ReportError();
     return;
   }
 
   // TODO(fxbug.dev/76640): In order to replace content from a previous call to SetContent(), need
-  // to detach from root_transform_, and otherwise clean up.  Flatland::ReleaseLink() seems like a
-  // good place to start.
-  FX_CHECK(child_link_.graph_handle == flatland::TransformHandle())
+  // to detach from root_transform_, and otherwise clean up.  Flatland::ReleaseViewport() seems like
+  // a good place to start.
+  FX_CHECK(child_link_.parent_viewport_watcher_handle == flatland::TransformHandle())
       << "Replacing FlatlandDisplay content is not yet supported.";
 
   auto child_transform = transform_graph_.CreateTransform();
 
-  LinkProperties properties;
+  ViewportProperties properties;
   {
     fuchsia::math::SizeU size;
     size.width = display_->width_in_px();
@@ -89,12 +89,12 @@ void FlatlandDisplay::SetContent(ContentLinkToken token,
   }
 
   // We can initialize the Link importer immediately, since no state changes actually occur before
-  // the feed-forward portion of this method. We also forward the initial LinkProperties through
+  // the feed-forward portion of this method. We also forward the initial ViewportProperties through
   // the LinkSystem immediately, so the child can receive them as soon as possible.
   // NOTE: clients won't receive CONNECTED_TO_DISPLAY until LinkSystem::UpdateLinks() is called,
   // typically during rendering.
   child_link_ = link_system_->CreateChildLink(
-      dispatcher_holder_, std::move(token), fidl::Clone(properties), std::move(content_link),
+      dispatcher_holder_, std::move(token), fidl::Clone(properties), std::move(child_view_watcher),
       child_transform,
       [ref = weak_from_this(),
        dispatcher_holder = dispatcher_holder_](const std::string& error_log) {
@@ -104,14 +104,16 @@ void FlatlandDisplay::SetContent(ContentLinkToken token,
         // TODO(fxbug.dev/77035): FlatlandDisplay currently has no way to notify clients of errors.
         FX_LOGS(ERROR) << "FlatlandDisplay illegal client usage: " << error_log;
       });
-  FX_CHECK(child_transform == child_link_.graph_handle);
+  FX_CHECK(child_transform == child_link_.parent_viewport_watcher_handle);
 
   // This is the feed-forward portion of the method, i.e. the part which enqueues an updated
   // UberStruct.
   bool child_added;
-  child_added = transform_graph_.AddChild(child_link_.graph_handle, child_link_.link_handle);
+  child_added = transform_graph_.AddChild(child_link_.parent_viewport_watcher_handle,
+                                          child_link_.link_handle);
   FX_DCHECK(child_added);
-  child_added = transform_graph_.AddChild(root_transform_, child_link_.graph_handle);
+  child_added =
+      transform_graph_.AddChild(root_transform_, child_link_.parent_viewport_watcher_handle);
   FX_DCHECK(child_added);
 
   // TODO(fxbug.dev/76640): given this fixed topology, we probably don't need to use
@@ -124,7 +126,7 @@ void FlatlandDisplay::SetContent(ContentLinkToken token,
 
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->local_topology = std::move(data.sorted_transforms);
-  uber_struct->link_properties[child_link_.graph_handle] = std::move(properties);
+  uber_struct->link_properties[child_link_.parent_viewport_watcher_handle] = std::move(properties);
 
   auto present_id = flatland_presenter_->RegisterPresent(session_id_, {});
   uber_struct_queue_->Push(present_id, std::move(uber_struct));

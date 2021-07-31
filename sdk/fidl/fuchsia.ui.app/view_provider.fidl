@@ -72,7 +72,7 @@ protocol ViewProvider {
 @discoverable
 protocol TemporaryFlatlandViewProvider {
     CreateView(resource struct {
-        graph_link_token fuchsia.ui.composition.GraphLinkToken;
+        view_creation_token fuchsia.ui.composition.ViewCreationToken;
         view_ref_control fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
     });

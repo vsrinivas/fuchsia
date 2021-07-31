@@ -62,7 +62,7 @@ fn hsv_to_rgba(h: f32, s: f32, v: f32) -> [u8; 4] {
 }
 
 enum MessageInternal {
-    CreateView(fland::GraphLinkToken, fviews::ViewRefControl, fviews::ViewRef),
+    CreateView(fland::ViewCreationToken, fviews::ViewRefControl, fviews::ViewRef),
     OnPresentError {
         error: fland::FlatlandError,
     },
@@ -176,13 +176,17 @@ impl AppModel {
             .expect("fidl error");
     }
 
-    fn create_graph_link(&mut self, mut graph_link_token: fland::GraphLinkToken) {
-        let (graph_link, server_end) =
-            create_proxy::<fland::GraphLinkMarker>().expect("failed to create GraphLinkProxy");
+    fn create_parent_viewport_watcher(
+        &mut self,
+        mut view_creation_token: fland::ViewCreationToken,
+    ) {
+        let (parent_viewport_watcher, server_end) =
+            create_proxy::<fland::ParentViewportWatcherMarker>()
+                .expect("failed to create ParentViewportWatcherProxy");
 
         // NOTE: it isn't necessary to call maybe_present() for this to take effect, because we will
-        // relayout when receive the initial layout info.  See LinkToParent() FIDL docs.
-        self.flatland.link_to_parent(&mut graph_link_token, server_end).expect("fidl error");
+        // relayout when receive the initial layout info.  See CreateView() FIDL docs.
+        self.flatland.create_view(&mut view_creation_token, server_end).expect("fidl error");
 
         // NOTE: there may be a race condition if TemporaryFlatlandViewProvider.CreateView() is
         // invoked a second time, causing us to create another graph link.  Because Zircon doesn't
@@ -193,7 +197,7 @@ impl AppModel {
         let sender = self.internal_sender.clone();
         fasync::Task::spawn(async move {
             let mut layout_info_stream =
-                HangingGetStream::new(Box::new(move || Some(graph_link.get_layout())));
+                HangingGetStream::new(Box::new(move || Some(parent_viewport_watcher.get_layout())));
 
             while let Some(result) = layout_info_stream.next().await {
                 match result {
@@ -330,13 +334,13 @@ fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
                 .try_for_each(move |req| {
                     match req {
                         fapp::TemporaryFlatlandViewProviderRequest::CreateView {
-                            graph_link_token,
+                            view_creation_token,
                             view_ref_control,
                             view_ref,
                             control_handle: _,
                         } => sender
                             .unbounded_send(MessageInternal::CreateView(
-                                graph_link_token,
+                                view_creation_token,
                                 view_ref_control,
                                 view_ref,
                             ))
@@ -426,10 +430,10 @@ async fn main() {
 
     while let Some(message) = internal_receiver.next().await {
         match message {
-            MessageInternal::CreateView(graph_link_token, _view_ref_control, _view_ref) => {
+            MessageInternal::CreateView(view_creation_token, _view_ref_control, _view_ref) => {
                 // TODO(fxbug.dev/78866): handling ViewRefs is necessary for focus management.
                 // For now, input is unsupported, and so we drop the ViewRef and ViewRefControl.
-                app.create_graph_link(graph_link_token);
+                app.create_parent_viewport_watcher(view_creation_token);
             }
             MessageInternal::Relayout { width, height } => {
                 app.on_relayout(width, height);

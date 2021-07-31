@@ -1,4 +1,4 @@
-protocol/member fuchsia.ui.app/TemporaryFlatlandViewProvider.CreateView(fuchsia.ui.composition/GraphLinkToken graph_link_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
+protocol/member fuchsia.ui.app/TemporaryFlatlandViewProvider.CreateView(fuchsia.ui.composition/ViewCreationToken view_creation_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
 protocol fuchsia.ui.app/TemporaryFlatlandViewProvider
 protocol/member fuchsia.ui.app/View.Attach(zx/handle:EVENTPAIR view_token)
 protocol/member fuchsia.ui.app/View.SetConfig(fuchsia.ui.app/ViewConfig config)

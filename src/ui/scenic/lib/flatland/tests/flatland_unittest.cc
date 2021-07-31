@@ -54,20 +54,20 @@ using fuchsia::math::SizeU;
 using fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result;
 using fuchsia::ui::composition::BufferCollectionExportToken;
 using fuchsia::ui::composition::BufferCollectionImportToken;
+using fuchsia::ui::composition::ChildViewStatus;
+using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
-using fuchsia::ui::composition::ContentLink;
-using fuchsia::ui::composition::ContentLinkStatus;
-using fuchsia::ui::composition::ContentLinkToken;
 using fuchsia::ui::composition::FlatlandError;
-using fuchsia::ui::composition::GraphLink;
-using fuchsia::ui::composition::GraphLinkStatus;
-using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::ImageProperties;
 using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::LinkProperties;
 using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
+using fuchsia::ui::composition::ParentViewportStatus;
+using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::TransformId;
+using fuchsia::ui::composition::ViewCreationToken;
+using fuchsia::ui::composition::ViewportCreationToken;
+using fuchsia::ui::composition::ViewportProperties;
 
 namespace {
 
@@ -429,31 +429,31 @@ class FlatlandTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  void CreateLink(Flatland* parent, Flatland* child, ContentId id,
-                  fidl::InterfacePtr<ContentLink>* content_link,
-                  fidl::InterfacePtr<GraphLink>* graph_link) {
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+  void CreateViewport(Flatland* parent, Flatland* child, ContentId id,
+                      fidl::InterfacePtr<ChildViewWatcher>* child_view_watcher,
+                      fidl::InterfacePtr<ParentViewportWatcher>* parent_viewport_watcher) {
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
-    parent->CreateLink(id, std::move(parent_token), std::move(properties),
-                       content_link->NewRequest());
-    child->LinkToParent(std::move(child_token), graph_link->NewRequest());
+    parent->CreateViewport(id, std::move(parent_token), std::move(properties),
+                           child_view_watcher->NewRequest());
+    child->CreateView(std::move(child_token), parent_viewport_watcher->NewRequest());
     PRESENT(parent, true);
     PRESENT(child, true);
   }
 
   void SetDisplayContent(FlatlandDisplay* display, Flatland* child,
-                         fidl::InterfacePtr<ContentLink>* content_link,
-                         fidl::InterfacePtr<GraphLink>* graph_link) {
+                         fidl::InterfacePtr<ChildViewWatcher>* child_view_watcher,
+                         fidl::InterfacePtr<ParentViewportWatcher>* parent_viewport_watcher) {
     FX_CHECK(display);
     FX_CHECK(child);
-    FX_CHECK(content_link);
-    FX_CHECK(graph_link);
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+    FX_CHECK(child_view_watcher);
+    FX_CHECK(parent_viewport_watcher);
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
     auto present_id = scheduling::PeekNextPresentId();
     EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(display->session_id(), _));
@@ -466,8 +466,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
         *mock_flatland_presenter_,
         ScheduleUpdateForSession(
             zx::time(0), scheduling::SchedulingIdPair{display->session_id(), present_id}, true));
-    display->SetContent(std::move(parent_token), content_link->NewRequest());
-    child->LinkToParent(std::move(child_token), graph_link->NewRequest());
+    display->SetContent(std::move(parent_token), child_view_watcher->NewRequest());
+    child->CreateView(std::move(child_token), parent_viewport_watcher->NewRequest());
   }
 
   // Creates an image in |flatland| with the specified |image_id| and backing properties.
@@ -866,13 +866,13 @@ TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
   PRESENT(flatland, true);
 
   // Clear, then create two transforms in the other order.
-  flatland->ClearGraph();
+  flatland->Clear();
   flatland->CreateTransform(kId2);
   flatland->CreateTransform(kId1);
   PRESENT(flatland, true);
 
   // Clear, create and release transforms, non-overlapping.
-  flatland->ClearGraph();
+  flatland->Clear();
   flatland->CreateTransform(kId1);
   flatland->ReleaseTransform(kId1);
   flatland->CreateTransform(kId2);
@@ -880,7 +880,7 @@ TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
   PRESENT(flatland, true);
 
   // Clear, create and release transforms, nested.
-  flatland->ClearGraph();
+  flatland->Clear();
   flatland->CreateTransform(kId2);
   flatland->CreateTransform(kId1);
   flatland->ReleaseTransform(kId1);
@@ -891,12 +891,12 @@ TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
   flatland->CreateTransform(kId1);
   flatland->ReleaseTransform(kId1);
   flatland->CreateTransform(kId1);
-  flatland->ClearGraph();
+  flatland->Clear();
   flatland->CreateTransform(kId1);
   PRESENT(flatland, true);
 
   // Create and clear, overlapping, with multiple present calls.
-  flatland->ClearGraph();
+  flatland->Clear();
   flatland->CreateTransform(kId2);
   PRESENT(flatland, true);
   flatland->CreateTransform(kId1);
@@ -1110,7 +1110,7 @@ TEST_F(FlatlandTest, CycleDetector) {
   // Then, create a cycle of length 2.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->ClearGraph();
+    flatland->Clear();
     flatland->CreateTransform(kId1);
     flatland->CreateTransform(kId2);
     flatland->AddChild(kId1, kId2);
@@ -1124,7 +1124,7 @@ TEST_F(FlatlandTest, CycleDetector) {
   // Then, connect each chain into a cycle of length four.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->ClearGraph();
+    flatland->Clear();
     flatland->CreateTransform(kId1);
     flatland->CreateTransform(kId2);
     flatland->CreateTransform(kId3);
@@ -1141,7 +1141,7 @@ TEST_F(FlatlandTest, CycleDetector) {
   // Create a cycle, where the root is not involved in the cycle.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->ClearGraph();
+    flatland->Clear();
     flatland->CreateTransform(kId1);
     flatland->CreateTransform(kId2);
     flatland->CreateTransform(kId3);
@@ -1365,100 +1365,101 @@ TEST_F(FlatlandTest, MatrixReleasesWhenTransformNotReferenced) {
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 }
 
-TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
+TEST_F(FlatlandTest, ParentViewportWatcherReplaceWithoutConnection) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
-  ContentLinkToken parent_token2;
-  GraphLinkToken child_token2;
+  ViewportCreationToken parent_token2;
+  ViewCreationToken child_token2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link2;
-  flatland->LinkToParent(std::move(child_token2), graph_link2.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
+  flatland->CreateView(std::move(child_token2), parent_viewport_watcher2.NewRequest());
 
   RunLoopUntilIdle();
 
-  // Until Present() is called, the previous GraphLink is not unbound.
-  EXPECT_TRUE(graph_link.is_bound());
-  EXPECT_TRUE(graph_link2.is_bound());
+  // Until Present() is called, the previous ParentViewportWatcher is not unbound.
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher2.is_bound());
 
   PRESENT(flatland, true);
 
-  EXPECT_FALSE(graph_link.is_bound());
-  EXPECT_TRUE(graph_link2.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher2.is_bound());
 }
 
-TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
+TEST_F(FlatlandTest, ParentViewportWatcherReplaceWithConnection) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId1, &child_view_watcher,
+                 &parent_viewport_watcher);
 
-  fidl::InterfacePtr<GraphLink> graph_link2;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
 
   // Don't use the helper function for the second link to test when the previous links are closed.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  // Creating the new GraphLink doesn't invalidate either of the old links until Present() is
-  // called on the child->
-  child->LinkToParent(std::move(child_token), graph_link2.NewRequest());
+  // Creating the new ParentViewportWatcher doesn't invalidate either of the old links until
+  // Present() is called on the child->
+  child->CreateView(std::move(child_token), parent_viewport_watcher2.NewRequest());
 
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
-  EXPECT_TRUE(graph_link2.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher2.is_bound());
 
-  // Present() replaces the original GraphLink, which also results in the invalidation of both ends
-  // of the original link.
+  // Present() replaces the original ParentViewportWatcher, which also results in the invalidation
+  // of both ends of the original link.
   PRESENT(child, true);
 
-  EXPECT_FALSE(content_link.is_bound());
-  EXPECT_FALSE(graph_link.is_bound());
-  EXPECT_TRUE(graph_link2.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher2.is_bound());
 }
 
-TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
+TEST_F(FlatlandTest, ParentViewportWatcherUnbindsOnParentDeath) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   parent_token.value.reset();
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
 }
 
-TEST_F(FlatlandTest, GraphLinkUnbindsImmediatelyWithInvalidToken) {
+TEST_F(FlatlandTest, ParentViewportWatcherUnbindsImmediatelyWithInvalidToken) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  GraphLinkToken child_token;
+  ViewCreationToken child_token;
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
   // The link will be unbound even before Present() is called.
   RunLoopUntilIdle();
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
 
   PRESENT(flatland, false);
 }
@@ -1466,7 +1467,7 @@ TEST_F(FlatlandTest, GraphLinkUnbindsImmediatelyWithInvalidToken) {
 TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  flatland->UnlinkFromParent([](GraphLinkToken token) { EXPECT_TRUE(false); });
+  flatland->ReleaseView([](ViewCreationToken token) { EXPECT_TRUE(false); });
 
   PRESENT(flatland, false);
 }
@@ -1474,55 +1475,55 @@ TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
 TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from returning a valid token.
   parent_token.value.reset();
   RunLoopUntilIdle();
 
-  GraphLinkToken graph_token;
-  flatland->UnlinkFromParent(
-      [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+  ViewCreationToken graph_token;
+  flatland->ReleaseView(
+      [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
   PRESENT(flatland, true);
 
   EXPECT_TRUE(graph_token.value.is_valid());
 
   // But trying to link with that token will immediately fail because it is already orphaned.
-  fidl::InterfacePtr<GraphLink> graph_link2;
-  flatland->LinkToParent(std::move(graph_token), graph_link2.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
+  flatland->CreateView(std::move(graph_token), parent_viewport_watcher2.NewRequest());
   PRESENT(flatland, true);
 
-  EXPECT_FALSE(graph_link2.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher2.is_bound());
 }
 
 TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const zx_koid_t expected_koid = fsl::GetKoid(child_token.value.get());
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
-  GraphLinkToken graph_token;
-  flatland->UnlinkFromParent(
-      [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+  ViewCreationToken graph_token;
+  flatland->ReleaseView(
+      [&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
 
   RunLoopUntilIdle();
 
-  // Until Present() is called and the acquire fence is signaled, the previous GraphLink is not
-  // unbound.
-  EXPECT_TRUE(graph_link.is_bound());
+  // Until Present() is called and the acquire fence is signaled, the previous ParentViewportWatcher
+  // is not unbound.
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
   EXPECT_FALSE(graph_token.value.is_valid());
 
   PresentArgs args;
@@ -1531,7 +1532,7 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
 
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
   EXPECT_FALSE(graph_token.value.is_valid());
 
   // Signal the acquire fence to unbind the link.
@@ -1540,92 +1541,92 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
   EXPECT_TRUE(graph_token.value.is_valid());
   EXPECT_EQ(fsl::GetKoid(graph_token.value.get()), expected_koid);
 }
 
-TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
+TEST_F(FlatlandTest, ChildViewWatcherUnbindsOnChildDeath) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, true);
 
   child_token.value.reset();
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
 }
 
-TEST_F(FlatlandTest, ContentLinkUnbindsImmediatelyWithInvalidToken) {
+TEST_F(FlatlandTest, ChildViewWatcherUnbindsImmediatelyWithInvalidToken) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
+  ViewportCreationToken parent_token;
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  flatland->CreateLink(kLinkId1, std::move(parent_token), {}, content_link.NewRequest());
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  flatland->CreateViewport(kLinkId1, std::move(parent_token), {}, child_view_watcher.NewRequest());
 
   // The link will be unbound even before Present() is called.
   RunLoopUntilIdle();
-  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
 
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, ContentLinkFailsIdIsZero) {
+TEST_F(FlatlandTest, ChildViewWatcherFailsIdIsZero) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport({0}, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, ContentLinkFailsNoLogicalSize) {
+TEST_F(FlatlandTest, ChildViewWatcherFailsNoLogicalSize) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
-  flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
+  flatland->CreateViewport({0}, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
-  fidl::InterfacePtr<ContentLink> content_link;
+TEST_F(FlatlandTest, ChildViewWatcherFailsInvalidLogicalSize) {
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
 
   // The X value must be positive.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({0, kDefaultSize});
-    flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
-                         content_link.NewRequest());
+    flatland->CreateViewport({0}, std::move(parent_token), std::move(properties),
+                             child_view_watcher.NewRequest());
     PRESENT(flatland, false);
   }
 
@@ -1633,59 +1634,60 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
-    LinkProperties properties2;
+    ViewportProperties properties2;
     properties2.set_logical_size({kDefaultSize, 0});
-    flatland->CreateLink({0}, std::move(parent_token), std::move(properties2),
-                         content_link.NewRequest());
+    flatland->CreateViewport({0}, std::move(parent_token), std::move(properties2),
+                             child_view_watcher.NewRequest());
     PRESENT(flatland, false);
   }
 }
 
-TEST_F(FlatlandTest, ContentLinkFailsIdCollision) {
+TEST_F(FlatlandTest, ChildViewWatcherFailsIdCollision) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland->CreateLink(kId1, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport(kId1, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, true);
 
-  ContentLinkToken parent_token2;
-  GraphLinkToken child_token2;
+  ViewportCreationToken parent_token2;
+  ViewCreationToken child_token2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
-  flatland->CreateLink(kId1, std::move(parent_token2), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport(kId1, std::move(parent_token2), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, false);
 }
 
-TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
+TEST_F(FlatlandTest, ClearDelaysLinkDestructionUntilPresent) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId1, &child_view_watcher,
+                 &parent_viewport_watcher);
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   // Clearing the parent graph should not unbind the interfaces until Present() is called and the
   // acquire fence is signaled.
-  parent->ClearGraph();
+  parent->Clear();
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   PresentArgs args;
   args.acquire_fences = utils::CreateEventArray(1);
@@ -1693,8 +1695,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 
   PRESENT_WITH_ARGS(parent, std::move(args), true);
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
@@ -1702,22 +1704,23 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(content_link.is_bound());
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
 
   // Recreate the Link. The parent graph was cleared so we can reuse the LinkId.
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
+  CreateViewport(parent.get(), child.get(), kLinkId1, &child_view_watcher,
+                 &parent_viewport_watcher);
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   // Clearing the child graph should not unbind the interfaces until Present() is called and the
   // acquire fence is signaled.
-  child->ClearGraph();
+  child->Clear();
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   PresentArgs args2;
   args2.acquire_fences = utils::CreateEventArray(1);
@@ -1725,8 +1728,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 
   PRESENT_WITH_ARGS(child, std::move(args2), true);
 
-  EXPECT_TRUE(content_link.is_bound());
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   // Signal the acquire fence to unbind the links.
   event_copy.signal(0, ZX_EVENT_SIGNALED);
@@ -1734,8 +1737,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(content_link.is_bound());
-  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
+  EXPECT_FALSE(parent_viewport_watcher.is_bound());
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
@@ -1745,24 +1748,24 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link, but don't call Present() on either instance.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
   // Request a layout update.
   bool layout_updated = false;
-  graph_link->GetLayout([&](LayoutInfo info) {
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
     EXPECT_EQ(1u, info.logical_size().width);
     EXPECT_EQ(2u, info.logical_size().height);
     layout_updated = true;
@@ -1778,31 +1781,31 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link, but don't call Present() on either instance.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
   UpdateLinks(parent->GetRoot());
 
   // First layout request should succeed immediately.
   bool layout_updated = false;
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(layout_updated);
 
   // Queue overwriting hanging gets.
   layout_updated = false;
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
   RunLoopUntilIdle();
   EXPECT_FALSE(layout_updated);
 
@@ -1813,8 +1816,8 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
 }
 
 TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create the parent Flatland session using another loop.
@@ -1831,11 +1834,11 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
 
   // Create parent link.
   const ContentId kLinkId = {1};
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent_ptr->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                         content_link.NewRequest());
+  parent_ptr->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                             child_view_watcher.NewRequest());
   EXPECT_TRUE(parent_loop.RunUntilIdle());
 
   // Create the child Flatland session using another loop.
@@ -1849,11 +1852,11 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
       uber_struct_system_->AllocateQueueForSession(session_id), importers);
   RegisterPresentError(child_ptr, session_id);
 
-  // Create child link. Use another loop for GraphLink channel.
-  async::TestLoop graph_link_loop;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child_ptr->LinkToParent(std::move(child_token),
-                          graph_link.NewRequest(graph_link_loop.dispatcher()));
+  // Create child link. Use another loop for ParentViewportWatcher channel.
+  async::TestLoop parent_viewport_watcher_loop;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child_ptr->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest(
+                                                    parent_viewport_watcher_loop.dispatcher()));
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Complete linking sessions.
@@ -1861,21 +1864,21 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
 
   // Send the first GetLayout hanging get which should have an immediate answer.
   bool layout_updated = false;
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
 
   // Process the callback on child's loop.
   EXPECT_TRUE(child_loop.RunUntilIdle());
   EXPECT_FALSE(layout_updated);
 
   // Read the response on graph link's loop.
-  EXPECT_TRUE(graph_link_loop.RunUntilIdle());
+  EXPECT_TRUE(parent_viewport_watcher_loop.RunUntilIdle());
   EXPECT_TRUE(layout_updated);
 
   // Send overwriting hanging gets that will cause an error on child's loop as we process the
   // request.
   layout_updated = false;
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
-  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
+  parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
   EXPECT_TRUE(parent_loop.RunUntilIdle());
   EXPECT_TRUE(child_loop.RunUntilIdle());
   fuchsia::ui::composition::PresentArgs present_args;
@@ -1897,8 +1900,8 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
@@ -1908,20 +1911,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
 
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
   // Request a status update.
   bool status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
     status_updated = true;
   });
 
@@ -1929,10 +1932,10 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
-  // The GraphLinkStatus will update when both the parent and child Present().
+  // The ParentViewportStatus will update when both the parent and child Present().
   status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
     status_updated = true;
   });
 
@@ -1954,8 +1957,8 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
@@ -1965,20 +1968,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
 
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
   // Request a status update.
   bool status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
     status_updated = true;
   });
 
@@ -1986,10 +1989,10 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
-  // The GraphLinkStatus will update when both the parent and child Present().
+  // The ParentViewportStatus will update when both the parent and child Present().
   status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
     status_updated = true;
   });
 
@@ -2011,8 +2014,8 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const TransformId kTransformId = {1};
@@ -2022,20 +2025,20 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
 
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
   parent->SetContent(kTransformId, kLinkId);
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
-  // The GraphLinkStatus will update when both the parent and child Present().
+  // The ParentViewportStatus will update when both the parent and child Present().
   bool status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
     status_updated = true;
   });
 
@@ -2044,10 +2047,11 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
   UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
-  // The GraphLinkStatus will update again if the parent removes the child link from its topology.
+  // The ParentViewportStatus will update again if the parent removes the child link from its
+  // topology.
   status_updated = false;
-  graph_link->GetStatus([&](GraphLinkStatus status) {
-    EXPECT_EQ(status, GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
+    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
     status_updated = true;
   });
 
@@ -2064,24 +2068,24 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
 
-  fidl::InterfacePtr<GraphLink> graph_link;
-  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
   bool status_updated = false;
-  content_link->GetStatus([&](ContentLinkStatus status) {
-    ASSERT_EQ(ContentLinkStatus::CONTENT_HAS_PRESENTED, status);
+  child_view_watcher->GetStatus([&](ChildViewStatus status) {
+    ASSERT_EQ(ChildViewStatus::CONTENT_HAS_PRESENTED, status);
     status_updated = true;
   });
 
@@ -2101,15 +2105,15 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
   UpdateLinks(parent->GetRoot());
 
   // Confirm that the initial logical size is available immediately.
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kDefaultSize, info.logical_size().width);
       EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
@@ -2122,15 +2126,15 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
 
   // Set the logical size to something new.
   {
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({2, 3});
-    parent->SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetViewportProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
 
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(2u, info.logical_size().width);
       EXPECT_EQ(3u, info.logical_size().height);
       layout_updated = true;
@@ -2154,16 +2158,16 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   }
 }
 
-TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
+TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
 
   parent->CreateTransform(kTransformId);
   parent->SetRootTransform(kTransformId);
@@ -2175,7 +2179,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   // Confirm that the initial layout is the default.
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kDefaultSize, info.logical_size().width);
       EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
@@ -2188,16 +2192,16 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
 
   // Set the logical size to something new.
   {
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({2, 3});
-    parent->SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetViewportProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
 
   // Confirm that the new logical size is accessible.
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(2u, info.logical_size().width);
       EXPECT_EQ(3u, info.logical_size().height);
       layout_updated = true;
@@ -2210,15 +2214,15 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
 
   // Set link properties using a properties object with an unset size field.
   {
-    LinkProperties default_properties;
-    parent->SetLinkProperties(kLinkId, std::move(default_properties));
+    ViewportProperties default_properties;
+    parent->SetViewportProperties(kLinkId, std::move(default_properties));
     PRESENT(parent, true);
   }
 
   // Confirm that no update has been triggered.
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
     UpdateLinks(parent->GetRoot());
@@ -2226,21 +2230,21 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   }
 }
 
-TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
+TEST_F(FlatlandTest, SetViewportPropertiesMultisetBehavior) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
 
   // Our initial layout (from link creation) should be the default size.
   {
     int num_updates = 0;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kDefaultSize, info.logical_size().width);
       EXPECT_EQ(kDefaultSize, info.logical_size().height);
       ++num_updates;
@@ -2261,19 +2265,19 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   // Set the logical size to something new multiple times.
   for (int i = 10; i >= 0; --i) {
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({kInitialSize + i + 1, kInitialSize + i + 1});
-    parent->SetLinkProperties(kLinkId, std::move(properties));
-    LinkProperties properties2;
+    parent->SetViewportProperties(kLinkId, std::move(properties));
+    ViewportProperties properties2;
     properties2.set_logical_size({kInitialSize + i, kInitialSize + i});
-    parent->SetLinkProperties(kLinkId, std::move(properties2));
+    parent->SetViewportProperties(kLinkId, std::move(properties2));
     PRESENT(parent, true);
   }
 
   // Confirm that the callback is fired once, and that it has the most up-to-date data.
   {
     int num_updates = 0;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kInitialSize, info.logical_size().width);
       EXPECT_EQ(kInitialSize, info.logical_size().height);
       ++num_updates;
@@ -2288,7 +2292,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   // Confirm that calling GetLayout again results in a hung get.
   int num_updates = 0;
-  graph_link->GetLayout([&](LayoutInfo info) {
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
     // When we receive the new layout information, confirm that we receive the last update in the
     // batch.
     EXPECT_EQ(kNewSize, info.logical_size().width);
@@ -2302,12 +2306,12 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   // Update the properties twice, once with the old value, once with the new value.
   {
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({kInitialSize, kInitialSize});
-    parent->SetLinkProperties(kLinkId, std::move(properties));
-    LinkProperties properties2;
+    parent->SetViewportProperties(kLinkId, std::move(properties));
+    ViewportProperties properties2;
     properties2.set_logical_size({kNewSize, kNewSize});
-    parent->SetLinkProperties(kLinkId, std::move(properties2));
+    parent->SetViewportProperties(kLinkId, std::move(properties2));
     PRESENT(parent, true);
   }
 
@@ -2317,7 +2321,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   EXPECT_EQ(1, num_updates);
 }
 
-TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
+TEST_F(FlatlandTest, SetViewportPropertiesOnMultipleChildren) {
   const int kNumChildren = 3;
   const TransformId kRootTransform = {1};
   const TransformId kTransformIds[kNumChildren] = {{2}, {3}, {4}};
@@ -2326,8 +2330,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> children[kNumChildren] = {CreateFlatland(), CreateFlatland(),
                                                       CreateFlatland()};
-  fidl::InterfacePtr<ContentLink> content_link[kNumChildren];
-  fidl::InterfacePtr<GraphLink> graph_link[kNumChildren];
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher[kNumChildren];
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher[kNumChildren];
 
   parent->CreateTransform(kRootTransform);
   parent->SetRootTransform(kRootTransform);
@@ -2335,7 +2339,8 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   for (int i = 0; i < kNumChildren; ++i) {
     parent->CreateTransform(kTransformIds[i]);
     parent->AddChild(kRootTransform, kTransformIds[i]);
-    CreateLink(parent.get(), children[i].get(), kLinkIds[i], &content_link[i], &graph_link[i]);
+    CreateViewport(parent.get(), children[i].get(), kLinkIds[i], &child_view_watcher[i],
+                   &parent_viewport_watcher[i]);
     parent->SetContent(kTransformIds[i], kLinkIds[i]);
   }
   UpdateLinks(parent->GetRoot());
@@ -2343,7 +2348,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   // Confirm that all children are at the default value
   for (int i = 0; i < kNumChildren; ++i) {
     bool layout_updated = false;
-    graph_link[i]->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kDefaultSize, info.logical_size().width);
       EXPECT_EQ(kDefaultSize, info.logical_size().height);
       layout_updated = true;
@@ -2359,16 +2364,16 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     SizeU size;
     size.width = id.value;
     size.height = id.value * 2;
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size(size);
-    parent->SetLinkProperties(id, std::move(properties));
+    parent->SetViewportProperties(id, std::move(properties));
   }
 
   PRESENT(parent, true);
 
   for (int i = 0; i < kNumChildren; ++i) {
     bool layout_updated = false;
-    graph_link[i]->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(kLinkIds[i].value, info.logical_size().width);
       EXPECT_EQ(kLinkIds[i].value * 2, info.logical_size().height);
       layout_updated = true;
@@ -2387,9 +2392,9 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
 
   parent->CreateTransform(kTransformId);
   parent->SetRootTransform(kTransformId);
@@ -2403,12 +2408,12 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
   SetDisplayPixelScale(new_display_pixel_scale);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
-  graph_link->GetLayout([&](LayoutInfo info) {});
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
 
   // Confirm that the new pixel scale is (.1, .2).
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_EQ(new_display_pixel_scale.x, info.pixel_scale().width);
       EXPECT_EQ(new_display_pixel_scale.y, info.pixel_scale().height);
       layout_updated = true;
@@ -2429,9 +2434,9 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
 
   parent->CreateTransform(kTransformId);
   parent->SetRootTransform(kTransformId);
@@ -2449,12 +2454,12 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
-  graph_link->GetLayout([&](LayoutInfo info) {});
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
 
   // Confirm that the new pixel scale is (2, 3).
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
       EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
       layout_updated = true;
@@ -2472,12 +2477,12 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
-  graph_link->GetLayout([&](LayoutInfo info) {});
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
 
   // Pixel scale is still (2, 3), so nothing changes.
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
     UpdateLinks(parent->GetRoot());
@@ -2489,12 +2494,12 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
-  graph_link->GetLayout([&](LayoutInfo info) {});
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
 
   // This call hangs
   {
     bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) {
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
       EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
       layout_updated = true;
@@ -2517,13 +2522,13 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     // Creating a link with an empty property object is an error. Logical size must be provided at
     // creation time.
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
-    LinkProperties empty_properties;
-    fidl::InterfacePtr<ContentLink> content_link;
-    flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(empty_properties),
-                         content_link.NewRequest());
+    ViewportProperties empty_properties;
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(empty_properties),
+                             child_view_watcher.NewRequest());
 
     PRESENT(flatland, false);
   }
@@ -2531,14 +2536,14 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
   // Setup.
   auto SetupFlatland = [&]() {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     zx::channel::create(0, &parent_token.value, &child_token.value);
-    LinkProperties properties;
+    ViewportProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
-    fidl::InterfacePtr<ContentLink> content_link;
-    flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                         content_link.NewRequest());
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(properties),
+                             child_view_watcher.NewRequest());
     return flatland;
   };
 
@@ -2571,13 +2576,13 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
   }
 }
 
-TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
+TEST_F(FlatlandTest, ReleaseViewportErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
 
   // Zero is not a valid link_id.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->ReleaseLink({0}, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+    flatland->ReleaseViewport({0}, [](ViewportCreationToken token) { EXPECT_TRUE(false); });
     PRESENT(flatland, false);
   }
 
@@ -2585,7 +2590,7 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
     const ContentId kLinkId1 = {1};
-    flatland->ReleaseLink(kLinkId1, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+    flatland->ReleaseViewport(kLinkId1, [](ViewportCreationToken token) { EXPECT_TRUE(false); });
     PRESENT(flatland, false);
   }
 
@@ -2601,38 +2606,39 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
     CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
                 std::move(properties));
 
-    flatland->ReleaseLink(kImageId, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+    flatland->ReleaseViewport(kImageId, [](ViewportCreationToken token) { EXPECT_TRUE(false); });
     PRESENT(flatland, false);
   }
 }
 
-TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
+TEST_F(FlatlandTest, ReleaseViewportReturnsOriginalToken) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const zx_koid_t expected_koid = fsl::GetKoid(parent_token.value.get());
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, true);
 
-  ContentLinkToken content_token;
-  flatland->ReleaseLink(
-      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+  ViewportCreationToken content_token;
+  flatland->ReleaseViewport(kLinkId1, [&content_token](ViewportCreationToken token) {
+    content_token = std::move(token);
+  });
 
   RunLoopUntilIdle();
 
-  // Until Present() is called and the acquire fence is signaled, the previous ContentLink is not
-  // unbound.
-  EXPECT_TRUE(content_link.is_bound());
+  // Until Present() is called and the acquire fence is signaled, the previous ChildViewWatcher is
+  // not unbound.
+  EXPECT_TRUE(child_view_watcher.is_bound());
   EXPECT_FALSE(content_token.value.is_valid());
 
   PresentArgs args;
@@ -2641,7 +2647,7 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
 
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
   EXPECT_FALSE(content_token.value.is_valid());
 
   // Signal the acquire fence to unbind the link.
@@ -2650,34 +2656,35 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(child_view_watcher.is_bound());
   EXPECT_TRUE(content_token.value.is_valid());
   EXPECT_EQ(fsl::GetKoid(content_token.value.get()), expected_koid);
 }
 
-TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
+TEST_F(FlatlandTest, ReleaseViewportReturnsOrphanedTokenOnChildDeath) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                       content_link.NewRequest());
+  flatland->CreateViewport(kLinkId1, std::move(parent_token), std::move(properties),
+                           child_view_watcher.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from returning a valid token.
   child_token.value.reset();
   RunLoopUntilIdle();
 
-  ContentLinkToken content_token;
-  flatland->ReleaseLink(
-      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+  ViewportCreationToken content_token;
+  flatland->ReleaseViewport(kLinkId1, [&content_token](ViewportCreationToken token) {
+    content_token = std::move(token);
+  });
   PRESENT(flatland, true);
 
   EXPECT_TRUE(content_token.value.is_valid());
@@ -2685,20 +2692,20 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
   // But trying to link with that token will immediately fail because it is already orphaned.
   const ContentId kLinkId2 = {2};
 
-  fidl::InterfacePtr<ContentLink> content_link2;
-  flatland->CreateLink(kLinkId2, std::move(content_token), std::move(properties),
-                       content_link2.NewRequest());
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher2;
+  flatland->CreateViewport(kLinkId2, std::move(content_token), std::move(properties),
+                           child_view_watcher2.NewRequest());
   PRESENT(flatland, true);
 
-  EXPECT_FALSE(content_link2.is_bound());
+  EXPECT_FALSE(child_view_watcher2.is_bound());
 }
 
-TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
+TEST_F(FlatlandTest, CreateViewportPresentedBeforeCreateView) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
@@ -2708,18 +2715,18 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> parent_content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> parent_child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     parent_content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         parent_child_view_watcher.NewRequest());
   parent->SetContent(kId1, kLinkId);
 
   PRESENT(parent, true);
 
   // Link the child to the parent->
-  fidl::InterfacePtr<GraphLink> child_graph_link;
-  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
+  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on the child->
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
@@ -2729,17 +2736,17 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
-TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
+TEST_F(FlatlandTest, CreateViewPresentedBeforeCreateViewport) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Link the child to the parent
-  fidl::InterfacePtr<GraphLink> child_graph_link;
-  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
+  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
 
   PRESENT(child, true);
 
@@ -2753,11 +2760,11 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> parent_content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> parent_child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     parent_content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         parent_child_view_watcher.NewRequest());
   parent->SetContent(kId1, kLinkId);
 
   // The child should only be accessible from the parent when Present() is called on the parent->
@@ -2772,8 +2779,8 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
@@ -2786,16 +2793,16 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> parent_content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> parent_child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     parent_content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         parent_child_view_watcher.NewRequest());
   parent->SetContent(kId1, kLinkId);
 
   // Link the child to the parent->
-  fidl::InterfacePtr<GraphLink> child_graph_link;
-  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
+  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on both the parent
   // and the child->
@@ -2814,8 +2821,8 @@ TEST_F(FlatlandTest, ClearChildLink) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   // Create and link the two instances.
@@ -2825,15 +2832,15 @@ TEST_F(FlatlandTest, ClearChildLink) {
 
   const ContentId kLinkId = {1};
 
-  fidl::InterfacePtr<ContentLink> parent_content_link;
-  LinkProperties properties;
+  fidl::InterfacePtr<ChildViewWatcher> parent_child_view_watcher;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     parent_content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         parent_child_view_watcher.NewRequest());
   parent->SetContent(kId1, kLinkId);
 
-  fidl::InterfacePtr<GraphLink> child_graph_link;
-  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
+  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
 
   PRESENT(parent, true);
   PRESENT(child, true);
@@ -2854,9 +2861,10 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
 
   // Create link and Present.
   const ContentId kLinkId1 = {1};
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId1, &child_view_watcher,
+                 &parent_viewport_watcher);
   RunLoopUntilIdle();
 
   const TransformId kId1 = {1};
@@ -2867,24 +2875,25 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // Both protocols should be bound at this point.
-  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(child_view_watcher.is_bound());
 
-  EXPECT_TRUE(graph_link.is_bound());
-  bool graph_link_updated = false;
-  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
-  EXPECT_FALSE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
+  bool parent_viewport_watcher_updated = false;
+  parent_viewport_watcher->GetLayout(
+      [&parent_viewport_watcher_updated](auto) { parent_viewport_watcher_updated = true; });
+  EXPECT_FALSE(parent_viewport_watcher_updated);
   RunLoopUntilIdle();
-  EXPECT_TRUE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher_updated);
 
   // Unlink the parent on child.
-  GraphLinkToken graph_token;
-  child->UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+  ViewCreationToken graph_token;
+  child->ReleaseView([&graph_token](ViewCreationToken token) { graph_token = std::move(token); });
   PRESENT(child, true);
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to link a different instance.
   std::shared_ptr<Flatland> child2 = CreateFlatland();
-  child2->LinkToParent(std::move(graph_token), graph_link.NewRequest());
+  child2->CreateView(std::move(graph_token), parent_viewport_watcher.NewRequest());
   PRESENT(child2, true);
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child2->GetRoot()));
 
@@ -2892,20 +2901,22 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // Both protocols should still be bound.
-  EXPECT_TRUE(content_link.is_bound());
-  bool content_link_updated = false;
-  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
-  EXPECT_FALSE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  bool child_view_watcher_updated = false;
+  child_view_watcher->GetStatus(
+      [&child_view_watcher_updated](auto) { child_view_watcher_updated = true; });
+  EXPECT_FALSE(child_view_watcher_updated);
   UpdateLinks(parent->GetRoot());
   RunLoopUntilIdle();
-  EXPECT_TRUE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher_updated);
 
-  EXPECT_TRUE(graph_link.is_bound());
-  graph_link_updated = false;
-  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
-  EXPECT_FALSE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
+  parent_viewport_watcher_updated = false;
+  parent_viewport_watcher->GetLayout(
+      [&parent_viewport_watcher_updated](auto) { parent_viewport_watcher_updated = true; });
+  EXPECT_FALSE(parent_viewport_watcher_updated);
   RunLoopUntilIdle();
-  EXPECT_TRUE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher_updated);
 }
 
 TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
@@ -2914,9 +2925,10 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
   // Create link and Present.
   const ContentId kLinkId1 = {1};
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId1, &child_view_watcher,
+                 &parent_viewport_watcher);
   RunLoopUntilIdle();
 
   const TransformId kId1 = {1};
@@ -2927,20 +2939,22 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // Both protocols should be bound at this point.
-  EXPECT_TRUE(content_link.is_bound());
-  bool content_link_updated = false;
-  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
-  EXPECT_FALSE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  bool child_view_watcher_updated = false;
+  child_view_watcher->GetStatus(
+      [&child_view_watcher_updated](auto) { child_view_watcher_updated = true; });
+  EXPECT_FALSE(child_view_watcher_updated);
   UpdateLinks(parent->GetRoot());
   RunLoopUntilIdle();
-  EXPECT_TRUE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher_updated);
 
-  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   // Release the link on parent.
-  ContentLinkToken content_token;
-  parent->ReleaseLink(
-      kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
+  ViewportCreationToken content_token;
+  parent->ReleaseViewport(kLinkId1, [&content_token](ViewportCreationToken token) {
+    content_token = std::move(token);
+  });
   PRESENT(parent, true);
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
@@ -2951,10 +2965,10 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   parent2->CreateTransform(kId2);
   parent2->SetRootTransform(kId2);
   const ContentId kLinkId2 = {2};
-  LinkProperties properties;
+  ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent2->CreateLink(kLinkId2, std::move(content_token), std::move(properties),
-                      content_link.NewRequest());
+  parent2->CreateViewport(kLinkId2, std::move(content_token), std::move(properties),
+                          child_view_watcher.NewRequest());
   parent2->SetContent(kId2, kLinkId2);
   PRESENT(parent2, true);
   EXPECT_TRUE(IsDescendantOf(parent2->GetRoot(), child->GetRoot()));
@@ -2963,20 +2977,22 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // Both protocols should still be bound.
-  EXPECT_TRUE(content_link.is_bound());
-  content_link_updated = false;
-  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
-  EXPECT_FALSE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher.is_bound());
+  child_view_watcher_updated = false;
+  child_view_watcher->GetStatus(
+      [&child_view_watcher_updated](auto) { child_view_watcher_updated = true; });
+  EXPECT_FALSE(child_view_watcher_updated);
   UpdateLinks(parent->GetRoot());
   RunLoopUntilIdle();
-  EXPECT_TRUE(content_link_updated);
+  EXPECT_TRUE(child_view_watcher_updated);
 
-  EXPECT_TRUE(graph_link.is_bound());
-  bool graph_link_updated = false;
-  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
-  EXPECT_FALSE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher.is_bound());
+  bool parent_viewport_watcher_updated = false;
+  parent_viewport_watcher->GetLayout(
+      [&parent_viewport_watcher_updated](auto) { parent_viewport_watcher_updated = true; });
+  EXPECT_FALSE(parent_viewport_watcher_updated);
   RunLoopUntilIdle();
-  EXPECT_TRUE(graph_link_updated);
+  EXPECT_TRUE(parent_viewport_watcher_updated);
 }
 
 TEST_F(FlatlandTest, CreateImageValidCase) {
@@ -3260,15 +3276,15 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
   const ContentId kLinkId = {2};
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
-    fidl::InterfacePtr<ContentLink> content_link;
-    LinkProperties link_properties;
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties link_properties;
     link_properties.set_logical_size({kDefaultSize, kDefaultSize});
-    flatland->CreateLink(kLinkId, std::move(parent_token), std::move(link_properties),
-                         content_link.NewRequest());
+    flatland->CreateViewport(kLinkId, std::move(parent_token), std::move(link_properties),
+                             child_view_watcher.NewRequest());
     PRESENT(flatland, true);
 
     ImageProperties image_properties;
@@ -3327,9 +3343,9 @@ TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
 
   // There are seperate ReleaseBufferImage calls to release them from importers.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(2);
-  flatland1->ClearGraph();
+  flatland1->Clear();
   PRESENT(flatland1, true);
-  flatland2->ClearGraph();
+  flatland2->Clear();
   PRESENT(flatland2, true);
 }
 
@@ -3685,17 +3701,17 @@ TEST_F(FlatlandTest, ReleaseImageErrorCases) {
   // ContentId is not an Image.
   {
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    ContentLinkToken parent_token;
-    GraphLinkToken child_token;
+    ViewportCreationToken parent_token;
+    ViewCreationToken child_token;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
     const ContentId kLinkId = {2};
 
-    fidl::InterfacePtr<ContentLink> content_link;
-    LinkProperties properties;
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties properties;
     properties.set_logical_size({kDefaultSize, kDefaultSize});
-    flatland->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                         content_link.NewRequest());
+    flatland->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                             child_view_watcher.NewRequest());
 
     flatland->ReleaseImage(kLinkId);
     PRESENT(flatland, false);
@@ -3996,7 +4012,7 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id1);
 }
 
-TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
+TEST_F(FlatlandTest, ClearReleasesImagesAndBufferCollections) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
   std::shared_ptr<Flatland> flatland = CreateFlatland();
 
@@ -4022,7 +4038,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   PRESENT(flatland, true);
 
   // Clear the graph, then signal the release fence and ensure the buffer collection is released.
-  flatland->ClearGraph();
+  flatland->Clear();
   import_token_dup.value.reset();
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1))
@@ -4080,16 +4096,18 @@ TEST_F(FlatlandDisplayTest, SimpleSetContent) {
 
   const ContentId kLinkId1 = {1};
 
-  fidl::InterfacePtr<ContentLink> content_link;
-  fidl::InterfacePtr<GraphLink> graph_link;
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
 
-  SetDisplayContent(display.get(), child.get(), &content_link, &graph_link);
+  SetDisplayContent(display.get(), child.get(), &child_view_watcher, &parent_viewport_watcher);
 
   std::optional<LayoutInfo> layout_info;
-  graph_link->GetLayout([&](LayoutInfo new_info) { layout_info = std::move(new_info); });
+  parent_viewport_watcher->GetLayout(
+      [&](LayoutInfo new_info) { layout_info = std::move(new_info); });
 
-  std::optional<GraphLinkStatus> graph_link_status;
-  graph_link->GetStatus([&](GraphLinkStatus new_status) { graph_link_status = new_status; });
+  std::optional<ParentViewportStatus> parent_viewport_watcher_status;
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus new_status) { parent_viewport_watcher_status = new_status; });
 
   RunLoopUntilIdle();
 
@@ -4099,29 +4117,31 @@ TEST_F(FlatlandDisplayTest, SimpleSetContent) {
   EXPECT_EQ(layout_info.value().logical_size().width, kWidth);
   EXPECT_EQ(layout_info.value().logical_size().height, kHeight);
 
-  // The GraphLink's status must wait until the first frame is generated (represented here by the
-  // call to UpdateLinks() below).
-  EXPECT_FALSE(graph_link_status.has_value());
+  // The ParentViewportWatcher's status must wait until the first frame is generated (represented
+  // here by the call to UpdateLinks() below).
+  EXPECT_FALSE(parent_viewport_watcher_status.has_value());
 
   UpdateLinks(display->root_transform());
 
   // UpdateLinks() causes us to receive the status notification.  The link is considered to be
   // disconnected because the child has not yet presented its first frame.
-  EXPECT_TRUE(graph_link_status.has_value());
-  EXPECT_EQ(graph_link_status.value(), GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
-  graph_link_status.reset();
+  EXPECT_TRUE(parent_viewport_watcher_status.has_value());
+  EXPECT_EQ(parent_viewport_watcher_status.value(),
+            ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
+  parent_viewport_watcher_status.reset();
 
   PRESENT(child, true);
 
   // The status won't change to "connected" until UpdateLinks() is called again.
-  graph_link->GetStatus([&](GraphLinkStatus new_status) { graph_link_status = new_status; });
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus new_status) { parent_viewport_watcher_status = new_status; });
   RunLoopUntilIdle();
-  EXPECT_FALSE(graph_link_status.has_value());
+  EXPECT_FALSE(parent_viewport_watcher_status.has_value());
 
   UpdateLinks(display->root_transform());
 
-  EXPECT_TRUE(graph_link_status.has_value());
-  EXPECT_EQ(graph_link_status.value(), GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  EXPECT_TRUE(parent_viewport_watcher_status.has_value());
+  EXPECT_EQ(parent_viewport_watcher_status.value(), ParentViewportStatus::CONNECTED_TO_DISPLAY);
 }
 
 // TODO(fxbug.dev/76640): other FlatlandDisplayTests that should be written:

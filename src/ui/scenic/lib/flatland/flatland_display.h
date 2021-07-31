@@ -47,9 +47,9 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
   FlatlandDisplay& operator=(FlatlandDisplay&&) = delete;
 
   // |fuchsia::ui::composition::FlatlandDisplay|
-  void SetContent(
-      fuchsia::ui::composition::ContentLinkToken token,
-      fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> content_link) override;
+  void SetContent(fuchsia::ui::composition::ViewportCreationToken token,
+                  fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher>
+                      child_view_watcher) override;
 
   TransformHandle root_transform() const { return root_transform_; }
   scenic_impl::display::Display* display() const { return display_.get(); }

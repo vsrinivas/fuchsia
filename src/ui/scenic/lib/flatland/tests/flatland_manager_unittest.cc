@@ -227,22 +227,22 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
   EXPECT_EQ(manager_->GetSessionCount(), 2ul);
 }
 
-TEST_F(FlatlandManagerTest, CreateLinkedFlatlands) {
-  fuchsia::ui::composition::ContentLinkToken parent_token;
-  fuchsia::ui::composition::GraphLinkToken child_token;
+TEST_F(FlatlandManagerTest, CreateViewportedFlatlands) {
+  fuchsia::ui::composition::ViewportCreationToken parent_token;
+  fuchsia::ui::composition::ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> parent = CreateFlatland();
   const fuchsia::ui::composition::ContentId kLinkId = {1};
-  fidl::InterfacePtr<fuchsia::ui::composition::ContentLink> content_link;
-  fuchsia::ui::composition::LinkProperties properties;
+  fidl::InterfacePtr<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher;
+  fuchsia::ui::composition::ViewportProperties properties;
   properties.set_logical_size({1, 2});
-  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                     content_link.NewRequest());
+  parent->CreateViewport(kLinkId, std::move(parent_token), std::move(properties),
+                         child_view_watcher.NewRequest());
   {
     fidl::InterfacePtr<fuchsia::ui::composition::Flatland> child = CreateFlatland();
-    fidl::InterfacePtr<fuchsia::ui::composition::GraphLink> graph_link;
-    child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+    fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
+    child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
 
     RunLoopUntilIdle();
     EXPECT_EQ(manager_->GetSessionCount(), 2ul);

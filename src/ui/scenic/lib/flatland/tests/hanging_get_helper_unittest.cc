@@ -12,8 +12,8 @@
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 using fuchsia::math::SizeU;
-using fuchsia::ui::composition::GraphLinkStatus;
 using fuchsia::ui::composition::LayoutInfo;
+using fuchsia::ui::composition::ParentViewportStatus;
 
 namespace flatland {
 namespace test {
@@ -155,49 +155,49 @@ TEST(HangingGetHelperTest, DuplicateDataIsIgnored) {
 
 TEST(HangingGetHelperTest, EnumDuplicateDataIsIgnored) {
   async::TestLoop loop;
-  HangingGetHelper<GraphLinkStatus> helper(
+  HangingGetHelper<ParentViewportStatus> helper(
       std::make_shared<utils::UnownedDispatcherHolder>(loop.dispatcher()));
 
-  std::optional<GraphLinkStatus> data;
-  helper.SetCallback([&](GraphLinkStatus d) { data = std::move(d); });
+  std::optional<ParentViewportStatus> data;
+  helper.SetCallback([&](ParentViewportStatus d) { data = std::move(d); });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   loop.RunUntilIdle();
 
   EXPECT_FALSE(data);
 
-  helper.Update(GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  helper.Update(ParentViewportStatus::CONNECTED_TO_DISPLAY);
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(GraphLinkStatus::CONNECTED_TO_DISPLAY, data.value()));
+  EXPECT_TRUE(fidl::Equals(ParentViewportStatus::CONNECTED_TO_DISPLAY, data.value()));
 
   data.reset();
-  helper.SetCallback([&](GraphLinkStatus d) { data = std::move(d); });
+  helper.SetCallback([&](ParentViewportStatus d) { data = std::move(d); });
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   loop.RunUntilIdle();
 
   EXPECT_FALSE(data);
 
-  helper.Update(GraphLinkStatus::CONNECTED_TO_DISPLAY);
+  helper.Update(ParentViewportStatus::CONNECTED_TO_DISPLAY);
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   loop.RunUntilIdle();
 
   EXPECT_FALSE(data);
 
-  helper.Update(GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
+  helper.Update(ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
 
   // TODO(fxbug.dev/76183): unnecessary if we use LLCPP bindings (or equivalent).
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
   ASSERT_TRUE(data);
-  EXPECT_TRUE(fidl::Equals(GraphLinkStatus::DISCONNECTED_FROM_DISPLAY, data.value()));
+  EXPECT_TRUE(fidl::Equals(ParentViewportStatus::DISCONNECTED_FROM_DISPLAY, data.value()));
 }
 
 TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
