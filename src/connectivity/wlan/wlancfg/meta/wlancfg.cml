@@ -6,8 +6,6 @@
     program: {
         runner: "elf",
         binary: "bin/wlancfg",
-        main_process_critical: "true",
-        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {

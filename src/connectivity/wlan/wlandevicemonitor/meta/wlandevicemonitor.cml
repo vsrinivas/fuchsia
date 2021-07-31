@@ -9,7 +9,6 @@
     program: {
         runner: "elf",
         binary: "bin/wlandevicemonitor",
-        main_process_critical: "true",
     },
     capabilities: [
         {

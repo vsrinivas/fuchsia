@@ -4,6 +4,7 @@
             name: "wlancfg",
             url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cm",
             startup: "eager",
+            on_terminate: "reboot",
         },
     ],
     offer: [

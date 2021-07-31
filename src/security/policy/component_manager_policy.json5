@@ -4,6 +4,7 @@
             ambient_mark_vmo_exec: [
                 "/core/appmgr",
                 "/core/test_manager/elf_test_ambient_exec_runner",
+
                 // We allow tests to access ambient executability in the same
                 // way that we're permissive with use of the components v1
                 // deprecated-ambient-replace-as-executable feature and
@@ -16,7 +17,6 @@
                 "/bootstrap/fshost",
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
-                "/core/wlancfg",
             ],
             create_raw_processes: [
                 "/core/starnix_manager/starnix_runner",
@@ -348,6 +348,9 @@
         child_policy: {
             reboot_on_terminate: [
                 "/core/appmgr",
+                "/core/wlancfg",
+                "/core/wlandevicemonitor",
+                "/core/wlanstack",
             ],
         },
         debug_registration_policy: [
