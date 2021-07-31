@@ -89,6 +89,8 @@ files = {
 
 old_labels = {
   base_package = "//build/images:system_image.meta"
+  base_static_packages = "//build/images:pkgsvr_index"
+  base_cache_packages = "//build/images:cache_index"
 
   # `bootfs_only` is only set by 'bringup', which uses different assembly
   # targets and differently named files in the previous assembly implementation
@@ -161,6 +163,8 @@ old_files = {
   fvm_sparse = "${root_build_dir}/obj/build/images/fvm.sparse.blk"
   fvm_blob_sparse = "${root_build_dir}/obj/build/images/fvm.blob.sparse.blk"
   fvm_fastboot = "${root_build_dir}/obj/build/images/fvm.fastboot.blk"
+  base_cache_packages = "${root_build_dir}/obj/build/images/cache_index"
+  base_static_packages = "$root_build_dir/obj/build/images/pkgsvr_index"
 }
 
 if (uses_base_package) {
@@ -368,10 +372,10 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":fuchsia",
-      "//build/images:pkgsvr_index",
+      old_labels.base_static_packages,
     ]
 
-    first = "$root_build_dir/obj/build/images/pkgsvr_index"
+    first = old_files.base_static_packages
     second = files.base_static_packages
 
     display_text_diff_on_failure = true
@@ -381,10 +385,10 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":fuchsia",
-      "//build/images:cache_index",
+      old_labels.base_cache_packages,
     ]
 
-    first = "$root_build_dir/obj/build/images/cache_index"
+    first = old_files.base_cache_packages
     second = files.base_cache_packages
 
     display_text_diff_on_failure = true
@@ -448,7 +452,7 @@ if (uses_base_package) {
       extracted_files.old_base_meta_package,
     ]
 
-    deps = [ "//build/images:system_image.meta" ]
+    deps = [ old_labels.base_package ]
   }
 
   # Extract base package's contents for inspection
@@ -490,7 +494,7 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":fuchsia",
-      "//build/images:system_image.meta",
+      old_labels.base_package,
     ]
 
     first = old_files.base_package
