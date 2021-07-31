@@ -354,9 +354,13 @@ impl ViewStrategy for FrameBufferViewStrategy {
             self.display_resources().frame_set.mark_prepared(available);
             true
         } else {
-            if let Some(presented) = self.presented {
-                self.update_image(view_details, view_assistant, presented);
-                true
+            if self.render_frame_count == 1 {
+                if let Some(presented) = self.presented {
+                    self.update_image(view_details, view_assistant, presented);
+                    true
+                } else {
+                    false
+                }
             } else {
                 false
             }
