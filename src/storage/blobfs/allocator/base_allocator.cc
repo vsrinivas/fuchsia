@@ -200,9 +200,9 @@ bool BaseAllocator::FindUnallocatedExtent(uint64_t start, uint64_t block_length,
       // Jump past as much of the allocated region as possible, and then restart searching for more
       // free blocks.
       size_t first_free;
-      if (block_bitmap_.Scan(start, start + block_length, true, &first_free)) {
-        // All bits are allocated; jump past this entire portion of allocated blocks.
-        start += block_length;
+      if (block_bitmap_.Scan(start, block_bitmap_.size(), true, &first_free)) {
+        // All remaining blocks are already allocated.
+        start = block_bitmap_.size();
       } else {
         // Not all blocks are allocated; jump to the first free block we can find.
         ZX_DEBUG_ASSERT(first_free > start);
