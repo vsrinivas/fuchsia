@@ -134,7 +134,12 @@ There are several ways of using this widget:
 
   <pre>{% verbatim %}[<var>display_name</var>][glossary.<var>term</var>]{% endverbatim %}</pre>
 
-  Then, you must define the Xref at the bottom of the markdown file. For example:
+  Alternatively, you don't need to specify `{{"<var>display_name</var>"}}`, which lets the actual term
+  be used as the `{{"<var>display_name</var>"}}`:
+
+  <pre>{% verbatim %}[glossary.<var>term</var>]{% endverbatim %}</pre>
+
+  For both formats, you must define the Xref at the bottom of the markdown file. For example:
 
   <pre>{% verbatim %}[glossary.<var>display_name</var>]: /docs/glossary/README.md#<var>term</var>{% endverbatim %}</pre>
 
@@ -170,8 +175,11 @@ Note: When using the widgets in Jinja2 there are additional parameters available
       </tr>
       <tr>
         <td><code>display_name</code></td>
-        <td><b>Required</b><br>Specify the text in your markdown file that will have
-        hover over text.
+        <td><b>Required</b><br><p>Specify the text in your markdown file that will have
+        hover over text.</p>
+        <p>Not required when using the xref syntax of
+        {% verbatim %}[glossary.<var>term</var>]{% endverbatim %}. In that case,
+        the glossary term is used as the <var>display_name</var>.</p></td>
       </tr>
       <tr>
         <td><code>term</code></td>
