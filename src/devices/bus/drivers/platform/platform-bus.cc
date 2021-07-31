@@ -661,6 +661,14 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
   if (status != ZX_OK) {
     return txn.Reply(status);
   }
+  device.name = "bt-hci-emulator";
+  device.vid = PDEV_VID_GENERIC;
+  device.pid = PDEV_PID_GENERIC;
+  device.did = PDEV_DID_BT_HCI_EMULATOR;
+  status = PBusDeviceAdd(&device);
+  if (status != ZX_OK) {
+    return txn.Reply(status);
+  }
 
   return txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.
 }

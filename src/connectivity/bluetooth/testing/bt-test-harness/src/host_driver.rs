@@ -142,9 +142,7 @@ impl TestHarness for HostDriverHarness {
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
-    let emulator = Emulator::create("bt-integration-test-host")
-        .await
-        .context("Error creating emulator root device")?;
+    let emulator = Emulator::create().await.context("Error creating emulator root device")?;
     let host_dev = emulator
         .publish_and_wait_for_host(Emulator::default_settings())
         .await

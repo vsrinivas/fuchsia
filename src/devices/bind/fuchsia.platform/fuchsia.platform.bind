@@ -39,6 +39,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RAM_DISK = 0x2D,
   RAM_NAND = 0x2E,
   VIRTUAL_AUDIO = 0x2F,
+  BT_HCI_EMULATOR = 0x30,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {

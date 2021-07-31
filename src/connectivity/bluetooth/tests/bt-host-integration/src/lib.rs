@@ -47,7 +47,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
         ..EmulatorSettings::EMPTY
     };
 
-    let mut emulator = Emulator::create("bt-hci-integration-lifecycle").await?;
+    let mut emulator = Emulator::create().await?;
     let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a

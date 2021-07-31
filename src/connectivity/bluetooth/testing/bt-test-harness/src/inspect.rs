@@ -87,7 +87,7 @@ pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error
 }
 
 pub async fn new_inspect_harness() -> Result<(InspectHarness, Emulator, PathBuf), Error> {
-    let emulator: Emulator = Emulator::create("bt-integration-test-host").await?;
+    let emulator: Emulator = Emulator::create().await?;
     let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
     let host_path = host_dev.path().to_path_buf();
 

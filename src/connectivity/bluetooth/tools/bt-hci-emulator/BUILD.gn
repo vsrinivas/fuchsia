@@ -11,6 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//src/connectivity/bluetooth/testing/hci-emulator-client",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

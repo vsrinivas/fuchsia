@@ -5,6 +5,16 @@ library fuchsia.hardware.bluetooth;
 
 using zx;
 
+const MAX_NAME_LENGTH uint32 = 32;
+
+/// Used for spawning bluetooth emulator devices.
+protocol EmulatorController {
+    /// Creates a child device, and returns the name of the child created.
+    Create() -> (struct {
+        name string:<MAX_NAME_LENGTH, optional>;
+    }) error zx.status;
+};
+
 /// Represents the bt-emulator device protocol. A bt-emulator device is used for configuring and
 /// publishing fake bt-hci devices.
 @for_deprecated_c_bindings

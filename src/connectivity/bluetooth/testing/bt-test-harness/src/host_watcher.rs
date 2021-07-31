@@ -112,12 +112,12 @@ pub const FAKE_HCI_ADDRESS: Address = Address::Public([0, 0, 0, 0, 0, 0]);
 /// bt-gap
 pub async fn activate_fake_host(
     host_watcher: HostWatcherHarness,
-    name: &str,
+    _name: &str,
 ) -> Result<(HostId, Emulator), Error> {
     let initial_hosts: Vec<HostId> = host_watcher.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let hci = Emulator::create_and_publish(name).await?;
+    let hci = Emulator::create_and_publish().await?;
 
     let host_watcher_state = host_watcher
         .when_satisfied(

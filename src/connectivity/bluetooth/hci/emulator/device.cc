@@ -114,12 +114,12 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
 
 #undef DEV
 
-zx_status_t Device::Bind() {
+zx_status_t Device::Bind(std::string_view name) {
   logf(TRACE, "bind\n");
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_emulator",
+      .name = name.data(),
       .ctx = this,
       .ops = &bt_emulator_device_ops,
       .proto_id = ZX_PROTOCOL_BT_EMULATOR,

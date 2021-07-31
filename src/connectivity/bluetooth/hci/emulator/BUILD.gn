@@ -9,10 +9,9 @@ import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("bt-hci-emulator-bind") {
   rules = "bt-hci-emulator.bind"
-  disable_autobind = true
   header_output = "bt-hci-emulator-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.test" ]
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("driver_module") {
@@ -20,6 +19,7 @@ driver_module("driver_module") {
   testonly = true
 
   sources = [
+    "controller.h",
     "device.cc",
     "device.h",
     "driver.cc",
@@ -33,6 +33,7 @@ driver_module("driver_module") {
     "//sdk/banjo/fuchsia.hardware.test:fuchsia.hardware.test_banjo_cpp",
     "//sdk/fidl/fuchsia.bluetooth.test",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_llcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/bluetooth/core/bt-host/fidl:helpers",

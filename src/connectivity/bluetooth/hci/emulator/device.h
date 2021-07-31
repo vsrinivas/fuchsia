@@ -39,7 +39,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
  public:
   explicit Device(zx_device_t* device);
 
-  zx_status_t Bind();
+  zx_status_t Bind(std::string_view name);
   void Unbind();
   void Release();
 

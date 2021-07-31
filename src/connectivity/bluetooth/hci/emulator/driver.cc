@@ -12,8 +12,8 @@
 #include <memory>
 #include <thread>
 
-#include "device.h"
 #include "src/connectivity/bluetooth/hci/emulator/bt-hci-emulator-bind.h"
+#include "src/connectivity/bluetooth/hci/emulator/controller.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"
 
 namespace {
@@ -21,7 +21,7 @@ namespace {
 zx_status_t DriverBind(void* ctx, zx_device_t* device) {
   logf(TRACE, "DriverBind\n");
 
-  auto dev = std::make_unique<bt_hci_emulator::Device>(device);
+  auto dev = std::make_unique<bt_hci_emulator::EmulatorController>(device);
   zx_status_t status = dev->Bind();
   if (status != ZX_OK) {
     logf(ERROR, "failed to bind: %s\n", zx_status_get_string(status));
