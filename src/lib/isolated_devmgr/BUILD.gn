@@ -143,16 +143,17 @@ executable("test_bin") {
 
 isolated_devmgr_component("ethertap-devmgr") {
   args = [
+    "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.example.IsolatedDevmgr",
     "--load_driver=/boot/driver/ethertap.so",
     "--load_driver=/boot/driver/ethernet.so",
-    "--wait_for=test/tapctl",
+    "--wait_for=sys/test/tapctl",
   ]
 
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/ethernet/drivers/ethertap",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }
 

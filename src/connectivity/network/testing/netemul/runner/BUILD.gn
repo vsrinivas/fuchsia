@@ -178,16 +178,17 @@ fuchsia_component("netstack-intermediary") {
 
 isolated_devmgr_component("netemul-devmgr") {
   args = [
+    "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.netemul.devmgr.IsolatedDevmgr",
     "--load_driver=/boot/driver/ethertap.so",
     "--load_driver=/boot/driver/ethernet.so",
-    "--wait_for=test/tapctl",
+    "--wait_for=sys/test/tapctl",
   ]
 
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/ethernet/drivers/ethertap",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }
 

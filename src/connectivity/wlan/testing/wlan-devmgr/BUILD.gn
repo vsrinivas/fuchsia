@@ -13,27 +13,23 @@ group("wlan_devmgr_deps") {
     "//src/connectivity/wlan/drivers/wlan:wlan_driver",
     "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap_driver",
-    "//src/devices/tests/sysdev",
   ]
 }
 
 isolated_devmgr_component("wlan-devmgr") {
   args = [
+    "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.wlan.devmgr.IsolatedDevmgr",
     "--load_driver=/boot/driver/wlantap.so",
     "--load_driver=/boot/driver/wlanphy.so",
     "--load_driver=/boot/driver/wlan.so",
     "--load_driver=/boot/driver/ethernet.so",
-    "--wait_for=test/wlantapctl",
+    "--wait_for=sys/test/wlantapctl",
   ]
-  deps = [ ":wlan_devmgr_deps" ]
-}
-
-# TODO(https://fxbug.dev/77388): Remove this
-renamed_binary("renamed_sys_binary") {
-  source = "$root_out_dir/sysdev.so"
-  source_deps = [ "//src/devices/tests/sysdev" ]
-  dest = "driver/platform-bus.so"
+  deps = [
+    ":wlan_devmgr_deps",
+    "//src/devices/misc/drivers/test-parent",
+  ]
 }
 
 isolated_devmgr_v2_component("wlan-devmgr-v2-component") {
@@ -43,7 +39,7 @@ isolated_devmgr_v2_component("wlan-devmgr-v2-component") {
 fuchsia_package("wlan-devmgr-v2") {
   testonly = true
   deps = [
-    ":renamed_sys_binary",
     ":wlan-devmgr-v2-component",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
   ]
 }

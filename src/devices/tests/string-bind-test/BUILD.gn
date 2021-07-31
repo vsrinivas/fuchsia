@@ -37,7 +37,7 @@ isolated_devmgr_unittest_package("string-bind-test") {
     ":parent-driver",
     ":test",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }
 

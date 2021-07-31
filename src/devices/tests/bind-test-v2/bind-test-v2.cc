@@ -27,16 +27,17 @@ class BindCompilerV2Test : public testing::Test {
   void SetUp() override {
     auto args = IsolatedDevmgr::DefaultArgs();
 
+    args.sys_device_driver = "/boot/driver/test-parent-sys.so";
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
-    // Wait for /dev/test/test to appear, then create an endpoint to it.
+    // Wait for /dev/sys/test/test to appear, then create an endpoint to it.
     fbl::unique_fd root_fd;
-    zx_status_t status =
-        devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "test/test", &root_fd);
+    zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                                       "sys/test/test", &root_fd);
     ASSERT_EQ(status, ZX_OK);
 
     auto root_device_endpoints = fidl::CreateEndpoints<fuchsia_device_test::RootDevice>();
@@ -50,7 +51,7 @@ class BindCompilerV2Test : public testing::Test {
     auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
     ASSERT_EQ(endpoints.status_value(), ZX_OK);
 
-    // Create the root test device in /dev/test/test, and get its relative path from /dev.
+    // Create the root test device in /dev/sys/test/test, and get its relative path from /dev.
     auto result = root_device.CreateDevice(fidl::StringView::FromExternal(kDriverLibname),
                                            endpoints->server.TakeChannel());
 

@@ -77,7 +77,7 @@ isolated_devmgr_v2_component("netemul-devmgr") {
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
     "//src/connectivity/ethernet/drivers/ethertap",
-    "//src/devices/tests/sysdev:renamed_sys_binary",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
   ]
 }
 

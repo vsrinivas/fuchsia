@@ -1889,7 +1889,8 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   } else {
     for (const auto& device_path : request->device_filter) {
       fbl::RefPtr<Device> device;
-      zx_status_t status = devfs_walk(root_device_->devnode(), device_path.data(), &device);
+      std::string path(device_path.data(), device_path.size());
+      zx_status_t status = devfs_walk(root_device_->devnode(), path.c_str(), &device);
       if (status != ZX_OK) {
         completer.ReplyError(status);
         return;

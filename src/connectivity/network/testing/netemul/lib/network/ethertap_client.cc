@@ -25,8 +25,8 @@
 
 #include <fbl/unique_fd.h>
 
-static const char kTapctl[] = "/dev/test/tapctl";
-static const char kTapctlRelative[] = "test/tapctl";
+static const char kTapctl[] = "/dev/sys/test/tapctl";
+static const char kTapctlRelative[] = "sys/test/tapctl";
 
 #define MAC_LOCAL (0x02)
 #define MAC_MULTICAST (0x01)

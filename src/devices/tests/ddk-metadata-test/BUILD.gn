@@ -71,7 +71,7 @@ isolated_devmgr_unittest_package("ddk-metadata-test") {
     ":driver",
     ":tests",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 
   test_specs = {

@@ -34,12 +34,12 @@ rustc_binary("bin") {
 
 isolated_devmgr_component("log-test-devmgr") {
   args = [
+    "--sys_device=/boot/driver/test-parent-sys.so",
     "--svc_name=fuchsia.validate.logs.IsolatedDevmgr",
-    "--device_vid_pid_did=11:3:0",
   ]
 
   deps = [
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
     "//src/diagnostics/validator/logs/ddk/log-test-driver",
   ]
 }

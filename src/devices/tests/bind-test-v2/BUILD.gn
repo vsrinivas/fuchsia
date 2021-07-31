@@ -36,7 +36,7 @@ isolated_devmgr_unittest_package("bind-test-v2") {
     ":bind-test-driver-v2",
     ":test",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }
 
@@ -55,9 +55,6 @@ driver_module("bind-test-driver-v2-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "bind-test-driver-v2.cc" ]
   deps = [
     ":bind-v2",

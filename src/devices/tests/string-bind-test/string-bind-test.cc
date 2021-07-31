@@ -29,6 +29,7 @@ class StringBindTest : public testing::Test {
   void SetUp() override {
     auto args = IsolatedDevmgr::DefaultArgs();
 
+    args.sys_device_driver = "/boot/driver/test-parent-sys.so";
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
 
@@ -38,7 +39,7 @@ class StringBindTest : public testing::Test {
     // Wait for /dev/test/test to appear, then get a channel to it.
     fbl::unique_fd root_fd;
     ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
-                                                                   "test/test", &root_fd));
+                                                                   "sys/test/test", &root_fd));
 
     auto root_device_endpoints = fidl::CreateEndpoints<fuchsia_device_test::RootDevice>();
     ASSERT_EQ(ZX_OK, root_device_endpoints.status_value());
@@ -77,7 +78,7 @@ class StringBindTest : public testing::Test {
     // properties.
     fbl::unique_fd string_bind_fd;
     status = devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "test/test/string-bind-parent/child", &string_bind_fd);
+        devmgr_.devfs_root(), "sys/test/test/string-bind-parent/child", &string_bind_fd);
     ASSERT_EQ(ZX_OK, status);
 
     // Connect to the DriverDevelopment service.

@@ -66,6 +66,6 @@ isolated_devmgr_unittest_package("bind-fail-test") {
     ":driver",
     ":tests",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }

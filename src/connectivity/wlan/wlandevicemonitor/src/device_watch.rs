@@ -118,8 +118,8 @@ mod tests {
 
     // In Component Framework v1, the isolated device manager build rule allowed for a flag that
     // would prevent serving /dev until a certain file enumerated.  In WLAN's case, that file was
-    // /dev/test/wlantapctl.  In Components Framework v2, we need to manually wait until
-    // /dev/test/wlantapctl appears before attempting to create a WLAN PHY device.
+    // /dev/sys/test/wlantapctl.  In Components Framework v2, we need to manually wait until
+    // /dev/sys/test/wlantapctl appears before attempting to create a WLAN PHY device.
     #[cfg(feature = "v2")]
     async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
         let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
@@ -189,13 +189,13 @@ mod tests {
         pin_mut!(phy_watcher);
 
         // Wait for the wlantap to appear.
-        let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev/test");
+        let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev");
         let zircon_channel =
             fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
         let async_channel = fasync::Channel::from_channel(zircon_channel)
             .expect("failed to create async channel from zircon channel");
         let dir = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
-        let monitor_fut = recursive_open_node(&dir, "test/wlantapctl");
+        let monitor_fut = recursive_open_node(&dir, "sys/test/wlantapctl");
         pin_mut!(monitor_fut);
         exec.run_singlethreaded(async {
             monitor_fut

@@ -6,7 +6,7 @@ library fuchsia.device.test;
 using zx;
 
 /// The path which can be used to open the control device
-const CONTROL_DEVICE string = "/dev/test/test";
+const CONTROL_DEVICE string = "/dev/sys/test/test";
 
 /// Returns the result summary of a test run
 @for_deprecated_c_bindings

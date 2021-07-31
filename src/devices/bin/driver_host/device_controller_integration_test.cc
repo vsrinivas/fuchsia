@@ -32,7 +32,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
                       zx::channel* dev_channel) {
   fbl::unique_fd root_fd;
   zx_status_t status =
-      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &root_fd);
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &root_fd);
   ASSERT_OK(status);
 
   fidl::WireSyncClient<fuchsia_device_test::RootDevice> test_root{zx::channel{}};
@@ -55,8 +55,7 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
-  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
 
@@ -93,6 +92,9 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindSameDriver) {
 TEST(DeviceControllerIntegrationTest, TestRebindNoChildrenManualBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
+  args.driver_search_paths.push_back("/boot/driver");
+  args.driver_search_paths.push_back("/boot/driver/test");
 
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
@@ -252,6 +254,7 @@ TEST(DeviceControllerIntegrationTest, TestDuplicateBindDifferentDriver) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
 
@@ -291,9 +294,9 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
-
   args.boot_args.emplace("driver.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
@@ -320,9 +323,9 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
-
   args.boot_args.emplace("driver.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
@@ -350,9 +353,9 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
-
   args.boot_args.emplace("driver.unit_test_fail.tests.enable", "true");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
@@ -379,9 +382,9 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
-
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
 
@@ -407,6 +410,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
 
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
   args.boot_args.emplace("driver.tests.enable", "true");

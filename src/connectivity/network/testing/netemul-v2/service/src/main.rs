@@ -501,7 +501,7 @@ impl ManagedRealm {
                             } else {
                                 warn!(
                                     "cannot remove device at path '{}/{}': path is not currently \
-                                    bound to a device",
+                                     bound to a device",
                                     DEVFS_PATH, path,
                                 );
                                 Err(zx::Status::NOT_FOUND)
@@ -1725,7 +1725,7 @@ mod tests {
                 }) if status == epitaph => (),
                 event => panic!(
                     "test case failed: \"{}\": expected channel close with epitaph {}, got \
-                        unexpected event on realm channel: {:?}",
+                     unexpected event on realm channel: {:?}",
                     name, epitaph, event
                 ),
             }
@@ -1871,7 +1871,7 @@ mod tests {
     ) -> String {
         match backing {
             fnetemul_network::EndpointBacking::Ethertap => {
-                format!("@/dev/test/tapctl/{}/ethernet", device_name)
+                format!("@/dev/sys/test/tapctl/{}/ethernet", device_name)
             }
             fnetemul_network::EndpointBacking::NetworkDevice => format!("/netemul/{}", device_name),
         }

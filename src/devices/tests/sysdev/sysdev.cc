@@ -40,7 +40,39 @@ class Sysdev : public SysdevType {
   }
 
   zx_status_t MakeComposite();
+  zx_status_t AddTestParent();
 };
+
+class TestParent;
+using TestParentType = ddk::Device<TestParent>;
+
+class TestParent : public TestParentType {
+ public:
+  explicit TestParent(zx_device_t* device) : TestParentType(device) {}
+
+  static zx_status_t Create(zx_device_t* parent);
+
+  // Device protocol implementation.
+  void DdkRelease() {
+    // test-parent should never have its release called.
+    ZX_ASSERT_MSG(false, "TestParent::DdkRelease() invoked!\n");
+  }
+};
+
+zx_status_t TestParent::Create(zx_device_t* parent) {
+  auto test_parent = std::make_unique<TestParent>(parent);
+  zx_status_t status = test_parent->DdkAdd(ddk::DeviceAddArgs("test")
+                                               .set_proto_id(ZX_PROTOCOL_TEST_PARENT)
+                                               .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Now owned by the driver framework.
+  __UNUSED auto ptr = test_parent.release();
+
+  return ZX_OK;
+}
 
 zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
                            zx_handle_t items_svc_handle) {
@@ -89,10 +121,12 @@ zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, con
     }
   }
 
+  status = TestParent::Create(sysdev->zxdev());
+
   // Now owned by devmgr.
   __UNUSED auto ptr = sysdev.release();
 
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t Sysdev::MakeComposite() {

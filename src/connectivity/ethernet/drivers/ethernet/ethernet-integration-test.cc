@@ -55,7 +55,7 @@ static constexpr zx::duration kPropagateDuration = zx::msec(200);
 namespace {
 
 const char kEthernetDir[] = "/dev/class/ethernet";
-const char kTapctl[] = "/dev/test/tapctl";
+const char kTapctl[] = "/dev/sys/test/tapctl";
 const uint8_t kTapMacPrefix[] = {0x12, 0x20};
 
 const char* mxstrerror(zx_status_t status) { return zx_status_get_string(status); }
@@ -933,6 +933,7 @@ TEST(EthernetDataTests, EthernetDataTest_Recv) {
 
 int main(int argc, char** argv) {
   auto args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
   args.load_drivers.push_back("/boot/driver/ethertap.so");
@@ -957,9 +958,10 @@ int main(int argc, char** argv) {
   }
 
   fbl::unique_fd ctl;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/tapctl", &ctl);
+  status =
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/tapctl", &ctl);
   if (status != ZX_OK) {
-    fprintf(stderr, "test/tapctl failed to enumerate: %d\n", status);
+    fprintf(stderr, "sys/test/tapctl failed to enumerate: %d\n", status);
     return status;
   }
 

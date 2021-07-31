@@ -75,7 +75,7 @@ fuchsia_test_package("device-watcher-test-package") {
   deps = [
     ":device-watcher-test",
     ":devmgr",
-    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
   ]
 }
 

@@ -44,7 +44,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
   std::unique_ptr<IsolatedDevmgr> CreateDevmgrSysdev() {
     devmgr_launcher::Args args;
     IsolatedDevmgr::ExtraArgs extra_args;
-    args.sys_device_driver = kSysdevDriver;
+    args.sys_device_driver = "/boot/driver/test-parent-sys.so";
 
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.load_drivers.push_back("/boot/driver/ethernet.so");
@@ -72,7 +72,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
   fidl::InterfaceHandle<fuchsia::hardware::ethertap::TapDevice> CreateTapDevice(
       const zx::channel& devfs) {
     fidl::SynchronousInterfacePtr<fuchsia::hardware::ethertap::TapControl> tapctl;
-    fdio_service_connect_at(devfs.get(), "test/tapctl",
+    fdio_service_connect_at(devfs.get(), "sys/test/tapctl",
                             tapctl.NewRequest().TakeChannel().release());
     fuchsia::hardware::ethertap::Config config;
     config.mtu = 1500;
@@ -108,7 +108,7 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 TEST_F(DevmgrTest, CreateTapSysdev) {
   auto devmgr = CreateDevmgrSysdev();
   ASSERT_TRUE(devmgr);
-  ASSERT_EQ(devmgr->WaitForFile("test/tapctl"), ZX_OK);
+  ASSERT_EQ(devmgr->WaitForFile("sys/test/tapctl"), ZX_OK);
 
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   devmgr->Connect(dir.NewRequest().TakeChannel());

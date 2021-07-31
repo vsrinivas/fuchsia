@@ -27,6 +27,6 @@ isolated_devmgr_unittest_package("devmgr-integration-test") {
   deps = [
     ":devmgr-integration",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 }

@@ -260,7 +260,7 @@ isolated_devmgr_unittest_package("driver-host-tests") {
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
     "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/misc/drivers/test-parent",
   ]
 
   test_specs = {

@@ -18,12 +18,12 @@ pub struct Wlantap {
 
 impl Wlantap {
     pub fn open() -> Result<Self, Error> {
-        const PATH_STR: &str = "/dev/test/wlantapctl";
+        const PATH_STR: &str = "/dev/sys/test/wlantapctl";
         Ok(Self { file: OpenOptions::new().read(true).write(true).open(Path::new(PATH_STR))? })
     }
 
     pub fn open_from_isolated_devmgr() -> Result<Self, Error> {
-        const PATH_STR: &str = "test/wlantapctl";
+        const PATH_STR: &str = "sys/test/wlantapctl";
         Ok(Self { file: isolated_devmgr::IsolatedDeviceEnv::open_file(PATH_STR)? })
     }
 

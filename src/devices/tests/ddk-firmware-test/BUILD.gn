@@ -103,7 +103,7 @@ fuchsia_test_package("ddk-firmware-test-package") {
     ":driver-manager-realm",
     ":test-firmware-file",
     "//src/devices/bin/driver-index:component",
-    "//src/devices/bus/drivers/platform",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
     "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
     "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
   ]

@@ -17,7 +17,7 @@
 
 #include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
 
-constexpr char kTapctlRelativePath[] = "test/tapctl";
+constexpr char kTapctlRelativePath[] = "sys/test/tapctl";
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -28,8 +28,8 @@ int main(int argc, const char** argv) {
   netemul::NetworkContext net_context;
   fdio_cpp::FdioCaller devfs_root;
   net_context.SetDevfsHandler([&devfs_root](zx::channel req) {
-    // Wait synchronously just once for "/dev/test/tapctl" to be available to ensure the driver is
-    // initialized.
+    // Wait synchronously just once for "/dev/sys/test/tapctl" to be available to ensure the driver
+    // is initialized.
     static std::once_flag flag;
     std::call_once(flag, [&devfs_root]() {
       devfs_root.reset(fbl::unique_fd(open("/dev", O_RDONLY)));

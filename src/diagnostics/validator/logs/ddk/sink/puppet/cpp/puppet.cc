@@ -57,14 +57,14 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
 
     // Wait for DDK puppet to activate
     while (fd < 1) {
-      fd = open("/remote-dev/test/virtual-logsink", O_RDONLY);
+      fd = open("/remote-dev/sys/test/virtual-logsink", O_RDONLY);
       usleep(1);
     }
 
     // Connect to the virtual-logsink service exported from the isolated devmgr.
     zx::channel channels[2];
     zx::channel::create(0, channels, channels + 1);
-    fdio_service_connect("/remote-dev/test/virtual-logsink", channels[0].release());
+    fdio_service_connect("/remote-dev/sys/test/virtual-logsink", channels[0].release());
     puppet_.Bind(std::move(channels[1]));
   }
 

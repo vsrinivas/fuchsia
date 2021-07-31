@@ -1,6 +1,11 @@
 {
     "phy": {
-        "/dev/test/wlantapctl/*": [ "Client", "Ap" ],
-        "*": [ "Ap" ]
+        "*": [
+            "Ap"
+        ],
+        "/dev/sys/test/wlantapctl/*": [
+            "Client",
+            "Ap"
+        ]
     }
 }

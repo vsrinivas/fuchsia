@@ -243,7 +243,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
         .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_device_manager::AdministratorMarker>()?;
 
     let out_dir = instance.root.get_exposed_dir();
-    let driver_service = recursive_open_node(&out_dir, "dev/test/ddk-firmware-test").await?;
+    let driver_service = recursive_open_node(&out_dir, "dev/sys/test/ddk-firmware-test").await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );
@@ -313,7 +313,7 @@ async fn load_system_firmware_test() -> Result<(), Error> {
         .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_device_manager::AdministratorMarker>()?;
 
     let out_dir = instance.root.get_exposed_dir();
-    let driver_service = recursive_open_node(&out_dir, "dev/test/ddk-firmware-test").await?;
+    let driver_service = recursive_open_node(&out_dir, "dev/sys/test/ddk-firmware-test").await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );

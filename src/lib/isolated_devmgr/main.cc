@@ -142,6 +142,7 @@ int main(int argc, const char** argv) {
     }
   }
 
+  // Fallback if sys_device is not specified.
   if (args.sys_device_driver == nullptr) {
     args.sys_device_driver = "/boot/driver/test/sysdev.so";
     args.load_drivers.push_back("/boot/driver/test/sysdev.so");

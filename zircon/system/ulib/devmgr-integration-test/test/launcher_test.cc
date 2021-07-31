@@ -21,7 +21,7 @@ namespace devmgr_integration_test {
 
 TEST(LauncherTest, DriverSearchPath) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.driver_search_paths.push_back("/boot/driver");
   args.driver_search_paths.push_back("/boot/driver/test");
 
@@ -29,25 +29,27 @@ TEST(LauncherTest, DriverSearchPath) {
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd fd;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, LoadDrivers) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
   args.load_drivers.push_back("/boot/driver/test.so");
-  args.load_drivers.push_back(IsolatedDevmgr::kSysdevDriver);
+  args.load_drivers.push_back("/boot/driver/test-parent-sys.so");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd fd;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, Namespace) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = "/test_drivers/test/sysdev.so";
+  args.sys_device_driver = "/test_drivers/test-parent-sys.so";
   args.driver_search_paths.push_back("/test_drivers");
   args.driver_search_paths.push_back("/test_drivers/test");
 
@@ -62,13 +64,14 @@ TEST(LauncherTest, Namespace) {
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
 
   fbl::unique_fd fd;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, OutgoingServices) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
-  args.driver_search_paths.push_back("/boot/driver/test");
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
+  args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -102,8 +105,8 @@ TEST(LauncherTest, ExposeDevfsToHub) {
 
   // Create devmgr instance
   devmgr_launcher::Args args;
-  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
-  args.driver_search_paths.push_back("/boot/driver/test");
+  args.sys_device_driver = "/boot/driver/test-parent-sys.so";
+  args.driver_search_paths.push_back("/boot/driver");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
