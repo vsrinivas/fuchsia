@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/873f453c3cd1122dda5dfe3219e3f21523725005/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/81444218cadddcb9924cdacaff46d8c7203ea337/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/873f453c3cd1122dda5dfe3219e3f21523725005/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/81444218cadddcb9924cdacaff46d8c7203ea337/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -4043,7 +4043,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:18
+From //src/connectivity/wlan/wlancfg/BUILD.gn:19
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
