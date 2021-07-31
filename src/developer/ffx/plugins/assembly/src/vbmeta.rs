@@ -25,7 +25,7 @@ pub fn construct_vbmeta(
     };
 
     // Sign the image and construct a VBMeta.
-    let (vbmeta, _salt) = crate::vbmeta::sign(
+    let (vbmeta, salt) = crate::vbmeta::sign(
         &vbmeta.kernel_partition,
         zbi,
         &vbmeta.key,
@@ -34,6 +34,10 @@ pub fn construct_vbmeta(
         salt,
         &RealFilesystemProvider {},
     )?;
+
+    // Write the salt to a file.
+    let salt_path = outdir.as_ref().join(format!("{}.vbmeta.salt", name.as_ref()));
+    std::fs::write(&salt_path, hex::encode(salt.bytes))?;
 
     // Write VBMeta to a file and return the path.
     let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", name.as_ref()));

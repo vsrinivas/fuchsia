@@ -58,6 +58,7 @@ impl UpdatePackageBuilder {
     /// Build the update package.
     pub fn build(
         mut self,
+        outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
         out: impl AsRef<Path>,
     ) -> Result<BTreeMap<String, String>> {
@@ -70,13 +71,19 @@ impl UpdatePackageBuilder {
         let mut far_contents = BTreeMap::new();
 
         far_contents
-            .insert("meta/package".to_string(), create_meta_package_file(gendir, "update", "0")?);
+            .insert("meta/package".to_string(), create_meta_package_file(&gendir, "update", "0")?);
 
         // Build the update package.
         let update_contents = self.contents.clone();
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(self.contents, far_contents)?;
-        fuchsia_pkg::build(&creation_manifest, out)?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out)?;
+
+        // Write the package manifest to a file.
+        let package_manifest_path = outdir.as_ref().join("update_package_manifest.json");
+        let package_manifest_file = File::create(&package_manifest_path)
+            .context("Failed to create update_package_manifest.json")?;
+        ser::to_writer(package_manifest_file, &package_manifest)?;
 
         Ok(update_contents)
     }
@@ -160,7 +167,7 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-        builder.build(&gendir.path(), &far_path).unwrap();
+        builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
         let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
@@ -190,7 +197,7 @@ mod tests {
         builder
             .add_package_by_manifest(generate_test_manifest("package", "0", Some(test_file.path())))
             .unwrap();
-        builder.build(&gendir.path(), &far_path).unwrap();
+        builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
         let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();

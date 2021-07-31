@@ -6,6 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use assembly_util::create_meta_package_file;
 use fuchsia_hash::Hash;
 use fuchsia_pkg::{CreationManifest, PackageManifest};
+use serde_json::ser;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
@@ -52,6 +53,7 @@ impl BasePackageBuilder {
     /// `gendir`.
     pub fn build(
         self,
+        outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
         out: impl AsRef<Path>,
     ) -> Result<BasePackageBuildResults> {
@@ -78,7 +80,7 @@ impl BasePackageBuilder {
 
         far_contents.insert(
             "meta/package".to_string(),
-            create_meta_package_file(gendir, "system_image", "0")?,
+            create_meta_package_file(&gendir, "system_image", "0")?,
         );
 
         // Build the base packages.
@@ -87,7 +89,13 @@ impl BasePackageBuilder {
             far_contents,
         )?;
 
-        fuchsia_pkg::build(&creation_manifest, out)?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out)?;
+
+        // Write the package manifest to a file.
+        let package_manifest_path = outdir.as_ref().join("base_package_manifest.json");
+        let package_manifest_file = File::create(&package_manifest_path)
+            .context("Failed to create base_package_manifest.json")?;
+        ser::to_writer(package_manifest_file, &package_manifest)?;
 
         Ok(BasePackageBuildResults {
             contents: external_contents,
@@ -250,8 +258,8 @@ mod tests {
         builder.add_base_package(generate_test_manifest("base_package", "0", None)).unwrap();
         builder.add_cache_package(generate_test_manifest("cache_package", "0", None)).unwrap();
 
-        let gen_dir = TempDir::new().unwrap();
-        let build_results = builder.build(&gen_dir.path(), &far_path).unwrap();
+        let gendir = TempDir::new().unwrap();
+        let build_results = builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
 
         // The following asserts lead up to the final one, catching earlier failure points where it
         // can be more obvious as to why the test is failing, as the hashes themselves are opaque.

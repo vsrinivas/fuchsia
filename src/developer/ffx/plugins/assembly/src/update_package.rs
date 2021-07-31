@@ -93,7 +93,7 @@ pub fn construct_update(
     // Build the update package and return its path.
     let update_package_path = outdir.as_ref().join("update.far");
     let update_contents = update_pkg_builder
-        .build(gendir, &update_package_path)
+        .build(outdir, gendir, &update_package_path)
         .context("Failed to build the update package")?;
     Ok(UpdatePackage { contents: update_contents, path: update_package_path })
 }

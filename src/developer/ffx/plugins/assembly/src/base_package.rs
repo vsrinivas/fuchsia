@@ -47,7 +47,7 @@ pub fn construct_base_package(
 
     let base_package_path = outdir.as_ref().join("base.far");
     let build_results = base_pkg_builder
-        .build(gendir, &base_package_path)
+        .build(outdir, gendir, &base_package_path)
         .context("Failed to build the base package")?;
 
     let base_package = File::open(&base_package_path).context("Failed to open the base package")?;

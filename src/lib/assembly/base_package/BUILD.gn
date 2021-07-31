@@ -15,6 +15,7 @@ if (is_host) {
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
     ]
     sources = [
