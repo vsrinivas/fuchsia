@@ -334,7 +334,7 @@ mod tests {
 
         std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();
 
-        let mut meta_far = vec![];
+        let meta_far_path = tmp.path().join("myfar.far");
         fuchsia_pkg::build(
             &CreationManifest::from_external_and_far_contents(
                 btreemap! {
@@ -348,10 +348,11 @@ mod tests {
                 },
             )
             .unwrap(),
-            &mut meta_far,
+            &meta_far_path,
         )
         .unwrap();
 
+        let meta_far: Vec<u8> = std::fs::read(&meta_far_path).unwrap_or(Vec::new());
         (meta_far, vec![fs::read("/pkg/bin/pkgfs_ramdisk_lib_test").unwrap()])
     }
 
@@ -368,7 +369,7 @@ mod tests {
 
         std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();
 
-        let mut meta_far = vec![];
+        let meta_far_path = tmp.path().join("myfar.far");
         fuchsia_pkg::build(
             &CreationManifest::from_external_and_far_contents(
                 btreemap! {
@@ -380,10 +381,11 @@ mod tests {
                 },
             )
             .unwrap(),
-            &mut meta_far,
+            &meta_far_path,
         )
         .unwrap();
 
+        let meta_far: Vec<u8> = std::fs::read(&meta_far_path).unwrap_or(Vec::new());
         (meta_far, vec![static_index.into_bytes()])
     }
 

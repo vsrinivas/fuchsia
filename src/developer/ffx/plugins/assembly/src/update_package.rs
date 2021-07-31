@@ -10,7 +10,6 @@ use anyhow::{Context, Result};
 use assembly_update_package::UpdatePackageBuilder;
 use fuchsia_pkg::PackagePath;
 use std::collections::BTreeMap;
-use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 
 #[derive(Default)]
@@ -93,15 +92,8 @@ pub fn construct_update(
 
     // Build the update package and return its path.
     let update_package_path = outdir.as_ref().join("update.far");
-    let mut update_package = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(&update_package_path)
-        .context("Failed to create the update package file")?;
-    update_package.set_len(0).context("Failed to erase the old update package")?;
     let update_contents = update_pkg_builder
-        .build(gendir, &mut update_package)
+        .build(gendir, &update_package_path)
         .context("Failed to build the update package")?;
     Ok(UpdatePackage { contents: update_contents, path: update_package_path })
 }

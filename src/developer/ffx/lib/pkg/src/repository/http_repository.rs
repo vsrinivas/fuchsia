@@ -176,7 +176,7 @@ mod test {
         }
     }
 
-    fn create_meta_far() -> Vec<u8> {
+    fn create_meta_far(path: PathBuf) {
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
@@ -187,7 +187,6 @@ mod test {
             },
         )
         .unwrap();
-        let mut meta_far_writer = Vec::new();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
         let meta_package =
@@ -201,8 +200,7 @@ mod test {
             },
         };
 
-        build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system).unwrap();
-        meta_far_writer
+        build_with_file_system(&creation_manifest, &path, &file_system).unwrap();
     }
 
     fn create_targets_json() -> Vec<u8> {
@@ -232,10 +230,9 @@ mod test {
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory
-        let meta_far = create_meta_far();
         let meta_far_path =
             blob_dir.join("0000000000000000000000000000000000000000000000000000000000000000");
-        write_file(meta_far_path, meta_far.as_slice());
+        create_meta_far(meta_far_path);
 
         let blob_path =
             blob_dir.join("15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b");

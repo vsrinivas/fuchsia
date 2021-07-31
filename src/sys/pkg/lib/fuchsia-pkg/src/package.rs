@@ -77,8 +77,10 @@ impl PackageBuilder {
     }
 
     pub fn add_entry(&mut self, blob_path: String, hash: Hash, source_path: PathBuf, size: u64) {
-        self.contents.insert(blob_path, hash);
-        self.blobs.insert(hash, BlobEntry { path: source_path, size });
+        if blob_path != "meta/".to_string() {
+            self.contents.insert(blob_path.clone(), hash);
+        }
+        self.blobs.insert(hash, BlobEntry { source_path, blob_path, size });
     }
 
     pub fn build(self) -> Result<Package, MetaContentsError> {
@@ -92,21 +94,22 @@ impl PackageBuilder {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobEntry {
-    path: PathBuf,
+    source_path: PathBuf,
+    blob_path: String,
     size: u64,
 }
 
 impl BlobEntry {
-    pub fn path(&self) -> PathBuf {
-        self.path.clone()
+    pub fn source_path(&self) -> PathBuf {
+        self.source_path.clone()
+    }
+
+    pub fn blob_path(&self) -> String {
+        self.blob_path.clone()
     }
 
     pub fn size(&self) -> u64 {
         self.size
-    }
-
-    pub fn from_path_and_size(path: PathBuf, size: u64) -> Self {
-        BlobEntry { path, size }
     }
 }
 
@@ -140,7 +143,11 @@ mod test_package {
             .unwrap(),
             };
         let meta_contents = MetaContents::from_map(map).unwrap();
-        let blob_entry = BlobEntry { path: PathBuf::from("src/bin/my_prog"), size: 1 };
+        let blob_entry = BlobEntry {
+            source_path: PathBuf::from("src/bin/my_prog"),
+            blob_path: "bin/my_prog".to_string(),
+            size: 1,
+        };
         let blobs = btreemap! {
         Hash::from_str(
          "0000000000000000000000000000000000000000000000000000000000000000")
@@ -178,6 +185,9 @@ mod test_package {
 
     #[test]
     fn test_from_meta_far_valid_meta_far() {
+        let outdir = tempdir().unwrap();
+        let meta_far_path = outdir.path().join("base.far");
+
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
@@ -188,7 +198,6 @@ mod test_package {
             },
         )
         .unwrap();
-        let mut meta_far_writer = Vec::new();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
         let meta_package =
@@ -202,10 +211,13 @@ mod test_package {
             },
         };
 
-        build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system).unwrap();
+        build_with_file_system(&creation_manifest, &meta_far_path, &file_system).unwrap();
 
-        let mut cursor = io::Cursor::new(meta_far_writer);
-        let blob_entry = BlobEntry { path: PathBuf::from("src/bin/my_prog"), size: 1 };
+        let blob_entry = BlobEntry {
+            source_path: PathBuf::from("src/bin/my_prog"),
+            blob_path: "bin/my_prog".to_string(),
+            size: 1,
+        };
         let blobs = btreemap! {
         Hash::from_str(
          "0000000000000000000000000000000000000000000000000000000000000000")
@@ -214,7 +226,8 @@ mod test_package {
            "1111111111111111111111111111111111111111111111111111111111111111")
         .unwrap() => blob_entry.clone(),
         };
-        let package = Package::from_meta_far(&mut cursor, blobs.clone()).unwrap();
+        let package =
+            Package::from_meta_far(File::open(&meta_far_path).unwrap(), blobs.clone()).unwrap();
         assert_eq!(blobs, package.blobs());
         assert_eq!("my-package-name", package.meta_package().name());
     }
@@ -225,7 +238,11 @@ mod test_package {
         let file_path = dir.path().join("meta.far");
         File::create(&file_path).unwrap();
         let file = File::open(&file_path).unwrap();
-        let blob_entry = BlobEntry { path: PathBuf::from("src/bin/my_prog"), size: 1 };
+        let blob_entry = BlobEntry {
+            source_path: PathBuf::from("src/bin/my_prog"),
+            blob_path: "bin/my_prog".to_string(),
+            size: 1,
+        };
         let blobs = btreemap! {
         Hash::from_str(
          "0000000000000000000000000000000000000000000000000000000000000000")

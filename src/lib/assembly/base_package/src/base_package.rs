@@ -53,7 +53,7 @@ impl BasePackageBuilder {
     pub fn build(
         self,
         gendir: impl AsRef<Path>,
-        out: &mut impl Write,
+        out: impl AsRef<Path>,
     ) -> Result<BasePackageBuildResults> {
         let Self { contents, base_packages, cache_packages } = self;
 
@@ -217,7 +217,6 @@ mod tests {
     use super::*;
     use fuchsia_archive::Reader;
     use serde_json::json;
-    use std::io::Cursor;
     use std::path::Path;
     use tempfile::{NamedTempFile, TempDir};
 
@@ -237,8 +236,10 @@ mod tests {
 
     #[test]
     fn build() {
+        let outdir = TempDir::new().unwrap();
+        let far_path = outdir.path().join("base.far");
+
         // Build the base package with an extra file, a base package, and a cache package.
-        let mut far_bytes: Vec<u8> = Vec::new();
         let mut builder = BasePackageBuilder::default();
         let test_file = NamedTempFile::new().unwrap();
         builder.add_files_from_package(generate_test_manifest(
@@ -250,7 +251,7 @@ mod tests {
         builder.add_cache_package(generate_test_manifest("cache_package", "0", None)).unwrap();
 
         let gen_dir = TempDir::new().unwrap();
-        let build_results = builder.build(&gen_dir.path(), &mut far_bytes).unwrap();
+        let build_results = builder.build(&gen_dir.path(), &far_path).unwrap();
 
         // The following asserts lead up to the final one, catching earlier failure points where it
         // can be more obvious as to why the test is failing, as the hashes themselves are opaque.
@@ -288,7 +289,7 @@ mod tests {
         }
 
         // Read the output and ensure it contains the right files (and their hashes)
-        let mut far_reader = Reader::new(Cursor::new(far_bytes)).unwrap();
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"system_image","version":"0"}"#);
         let contents = far_reader.read_file("meta/contents").unwrap();

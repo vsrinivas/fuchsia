@@ -49,28 +49,26 @@ pub fn cmd_package_build(
         }
     }
 
-    let pm_fini = entries.join("\n");
-    let creation_manifest = CreationManifest::from_pm_fini(pm_fini.as_bytes())?;
-    let mut meta_far_writer = Vec::new();
-    let package_manifest = build(&creation_manifest, &mut meta_far_writer)?;
-
     let out_dir = match cmd.source_dir {
         Some(dir) => PathBuf::from(dir),
         None => PathBuf::from("."),
     };
+
+    let pm_fini = entries.join("\n");
+    let creation_manifest = CreationManifest::from_pm_fini(pm_fini.as_bytes())?;
+    let meta_far_path = out_dir.join("meta.far");
+    let package_manifest = build(&creation_manifest, &meta_far_path)?;
     let package_manifest_path = out_dir.join("package_manifest.json");
     let mut file = File::create(package_manifest_path)?;
     file.write_all(serde_json::to_string(&package_manifest)?.as_bytes())?;
-    let meta_far_path = out_dir.join("meta.far");
-    let mut file = File::create(meta_far_path)?;
-    file.write_all(meta_far_writer.as_slice())?;
 
     let blobs = package_manifest.into_blobs();
     for info in blobs {
         repo.blobs().add_blob(File::open(info.source_path)?)?;
     }
-    let mut cursor = std::io::Cursor::new(meta_far_writer);
-    let meta_hash = repo.blobs().add_blob(&mut cursor)?;
+
+    // The meta-far will not get added twice, but we `add_blob` to get the hash.
+    let meta_hash = repo.blobs().add_blob(File::open(&meta_far_path)?)?;
 
     if let Some(hash_out) = cmd.hash_out {
         writeln!(File::create(&hash_out)?, "{}", meta_hash)?;

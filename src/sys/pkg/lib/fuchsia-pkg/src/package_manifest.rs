@@ -33,26 +33,16 @@ impl PackageManifest {
     }
 
     pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
-        let blobs_map = package.blobs();
-        let mut blobs = Vec::new();
-        for (path, merkle) in package.meta_contents().into_contents().iter() {
-            match blobs_map.get(merkle) {
-                Some(blob_entry) => {
-                    blobs.push(BlobInfo {
-                        source_path: blob_entry.path().into_os_string().into_string().unwrap(),
-                        path: path.to_string(),
-                        merkle: *merkle,
-                        size: blob_entry.size(),
-                    });
-                }
-                None => {
-                    return Err(PackageManifestError::InvalidBlobPath {
-                        path: path.to_string(),
-                        merkle: *merkle,
-                    });
-                }
-            }
-        }
+        let blobs = package
+            .blobs()
+            .iter()
+            .map(|(merkle, blob_entry)| BlobInfo {
+                source_path: blob_entry.source_path().into_os_string().into_string().unwrap(),
+                path: blob_entry.blob_path().to_string(),
+                merkle: *merkle,
+                size: blob_entry.size(),
+            })
+            .collect();
         let package_metadata = PackageMetadata {
             name: package.meta_package().name().to_string(),
             version: package.meta_package().variant().to_string(),

@@ -9,14 +9,16 @@ use crate::{
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::io::{Seek, SeekFrom};
+use std::path::{Path, PathBuf};
 use std::{fs, io};
+use tempfile::NamedTempFile;
 
 pub fn build(
     creation_manifest: &CreationManifest,
-    meta_far_writer: impl io::Write,
+    meta_far_path: impl AsRef<Path>,
 ) -> Result<PackageManifest, BuildError> {
-    build_with_file_system(creation_manifest, meta_far_writer, &ActualFileSystem {})
+    build_with_file_system(creation_manifest, meta_far_path, &ActualFileSystem {})
 }
 
 // Used to mock out native filesystem for testing
@@ -44,7 +46,7 @@ impl FileSystem<'_> for ActualFileSystem {
 
 pub fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
-    meta_far_writer: impl io::Write,
+    meta_far_path: impl AsRef<Path>,
     file_system: &'a impl FileSystem<'a>,
 ) -> Result<PackageManifest, BuildError> {
     let meta_package = match creation_manifest.far_contents().get("meta/package") {
@@ -94,7 +96,33 @@ pub fn build_with_file_system<'a>(
     for (resource_path, content) in &far_contents {
         meta_entries.insert(resource_path, (content.len() as u64, Box::new(content.as_slice())));
     }
-    fuchsia_archive::write(meta_far_writer, meta_entries)?;
+
+    // Write the meta-far to a temporary file.
+    let mut meta_far_file = if let Some(parent) = meta_far_path.as_ref().parent() {
+        NamedTempFile::new_in(parent)?
+    } else {
+        NamedTempFile::new()?
+    };
+    fuchsia_archive::write(&meta_far_file, meta_entries)?;
+
+    // Calculate the merkle of the meta-far.
+    meta_far_file.seek(SeekFrom::Start(0))?;
+    let meta_far_merkle = MerkleTree::from_reader(&meta_far_file)?.root();
+
+    // Calculate the size of the meta-far.
+    let meta_far_size = meta_far_file.as_file().metadata()?.len();
+
+    // Replace the existing meta-far with the new file.
+    meta_far_file.persist(&meta_far_path).map_err(|err| err.error)?;
+
+    // Add the meta-far as an entry to the package.
+    package_builder.add_entry(
+        "meta/".to_string(),
+        meta_far_merkle,
+        meta_far_path.as_ref().to_path_buf(),
+        meta_far_size,
+    );
+
     let package = package_builder.build()?;
     let package_manifest = PackageManifest::from_package(package)?;
     Ok(package_manifest)
@@ -136,8 +164,10 @@ mod test_build_with_file_system {
     use proptest::prelude::*;
     use rand::SeedableRng;
     use std::collections::{HashMap, HashSet};
+    use std::fs::File;
     use std::io;
     use std::iter::FromIterator;
+    use tempfile::TempDir;
 
     const GENERATED_FAR_CONTENTS: [&str; 2] = ["meta/contents", "meta/package"];
 
@@ -188,6 +218,9 @@ mod test_build_with_file_system {
 
     #[test]
     fn test_verify_far_contents_with_fixed_inputs() {
+        let outdir = TempDir::new().unwrap();
+        let meta_far_path = outdir.path().join("meta.far");
+
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             btreemap! {
                 "lib/mylib.so".to_string() => "host/mylib.so".to_string()
@@ -198,7 +231,6 @@ mod test_build_with_file_system {
             },
         )
         .unwrap();
-        let mut meta_far_writer = Vec::new();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
         let meta_package =
@@ -211,9 +243,8 @@ mod test_build_with_file_system {
                 "host/meta/package".to_string() => v.clone()
             },
         };
-        build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system).unwrap();
-        let mut cursor = io::Cursor::new(meta_far_writer);
-        let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+        build_with_file_system(&creation_manifest, &meta_far_path, &file_system).unwrap();
+        let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
         let expected_meta_package_bytes = v.as_slice();
         assert_eq!(actual_meta_package_bytes.as_slice(), &expected_meta_package_bytes[..]);
@@ -227,6 +258,9 @@ mod test_build_with_file_system {
 
     #[test]
     fn test_reject_conflict_with_generated_file() {
+        let outdir = TempDir::new().unwrap();
+        let meta_far_path = outdir.path().join("meta.far");
+
         let creation_manifest = CreationManifest::from_external_and_far_contents(
             BTreeMap::new(),
             btreemap! {
@@ -235,7 +269,6 @@ mod test_build_with_file_system {
             },
         )
         .unwrap();
-        let mut meta_far_writer = Vec::new();
         let mut v = vec![];
         let meta_package =
             MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
@@ -246,7 +279,7 @@ mod test_build_with_file_system {
                 "host/meta/package".to_string() => v
             },
         };
-        let result = build_with_file_system(&creation_manifest, &mut meta_far_writer, &file_system);
+        let result = build_with_file_system(&creation_manifest, &meta_far_path, &file_system);
         assert_matches!(
             result,
             Err(BuildError::ConflictingResource {
@@ -260,20 +293,21 @@ mod test_build_with_file_system {
             creation_manifest in random_creation_manifest(),
             seed: u64)
         {
+            let outdir = TempDir::new().unwrap();
+            let meta_far_path = outdir.path().join("meta.far");
+
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
             build_with_file_system(
                 &creation_manifest,
-                &mut meta_far_writer,
+                &meta_far_path,
                 &file_system,
             )
                 .unwrap();
-            let mut cursor = io::Cursor::new(meta_far_writer);
-            let reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+            let reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             let expected_far_directory_names = {
                 let mut map: HashSet<&str> = HashSet::new();
                 for path in GENERATED_FAR_CONTENTS.iter() {
@@ -293,20 +327,21 @@ mod test_build_with_file_system {
             creation_manifest in random_creation_manifest(),
             seed: u64)
         {
+            let outdir = TempDir::new().unwrap();
+            let meta_far_path = outdir.path().join("meta.far");
+
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let mut meta_far_writer = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
             build_with_file_system(
                 &creation_manifest,
-                &mut meta_far_writer,
+                &meta_far_path,
                 &file_system,
             )
                 .unwrap();
-            let mut cursor = io::Cursor::new(meta_far_writer);
-            let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+            let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {
                 let expected_contents = file_system.content_map.get(host_path).unwrap();
                 let actual_contents = reader.read_file(resource_path).unwrap();
@@ -319,20 +354,21 @@ mod test_build_with_file_system {
             creation_manifest in random_creation_manifest(),
             seed: u64)
         {
+            let outdir = TempDir::new().unwrap();
+            let meta_far_path = outdir.path().join("meta.far");
+
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             prng.fill(&mut private_key_bytes);
-            let mut meta_far_writer: Vec<u8> = Vec::new();
             let file_system = FakeFileSystem::from_creation_manifest_with_random_contents(
                 &creation_manifest, &mut prng);
             build_with_file_system(
                 &creation_manifest,
-                &mut meta_far_writer,
+                &meta_far_path,
                 &file_system,
             )
                 .unwrap();
-            let mut cursor = io::Cursor::new(meta_far_writer);
-            let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+            let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             let meta_contents =
                 MetaContents::deserialize(
                     reader.read_file("meta/contents").unwrap().as_slice())
@@ -360,7 +396,7 @@ mod test_build {
     use proptest::prelude::*;
     use rand::SeedableRng;
     use std::fs;
-    use std::io::{self, Write};
+    use std::io::Write;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -430,18 +466,19 @@ mod test_build {
             creation_manifest in random_creation_manifest(),
             seed: u64)
         {
+            let outdir = TempDir::new().unwrap();
+            let meta_far_path = outdir.path().join("meta.far");
+
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             let (creation_manifest, _temp_dir) = populate_filesystem_from_creation_manifest(creation_manifest, &mut prng);
             let mut private_key_bytes = [0u8; 32];
             prng.fill(&mut private_key_bytes);
-            let mut meta_far_writer = Vec::new();
             build(
                 &creation_manifest,
-                &mut meta_far_writer,
+                &meta_far_path,
             )
                 .unwrap();
-            let mut cursor = io::Cursor::new(meta_far_writer);
-            let mut reader = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+            let mut reader = fuchsia_archive::Reader::new(fs::File::open(&meta_far_path).unwrap()).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {
                 let expected_contents = std::fs::read(host_path).unwrap();
                 let actual_contents = reader.read_file(resource_path).unwrap();

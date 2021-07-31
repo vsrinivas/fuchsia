@@ -11,8 +11,7 @@ use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use log::info;
 use std::collections::BTreeMap;
-use std::fs::OpenOptions;
-use std::io::{Seek, SeekFrom};
+use std::fs::File;
 use std::path::{Path, PathBuf};
 
 pub struct BasePackage {
@@ -47,18 +46,11 @@ pub fn construct_base_package(
     }
 
     let base_package_path = outdir.as_ref().join("base.far");
-    let mut base_package = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(&base_package_path)
-        .context("Failed to create the base package file")?;
-    base_package.set_len(0).context("Failed to erase the old base package")?;
     let build_results = base_pkg_builder
-        .build(gendir, &mut base_package)
+        .build(gendir, &base_package_path)
         .context("Failed to build the base package")?;
 
-    base_package.seek(SeekFrom::Start(0))?;
+    let base_package = File::open(&base_package_path).context("Failed to open the base package")?;
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
         .root();

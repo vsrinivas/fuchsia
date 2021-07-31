@@ -30,7 +30,6 @@ fn main() -> Result<(), PmBuildError> {
         fuchsia_pkg::CreationManifest::from_json(std::fs::File::open(options.creation_manifest)?)?;
     let meta_package =
         fuchsia_pkg::MetaPackage::deserialize(std::fs::File::open(options.meta_package)?)?;
-    let output = std::fs::File::create(options.output)?;
-    fuchsia_pkg::build(&creation_manifest, &meta_package, output)?;
+    fuchsia_pkg::build(&creation_manifest, &meta_package, &options.output)?;
     Ok(())
 }

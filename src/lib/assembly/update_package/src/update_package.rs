@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::ser;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 
 /// A builder that constructs update packages.
@@ -60,7 +59,7 @@ impl UpdatePackageBuilder {
     pub fn build(
         mut self,
         gendir: impl AsRef<Path>,
-        out: &mut impl Write,
+        out: impl AsRef<Path>,
     ) -> Result<BTreeMap<String, String>> {
         // Add the package list.
         let packages_path = gendir.as_ref().join("packages.json");
@@ -124,7 +123,6 @@ mod tests {
     use fuchsia_hash::Hash;
     use fuchsia_pkg::PackagePath;
     use serde_json::json;
-    use std::io::Cursor;
     use std::str::FromStr;
     use tempfile::{tempdir, NamedTempFile};
 
@@ -146,7 +144,9 @@ mod tests {
 
     #[test]
     fn add_package() {
-        let mut update_bytes: Vec<u8> = Vec::new();
+        let outdir = tempdir().unwrap();
+        let far_path = outdir.path().join("update.far");
+
         let test_file = NamedTempFile::new().unwrap();
         let gendir = tempdir().unwrap();
 
@@ -160,10 +160,10 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-        builder.build(&gendir.path(), &mut update_bytes).unwrap();
+        builder.build(&gendir.path(), &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
-        let mut far_reader = Reader::new(Cursor::new(update_bytes)).unwrap();
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update","version":"0"}"#);
         let contents = far_reader.read_file("meta/contents").unwrap();
@@ -178,7 +178,9 @@ mod tests {
 
     #[test]
     fn add_package_by_manifest() {
-        let mut update_bytes: Vec<u8> = Vec::new();
+        let outdir = tempdir().unwrap();
+        let far_path = outdir.path().join("update.far");
+
         let test_file = NamedTempFile::new().unwrap();
         let gendir = tempdir().unwrap();
 
@@ -188,10 +190,10 @@ mod tests {
         builder
             .add_package_by_manifest(generate_test_manifest("package", "0", Some(test_file.path())))
             .unwrap();
-        builder.build(&gendir.path(), &mut update_bytes).unwrap();
+        builder.build(&gendir.path(), &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
-        let mut far_reader = Reader::new(Cursor::new(update_bytes)).unwrap();
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(package, br#"{"name":"update","version":"0"}"#);
         let contents = far_reader.read_file("meta/contents").unwrap();
