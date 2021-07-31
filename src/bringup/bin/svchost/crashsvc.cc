@@ -96,6 +96,8 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   // Print one last reset to clear all symbolizer contextual state for the process.
   fprintf(stdout, "{{{reset}}}\n");
 
+  const std::string process_name = fsl::GetObjectName(process.get());
+
   // If the process serving fuchsia.exception.Handler crashes, the system will still send future
   // fuchsia.exception.Handler/OnException requests to that process as it is still alive and
   // therefore the exception will be stuck in the underlying channel, never terminating the process.
@@ -104,9 +106,29 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   //
   // This needs to be kept in sync with the name of the process serving
   // fuchsia.exception.Handler.
-  if (fsl::GetObjectName(process.get()) == "exceptions.cmx") {
+  //
+  // TODO(fxb/81844): change this to exceptions.cm once exceptions.cmx becomes a v2
+  // component.
+  if (process_name == "exceptions.cmx") {
     LogError("cannot handle exception for the process serving fuchsia.exception.Handler",
              ZX_ERR_NOT_SUPPORTED);
+
+    // Release the exception to let the kernel terminate the process.
+    exception.reset();
+    return;
+  }
+
+  // If an ancestor of the component serving fuchsia.exception.Handler crashes, the system may be
+  // unable to meaningfully handle the exception because entries in exception handler's "/svc"
+  // directory may be unserviceable and synchronous operations may hang indefinitely.
+  //
+  // TODO(fxb/81844): change this to component_manager.cm once exceptions.cmx becomes a v2
+  // component.
+  if (process_name == "appmgr.cm") {
+    LogError(
+        "cannot handle exception for a process that is a necessary dependency of the process "
+        "serving fuchsia.exception.Handler",
+        ZX_ERR_NOT_SUPPORTED);
 
     // Release the exception to let the kernel terminate the process.
     exception.reset();
