@@ -70,9 +70,10 @@ class X86 : public DeviceType {
   zx_status_t Start();
   int Thread();
 
-  IommuManager iommu_manager_{[](fx_log_severity_t severity, const char* file, int line,
-                                 const char* msg,
-                                 va_list args) { zxlogvf_etc(severity, file, line, msg, args); }};
+  IommuManager iommu_manager_{
+      [](fx_log_severity_t severity, const char* file, int line, const char* msg, va_list args) {
+        zxlogvf_etc(severity, nullptr, file, line, msg, args);
+      }};
 
   ddk::PBusProtocolClient pbus_;
 

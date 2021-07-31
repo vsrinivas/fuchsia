@@ -55,12 +55,13 @@ void TestDevhostDriver::GetPid(GetPidRequestView request, GetPidCompleter::Sync&
 }
 
 zx_status_t TestDevhostDriver::Bind() {
+  zxlogf(INFO, "test-devhost-parent bind");
   std::array tags{"my-tag"};
   zx_status_t status = zxlog_set_tags(tags.data(), tags.size());
   if (status != ZX_OK) {
     return status;
   }
-  zxlogf(INFO, "test-devhost-parent bind");
+  zxlogf_tag(INFO, "my-tag-2", "log with some tags");
   size_t size;
   status = DdkGetMetadataSize(DEVICE_METADATA_TEST, &size);
   if (status != ZX_OK) {

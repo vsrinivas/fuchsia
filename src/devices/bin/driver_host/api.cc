@@ -403,28 +403,17 @@ __EXPORT zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const 
                                                   size_t num_tags) {
   if (drv != nullptr) {
     fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-    char process_name[ZX_MAX_NAME_LEN] = {};
-    zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-    std::vector<const char*> new_tags = {process_name, "driver"};
-    new_tags.insert(new_tags.end(), tags, tags + num_tags);
-    fx_logger_config_t config{
-        .min_severity = FX_LOG_SEVERITY_DEFAULT,
-        .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
-        .log_service_channel = ZX_HANDLE_INVALID,
-        .tags = &new_tags[0],
-        .num_tags = new_tags.size(),
-    };
-    return fx_logger_reconfigure(drv->logger(), &config);
+    return drv->ReconfigureLogger(cpp20::span(tags, num_tags));
   } else {
     return ZX_ERR_INVALID_ARGS;
   }
 }
 
-__EXPORT void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
+__EXPORT void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* tag,
                                     const char* file, int line, const char* msg, va_list args) {
   if (drv != nullptr && flag != DDK_LOG_SERIAL) {
     fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-    fx_logger_logvf_with_source(drv->logger(), flag, drv->name(), file, line, msg, args);
+    fx_logger_logvf_with_source(drv->logger(), flag, tag, file, line, msg, args);
   } else {
     // If we have been invoked outside of the context of a driver, or if |flag|
     // is DDK_LOG_SERIAL, use vfprintf.
@@ -433,11 +422,11 @@ __EXPORT void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t fl
   }
 }
 
-__EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
-                                   int line, const char* msg, ...) {
+__EXPORT void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* tag,
+                                   const char* file, int line, const char* msg, ...) {
   va_list args;
   va_start(args, msg);
-  driver_logvf_internal(drv, flag, file, line, msg, args);
+  driver_logvf_internal(drv, flag, tag, file, line, msg, args);
   va_end(args);
 }
 

@@ -205,6 +205,21 @@ zx_driver::zx_driver(fx_logger_t* logger, std::string_view libname, InspectNodeC
 
 zx_driver::~zx_driver() { fx_logger_destroy(logger_); }
 
+zx_status_t zx_driver::ReconfigureLogger(cpp20::span<const char* const> tags) const {
+  char process_name[ZX_MAX_NAME_LEN] = {};
+  zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  std::vector<const char*> new_tags = {name(), process_name, "driver"};
+  new_tags.insert(new_tags.end(), tags.begin(), tags.end());
+  fx_logger_config_t config{
+      .min_severity = FX_LOG_SEVERITY_DEFAULT,
+      .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+      .log_service_channel = ZX_HANDLE_INVALID,
+      .tags = std::data(new_tags),
+      .num_tags = std::size(new_tags),
+  };
+  return fx_logger_reconfigure(logger(), &config);
+}
+
 void DriverHostContext::SetupDriverHostController(
     fidl::ServerEnd<fuchsia_device_manager::DriverHostController> request) {
   auto conn = std::make_unique<internal::DriverHostControllerConnection>(this);

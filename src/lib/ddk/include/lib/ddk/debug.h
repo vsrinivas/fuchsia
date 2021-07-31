@@ -83,27 +83,27 @@ zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const char* con
   driver_log_set_tags_internal(__zircon_driver_rec__.driver, tags, num_tags)
 
 // Do not use this function directly, use zxlogf() instead.
-void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
-                          int line, const char* msg, ...) __PRINTFLIKE(5, 6);
+void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* tag,
+                          const char* file, int line, const char* msg, ...) __PRINTFLIKE(6, 7);
 
 // Do not use this function directly, use zxlogvf() instead.
-void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
-                           int line, const char* msg, va_list args);
+void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* tag,
+                           const char* file, int line, const char* msg, va_list args);
 
 // Do not use this macro directly, use zxlogf() instead.
-#define zxlogf_etc(flag, msg...)                                                         \
-  do {                                                                                   \
-    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {      \
-      driver_logf_internal(__zircon_driver_rec__.driver, flag, __FILE__, __LINE__, msg); \
-    }                                                                                    \
+#define zxlogf_etc(flag, tag, msg...)                                                         \
+  do {                                                                                        \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {           \
+      driver_logf_internal(__zircon_driver_rec__.driver, flag, tag, __FILE__, __LINE__, msg); \
+    }                                                                                         \
   } while (0)
 
 // Do not use this macro directly, use zxlogvf() instead.
-#define zxlogvf_etc(flag, file, line, format, args)                                        \
-  do {                                                                                     \
-    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {        \
-      driver_logvf_internal(__zircon_driver_rec__.driver, flag, file, line, format, args); \
-    }                                                                                      \
+#define zxlogvf_etc(flag, tag, file, line, format, args)                                        \
+  do {                                                                                          \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {             \
+      driver_logvf_internal(__zircon_driver_rec__.driver, flag, tag, file, line, format, args); \
+    }                                                                                           \
   } while (0)
 
 // zxlogf() provides a path to the kernel debuglog gated by log level flags
@@ -117,7 +117,8 @@ void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const
 //
 // Example driver.floppydisk.log=trace
 //
-#define zxlogf(flag, msg...) zxlogf_etc(DDK_LOG_##flag, msg)
+#define zxlogf(flag, msg...) zxlogf_etc(DDK_LOG_##flag, NULL, msg)
+#define zxlogf_tag(flag, tag, msg...) zxlogf_etc(DDK_LOG_##flag, tag, msg)
 
 // zxlogvf() is similar to zxlogf() but it accepts a va_list as argument,
 // analogous to vprintf() and printf().
@@ -135,7 +136,9 @@ void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const
 // The debug levels are the same as those of zxlogf() macro.
 //
 #define zxlogvf(flag, file, line, format, args) \
-  zxlogvf_etc(DDK_LOG_##flag, file, line, format, args);
+  zxlogvf_etc(DDK_LOG_##flag, NULL, file, line, format, args);
+#define zxlogvf_tag(flag, tag, file, line, format, args) \
+  zxlogvf_etc(DDK_LOG_##flag, tag, file, line, format, args);
 
 __END_CDECLS
 

@@ -18,7 +18,7 @@ void vLog(bool is_error, const char* file, int line, const char* prefix1, const 
           const char* format, va_list args) {
   fbl::String new_format = fbl::StringPrintf("[%s %s] %s", prefix1, prefix2, format);
   const fx_log_severity_t severity = is_error ? DDK_LOG_ERROR : DDK_LOG_DEBUG;
-  zxlogvf_etc(severity, file, line, new_format.c_str(), args);
+  zxlogvf_etc(severity, nullptr, file, line, new_format.c_str(), args);
 }
 
 static std::atomic_uint64_t name_counter;

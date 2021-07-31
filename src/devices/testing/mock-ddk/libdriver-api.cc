@@ -226,17 +226,19 @@ extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
 }
 
 extern "C" void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
-                                      const char* file, int line, const char* msg, va_list args) {
+                                      const char* tag, const char* file, int line, const char* msg,
+                                      va_list args) {
   vfprintf(stdout, msg, args);
   putchar('\n');
   fflush(stdout);
 }
 
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
-                                     const char* file, int line, const char* msg, ...) {
+                                     const char* tag, const char* file, int line, const char* msg,
+                                     ...) {
   va_list args;
   va_start(args, msg);
-  driver_logvf_internal(drv, flag, file, line, msg, args);
+  driver_logvf_internal(drv, flag, tag, file, line, msg, args);
   va_end(args);
 }
 

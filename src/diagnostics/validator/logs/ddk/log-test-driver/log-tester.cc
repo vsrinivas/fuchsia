@@ -100,7 +100,7 @@ void LogTester::EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& comp
   }
   auto& txt = request->spec.record.arguments.at(0).value.text();
   std::string cpp_str(txt.begin(), txt.end());
-  driver_logf_internal(__zircon_driver_rec__.driver, severity, request->spec.file.data(),
+  driver_logf_internal(__zircon_driver_rec__.driver, severity, nullptr, request->spec.file.data(),
                        request->spec.line, "%s\n", cpp_str.c_str());
   completer.Reply();
 }

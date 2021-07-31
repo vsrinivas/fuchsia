@@ -54,6 +54,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   void set_name(const char* name) {
     name_ = name;
     inspect_.set_name(name);
+    ReconfigureLogger({});
   }
 
   void set_driver_rec(zx_driver_rec_t* driver_rec) {
@@ -117,6 +118,8 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
   bool RunUnitTestsOp(const fbl::RefPtr<zx_device_t>& parent, zx::channel test_output) const {
     return ops_->run_unit_tests(ctx_, parent.get(), test_output.release());
   }
+
+  zx_status_t ReconfigureLogger(cpp20::span<const char* const> tags) const;
 
  private:
   friend std::unique_ptr<zx_driver> std::make_unique<zx_driver>();

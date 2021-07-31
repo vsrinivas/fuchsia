@@ -26,7 +26,7 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
   constexpr size_t kValuesPerLine = 16;
 
   if (zxlog_level_enabled_etc(flag)) {
-    zxlogf_etc(flag, "%p:", data);
+    zxlogf_etc(flag, nullptr, "%p:", data);
 
     static constexpr char kHexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7',
                                          '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
@@ -44,10 +44,10 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
         }
       }
       *next++ = '\0';
-      zxlogf_etc(flag, "%04zx: %s", i, buffer);
+      zxlogf_etc(flag, nullptr, "%04zx: %s", i, buffer);
     }
     if (length > kMaxHexDumpBytes) {
-      zxlogf_etc(flag, "%04zx: ...", kMaxHexDumpBytes);
+      zxlogf_etc(flag, nullptr, "%04zx: ...", kMaxHexDumpBytes);
     }
   }
 }
@@ -57,7 +57,7 @@ void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
   constexpr size_t kValuesPerLine = 64;
 
   if (zxlog_level_enabled_etc(flag)) {
-    zxlogf_etc(flag, "%p:", data);
+    zxlogf_etc(flag, nullptr, "%p:", data);
 
     const char* const bytes = reinterpret_cast<const char*>(data);
     const size_t max_dump_bytes = std::min<size_t>(length, kMaxStringDumpBytes);
@@ -67,10 +67,10 @@ void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
       std::transform(bytes + i, bytes + i + line_width, buffer,
                      [](unsigned char c) { return std::isprint(c) ? c : '.'; });
       buffer[line_width] = '\0';
-      zxlogf_etc(flag, "%04zx: %s", i, buffer);
+      zxlogf_etc(flag, nullptr, "%04zx: %s", i, buffer);
     }
     if (length > kMaxStringDumpBytes) {
-      zxlogf_etc(flag, "%04zx: ...", kMaxStringDumpBytes);
+      zxlogf_etc(flag, nullptr, "%04zx: ...", kMaxStringDumpBytes);
     }
   }
 }
