@@ -8,7 +8,7 @@ use {
     fuchsia_bluetooth::types::{PeerId, Uuid},
     fuchsia_component_test::{builder::Capability, RealmInstance},
     futures::stream::StreamExt,
-    mock_piconet_client::v2::{PiconetHarness, PiconetMember, ProfileObserver},
+    mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
     profile_client::ProfileClient,
 };
 
@@ -60,7 +60,7 @@ pub fn spp_service_definition() -> bredr::ServiceDefinition {
 /// Builds the test topology for the RFCOMM integration tests. Returns the test realm, an observer
 /// for bt-rfcomm, and a piconet member which can be driven by the test.
 #[track_caller]
-async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember) {
+async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMember) {
     let mut test_harness = PiconetHarness::new().await;
 
     // Add a mock piconet member.
@@ -90,12 +90,17 @@ async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember
     (test_topology, rfcomm, test_driven_peer)
 }
 
-/// Returns an SppClient that uses the Profile capability exposed by the test `topology`.
+/// Returns an SppClient that uses the `Profile` capability exposed by the RFCOMM component in the
+/// test `topology`.
 /// For the purposes of the integration tests, the RFCOMM client advertises SPP.
 #[track_caller]
-async fn setup_spp_client(topology: &RealmInstance) -> SppClient {
-    let profile =
-        topology.root.connect_to_protocol_at_exposed_dir::<bredr::ProfileMarker>().unwrap();
+async fn setup_spp_client(
+    topology: &RealmInstance,
+    rfcomm_component: &BtProfileComponent,
+) -> SppClient {
+    let profile = rfcomm_component
+        .connect_to_protocol::<bredr::ProfileMarker>(topology)
+        .expect("Profile should be available");
     let spp = spp_service_definition();
     ProfileClient::advertise(profile, &vec![spp], bredr::ChannelParameters::EMPTY).unwrap()
 }
@@ -121,7 +126,7 @@ async fn register_rfcomm_service_advertisement_is_discovered() {
 
     // Poke at `bt-rfcomm` by registering a fake SPP client that uses the Profile protocol
     // provided by it.
-    let spp_client = setup_spp_client(&test_topology).await;
+    let spp_client = setup_spp_client(&test_topology, &rfcomm_under_test).await;
 
     // Test driven member searches for SPP services.
     let mut search_results = test_driven_peer
@@ -134,7 +139,7 @@ async fn register_rfcomm_service_advertisement_is_discovered() {
     drop(spp_client);
 
     // Client coming back should be OK.
-    let _spp_client2 = setup_spp_client(&test_topology).await;
+    let _spp_client2 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
 
     // We expect test driven member to discover `spp_client2s` service advertisement.
     expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
@@ -149,11 +154,11 @@ async fn multiple_rfcomm_clients_can_register_advertisements() {
         .register_service_search(bredr::ServiceClassProfileIdentifier::SerialPort, vec![])
         .unwrap();
 
-    let _spp_client1 = setup_spp_client(&test_topology).await;
+    let _spp_client1 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
     // `spp_client1`'s advertisement should be discovered.
     expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
 
-    let _spp_client2 = setup_spp_client(&test_topology).await;
+    let _spp_client2 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
     // Because `bt-rfcomm` manages multiple RFCOMM service advertisements, we expect _2_ search
     // result events. This is because `bt-rfcomm` unregisters `_spp_client1`'s advertisement, groups
     // `_spp_client2`'s advertisement with it, and re-registers them together. As such, the new

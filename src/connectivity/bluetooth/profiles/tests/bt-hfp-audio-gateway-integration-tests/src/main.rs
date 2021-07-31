@@ -15,7 +15,7 @@ use {
     fuchsia_zircon::Duration,
     futures::{stream::StreamExt, TryFutureExt},
     matches::assert_matches,
-    mock_piconet_client::v2::{PiconetHarness, PiconetMember},
+    mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
     std::convert::TryInto,
     test_call_manager::TestCallManager,
 };
@@ -143,9 +143,15 @@ async fn expect_connection(
     }
 }
 
-/// Returns a TestCallManager that uses the Hfp protocol provided by the test `topology`.
-async fn setup_test_call_manager(topology: &RealmInstance) -> TestCallManager {
-    let hfp_protocol = topology.root.connect_to_protocol_at_exposed_dir::<HfpMarker>().unwrap();
+/// Returns a TestCallManager that uses the `Hfp` protocol provided by the `bt-hfp-audio-gateway`
+/// component in the test `topology`.
+async fn setup_test_call_manager(
+    topology: &RealmInstance,
+    hfp_component: &BtProfileComponent,
+) -> TestCallManager {
+    let hfp_protocol = hfp_component
+        .connect_to_protocol::<HfpMarker>(topology)
+        .expect("HFP protocol should be available");
     let facade = TestCallManager::new();
     facade.register_manager(hfp_protocol).await.unwrap();
     facade
@@ -186,7 +192,7 @@ async fn test_hfp_search_and_connect() {
     let mut connect_requests = remote_peer.register_service_advertisement(service_defs).unwrap();
 
     // Set up the test call manager to interact with the HFP protocol.
-    let _facade = setup_test_call_manager(&test_topology).await;
+    let _facade = setup_test_call_manager(&test_topology, &hfp_under_test).await;
 
     // We expect HFP to discover Peer #1's service advertisement.
     hfp_under_test.expect_observer_service_found_request(remote_peer.peer_id()).await.unwrap();
@@ -285,7 +291,7 @@ async fn test_hfp_full_slc_init_procedure() {
     let mut connect_requests = remote_peer.register_service_advertisement(service_defs).unwrap();
 
     // Set up the test call manager to interact with the HFP protocol.
-    let _facade = setup_test_call_manager(&test_topology).await;
+    let _facade = setup_test_call_manager(&test_topology, &hfp_under_test).await;
 
     // We expect HFP to discover Peer #1's service advertisement.
     hfp_under_test.expect_observer_service_found_request(remote_peer.peer_id()).await.unwrap();

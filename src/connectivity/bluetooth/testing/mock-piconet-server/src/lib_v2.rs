@@ -5,7 +5,7 @@
 use {
     crate::peer_observer_timeout,
     anyhow::{format_err, Context, Error},
-    cm_rust::{ComponentDecl, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget},
+    cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget},
     fidl::{
         encoding::Decodable,
         endpoints::{self as f_end, DiscoverableProtocolMarker},
@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_async::{self as fasync, futures::TryStreamExt, DurationExt, TimeoutExt},
-    fuchsia_bluetooth::types as bt_types,
+    fuchsia_bluetooth::{types as bt_types, util::CollectExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
@@ -28,8 +28,26 @@ static MOCK_PICONET_SERVER_URL_V2: &str =
 static PROFILE_INTERPOSER_PREFIX: &str = "profile-interposer";
 static BT_RFCOMM_PREFIX: &str = "bt-rfcomm";
 
+/// Returns the protocol name from the `capability` or an Error if it cannot be retrieved.
+fn protocol_name_from_capability(capability: &Capability) -> Result<String, Error> {
+    if let Capability::Protocol(name) = capability {
+        Ok(name.clone())
+    } else {
+        Err(format_err!("Not a protocol capability: {:?}", capability))
+    }
+}
+
+fn expose_decl(name: &str, id: bt_types::PeerId, capability_name: &str) -> ExposeDecl {
+    ExposeDecl::Protocol(ExposeProtocolDecl {
+        source: ExposeSource::Child(name.to_string()),
+        source_name: capability_name.into(),
+        target: ExposeTarget::Parent,
+        target_name: capability_path_for_peer_id(id, capability_name).into(),
+    })
+}
+
 /// Specification data for creating a peer in the mock piconet. This may be a
-/// peer that will be driven by test code or one that is an actual bluetooth
+/// peer that will be driven by test code or one that is an actual Bluetooth
 /// profile implementation.
 #[derive(Clone, Debug)]
 pub struct PiconetMemberSpec {
@@ -38,6 +56,13 @@ pub struct PiconetMemberSpec {
     /// The optional hermetic RFCOMM component URL to be used by piconet members
     /// that need RFCOMM functionality.
     rfcomm_url: Option<String>,
+    /// Expose declarations for additional capabilities provided by this piconet member. This is
+    /// typically empty for test driven peers (unless an RFCOMM intermediary is specified), and may
+    /// be populated for specs describing an actual Bluetooth profile implementation.
+    /// The exposed capabilities will be available at a unique path associated with this spec (e.g
+    /// `fuchsia.bluetooth.hfp.Hfp-321abc` where `321abc` is the PeerId for this member).
+    /// Note: Only protocol capabilities may be specified here.
+    expose_decls: Vec<ExposeDecl>,
     observer: Option<bredr::PeerObserverProxy>,
 }
 
@@ -46,42 +71,62 @@ impl PiconetMemberSpec {
         &self,
         topology: &RealmInstance,
     ) -> Result<bredr::ProfileProxy, anyhow::Error> {
-        let (client, server) = f_end::create_endpoints::<bredr::ProfileMarker>()?;
+        let (client, server) = f_end::create_proxy::<bredr::ProfileMarker>()?;
         topology.root.connect_request_to_named_protocol_at_exposed_dir(
-            &mock_profile_service_path(self),
+            &capability_path_for_mock::<bredr::ProfileMarker>(self),
             server.into_channel(),
         )?;
-        client.into_proxy().map_err(|e| e.into())
+        Ok(client)
     }
 
     /// Create a PiconetMemberSpec configured to be used with a Profile
     /// component which is under test.
     /// `rfcomm_url` is the URL for an optional v2 RFCOMM component that will sit between the
     /// Profile and the Mock Piconet Server.
+    /// `expose_capabilities` specifies protocol capabilities provided by this Profile component to
+    /// be exposed above the test root.
     pub fn for_profile(
         name: String,
         rfcomm_url: Option<String>,
-    ) -> (Self, bredr::PeerObserverRequestStream) {
+        expose_capabilities: Vec<Capability>,
+    ) -> Result<(Self, bredr::PeerObserverRequestStream), Error> {
+        let id = bt_types::PeerId::random();
+        let capability_names =
+            expose_capabilities.iter().map(protocol_name_from_capability).collect_results()?;
+        let expose_decls = capability_names
+            .iter()
+            .map(|capability_name| expose_decl(&name, id, capability_name))
+            .collect();
         let (peer_proxy, peer_stream) =
             f_end::create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
 
-        (
-            Self { name, id: bt_types::PeerId::random(), observer: Some(peer_proxy), rfcomm_url },
-            peer_stream,
-        )
+        Ok((Self { name, id, rfcomm_url, expose_decls, observer: Some(peer_proxy) }, peer_stream))
     }
 
     /// Create a PiconetMemberSpec designed to be used with a peer that will be driven
     /// by test code.
     /// `rfcomm_url` is the URL for an optional v2 RFCOMM component that will sit between the
-    /// mock peer and the Mock Piconet Server.
+    /// mock peer and the integration test client.
     pub fn for_mock_peer(name: String, rfcomm_url: Option<String>) -> Self {
-        Self { name, id: bt_types::PeerId::random(), rfcomm_url, observer: None }
+        let id = bt_types::PeerId::random();
+        // If the RFCOMM URL is specified, then we expect to expose the `bredr.Profile` capability
+        // above the test root at a unique path.
+        let expose_decls = if rfcomm_url.is_some() {
+            let rfcomm_name = bt_rfcomm_moniker_for_member(&name);
+            vec![expose_decl(&rfcomm_name, id, bredr::ProfileMarker::PROTOCOL_NAME)]
+        } else {
+            Vec::new()
+        };
+        Self { name, id, rfcomm_url, expose_decls, observer: None }
     }
 }
 
-fn mock_profile_service_path(mock: &PiconetMemberSpec) -> String {
-    format!("{}-{}", bredr::ProfileMarker::PROTOCOL_NAME, mock.id)
+fn capability_path_for_mock<S: DiscoverableProtocolMarker>(mock: &PiconetMemberSpec) -> String {
+    capability_path_for_peer_id(mock.id, S::PROTOCOL_NAME)
+}
+
+fn capability_path_for_peer_id(id: bt_types::PeerId, capability_name: &str) -> String {
+    format!("{}-{}", capability_name, id)
 }
 
 pub struct PiconetMember {
@@ -151,13 +196,18 @@ impl PiconetMember {
     }
 }
 
-/// Helper designed to observe what a real profile implementation is doing.
-pub struct ProfileObserver {
+/// Represents a Bluetooth profile-under-test in the test topology.
+///
+/// Provides helpers designed to observe what the real profile implementation is doing.
+/// Provides access to any capabilities that have been exposed by this profile.
+/// Note: Only capabilities that are specified in the `expose_capabilities` field of the
+///       PiconetHarness::add_profile_with_capabilities() method will be available for connection.
+pub struct BtProfileComponent {
     observer_stream: bredr::PeerObserverRequestStream,
     profile_id: bt_types::PeerId,
 }
 
-impl ProfileObserver {
+impl BtProfileComponent {
     pub fn new(stream: bredr::PeerObserverRequestStream, id: bt_types::PeerId) -> Self {
         Self { observer_stream: stream, profile_id: id }
     }
@@ -166,7 +216,21 @@ impl ProfileObserver {
         self.profile_id
     }
 
-    /// Expects a request over the PeerObserver protocol for this MockPeer.
+    /// Connects to the protocol `S` provided by this Profile. Returns the client end on success,
+    /// Error if the capability is not available.
+    pub fn connect_to_protocol<S: DiscoverableProtocolMarker>(
+        &self,
+        topology: &RealmInstance,
+    ) -> Result<S::Proxy, Error> {
+        let (client, server) = f_end::create_proxy::<S>()?;
+        topology.root.connect_request_to_named_protocol_at_exposed_dir(
+            &capability_path_for_peer_id(self.profile_id, S::PROTOCOL_NAME),
+            server.into_channel(),
+        )?;
+        Ok(client)
+    }
+
+    /// Expects a request over the `PeerObserver` protocol for this MockPeer.
     ///
     /// Returns the request if successful.
     pub async fn expect_observer_request(&mut self) -> Result<bredr::PeerObserverRequest, Error> {
@@ -323,7 +387,7 @@ async fn add_mock_piconet_member<'a, 'b>(
     let profile_path = if mock.rfcomm_url.is_some() {
         bredr::ProfileMarker::PROTOCOL_NAME.to_string()
     } else {
-        mock_profile_service_path(mock)
+        capability_path_for_mock::<bredr::ProfileMarker>(mock)
     };
     add_mock_piconet_component(
         builder,
@@ -637,7 +701,7 @@ fn interposer_name_for_profile(profile_name: &'_ str) -> String {
 pub struct PiconetHarness {
     pub builder: RealmBuilder,
     pub ps_moniker: String,
-    profiles: Vec<String>,
+    profiles: Vec<PiconetMemberSpec>,
     piconet_members: Vec<PiconetMemberSpec>,
 }
 
@@ -678,47 +742,23 @@ impl PiconetHarness {
         Ok(())
     }
 
-    /// Potentially updates the `root_decl` with expose decls for piconet `members` that
-    /// use an RFCOMM intermediary for the `Profile` capability.
-    /// The added expose decls will be defined such that each `Profile` capability will be uniquely
-    /// associated with the piconet member.
-    async fn expose_rfcomm_profile_capability(
-        topology: &mut Realm,
-        root_decl: &mut ComponentDecl,
-        members: &Vec<PiconetMemberSpec>,
-    ) {
-        for member_spec in members {
-            let rfcomm_name = bt_rfcomm_moniker_for_member(&member_spec.name);
-            if let Ok(true) = topology.contains(&rfcomm_name.clone().into()).await {
-                root_decl.exposes.push(ExposeDecl::Protocol(ExposeProtocolDecl {
-                    source: ExposeSource::Child(rfcomm_name),
-                    source_name: bredr::ProfileMarker::PROTOCOL_NAME.into(),
-                    target: ExposeTarget::Parent,
-                    target_name: mock_profile_service_path(member_spec).into(),
-                }))
-            }
-        }
-    }
-
-    /// Builds the test topology with the updated routes for the `bredr.Profile` capability and
-    /// returns the built Realm.
+    /// Builds the test topology with the updated expose routes specified by the profiles and
+    /// piconet members.
     async fn update_routes_and_build(self) -> Result<Realm, Error> {
         let mut topology = self.builder.build();
         log::info!(
-            "Building test realm with profiles: {:?}, piconet members: {:?}",
+            "Building test realm with profiles: {:?} and piconet members: {:?}",
             self.profiles,
             self.piconet_members
         );
         let mut root_decl = topology.get_decl(&Moniker::root()).await.expect("failed to get root");
 
-        // This allows integration test writers to uniquely access the `Profile` capability for each
-        // piconet member.
-        PiconetHarness::expose_rfcomm_profile_capability(
-            &mut topology,
-            &mut root_decl,
-            &self.piconet_members,
-        )
-        .await;
+        let mut piconet_member_exposes =
+            self.piconet_members.iter().map(|spec| spec.expose_decls.clone()).flatten().collect();
+        let mut profile_member_exposes =
+            self.profiles.iter().map(|spec| spec.expose_decls.clone()).flatten().collect();
+        root_decl.exposes.append(&mut piconet_member_exposes);
+        root_decl.exposes.append(&mut profile_member_exposes);
 
         // Update the root decl with the modified `expose` routes.
         topology
@@ -741,7 +781,7 @@ impl PiconetHarness {
         &mut self,
         name: String,
         profile_url: String,
-    ) -> Result<ProfileObserver, Error> {
+    ) -> Result<BtProfileComponent, Error> {
         self.add_profile_with_capabilities(name, profile_url, None, vec![], vec![]).await
     }
 
@@ -752,7 +792,7 @@ impl PiconetHarness {
     /// intermediary in the test topology.
     /// `use_capabilities` specifies any capabilities used by the profile that will be
     /// provided outside the test realm.
-    /// `expose_capabilities` specifies any capabilities provided by the profile to be
+    /// `expose_capabilities` specifies any protocol capabilities provided by the profile to be
     /// available in the outgoing directory of the test realm root.
     ///
     /// Returns an observer for the launched profile.
@@ -763,21 +803,18 @@ impl PiconetHarness {
         rfcomm_url: Option<String>,
         use_capabilities: Vec<Capability>,
         expose_capabilities: Vec<Capability>,
-    ) -> Result<ProfileObserver, Error> {
-        let (mut spec, request_stream) = PiconetMemberSpec::for_profile(name, rfcomm_url);
-        let mut caps = routes_from_capabilities(
+    ) -> Result<BtProfileComponent, Error> {
+        let (mut spec, request_stream) =
+            PiconetMemberSpec::for_profile(name, rfcomm_url, expose_capabilities.clone())?;
+        // Use capabilities can be directly turned into routes.
+        let routes = routes_from_capabilities(
             use_capabilities,
             RouteEndpoint::AboveRoot,
             vec![RouteEndpoint::Component(spec.name.clone())],
         );
-        caps.extend(routes_from_capabilities(
-            expose_capabilities,
-            RouteEndpoint::Component(spec.name.clone()),
-            vec![RouteEndpoint::AboveRoot],
-        ));
 
-        self.add_profile_from_spec(&mut spec, profile_url, caps).await?;
-        Ok(ProfileObserver::new(request_stream, spec.id))
+        self.add_profile_from_spec(&mut spec, profile_url, routes).await?;
+        Ok(BtProfileComponent::new(request_stream, spec.id))
     }
 
     async fn add_profile_from_spec(
@@ -794,7 +831,7 @@ impl PiconetHarness {
             capabilities,
         )
         .await?;
-        self.profiles.push(spec.name.clone());
+        self.profiles.push(spec.clone());
         Ok(())
     }
 }
@@ -947,8 +984,9 @@ mod tests {
         // Root should have an expose declaration for `Profile` at the custom path.
         {
             let bt_rfcomm_name = super::bt_rfcomm_moniker_for_member(&member_spec.name);
-            let custom_profile_capability_name =
-                CapabilityName(super::mock_profile_service_path(&member_spec));
+            let custom_profile_capability_name = CapabilityName(super::capability_path_for_mock::<
+                bredr::ProfileMarker,
+            >(&member_spec));
             let custom_expose_profile_decl = ExposeProtocolDecl {
                 source: ExposeSource::Child(bt_rfcomm_name),
                 source_name: CapabilityName(profile_capability_name.to_string()),
@@ -971,7 +1009,7 @@ mod tests {
         let pico_member_decl =
             topology.get_decl(&pico_member_moniker).await.expect("piconet member had no decl");
         let profile_capability_name =
-            CapabilityName(super::mock_profile_service_path(&member_spec));
+            CapabilityName(super::capability_path_for_mock::<bredr::ProfileMarker>(&member_spec));
         let mut expose_proto_decl = ExposeProtocolDecl {
             source: ExposeSource::Self_,
             source_name: profile_capability_name.clone(),
@@ -1201,7 +1239,7 @@ mod tests {
             vec![Capability::protocol(fake_cap1.clone()), Capability::protocol(fake_cap2.clone())];
         let fake_cap3 = "Cat".to_string();
         let use_capabilities = vec![Capability::protocol(fake_cap3.clone())];
-        let _profile_member = test_harness
+        let profile_member = test_harness
             .add_profile_with_capabilities(
                 profile_name.to_string(),
                 "fuchsia-pkg://fuchsia.com/example#meta/example.cm".to_string(),
@@ -1219,28 +1257,25 @@ mod tests {
         // of Profile, ProfileTest, and LogSink routes.
 
         // `Foo` is exposed by the profile to parent.
-        let fake_capability_name1 = CapabilityName(fake_cap1);
         let fake_capability_expose1 = ExposeDecl::Protocol(ExposeProtocolDecl {
             source: ExposeSource::Child(profile_name.to_string()),
-            source_name: fake_capability_name1.clone(),
+            source_name: fake_cap1.clone().into(),
             target: ExposeTarget::Parent,
-            target_name: fake_capability_name1.clone(),
+            target_name: capability_path_for_peer_id(profile_member.peer_id(), &fake_cap1).into(),
         });
         // `Bar` is exposed by the profile to parent.
-        let fake_capability_name2 = CapabilityName(fake_cap2);
         let fake_capability_expose2 = ExposeDecl::Protocol(ExposeProtocolDecl {
             source: ExposeSource::Child(profile_name.to_string()),
-            source_name: fake_capability_name2.clone(),
+            source_name: fake_cap2.clone().into(),
             target: ExposeTarget::Parent,
-            target_name: fake_capability_name2.clone(),
+            target_name: capability_path_for_peer_id(profile_member.peer_id(), &fake_cap2).into(),
         });
         // `Cat` is used by the profile and exposed from above the test root.
-        let fake_capability_name3 = CapabilityName(fake_cap3);
         let fake_capability_offer3 = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Parent,
-            source_name: fake_capability_name3.clone(),
+            source_name: fake_cap3.clone().into(),
             target: OfferTarget::Child(profile_name.to_string()),
-            target_name: fake_capability_name3,
+            target_name: fake_cap3.into(),
             dependency_type: DependencyType::Strong,
         });
 
@@ -1248,5 +1283,65 @@ mod tests {
         assert!(root.exposes.contains(&fake_capability_expose1));
         assert!(root.exposes.contains(&fake_capability_expose2));
         assert!(root.offers.contains(&fake_capability_offer3));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_multiple_profiles_with_same_expose_is_ok() {
+        let mut test_harness = PiconetHarness::new().await;
+        let profile_name1 = "test-profile-1";
+        let profile_name2 = "test-profile-2";
+
+        // Both profiles expose the same protocol capability.
+        let fake_cap = "FooBarAmazing".to_string();
+        let expose_capabilities = vec![Capability::protocol(fake_cap.clone())];
+
+        let profile_member1 = test_harness
+            .add_profile_with_capabilities(
+                profile_name1.to_string(),
+                "fuchsia-pkg://fuchsia.com/example#meta/example-profile1.cm".to_string(),
+                None,
+                vec![],
+                expose_capabilities.clone(),
+            )
+            .await
+            .expect("failed to add profile1");
+        let profile_member2 = test_harness
+            .add_profile_with_capabilities(
+                profile_name2.to_string(),
+                "fuchsia-pkg://fuchsia.com/example#meta/example-profile2.cm".to_string(),
+                None,
+                vec![],
+                expose_capabilities,
+            )
+            .await
+            .expect("failed to add profile2");
+
+        let mut topology = test_harness.update_routes_and_build().await.expect("should build");
+        assert!(topology
+            .contains(&profile_name1.clone().into())
+            .await
+            .expect("failed to check for profile1 in realm"));
+        assert!(topology
+            .contains(&profile_name2.clone().into())
+            .await
+            .expect("failed to check for profile2 in realm"));
+
+        // Validate that `fake_cap` is exposed by both profiles, and is OK.
+        let profile1_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Child(profile_name1.to_string()),
+            source_name: fake_cap.clone().into(),
+            target: ExposeTarget::Parent,
+            target_name: capability_path_for_peer_id(profile_member1.peer_id(), &fake_cap).into(),
+        });
+        let profile2_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Child(profile_name2.to_string()),
+            source_name: fake_cap.clone().into(),
+            target: ExposeTarget::Parent,
+            target_name: capability_path_for_peer_id(profile_member2.peer_id(), &fake_cap).into(),
+        });
+
+        let root = topology.get_decl(&vec![].into()).await.expect("unable to get root decl");
+        assert!(root.exposes.contains(&profile1_expose));
+        assert!(root.exposes.contains(&profile2_expose));
     }
 }

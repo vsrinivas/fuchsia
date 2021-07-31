@@ -32,7 +32,7 @@ const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 const MOCK_PEER_NAME: &str = "mock-peer";
 
 struct AvrcpIntegrationTest {
-    avrcp_observer: mock_piconet_client::v2::ProfileObserver,
+    avrcp_observer: mock_piconet_client::v2::BtProfileComponent,
     mock_peer: PiconetMember,
     test_realm: fuchsia_component_test::RealmInstance,
 }
@@ -297,9 +297,8 @@ async fn avrcp_disallows_handler_double_sets(mut tf: AvrcpIntegrationTest) {
 
     // Connect to bt-avrcp.cm's controller service
     let avrcp_svc = tf
-        .test_realm
-        .root
-        .connect_to_protocol_at_exposed_dir::<PeerManagerMarker>()
+        .avrcp_observer
+        .connect_to_protocol::<PeerManagerMarker>(&tf.test_realm)
         .context("Failed to connect to Bluetooth AVRCP interface")
         .unwrap();
 
@@ -371,9 +370,8 @@ async fn avrcp_remote_receives_set_absolute_volume_request(mut tf: AvrcpIntegrat
 
     // Connect to avrcp controller service.
     let avrcp_svc = tf
-        .test_realm
-        .root
-        .connect_to_protocol_at_exposed_dir::<PeerManagerMarker>()
+        .avrcp_observer
+        .connect_to_protocol::<PeerManagerMarker>(&tf.test_realm)
         .context("Failed to connect to Bluetooth AVRCP interface")
         .unwrap();
 
