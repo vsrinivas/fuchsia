@@ -178,6 +178,9 @@ template("assemble_system") {
     product_config = "${image_name}_product_config"
     board_config = "${image_name}_board_config"
     image_assembler = "${image_name}_image_assembler"
+    copy_vbmeta = "${image_name}_copy_vbmeta"
+    copy_zbi = "${image_name}_copy_zbi"
+    copy_zbi_manifest = "${image_name}_copy_zbi_manifest"
     copy_images = "${image_name}_copy_images"
     config_data = "${image_name}_config-data"
     empty_minfs = "${image_name}_data.blk"
@@ -567,11 +570,38 @@ template("assemble_system") {
       output_name = parts[0]
     }
 
-    copy(labels.copy_images) {
+    if (use_vbmeta) {
+      copy(labels.copy_vbmeta) {
+        forward_variables_from(invoker, [ "testonly" ])
+        sources = [ files.vbmeta ]
+        outputs = [ "${invoker.output_dir}/${output_name}.vbmeta" ]
+        deps = [ ":${labels.image_assembler}" ]
+      }
+    }
+
+    copy(labels.copy_zbi) {
       forward_variables_from(invoker, [ "testonly" ])
       sources = [ files.zbi_final ]
       outputs = [ "${invoker.output_dir}/${output_name}.zbi" ]
       deps = [ ":${labels.image_assembler}" ]
+    }
+
+    copy(labels.copy_zbi_manifest) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = [ files.zbi_manifest ]
+      outputs = [ "${invoker.output_dir}/${output_name}.zbi.json" ]
+      deps = [ ":${labels.image_assembler}" ]
+    }
+
+    group(labels.copy_images) {
+      forward_variables_from(invoker, [ "testonly" ])
+      public_deps = [
+        ":${labels.copy_zbi_manifest}",
+        ":${labels.copy_zbi}",
+      ]
+      if (use_vbmeta) {
+        public_deps += [ ":${labels.copy_vbmeta}" ]
+      }
     }
   }
 

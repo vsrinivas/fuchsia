@@ -49,69 +49,88 @@ declare_args() {
 #   testonly, metadata
 #       Usual GN meaning.
 template("vbmeta") {
-  if (defined(invoker.output_name)) {
-    output_file = invoker.output_name
-  } else {
-    output_file = target_name
+  generate_image = false
+  if (defined(invoker.generate_image)) {
+    generate_image = invoker.generate_image
   }
 
-  output_file += ".vbmeta"
-  salt_file = output_file + ".salt"
-
-  zbi = invoker.zbi
-  assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
-  assert(avb_key != "", "avb_key must be specified")
-  assert(avb_atx_metadata != "", "avb metadata must be specified")
-  output_file = "$root_out_dir/$output_file"
-  salt_file = "$root_out_dir/$salt_file"
-
-  ffx_action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                             "deps",
-                             "metadata",
-                           ])
-
-    args = [
-      "--config",
-      "assembly_enabled=true",
-      "assembly",
-      "vbmeta",
-      "sign",
-      "--key",
-      rebase_path(avb_key, root_build_dir),
-      "--key-metadata",
-      rebase_path(avb_atx_metadata, root_build_dir),
-      "--name",
-      zvb_partition_name,
-      "--image-path",
-      rebase_path(zbi[0], root_build_dir),
-      "--output",
-      rebase_path(output_file, root_build_dir),
-      "--salt-outfile",
-      rebase_path(salt_file, root_build_dir),
-    ]
-    inputs = [
-      avb_key,
-      avb_atx_metadata,
-      zbi[0],
-    ]
-
-    # Add any json-format descriptors to the arguments list directly.
-    foreach(descriptor_file, board_extra_vbmeta_descriptors) {
-      args += [
-        "--additional-descriptor",
-        rebase_path(descriptor_file, root_build_dir),
-      ]
-      inputs += [ descriptor_file ]
+  if (generate_image) {
+    if (defined(invoker.output_name)) {
+      output_file = "${invoker.output_name}"
+    } else {
+      output_file = "${target_name}"
     }
 
-    outputs = [
-      output_file,
-      salt_file,
-    ]
+    output_file += ".vbmeta"
+    salt_file = output_file + ".salt"
+
+    zbi = invoker.zbi
+    assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
+    assert(avb_key != "", "avb_key must be specified")
+    assert(avb_atx_metadata != "", "avb metadata must be specified")
+    output_file = "$root_out_dir/$output_file"
+    salt_file = "$root_out_dir/$salt_file"
+
+    ffx_action(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "deps",
+                               "metadata",
+                             ])
+
+      args = [
+        "--config",
+        "assembly_enabled=true",
+        "assembly",
+        "vbmeta",
+        "sign",
+        "--key",
+        rebase_path(avb_key, root_build_dir),
+        "--key-metadata",
+        rebase_path(avb_atx_metadata, root_build_dir),
+        "--name",
+        zvb_partition_name,
+        "--image-path",
+        rebase_path(zbi[0], root_build_dir),
+        "--output",
+        rebase_path(output_file, root_build_dir),
+        "--salt-outfile",
+        rebase_path(salt_file, root_build_dir),
+      ]
+      inputs = [
+        avb_key,
+        avb_atx_metadata,
+        zbi[0],
+      ]
+
+      # Add any json-format descriptors to the arguments list directly.
+      foreach(descriptor_file, board_extra_vbmeta_descriptors) {
+        args += [
+          "--additional-descriptor",
+          rebase_path(descriptor_file, root_build_dir),
+        ]
+        inputs += [ descriptor_file ]
+      }
+
+      outputs = [
+        output_file,
+        salt_file,
+      ]
+    }
+  } else {
+    group(target_name) {
+      not_needed(invoker, [ "output_name" ])
+      not_needed(invoker, [ "zbi" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                               "deps",
+                               "metadata",
+                             ])
+    }
   }
 }
 

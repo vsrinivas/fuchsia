@@ -969,6 +969,7 @@ if (custom_signing_script != "") {
 
 if (use_vbmeta) {
   vbmeta("fuchsia.vbmeta") {
+    generate_image = true
     output_name = "fuchsia"
     testonly = true
     if (custom_signing_script != "") {
@@ -1006,6 +1007,7 @@ if (use_vbmeta) {
   }
 
   vbmeta("fuchsia_prime.vbmeta") {
+    generate_image = true
     output_name = "fuchsia_prime"
     testonly = true
     if (custom_signing_script != "") {

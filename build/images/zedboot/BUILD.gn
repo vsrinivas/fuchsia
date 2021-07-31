@@ -225,6 +225,7 @@ if (custom_signing_script != "") {
 
 if (use_vbmeta) {
   vbmeta("zedboot.vbmeta") {
+    generate_image = true
     output_name = "zedboot"
     testonly = true
     if (custom_signing_script != "") {
