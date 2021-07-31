@@ -1,0 +1,10 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+            "/tmp:tmpfs",
+        ],
+    },
+}

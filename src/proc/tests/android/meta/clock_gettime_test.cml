@@ -1,12 +1,8 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/clock_gettime_test",
         args: [ "--gunit_filter=-ClockGettime.JavaThreadTime:ClockGettime/MonotonicClockTest.IsMonotonic*" ],
         environ: [ "TEST_ON_GVISOR=1" ],
-        mounts: [
-            "/:remotefs:root",
-            "/data:remotefs:data",
-        ],
     },
 }

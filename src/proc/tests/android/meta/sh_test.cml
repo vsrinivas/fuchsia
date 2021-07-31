@@ -1,5 +1,5 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "system/bin/sh",
         args: [
@@ -7,6 +7,5 @@
             "toybox",
             "help",
         ],
-        mounts: [ "/:remotefs:root" ],
     },
 }

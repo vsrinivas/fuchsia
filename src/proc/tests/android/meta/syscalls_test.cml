@@ -1,12 +1,7 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/syscalls_test",
-        mounts: [
-            "/:remotefs:root",
-            "/data:tmpfs",
-            "/tmp:tmpfs",
-        ],
         user: "root:x:0:0",
     },
 }

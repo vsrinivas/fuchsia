@@ -1,11 +1,7 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/clock_getres_test",
         environ: [ "TEST_ON_GVISOR=1" ],
-        mounts: [
-            "/:remotefs:root",
-            "/data:remotefs:data",
-        ],
     },
 }
