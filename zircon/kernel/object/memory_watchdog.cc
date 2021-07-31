@@ -11,6 +11,7 @@
 #include <object/executor.h>
 #include <object/memory_watchdog.h>
 #include <platform/halt_helper.h>
+#include <vm/loan_sweeper.h>
 #include <vm/scanner.h>
 
 namespace {
@@ -182,6 +183,11 @@ bool MemoryWatchdog::IsEvictionRequired(PressureLevel idx) const {
          idx != PressureLevel::kOutOfMemory && !IsDiagnosticLevel(idx);
 }
 
+bool MemoryWatchdog::IsLoanSweeperRequired(PressureLevel idx) const {
+  return idx < prev_mem_event_idx_ && idx <= max_loan_sweep_level_ &&
+         idx != PressureLevel::kOutOfMemory && !IsDiagnosticLevel(idx);
+}
+
 void MemoryWatchdog::WorkerThread() {
   while (true) {
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
@@ -190,15 +196,21 @@ void MemoryWatchdog::WorkerThread() {
              pmm_count_free_pages() * PAGE_SIZE / MB);
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
       // in the out of memory state.
+      bool first_sync_pass = true;
       while (mem_event_idx_ == PressureLevel::kOutOfMemory) {
-        uint64_t evicted_pages = pmm_evictor()->EvictOneShotSynchronous(
-            MB * 10, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::Print);
-        if (evicted_pages == 0) {
-          printf("memory-pressure: found no pages to evict\n");
+        uint64_t freed_pages = 0;
+        freed_pages += pmm_loan_sweeper()->SynchronousSweep(/*is_continuous_sweep=*/false, /*also_replace_recently_pinned=*/true);
+        if (!first_sync_pass) {
+          freed_pages += pmm_evictor()->EvictOneShotSynchronous(
+              MB * 10, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::Print);
+        }
+        if (!first_sync_pass && freed_pages == 0) {
+          printf("memory-pressure: found no pages to evict or sweep\n");
           break;
         }
+        first_sync_pass = false;
       }
-      printf("memory-pressure: free memory after OOM eviction is %zuMB\n",
+      printf("memory-pressure: free memory after OOM eviction and loan sweeper is %zuMB\n",
              pmm_count_free_pages() * PAGE_SIZE / MB);
     }
 
@@ -211,6 +223,14 @@ void MemoryWatchdog::WorkerThread() {
 
     if (IsSignalDue(idx, time_now)) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
+
+      if (IsLoanSweeperRequired(idx)) {
+        // Sweep for non-loaned pages we can replace with free loaned pages, to free up non-loaned
+        // pages.
+        pmm_loan_sweeper()->EnableContinuousSweep();
+      } else {
+        pmm_loan_sweeper()->DisableContinuousSweep();
+      }
 
       if (IsEvictionRequired(idx)) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race

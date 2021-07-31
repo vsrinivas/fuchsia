@@ -83,7 +83,8 @@ zx_status_t pmm_alloc_page(uint alloc_flags, vm_page_t** page, paddr_t* pa) {
 
 zx_status_t pmm_alloc_pages(size_t count, uint alloc_flags, list_node* list) {
   LocalTraceDuration trace{"pmm_alloc_pages"_stringref};
-  return pmm_node.AllocPages(count, alloc_flags, list);
+  zx_status_t result = pmm_node.AllocPages(count, alloc_flags, list);
+  return result;
 }
 
 zx_status_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
@@ -108,8 +109,38 @@ zx_status_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignme
   return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);
 }
 
+void pmm_begin_loan(paddr_t address, size_t count) {
+  LocalTraceDuration trace{"pmm_begin_loan"_stringref};
+  pmm_node.BeginLoan(address, count);
+}
+
+void pmm_cancel_loan(paddr_t address, size_t count) {
+  LocalTraceDuration trace{"pmm_cancel_loan"_stringref};
+  pmm_node.CancelLoan(address, count);
+}
+
+void pmm_end_loan(paddr_t address, size_t count, list_node* page_list) {
+  LocalTraceDuration trace{"pmm_end_loan"_stringref};
+  pmm_node.EndLoan(address, count, page_list);
+}
+
+void pmm_delete_lender(paddr_t address, size_t count) {
+  LocalTraceDuration trace{"pmm_delete_lender"_stringref};
+  pmm_node.DeleteLender(address, count);
+}
+
+bool pmm_is_loaned(vm_page_t* page) {
+  LocalTraceDuration trace{"pmm_is_loaned"_stringref};
+  return pmm_node.IsLoaned(page);
+}
+
+void pmm_ensure_signal_if_free(vm_page_t* page) {
+  LocalTraceDuration trace{"pmm_ensure_signal_if_free"_stringref};
+  return pmm_node.EnsureSignalIfFree(page);
+}
+
 void pmm_alloc_pages(uint alloc_flags, page_request_t* req) {
-  LocalTraceDuration trace{"pmm_alloc_pages"_stringref};
+  LocalTraceDuration trace{"pmm_alloc_pages (req)"_stringref};
   pmm_node.AllocPages(alloc_flags, req);
 }
 
@@ -131,11 +162,23 @@ void pmm_free_page(vm_page* page) {
 
 uint64_t pmm_count_free_pages() { return pmm_node.CountFreePages(); }
 
+uint64_t pmm_count_loaned_free_pages() { return pmm_node.CountLoanedFreePages(); }
+
+uint64_t pmm_count_loaned_used_pages() { return pmm_node.CountLoanedUsedPages(); }
+
+uint64_t pmm_count_loaned_pages() { return pmm_node.CountLoanedPages(); }
+
+uint64_t pmm_count_loan_cancelled_pages() { return pmm_node.CountLoanCancelledPages(); }
+
 uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 
 PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
 
 Evictor* pmm_evictor() { return pmm_node.GetEvictor(); }
+
+LoanSweeper* pmm_loan_sweeper() { return pmm_node.GetLoanSweeper(); }
+
+PpbConfig* pmm_ppb_config() { return pmm_node.GetPpbConfig(); }
 
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, void* context,

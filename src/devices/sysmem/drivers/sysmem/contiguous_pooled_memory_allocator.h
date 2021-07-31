@@ -92,6 +92,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
   uint64_t CalculateLargeContiguousRegionSize();
+
+  void TryDecommitRegion(const ralloc_region_t* region);
+  zx_status_t CancelLoanRegion(const ralloc_region_t* region);
+  zx_status_t CommitRegion(const ralloc_region_t* region);
+
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
@@ -115,6 +120,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};
+  // Based on the VMO being a normal contiguous VMO (not a physical VMO), and the VMO being
+  // CPU-accessible (for now).
+  bool can_decommit_{};
   bool is_ready_{};
   // True if the allocator can be deleted after it's marked ready.
   bool can_be_torn_down_{};
@@ -131,6 +139,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty used_size_property_;
   inspect::UintProperty allocations_failed_property_;
   inspect::UintProperty last_allocation_failed_timestamp_ns_property_;
+  inspect::UintProperty cancel_loan_failed_property_;
+  inspect::UintProperty last_cancel_loan_failed_timestamp_ns_property_;
+  inspect::UintProperty commits_failed_property_;
+  inspect::UintProperty last_commit_failed_timestamp_ns_property_;
   // Keeps track of how many allocations would have succeeded but failed due to fragmentation.
   inspect::UintProperty allocations_failed_fragmentation_property_;
   // This is the size of a the largest free contiguous region when high_water_mark_property_ was

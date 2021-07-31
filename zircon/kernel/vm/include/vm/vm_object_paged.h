@@ -27,6 +27,7 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_cow_pages.h>
 #include <vm/vm_object.h>
+#include "vm_object.h"
 
 // the main VM object type, based on a copy-on-write set of pages.
 class VmObjectPaged final : public VmObject {
@@ -36,6 +37,7 @@ class VmObjectPaged final : public VmObject {
   static constexpr uint32_t kContiguous = (1u << 1);
   static constexpr uint32_t kSlice = (1u << 3);
   static constexpr uint32_t kDiscardable = (1u << 4);
+  static constexpr uint32_t kLoanedOk = (1u << 5);
 
   static zx_status_t Create(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                             fbl::RefPtr<VmObjectPaged>* vmo);
@@ -113,13 +115,16 @@ class VmObjectPaged final : public VmObject {
   }
 
   zx_status_t CommitRange(uint64_t offset, uint64_t len) override {
-    return CommitRangeInternal(offset, len, false);
+    return CommitRangeInternal(offset, len, kCommitFlagsNone);
   }
   zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) override {
-    return CommitRangeInternal(offset, len, true);
+    return CommitRangeInternal(offset, len, kCommitFlagsPin);
   }
   zx_status_t DecommitRange(uint64_t offset, uint64_t len) override;
   zx_status_t ZeroRange(uint64_t offset, uint64_t len) override;
+  zx_status_t CancelLoanRange(uint64_t offset, uint64_t len) override {
+    return CommitRangeInternal(offset, len, kCommitFlagsCancelLoan);
+  }
 
   void Unpin(uint64_t offset, uint64_t len) override {
     Guard<Mutex> guard{&lock_};
@@ -259,8 +264,8 @@ class VmObjectPaged final : public VmObject {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 
-  // Unified function that implements both CommitRange and CommitRangePinned
-  zx_status_t CommitRangeInternal(uint64_t offset, uint64_t len, bool pin);
+  // Unified function that implements CommitRange, CommitRangePinned, and CancelLoanRange.
+  zx_status_t CommitRangeInternal(uint64_t offset, uint64_t len, CommitFlags commit_flags);
 
   // Internal decommit range helper that expects the lock to be held.
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);

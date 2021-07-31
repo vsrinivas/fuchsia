@@ -23,10 +23,13 @@
 #include <kernel/mutex.h>
 #include <vm/page_source.h>
 #include <vm/pmm.h>
+#include <vm/ppb_config.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
+#include "pmm.h"
+#include "vm_page_list.h"
 
 // Forward declare these so VmCowPages helpers can accept references.
 class BatchPQRemove;
@@ -45,10 +48,11 @@ class VmCowPages final
           // Guarded by DiscardableVmosLock::Get().
           fbl::TaggedDoublyLinkedListable<VmCowPages*, internal::DiscardableListTag>> {
  public:
-  static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
-                            uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages);
+  static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, bool contiguous, bool loaned_ok,
+                            uint32_t pmm_alloc_flags, uint64_t size,
+                            fbl::RefPtr<VmCowPages>* cow_pages);
 
-  static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
+  static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src, bool loaned_ok,
                                     fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
                                     fbl::RefPtr<VmCowPages>* cow_pages);
 
@@ -107,9 +111,18 @@ class VmCowPages final
   // See VmObject::TakePages
   zx_status_t TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) TA_REQ(lock_);
 
+  zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages);
+
   // See VmObject::SupplyPages
   zx_status_t SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages)
       TA_REQ(lock_);
+
+  zx_status_t SupplyNonZeroedPhysicalPages(uint64_t offset, uint64_t len, list_node* pages);
+
+  zx_status_t SupplyZeroedPhysicalPagesLocked(uint64_t offset, uint64_t len, list_node* pages)
+      TA_REQ(lock_);
+
+  zx_status_t FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status);
 
   // See VmObject::FailPageRequests
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
@@ -159,8 +172,11 @@ class VmCowPages final
   //                        not need to retried.
   //  * => Any other error, the number of pages committed is undefined.
   // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
-  zx_status_t CommitRangeLocked(uint64_t offset, uint64_t len, uint64_t* committed_len,
+  zx_status_t CommitRangeLocked(uint64_t offset, uint64_t len,
+                                CommitFlags commit_flags, uint64_t* committed_len,
                                 LazyPageRequest* page_request) TA_REQ(lock_);
+
+  zx_status_t PinPageLocked(vm_page_t* page);
 
   // Increases the pin count of the range of pages given by |offset| and |len|. The full range must
   // already be committed and this either pins all pages in the range, or pins no pages and returns
@@ -170,6 +186,9 @@ class VmCowPages final
 
   // See VmObject::Unpin
   void UnpinLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
+  // Used during delete of contiguous VMOs only.
+  void UnpinLastContiguousPagesLocked() TA_REQ(lock_);
 
   // Returns true if a page is not currently committed, and if the offset were to be read from, it
   // would be read as zero. Requested offset must be page aligned and within range.
@@ -202,6 +221,17 @@ class VmCowPages final
   // been moved out from the evictable page queue(s) into the active queue(s).
   bool RemovePageForEviction(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
 
+  // Asks the VMO to replace a loaned page with a non-loaned page.  This will only return ZX_OK,
+  // ZX_ERR_NOT_FOUND if the page isn't in this VMO, or ZX_ERR_NO_MEMORY if pmm had no non-loaned
+  // page available to move the data into.
+  //
+  // For now, we intentionally don't fall back to evicting the page, even if the page is evict-able
+  // and we can't get a replacement page.
+  //
+  // Commit of pages of a contiguous VMO can fail with ZX_ERR_NO_MEMORY if we can't get a replacment
+  // page.
+  zx_status_t ReplacePage(vm_page_t* page, uint64_t offset, CommitFlags commit_flags);
+
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
   // all race conditions are handled internally. This function returns false if
@@ -215,8 +245,9 @@ class VmCowPages final
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
   bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
+  bool DebugValidateBacklinksLocked() const TA_REQ(lock_);
   // Calls DebugValidatePageSplitsLocked on this and every parent in the chain, returning true if
-  // all return true.
+  // all return true.  Also calls DebugValidateBacklinksLocked() on every node in the hierarchy.
   bool DebugValidatePageSplitsHierarchyLocked() const TA_REQ(lock_);
 
   // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
@@ -254,6 +285,10 @@ class VmCowPages final
   bool DebugIsReclaimable() const;
   bool DebugIsUnreclaimable() const;
   bool DebugIsDiscarded() const;
+  bool DebugIsPage(uint64_t offset) const;
+  bool DebugIsMarker(uint64_t offset) const;
+  bool DebugIsEmpty(uint64_t offset) const;
+  vm_page_t* DebugGetPage(uint64_t offset) const;
 
   // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
   // succeed, the vmo should have been in the reclaimable state for at least
@@ -287,6 +322,8 @@ class VmCowPages final
                                                   list_node_t* freed_list)
       TA_EXCL(DiscardableVmosLock::Get());
 
+  bool AnyExtraPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
+
  private:
   // private constructor (use Create())
   VmCowPages(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t options, uint32_t pmm_alloc_flags,
@@ -300,6 +337,7 @@ class VmCowPages final
 
   bool is_hidden_locked() const TA_REQ(lock_) { return (options_ & kHidden); }
   bool is_slice_locked() const TA_REQ(lock_) { return options_ & kSlice; }
+  bool is_contiguous_locked() const TA_REQ(lock_) { return options_ & kContiguous; }
 
   // Add a page to the object. This operation unmaps the corresponding
   // offset from any existing mappings.
@@ -321,10 +359,11 @@ class VmCowPages final
   // is less than |size_ - offset| it must be page aligned.
   // Optionally returns the number of pages removed if |pages_freed_out| is not null.
   zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len, list_node_t* freed_list,
-                                        uint64_t* pages_freed_out = nullptr) TA_REQ(lock_);
+                                        uint64_t* pages_freed_out = nullptr,
+                                        bool allow_contiguous = false) TA_REQ(lock_);
 
   // internal check if any pages in a range are pinned
-  bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
+  bool AnyPagesPinnedLocked(uint64_t offset, size_t len, bool allow_contiguous) TA_REQ(lock_);
 
   // Helper function for ::AllocatedPagesInRangeLocked. Counts the number of pages in ancestor's
   // vmos that should be attributed to this vmo for the specified range. It is an error to pass in a
@@ -427,14 +466,14 @@ class VmCowPages final
 
   // Unpins a page and potentially moves it into a different page queue should its pin
   // count reach zero.
-  void UnpinPage(vm_page_t* page, uint64_t offset);
+  void UnpinPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Updates the page queue of an existing page, moving it to whichever non wired queue
   // is appropriate.
-  void MoveToNotWired(vm_page_t* page, uint64_t offset);
+  void MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Places a newly added page into the appropriate non wired page queue.
-  void SetNotWired(vm_page_t* page, uint64_t offset);
+  void SetNotWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Updates any meta data for accessing a page. Currently this moves pager backed pages around in
   // the page queue to track which ones were recently accessed for the purposes of eviction. In
@@ -580,12 +619,31 @@ class VmCowPages final
   // Returns the root parent's page source.
   fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
+  void InitializeVmPage(vm_page_t* p, uint64_t offset);
+
+  // Allocates a new page and populates it with the data at |parent_paddr|.
+  bool AllocateCopyPage(uint64_t offset, uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_t* alloc_list,
+                        vm_page_t** clone);
+
+  uint32_t PmmAllocFlagsLocked() const TA_REQ(lock_) {
+    uint32_t result = pmm_alloc_flags_;
+    if (result & PMM_ALLOC_FLAG_LOANED_OK) {
+      if (!pmm_ppb_config()->non_pager_enabled() && !GetRootPageSourceLocked()) {
+        result &= ~PMM_ALLOC_FLAG_LOANED_OK;
+      }
+    }
+    return result;
+  }
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
   // |options_| is a bitmask of:
   static constexpr uint32_t kHidden = (1u << 2);
   static constexpr uint32_t kSlice = (1u << 3);
+  static constexpr uint32_t kContiguous = (1u << 4);
+  static constexpr uint32_t kLoanedOk = (1u << 5);
+
   uint32_t options_ TA_GUARDED(lock_);
 
   uint64_t size_ TA_GUARDED(lock_);
@@ -656,7 +714,7 @@ class VmCowPages final
   uint64_t pinned_page_count_ TA_GUARDED(lock_) = 0;
 
   // The page source, if any.
-  const fbl::RefPtr<PageSource> page_source_;
+  fbl::RefPtr<PageSource> page_source_;
 
   // Count eviction events so that we can report them to the user.
   uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;
@@ -696,6 +754,10 @@ class VmCowPages final
   // raw pointer to avoid circular references, the VmObjectPaged destructor needs to update it.
   VmObjectPaged* paged_ref_ TA_GUARDED(lock_) = nullptr;
 
+  static constexpr paddr_t kInvalidContiguousBase = -1;
+  // Only set to a physical base address if options_ & kContiguous.
+  paddr_t contiguous_base_ = kInvalidContiguousBase;
+
   using Cursor =
       VmoCursor<VmCowPages, DiscardableVmosLock, DiscardableList, DiscardableList::iterator>;
 
@@ -704,6 +766,8 @@ class VmCowPages final
   // be advanced (by calling AdvanceIf()) before removing any element from the discardable lists.
   static fbl::DoublyLinkedList<Cursor*> discardable_vmos_cursors_
       TA_GUARDED(DiscardableVmosLock::Get());
+
+  bool ever_pinned_ = false;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_COW_PAGES_H_

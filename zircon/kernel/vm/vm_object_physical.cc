@@ -223,6 +223,10 @@ zx_status_t VmObjectPhysical::Lookup(
   return ZX_OK;
 }
 
+zx_status_t VmObjectPhysical::CommitRange(uint64_t offset, uint64_t len) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t VmObjectPhysical::CommitRangePinned(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
@@ -235,6 +239,10 @@ zx_status_t VmObjectPhysical::CommitRangePinned(uint64_t offset, uint64_t len) {
   }
   // Physical VMOs are always committed and so are always pinned.
   return ZX_OK;
+}
+
+zx_status_t VmObjectPhysical::DecommitRange(uint64_t offset, uint64_t len) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t VmObjectPhysical::LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) {

@@ -15,6 +15,7 @@
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
 #include <lk/init.h>
+#include <vm/loan_sweeper.h>
 #include <vm/scanner.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
@@ -63,7 +64,7 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->QueueCounts();
-  for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
+  for (size_t i = 0; i < PageQueue::kNumPagerBacked; i++) {
     printf("[SCAN]: Found %lu user-pager backed pages in queue %zu\n", queue_counts.pager_backed[i],
            i);
   }
@@ -284,6 +285,8 @@ static void scanner_init_func(uint level) {
   zx_time_t eviction_interval = ZX_SEC(gBootOptions->page_scanner_eviction_interval_seconds);
   pmm_evictor()->SetContinuousEvictionInterval(
       (eviction_interval < kQueueRotateTime) ? kQueueRotateTime : eviction_interval);
+
+  pmm_loan_sweeper()->Init();
 
   thread->Resume();
 }

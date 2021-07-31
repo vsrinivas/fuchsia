@@ -162,6 +162,10 @@ void PagerProxy::OnDispatcherClose() {
   }
 }
 
+bool PagerProxy::DecommitSupported() {
+  return false;
+}
+
 void PagerProxy::Free(PortPacket* packet) {
   fbl::RefPtr<PageSource> self_src;
 

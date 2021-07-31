@@ -41,6 +41,8 @@ zx_status_t VmObjectDispatcher::parse_create_syscall_flags(uint32_t flags, uint3
     return ZX_ERR_INVALID_ARGS;
   }
 
+  res |= VmObjectPaged::kLoanedOk;
+
   *out_flags = res;
 
   return ZX_OK;
@@ -253,6 +255,13 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
           offset, size, buffer.get(), buffer_size, rights);
 
   switch (op) {
+    case ZX_VMO_OP_CANCEL_LOAN: {
+      if ((rights & ZX_RIGHT_WRITE) == 0) {
+        return ZX_ERR_ACCESS_DENIED;
+      }
+      auto status = vmo_->CancelLoanRange(offset, size);
+      return status;
+    }
     case ZX_VMO_OP_COMMIT: {
       if ((rights & ZX_RIGHT_WRITE) == 0) {
         return ZX_ERR_ACCESS_DENIED;

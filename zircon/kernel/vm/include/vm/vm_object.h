@@ -56,6 +56,14 @@ enum class CloneType {
   PrivatePagerCopy,
 };
 
+enum CommitFlags : uint32_t {
+  kCommitFlagsNone = 0,
+  kCommitFlagsPin = 1u << 0,
+  kCommitFlagsCancelLoan = 1u << 1,
+  kCommitFlagsForceReplaceLoaned = 1u << 2,
+  kCommitFlagsForceReplaceNonLoaned = 1u << 3,
+};
+
 namespace internal {
 struct ChildListTag {};
 struct GlobalListTag {};
@@ -286,6 +294,10 @@ class VmObject : public VmHierarchyBase,
 
   // Zero a range of the VMO. May release physical pages in the process.
   virtual zx_status_t ZeroRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
+  // Mark any loaned pages as no longer available for any new use.  Existing use is not ended by
+  // this call; that happens in CommitRange().
+  virtual zx_status_t CancelLoanRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
   // Unpin the given range of the vmo.  This asserts if it tries to unpin a
   // page that is already not pinned (do not expose this function to

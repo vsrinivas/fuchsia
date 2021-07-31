@@ -20,6 +20,7 @@ bool AddPage(VmPageList* pl, vm_page_t* page, uint64_t offset) {
   if (!slot->IsEmpty()) {
     return false;
   }
+  page->set_state(vm_page_state::OBJECT);
   *slot = VmPageOrMarker::Page(page);
   return true;
 }
@@ -336,7 +337,7 @@ static bool vmpl_take_cleanup_test() {
   ASSERT_NE(0u, pa, "pmm_alloc single page");
 
   page->set_state(vm_page_state::OBJECT);
-  page->object.pin_count = 0;
+  page->object.get_page_queue_ref().store(PageQueue::PageQueueNone, fbl::memory_order_relaxed);
 
   VmPageList pl;
   EXPECT_TRUE(AddPage(&pl, page, 0));

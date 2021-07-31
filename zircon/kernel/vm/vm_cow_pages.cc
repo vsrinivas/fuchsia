@@ -16,6 +16,11 @@
 #include <vm/physmap.h>
 #include <vm/vm_object_paged.h>
 
+#include "include/vm/physical_page_provider.h"
+#include "include/vm/pmm.h"
+#include "include/vm/ppb_config.h"
+#include "include/vm/vm_object.h"
+#include "include/vm/vm_page_list.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -54,17 +59,32 @@ bool IsZeroPage(vm_page_t* p) {
   return true;
 }
 
-void InitializeVmPage(vm_page_t* p) {
+bool SlotHasPinnedPage(VmPageOrMarker* slot) {
+  return slot && slot->IsPage() && slot->Page()->object.get_pin_count() > 0;
+}
+
+inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
+  uint64_t result;
+  bool overflow = add_overflow(a, b, &result);
+  DEBUG_ASSERT(!overflow);
+  return result;
+}
+
+}  // namespace
+
+// TODO: Move the following two methods down in a separate CL; keeping diffs cleaner for initial CL.
+
+void VmCowPages::InitializeVmPage(vm_page_t* p, uint64_t offset) {
   DEBUG_ASSERT(p->state() == vm_page_state::ALLOC);
-  p->set_state(vm_page_state::OBJECT);
-  p->object.pin_count = 0;
+  pmm_page_queues()->SetNewPageBacklink(p, this, offset);
+  DEBUG_ASSERT(p->object.get_pin_count() == 0);
   p->object.cow_left_split = 0;
   p->object.cow_right_split = 0;
   p->object.always_need = 0;
 }
 
 // Allocates a new page and populates it with the data at |parent_paddr|.
-bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_t* alloc_list,
+bool VmCowPages::AllocateCopyPage(uint64_t offset, uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_t* alloc_list,
                       vm_page_t** clone) {
   paddr_t pa_clone;
   vm_page_t* p_clone = nullptr;
@@ -83,7 +103,7 @@ bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_
     DEBUG_ASSERT(status == ZX_OK);
   }
 
-  InitializeVmPage(p_clone);
+  InitializeVmPage(p_clone, offset);
 
   void* dst = paddr_to_physmap(pa_clone);
   DEBUG_ASSERT(dst);
@@ -102,19 +122,6 @@ bool AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr, list_node_
 
   return true;
 }
-
-bool SlotHasPinnedPage(VmPageOrMarker* slot) {
-  return slot && slot->IsPage() && slot->Page()->object.pin_count > 0;
-}
-
-inline uint64_t CheckedAdd(uint64_t a, uint64_t b) {
-  uint64_t result;
-  bool overflow = add_overflow(a, b, &result);
-  DEBUG_ASSERT(!overflow);
-  return result;
-}
-
-}  // namespace
 
 VmCowPages::DiscardableList VmCowPages::discardable_reclaim_candidates_ = {};
 VmCowPages::DiscardableList VmCowPages::discardable_non_reclaim_candidates_ = {};
@@ -184,11 +191,12 @@ class BatchPQRemove {
 };
 
 VmCowPages::VmCowPages(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr, uint32_t options,
-                       uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<PageSource> page_source)
+                       uint32_t pmm_alloc_flags, uint64_t size,
+                       fbl::RefPtr<PageSource> page_source)
     : VmHierarchyBase(ktl::move(hierarchy_state_ptr)),
       options_(options),
       size_(size),
-      pmm_alloc_flags_(pmm_alloc_flags),
+      pmm_alloc_flags_((!(options & kContiguous) && (options & kLoanedOk)) ? (pmm_alloc_flags | PMM_ALLOC_FLAG_LOANED_OK) : pmm_alloc_flags),
       page_source_(ktl::move(page_source)) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
 }
@@ -209,6 +217,7 @@ VmCowPages::~VmCowPages() {
   // vmo and repopulate the page list.
   if (!is_hidden_locked()) {
     if (parent_) {
+//static_assert(false); // check RemoveChildLocked().
       parent_->RemoveChildLocked(this);
       guard.Release();
       // Avoid recursing destructors when we delete our parent by using the deferred deletion
@@ -251,14 +260,19 @@ VmCowPages::~VmCowPages() {
   __UNINITIALIZED BatchPQRemove page_remover(&list);
   // free all of the pages attached to us
   page_list_.RemoveAllPages([&page_remover](vm_page_t* page) {
-    ASSERT(page->object.pin_count == 0);
+    ASSERT(page->object.get_pin_count() == 0);
     page_remover.Push(page);
   });
+  page_remover.Flush();
 
   if (page_source_) {
     page_source_->Close();
   }
-  page_remover.Flush();
+
+  if (is_contiguous_locked() && contiguous_base_ != kInvalidContiguousBase) {
+    // Un-mark loaned bit on any loaned pages.
+    pmm_delete_lender(contiguous_base_, size_locked() / PAGE_SIZE);
+  }
 
   pmm_free(&list);
 }
@@ -279,7 +293,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   // but there's no harm in looking up a random slot as we'll then notice it's the wrong page.
   VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
-      page->object.pin_count > 0) {
+      page->object.get_pin_count() > 0) {
     return false;
   }
 
@@ -329,7 +343,7 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
   page_list_.RemovePages(
       [&count, &freed_list, reclaim, this](VmPageOrMarker* p, uint64_t off) {
         // Pinned pages cannot be decommitted so do not consider them.
-        if (p->IsPage() && p->Page()->object.pin_count == 0 && IsZeroPage(p->Page())) {
+        if (p->IsPage() && p->Page()->object.get_pin_count() == 0 && IsZeroPage(p->Page())) {
           count++;
           if (reclaim) {
             // Need to remove all mappings (include read) ones to this range before we remove the
@@ -351,11 +365,21 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
   return count;
 }
 
-zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
-                               uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages) {
+zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, bool contiguous,
+                               bool loaned_ok,
+                               uint32_t pmm_alloc_flags, uint64_t size,
+                               fbl::RefPtr<VmCowPages>* cow_pages) {
+  uint32_t options = 0;
+  if (contiguous) {
+    options |= kContiguous;
+  }
+  if (loaned_ok) {
+    options |= kLoanedOk;
+  }
   fbl::AllocChecker ac;
   auto cow = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(ktl::move(root_lock), 0, pmm_alloc_flags, size, nullptr));
+      new (&ac) VmCowPages(ktl::move(root_lock), options, pmm_alloc_flags,
+                           size, nullptr));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -364,11 +388,16 @@ zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t
 }
 
 zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src,
+                                       bool loaned_ok,
                                        fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
                                        fbl::RefPtr<VmCowPages>* cow_pages) {
+  uint32_t options = 0;
+  if (loaned_ok) {
+    options |= kLoanedOk;
+  }
   fbl::AllocChecker ac;
   auto cow = fbl::AdoptRef<VmCowPages>(
-      new (&ac) VmCowPages(ktl::move(root_lock), 0, PMM_ALLOC_FLAG_ANY, size, ktl::move(src)));
+      new (&ac) VmCowPages(ktl::move(root_lock), options, PMM_ALLOC_FLAG_ANY, size, ktl::move(src)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -500,6 +529,7 @@ void VmCowPages::CloneParentIntoChildLocked(fbl::RefPtr<VmCowPages>& child) {
   }
 }
 
+//static_assert(false); // from here
 zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint64_t size,
                                           fbl::RefPtr<VmCowPages>* cow_child) {
   LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
@@ -789,13 +819,14 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   // have pages in the unswappable_zero_forked queue. We do know that pages in this queue cannot
   // have been pinned, so we can just move (or re-move potentially) any page that is not pinned
   // into the unswappable queue.
+#if 0
   {
     PageQueues* pq = pmm_page_queues();
     Guard<CriticalMutex> guard{pq->get_lock()};
     page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
       if (p->IsPage()) {
         vm_page_t* page = p->Page();
-        if (page->object.pin_count == 0) {
+        if (page->object.get_pin_count() == 0) {
           AssertHeld<Lock<CriticalMutex>>(*pq->get_lock());
           pq->MoveToUnswappableLocked(page);
         }
@@ -803,6 +834,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
       return ZX_ERR_NEXT;
     });
   }
+#endif
 
   // At this point, we need to merge |this|'s page list and |child|'s page list.
   //
@@ -821,7 +853,8 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   //     the simplest way to find those pages is to examine the split bits.
   bool fast_merge = merge_start_offset == 0 && !partial_cow_release_ && !child.is_hidden_locked();
 
-  if (fast_merge) {
+  // DO NOT SUBMIT - See if we can put back this optimization, while still updating the backlinks at least for loaned pages.
+  if (false && fast_merge) {
     // Only leaf vmos can be directly removed, so this must always be true. This guarantees
     // that there are no pages that were split into |removed| that have since been migrated
     // to its children.
@@ -849,15 +882,17 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
         },
         removed->parent_start_limit_, removed->parent_limit_);
 
+    // These will be freed, but accumulate them separately for use in asserts before adding these to
+    // freed_pages.
     list_node covered_pages;
     list_initialize(&covered_pages);
     __UNINITIALIZED BatchPQRemove covered_remover(&covered_pages);
 
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
-
-    child.page_list_.MergeOnto(page_list_,
-                               [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
+    child.page_list_.MergeOnto(
+      page_list_,
+      [&covered_remover](vm_page_t* p) { covered_remover.Push(p); });
     child.page_list_ = ktl::move(page_list_);
 
     vm_page_t* p;
@@ -866,7 +901,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
       // The page was already present in |child|, so it should be split at least
       // once. And being split twice is obviously bad.
       ASSERT(p->object.cow_left_split ^ p->object.cow_right_split);
-      ASSERT(p->object.pin_count == 0);
+      ASSERT(p->object.get_pin_count() == 0);
     }
     list_splice_after(&covered_pages, &freed_pages);
   } else {
@@ -874,10 +909,10 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     child.page_list_.MergeFrom(
         page_list_, merge_start_offset, merge_end_offset,
         [&page_remover](vm_page* page, uint64_t offset) { page_remover.Push(page); },
-        [&page_remover, removed_left](VmPageOrMarker* page_or_marker, uint64_t offset) {
+        [&page_remover, removed_left, &child](VmPageOrMarker* page_or_marker, uint64_t offset) {
           DEBUG_ASSERT(page_or_marker->IsPage());
           vm_page_t* page = page_or_marker->Page();
-          DEBUG_ASSERT(page->object.pin_count == 0);
+          DEBUG_ASSERT(page->object.get_pin_count() == 0);
 
           if (removed_left ? page->object.cow_right_split : page->object.cow_left_split) {
             // This happens when the pages was already migrated into child but then
@@ -889,6 +924,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
             // page, then neither of its children do.
             page->object.cow_left_split = 0;
             page->object.cow_right_split = 0;
+            pmm_page_queues()->SetPageBacklink(page, &child, offset);
           }
         });
   }
@@ -1185,9 +1221,15 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool d
   if (p->IsPage()) {
     vm_page_t* low_level_page = p->Page();
     DEBUG_ASSERT(low_level_page->state() == vm_page_state::OBJECT);
-    DEBUG_ASSERT(low_level_page->object.pin_count == 0);
-    SetNotWired(low_level_page, offset);
+    DEBUG_ASSERT(low_level_page->object.get_pin_count() == 0);
+    SetNotWiredLocked(low_level_page, offset);
   }
+  // DO NOT SUBMIT - consider checking if this page is loan_cancelled here, and if so, replacing
+  // with a page which is not loan_cancelled, directly from here.  Assuming we do the same for any
+  // other ways for a page to arrive at a new VmCowPages after having been moved with temporary
+  // ownership by a thread's stack, if a contiguous VMO is trying to chase down the loan_cancelled
+  // page, the page can't move between VMOs repeatedly, potentialy avoiding being chased down for an
+  // unknown / not-stricly-bounded number of iterations.
   *page = ktl::move(*p);
 
   if (do_range_update) {
@@ -1205,13 +1247,13 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page, bool 
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
 
-  InitializeVmPage(page);
+  InitializeVmPage(page, offset);
   if (zero) {
     ZeroPage(page);
   }
 
   VmPageOrMarker p = VmPageOrMarker::Page(page);
-  zx_status_t status = AddPageLocked(&p, offset, false);
+  zx_status_t status = AddPageLocked(&p, offset, do_range_update);
 
   if (status != ZX_OK) {
     // Release the page from 'p', as we are returning failure 'page' is still owned by the caller.
@@ -1226,6 +1268,13 @@ zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pa
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+
+  if (is_contiguous_locked() && contiguous_base_ == kInvalidContiguousBase && start_offset == 0 &&
+      !list_is_empty(pages)) {
+    // This stashes contiguous_base_ as soon as we know the contiguous_base_.
+    vm_page_t* page_at_offset_zero = list_peek_head_type(pages, vm_page_t, queue_node);
+    contiguous_base_ = page_at_offset_zero->paddr();
+  }
 
   uint64_t offset = start_offset;
   while (vm_page_t* p = list_remove_head_type(pages, vm_page_t, queue_node)) {
@@ -1348,7 +1397,7 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
     } else {
       // Otherwise we need to fork the page.
       vm_page_t* cover_page;
-      alloc_failure = !AllocateCopyPage(pmm_alloc_flags_, page->paddr(), alloc_list, &cover_page);
+      alloc_failure = !cur->AllocateCopyPage(cur_offset, PmmAllocFlagsLocked(), page->paddr(), alloc_list, &cover_page);
       if (unlikely(alloc_failure)) {
         // TODO: plumb through PageRequest once anonymous page source is implemented.
         break;
@@ -1589,7 +1638,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
           return ZX_ERR_NEXT;
         },
         [](uint64_t start, uint64_t end) {
-          // This is a gap, and we never want to  pre-map in zero pages.
+          // This is a gap, and we never want to pre-map in zero pages.
           return ZX_ERR_STOP;
         },
         offset, CheckedAdd(offset, max_len));
@@ -1713,7 +1762,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     // If the vmo isn't hidden, we can't move the page. If the page is the zero
     // page, there's no need to try to move the page. In either case, we need to
     // allocate a writable page for this vmo.
-    if (!AllocateCopyPage(pmm_alloc_flags_, p->paddr(), alloc_list, &res_page)) {
+    if (!AllocateCopyPage(offset, PmmAllocFlagsLocked(), p->paddr(), alloc_list, &res_page)) {
       return ZX_ERR_NO_MEMORY;
     }
     VmPageOrMarker insert = VmPageOrMarker::Page(res_page);
@@ -1731,7 +1780,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
       pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 
-    // This is the only path where we can allocate a new page without being a clone (clones are
+    // This is a path where we can allocate a new page without being a clone (clones are
     // always cached). So we check here if we are not fully cached and if so perform a
     // clean/invalidate to flush our zeroes. After doing this we will not touch the page via the
     // physmap and so we can pretend there isn't an aliased mapping.
@@ -1769,7 +1818,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_t* committed_len,
+zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len,
+                                          CommitFlags commit_flags, uint64_t* committed_len,
                                           LazyPageRequest* page_request) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
@@ -1790,35 +1840,139 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     // property changes.
     DEBUG_ASSERT(!parent->is_slice_locked());
 
-    return parent->CommitRangeLocked(offset + parent_offset, len, committed_len, page_request);
+    return parent->CommitRangeLocked(offset + parent_offset, len,
+                                     commit_flags, committed_len, page_request);
+  }
+
+  bool pin = !!(commit_flags & kCommitFlagsPin);
+  bool replace_loaned = !!(commit_flags & kCommitFlagsForceReplaceLoaned);
+  bool replace_non_loaned = !!(commit_flags & kCommitFlagsForceReplaceNonLoaned);
+  bool cancel_loan = !!(commit_flags & kCommitFlagsCancelLoan);
+  DEBUG_ASSERT(static_cast<uint32_t>(pin) + static_cast<uint32_t>(cancel_loan) +
+               static_cast<uint32_t>(replace_loaned) +
+               static_cast<uint32_t>(replace_non_loaned) <= 1);
+  if (cancel_loan && !is_contiguous_locked()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (replace_loaned && is_contiguous_locked()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (replace_non_loaned && is_contiguous_locked()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (replace_non_loaned && !(PmmAllocFlagsLocked() & PMM_ALLOC_FLAG_LOANED_OK)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  bool replace = replace_loaned || replace_non_loaned;
+
+  if (cancel_loan) {
+    // This is typically part of the 1st step of an overall 2 step sequence where loaned_ending is
+    // set across all relevant pages first, then impacted pages are replaced by non-impacted pages
+    // second.  This way we don't end up copying page content multiple times, since we avoid copying
+    // page content into pages that are also being reclaimed.  The 1st step can be multiple ranges
+    // in a single VMO, or can be ranges in different VMOs.
+    //
+    // This only needs pmm_cancel_loan(), not the rest of commit (for now).
+    //
+    // Tell pmm that the relevant pages should not be put to any new use until either the pages are
+    // returned to the loaning VMO, or the loaning VMO is deleted.
+    //
+    // When a client is using kCommitFlagsEndLoan first, then doing a commit with kCommitFlagsNone,
+    // a pmm_cancel_loan() will still occur within PhysicalPageProvider.  We don't require
+    // kCommitFlagsEndLoan to be used previously (or still be in effect) for the commit to work.
+    DEBUG_ASSERT(contiguous_base_ != kInvalidContiguousBase);
+    pmm_cancel_loan(contiguous_base_ + offset, len / PAGE_SIZE);
+    *committed_len = len;
+    return ZX_OK;
   }
 
   fbl::RefPtr<PageSource> root_source = GetRootPageSourceLocked();
 
-  // If this vmo has a direct page source, then the source will provide the backing memory. For
-  // children that eventually depend on a page source, we skip preallocating memory to avoid
-  // potentially overallocating pages if something else touches the vmo while we're blocked on the
-  // request. Otherwise we optimize things by preallocating all the pages.
+  // If !contiguous && !pin, any free page can be used, including loaned pages.
+  //
+  // If !contiguous && pin, any free non-loaned page can be used.
+  //
+  // If contiguous, only the specific physical pages can be used, and they may need to be reclaimed
+  // from some other use.  This reclamation can't happen under the current VmHierarchyState::lock_,
+  // so we can't treat acquisition of these pages as pre-allocation below, but instead treat the
+  // (re-)acquisition of these pages as a page_request.  Their "loaned" status is consistent with
+  // whether the page is already present in this VmCowPages (!loaned) or is currently absent from
+  // this VmCowPages (loaned).
+  //
+  // If !contiguous and pin, we also need to replace any loaned pages with !loaned pages.  A loaned
+  // page cannot be pinned while loaned.
+  //
+  // If this vmo has a direct page source, then the source will provide the backing memory.
+  //
+  // If pin, all existing loaned pages need to be replaced with non-loaned pages regardless of
+  // whether we're pre-allocating for absent pages.
+  //
+  // For children that eventually depend on a page source, we skip preallocating memory for absent
+  // pages to avoid potentially overallocating pages if something else touches the vmo while we're
+  // blocked on the request. Otherwise we optimize things by preallocating all the pages.
   list_node page_list;
   list_initialize(&page_list);
-  if (root_source == nullptr) {
+  if (!is_contiguous_locked() && (root_source == nullptr || pin || replace)) {
     // make a pass through the list to find out how many pages we need to allocate
-    size_t count = len / PAGE_SIZE;
-    page_list_.ForEveryPageInRange(
-        [&count](const auto* p, auto off) {
-          if (p->IsPage()) {
-            count--;
-          }
-          return ZX_ERR_NEXT;
-        },
-        offset, offset + len);
-
-    if (count == 0) {
-      *committed_len = len;
-      return ZX_OK;
+    size_t count;
+    if (replace || (root_source != nullptr)) {
+      // we only want to preallocate to replace pages.
+      count = 0;
+      page_list_.ForEveryPageInRange(
+          [&count, replace_non_loaned](const auto* p, auto off) {
+            if (p->IsPage()) {
+              if (replace_non_loaned && p->Page()->object.get_pin_count()) {
+                // A pinned page is not replaceable.
+                return ZX_ERR_NEXT;
+              }
+              bool is_loaned = pmm_is_loaned(p->Page());
+              bool need_loaned = replace_non_loaned;
+              // During this method, loaned pages may become non-loaned, but non-loaned pages cannot
+              // become loaned.
+              //
+              // If we're ensuring we use a non-loaned page, we can pre-allocate here, and if the
+              // old page becomes non-loaned before we replace with the new page, we can just free
+              // the new paage.
+              //
+              // If we're trying to ensure we switch from non-loaned to loaned, we'll pre-allocate
+              // according to how many pages are presently needing replacement, but by the time we
+              // actually perform the replacement, it's possible for us to run out of preallocated
+              // pages before we've done all the replacements.  In that case we just stop replacing
+              // early, since replacing non-loaned with loaned is ok to be best-effort.
+              if (is_loaned == need_loaned) {
+                return ZX_ERR_NEXT;
+              }
+              DEBUG_ASSERT(!p->Page()->object.get_pin_count());
+              ++count;
+            }
+            return ZX_ERR_NEXT;
+          },
+          offset, offset + len);
+    } else {
+      count = len / PAGE_SIZE;
+      page_list_.ForEveryPageInRange(
+          [&count, pin](const auto* p, auto off) {
+            // If already a page, and it's a suitable page, we can keep it and don't need to get a
+            // different page.
+            if (p->IsPage() && (!pin || !pmm_is_loaned(p->Page()))) {
+              --count;
+            }
+            return ZX_ERR_NEXT;
+          },
+          offset, offset + len);
     }
 
-    zx_status_t status = pmm_alloc_pages(count, pmm_alloc_flags_, &page_list);
+    uint32_t pmm_alloc_flags = PmmAllocFlagsLocked();
+    if (pin) {
+      DEBUG_ASSERT(!(pmm_alloc_flags & PMM_ALLOC_FLAG_LOANED_REQUIRED));
+      pmm_alloc_flags &= ~PMM_ALLOC_FLAG_LOANED_OK;
+    }
+    if (replace_non_loaned) {
+      DEBUG_ASSERT(!is_contiguous_locked());
+      DEBUG_ASSERT(pmm_alloc_flags & PMM_ALLOC_FLAG_LOANED_OK);
+      pmm_alloc_flags |= PMM_ALLOC_FLAG_LOANED_REQUIRED;
+    }
+    zx_status_t status = pmm_alloc_pages(count, pmm_alloc_flags, &page_list);
     if (status != ZX_OK) {
       return status;
     }
@@ -1830,6 +1984,94 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     }
   });
 
+  if (!is_contiguous_locked() && (pin || replace)) {
+    // Replace existing page(s) with a non-loaned page (if pin) or a different page (if
+    // replace_loaned) or a loaned page (if replace_non_loaned).  We use RemovePages in case the
+    // remove/add activity may (somehow) leave some empty intermediate data structures in page_list_
+    // despite each page being replaced with a different page.
+    list_node_t freed_list;
+    list_initialize(&freed_list);
+    __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+    page_list_.RemovePages(
+      [this, &page_list, &page_remover, replace_non_loaned](auto* p, auto off) {
+        AssertHeld(lock_);
+        // If we're trying to replace non-loaned with loaned, we can run out of preallocated
+        // pages if a page has become non-loaned since preallocation above.  If that happens, it
+        // was a race to notice the page anyway, so stop when we're out of preallocated pages.  It
+        // is also the case that it's possible that some of the pre-allocated loaned pages may be
+        // non-loaned by the time we switch to them; that's fine - the LoanSweeper may eventually
+        // try replacing those pages again if we still have available loaned pages to take their
+        // place (which we may not).
+        //
+        // In the case of replacing loaned with non-loaned, this won't ever be true because this
+        // VmCowPages can only pick up more loaned pages under lock_, so instead we may replace all
+        // the loaned pages and still have some pages in page_list that we free at the end.
+        if (list_is_empty(&page_list)) {
+          return ZX_ERR_STOP;
+        }
+        if (p->IsPage()) {
+          if (replace_non_loaned && p->Page()->object.get_pin_count()) {
+            return ZX_ERR_NEXT;
+          }
+          bool is_loaned = pmm_is_loaned(p->Page());
+          bool need_loaned = replace_non_loaned;
+          if (is_loaned != need_loaned) {
+            DEBUG_ASSERT(!p->Page()->object.get_pin_count());
+
+            // get ready
+            vm_page_t* old_page = p->Page();
+            DEBUG_ASSERT(!list_is_empty(&page_list));
+            vm_page_t* new_page = list_remove_head_type(&page_list, vm_page_t, queue_node);
+            DEBUG_ASSERT(new_page);
+
+            DEBUG_ASSERT(!replace_non_loaned || !old_page->is_loaned());
+            DEBUG_ASSERT(!replace_non_loaned || new_page->is_loaned());
+            DEBUG_ASSERT(!replace_non_loaned || !is_contiguous_locked());
+            DEBUG_ASSERT(!replace_non_loaned || (PmmAllocFlagsLocked() & PMM_ALLOC_FLAG_LOANED_OK));
+
+            // unmap before removing old page
+            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+
+            // copy
+            void* src = paddr_to_physmap(old_page->paddr());
+            DEBUG_ASSERT(src);
+            void* dst = paddr_to_physmap(new_page->paddr());
+            DEBUG_ASSERT(dst);
+            // It might be better to avoid copying potentially multiple pages under the
+            // VmHierarchyState::lock_.  This isn't the only place we do so, but still.
+            memcpy(dst, src, PAGE_SIZE);
+
+// DO NOT SUBMIT - shouldn't need this:
+arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(new_page->paddr()), PAGE_SIZE);
+
+            // remove old
+            old_page = p->ReleasePage();
+            page_remover.Push(old_page);
+            *p = VmPageOrMarker::Empty();
+
+            // add new
+            //
+            // We could optimize this by doing what's needed to *p directly, but for now call this
+            // common code.
+            zx_status_t status = AddNewPageLocked(off, new_page, /*zero=*/false, /*do_range_update*/false);
+            // Absent kernel code bugs, AddNewPagesLocked() can only return ZX_ERR_NO_MEMORY, but that
+            // failure can only occur if page_list_ had to allocate.  Here, page_list_ hasn't yet had
+            // a chance to clean up any internal structures, so AddNewPagesLocked() didn't need to
+            // allocate, so we know that AddNewPagesLocked() will succeed.
+            DEBUG_ASSERT(status == ZX_OK);
+          }
+        }
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
+    page_remover.Flush();
+    pmm_free(&freed_list);
+  }
+  if (replace) {
+    *committed_len = len;
+    return ZX_OK;
+  }
+
   const uint64_t start_offset = offset;
   const uint64_t end = offset + len;
   bool have_page_request = false;
@@ -1838,7 +2080,35 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
     // Don't commit if we already have this page
     VmPageOrMarker* p = page_list_.Lookup(offset);
     if (!p || !p->IsPage()) {
-      // Check if our parent has the page
+      // This also deals with contiguous VMOs.  We have PhysicalPageProvider always operate async
+      // (similar to the PagerProxy), because we'd like to (in typical non-overlapping
+      // commit/decommit usage) have once batch that covers the entire commit, regardless of the
+      // fact that some of the pages may already be free and therefore could be immediately
+      // obtained.  Quite often at least one page will be presently owned by a different VMO, so we
+      // may as well always do one big async batch that deals with all the presently absent pages.
+      //
+      // Ensure we have a PhysicalPageProvider, since that's how we'll be getting the physical pages
+      // back.  We avoid allocating this until we know we have a page we need to get back, so that
+      // not every contiguous VMO has to allocate these.
+      if (unlikely(is_contiguous_locked() && !page_source_)) {
+        DEBUG_ASSERT(contiguous_base_ != kInvalidContiguousBase);
+        fbl::AllocChecker ac;
+        auto page_provider = ktl::unique_ptr<PhysicalPageProvider>(new (&ac) PhysicalPageProvider(
+            this, contiguous_base_));
+        if (!ac.check()) {
+          return ZX_ERR_NO_MEMORY;
+        }
+
+        auto page_source = fbl::AdoptRef(new (&ac) PageSource(ktl::move(page_provider)));
+        if (!ac.check()) {
+          return ZX_ERR_NO_MEMORY;
+        }
+
+        page_source_ = ktl::move(page_source);
+        root_source = page_source_;
+      }
+
+      // Check if our parent has the page.
       const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
       zx_status_t res = LookupPagesLocked(offset, flags, 1, &page_list, page_request, &lookup_info);
       if (unlikely(res == ZX_ERR_SHOULD_WAIT)) {
@@ -1889,6 +2159,24 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
   return ZX_OK;
 }
 
+zx_status_t VmCowPages::PinPageLocked(vm_page_t* page) {
+  DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
+  DEBUG_ASSERT(!pmm_is_loaned(page));
+
+  ever_pinned_ = true;
+
+  if (page->object.get_pin_count() == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  uint8_t pin_count_before = page->object.get_pin_count();
+  if (pin_count_before == 0) {
+    pmm_page_queues()->MoveToWired(page);
+  }
+  page->object.set_pin_count(pin_count_before + 1);
+  return ZX_OK;
+}
+
 zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
@@ -1924,20 +2212,17 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
   });
 
   zx_status_t status = page_list_.ForEveryPageInRange(
-      [&next_offset](const VmPageOrMarker* p, uint64_t page_offset) {
+      [this, &next_offset](const VmPageOrMarker* p, uint64_t page_offset) {
         if (page_offset != next_offset || !p->IsPage()) {
           return ZX_ERR_BAD_STATE;
         }
         vm_page_t* page = p->Page();
-        DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
-        if (page->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
-          return ZX_ERR_UNAVAILABLE;
+
+        zx_status_t pin_result = PinPageLocked(page);
+        if (pin_result != ZX_OK) {
+          return pin_result;
         }
 
-        page->object.pin_count++;
-        if (page->object.pin_count == 1) {
-          pmm_page_queues()->MoveToWired(page);
-        }
         // Pinning every page in the largest vmo possible as many times as possible can't overflow
         static_assert(VmPageList::MAX_SIZE / PAGE_SIZE < UINT64_MAX / VM_PAGE_OBJECT_MAX_PIN_COUNT);
         next_offset += PAGE_SIZE;
@@ -1993,7 +2278,8 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
     return parent->DecommitRangeLocked(offset + parent_offset, new_len);
   }
 
-  if (parent_ || GetRootPageSourceLocked()) {
+  auto page_source = GetRootPageSourceLocked();
+  if (parent_ || (page_source && !page_source->DecommitSupported())) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -2004,10 +2290,14 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
 
   list_node_t freed_list;
   list_initialize(&freed_list);
-
-  zx_status_t status = UnmapAndRemovePagesLocked(offset, new_len, &freed_list);
+  uint64_t pages_freed = 0;
+  zx_status_t status = UnmapAndRemovePagesLocked(offset, new_len, &freed_list, &pages_freed, /*allow_contiguous=*/true);
   if (status != ZX_OK) {
     return status;
+  }
+
+  if (is_contiguous_locked()) {
+    pmm_begin_loan(contiguous_base_ + offset, len / PAGE_SIZE);
   }
 
   pmm_free(&freed_list);
@@ -2017,10 +2307,11 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
 
 zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
                                                   list_node_t* freed_list,
-                                                  uint64_t* pages_freed_out) {
-  // TODO(teisenbe): Allow decommitting of pages pinned by
-  // CommitRangeContiguous
-  if (AnyPagesPinnedLocked(offset, len)) {
+                                                  uint64_t* pages_freed_out, bool allow_contiguous) {
+  canary_.Assert();
+  AssertHeld(lock_);
+
+  if (AnyPagesPinnedLocked(offset, len, allow_contiguous)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -2040,6 +2331,31 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
 
   // unmap all of the pages in this range on all the mapping regions
   RangeChangeUpdateLocked(offset, len, RangeChangeOp::Unmap);
+
+  if (is_contiguous_locked()) {
+    // We know thanks to AnyPagesPinnedLocked() with allow_contiguous true (and invariants) that no
+    // present page has a get_pin_count() > 1 (for contiguous VMOs).  To loan the page back to pmm,
+    // we need get_pin_count() to be zero.
+    //
+    // We rely on clients that decommit pages of a contiguous VMO to ensure that DMA does not occur
+    // on decommitted pages.  If the contiguous VMO is actually pinned, separately from having been
+    // created, then get_pin_count() on those pages will be >1 and AnyPagesPinnedLocked will reject
+    // the client-pinned page above.
+    uint64_t unpinned_page_count = 0;
+    page_list_.ForEveryPageInRange([this, &unpinned_page_count](const auto* p, uint64_t offset) {
+      AssertHeld(lock_);
+      // No other state allowed for present pages in contiguous VMOs.
+      DEBUG_ASSERT(p->IsPage());
+      UnpinPageLocked(p->Page(), offset);
+      DEBUG_ASSERT(!p->Page()->object.get_pin_count());
+      ++unpinned_page_count;
+      return ZX_ERR_NEXT;
+    },
+    offset, offset + len);
+    bool overflow = sub_overflow(
+        pinned_page_count_, unpinned_page_count, &pinned_page_count_);
+    ASSERT(!overflow);
+  }
 
   __UNINITIALIZED BatchPQRemove page_remover(freed_list);
 
@@ -2097,19 +2413,24 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   // be performed without exposing data that we shouldn't between children and parents, but no
   // actual state will have been changed. Should decommit succeed we are done, otherwise we will
   // have to handle each offset individually.
-  zx_status_t status = DecommitRangeLocked(page_start_base, page_end_base - page_start_base);
-  if (status == ZX_OK) {
-    return ZX_OK;
-  }
+  //
+  // Zeroing doesn't decommit pages of contiguous VMOs.
+  if (!is_contiguous_locked()) {
+    zx_status_t status = DecommitRangeLocked(page_start_base, page_end_base - page_start_base);
+    if (status == ZX_OK) {
+      return ZX_OK;
+    }
 
-  // Unmap any page that is touched by this range in any of our, or our childrens, mapping regions.
-  // We do this on the assumption we are going to be able to free pages either completely or by
-  // turning them into markers and it's more efficient to unmap once in bulk here.
-  RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base, RangeChangeOp::Unmap);
+    // Unmap any page that is touched by this range in any of our, or our childrens, mapping regions.
+    // We do this on the assumption we are going to be able to free pages either completely or by
+    // turning them into markers and it's more efficient to unmap once in bulk here.
+    RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base, RangeChangeOp::Unmap);
+  }
 
   list_node_t freed_list;
   list_initialize(&freed_list);
 
+  // See also free_any_pages below, which intentionally frees incrementally.
   auto auto_free = fit::defer([&freed_list]() {
     if (!list_is_empty(&freed_list)) {
       pmm_free(&freed_list);
@@ -2146,6 +2467,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
   for (uint64_t offset = start; offset < end; offset += PAGE_SIZE) {
     VmPageOrMarker* slot = page_list_.Lookup(offset);
+
+    if (is_contiguous_locked() && !slot) {
+      // Already logically zero - don't commit pages to back the zeroes if they're not already
+      // committed.
+      continue;
+    }
 
     const bool can_see_parent = parent_ && offset < parent_limit_;
 
@@ -2237,15 +2564,18 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
         ZeroPage(slot->Page());
         continue;
       }
+      // We've already peeled off !slot above, and slot->IsPage() just above, and there are no other
+      // possible page states for contiguous VMOs.
+      DEBUG_ASSERT(!is_contiguous_locked());
       // Allocate a new page, it will be zeroed in the process.
       vm_page_t* p;
       free_any_pages();
       // Do not pass our freed_list here as this takes an |alloc_list| list to allocate from.
-      bool result = AllocateCopyPage(pmm_alloc_flags_, vm_get_zero_page_paddr(), nullptr, &p);
+      bool result = AllocateCopyPage(offset, PmmAllocFlagsLocked(), vm_get_zero_page_paddr(), nullptr, &p);
       if (!result) {
         return ZX_ERR_NO_MEMORY;
       }
-      SetNotWired(p, offset);
+      SetNotWiredLocked(p, offset);
       *slot = VmPageOrMarker::Page(p);
       continue;
     }
@@ -2268,7 +2598,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Remove any page that could be hanging around in the slot before we make it a marker.
     if (slot->IsPage()) {
       vm_page_t* page = slot->ReleasePage();
-      DEBUG_ASSERT(page->object.pin_count == 0);
+      DEBUG_ASSERT(page->object.get_pin_count() == 0);
       pmm_page_queues()->Remove(page);
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
       list_add_tail(&freed_list, &page->queue_node);
@@ -2280,28 +2610,36 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   return ZX_OK;
 }
 
-void VmCowPages::MoveToNotWired(vm_page_t* page, uint64_t offset) {
-  if (page_source_) {
+void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
+  if (page_source_ && !is_contiguous_locked()) {
     pmm_page_queues()->MoveToPagerBacked(page, this, offset);
   } else {
+    // DO NOT SUBMIT - probably just change SetUnswappable() to take this, offset.
+    pmm_page_queues()->SetPageBacklink(page, this, offset);
     pmm_page_queues()->MoveToUnswappable(page);
   }
 }
 
-void VmCowPages::SetNotWired(vm_page_t* page, uint64_t offset) {
-  if (page_source_) {
+void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
+  if (page_source_ && !is_contiguous_locked()) {
     pmm_page_queues()->SetPagerBacked(page, this, offset);
   } else {
+    // DO NOT SUBMIT - probably just change SetUnswappable() to take this, offset.
+    pmm_page_queues()->SetPageBacklink(page, this, offset);
     pmm_page_queues()->SetUnswappable(page);
   }
 }
 
-void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
+void VmCowPages::UnpinPageLocked(vm_page_t* page, uint64_t offset) {
+  canary_.Assert();
+
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
-  ASSERT(page->object.pin_count > 0);
-  page->object.pin_count--;
-  if (page->object.pin_count == 0) {
-    MoveToNotWired(page, offset);
+  uint8_t pin_count_before = page->object.get_pin_count();
+  ASSERT(pin_count_before > 0);
+  uint8_t pin_count_after = pin_count_before - 1;
+  page->object.set_pin_count(pin_count_after);
+  if (pin_count_after == 0) {
+    MoveToNotWiredLocked(page, offset);
   }
 }
 
@@ -2309,7 +2647,8 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
   canary_.Assert();
 
   // Hints only apply to pager backed VMOs.
-  if (!is_pager_backed_locked()) {
+// DO NOT SUBMIT - switch to is_discard_supported()
+  if (!is_pager_backed_locked() || is_contiguous_locked()) {
     return;
   }
 
@@ -2337,7 +2676,7 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
       // Don't move a pinned page to the inactive queue.
       // Note that this does not unset the always_need bit if it has been previously set. The
       // always_need hint is sticky.
-      if (page->object.get_object() == root && page->object.pin_count == 0) {
+      if (page->object.get_object() == root && page->object.get_pin_count() == 0) {
         pmm_page_queues()->MoveToPagerBackedInactive(page);
       }
     }
@@ -2352,7 +2691,8 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
   canary_.Assert();
 
   // Hints only apply to pager backed VMOs.
-  if (!is_pager_backed_locked()) {
+// DO NOT SUBMIT - switch to is_discard_supported()
+  if (!is_pager_backed_locked() || is_contiguous_locked()) {
     return;
   }
 
@@ -2428,6 +2768,8 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
 void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
+  AssertHeld(lock_);
+
   // verify that the range is within the object
   ASSERT(InRange(offset, len, size_));
   // forbid zero length unpins as zero length pins return errors.
@@ -2445,11 +2787,11 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
 
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
       [this](const auto* page, uint64_t off) {
+        AssertHeld(lock_);
         if (page->IsMarker()) {
           return ZX_ERR_NOT_FOUND;
         }
-        AssertHeld(lock_);
-        UnpinPage(page->Page(), off);
+        UnpinPageLocked(page->Page(), off);
         return ZX_ERR_NEXT;
       },
       [](uint64_t gap_start, uint64_t gap_end) { return ZX_ERR_NOT_FOUND; }, start_page_offset,
@@ -2463,7 +2805,33 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len) {
   return;
 }
 
-bool VmCowPages::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
+void VmCowPages::UnpinLastContiguousPagesLocked() {
+  canary_.Assert();
+
+  DEBUG_ASSERT(is_contiguous_locked());
+  DEBUG_ASSERT(!is_slice_locked());
+
+  uint64_t unpin_count = 0;
+  zx_status_t status = page_list_.ForEveryPage(
+    [this, &unpin_count](const auto* page, uint64_t off) {
+      AssertHeld(lock_);
+      DEBUG_ASSERT(page->IsPage());
+      // Must be exactly 1 during contiguous VMO deletion.
+      DEBUG_ASSERT(page->Page()->object.get_pin_count() == 1);
+      UnpinPageLocked(page->Page(), off);
+      ++unpin_count;
+      return ZX_ERR_NEXT;
+    });
+  ASSERT_MSG(status == ZX_OK, "unexpected failure");
+
+  bool overflow = sub_overflow(pinned_page_count_, unpin_count, &pinned_page_count_);
+  ASSERT(!overflow);
+  DEBUG_ASSERT(pinned_page_count_ == 0);
+
+  return;
+}
+
+bool VmCowPages::AnyPagesPinnedLocked(uint64_t offset, size_t len, bool allow_contiguous) {
   canary_.Assert();
   DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -2476,11 +2844,13 @@ bool VmCowPages::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
     return false;
   }
 
+  uint32_t baseline_pin_count = (allow_contiguous && is_contiguous_locked()) ? 1 : 0;
   bool found_pinned = false;
   page_list_.ForEveryPageInRange(
-      [&found_pinned, start_page_offset, end_page_offset](const auto* p, uint64_t off) {
+      [allow_contiguous, &found_pinned, start_page_offset, end_page_offset, baseline_pin_count](const auto* p, uint64_t off) {
         DEBUG_ASSERT(off >= start_page_offset && off < end_page_offset);
-        if (p->IsPage() && p->Page()->object.pin_count > 0) {
+        DEBUG_ASSERT(!allow_contiguous || (!p->IsPage() || p->Page()->object.get_pin_count() >= baseline_pin_count));
+        if (p->IsPage() && p->Page()->object.get_pin_count() > baseline_pin_count) {
           found_pinned = true;
           return ZX_ERR_STOP;
         }
@@ -2489,6 +2859,10 @@ bool VmCowPages::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
       start_page_offset, end_page_offset);
 
   return found_pinned;
+}
+
+bool VmCowPages::AnyExtraPinnedLocked(uint64_t offset, size_t len) {
+  return AnyPagesPinnedLocked(offset, len, true);
 }
 
 // Helper function which processes the region visible by both children.
@@ -2718,7 +3092,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
     uint64_t len = end - start;
 
     // bail if there are any pinned pages in the range we're trimming
-    if (AnyPagesPinnedLocked(start, len)) {
+    if (AnyPagesPinnedLocked(start, len, /*allow_contiguous=*/false)) {
       return ZX_ERR_BAD_STATE;
     }
 
@@ -2846,7 +3220,7 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (AnyPagesPinnedLocked(offset, len) || parent_ || page_source_) {
+  if (AnyPagesPinnedLocked(offset, len, /*allow_contiguous=*/false) || parent_ || page_source_) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -2861,7 +3235,7 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
   page_list_.ForEveryPageInRange(
       [](const auto* p, uint64_t off) {
         if (p->IsPage()) {
-          DEBUG_ASSERT(p->Page()->object.pin_count == 0);
+          DEBUG_ASSERT(p->Page()->object.get_pin_count() == 0);
           pmm_page_queues()->Remove(p->Page());
         }
         return ZX_ERR_NEXT;
@@ -2875,13 +3249,23 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
   return ZX_OK;
 }
 
+zx_status_t VmCowPages::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
+  Guard<Mutex> guard{&lock_};
+  return SupplyPagesLocked(offset, len, pages);
+}
+
 zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(!is_contiguous_locked());
 
   ASSERT(page_source_);
+
+  // It is possible that a failure occurs and we increment the gen count needlessly, but the user
+  // is certainly expecting it to succeed.
+  IncrementHierarchyGenerationCountLocked();
 
   if (!InRange(offset, len, size_)) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -2942,12 +3326,125 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
   }
 
   if (!list_is_empty(&freed_list)) {
+    DEBUG_ASSERT(!is_contiguous_locked());
     pmm_free(&freed_list);
   }
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
 
   return status;
+}
+
+zx_status_t VmCowPages::SupplyNonZeroedPhysicalPages(uint64_t offset, uint64_t len, list_node* pages) {
+  // Zero pages outside the lock.
+  vm_page_t* page;
+  vm_page_t* next_page;
+  list_for_every_entry_safe(pages, page, next_page, vm_page_t, queue_node) {
+    uint64_t page_offset = page->paddr() - contiguous_base_;
+    DEBUG_ASSERT(InRange(page_offset, static_cast<uint64_t>(PAGE_SIZE), offset, offset + len));
+    // Zero page to CPU cache.
+    ZeroPage(page);
+    // Flush zeroes out to RAM.  On systems without IOMMU, we must trust the client to not DMA
+    // the page while the page is not present, but by doing the cache clean here, we avoid trusting
+    // the client to cache clean the page after commit and before DMA.
+    //
+    // On systems with an IOMMU, we should prevent DMA while the page is not present, even if a
+    // client with a BTI is assumed hostile.
+    //
+    // This includes any necessary fencing after the flush.
+    arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(page->paddr()), PAGE_SIZE);
+  }
+
+  Guard<Mutex> guard{&lock_};
+
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  return SupplyZeroedPhysicalPagesLocked(offset, len, pages);
+}
+
+zx_status_t VmCowPages::SupplyZeroedPhysicalPagesLocked(uint64_t offset, uint64_t len, list_node* pages) {
+  canary_.Assert();
+
+  DEBUG_ASSERT(is_contiguous_locked());
+  DEBUG_ASSERT(contiguous_base_ != kInvalidContiguousBase);
+  DEBUG_ASSERT(page_source_);
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  // It is possible that a failure occurs and we increment the gen count needlessly, but the user
+  // is certainly expecting it to succeed.
+  IncrementHierarchyGenerationCountLocked();
+
+  // This call owns all the pages passed in, regardless of success or failure.
+  auto pages_cleanup = fit::defer([pages]() {
+    if (!list_is_empty(pages)) {
+      pmm_free(pages);
+    }
+  });
+
+  uint64_t range_update_start = 0;
+  uint64_t range_update_len = 0;
+  auto range_update_flush = [this, &range_update_start, &range_update_len]() {
+    AssertHeld(lock_);
+    RangeChangeUpdateLocked(range_update_start, range_update_len, RangeChangeOp::Unmap);
+  };
+  auto defer_range_update_flush = fit::defer(range_update_flush);
+
+  vm_page_t* page;
+  vm_page_t* next_page;
+  list_for_every_entry_safe(pages, page, next_page, vm_page_t, queue_node) {
+    DEBUG_ASSERT(page->paddr() >= contiguous_base_);
+    uint64_t page_offset = page->paddr() - contiguous_base_;
+    DEBUG_ASSERT(InRange(page_offset, static_cast<uint64_t>(PAGE_SIZE), offset, offset + len));
+    DEBUG_ASSERT(page->state() == vm_page_state::ALLOC);
+    DEBUG_ASSERT(!page->is_loaned());
+    DEBUG_ASSERT(!page->is_loan_cancelled());
+
+    if (range_update_len && (range_update_start + range_update_len != page_offset)) {
+      // Flush the old range that's not contiguous with this range, and start tracking the new
+      // range.
+      range_update_flush();
+      range_update_start = page_offset;
+      range_update_len = 0;
+    }
+
+    // Caller no longer owns page.
+    list_delete(&page->queue_node);
+
+    // This initializes pin_count to 0.
+    zx_status_t status = AddNewPageLocked(page_offset, page, false, false);
+    if (status != ZX_OK) {
+      list_add_head(pages, &page->queue_node);
+      // ~defer_range_update flushes any pending unmap range
+      // ~pages_cleanup frees any leftover pages, including page passed to AddNewPageLocked.
+      return status;
+    }
+
+    DEBUG_ASSERT(page->object.get_pin_count() == 0);
+    status = PinPageLocked(page);
+    // PinPageLocked can only fail if pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT, so PinPageLocked
+    // can't fail as called here.
+    DEBUG_ASSERT(status == ZX_OK);
+    // All present pages of a contiguous VMO have 1 implicit pin_count tally.
+    DEBUG_ASSERT(page->object.get_pin_count() == 1);
+    ++pinned_page_count_;
+
+    range_update_len += PAGE_SIZE;
+  }
+  range_update_flush();
+  defer_range_update_flush.cancel();
+
+  // We claim the whole range is supplied even if not every page of the range was in pages.  See
+  // comments near call site in PhysicalPageProvider for why.
+  page_source_->OnPagesSupplied(offset, len);
+
+  VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
+
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::FailPageRequests(uint64_t offset, uint64_t len, zx_status_t error_status) {
+  Guard<Mutex> guard{&lock_};
+  return FailPageRequestsLocked(offset, len, error_status);
 }
 
 // This is a transient operation used only to fail currently outstanding page requests. It does not
@@ -3124,7 +3621,7 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
   }
 
   // Pinned pages could be in use by DMA so we cannot safely evict them.
-  if (page->object.pin_count != 0) {
+  if (page->object.get_pin_count() != 0) {
     return false;
   }
 
@@ -3160,15 +3657,135 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
   return true;
 }
 
+zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, CommitFlags commit_flags) {
+  // No other flags.
+  DEBUG_ASSERT(!(commit_flags & ~(kCommitFlagsForceReplaceLoaned | kCommitFlagsForceReplaceNonLoaned)));
+  // Exactly 1 of these 2 flags set.
+  DEBUG_ASSERT(!!(commit_flags & kCommitFlagsForceReplaceLoaned) ^ !!(commit_flags & kCommitFlagsForceReplaceNonLoaned));
+
+  Guard<Mutex> guard{&lock_};
+
+  // Check this page is still a part of this VMO.
+  VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  if (page == vm_get_zero_page()) {
+    // This page isn't really owned by this VMO, and is already used in whatever VMOs need a
+    // known-zero page, so we can't replace it, and no point in replacing it anyway since it's only
+    // using one page across many zero pages in many VMOs.
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  if (is_contiguous_locked()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (unlikely((commit_flags & kCommitFlagsForceReplaceNonLoaned) && !(PmmAllocFlagsLocked() & PMM_ALLOC_FLAG_LOANED_OK))) {
+    // The page is not replaceable after all.
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (ever_pinned_ && (commit_flags & kCommitFlagsForceReplaceNonLoaned)) {
+    // The page is not replaceable after all.  We use ZX_ERR_INTERNAL for this because we really
+    // shouldn't need to exclude replacing pages that have ever been pinned.  We do this to mitigate
+    // DMA to/from pages that are not presently pinned.  The presumption here is that to DMA to/from
+    // the pages, the physical address must have been obtained at some point, and the only way to
+    // obtain that physical address is to at least temporarily pin.
+// DO NOT SUBMIT - probably just remove this, if all weird crashes are fixed now.
+//    return ZX_ERR_INTERNAL;
+  }
+
+  // kCommitFlagsForceReplaceLoaned
+  //
+  // CommitRangeLocked() will replace the loaned page with a different page (possibly still loaned).
+  // While we might run out of memory doing this, we won't hit the async page request case, and
+  // committed_len will be PAGE_SIZE unless the commit failed.
+  //
+  // We use/share CommitRangeLocked for this because pin uses CommitRangeLocked and pin also
+  // replaces loaned pages (with non-loaned pages).
+  //
+  // While some batching might sometimes be possible here, in general we can't really know that
+  // loaned pages will be grouped together in borrowing VMOs, and we don't want to be holding a
+  // VMO's lock for too long anyway.
+  //
+  // kCommitFlagsForceReplaceNonLoaned
+  //
+  // CommitRangeLocked() will replace the non-loaned page with a loaned page.  While we might run
+  // out of memory doing this, we won't hit the async page request case, and committed_len will be
+  // PAGE_SIZE unless the commit failed.
+  __UNINITIALIZED LazyPageRequest page_request(true);
+  uint64_t committed_len = 0;
+  zx_status_t status = CommitRangeLocked(offset, PAGE_SIZE,
+                                         commit_flags,
+                                         &committed_len, &page_request);
+  DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NO_MEMORY);
+  if (status != ZX_OK) {
+    return status;
+  }
+  DEBUG_ASSERT(committed_len == PAGE_SIZE);
+
+  return ZX_OK;
+}
+
 bool VmCowPages::DebugValidatePageSplitsHierarchyLocked() const {
   const VmCowPages* cur = this;
   AssertHeld(cur->lock_);
+  const VmCowPages* parent_most = cur;
   do {
     if (!cur->DebugValidatePageSplitsLocked()) {
       return false;
     }
     cur = cur->parent_.get();
+    if (cur) {
+      parent_most = cur;
+    }
   } while (cur);
+  // Iterate whole hierarchy; the iteration order doesn't matter.  Since there are cases with
+  // >2 children, in-order isn't well defined, so we choose pre-order, but post-order would also
+  // be fine.
+  const VmCowPages* prev = nullptr;
+  cur = parent_most;
+  while (cur) {
+    uint32_t children = cur->children_list_len_;
+    if (!prev || prev == cur->parent_.get()) {
+      // Visit cur
+      if (!cur->DebugValidateBacklinksLocked()) {
+        dprintf(INFO, "cur: %p this: %p\n", cur, this);
+        return false;
+      }
+
+      if (!children) {
+        // no children; move to parent (or nullptr)
+        prev = cur;
+        cur = cur->parent_.get();
+        continue;
+      } else {
+        // move to first child
+        prev = cur;
+        cur = &cur->children_list_.front();
+        continue;
+      }
+    }
+    // At this point we know we came up from a child, not down from the parent.
+    DEBUG_ASSERT(prev && prev != cur->parent_.get());
+    // The children are linked together, so we can move from one child to the next.
+
+    auto iterator = cur->children_list_.make_iterator(*prev);
+    ++iterator;
+    if (iterator == cur->children_list_.end()) {
+      // no more children; move back to parent
+      prev = cur;
+      cur = cur->parent_.get();
+      continue;
+    }
+
+    // descend to next child
+    prev = cur;
+    cur = &(*iterator);
+    DEBUG_ASSERT(cur);
+  }
   return true;
 }
 
@@ -3350,7 +3967,45 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
     }
     return ZX_ERR_NEXT;
   });
+
   return valid;
+}
+
+bool VmCowPages::DebugValidateBacklinksLocked() const {
+  canary_.Assert();
+  bool result = true;
+  page_list_.ForEveryPage([this, &result](const auto* p, uint64_t offset) {
+    DEBUG_ASSERT(p->IsPage() || p->IsMarker());
+    if (!p->IsPage()) {
+      return ZX_ERR_NEXT;
+    }
+    vm_page_t* page = p->Page();
+    vm_page_state state = page->state();
+    if (state != vm_page_state::OBJECT) {
+      dprintf(INFO, "unexpected page state: %hhu\n", state);
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    const VmCowPages* object = reinterpret_cast<VmCowPages*>(page->object.get_object());
+    if (!object) {
+      dprintf(INFO, "missing object\n");
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    if (object != this) {
+      dprintf(INFO, "incorrect object - object: %p this: %p\n", object, this);
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    uint64_t page_offset = page->object.get_page_offset();
+    if (page_offset != offset) {
+      dprintf(INFO, "incorrect offset - page_offset: %" PRIx64 " offset: %" PRIx64 "\n", page_offset, offset);
+      result = false;
+      return ZX_ERR_STOP;
+    }
+    return ZX_ERR_NEXT;
+  });
+  return result;
 }
 
 bool VmCowPages::IsLockRangeValidLocked(uint64_t offset, uint64_t len) const {
@@ -3585,6 +4240,43 @@ bool VmCowPages::DebugIsDiscarded() const {
     return false;
   }
   return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/false);
+}
+
+bool VmCowPages::DebugIsPage(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return p && p->IsPage();
+}
+
+bool VmCowPages::DebugIsMarker(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return p && p->IsMarker();
+}
+
+bool VmCowPages::DebugIsEmpty(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return !p || p->IsEmpty();
+}
+
+vm_page_t* VmCowPages::DebugGetPage(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  if (p && p->IsPage()) {
+    return p->Page();
+  }
+  if (!is_contiguous_locked()) {
+    return nullptr;
+  }
+  if (contiguous_base_ == kInvalidContiguousBase) {
+    return nullptr;
+  }
+  return paddr_to_vm_page(contiguous_base_ + offset);
 }
 
 VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {

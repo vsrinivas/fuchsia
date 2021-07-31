@@ -54,7 +54,7 @@ class HandleTable {
   // Maps a handle value into a Handle as long we can verify that
   // it belongs to this handle table. Use |skip_policy = true| for testing that
   // a handle is valid without potentially triggering a job policy exception.
-  Handle* GetHandleLocked(zx_handle_t handle_value, bool skip_policy = false) TA_REQ_SHARED(lock_);
+  __NO_INLINE Handle* GetHandleLocked(zx_handle_t handle_value, bool skip_policy = false) TA_REQ_SHARED(lock_);
 
   // Returns the number of outstanding handles in this handle table.
   uint32_t HandleCount() const;

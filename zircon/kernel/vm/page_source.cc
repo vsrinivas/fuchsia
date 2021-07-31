@@ -355,6 +355,12 @@ void PageSource::CancelRequest(PageRequest* request) {
   request->offset_ = UINT64_MAX;
 }
 
+bool PageSource::DecommitSupported() {
+  canary_.Assert();
+  Guard<Mutex> guard{&page_source_mtx_};
+  return page_provider_->DecommitSupported();
+}
+
 void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);

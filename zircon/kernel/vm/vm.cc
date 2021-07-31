@@ -232,7 +232,9 @@ void vm_init_preheap() {
   struct list_node list;
   list_initialize(&list);
   size_t page_count = entropy % 16;
+dprintf(INFO, "page_count: %" PRIu64 "\n", page_count);
   status = pmm_alloc_pages(page_count, 0, &list);
+dprintf(INFO, "pmm_alloc_pages status: %d", status);
   DEBUG_ASSERT(status == ZX_OK);
   LTRACEF("physical mapping padding page count %#" PRIxPTR "\n", page_count);
 #endif

@@ -16,7 +16,9 @@
 #include <kernel/mutex.h>
 #include <ktl/array.h>
 #include <ktl/optional.h>
+#include <lib/fitx/result.h>
 #include <vm/page.h>
+#include <vm/page_queue.h>
 
 class VmCowPages;
 
@@ -30,16 +32,6 @@ class VmCowPages;
 // the PageQueues::lock_.
 class PageQueues {
  public:
-  // The number of pager backed queues is slightly arbitrary, but to be useful you want at least 3
-  // representing
-  //  * Very new pages that you probably don't want to evict as doing so probably implies you are in
-  //    swap death
-  //  * Slightly old pages that could be evicted if needed
-  //  * Very old pages that you'd be happy to evict
-  // For now 4 queues are chosen to stretch out that middle group such that the distinction between
-  // slightly old and very old is more pronounced.
-  static constexpr size_t kNumPagerBacked = 4;
-
   // Currently define a single queue, the MRU, as active. This needs to be increased to at least 2
   // in the future when we want to track ratios of active and inactive sets.
   static constexpr size_t kNumActiveQueues = 1;
@@ -76,6 +68,20 @@ class PageQueues {
     page_queue_counts_[target_queue].fetch_add(1, ktl::memory_order_relaxed);
   }
 
+  // We use backlinks for pager backed pages, and also for loaned pages.  The backlink needs to
+  // remain valid while a VmCowPages owns a page (for all intervals outside the PageQueues lock).
+  // If a page is moved from one VmCowPages to another, the backlink can be absent (cleared) while
+  // the page is in transit; that interval should be short.
+  //
+  // Also set_state(OBJECT) while under PageQueues lock.
+  //
+  // The only calls that un-set the backlink are Remove and RemoveArrayIntoList.
+  void SetNewPageBacklink(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+
+  // Change the backlink without setting a queue or moving to a queue.
+  void SetPageBacklink(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  void ClearPageBacklink(vm_page_t* page);
+
   // Place page in the wired queue. Must not already be in a page queue.
   void SetWired(vm_page_t* page);
   // Moves page from whichever queue it is currently in, to the wired queue.
@@ -85,17 +91,16 @@ class PageQueues {
   // Moves page from whichever queue it is currently in, to the unswappable queue.
   void MoveToUnswappable(vm_page_t* page);
   // Place page in the pager backed queue. Must not already be in a page queue. Sets the back
-  // reference information. If the page is removed from the referenced object (especially if it's
-  // due to the object being destroyed) then this back reference *must* be updated, either by
-  // calling Remove or calling MoveToPagerBacked with the new object information.
+  // reference information if object != nullptr. If the page is removed from the referenced object
+  // (especially if it's due to the object being destroyed) then this back reference *must* be
+  // updated, either by calling Remove or calling MoveToPagerBacked with the new object information.
   void SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
   // keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Moves page from whichever queue it is currently in, to the inactive pager backed queue. The
-  // object back reference information must have already been set by a previous call to
-  // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
-  // given in SetPagerBacked apply.
+  // page must be in a queue, per a previous call to SetPagerBacked or MoveToPagerBacked. Same rules
+  // on keeping the back reference up to date as given in SetPagerBacked apply.
   void MoveToPagerBackedInactive(vm_page_t* page);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
@@ -104,7 +109,8 @@ class PageQueues {
   // rules for back pointers apply as for SetPagerBacked.
   void MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
 
-  // Removes the page from any page list and returns ownership of the queue_node.
+  // Removes the page from any page list and returns ownership of the queue_node.  Also un-sets the
+  // backlink.
   void Remove(vm_page_t* page);
   // Batched version of Remove that also places all the pages in the specified list
   void RemoveArrayIntoList(vm_page_t** page, size_t count, list_node_t* out_list);
@@ -153,6 +159,11 @@ class PageQueues {
   // not modified.
   ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue);
 
+  // Called while the loaning VmCowPages is known referenced, so the loaning VmCowPages won't be
+  // running its destructor.  The owning_cow parameter can be nullptr, if the caller doesn't care
+  // to exclude the owning cow from being returned, or if there isn't an owning cow.
+  fitx::result<zx_status_t, ktl::optional<VmoBacklink>> GetCowWithReplaceablePage(vm_page_t* page, VmCowPages* owning_cow, zx_duration_t unpin_age_threshold);
+
   // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
   struct PagerCounts {
     size_t total = 0;
@@ -193,19 +204,10 @@ class PageQueues {
   bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
   bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
   bool DebugPageIsWired(const vm_page_t* page) const;
-
  private:
-  // Specifies the indices for both the page_queues_ and the page_queue_counts_
-  enum PageQueue : uint32_t {
-    PageQueueNone = 0,
-    PageQueueUnswappable,
-    PageQueueWired,
-    PageQueueUnswappableZeroFork,
-    PageQueuePagerBackedInactive,
-    PageQueuePagerBackedBase,
-    PageQueuePagerBackedLast = PageQueuePagerBackedBase + kNumPagerBacked - 1,
-    PageQueueNumQueues,
-  };
+  // This and kContinuousSweepUnpinAgeThreshold are tuned to incorrectly identify pages as
+  // too-recently-unpinned <= 1/16th of the time.
+  static constexpr zx_duration_t kUnpinTimeResolutionNanos = ZX_MSEC(750);
 
   // Ensure that the pager-backed queue counts are always at the end.
   static_assert(PageQueuePagerBackedLast + 1 == PageQueueNumQueues);
@@ -261,6 +263,11 @@ class PageQueues {
       TA_REQ(lock_);
   void MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
                                  PageQueue queue) TA_REQ(lock_);
+
+  void SetBacklinkLocked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  void ClearBacklinkLocked(vm_page_t* page);
+
+  void RemoveEvent(vm_page_t* page, StackLinkableEvent* event);
 
   // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
   // atomics.
@@ -334,6 +341,10 @@ class PageQueues {
   // total number of pages in all queues. This approach avoids unnecessary branches when updating
   // counts.
   ktl::array<ktl::atomic<size_t>, PageQueueNumQueues> page_queue_counts_ = {};
+
+  static constexpr uint8_t kArbitraryUnpinTimeCounterIncrement =
+      VM_PAGE_OBJECT_UNPIN_TIME_MODULUS / 8 + 1;
+  uint8_t next_arbitrary_unpin_time_ = 0;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

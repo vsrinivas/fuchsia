@@ -17,6 +17,8 @@
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
 
+#include "include/vm/pmm.h"
+#include "include/vm/vm_page_list.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -150,11 +152,15 @@ VmPageOrMarker VmPageList::RemovePage(uint64_t offset) {
 
   // free this page
   VmPageOrMarker page = ktl::move(pln->Lookup(index));
-  if (page.IsPage() && pln->IsEmpty()) {
-    // if it was the last page in the node, remove the node from the tree
-    LTRACEF_LEVEL(2, "%p freeing the list node\n", this);
-    list_.erase(*pln);
+  if (page.IsPage()) {
+    if (pln->IsEmpty()) {
+      // if it was the last page in the node, remove the node from the tree
+      LTRACEF_LEVEL(2, "%p freeing the list node\n", this);
+      list_.erase(*pln);
+    }
+    pmm_page_queues()->ClearPageBacklink(page.Page());
   }
+
   return page;
 }
 
@@ -266,9 +272,9 @@ void VmPageList::MergeOnto(VmPageList& other, fbl::Function<void(vm_page*)> rele
         if (page.IsEmpty()) {
           continue;
         }
-        VmPageOrMarker& old_page = target->Lookup(i);
-        VmPageOrMarker removed = ktl::move(old_page);
-        old_page = ktl::move(page);
+        VmPageOrMarker& target_page = target->Lookup(i);
+        VmPageOrMarker removed = ktl::move(target_page);
+        target_page = ktl::move(page);
         if (removed.IsPage()) {
           release_fn(removed.ReleasePage());
         }
@@ -294,10 +300,17 @@ VmPageSpliceList VmPageList::TakePages(uint64_t offset, uint64_t length) {
   }
 
   // As long as the current and end node offsets are different, we
-  // can just move the whole node into the splice list.
+  // can move the whole node into the splice list.
   while (offset_to_node_offset(offset, 0) != offset_to_node_offset(end, 0)) {
     ktl::unique_ptr<VmPageListNode> node = list_.erase(offset_to_node_offset(offset, 0));
     if (node) {
+      for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
+        VmPageOrMarker& page_or_marker = node->Lookup(i);
+        if (page_or_marker.IsPage()) {
+          vm_page_t* page = page_or_marker.Page();
+          pmm_page_queues()->ClearPageBacklink(page);
+        }
+      }
       res.middle_.insert(ktl::move(node));
     }
     offset += (PAGE_SIZE * VmPageListNode::kPageFanOut);

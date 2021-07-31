@@ -30,6 +30,8 @@
 #include <vm/vm_address_region.h>
 #include <vm/vm_cow_pages.h>
 
+#include "include/vm/pmm.h"
+#include "include/vm/vm_object.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -64,11 +66,8 @@ VmObjectPaged::~VmObjectPaged() {
   Guard<Mutex> guard{&lock_};
 
   if (is_contiguous() && !is_slice()) {
-    // A contiguous VMO either has all its pages committed and pinned or, if creation failed, no
-    // pages committed and pinned. Check if we are in the failure case by looking up the first page.
-    if (GetPageLocked(0, 0, nullptr, nullptr, nullptr, nullptr) == ZX_OK) {
-      cow_pages_locked()->UnpinLocked(0, size_locked());
-    }
+    // A contiguous VMO has all it's present pages pinned.  Unpin all present pages.
+    cow_pages_locked()->UnpinLastContiguousPagesLocked();
   }
 
   AssertHeld(hierarchy_state_ptr_->lock_ref());
@@ -215,7 +214,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
   }
 
   fbl::RefPtr<VmCowPages> cow_pages;
-  status = VmCowPages::Create(state, pmm_alloc_flags, size, &cow_pages);
+  status = VmCowPages::Create(state, !!(options & kContiguous), !!(options & kLoanedOk), pmm_alloc_flags, size, &cow_pages);
   if (status != ZX_OK) {
     return status;
   }
@@ -245,7 +244,6 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint32_t options, ui
     // Force callers to use CreateContiguous() instead.
     return ZX_ERR_INVALID_ARGS;
   }
-
   return CreateCommon(pmm_alloc_flags, options, size, obj);
 }
 
@@ -383,7 +381,7 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
   }
 
   fbl::RefPtr<VmCowPages> cow_pages;
-  status = VmCowPages::CreateExternal(ktl::move(src), state, size, &cow_pages);
+  status = VmCowPages::CreateExternal(ktl::move(src), !!(options & kLoanedOk), state, size, &cow_pages);
   if (status != ZX_OK) {
     return status;
   }
@@ -452,11 +450,9 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
 
-    // If this VMO is contiguous then we allow creating an uncached slice as we will never
-    // have to perform zeroing of pages. Pages will never be zeroed since contiguous VMOs have
-    // all of their pages allocated (and so COW of the zero page will never happen). The VMO is
-    // also not allowed to be resizable and so will never have to allocate new pages (and zero
-    // them).
+    // If this VMO is contiguous then we allow creating an uncached slice.  When zeroing pages that
+    // are reclaimed from having been loaned from a contiguous VMO, we will zero the pages and flush
+    // the zeroes to RAM.
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED && !is_contiguous()) {
       return ZX_ERR_BAD_STATE;
     }
@@ -635,9 +631,22 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
   return page_count;
 }
 
-zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bool pin) {
+zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len,
+                                               CommitFlags commit_flags) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
+
+  // These are only used on VmCowPages directly.
+  DEBUG_ASSERT(!(commit_flags & kCommitFlagsForceReplaceLoaned));
+  DEBUG_ASSERT(!(commit_flags & kCommitFlagsForceReplaceNonLoaned));
+  // These can be used on VmOjbectPaged.
+  bool pin = !!(commit_flags & kCommitFlagsPin);
+  bool cancel_loan = !!(commit_flags & kCommitFlagsCancelLoan);
+
+  // These flags are exclusive; a max of one can be set at a time.
+  if (static_cast<uint32_t>(pin) + static_cast<uint32_t>(cancel_loan) > 1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   Guard<Mutex> guard{&lock_};
 
@@ -657,19 +666,25 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 
   // If a pin is requested the entire range must exist and be valid,
   // otherwise we can commit a partial range.
-  if (pin) {
+  if (pin || cancel_loan) {
     // If pinning we explicitly forbid zero length pins as we cannot guarantee consistent semantics.
     // For example pinning a zero length range outside the range of the VMO is an error, and so
     // pinning a zero length range inside the vmo and then resizing the VMO smaller than the pin
     // region should also be an error. To enforce this without having to have new metadata to track
     // zero length pin regions is to just forbid them. Note that the user entry points for pinning
     // already forbid zero length ranges.
-    if (len == 0) {
+    //
+    // For cancel_loan we forbid the same things as for pin, since clients of cancel_loan will be quite
+    // aware of the contiguous VMO bounds and can easily avoid making zero length requests.
+    if (unlikely(len == 0)) {
       return ZX_ERR_INVALID_ARGS;
     }
     // verify that the range is within the object
     if (unlikely(!InRange(offset, len, size_locked()))) {
       return ZX_ERR_OUT_OF_RANGE;
+    }
+    if (unlikely(cancel_loan && !is_contiguous())) {
+      return ZX_ERR_INVALID_ARGS;
     }
   } else {
     uint64_t new_len = len;
@@ -701,12 +716,16 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // process finishes with success.
   for (;;) {
     uint64_t committed_len = 0;
-    zx_status_t status =
-        cow_pages_locked()->CommitRangeLocked(offset, len, &committed_len, &page_request);
+    zx_status_t status = cow_pages_locked()->CommitRangeLocked(offset, len,
+                                                               commit_flags, &committed_len,
+                                                               &page_request);
 
     // Regardless of the return state some pages may have been committed and so unmap any pages in
     // the range we touched.
-    if (committed_len > 0) {
+    //
+    // For cancel_loan, this is unnecessary as the pages haven't been removed from their present use
+    // yet.
+    if (committed_len > 0 && !cancel_loan) {
       RangeChangeUpdateLocked(offset, committed_len, RangeChangeOp::Unmap);
     }
 
@@ -753,9 +772,9 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 
     // Re-run the range checks, since size_ could have changed while we were blocked. This
     // is not a failure, since the arguments were valid when the syscall was made. It's as
-    // if the commit was successful but then the pages were thrown away. Unless we are pinning,
-    // in which case pages being thrown away is explicitly an error.
-    if (pin) {
+    // if the commit was successful but then the pages were thrown away. Unless we are pinning or
+    // ending a loan, in which case pages being thrown away is explicitly an error.
+    if (pin || cancel_loan) {
       // verify that the range is within the object
       if (unlikely(!InRange(offset, len, size_locked()))) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -776,15 +795,15 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
-  if (is_contiguous()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   Guard<Mutex> guard{&lock_};
   return DecommitRangeLocked(offset, len);
 }
 
 zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
+
+  // Decommit of pages from a contiguous VMO relies on contiguous VMOs not being resizable.
+  DEBUG_ASSERT(!is_resizable() || !is_contiguous());
 
   zx_status_t status = cow_pages_locked()->DecommitRangeLocked(offset, len);
   if (status == ZX_OK) {
@@ -883,9 +902,13 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   }
 
   // Now that we have a page aligned range we can try hand over to the cow pages zero method.
-  // Always increment the gen count as it's possible for ZeroPagesLocked to fail part way through
+  // Increment the gen count as it's possible for ZeroPagesLocked to fail part way through
   // and it doesn't unroll its actions.
-  IncrementHierarchyGenerationCountLocked();
+  //
+  // Zeroing pages of a contiguous VMO doesn't commit or de-commit any pages.
+  if (!is_contiguous()) {
+    IncrementHierarchyGenerationCountLocked();
+  }
 
   return cow_pages_locked()->ZeroPagesLocked(start, end);
 }
@@ -895,6 +918,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
   LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
+  DEBUG_ASSERT(!is_contiguous() || !is_resizable());
+  // Also rejects contiguous VMOs.
   if (!is_resizable()) {
     return ZX_ERR_UNAVAILABLE;
   }
@@ -1215,10 +1240,6 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
 
   Guard<Mutex> guard{&lock_};
 
-  // It is possible that supply pages fails and we increment the gen count needlessly, but the user
-  // is certainly expecting it to succeed.
-  IncrementHierarchyGenerationCountLocked();
-
   return cow_pages_locked()->SupplyPagesLocked(offset, len, pages);
 }
 
@@ -1249,12 +1270,17 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
     // Similarly it's not a problem if there aren't actually any committed pages.
     return ZX_ERR_BAD_STATE;
   }
-  // If we are contiguous we 'pre pinned' all the pages, but this doesn't count for pinning as far
-  // as the user and potential DMA is concerned. Take this into account when checking if the user
-  // pinned any pages.
-  uint64_t expected_pin_count = (is_contiguous() ? (size_locked() / PAGE_SIZE) : 0);
-  if (cow_pages_locked()->pinned_page_count_locked() > expected_pin_count) {
-    return ZX_ERR_BAD_STATE;
+  // If we are contiguous we 'pre pinned' all the present pages, but this doesn't count for pinning
+  // as far as the user and potential DMA is concerned. Take this into account when checking if the
+  // user pinned any pages.
+  if (is_contiguous()) {
+    if (cow_pages_locked()->AnyExtraPinnedLocked(0, size_locked())) {
+      return ZX_ERR_BAD_STATE;
+    }
+  } else {
+    if (cow_pages_locked()->pinned_page_count_locked() > 0) {
+      return ZX_ERR_BAD_STATE;
+    }
   }
   if (!mapping_list_.is_empty()) {
     return ZX_ERR_BAD_STATE;

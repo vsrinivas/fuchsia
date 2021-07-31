@@ -780,7 +780,7 @@ static bool pq_move_queues() {
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 1, 0, 0, 0}));
 
   // Verify that the inactive page is first in line for eviction.
-  auto backlink = pq.PeekPagerBacked(PageQueues::kNumPagerBacked - 1);
+  auto backlink = pq.PeekPagerBacked(PageQueue::kNumPagerBacked - 1);
   EXPECT_TRUE(backlink != ktl::nullopt && backlink->page == &test_page);
 
   pq.MoveToWired(&test_page);

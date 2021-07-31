@@ -56,6 +56,7 @@ class MemoryWatchdog {
   // Called by the WorkerThread to determine if kernel eviction (asynchronous) needs to be triggered
   // in response to pressure change to level |idx|.
   inline bool IsEvictionRequired(PressureLevel idx) const;
+  inline bool IsLoanSweeperRequired(PressureLevel idx) const;
 
   // Kernel-owned events used to signal userspace at different levels of memory pressure.
   ktl::array<fbl::RefPtr<EventDispatcher>, PressureLevel::kNumLevels> mem_pressure_events_;
@@ -75,6 +76,7 @@ class MemoryWatchdog {
 
   // The highest pressure level we trigger eviction at, OOM being the lowest pressure level (0).
   PressureLevel max_eviction_level_ = PressureLevel::kCritical;
+  PressureLevel max_loan_sweep_level_ = PressureLevel::kWarning;
 
   // The free memory target to aim for when we trigger eviction.
   uint64_t free_mem_target_ = 0;

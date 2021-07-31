@@ -297,7 +297,7 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
 
   // Avoid evicting from the newest queue to prevent thrashing.
   const size_t lowest_evict_queue =
-      eviction_level == EvictionLevel::IncludeNewest ? 1 : PageQueues::kNumPagerBacked - 1;
+      eviction_level == EvictionLevel::IncludeNewest ? 1 : kNumPagerBacked - 1;
 
   // If we're going to include newest pages, ignore eviction hints as well, i.e. also consider
   // evicting pages with always_need set if we encounter them in LRU order.

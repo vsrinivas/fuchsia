@@ -207,6 +207,7 @@ typedef struct zx_wait_item {
 #define ZX_VMO_OP_TRY_LOCK               ((uint32_t)11u)
 #define ZX_VMO_OP_DONT_NEED              ((uint32_t)12u)
 #define ZX_VMO_OP_ALWAYS_NEED            ((uint32_t)13u)
+#define ZX_VMO_OP_CANCEL_LOAN            ((uint32_t)14u)
 
 // |buffer| for zx_vmo_op_range() with ZX_VMO_OP_LOCK.
 typedef struct zx_vmo_lock_state {

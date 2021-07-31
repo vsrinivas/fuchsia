@@ -61,6 +61,8 @@ class PageProvider {
   // backing source side (e.g. a pager).
   virtual void OnDispatcherClose() = 0;
 
+  virtual bool DecommitSupported() = 0;
+
   // Waits on an |event| associated with a page request.
   virtual zx_status_t WaitOnEvent(Event* event) = 0;
 
@@ -92,6 +94,11 @@ class PageProvider {
 //      any PageRequests that have been fulfilled.
 //   6) The caller wakes up and queries the vm object again, by which
 //      point the requested page will be present.
+//
+// For a contiguous VMO requesting physical pages back, step 4 above just frees the pages from some
+// other use, and step 6 finds the requested pages available, but not yet present in the VMO,
+// similar to what can happen with a normal PageProvider where pages can be read and then
+// decommitted before the caller queries the vm object again.
 
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource>,
@@ -148,6 +155,8 @@ class PageSource : public fbl::RefCounted<PageSource>,
   // Called when the PageProvider's backing dispatcher (e.g. a pager dispatcher) is being torn down.
   // See PagerDispatcher::on_zero_handles().
   void OnPageProviderDispatcherClose();
+
+  bool DecommitSupported();
 
   void Dump() const;
 

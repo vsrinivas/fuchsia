@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
+#include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <numeric>
@@ -68,6 +69,10 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   allocations_failed_property_ = node_.CreateUint("allocations_failed", 0);
   last_allocation_failed_timestamp_ns_property_ =
       node_.CreateUint("last_allocation_failed_timestamp_ns", 0);
+  cancel_loan_failed_property_ = node_.CreateUint("cancel_loan_failed", 0);
+  last_cancel_loan_failed_timestamp_ns_property_ = node_.CreateUint("last_cancel_loan_failed_timestamp_ns", 0);
+  commits_failed_property_ = node_.CreateUint("commits_failed", 0);
+  last_commit_failed_timestamp_ns_property_ = node_.CreateUint("last_commit_failed_timstamp_ns", 0);
   allocations_failed_fragmentation_property_ =
       node_.CreateUint("allocations_failed_fragmentation", 0);
   max_free_at_high_water_property_ = node_.CreateUint("max_free_at_high_water", size);
@@ -188,7 +193,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
   // We'd have this assert, except it doesn't work with fake-bti, so for now we trust that when not
   // running a unit test, we have a VMO with info.flags & ZX_INFO_VMO_CONTIGUOUS.
   // ZX_DEBUG_ASSERT(info.flags & ZX_INFO_VMO_CONTIGUOUS);
-
+  
   // Regardless of CPU or RAM domain, and regardless of contig VMO or physical VMO, if we use the
   // CPU to access the RAM, we want to use the CPU cache.  If we can't use the CPU to access the RAM
   // (on REE side), then we don't want to use the CPU cache.
@@ -240,12 +245,21 @@ keepGoing:;
     LOG(ERROR, "Could not pin memory, status %d", status);
     return status;
   }
-
   start_ = addrs;
+  // Since the VMO is contiguous or physical, we don't need to keep the VMO pinned for it to remain
+  // physically contiguous.  A physical VMO can't have any pages decommitted, while a contiguous
+  // VMO can.  In order to decommit pages from a contiguous VMO, we can't have the decommitting
+  // pages pinned (from user mode, ignoring any pinning internal to Zircon).
+  status = pool_pmt_.unpin();
+  // All possible failures are bugs in how we called zx_pmt_unpin().
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
   contiguous_vmo_ = std::move(local_contiguous_vmo);
+  can_decommit_ = is_cpu_accessible_ && (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PAGED);
+
   ralloc_region_t region = {0, size_};
   region_allocator_.AddRegion(region);
-  // It is intentional here that ~pmt doesn't imply zx_pmt_unpin().  If sysmem dies, we'll reboot.
+  TryDecommitRegion(&region);
   return ZX_OK;
 }
 
@@ -281,6 +295,23 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
       // fragmentation.
       allocations_failed_fragmentation_property_.Add(1);
     }
+    return status;
+  }
+
+  // DO NOT SUBMIT - refactor calling code to do allocation in two stages, so that we know all the regions and can ZX_VMO_OP_CANCEL_LOAN on all of them first, then separately do commit on all of them.
+  status = CancelLoanRegion(region.get());
+  if (status != ZX_OK) {
+    LOG(WARNING, "CancelLoanRegion() failed (uknown cause) - size: %zu status %d", size, status);
+    cancel_loan_failed_property_.Add(1);
+    last_cancel_loan_failed_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
+    return status;
+  }
+
+  status = CommitRegion(region.get());
+  if (status != ZX_OK) {
+    LOG(WARNING, "CommitRegion() failed (OOM?) - size: %zu status %d", size, status);
+    commits_failed_property_.Add(1);
+    last_commit_failed_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
     return status;
   }
 
@@ -351,6 +382,7 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   auto it = regions_.find(parent_vmo.get());
   ZX_ASSERT(it != regions_.end());
   CheckGuardRegionData(it->second);
+  TryDecommitRegion(it->second.ptr.get());
   regions_.erase(it);
   parent_vmo.reset();
   TracePoolSize(false);
@@ -558,4 +590,40 @@ uint64_t ContiguousPooledMemoryAllocator::GetVmoRegionOffsetForTest(const zx::vm
   return regions_[vmo.get()].ptr->base + guard_region_data_.size();
 }
 
+void ContiguousPooledMemoryAllocator::TryDecommitRegion(const ralloc_region_t* region) {
+  if (!can_decommit_) {
+    return;
+  }
+  LOG(INFO, "TryDecommitRegion - base: 0x%" PRIx64 " size: 0x%" PRIx64, region->base, region->size);
+  zx_status_t status = contiguous_vmo_.op_range(ZX_VMO_OP_DECOMMIT, region->base, region->size, nullptr, 0);
+  if (status != ZX_OK) {
+    LOG(WARNING, "ZX_VMO_OP_DECOMMIT failed on contiguous VMO - status: %d", status);
+  }
+}
+
+zx_status_t ContiguousPooledMemoryAllocator::CancelLoanRegion(const ralloc_region_t* region) {
+  if (!can_decommit_) {
+    return ZX_OK;
+  }
+  LOG(INFO, "CancelLoanRegion - base: 0x%" PRIx64 " size: 0x%" PRIx64, region->base, region->size);
+  zx_status_t status = contiguous_vmo_.op_range(ZX_VMO_OP_CANCEL_LOAN, region->base, region->size, nullptr, 0);
+  return status;
+}
+
+zx_status_t ContiguousPooledMemoryAllocator::CommitRegion(const ralloc_region_t* region) {
+  if (!can_decommit_) {
+    return ZX_OK;
+  }
+  LOG(INFO, "CommitRegion - base: 0x%" PRIx64 " size: 0x%" PRIx64, region->base, region->size);
+  zx_status_t status = contiguous_vmo_.op_range(ZX_VMO_OP_COMMIT, region->base, region->size, nullptr, 0);
+  return status;
+}
+
 }  // namespace sysmem_driver
+
+// DO NOT SUBMIT - remove
+#if 0
+  status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
+                                     local_contiguous_vmo, 0, size_, &addrs, 1, &pool_pmt_);
+
+#endif

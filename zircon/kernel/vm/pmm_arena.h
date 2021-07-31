@@ -65,6 +65,9 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
   //
   // It is an error if the range specified by |offset| and |count| is not
   // completely contained within the arena.
+  //
+  // A loaned page is considered non-free for purposes of contiguous memory
+  // allocation.
   zx::status<uint64_t> FindLastNonFree(uint64_t offset, size_t count) const;
 
   pmm_arena_info_t info_ = {};

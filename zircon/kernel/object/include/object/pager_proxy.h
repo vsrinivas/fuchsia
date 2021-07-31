@@ -53,6 +53,7 @@ class PagerProxy : public PageProvider, public PortAllocator {
   // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
   // reference to the containing PageSource object.
   void OnDispatcherClose() final;
+  bool DecommitSupported() final;
   void Dump() final;
 
   PagerDispatcher* const pager_;

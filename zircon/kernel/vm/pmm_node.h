@@ -11,6 +11,7 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <vm/loan_sweeper.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
 
@@ -41,6 +42,14 @@ class PmmNode {
   bool ClearRequest(page_request_t* req);
   void SwapRequest(page_request_t* old, page_request_t* new_req);
 
+  // Contiguous page loaning routines
+  void BeginLoan(paddr_t address, size_t count);
+  void CancelLoan(paddr_t address, size_t count);
+  void EndLoan(paddr_t address, size_t count, list_node* page_list);
+  void DeleteLender(paddr_t address, size_t count);
+  bool IsLoaned(vm_page_t* page);
+  void EnsureSignalIfFree(vm_page_t* page);
+
   zx_status_t InitReclamation(const uint64_t* watermarks, uint8_t watermark_count,
                               uint64_t debounce, void* context,
                               mem_avail_state_updated_callback_t callback);
@@ -49,6 +58,10 @@ class PmmNode {
   void InitRequestThread();
 
   uint64_t CountFreePages() const;
+  uint64_t CountLoanedFreePages() const;
+  uint64_t CountLoanedUsedPages() const;
+  uint64_t CountLoanedPages() const;
+  uint64_t CountLoanCancelledPages() const;
   uint64_t CountTotalBytes() const;
 
   // printf free and overall state of the internal arenas
@@ -115,6 +128,10 @@ class PmmNode {
 
   Evictor* GetEvictor() { return &evictor_; }
 
+  LoanSweeper* GetLoanSweeper() { return &loan_sweeper_; }
+
+  PpbConfig* GetPpbConfig() { return &ppb_config_; }
+
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
@@ -140,6 +157,30 @@ class PmmNode {
     }
   }
 
+  void IncrementFreeLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    free_loaned_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementFreeLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(free_loaned_count_.load(ktl::memory_order_relaxed) >= amount);
+    free_loaned_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
+  void IncrementLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    loaned_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementLoanedCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(loaned_count_.load(ktl::memory_order_relaxed) >= amount);
+    loaned_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
+  void IncrementLoanCancelledCountLocked(uint64_t amount) TA_REQ(lock_) {
+    loan_cancelled_count_.fetch_add(amount, ktl::memory_order_relaxed);
+  }
+  void DecrementLoanCancelledCountLocked(uint64_t amount) TA_REQ(lock_) {
+    DEBUG_ASSERT(loan_cancelled_count_.load(ktl::memory_order_relaxed) >= amount);
+    loan_cancelled_count_.fetch_sub(amount, ktl::memory_order_relaxed);
+  }
+
   bool InOomStateLocked() TA_REQ(lock_);
 
   void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
@@ -157,10 +198,16 @@ class PmmNode {
   // as logic in the system relies on the free_count_ not changing whilst the lock is held, but also
   // be an atomic so it can be correctly read without the lock.
   ktl::atomic<uint64_t> free_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> free_loaned_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> loaned_count_ TA_GUARDED(lock_) = 0;
+  ktl::atomic<uint64_t> loan_cancelled_count_ TA_GUARDED(lock_) = 0;
 
   fbl::SizedDoublyLinkedList<PmmArena*> arena_list_ TA_GUARDED(lock_);
 
+  // Free pages where !loaned.
   list_node free_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_list_);
+  // Free pages where loaned && !loan_cancelled.
+  list_node free_loaned_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(free_loaned_list_);
 
   // List of pending requests.
   list_node_t request_list_ TA_GUARDED(lock_) = LIST_INITIAL_VALUE(request_list_);
@@ -186,6 +233,8 @@ class PmmNode {
   PageQueues page_queues_;
 
   Evictor evictor_;
+  LoanSweeper loan_sweeper_;
+  PpbConfig ppb_config_;
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);

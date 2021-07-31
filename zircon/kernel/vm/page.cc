@@ -26,7 +26,7 @@ void vm_page::dump() const {
   printf("page %p: address %#" PRIxPTR " state %s", this, paddr(),
          page_state_to_string(page_state));
   if (page_state == vm_page_state::OBJECT) {
-    printf(" pin_count %d split_bits %d%d\n", object.pin_count, object.cow_left_split,
+    printf(" pin_count %d split_bits %d%d\n", object.get_pin_count(), object.cow_left_split,
            object.cow_right_split);
   } else {
     printf("\n");
@@ -44,6 +44,10 @@ void vm_page::set_state(vm_page_state new_state) {
     p->vm_page_counts.by_state[VmPageStateIndex(old_state)] -= 1;
     p->vm_page_counts.by_state[VmPageStateIndex(new_state)] += 1;
   });
+
+  if (unlikely(object.page_offset_priv == kObjectOrEventIsEvent && old_state == vm_page_state::OBJECT && new_state == vm_page_state::FREE)) {
+    object.signal_waiters();
+  }
 }
 
 uint64_t vm_page::get_count(vm_page_state state) {

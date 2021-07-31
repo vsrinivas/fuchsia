@@ -80,103 +80,129 @@ static bool vmo_commit_test() {
   END_TEST;
 }
 
-// Creates a paged VMO, pins it, and tries operations that should unpin it.
+// Creates paged and contiguous VMOs, pins them, and tries operations that should unpin.
 static bool vmo_pin_test() {
   BEGIN_TEST;
 
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status =
-      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &vmo);
-  ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
-  ASSERT_TRUE(vmo, "vmobject creation\n");
+  for (uint32_t is_contiguous = 0; is_contiguous < 2; ++is_contiguous) {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status;
+    if (is_contiguous) {
+      status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size, /*alignment_log2=*/0, &vmo);
+    } else {
+      status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &vmo);
+    }
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size);
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
-  status = vmo->CommitRangePinned(PAGE_SIZE, 0);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "pinning range of len 0\n");
+    status = vmo->CommitRangePinned(PAGE_SIZE, alloc_size);
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "pinning out of range\n");
+    status = vmo->CommitRangePinned(PAGE_SIZE, 0);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "pinning range of len 0\n");
 
-  status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "pinning range\n");
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
-  status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-  status = vmo->DecommitRange(PAGE_SIZE, PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-  status = vmo->DecommitRange(3 * PAGE_SIZE, PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(PAGE_SIZE, PAGE_SIZE);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(3 * PAGE_SIZE, PAGE_SIZE);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
 
-  vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
+    dprintf(INFO, "is_contiguous: %d\n", is_contiguous);
+    if (is_contiguous) {
+      EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    } else {
+      EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    }
 
-  status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
+    status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
-  status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "pinning committed range\n");
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    status = vmo->CommitRangePinned(PAGE_SIZE, 3 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "pinning range after decommit\n");
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
-  status = vmo->Resize(0);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "resizing pinned range\n");
+    if (!is_contiguous) {
+      status = vmo->Resize(0);
+      EXPECT_EQ(ZX_ERR_BAD_STATE, status, "resizing pinned range\n");
+    }
 
-  vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
+    vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
 
-  status = vmo->Resize(0);
-  EXPECT_EQ(ZX_OK, status, "resizing unpinned range\n");
+    if (!is_contiguous) {
+      status = vmo->Resize(0);
+      EXPECT_EQ(ZX_OK, status, "resizing unpinned range\n");
+    }
+  }
 
   END_TEST;
 }
 
-// Creates a page VMO and pins the same pages multiple times
+// Creates a page VMO and contiguous VMO and pins the same pages multiple times
 static bool vmo_multiple_pin_test() {
   BEGIN_TEST;
 
   AutoVmScannerDisable scanner_disable;
 
   static const size_t alloc_size = PAGE_SIZE * 16;
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
-  ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
-  ASSERT_TRUE(vmo, "vmobject creation\n");
+  for (uint32_t is_contiguous = 0; is_contiguous < 2; ++is_contiguous) {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status;
+    if (is_contiguous) {
+      status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size, /*alignment_log2=*/0, &vmo);
+    } else {
+      status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, alloc_size, &vmo);
+    }
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  status = vmo->CommitRangePinned(0, alloc_size);
-  EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
-  status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "pinning subrange\n");
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
+    status = vmo->CommitRangePinned(0, alloc_size);
+    EXPECT_EQ(ZX_OK, status, "pinning whole range\n");
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
+    status = vmo->CommitRangePinned(PAGE_SIZE, 4 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "pinning subrange\n");
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
-  for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
+    for (unsigned int i = 1; i < VM_PAGE_OBJECT_MAX_PIN_COUNT - is_contiguous; ++i) {
+      status = vmo->CommitRangePinned(0, PAGE_SIZE);
+      EXPECT_EQ(ZX_OK, status, "pinning first page max times\n");
+    }
     status = vmo->CommitRangePinned(0, PAGE_SIZE);
-    EXPECT_EQ(ZX_OK, status, "pinning first page max times\n");
-  }
-  status = vmo->CommitRangePinned(0, PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
+    EXPECT_EQ(ZX_ERR_UNAVAILABLE, status, "page is pinned too much\n");
 
-  vmo->Unpin(0, alloc_size);
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
-  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
-  status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
-  status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
+    vmo->Unpin(0, alloc_size);
+    EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
+    if (is_contiguous) {
+      EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+    } else {
+      EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+    }
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
+    status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
-  vmo->Unpin(PAGE_SIZE, 4 * PAGE_SIZE);
-  status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
+    vmo->Unpin(PAGE_SIZE, 4 * PAGE_SIZE);
+    status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
-  for (unsigned int i = 2; i < VM_PAGE_OBJECT_MAX_PIN_COUNT; ++i) {
+    for (unsigned int i = 2; i < VM_PAGE_OBJECT_MAX_PIN_COUNT - is_contiguous; ++i) {
+      vmo->Unpin(0, PAGE_SIZE);
+    }
+    status = vmo->DecommitRange(0, PAGE_SIZE);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting unpinned range\n");
+
     vmo->Unpin(0, PAGE_SIZE);
+    status = vmo->DecommitRange(0, PAGE_SIZE);
+    EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
   }
-  status = vmo->DecommitRange(0, PAGE_SIZE);
-  EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting unpinned range\n");
-
-  vmo->Unpin(0, PAGE_SIZE);
-  status = vmo->DecommitRange(0, PAGE_SIZE);
-  EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
 
   END_TEST;
 }
@@ -287,7 +313,9 @@ static bool vmo_create_contiguous_test() {
   END_TEST;
 }
 
-// Make sure decommitting is disallowed
+// Make sure decommitting pages from a contiguous VMO is allowed, and that we get back the correct
+// pages when committing pages back into a contiguous VMO, even if another VMO was (temporarily)
+// using those pages.
 static bool vmo_contiguous_decommit_test() {
   BEGIN_TEST;
 
@@ -297,24 +325,162 @@ static bool vmo_contiguous_decommit_test() {
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
-  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
-  status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
-  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
-  status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);
-  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
-
-  // Make sure all pages are still present and contiguous
-  paddr_t last_pa;
-  auto lookup_func = [&last_pa](size_t offset, paddr_t pa) {
-    if (offset != 0 && last_pa + PAGE_SIZE != pa) {
-      return ZX_ERR_BAD_STATE;
-    }
-    last_pa = pa;
+  paddr_t first_pa = static_cast<paddr_t>(-1);
+  auto stash_first_pa_func = [&first_pa](size_t offset, paddr_t pa) {
+    DEBUG_ASSERT(first_pa == static_cast<paddr_t>(-1));
+    DEBUG_ASSERT(offset == 0);
+    first_pa = pa;
     return ZX_ERR_NEXT;
   };
-  status = vmo->Lookup(0, alloc_size, lookup_func);
-  ASSERT_EQ(status, ZX_OK, "vmo lookup\n");
+  status = vmo->Lookup(0, PAGE_SIZE, stash_first_pa_func);
+  ASSERT_EQ(status, ZX_OK, "lookup first pa works\n");
+  ASSERT_TRUE(first_pa != static_cast<paddr_t>(-1));
+
+  bool borrowed_seen = false;
+
+  bool page_expected[alloc_size / PAGE_SIZE];
+  for (bool& present : page_expected) {
+    // Default to true.
+    present = true;
+  }
+  // Make sure expected pages (and only expected pages) are present and consistent with start
+  // physical address of contiguous VMO.
+  auto verify_expected_pages = [vmo, first_pa, &borrowed_seen, &page_expected]() {
+    auto cow = vmo->DebugGetCowPages();
+    bool page_seen[alloc_size / PAGE_SIZE] = {};
+    auto lookup_func = [first_pa, &page_seen](size_t offset, paddr_t pa) {
+      DEBUG_ASSERT(!page_seen[offset / PAGE_SIZE]);
+      page_seen[offset / PAGE_SIZE] = true;
+      if (pa - first_pa != offset) {
+        return ZX_ERR_BAD_STATE;
+      }
+      return ZX_ERR_NEXT;
+    };
+    zx_status_t status = vmo->Lookup(0, alloc_size, lookup_func);
+    if (status != ZX_OK) {
+      printf("vmo->Lookup() failed - status: %d\n", status);
+      return false;
+    }
+    for (uint64_t offset = 0; offset < alloc_size; offset += PAGE_SIZE) {
+      uint64_t page_index = offset / PAGE_SIZE;
+      if (page_expected[page_index] != page_seen[page_index]) {
+        printf("page_expected[page_index] != page_seen[page_index]\n");
+        return false;
+      }
+      vm_page_t* page = cow->DebugGetPage(offset);
+      DEBUG_ASSERT(page);
+      if (page_expected[page_index]) {
+        DEBUG_ASSERT(cow->DebugIsPage(offset));
+        DEBUG_ASSERT(!page->loaned);
+      } else {
+        DEBUG_ASSERT(cow->DebugIsEmpty(offset));
+        DEBUG_ASSERT(page->loaned);
+        if (!page->is_free()) {
+          // It's not in cow, and it's not free, so note that we observed a borrowed page.
+          borrowed_seen = true;
+        }
+      }
+      DEBUG_ASSERT(!page->loan_cancelled);
+    }
+    return true;
+  };
+  verify_expected_pages();
+  auto track_decommit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset, uint64_t size) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    uint64_t end_offset = start_offset + size;
+    for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
+      page_expected[offset / PAGE_SIZE] = false;
+    }
+    verify_expected_pages();
+  };
+  auto track_commit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset, uint64_t size) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    uint64_t end_offset = start_offset + size;
+    for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
+      page_expected[offset / PAGE_SIZE] = true;
+    }
+    verify_expected_pages();
+  };
+
+  status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK, "decommit of contiguous VMO pages works\n");
+  track_decommit(PAGE_SIZE, 4 * PAGE_SIZE);
+
+  status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK, "decommit of contiguous VMO pages overlapping non-present pages works\n");
+  track_decommit(0, 4 * PAGE_SIZE);
+
+  status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK, "decommit at end of contiguous VMO works\n");
+  track_decommit(alloc_size - PAGE_SIZE, PAGE_SIZE);
+
+  // Due to concurrent activity of the system, we may not be able to allocate the loaned pages into
+  // a VMO we're creating here, and depending on timing, we may also not observe the pages being
+  // borrowed.  However, it shouldn't take many tries, if we continue to allocate non-pinned pages
+  // to a VMO repeatedly, since loaned pages are preferred for allocations that can use them.
+  //
+  // We page attention to whether ASAN is enabled in order to apply a strategy that's optimized for
+  // pages being put on the head (normal) or tail (ASAN) of the free list
+  // (PmmNode::free_loaned_list_).
+
+  zx_time_t complain_deadline = current_time() + ZX_SEC(5);
+  while (!borrowed_seen) {
+    // Not super small, in case we end up needing to do multiple iterations of the loop to see the
+    // pages being borrowed, and ASAN is enabled which could require more iterations of this loop
+    // if this size were smaller.  Also hopefully not big enough to fail on small-ish devices.
+    constexpr uint64_t kBorrowingVmoSize = PAGE_SIZE * 64;
+    fbl::RefPtr<VmObjectPaged> borrowing_vmo;
+    // Allocating a VMO alone won't cause borrowing since VMOs aren't initially committed.
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, /*options=*/0, kBorrowingVmoSize,
+                                   &borrowing_vmo);
+    ASSERT_EQ(status, ZX_OK, "borrowing VMO created\n");
+    // Commit pages of the borrowing VMO to get it to borrow some pages, if no other VMO gets
+    // to the pages first.
+    status = borrowing_vmo->CommitRange(0, kBorrowingVmoSize);
+    ASSERT_EQ(status, ZX_OK, "borrowing VMO pinned\n");
+    // Updates borrowing_seen to true, if any pages of vmo are seen to be borrowed (maybe by
+    // borrowing_vmo, or maybe by some other VMO; we don't care which here).
+    verify_expected_pages();
+
+    if (!borrowed_seen) {
+      if constexpr (!__has_feature(address_sanitizer)) {
+        // By committing and de-committing in the loop, we put the pages we're paying attention to
+        // back at the head of the free_loaned_list_, so the next iteration of the loop is more
+        // likely to see them being borrowed (by allocating them).
+        status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+        ASSERT_EQ(status, ZX_OK, "temp commit back to contiguous VMO, to remove from free list\n");
+        track_commit(0, 4 * PAGE_SIZE);
+
+        status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+        ASSERT_EQ(status, ZX_OK, "decommit back to free list at head of free list\n");
+        track_decommit(0, 4 * PAGE_SIZE);
+      } else {
+        // By _not_ committing and de-committing in the loop, the pages we're allocating in a loop
+        // will eventually work through the free_loaned_list_, even if a large contiguous VMO was
+        // decomitted at an inconvenient time.
+      }
+      zx_time_t now = current_time();
+      if (now > complain_deadline) {
+        dprintf(INFO, "!borrowed_seen is persisting longer than expected; still trying...\n");
+        complain_deadline = now + ZX_SEC(5);
+      }
+    }
+  }
+
+  status = vmo->CancelLoanRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "cancel loan\n");
+  
+  status = vmo->DecommitRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "decommit after cancel loan\n");
+
+  status = vmo->CancelLoanRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "cancel loan (2nd time)\n");
+
+  status = vmo->CommitRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "committed pages back into contiguous VMO\n");
+  track_commit(0, alloc_size);
 
   END_TEST;
 }
@@ -1410,60 +1576,130 @@ static bool vmo_attribution_ops_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status =
-      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE, &vmo);
-  ASSERT_EQ(ZX_OK, status);
+  for (uint32_t is_contiguous = 0; is_contiguous < 2; ++is_contiguous) {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status;
+    if (is_contiguous) {
+      status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, 4 * PAGE_SIZE, /*alignment_log2=*/0, &vmo);
+    } else {
+      status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE, &vmo);
+    }
+    ASSERT_EQ(ZX_OK, status);
 
-  uint64_t expected_gen_count = 1;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
+    uint64_t expected_gen_count = 1;
+    uint64_t expected_page_count;
+    if (is_contiguous) {
+      expected_page_count = 4;
+    } else {
+      expected_page_count = 0;
+    }
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Committing pages should increment the generation count.
-  status = vmo->CommitRange(0, 4 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  expected_gen_count += 4;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 4u));
+    // Committing pages should increment the generation count.
+    status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (is_contiguous) {
+      // expected_gen_count doesn't change because the pages area already committed.
+    } else {
+      expected_gen_count += 4;
+    }
+    expected_page_count = 4;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Committing the same range again will be a no-op, and should *not* increment the generation
-  // count.
-  status = vmo->CommitRange(0, 4 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 4u));
+    // Committing the same range again will be a no-op, and should *not* increment the generation
+    // count.
+    status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    expected_page_count = 4;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Decommitting pages should increment the generation count.
-  status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  ++expected_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
+    // Decommitting pages should increment the generation count.
+    status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    ++expected_gen_count;
+    expected_page_count = 0;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  fbl::AllocChecker ac;
-  fbl::Vector<uint8_t> buf;
-  buf.reserve(2 * PAGE_SIZE, &ac);
-  ASSERT_TRUE(ac.check());
+    // Committing again should increment the generation count.
+    status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (is_contiguous) {
+      expected_gen_count += 1;
+    } else {
+      expected_gen_count += 4;
+    }
+    expected_page_count = 4;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Read the first two pages. Since these are zero pages being read, this won't commit any pages in
-  // the vmo and should not increment the generation count.
-  status = vmo->Read(buf.data(), 0, 2 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
+    // Decommitting pages should increment the generation count.
+    status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    ++expected_gen_count;
+    expected_page_count = 0;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Write the first two pages. This will commit 2 pages and should increment the generation count.
-  status = vmo->Write(buf.data(), 0, 2 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  expected_gen_count += 2;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 2u));
+    fbl::AllocChecker ac;
+    fbl::Vector<uint8_t> buf;
+    buf.reserve(2 * PAGE_SIZE, &ac);
+    ASSERT_TRUE(ac.check());
 
-  // Resizing the vmo should increment the generation count.
-  status = vmo->Resize(2 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  ++expected_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 2u));
+    // Read the first two pages.
+    status = vmo->Read(buf.data(), 0, 2 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (is_contiguous) {
+      // For a contiguous VMO, any page being read/written causes that page to be committed if it
+      // isn't already.
+      expected_gen_count += 2;
+      expected_page_count += 2;
+    } else {
+      // Since these are zero pages being read, this won't commit any pages in
+      // the vmo and should not increment the generation count, and shouldn't increase the number of
+      // pages.
+    }
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
-  // Zero'ing the range will decommit pages, and should increment the generation count.
-  status = vmo->ZeroRange(0, 2 * PAGE_SIZE);
-  ASSERT_EQ(ZX_OK, status);
-  ++expected_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
+    // Write the first two pages. This will commit 2 pages and should increment the generation count.
+    status = vmo->Write(buf.data(), 0, 2 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (is_contiguous) {
+      // first two pages already committed
+      DEBUG_ASSERT(expected_page_count == 2);
+    } else {
+      expected_gen_count += 2;
+      DEBUG_ASSERT(expected_page_count == 0);
+      expected_page_count += 2;
+    }
+    DEBUG_ASSERT(expected_page_count == 2);
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+
+    // Write the last two pages. This will commit 2 pages and should increment the generation count.
+    status = vmo->Write(buf.data(), 2 * PAGE_SIZE, 2 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    expected_gen_count += 2;
+    expected_page_count += 2;
+    DEBUG_ASSERT(expected_page_count == 4);
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+
+    if (!is_contiguous) {
+      // Resizing the vmo should increment the generation count.
+      status = vmo->Resize(2 * PAGE_SIZE);
+      ASSERT_EQ(ZX_OK, status);
+      ++expected_gen_count;
+      expected_page_count -= 2;
+      EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+    }
+
+    // Zero'ing the range will decommit pages, and should increment the generation count.
+    status = vmo->ZeroRange(0, 2 * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (is_contiguous) {
+      // Zeroing doesn't decommit pages of contiguous VMOs (nor does it commit pages).
+    } else {
+      ++expected_gen_count;
+      expected_page_count -= 2;
+    }
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
+  }
 
   END_TEST;
 }
