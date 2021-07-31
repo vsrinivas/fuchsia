@@ -1596,8 +1596,8 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_
   for (const Driver* driver : drivers) {
     zx_status_t status = AttemptBind(driver, dev);
     if (status != ZX_OK) {
-      LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__, dev->name().data(),
-           zx_status_get_string(status));
+      LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__,
+           driver->name.c_str(), dev->name().data(), zx_status_get_string(status));
     }
   }
 

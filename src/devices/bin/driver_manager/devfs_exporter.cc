@@ -32,8 +32,9 @@ void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& com
   zx_status_t status = devfs_export(root_, std::move(request->service_node),
                                     request->devfs_path.get(), request->protocol_id, devnodes_);
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to export service to devfs path \"%.*s\": %s", request->devfs_path.size(),
-         request->devfs_path.data(), zx_status_get_string(status));
+    LOGF(ERROR, "Failed to export service to devfs path \"%.*s\": %s",
+         static_cast<int>(request->devfs_path.size()), request->devfs_path.data(),
+         zx_status_get_string(status));
     completer.ReplyError(status);
     return;
   }

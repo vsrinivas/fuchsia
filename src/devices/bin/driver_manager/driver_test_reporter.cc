@@ -11,7 +11,8 @@
 void DriverTestReporter::LogMessage(LogMessageRequestView request,
                                     LogMessageCompleter::Sync& completer) {
   const fidl::StringView& msg = request->msg;
-  LOGF(INFO, "[----------][%s] %.*s\n", driver_name_.data(), msg.size(), msg.data());
+  LOGF(INFO, "[----------][%s] %.*s\n", driver_name_.data(), static_cast<int>(msg.size()),
+       msg.data());
 }
 
 void DriverTestReporter::LogTestCase(LogTestCaseRequestView request,
@@ -19,15 +20,17 @@ void DriverTestReporter::LogTestCase(LogTestCaseRequestView request,
   const fidl::StringView& name = request->name;
   const fuchsia_driver_test::wire::TestCaseResult& result = request->result;
   uint64_t ran = result.passed + result.failed;
-  LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(), name.size(),
-       name.data());
+  LOGF(INFO, "[----------] %lu tests from %s.%.*s\n", ran, driver_name_.data(),
+       static_cast<int>(name.size()), name.data());
   LOGF(INFO, "[----------] %lu passed\n", result.passed);
   LOGF(INFO, "[----------] %lu failed\n", result.failed);
   LOGF(INFO, "[----------] %lu skipped\n", result.skipped);
   if (result.failed == 0) {
-    LOGF(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), name.size(), name.data());
+    LOGF(INFO, "[       OK ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name.size()),
+         name.data());
   } else {
-    LOGF(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), name.size(), name.data());
+    LOGF(INFO, "[     FAIL ] %s.%.*s\n", driver_name_.data(), static_cast<int>(name.size()),
+         name.data());
   }
   total_cases_ += 1;
   total_passed_ += result.passed;

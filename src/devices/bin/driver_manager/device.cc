@@ -572,19 +572,22 @@ void Device::HandleTestOutput(async_dispatcher_t* dispatcher, async::WaitBase* w
 
   test_reporter->TestStart();
 
-  fidl::BindServer(
-      dispatcher, fidl::ServerEnd<fuchsia_driver_test::Logger>(std::move(test_output_)),
-      test_reporter.get(),
-      [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
-             fidl::ServerEnd<fuchsia_driver_test::Logger> server_end) {
-        switch (info.reason()) {
-          case fidl::Reason::kPeerClosed:
-            test_reporter->TestFinished();
-            break;
-          default:
-            LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this, name_.data(), info);
-        }
-      });
+  fidl::BindServer(dispatcher,
+                   fidl::ServerEnd<fuchsia_driver_test::Logger>(std::move(test_output_)),
+                   test_reporter.get(),
+                   [this](DriverTestReporter* test_reporter, fidl::UnbindInfo info,
+                          fidl::ServerEnd<fuchsia_driver_test::Logger> server_end) {
+                     switch (info.reason()) {
+                       case fidl::Reason::kPeerClosed:
+                         test_reporter->TestFinished();
+                         break;
+                       default: {
+                         auto reason = info.FormatDescription();
+                         LOGF(ERROR, "Unexpected server error for device %p '%s': %s", this,
+                              name_.data(), reason.c_str());
+                       }
+                     }
+                   });
 }
 
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
