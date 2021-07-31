@@ -188,13 +188,36 @@ template("assemble_system") {
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
-    blobfs_manifest = "$target_out_dir/${image_name}/gen/blob.manifest"
     empty_minfs = "$target_out_dir/${image_name}_data.blk"
 
+    outdir = "$target_out_dir/$image_name"
+    gendir = "$outdir/gen"
+
+    zbi = "${outdir}/${image_name}.zbi"
+    zbi_signed = "${zbi}.signed"
+    vbmeta = "${outdir}/${image_name}.vbmeta"
+    base_package = "${outdir}/base.far"
+    update_package = "${outdir}/update.far"
+    blobfs = "${outdir}/blob.blk"
+    fvm = "${outdir}/fvm.blk"
+    fvm_sparse = "${outdir}/fvm.sparse.blk"
+    fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+    update_package_manifest = "${outdir}/update_package_manifest.json"
+    base_package_manifest = "${outdir}/base_package_manifest.json"
+
+    zbi_manifest = "${gendir}/zbi.json"
+    blobfs_manifest = "${gendir}/blob.manifest"
+    blobs_json = "${gendir}/blobs.json"
+    static_packages = "${gendir}/data/static_packages"
+    cache_packages = "${gendir}/data/cache_packages"
+    base_meta_package = "${gendir}/system_image/meta/package"
+    update_meta_package = "${gendir}/update/meta/package"
+
+    # Determine which ZBI we are shipping.
+    zbi_final = zbi
     if (defined(invoker.zbi_signing_script)) {
-      zbi = "$target_out_dir/${image_name}/${image_name}.zbi.signed"
-    } else {
-      zbi = "$target_out_dir/${image_name}/${image_name}.zbi"
+      zbi_final = zbi_signed
     }
   }
 
@@ -452,8 +475,6 @@ template("assemble_system") {
     # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
     hermetic_deps = false
 
-    outdir = "$target_out_dir/$image_name"
-    gendir = "$outdir/gen"
     args = [
       "--config",
       "assembly_enabled=true",
@@ -464,9 +485,9 @@ template("assemble_system") {
       "--board",
       rebase_path(files.board_config, root_build_dir),
       "--gendir",
-      rebase_path(gendir, root_build_dir),
+      rebase_path(files.gendir, root_build_dir),
       "--outdir",
-      rebase_path(outdir, root_build_dir),
+      rebase_path(files.outdir, root_build_dir),
     ]
 
     deps = []
@@ -486,33 +507,41 @@ template("assemble_system") {
     # zbi outputs
     outputs = [
       files.zbi,
-      "${gendir}/zbi.json",
-      "${outdir}/update.far",
+      files.zbi_manifest,
+      files.update_package,
     ]
 
+    if (defined(invoker.zbi_signing_script)) {
+      outputs += [ files.zbi_signed ]
+    }
+
     if (use_vbmeta) {
-      outputs += [ "${outdir}/${image_name}.vbmeta" ]
+      outputs += [ files.vbmeta ]
     }
 
     # Base package outputs, if this configuration uses them.
     if (!bootfs_only) {
       outputs += [
-        "${outdir}/base.far",
-        "${outdir}/blob.blk",
-        "${outdir}/fvm.blk",
-        "${outdir}/fvm.sparse.blk",
-        "${outdir}/fvm.blob.sparse.blk",
+        # In the outdir.
+        files.base_package,
+        files.blobfs,
+        files.fvm,
+        files.fvm_sparse,
+        files.fvm_blob_sparse,
 
-        # intermediate outputs that are in gendir:
+        # In the gendir.
         files.blobfs_manifest,
-        "${gendir}/data/static_packages",
-        "${gendir}/data/cache_packages",
-        "${gendir}/system_image/meta/package",
-        "${gendir}/update/meta/package",
+        files.blobs_json,
+        files.static_packages,
+        files.cache_packages,
+        files.base_meta_package,
+        files.update_meta_package,
+        files.update_package_manifest,
+        files.base_package_manifest,
       ]
 
       if (build_fastboot_fvm) {
-        outputs += [ "${outdir}/fvm.fastboot.blk" ]
+        outputs += [ files.fvm_fastboot ]
       }
     }
 
@@ -529,19 +558,19 @@ template("assemble_system") {
     assert(
         invoker.output_dir != target_out_dir,
         "The specified output directory must be different from the default target_out_dir")
-    out = get_target_outputs(":${labels.image_assembler}")
-    zbi = out[0]
 
     # The output name is the same as the original file by default.
-    output_name = "${image_name}.zbi"
+    # Otherwise, it takes the output_name, and strips any extension.
+    output_name = "${image_name}"
     if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
+      parts = string_split(invoker.output_name, ".")
+      output_name = parts[0]
     }
 
     copy(labels.copy_images) {
       forward_variables_from(invoker, [ "testonly" ])
-      sources = [ zbi ]
-      outputs = [ "${invoker.output_dir}/${output_name}" ]
+      sources = [ files.zbi_final ]
+      outputs = [ "${invoker.output_dir}/${output_name}.zbi" ]
       deps = [ ":${labels.image_assembler}" ]
     }
   }
@@ -553,7 +582,7 @@ template("assemble_system") {
   if (defined(invoker.cmdline_goldens)) {
     verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
       forward_variables_from(invoker, [ "testonly" ])
-      zbi = files.zbi
+      zbi = files.zbi_final
       goldens = invoker.cmdline_goldens
       zbi_target = ":${labels.image_assembler}"
     }
@@ -561,7 +590,7 @@ template("assemble_system") {
   if (defined(invoker.bootfs_goldens)) {
     verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
       forward_variables_from(invoker, [ "testonly" ])
-      zbi = files.zbi
+      zbi = files.zbi_final
       goldens = invoker.bootfs_goldens
       zbi_target = ":${labels.image_assembler}"
     }
@@ -569,7 +598,7 @@ template("assemble_system") {
   if (defined(invoker.static_pkgs_goldens)) {
     verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
       forward_variables_from(invoker, [ "testonly" ])
-      zbi = files.zbi
+      zbi = files.zbi_final
       zbi_target = ":${labels.image_assembler}"
       blobfs_manifest = files.blobfs_manifest
       blobfs_manifest_target = ":${labels.image_assembler}"
