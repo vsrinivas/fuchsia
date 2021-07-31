@@ -306,28 +306,11 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
   };
 
   {
-    zx_bind_inst_t test_drv_bind[] = {
-        BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-    };
-    auto test_drv = make_fake_driver(test_drv_bind);
-    ASSERT_OK(coordinator.BindDriver(test_drv.get(), CallOnce{__LINE__}));
-  }
-
-  {
     zx_bind_inst_t root_drv_bind[] = {
         BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT),
     };
     auto root_drv = make_fake_driver(root_drv_bind);
     ASSERT_OK(coordinator.BindDriver(root_drv.get(), CallOnce{__LINE__}));
-  }
-
-  {
-    zx_bind_inst_t test_drv_bind[] = {
-        BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
-        BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    };
-    auto test_drv = make_fake_driver(test_drv_bind);
-    ASSERT_OK(coordinator.BindDriver(test_drv.get(), CallOnce{__LINE__}));
   }
 
   {
@@ -356,7 +339,7 @@ TEST(MiscTestCase, BindDevices) {
 
   fbl::RefPtr<Device> device;
   auto status = coordinator.AddDevice(
-      coordinator.test_device(), std::move(controller_endpoints->client),
+      coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
       {} /* driver_path */, {} /* args */, false /* skip_autobind */, false /* has_init */,
@@ -410,7 +393,7 @@ TEST(MiscTestCase, TestOutput) {
 
   fbl::RefPtr<Device> device;
   auto status = coordinator.AddDevice(
-      coordinator.test_device(), std::move(controller_endpoints->client),
+      coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
       {} /* driver_path */, {} /* args */, false /* skip_autobind */, false /* has_init */,
@@ -514,7 +497,7 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
 
   fbl::RefPtr<Device> device;
   auto status = coordinator.AddDevice(
-      coordinator.test_device(), std::move(controller_endpoints->client),
+      coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), props_data, props_count, str_props_data,
       str_props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
       false /* skip_autobind */, false /* has_init */, true /* always_init */,
@@ -595,7 +578,7 @@ TEST(MiscTestCase, InvalidStringProperties) {
 
   fbl::RefPtr<Device> device;
   auto status = coordinator.AddDevice(
-      coordinator.test_device(), std::move(controller_endpoints->client),
+      coordinator.sys_device(), std::move(controller_endpoints->client),
       std::move(coordinator_endpoints->server), nullptr /* props */, 0 /* props_count */, str_props,
       std::size(str_props), "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
       false /* skip_autobind */, false /* has_init */, true /* always_init */,

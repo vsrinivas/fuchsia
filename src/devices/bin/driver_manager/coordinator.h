@@ -308,7 +308,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
-  const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(
       uint32_t flags, SuspendCallback = [](zx_status_t status) {});
@@ -379,7 +378,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> sys_device_;
-  fbl::RefPtr<Device> test_device_;
 
   SuspendHandler suspend_handler_;
   ResumeContext resume_context_;

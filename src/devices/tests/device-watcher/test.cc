@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(DeviceWatcherTest, DISABLED_WatchUSBDevice) {
+TEST(DeviceWatcherTest, WatchUSBDevice) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto svc = service::OpenServiceRoot();

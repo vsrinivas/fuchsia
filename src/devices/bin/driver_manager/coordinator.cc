@@ -215,9 +215,6 @@ zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
                                             zx::vmo(), zx::channel());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
-  test_device_ = fbl::MakeRefCounted<Device>(this, "test", fbl::String(), "test,", root_device_,
-                                             ZX_PROTOCOL_TEST_PARENT, zx::vmo(), zx::channel());
-  test_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
   return ZX_OK;
 }
 
@@ -273,7 +270,6 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
 void Coordinator::DumpState(VmoWriter* vmo) const {
   DumpDevice(vmo, root_device_.get(), 0);
   DumpDevice(vmo, sys_device_.get(), 1);
-  DumpDevice(vmo, test_device_.get(), 1);
 }
 
 void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
@@ -1400,10 +1396,6 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   if (status != ZX_ERR_NEXT) {
     return status;
   }
-  status = BindDriverToDevice(test_device_, drv, true /* autobind */, attempt_bind);
-  if (status != ZX_ERR_NEXT) {
-    return status;
-  }
   if (!running_) {
     return ZX_ERR_UNAVAILABLE;
   }
@@ -1444,11 +1436,6 @@ void Coordinator::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfi
   zx_status_t status = MatchAndBindDeviceDriverIndex(root_device_, config);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
-    return;
-  }
-  status = MatchAndBindDeviceDriverIndex(test_device_, config);
-  if (status != ZX_OK && status != ZX_ERR_NEXT) {
-    LOGF(ERROR, "DriverIndex failed to match test_device: %d", status);
     return;
   }
 
@@ -1978,7 +1965,6 @@ void Coordinator::DumpBindingProperties(DumpBindingPropertiesRequestView request
   VmoWriter writer{std::move(request->output)};
   DumpDeviceProps(&writer, root_device_.get());
   DumpDeviceProps(&writer, sys_device_.get());
-  DumpDeviceProps(&writer, test_device_.get());
   completer.Reply(writer.status(), writer.written(), writer.available());
 }
 
