@@ -1,8 +1,5 @@
 protocol/member fuchsia.deprecatedtimezone/Timezone.GetTimezoneId() -> (string timezone_id)
 protocol/member fuchsia.deprecatedtimezone/Timezone.GetTimezoneOffsetMinutes(int64 milliseconds_since_epoch) -> (int32 local_offset_minutes,int32 dst_offset_minutes)
 protocol/member fuchsia.deprecatedtimezone/Timezone.SetTimezone(string timezone_id) -> (bool status)
-protocol/member fuchsia.deprecatedtimezone/Timezone.Watch(client_end:fuchsia.deprecatedtimezone/TimezoneWatcher watcher)
 protocol fuchsia.deprecatedtimezone/Timezone
-protocol/member fuchsia.deprecatedtimezone/TimezoneWatcher.OnTimezoneOffsetChange(string timezone_id)
-protocol fuchsia.deprecatedtimezone/TimezoneWatcher
 library fuchsia.deprecatedtimezone

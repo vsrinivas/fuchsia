@@ -45,3 +45,8 @@ fuchsia_package_with_single_component("timezone") {
     "//src/intl:icudtl",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test" ]
+}

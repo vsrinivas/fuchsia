@@ -134,38 +134,5 @@ TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
   EXPECT_EQ(dst_offset, 0);
 }
 
-class TimezoneWatcherForTest : TimezoneWatcher {
- public:
-  void OnTimezoneOffsetChange(std::string timezone_id) override {
-    last_seen_timezone = timezone_id;
-  }
-  std::string last_seen_timezone;
-  void AddBinding(fidl::InterfaceRequest<TimezoneWatcher> request) {
-    bindings_.AddBinding(this, std::move(request));
-  }
-
- private:
-  fidl::BindingSet<TimezoneWatcher> bindings_;
-};
-
-TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_Watcher) {
-  TimezoneWatcherForTest watcher;
-  TimezoneWatcherPtr watcher_ptr;
-  watcher.AddBinding(watcher_ptr.NewRequest());
-
-  auto timezone_ptr = timezone();
-  timezone_ptr->Watch(watcher_ptr.Unbind());
-  RunLoopUntilIdle();
-  std::string expected_timezone = "America/Los_Angeles";
-  ASSERT_NE(expected_timezone, watcher.last_seen_timezone);
-
-  bool success = false;
-  timezone_ptr->SetTimezone(expected_timezone, [&success](bool retval) { success = retval; });
-  RunLoopUntilIdle();
-  ASSERT_TRUE(success);
-
-  ASSERT_EQ(expected_timezone, watcher.last_seen_timezone);
-}
-
 }  // namespace test
 }  // namespace time_zone

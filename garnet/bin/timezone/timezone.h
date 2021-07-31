@@ -44,15 +44,12 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
                                 GetTimezoneOffsetMinutesCallback callback) override;
   void SetTimezone(std::string timezone_id, SetTimezoneCallback callback) override;
   void GetTimezoneId(GetTimezoneIdCallback callback) override;
-  void Watch(fidl::InterfaceHandle<fuchsia::deprecatedtimezone::TimezoneWatcher> watcher) override;
 
   // Get the inspector for testing.
   const inspect::Inspector& inspector() { return *inspector_.inspector(); }
 
  private:
   bool Init();
-  // Destroys a watcher proxy (called upon a connection error).
-  void ReleaseWatcher(fuchsia::deprecatedtimezone::TimezoneWatcher* watcher);
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const std::string& new_timezone_id);
 
@@ -82,7 +79,6 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
 
   // |fuchsia.deprecatedtimezone.Timezone|:
   fidl::BindingSet<fuchsia::deprecatedtimezone::Timezone> deprecated_bindings_;
-  std::vector<fuchsia::deprecatedtimezone::TimezoneWatcherPtr> deprecated_watchers_;
   sys::ComponentInspector inspector_;
   inspect::StringProperty timezone_property_;
 };

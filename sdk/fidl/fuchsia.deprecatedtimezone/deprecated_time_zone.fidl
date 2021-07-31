@@ -39,18 +39,4 @@ protocol Timezone {
     GetTimezoneId() -> (struct {
         timezone_id string;
     });
-
-    /// Watches for updates to the timezone ID.
-    @deprecated("use fuchsia.settings.Intl instead")
-    Watch(resource struct {
-        watcher client_end:TimezoneWatcher;
-    });
-};
-
-@deprecated("use fuchsia.intl.PropertyProvider")
-protocol TimezoneWatcher {
-    /// When the timezone changes, returns the new timezone ID.
-    OnTimezoneOffsetChange(struct {
-        timezone_id string;
-    });
 };
