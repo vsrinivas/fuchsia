@@ -1,3 +1,128 @@
+chromium / infra / testing / expect_tests / 0d171a320ac90c22a991bb20bb51ca4d23cb90dc
+commit	0d171a320ac90c22a991bb20bb51ca4d23cb90dc	[log] [tgz]
+author	Andrew Chang <andrewjc@google.com>	Wed Sep 16 00:04:46 2020
+committer	LUCI CQ <infra-scoped@luci-project-accounts.iam.gserviceaccount.com>	Wed Sep 16 00:04:46 2020
+tree	23d79a3c4f811e7cd335246c5cc0314efb583ec6
+parent	db0348dfbd6cabad28197df46c9de6a4431a5256 [diff]
+Ran python-modernize across expect_tests/.
+
+Bug: monorail:8285
+Change-Id: I2766d1f01d30d79ffa4545fde484090e21af421b
+Reviewed-on: https://chromium-review.googlesource.com/c/infra/testing/expect_tests/+/2392860
+Reviewed-by: Dave Tu <dtu@chromium.org>
+Commit-Queue: Andrew Chang <andrewjc@google.com>
+expect_tests/__init__.py[diff]
+expect_tests/cover.py[diff]
+expect_tests/handle_debug.py[diff]
+expect_tests/handle_list.py[diff]
+expect_tests/handle_test.py[diff]
+expect_tests/handle_train.py[diff]
+expect_tests/listing.py[diff]
+expect_tests/main.py[diff]
+expect_tests/pipeline.py[diff]
+expect_tests/serialize.py[diff]
+expect_tests/tempdir.py[diff]
+expect_tests/test/data/exceptional/import_crashes/package/fail_test.py[diff]
+expect_tests/test/data/exceptional/test_raises/package/fail_test.py[diff]
+expect_tests/test/data/package1/file1.py[diff]
+expect_tests/test/data/package1/file1_test.py[diff]
+expect_tests/test/data/package1/file2_test.py[diff]
+expect_tests/test/data/package1/subpackage1_1/file3_test.py[diff]
+expect_tests/test/data/package1/subpackage1_1/subpackage1_1_1/file4_test.py[diff]
+expect_tests/test/pipeline_test.py[diff]
+expect_tests/type_definitions.py[diff]
+expect_tests/unittest_helper.py[diff]
+expect_tests/util.py[diff]
+setup.py[diff]
+23 files changed
+tree: 23d79a3c4f811e7cd335246c5cc0314efb583ec6
+.gitignore
+.vpython
+.vpython3
+LICENSE
+PRESUBMIT.py
+README.md
+codereview.settings
+expect_tests/
+infra/
+requirements.txt
+scripts/
+setup.py
+README.md
+Expect Tests
+Expect Tests is a test framework which:
+
+Is parallel by default
+Collects coverage information by default
+Allows easy test-case generation
+Is compatible with unittest
+Provides easy test globbing and debugging
+You can run the test suite with nosetests expect_tests/test in the root directory.
+
+Quick user manual
+Writing tests
+Tests are subclasses of unittests.TestCase only. expect_tests looks for tests in files named like *_test.py. The coverage information for file foo.py is only collected from tests located in test/foo_test.py.
+
+If a test returns a value, an expectation file for this test is created, and contents of this file are compared against the return value. Any python object that can be unambiguously serialized into JSON or into a string using python's repr() function can be used as expectations.
+
+The expectation files should be checked into your repository along with the code (otherwise you‘ll break tests on other developer’s machines and on bots). Expectations can be used as diff-able change detectors, and can help you review changes in your code's behavior.
+
+Invocation
+The simplest expect_tests invocation is:
+
+expect_tests (list|test|train) <path>
+where can point either to a Python (sub)package's directory, or to a directory containing Python packages. In the latter case, all tests in all packages in the directory will be considered.
+
+list: just output the full list of tests on stdout
+test: run the tests
+train: run the test and update their expectations instead of checking against them.
+Filtering tests
+It is possible to run an action on a subset of test instead of all of them. This is achieved by appending a filter after the path specification:
+
+expect_tests (list|test|train) <path>:<filter glob>
+applies to the full test names, as output by ‘list’. It does not apply to the package path.
+
+Example: Suppose you have the following structure:
+
+root/
+root/package1
+root/package1/__init__.py
+root/package1/foo.py
+root/package1/test/__init__.py
+root/package1/test/foo_test.py  # contains test TestFoo.test\_feature
+root/package1/subpackage
+root/package1/subpackage/__init__.py
+root/package1/subpackage/subfoo.py
+root/package1/subpackage/test/__init__.py
+root/package1/subpackage/test/subfoo_test.py  # contains TestSubFoo.test\_feature
+root/package2/... # with same structure as package1
+Then (supposing the current directory is the parent of root/)
+
+$ expect_tests list root
+package1.tests.foo_test.TestFoo.test_feature
+package1.subpackage.tests.subfoo_test.TestSubFoo.test_feature
+package2.tests.foo_test.TestFoo.test_feature
+package2.subpackage.tests.subfoo_test.TestSubFoo.test_feature
+
+$ expect_tests list root/package1
+package1.tests.foo_test.TestFoo.test_feature
+package1.subpackage.tests.subfoo_test.TestSubFoo.test_feature
+
+$ expect_tests list 'root:package1*'  # less efficient than root/package1
+package1.tests.foo_test.TestFoo.test_feature
+package1.subpackage.tests.subfoo_test.TestSubFoo.test_feature
+
+$ expect_tests list 'root/package1:*TestSubFoo*'
+package1.subpackage.tests.subfoo_test.TestSubFoo.test_feature
+Fine-tuning and advanced topics
+Having trouble debugging a test? You can use the ‘debug’ action instead of ‘test’ to get a debugging prompt when entering tests. That way you can step through the code if necessary.
+
+You can make expect_tests ignore a subpackage by adding a .expect_tests.cfg file in the directory containing the package, with the following content:
+
+[expect_tests]
+skip=packagetoignore1
+     packagetoignore2
+Some Python code, like the Appengine sdk, requires some special setup to be able to work. In order to support that, you can create a .expect_tests_pretest.py file in the directory containing the top-level package containing tests. This code will be execfile'd just before any operation (list/run/train) in this directory.
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
