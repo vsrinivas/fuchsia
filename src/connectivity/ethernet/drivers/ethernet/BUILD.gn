@@ -111,7 +111,6 @@ isolated_devmgr_unittest_package("ethernet-integration-test") {
     ":ethernet",
     ":ethernet-integration",
     "//src/connectivity/ethernet/drivers/ethertap",
-    "//src/devices/misc/drivers/test",
     "//src/devices/misc/drivers/test-parent",
   ]
 }
