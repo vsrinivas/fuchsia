@@ -33,6 +33,7 @@ rustc_library("package-directory") {
   ]
 
   test_deps = [
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
