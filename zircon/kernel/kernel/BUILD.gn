@@ -39,6 +39,7 @@ source_set("kernel") {
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/heap",
     "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/jtrace",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",
     "//zircon/kernel/lib/libc",

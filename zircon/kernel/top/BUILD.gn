@@ -22,6 +22,7 @@ source_set("top") {
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/io",
+    "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/lockup_detector",
     "//zircon/kernel/lib/userabi",
     "//zircon/kernel/lib/version",

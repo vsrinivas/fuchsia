@@ -7,6 +7,7 @@
 
 #include <lib/console.h>
 #include <lib/debuglog.h>
+#include <lib/jtrace/jtrace.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -99,6 +100,8 @@ void platform_panic_start(void) {
   static ktl::atomic<int> panic_started(0);
   if (panic_started.exchange(1) == 0) {
     dlog_bluescreen_init();
+    // Attempt to dump the current debug trace buffer, if we have one.
+    jtrace_dump(jtrace::TraceBufferType::Current);
   }
 
   halt_other_cpus();

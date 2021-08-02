@@ -91,6 +91,19 @@ declare_args() {
   # should be a power of two, and typically should be a multiple of the
   # cacheline size of the target architecture.
   persistent_ram_allocation_granularity = 128
+
+  # Please refer to https://fuchsia.dev/fuchsia-src/development/debugging/jtrace
+  # for a description of these configuration options.
+  #
+  # Note that the special value "auto" is used only by the default definitions
+  # of the entries (below).  It acts as a special value which automatically
+  # chooses a default based on whether or not JTRACE is configured for
+  # persistent tracing, while still allowing a user to explicitly override the
+  # value regardless of whether persistent tracing is enabled or not.
+  jtrace_enabled = false
+  jtrace_last_entry_storage = 0
+  jtrace_target_buffer_size = "auto"
+  jtrace_use_large_entries = "auto"
 }
 
 declare_args() {

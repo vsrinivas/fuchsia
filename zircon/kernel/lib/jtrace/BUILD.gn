@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("jtrace") {
+  kernel = true
+  sources = [ "jtrace.cc" ]
+  deps = [
+    "//sdk/lib/fit:headers",
+    "//zircon/kernel/lib/console",
+    "//zircon/kernel/lib/debuglog",
+    "//zircon/kernel/lib/io",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/syscalls",
+    "//zircon/kernel/vm",
+    "//zircon/system/ulib/affine",
+    "//zircon/system/ulib/fbl:headers",
+    "//zircon/system/ulib/lazy_init",
+    "//zircon/system/ulib/pretty",
+  ]
+  public_configs = [
+    "//zircon/kernel:jtrace_config",
+    "//zircon/kernel:persistent_ram_config",
+  ]
+}

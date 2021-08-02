@@ -46,6 +46,7 @@ void console_write(ktl::string_view str);
 
 extern FILE gSerialFile;
 extern FILE gConsoleFile;
+extern FILE gStdoutUnbuffered;
 extern FILE gStdoutNoPersist;
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_

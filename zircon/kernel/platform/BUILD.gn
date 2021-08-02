@@ -28,6 +28,7 @@ source_set("platform") {
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/persistent-debuglog",
     "//zircon/kernel/lib/root_resource_filter",
     "//zircon/system/ulib/ram-crashlog",

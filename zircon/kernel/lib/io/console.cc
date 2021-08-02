@@ -149,6 +149,12 @@ FILE gSerialFile{[](void*, ktl::string_view str) {
                  },
                  nullptr};
 
+FILE gStdoutUnbuffered{[](void*, ktl::string_view str) {
+                         stdout_write(str, SkipPersistedDebuglog::No);
+                         return static_cast<int>(str.size());
+                       },
+                       nullptr};
+
 FILE gStdoutNoPersist{[](void*, ktl::string_view str) {
                         stdout_write_buffered(str, SkipPersistedDebuglog::Yes);
                         return static_cast<int>(str.size());

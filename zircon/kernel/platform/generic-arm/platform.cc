@@ -14,6 +14,7 @@
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
+#include <lib/jtrace/jtrace.h>
 #include <lib/memory_limit.h>
 #include <lib/persistent-debuglog.h>
 #include <lib/system-topology.h>
@@ -137,6 +138,8 @@ void platform_panic_start(void) {
 
   if (panic_started.exchange(1) == 0) {
     dlog_bluescreen_init();
+    // Attempt to dump the current debug trace buffer, if we have one.
+    jtrace_dump(jtrace::TraceBufferType::Current);
   }
 }
 
@@ -310,13 +313,24 @@ static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
 
 static void allocate_persistent_ram(paddr_t pa, size_t length) {
   // Figure out how to divide up our persistent RAM.  Right now there are
-  // two potential users, the crashlog, and persistent debug logging.
-  // Persistent debug logging has a target amount of RAM it would _like_
-  // to have, and crash-logging has a minimum amount it is guaranteed to
+  // three potential users:
+  //
+  // 1) The crashlog.
+  // 2) Persistent debug logging.
+  // 3) Persistent debug tracing.
+  //
+  // Persistent debug logging and tracing have target amounts of RAM they would
+  // _like_ to have, and crash-logging has a minimum amount it is guaranteed to
   // get.  Additionally, all allocated are made in a chunks of the minimum
   // persistent RAM allocation granularity.
+  //
+  // Make sure that the crashlog gets as much of its minimum allocation as is
+  // possible.  Then attempt to satisfy the target for persistent debug logging,
+  // followed by persistent debug tracing.  Finally, give anything leftovers to
+  // the crashlog.
   size_t crashlog_size = 0;
-  size_t dlog_size = 0;
+  size_t pdlog_size = 0;
+  size_t jtrace_size = 0;
   {
     // start by figuring out how many chunks of RAM we have available to
     // us total.
@@ -328,29 +342,45 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
                                       kMinCrashlogSize / kPersistentRamAllocationGranularity);
     persistent_chunks_available -= crashlog_chunks;
 
-    // Give what remains over to the persistent debug logging, up to the
-    // desired target amount.
-    size_t dlog_chunks =
+    // Next in line is persistent debug logging.
+    size_t pdlog_chunks =
         ktl::min(persistent_chunks_available,
                  kTargetPersistentDebugLogSize / kPersistentRamAllocationGranularity);
-    persistent_chunks_available -= dlog_chunks;
+    persistent_chunks_available -= pdlog_chunks;
+
+    // Next up is persistent debug tracing.
+    size_t jtrace_chunks =
+        ktl::min(persistent_chunks_available,
+                 kJTraceTargetPersistentBufferSize / kPersistentRamAllocationGranularity);
+    persistent_chunks_available -= jtrace_chunks;
 
     // Finally, anything left over can go to the crashlog.
     crashlog_chunks += persistent_chunks_available;
 
     crashlog_size = crashlog_chunks * kPersistentRamAllocationGranularity;
-    dlog_size = dlog_chunks * kPersistentRamAllocationGranularity;
+    pdlog_size = pdlog_chunks * kPersistentRamAllocationGranularity;
+    jtrace_size = jtrace_chunks * kPersistentRamAllocationGranularity;
   }
 
   // Configure up the crashlog RAM
   dprintf(INFO, "Crashlog configured with %" PRIu64 " bytes\n", crashlog_size);
   platform_set_ram_crashlog_location(pa, crashlog_size);
+  size_t offset = crashlog_size;
 
   // Configure the persistent debuglog RAM (if we have any)
-  if (dlog_size > 0) {
+  if (pdlog_size > 0) {
     dprintf(INFO, "Persistent debug logging enabled and configured with %" PRIu64 " bytes\n",
-            dlog_size);
-    persistent_dlog_set_location(paddr_to_physmap(pa + crashlog_size), dlog_size);
+            pdlog_size);
+    persistent_dlog_set_location(paddr_to_physmap(pa + offset), pdlog_size);
+    offset += pdlog_size;
+  }
+
+  // Do _not_ attempt to set the location of the debug trace buffer if this is
+  // not a persistent debug trace buffer.  The location of a non-persistent
+  // trace buffer would have been already set during (very) early init.
+  if constexpr (kJTraceIsPersistent == jtrace::IsPersistent::Yes) {
+    jtrace_set_location(paddr_to_physmap(pa + offset), jtrace_size);
+    offset += jtrace_size;
   }
 }
 

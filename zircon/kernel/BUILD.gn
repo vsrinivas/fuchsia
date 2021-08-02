@@ -165,6 +165,7 @@ if (is_kernel) {
   # This is the top config for all kernel code.
   config("kernel_config") {
     configs = [
+      ":jtrace_config",
       ":lock_dep",
       ":scheduler",
       ":standalone",
@@ -360,6 +361,42 @@ if (is_kernel) {
   config("persistent_ram_config") {
     visibility = [ ":*" ]
     defines = [ "PERSISTENT_RAM_ALLOCATION_GRANULARITY=$persistent_ram_allocation_granularity" ]
+  }
+
+  config("jtrace_config") {
+    visibility = [ ":*" ]
+
+    if (jtrace_enabled == false) {
+      defines = [ "JTRACE_TARGET_BUFFER_SIZE=0" ]
+    } else {
+      if (jtrace_target_buffer_size == "auto") {
+        if (jtrace_enabled == "persistent") {
+          jtrace_target_buffer_size = 4096
+        } else {
+          jtrace_target_buffer_size = 32768
+        }
+      }
+
+      if (jtrace_use_large_entries == "auto") {
+        if (jtrace_enabled == "persistent") {
+          jtrace_use_large_entries = false
+        } else {
+          jtrace_use_large_entries = true
+        }
+      }
+
+      defines = [
+        "JTRACE_TARGET_BUFFER_SIZE=$jtrace_target_buffer_size",
+        "JTRACE_LAST_ENTRY_STORAGE=$jtrace_last_entry_storage",
+        "JTRACE_USE_LARGE_ENTRIES=$jtrace_use_large_entries",
+      ]
+
+      if (jtrace_enabled == "persistent") {
+        defines += [ "JTRACE_IS_PERSISTENT=true" ]
+      } else {
+        defines += [ "JTRACE_IS_PERSISTENT=false" ]
+      }
+    }
   }
 
   code_patching_hermetic_embedding("code-patches") {

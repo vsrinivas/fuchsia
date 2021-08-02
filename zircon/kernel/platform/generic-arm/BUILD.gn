@@ -30,6 +30,7 @@ source_set("generic-arm") {
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/instrumentation:headers",
+    "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/lockdep",
     "//zircon/kernel/lib/memory_limit",
     "//zircon/kernel/lib/persistent-debuglog",
