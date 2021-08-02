@@ -12,6 +12,7 @@ use {
         fmt,
         fs::{File, OpenOptions},
         io::{BufReader, BufWriter},
+        path::Path,
     },
 };
 
@@ -20,44 +21,28 @@ pub struct FileBacked {
 }
 
 impl FileBacked {
-    fn reader_from_ref(path: &Option<&String>) -> Result<Option<BufReader<File>>> {
+    fn reader<P>(path: &Option<P>) -> Result<Option<BufReader<File>>>
+    where
+        P: AsRef<Path>,
+    {
         match path {
             Some(p) => {
-                File::open(p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
+                File::open(&p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
             }
             None => Ok(None),
         }
     }
 
-    fn reader(path: &Option<String>) -> Result<Option<BufReader<File>>> {
-        match path {
-            Some(p) => {
-                File::open(p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
-            }
-            None => Ok(None),
-        }
-    }
-
-    fn writer_from_ref(path: &Option<&String>) -> Result<Option<BufWriter<File>>> {
+    fn writer<P>(path: &Option<P>) -> Result<Option<BufWriter<File>>>
+    where
+        P: AsRef<Path>,
+    {
         match path {
             Some(p) => OpenOptions::new()
                 .write(true)
                 .truncate(true)
                 .create(true)
-                .open(p)
-                .map(|f| Some(BufWriter::new(f)))
-                .context("opening write buffer"),
-            None => Ok(None),
-        }
-    }
-
-    fn writer(path: &Option<String>) -> Result<Option<BufWriter<File>>> {
-        match path {
-            Some(p) => OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(p)
+                .open(&p)
                 .map(|f| Some(BufWriter::new(f)))
                 .context("opening write buffer"),
             None => Ok(None),
@@ -73,7 +58,7 @@ impl FileBacked {
         Ok(Self {
             data: Persistent::load(
                 FileBacked::reader(global)?,
-                FileBacked::reader_from_ref(build)?,
+                FileBacked::reader(build)?,
                 FileBacked::reader(user)?,
                 runtime,
             )?,
@@ -88,7 +73,7 @@ impl FileBacked {
     ) -> Result<()> {
         self.data.save(
             FileBacked::writer(global)?,
-            FileBacked::writer_from_ref(build)?,
+            FileBacked::writer(build)?,
             FileBacked::writer(user)?,
         )
     }
