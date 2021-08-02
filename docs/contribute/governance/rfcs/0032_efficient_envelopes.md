@@ -57,7 +57,7 @@ and wire size matter.
 The proposed envelope format is:
 
 ![Figure: 64 bit little endian word, MSB 32 bits size, 16 bits handle_count,
-16 bits reserved](resources/ftp-032-figure1.png)
+16 bits reserved](resources/0032_efficient_envelopes/figure1.png)
 
 Compared with the [existing envelope format][envelopes]:
 
