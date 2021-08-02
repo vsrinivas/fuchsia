@@ -97,7 +97,12 @@ zx::vmo Bootfs::Open(std::string_view root_prefix, std::string_view filename,
                                          e->data_len, &file_vmo);
   check(log_, status, "zx_vmo_create_child failed");
 
-  file_vmo.set_property(ZX_PROP_NAME, filename.data(), filename.size());
+  status = file_vmo.set_property(ZX_PROP_NAME, filename.data(), filename.size());
+  check(log_, status, "failed to set ZX_PROP_NAME");
+
+  uint64_t size = e->data_len;
+  status = file_vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+  check(log_, status, "failed to set ZX_PROP_VMO_CONTENT_SIZE");
 
   status = file_vmo.replace_as_executable(vmex_resource_, &file_vmo);
   check(log_, status, "zx_vmo_replace_as_executable failed");
