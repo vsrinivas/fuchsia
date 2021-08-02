@@ -216,14 +216,15 @@ Follow these guidelines when modifying fint protos:
 
 #### Regenerating generated code
 
-After changing a .proto file, run `./tools/update_protos.sh` to update the
-corresponding generated code.
+After changing a .proto file, run `fx build` (make sure the changed proto is
+included by your `fx set`), and follow the prompt to update the corresponding
+generated code.
 
 Note that when adding a new field to a protobuf, you'll need to add the field
 and then update the generated code *before* referencing the new field in fint's
-code. This is because `update_protos.sh` runs `fx set`, which uses (and builds)
-fint itself under the hood, and if fint references a protobuf field that doesn't
-yet exist in the generated Go code then it will fail to compile.
+code. This is because `fx set` uses (and builds) fint itself under the hood, and
+if fint references a protobuf field that doesn't yet exist in the generated Go
+code then it will fail to compile.
 
 On the other hand, it *is* safe to delete a protobuf field and then regenerate
 the generated files even while the field is still referenced in fint. But
