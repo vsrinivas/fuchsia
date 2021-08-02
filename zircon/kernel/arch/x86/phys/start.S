@@ -21,6 +21,13 @@
   // As early as possible collect the time stamp.
   sample_ticks
 
+  // Disable asynchronous interrupts in case the boot loader left them on.
+  cli
+
+  // Clear any incoming stack pointer so it can't be used accidentally
+  // before the proper stack is set up below.
+  xor %esp, %esp
+
   // Clear frame pointer: at the root of the call stack.
   xor %ebp, %ebp
 
@@ -40,6 +47,11 @@
   // Save first argument to PhysMain in a call-saved register.
   // The time stamp is already safe in %rbx.
   mov %rsi, %r12
+
+  // Clear the IDT to zero address and zero limit, so any trap is sure to
+  // get a triple-fault.  We've just cleared the .bss containing the stack,
+  // so these bytes are known to be zero.
+  lidt boot_stack(%rip)
 
   // Get all the cpuid data in place.
   // This only needs the basic stack to call and return.
