@@ -247,39 +247,28 @@ pub fn sys_faccessat(
     Ok(SUCCESS)
 }
 
-fn getdents_internal(
-    ctx: &SyscallContext<'_>,
-    fd: FdNumber,
-    user_entries: UserAddress,
-    mut sink: impl DirentSink,
-) -> Result<SyscallResult, Errno> {
-    let file = ctx.task.files.get(fd)?;
-    file.readdir(&ctx.task, &mut sink)?;
-    let bytes = sink.bytes();
-    if !bytes.is_empty() {
-        ctx.task.mm.write_memory(user_entries, bytes)?;
-    }
-    Ok(bytes.len().into())
-}
-
 pub fn sys_getdents(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    user_entries: UserAddress,
-    count: usize,
+    user_buffer: UserAddress,
+    user_capacity: usize,
 ) -> Result<SyscallResult, Errno> {
-    let sink = DirentSink32::with_capacity(count);
-    getdents_internal(ctx, fd, user_entries, sink)
+    let file = ctx.task.files.get(fd)?;
+    let mut sink = DirentSink32::new(ctx.task.clone(), user_buffer, user_capacity);
+    file.readdir(&ctx.task, &mut sink)?;
+    Ok(sink.actual().into())
 }
 
 pub fn sys_getdents64(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    user_entries: UserAddress,
-    count: usize,
+    user_buffer: UserAddress,
+    user_capacity: usize,
 ) -> Result<SyscallResult, Errno> {
-    let sink = DirentSink64::with_capacity(count);
-    getdents_internal(ctx, fd, user_entries, sink)
+    let file = ctx.task.files.get(fd)?;
+    let mut sink = DirentSink64::new(ctx.task.clone(), user_buffer, user_capacity);
+    file.readdir(&ctx.task, &mut sink)?;
+    Ok(sink.actual().into())
 }
 
 pub fn sys_chdir(ctx: &SyscallContext<'_>, user_path: UserCString) -> Result<SyscallResult, Errno> {

@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use std::mem;
+use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
+use crate::task::*;
 use crate::types::*;
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -81,17 +83,20 @@ pub trait DirentSink {
         name: &FsStr,
     ) -> Result<(), Errno>;
 
-    /// The bytes into which the directory entries have been serialized.
-    fn bytes(&self) -> &[u8];
+    /// The number of bytes which have been written into the sink.
+    fn actual(&self) -> usize;
 }
 
 pub struct DirentSink64 {
-    buffer: Vec<u8>,
+    task: Arc<Task>,
+    user_buffer: UserAddress,
+    user_capacity: usize,
+    actual: usize,
 }
 
 impl DirentSink64 {
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self { buffer: Vec::with_capacity(capacity) }
+    pub fn new(task: Arc<Task>, user_buffer: UserAddress, user_capacity: usize) -> Self {
+        Self { task, user_buffer, user_capacity, actual: 0 }
     }
 }
 
@@ -105,10 +110,10 @@ impl DirentSink for DirentSink64 {
     ) -> Result<(), Errno> {
         let content_size = DIRENT64_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 1, 8); // +1 for the null terminator.
-        if self.buffer.len() + entry_size > self.buffer.capacity() {
+        if self.actual + entry_size > self.user_capacity {
             return Err(ENOSPC);
         }
-        let staring_length = self.buffer.len();
+        let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader64 {
             d_ino: inode_num,
             d_off: offset,
@@ -117,27 +122,35 @@ impl DirentSink for DirentSink64 {
             ..DirentHeader64::default()
         };
         let header_bytes = header.as_bytes();
-        self.buffer.extend_from_slice(&header_bytes[..DIRENT64_HEADER_SIZE]);
-        self.buffer.extend_from_slice(name);
+        buffer.extend_from_slice(&header_bytes[..DIRENT64_HEADER_SIZE]);
+        buffer.extend_from_slice(name);
         for _ in 0..(entry_size - content_size) {
-            self.buffer.push(b'\0');
+            buffer.push(b'\0');
         }
-        assert_eq!(self.buffer.len(), staring_length + entry_size);
+        assert_eq!(buffer.len(), entry_size);
+        self.task
+            .mm
+            .write_memory(self.user_buffer + self.actual, buffer.as_slice())
+            .map_err(|_| ENOSPC)?;
+        self.actual += entry_size;
         Ok(())
     }
 
-    fn bytes(&self) -> &[u8] {
-        self.buffer.as_slice()
+    fn actual(&self) -> usize {
+        self.actual
     }
 }
 
 pub struct DirentSink32 {
-    pub buffer: Vec<u8>,
+    task: Arc<Task>,
+    user_buffer: UserAddress,
+    user_capacity: usize,
+    actual: usize,
 }
 
 impl DirentSink32 {
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self { buffer: Vec::with_capacity(capacity) }
+    pub fn new(task: Arc<Task>, user_buffer: UserAddress, user_capacity: usize) -> Self {
+        Self { task, user_buffer, user_capacity, actual: 0 }
     }
 }
 
@@ -151,10 +164,10 @@ impl DirentSink for DirentSink32 {
     ) -> Result<(), Errno> {
         let content_size = DIRENT32_HEADER_SIZE + name.len();
         let entry_size = round_up_to_increment(content_size + 2, 8); // +1 for the null terminator, +1 for the type.
-        if self.buffer.len() + entry_size > self.buffer.capacity() {
+        if self.actual + entry_size > self.user_capacity {
             return Err(ENOSPC);
         }
-        let staring_length = self.buffer.len();
+        let mut buffer = Vec::with_capacity(entry_size);
         let header = DirentHeader32 {
             d_ino: inode_num,
             d_off: offset,
@@ -162,17 +175,22 @@ impl DirentSink for DirentSink32 {
             ..DirentHeader32::default()
         };
         let header_bytes = header.as_bytes();
-        self.buffer.extend_from_slice(&header_bytes[..DIRENT32_HEADER_SIZE]);
-        self.buffer.extend_from_slice(name);
+        buffer.extend_from_slice(&header_bytes[..DIRENT32_HEADER_SIZE]);
+        buffer.extend_from_slice(name);
         for _ in 0..(entry_size - content_size - 1) {
-            self.buffer.push(b'\0');
+            buffer.push(b'\0');
         }
-        self.buffer.push(entry_type.bits()); // Include the type.
-        assert_eq!(self.buffer.len(), staring_length + entry_size);
+        buffer.push(entry_type.bits()); // Include the type.
+        assert_eq!(buffer.len(), entry_size);
+        self.task
+            .mm
+            .write_memory(self.user_buffer + self.actual, buffer.as_slice())
+            .map_err(|_| ENOSPC)?;
+        self.actual += entry_size;
         Ok(())
     }
 
-    fn bytes(&self) -> &[u8] {
-        self.buffer.as_slice()
+    fn actual(&self) -> usize {
+        self.actual
     }
 }

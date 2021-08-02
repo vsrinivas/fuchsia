@@ -382,8 +382,8 @@ impl FileObject {
             // because EINVAL is a very generic error. We only want to perform
             // this transformation in exactly the case where there was not
             // sufficient space in the DirentSink.
-            Err(ENOSPC) if sink.bytes().is_empty() => Err(EINVAL),
-            Err(ENOSPC) => Ok(()),
+            Err(ENOSPC) if sink.actual() > 0 => Ok(()),
+            Err(ENOSPC) => Err(EINVAL),
             result => result,
         }
     }
