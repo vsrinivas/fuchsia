@@ -1,74 +1,21 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/rust/rustc_library.gni")
-import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
-
-rustc_library("ramdevice_client") {
-  with_unit_tests = true
-  edition = "2018"
-  deps = [
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-  ]
-  test_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:matches",
-  ]
-  non_rust_deps = [ "//zircon/system/ulib/ramdevice-client" ]
-
-  sources = [
-    "src/lib.rs",
-    "src/ramdevice_sys.rs",
-  ]
-}
-
-fuchsia_component("ramdevice-client-tests") {
-  testonly = true
-  manifest = "meta/ramdevice_client_lib_test.cmx"
-  deps = [
-    ":ramdevice_client_test",
-    ":ramdisk-isolated-devmgr-component",
-  ]
-}
-
-fuchsia_test_package("ramdevice-client-tests-package") {
-  package_name = "ramdevice-client-tests"
-  test_components = [ ":ramdevice-client-tests" ]
-}
-
-# Test component that exposes a /dev filesystem containing ramdisk support as
-# its fuchsia.test.IsolatedDevmgr service.
-isolated_devmgr_component("ramdisk-isolated-devmgr-component") {
-  component_name = "ramdisk-isolated-devmgr"
-  args = [
-    "--sys_device=/boot/driver/platform-bus.so",
-    "--svc_name=fuchsia.test.IsolatedDevmgr",
-    "--load_driver=/boot/driver/ramdisk.so",
-    "--wait_for=sys/platform/00:00:2d/ramctl",
-  ]
-
-  deps = [
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/ftl",
-    "//src/devices/block/drivers/gpt",
-    "//src/devices/block/drivers/mbr",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/bus/drivers/platform",
-    "//src/storage/fvm/driver",
-  ]
-}
-
-fuchsia_package("ramdisk-isolated-devmgr") {
-  testonly = true
-  deps = [ ":ramdisk-isolated-devmgr-component" ]
-}
-
 group("tests") {
   testonly = true
-  deps = [ ":ramdevice-client-tests-package" ]
+  deps = [ "rust:tests" ]
+}
+
+# Forward some targets for easier transition
+group("ramdevice_client") {
+  public_deps = [ "rust:ramdevice_client" ]
+}
+group("ramdisk-isolated-devmgr") {
+  testonly = true
+  public_deps = [ "rust:ramdisk-isolated-devmgr" ]
+}
+group("ramdisk-isolated-devmgr-component") {
+  testonly = true
+  public_deps = [ "rust:ramdisk-isolated-devmgr-component" ]
 }
