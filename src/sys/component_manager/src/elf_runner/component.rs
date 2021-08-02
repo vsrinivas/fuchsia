@@ -154,6 +154,14 @@ impl Controllable for ElfComponent {
                 .boxed()
             }
         } else {
+            if self.main_process_critical {
+                warn!(
+                    "killing job of component {} marked with 'main_process_critical' because \
+                component does not implement Lifecycle, so this will also kill component_manager \
+                and all of its components",
+                    self.component_url
+                );
+            }
             let _ = self.job.kill().map_err(|e| {
                 error!("failed killing job for component with no lifecycle channel: {}", e)
             });
