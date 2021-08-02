@@ -337,9 +337,15 @@ details. See for instance the
 
 ### Error wrapping {#error-wrapping}
 
-When propagating errors using `fmt.Errorf`, always use `%w` to include the inner
-error. See [Working with Errors in Go
-1.13](https://blog.golang.org/go1.13-errors).
+When propagating errors using `fmt.Errorf`:
+
+* Use `%s` to only include their string values;
+* Use `%w` to allow callers to unwrap and observe wrapped errors; note `%w`
+  makes those wrapped errors part of your API.
+
+See [Working with Errors in Go
+1.13](https://blog.golang.org/go1.13-errors), and more specifically [Whether
+to Wrap](https://blog.golang.org/go1.13-errors#TOC_3.4.).
 
 There are some specific cases where error propagation must be done in a way that
 satisfies an API contract, e.g. often the case in a RDBMS driver where specific
