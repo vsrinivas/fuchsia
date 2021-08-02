@@ -11,6 +11,12 @@ golden_go_proto("proto") {
   import_protobuf_full = true
 }
 
+golden_go_proto("proto_grpc") {
+  sources = [ "proto/emulator_controller.proto" ]
+  import_protobuf_full = true
+  generate_go_grpc = true
+}
+
 go_library("proto_lib") {
   source_dir = "proto"
   sources = [
@@ -30,9 +36,8 @@ go_library("femu-grpc_lib") {
 
 group("tests") {
   testonly = true
-
-  # TODO(https://fxbug.dev/72810): proto_library doesn't support grpc-go.
-  if (false) {
-    deps = [ ":proto_goldens" ]
-  }
+  deps = [
+    ":proto",
+    ":proto_grpc",
+  ]
 }

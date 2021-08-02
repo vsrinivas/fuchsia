@@ -63,11 +63,20 @@ template("_golden_go_proto_file") {
 #   generate_descriptor_set (optional, default false)
 #       Generate a descriptor set file.
 #
+#   generate_go_grpc (optional, default false)
+#       Generate a gRPC protobuf stub.
+#
 #   import_protobuf_full (optional)
 #       Allows .proto files to import .proto files from protobuf_full, without
 #       adding a dependency on all the C++ code in that library.
 template("golden_go_proto") {
+  _generate_go_grpc =
+      defined(invoker.generate_go_grpc) && invoker.generate_go_grpc
   _proto_name = "${target_name}_proto"
+  if (_generate_go_grpc) {
+    _proto_name += "_grpc"
+  }
+
   proto_library(_proto_name) {
     forward_variables_from(invoker,
                            [
@@ -76,7 +85,11 @@ template("golden_go_proto") {
                              "sources",
                            ])
     generate_cc = false
-    generate_go = true
+    if (_generate_go_grpc) {
+      generate_go_grpc = true
+    } else {
+      generate_go = true
+    }
     generate_python = false
   }
 
@@ -85,6 +98,9 @@ template("golden_go_proto") {
   _goldens = []
   foreach(source, invoker.sources) {
     _name = get_path_info(source, "name")
+    if (_generate_go_grpc) {
+      _name += "_grpc"
+    }
     _dir = rebase_path(get_path_info(source, "dir"), ".")
 
     _output = "${_name}.pb.go"
@@ -99,8 +115,11 @@ template("golden_go_proto") {
 
   if (defined(invoker.generate_descriptor_set) &&
       invoker.generate_descriptor_set) {
-    _golden_name = "${target_name}_desc_pb_diff"
     _target_name = target_name
+    if (_generate_go_grpc) {
+      _target_name += "_grpc"
+    }
+    _golden_name = "${_target_name}_desc_pb_diff"
     golden_file(_golden_name) {
       golden = "${_dir}/${_target_name}.desc.pb"
       current = "${target_out_dir}/${_proto_name}.desc.pb"
