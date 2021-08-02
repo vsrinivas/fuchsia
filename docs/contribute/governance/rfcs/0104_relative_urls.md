@@ -48,7 +48,7 @@ relative URLs to make it easier to write isolated driver integration tests.
 
 Below is an example topology of such a test:
 
-![Relative URLs example](resources/relative_urls/relative-url-example.png)
+![Relative URLs example](resources/0104_relative_urls/relative-url-example.png)
 
 The Driver Framework needs multiple test components working together for an
 integration test. All of these components should be loaded out of the test
@@ -121,7 +121,7 @@ will be handled normally.
 An example of walking through multiple relative components to find the absolute
 URL.
 
-![Resolving relative URLs](resources/relative_urls/relative-url-resolution.png)
+![Resolving relative URLs](resources/0104_relative_urls/relative-url-resolution.png)
 
 Here are the steps for RelativeResolver to resolve `#meta/child.cm`:
 
