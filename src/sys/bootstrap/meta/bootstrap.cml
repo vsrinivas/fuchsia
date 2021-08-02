@@ -217,7 +217,10 @@
             to: "#driver_manager",
         },
         {
-            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            protocol: [
+                "fuchsia.driver.development.DriverIndex",
+                "fuchsia.driver.framework.DriverIndex",
+            ],
             from: "#driver_index",
             to: "#driver_manager",
         },

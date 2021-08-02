@@ -1708,6 +1708,7 @@ zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
     }
     driver_info_vec.push_back(std::move(driver_info));
   }
+
   return zx::ok(std::move(driver_info_vec));
 }
 
@@ -1734,9 +1735,33 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   auto result = GetDriverInfo(allocator, driver_list);
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
-  } else {
-    completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
   }
+
+  // Check the driver index for drivers.
+  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
+    completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
+    return;
+  }
+
+  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
+      std::move(driver_index_client.value()), dispatcher());
+  auto info_result = driver_index->GetDriverInfo_Sync(request->driver_filter);
+  // There are still some environments where we can't connect to DriverIndex.
+  if (info_result.status() != ZX_OK) {
+    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
+    completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
+    return;
+  }
+  if (info_result->result.is_err()) {
+    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
+    completer.ReplyError(info_result->result.err());
+    return;
+  }
+  const auto& drivers = info_result->result.response().drivers;
+  result->insert(result->end(), drivers.begin(), drivers.end());
+  completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
 }
 
 void Coordinator::Register(RegisterRequestView request, RegisterCompleter::Sync& completer) {

@@ -96,7 +96,7 @@ class BindCompilerV2Test : public testing::Test {
 
 // Check that calling GetDriverInfo with an invalid driver path returns ZX_ERR_NOT_FOUND.
 TEST_F(BindCompilerV2Test, InvalidDriver) {
-  fuchsia::driver::development::DriverDevelopment_GetDriverInfo_Result result;
+  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
   ASSERT_EQ(driver_dev_->GetDriverInfo({"abc"}, &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   ASSERT_EQ(result.err(), ZX_ERR_NOT_FOUND);
@@ -104,7 +104,7 @@ TEST_F(BindCompilerV2Test, InvalidDriver) {
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(BindCompilerV2Test, ValidDriver) {
-  fuchsia::driver::development::DriverDevelopment_GetDriverInfo_Result result;
+  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
   ASSERT_EQ(driver_dev_->GetDriverInfo({driver_libpath_}, &result), ZX_OK);
   ASSERT_TRUE(result.is_response());
   ASSERT_EQ(result.response().drivers.size(), 1u);

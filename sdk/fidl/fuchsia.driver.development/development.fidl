@@ -99,13 +99,7 @@ type DeviceInfo = table {
 /// Interface for developing and debugging drivers.
 /// This interface should only be used for development and disabled in release builds.
 @discoverable
-protocol DriverDevelopment {
-    /// Restart all Driver Hosts containing the driver specified by `driver path`.
-    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
-    RestartDriverHosts(struct {
-        driver_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
-    }) -> (struct {}) error zx.status;
-
+protocol DriverIndex {
     /// Returns a list of all drivers that are known to the system.
     /// If a |driver_filter| is provided, the returned list will be filtered to
     /// only include drivers specified in the filter.
@@ -118,6 +112,19 @@ protocol DriverDevelopment {
     }) -> (struct {
         drivers vector<DriverInfo>:MAX;
     }) error zx.status;
+};
+
+/// Interface for developing and debugging drivers.
+/// This interface should only be used for development and disabled in release builds.
+@discoverable
+protocol DriverDevelopment {
+    compose DriverIndex;
+
+    /// Restart all Driver Hosts containing the driver specified by `driver path`.
+    /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
+    RestartDriverHosts(struct {
+        driver_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
+    }) -> (struct {}) error zx.status;
 
     /// Returns the list of devices that are running on the system.
     /// If a |device_filter| is provided, the returned list will be filtered to

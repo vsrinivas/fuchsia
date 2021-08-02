@@ -42,6 +42,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

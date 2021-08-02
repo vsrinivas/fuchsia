@@ -6,6 +6,7 @@ use anyhow::{self, Context};
 use bind::interpreter::decode_bind_rules::DecodedBindRules;
 use bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey};
 use cm_rust::FidlIntoNative;
+use fidl_fuchsia_driver_development as fdd;
 use fidl_fuchsia_driver_framework as fdf;
 use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
 use fidl_fuchsia_io as fio;
@@ -39,6 +40,7 @@ fn ignore_peer_closed(err: fidl::Error) -> Result<(), fidl::Error> {
 /// and dispatched.
 enum IncomingRequest {
     DriverIndexProtocol(DriverIndexRequestStream),
+    DriverDevelopmentProtocol(fdd::DriverIndexRequestStream),
 }
 
 fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Option<String> {
@@ -218,6 +220,16 @@ impl ResolvedDriver {
             ..fdf::MatchedDriver::EMPTY
         }
     }
+
+    fn create_driver_info(&self) -> fdd::DriverInfo {
+        fdd::DriverInfo {
+            url: Some(self.component_url.as_str().to_string()),
+            bind_rules: Some(fdd::BindRulesBytecode::BytecodeV2(
+                self.bind_rules.instructions.clone(),
+            )),
+            ..fdd::DriverInfo::EMPTY
+        }
+    }
 }
 
 enum BaseRepo {
@@ -301,6 +313,52 @@ impl Indexer {
             .map(|driver| driver.create_matched_driver())
             .collect())
     }
+    fn get_driver_info(&self, driver_filter: Vec<String>) -> fdd::DriverIndexGetDriverInfoResult {
+        let mut driver_info = Vec::new();
+
+        for driver in &self.boot_repo {
+            if driver_filter.len() == 0
+                || driver_filter.iter().any(|f| f == driver.component_url.as_str())
+            {
+                driver_info.push(driver.create_driver_info());
+            }
+        }
+
+        let base_repo = self.base_repo.borrow();
+        if let BaseRepo::Resolved(drivers) = &base_repo.deref() {
+            for driver in drivers {
+                if driver_filter.len() == 0
+                    || driver_filter.iter().any(|f| f == driver.component_url.as_str())
+                {
+                    driver_info.push(driver.create_driver_info());
+                }
+            }
+        }
+
+        Ok(driver_info)
+    }
+}
+
+async fn run_driver_development_server(
+    indexer: Rc<Indexer>,
+    stream: fdd::DriverIndexRequestStream,
+) -> Result<(), anyhow::Error> {
+    stream
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async {
+            let indexer = indexer.clone();
+            match request {
+                fdd::DriverIndexRequest::GetDriverInfo { driver_filter, responder } => {
+                    responder
+                        .send(&mut indexer.get_driver_info(driver_filter))
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to GetDriverInfo")?;
+                }
+            }
+            Ok(())
+        })
+        .await?;
+    Ok(())
 }
 
 async fn run_index_server(
@@ -394,6 +452,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
     service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverIndexProtocol);
+    service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverDevelopmentProtocol);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
     let (resolver, resolver_stream) =
@@ -414,6 +473,9 @@ async fn main() -> Result<(), anyhow::Error> {
                     match request {
                         IncomingRequest::DriverIndexProtocol(stream) => {
                             run_index_server(index.clone(), stream).await
+                        }
+                        IncomingRequest::DriverDevelopmentProtocol(stream) => {
+                            run_driver_development_server(index.clone(), stream).await
                         }
                     }
                     .unwrap_or_else(|e| log::error!("Error running index_server: {:?}", e))

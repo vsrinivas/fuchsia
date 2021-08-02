@@ -11,7 +11,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            protocol: [
+                "fuchsia.driver.development.DriverIndex",
+                "fuchsia.driver.framework.DriverIndex",
+            ],
         },
     ],
     use: [
@@ -28,7 +31,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            protocol: [
+                "fuchsia.driver.development.DriverIndex",
+                "fuchsia.driver.framework.DriverIndex",
+            ],
             from: "self",
         },
     ],

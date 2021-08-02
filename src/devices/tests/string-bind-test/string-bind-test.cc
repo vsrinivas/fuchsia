@@ -59,7 +59,7 @@ class StringBindTest : public testing::Test {
 
 // Get the bind program of the test driver and check that it has the expected instructions.
 TEST_F(StringBindTest, DriverBytecode) {
-  fuchsia::driver::development::DriverDevelopment_GetDriverInfo_Result result;
+  fuchsia::driver::development::DriverIndex_GetDriverInfo_Result result;
   ASSERT_EQ(ZX_OK, driver_dev_->GetDriverInfo({kStringBindDriverLibPath}, &result));
   ASSERT_TRUE(result.is_response());
   ASSERT_EQ(result.response().drivers.size(), 1u);
