@@ -5,9 +5,7 @@
 #include "src/storage/lib/utils/topological_path.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
-#include <lib/fdio/cpp/caller.h>
-
-#include <fbl/unique_fd.h>
+#include <lib/service/llcpp/service.h>
 
 namespace storage {
 
@@ -23,11 +21,10 @@ zx::status<std::string> GetTopologicalPath(
 }
 
 zx::status<std::string> GetTopologicalPath(const std::string& path) {
-  fbl::unique_fd fd(open(path.c_str(), O_RDWR));
-  if (!fd)
-    return zx::error(ZX_ERR_NOT_FOUND);
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  return GetTopologicalPath(caller.channel());
+  auto client_end_or = service::Connect<fuchsia_device::Controller>(path.c_str());
+  if (client_end_or.is_error())
+    return client_end_or.take_error();
+  return GetTopologicalPath(*client_end_or);
 }
 
 }  // namespace storage

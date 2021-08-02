@@ -8,14 +8,8 @@ source_set("topological_path") {
     "topological_path.h",
   ]
   deps = [
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
-    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }

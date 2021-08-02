@@ -131,23 +131,25 @@ struct ramdisk_client {
     if (!dirfd) {
       return ZX_ERR_BAD_STATE;
     }
+
     fbl::unique_fd ramdisk_fd(openat(dirfd.get(), ramdisk_path.c_str(), O_RDWR));
     if (!ramdisk_fd) {
       return ZX_ERR_BAD_STATE;
     }
-    zx_handle_t ramdisk_interface_raw;
-    zx_status_t status = fdio_get_service_handle(ramdisk_fd.release(), &ramdisk_interface_raw);
-    if (status != ZX_OK) {
-      return status;
+    fdio_cpp::FdioCaller ramdisk_caller(std::move(ramdisk_fd));
+    auto ramdisk_interface_or = ramdisk_caller.take_as<fuchsia_device::Controller>();
+    if (ramdisk_interface_or.is_error()) {
+      return ramdisk_interface_or.status_value();
     }
-    zx::channel ramdisk_interface(ramdisk_interface_raw);
+    fidl::ClientEnd<fuchsia_device::Controller> ramdisk_interface =
+        std::move(ramdisk_interface_or.value());
 
     // If binding to the block interface fails, ensure we still try to tear down the
     // ramdisk driver.
     auto cleanup = fit::defer(
         [&ramdisk_interface]() { ramdisk_client::DestroyByHandle(std::move(ramdisk_interface)); });
 
-    status = wait_for_device_at(dirfd.get(), block_path.c_str(), duration.get());
+    zx_status_t status = wait_for_device_at(dirfd.get(), block_path.c_str(), duration.get());
     if (status != ZX_OK) {
       return status;
     }
@@ -190,13 +192,12 @@ struct ramdisk_client {
     if (!ramdisk_fd) {
       return ZX_ERR_BAD_STATE;
     }
-
-    zx_handle_t ramdisk_interface;
-    status = fdio_get_service_handle(ramdisk_fd.release(), &ramdisk_interface);
-    if (status != ZX_OK) {
-      return status;
+    fdio_cpp::FdioCaller ramdisk_caller(std::move(ramdisk_fd));
+    auto ramdisk_interface_or = ramdisk_caller.take_as<fuchsia_device::Controller>();
+    if (ramdisk_interface_or.is_error()) {
+      return ramdisk_interface_or.status_value();
     }
-    ramdisk_interface_.reset(ramdisk_interface);
+    ramdisk_interface_ = std::move(ramdisk_interface_or.value());
 
     // Wait for the "block" path to rebind.
     strlcpy(ramdisk_path, relative_path_.c_str(), sizeof(ramdisk_path));
@@ -224,7 +225,7 @@ struct ramdisk_client {
     return ZX_OK;
   }
 
-  const zx::channel& ramdisk_interface() const { return ramdisk_interface_; }
+  const zx::channel& ramdisk_interface() const { return ramdisk_interface_.channel(); }
 
   const fbl::unique_fd& block_fd() const { return block_fd_; }
 
@@ -233,7 +234,8 @@ struct ramdisk_client {
   ~ramdisk_client() { Destroy(); }
 
  private:
-  ramdisk_client(fbl::String path, fbl::String relative_path, zx::channel ramdisk_interface,
+  ramdisk_client(fbl::String path, fbl::String relative_path,
+                 fidl::ClientEnd<fuchsia_device::Controller> ramdisk_interface,
                  fbl::unique_fd dev_root_fd, fbl::unique_fd block_fd)
       : path_(std::move(path)),
         relative_path_(relative_path),
@@ -241,10 +243,9 @@ struct ramdisk_client {
         dev_root_fd_(std::move(dev_root_fd)),
         block_fd_(std::move(block_fd)) {}
 
-  static zx_status_t DestroyByHandle(zx::channel ramdisk) {
+  static zx_status_t DestroyByHandle(fidl::ClientEnd<fuchsia_device::Controller> ramdisk) {
     zx_status_t call_status = ZX_OK;
-    auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(ramdisk.get()))
-                    .ScheduleUnbind();
+    auto resp = fidl::WireCall(ramdisk).ScheduleUnbind();
     zx_status_t status = resp.status();
     if (status != ZX_OK) {
       return status;
@@ -259,7 +260,7 @@ struct ramdisk_client {
   fbl::String path_;
   // The path relative to dev_root_fd_.
   fbl::String relative_path_;
-  zx::channel ramdisk_interface_;
+  fidl::ClientEnd<fuchsia_device::Controller> ramdisk_interface_;
   fbl::unique_fd dev_root_fd_;
   fbl::unique_fd block_fd_;
 };

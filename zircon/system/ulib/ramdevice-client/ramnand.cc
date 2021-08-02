@@ -6,6 +6,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -182,15 +183,9 @@ zx_status_t RamNand::CreateIsolated(const fuchsia_hardware_nand_RamNandInfo* con
 __EXPORT
 RamNand::~RamNand() {
   if (unbind && fd_) {
-    zx::channel dev;
-    zx_status_t status = fdio_get_service_handle(fd_.release(), dev.reset_and_get_address());
-    if (status != ZX_OK) {
-      fprintf(stderr, "Could not get service handle when unbinding ram_nand, %d\n", status);
-      return;
-    }
-    auto resp =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(dev.get())).ScheduleUnbind();
-    status = resp.status();
+    fdio_cpp::FdioCaller caller(std::move(fd_));
+    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>()).ScheduleUnbind();
+    zx_status_t status = resp.status();
     if (status == ZX_OK && resp->result.is_err()) {
       status = resp->result.err();
     }
