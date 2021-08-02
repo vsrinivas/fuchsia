@@ -483,7 +483,7 @@ mod tests {
 
         // The maximum time we will wait for a new volume is 100 milliseconds.
         exec.set_fake_time(101.millis().after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());

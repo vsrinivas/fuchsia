@@ -705,17 +705,17 @@ mod test {
 
         //set audioMuxVersionA to 1 and verify we fail to parse
         input[0] = 103;
-        AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
+        let _ = AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
 
         //set useSameStream to 1 and verify we fail to parse (StreamMuxConfig is required)
         input[0] = 199;
-        AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
+        let _ = AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
 
         //set allStreamsSameTimeRemaining to 0 and verify we error, we don't support multiple time
         //bases
         input[0] = 71;
         input[1] = 248;
-        AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
+        let _ = AudioMuxElement::try_from_bytes(input).expect_err("Failure to parse");
     }
 
     #[test]

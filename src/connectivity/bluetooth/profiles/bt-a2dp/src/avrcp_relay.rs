@@ -263,7 +263,7 @@ async fn update_status(
     status.set_state_from_avrcp(playback_status);
     status.duration =
         avrcp_status.song_length.map(|m| zx::Duration::from_millis(m as i64).into_nanos());
-    avrcp_status.song_position.map(|m| status.set_position(m as i64));
+    let _ = avrcp_status.song_position.map(|m| status.set_position(m as i64));
     Ok(())
 }
 
@@ -404,7 +404,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // Expect play status timer interval request.
-        exec.wake_next_timer();
+        let _ = exec.wake_next_timer();
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         expect_play_status_request(&mut exec, &mut controller_request_stream)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());

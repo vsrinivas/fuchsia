@@ -199,7 +199,7 @@ impl A2dpConfiguration {
     pub fn errors(&self) -> HashSet<ConfigurationError> {
         let mut e = HashSet::new();
         if !(self.enable_sink || self.enable_source) {
-            e.insert(ConfigurationError::NoProfilesEnabled);
+            let _ = e.insert(ConfigurationError::NoProfilesEnabled);
         }
         e
     }
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn success_using_provided_config_file() {
         let args = A2dpConfigurationArgs::default();
-        A2dpConfiguration::load_default_with_args(args).expect("provided config is not Ok()");
+        let _ = A2dpConfiguration::load_default_with_args(args).expect("provided config not Ok");
     }
 
     #[test]

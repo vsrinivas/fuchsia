@@ -593,11 +593,11 @@ async fn main() -> Result<(), Error> {
 
     // `bt-a2dp` provides the `avdtp.PeerManager`, `a2dp.AudioMode`, and `internal.a2dp.Controller`
     // capabilities.
-    fs.dir("svc").add_fidl_service(move |s| controller_pool.connected(s));
-    fs.dir("svc").add_fidl_service({
-        let peers = peers.clone();
-        move |s| handle_audio_mode_connection(peers.clone(), s)
-    });
+    let _ =
+        fs.dir("svc").add_fidl_service(move |s| controller_pool.connected(s)).add_fidl_service({
+            let peers = peers.clone();
+            move |s| handle_audio_mode_connection(peers.clone(), s)
+        });
     add_stream_controller_capability(&mut fs, PermitsManager::from(permits));
 
     if let Err(e) = fs.take_and_serve_directory_handle() {
@@ -755,6 +755,13 @@ mod tests {
         assert_eq!(streams.information().len(), 1, "Source SBC only should be available");
     }
 
+    /// Set the time to `time`, and then wake any expired timers and run until the main loop stalls.
+    fn forward_time_to(exec: &mut fasync::TestExecutor, time: fasync::Time) {
+        exec.set_fake_time(time);
+        let _ = exec.wake_expired_timers();
+        run_to_stalled(exec);
+    }
+
     #[test]
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
@@ -793,9 +800,7 @@ mod tests {
 
         // Fast forward time by 5 seconds. In this time, the remote peer has not
         // connected.
-        exec.set_fake_time(fasync::Time::from_nanos(6000000000));
-        exec.wake_expired_timers();
-        run_to_stalled(&mut exec);
+        forward_time_to(&mut exec, fasync::Time::after(zx::Duration::from_seconds(5)));
 
         // After fast forwarding time, expect and handle the `connect` request
         // because A2DP-sink should be initiating.
@@ -852,9 +857,7 @@ mod tests {
 
         // Fast forward time by .5 seconds. The threshold is 1 second, so the timer
         // to initiate connections has not been triggered.
-        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(500)));
-        exec.wake_expired_timers();
-        run_to_stalled(&mut exec);
+        forward_time_to(&mut exec, fasync::Time::after(zx::Duration::from_millis(500)));
 
         // A peer connects before the timeout.
         let (_remote, signaling) = Channel::create();
@@ -867,9 +870,7 @@ mod tests {
 
         // Fast forward time by 4.5 seconds. Ensure no outbound connection is initiated
         // by us, since the remote peer has assumed the INT role.
-        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(4500)));
-        exec.wake_expired_timers();
-        run_to_stalled(&mut exec);
+        forward_time_to(&mut exec, fasync::Time::after(zx::Duration::from_millis(4500)));
 
         let request = exec.run_until_stalled(&mut prof_stream.next());
         match request {

@@ -55,7 +55,7 @@ impl StreamController for PermitsManager {
             return Ok(token);
         }
         let token = Arc::new(self.permits.seize());
-        self.held.replace(Arc::downgrade(&token));
+        let _ = self.held.replace(Arc::downgrade(&token));
         Ok(token)
     }
 }
@@ -185,7 +185,7 @@ pub fn add_stream_controller_capability<SC: StreamController + Clone + Send + 's
     fs: &mut ServiceFs<ServiceObj<'_, ()>>,
     controller: SC,
 ) {
-    fs.dir("svc").add_fidl_service({
+    let _ = fs.dir("svc").add_fidl_service({
         move |s| {
             fasync::Task::spawn(handle_stream_controller_connection(s, controller.clone())).detach()
         }

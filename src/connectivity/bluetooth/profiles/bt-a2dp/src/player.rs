@@ -21,7 +21,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{
         channel::mpsc,
-        future::{AbortHandle, Abortable, Aborted, MapOk},
+        future::MapOk,
         io::{AsyncWrite, AsyncWriteExt},
         ready,
         stream::FuturesUnordered,
@@ -108,7 +108,9 @@ impl AudioConsumerSink {
         while let Poll::Ready(Some(result)) = self.send_futures.poll_next_unpin(cx) {
             match result {
                 Ok(index) => {
-                    self.buffers_free.insert(index);
+                    if !self.buffers_free.insert(index) {
+                        warn!("Freed a playback buffer twice: {}", index);
+                    }
                 }
                 Err(e) => warn!("Failed to send packet: {}", e),
             };
@@ -138,7 +140,9 @@ impl AudioConsumerSink {
         if let Err(_) = buffer.write(frame, 0) {
             return None;
         }
-        self.buffers_free.remove(&buffer_index);
+        if !self.buffers_free.remove(&buffer_index) {
+            warn!("Used a free buffer twice somehow: {}", buffer_index);
+        }
         Some(buffer_index)
     }
 
@@ -308,7 +312,7 @@ pub struct Player {
     playing: bool,
     next_packet_flags: mpsc::Sender<u32>,
     last_seq_played: u16,
-    decoder_task: Option<AbortHandle>,
+    _decoder_task: Option<fasync::Task<()>>,
 }
 
 impl Player {
@@ -351,29 +355,18 @@ impl Player {
             let mut sink = audio_sink;
             let decoding_task_fut = async move {
                 while let Some(decoded) = decoded_stream.next().await {
-                    let decoded = match decoded {
-                        Ok(decoded) => decoded,
-                        Err(e) => {
-                            info!("Decoded stream failed to produce: {:?}", e);
-                            break;
-                        }
-                    };
-                    if let Err(e) = sink.write_all(&decoded).await {
-                        info!("AudioConsumer failed to write: {:?}", e);
-                        break;
-                    }
+                    let decoded = decoded.context("Failed to get decoded audio")?;
+                    sink.write_all(&decoded).await.context("Failed to write to AudioConsumer")?;
                 }
+                Ok::<(), anyhow::Error>(())
             };
             audio_sink = Box::pin(decoder);
-            let (stop_handle, stop_registration) = AbortHandle::new_pair();
-            let abortable_task_fut = Abortable::new(decoding_task_fut, stop_registration);
-            fuchsia_async::Task::local(async move {
-                if let Err(Aborted) = abortable_task_fut.await {
-                    info!("Decoder forwarding task completed.");
+            let task = fuchsia_async::Task::local(async move {
+                if let Err(e) = decoding_task_fut.await {
+                    warn!("Decoder task failed: {:?}", e);
                 }
-            })
-            .detach();
-            decoder_task = Some(stop_handle);
+            });
+            decoder_task = Some(task);
         }
 
         let watch_status_stream =
@@ -386,7 +379,7 @@ impl Player {
             playing: false,
             next_packet_flags: sender,
             last_seq_played: 0,
-            decoder_task,
+            _decoder_task: decoder_task,
         })
     }
 
@@ -494,12 +487,6 @@ impl Player {
     }
 }
 
-impl Drop for Player {
-    fn drop(&mut self) {
-        self.decoder_task.take().map(|t| t.abort());
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -571,7 +558,7 @@ pub(crate) mod tests {
 
         assert_eq!(expect_compression, compression.is_some());
 
-        buffers[0].write(&[0], 0).expect_err("Write should fail");
+        let _ = buffers[0].write(&[0], 0).expect_err("Write should fail");
 
         let sink_request_stream = stream_sink_request
             .into_stream()
@@ -706,7 +693,7 @@ pub(crate) mod tests {
     #[test]
     fn test_player_setup() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
+        let _ = setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
     }
 
     #[test]
@@ -876,7 +863,7 @@ pub(crate) mod tests {
             setup_player(&mut exec, build_config(&MediaCodecType::AUDIO_AAC));
 
         let mut raw = build_rtp_aac_packet(&[]);
-        push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
+        let _ = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
 
         // Should have started the player
         let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
@@ -892,7 +879,8 @@ pub(crate) mod tests {
 
         let push_fut = player.push_payload(&raw);
         pin_mut!(push_fut);
-        exec.run_singlethreaded(&mut push_fut).expect_err("fail to write corrupted payload");
+        let _ =
+            exec.run_singlethreaded(&mut push_fut).expect_err("fail to write corrupted payload");
     }
 
     #[test]
