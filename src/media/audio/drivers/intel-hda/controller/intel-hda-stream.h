@@ -90,6 +90,10 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   void WatchClockRecoveryPositionInfo(
       WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+  void SetActiveChannels(SetActiveChannelsRequestView request,
+                         SetActiveChannelsCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Release the client ring buffer (if one has been assigned)
   void ReleaseRingBufferLocked() TA_REQ(channel_lock_);

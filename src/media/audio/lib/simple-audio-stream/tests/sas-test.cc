@@ -900,6 +900,12 @@ TEST_F(SimpleAudioTest, RingBufferTests) {
                                                                   kNumberOfPositionNotifications);
   ASSERT_OK(vmo.status());
 
+  constexpr uint64_t kSomeActiveChannelsMask = 0xc3;
+  auto active_channels =
+      fidl::WireCall<audio_fidl::RingBuffer>(local).SetActiveChannels(kSomeActiveChannelsMask);
+  ASSERT_OK(active_channels.status());
+  ASSERT_EQ(active_channels->result.err(), ZX_ERR_NOT_SUPPORTED);
+
   // Check inspect state.
   {
     ASSERT_NO_FATAL_FAILURES(ReadInspect(server->inspect().DuplicateVmo()));

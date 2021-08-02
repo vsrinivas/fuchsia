@@ -145,6 +145,7 @@ table/member fuchsia.hardware.audio/PlugState.plugged bool
 table fuchsia.hardware.audio/PlugState
 protocol/member fuchsia.hardware.audio/RingBuffer.GetProperties() -> (fuchsia.hardware.audio/RingBufferProperties properties)
 protocol/member fuchsia.hardware.audio/RingBuffer.GetVmo(uint32 min_frames,uint32 clock_recovery_notifications_per_ring) -> (fuchsia.hardware.audio/RingBuffer_GetVmo_Result result)
+protocol/member fuchsia.hardware.audio/RingBuffer.SetActiveChannels(uint64 active_channels_bitmask) -> (fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result result)
 protocol/member fuchsia.hardware.audio/RingBuffer.Start() -> (int64 start_time)
 protocol/member fuchsia.hardware.audio/RingBuffer.Stop() -> ()
 protocol/member fuchsia.hardware.audio/RingBuffer.WatchClockRecoveryPositionInfo() -> (fuchsia.hardware.audio/RingBufferPositionInfo position_info)
@@ -163,6 +164,11 @@ resource struct fuchsia.hardware.audio/RingBuffer_GetVmo_Response
 union/member fuchsia.hardware.audio/RingBuffer_GetVmo_Result.err fuchsia.hardware.audio/GetVmoError
 union/member fuchsia.hardware.audio/RingBuffer_GetVmo_Result.response fuchsia.hardware.audio/RingBuffer_GetVmo_Response
 resource strict union fuchsia.hardware.audio/RingBuffer_GetVmo_Result
+struct/member fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Response.set_time int64
+struct fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Response
+union/member fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result.err int32
+union/member fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result.response fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Response
+strict union fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result
 enum/member fuchsia.hardware.audio/SampleFormat.PCM_FLOAT 3
 enum/member fuchsia.hardware.audio/SampleFormat.PCM_SIGNED 1
 enum/member fuchsia.hardware.audio/SampleFormat.PCM_UNSIGNED 2
