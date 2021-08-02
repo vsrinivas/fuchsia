@@ -1074,7 +1074,7 @@ using '--args=ermine_app_entries="config/app_launch_entries.json"'
 
 **Current value (from the default):** `"config/app_launch_entries.json"`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:25
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:24
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -3433,7 +3433,7 @@ Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
-From //src/experiences/session_shells/ermine/shell/BUILD.gn:28
+From //src/experiences/session_shells/ermine/shell/BUILD.gn:27
 
 ### sysmgr_golden_warn_override
 Used by config_package().
