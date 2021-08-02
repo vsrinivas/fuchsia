@@ -249,11 +249,12 @@ Rust), we can make exceptions. Note the following:
   changes to your API are more likely to break compilation of petal code.
 
 * If there are large test frameworks or libraries that you need to use to write
-  tests for public APIs, and they are only written in a language that we don't
-  support for SDK users, that means that there is a form of testing that you
-  need for exercising developer use cases that you are not providing to
-  developers.  Consider whether those test frameworks should be provided in a
-  language that is supported for end-developers.
+  tests for public APIs, and they are only written in a language that is not
+  officially supported for SDK users (see the [Fuchsia language policy] doc),
+  that means that there is a form of testing that you need for exercising
+  developer use cases that you are not providing to developers.  Consider
+  whether those test frameworks should be provided in a language that is
+  supported for end-developers.
 
 * There will be a high bar for language exceptions for teams that wish to use
   other languages only because of unfamiliarity with C++.  We encourage API
