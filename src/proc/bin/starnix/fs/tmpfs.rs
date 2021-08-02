@@ -9,7 +9,7 @@ use std::ops::Bound;
 use std::sync::{Arc, Weak};
 
 use crate::devices::*;
-use crate::fd_impl_nonseekable;
+use crate::fd_impl_directory;
 use crate::fs::pipe::Pipe;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_system_page_size;
@@ -116,20 +116,51 @@ impl DirectoryFileObject {
 }
 
 impl FileOps for DirectoryFileObject {
-    // TODO: seek should interact with directory listing.
-    fd_impl_nonseekable!();
+    fd_impl_directory!();
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
-        Err(EISDIR)
-    }
-
-    fn write(
+    fn seek(
         &self,
-        _file: &FileObject,
+        file: &FileObject,
         _task: &Task,
-        _data: &[UserBuffer],
-    ) -> Result<usize, Errno> {
-        Err(EISDIR)
+        offset: off_t,
+        whence: SeekOrigin,
+    ) -> Result<off_t, Errno> {
+        let mut current_offset = file.offset.lock();
+        let new_offset = match whence {
+            SeekOrigin::SET => Some(offset),
+            SeekOrigin::CUR => (*current_offset).checked_add(offset),
+            SeekOrigin::END => {
+                return Err(EINVAL);
+            }
+        }
+        .ok_or(EINVAL)?;
+
+        if new_offset < 0 {
+            return Err(EINVAL);
+        }
+
+        // Nothing to do.
+        if *current_offset == new_offset {
+            return Ok(new_offset);
+        }
+
+        let mut readdir_position = self.readdir_position.lock();
+        *current_offset = new_offset;
+
+        // We use 0 and 1 for "." and ".."
+        if new_offset <= 2 {
+            *readdir_position = Bound::Unbounded;
+        } else {
+            let children = file.node().children();
+            let count = (new_offset - 2) as usize;
+            *readdir_position = children
+                .iter()
+                .take(count)
+                .last()
+                .map_or(Bound::Unbounded, |(name, _)| Bound::Excluded(name.clone()));
+        }
+
+        Ok(*current_offset)
     }
 
     fn readdir(

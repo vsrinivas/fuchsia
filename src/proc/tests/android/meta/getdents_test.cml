@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "/data/tests/getdents_test",
-        args: [ "--gunit_filter=*.VerifyEntries:*.VerifyPadding:*.SmallDir:*.LargeDir:*.PartialBuffer:*.NotDir:*.OpenDir:*.GoneAfterRemoveCache" ],
+        args: [ "--gunit_filter=*.VerifyEntries:*.VerifyPadding:*.SmallDir:*.LargeDir:*.PartialBuffer:*.NotDir:*.SeekResetsCursor:*.OpenDir:*.GoneAfterRemoveCache" ],
         mounts: [
             "/:remotefs:root",
             "/data:remotefs:data",

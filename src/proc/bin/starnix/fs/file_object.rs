@@ -192,25 +192,65 @@ macro_rules! fd_impl_seekable {
             whence: SeekOrigin,
         ) -> Result<off_t, Errno> {
             let mut current_offset = file.offset.lock();
-            let temp = *current_offset;
-            let value = match whence {
+            let new_offset = match whence {
                 SeekOrigin::SET => Some(offset),
-                SeekOrigin::CUR => temp.checked_add(offset),
+                SeekOrigin::CUR => (*current_offset).checked_add(offset),
                 SeekOrigin::END => {
                     let stat = file.node().stat()?;
                     offset.checked_add(stat.st_size as off_t)
                 }
-            };
-            if let Some(new_offset) = value {
-                if new_offset >= 0 {
-                    *current_offset = new_offset;
-                } else {
-                    return Err(EINVAL);
-                }
-            } else {
+            }
+            .ok_or(EINVAL)?;
+
+            if new_offset < 0 {
                 return Err(EINVAL);
             }
+
+            *current_offset = new_offset;
             Ok(*current_offset)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! fd_impl_directory {
+    () => {
+        fn read(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
+            Err(EISDIR)
+        }
+
+        fn read_at(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _offset: usize,
+            _data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
+            Err(EISDIR)
+        }
+
+        fn write(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
+            Err(EISDIR)
+        }
+
+        fn write_at(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _offset: usize,
+            _data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
+            Err(EISDIR)
         }
     };
 }
