@@ -25,7 +25,7 @@ zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_
 
 // Launches the specified filesystem.
 zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& options,
-                    OutgoingDirectory outgoing_directory);
+                    OutgoingDirectory outgoing_directory, zx::channel crypt_client);
 
 }  // namespace fs_management
 

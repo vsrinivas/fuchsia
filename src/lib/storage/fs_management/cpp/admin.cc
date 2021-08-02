@@ -33,12 +33,12 @@ void UnmountHandle(zx_handle_t export_root, bool wait_until_ready) {
 }
 
 zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOptions& options,
-                          OutgoingDirectory outgoing_directory) {
+                          OutgoingDirectory outgoing_directory, zx::channel crypt_client) {
   zx_status_t status;
-  constexpr size_t kNumHandles = 2;
-  std::array<zx_handle_t, kNumHandles> handles = {device.release(),
-                                                  outgoing_directory.server.release()};
-  std::array<uint32_t, kNumHandles> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST};
+  std::array<zx_handle_t, 3> handles = {device.release(), outgoing_directory.server.release(),
+                                        crypt_client.release()};
+  std::array<uint32_t, 3> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST,
+                                 PA_HND(PA_USER0, 2)};
 
   // |compression_level| should outlive |argv|.
   std::string compression_level;
@@ -80,8 +80,8 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOpti
     UnmountHandle(outgoing_directory.client->get(), options.wait_until_ready);
   });
 
-  if ((status = options.callback(argc, argv.data(), handles.data(), ids.data(), kNumHandles)) !=
-      ZX_OK) {
+  if ((status = options.callback(argc, argv.data(), handles.data(), ids.data(),
+                                 handles[2] == ZX_HANDLE_INVALID ? 2 : 3)) != ZX_OK) {
     return zx::error(status);
   }
 
@@ -120,32 +120,32 @@ zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_
 }
 
 zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& options,
-                    OutgoingDirectory outgoing_directory) {
+                    OutgoingDirectory outgoing_directory, zx::channel crypt_client) {
   switch (df) {
     case DISK_FORMAT_MINFS:
       return InitNativeFs(fs_management::GetBinaryPath("minfs").c_str(), std::move(device), options,
-                          std::move(outgoing_directory));
+                          std::move(outgoing_directory), std::move(crypt_client));
     case DISK_FORMAT_FXFS:
       return InitNativeFs(fs_management::GetBinaryPath("fxfs").c_str(), std::move(device), options,
-                          std::move(outgoing_directory));
+                          std::move(outgoing_directory), std::move(crypt_client));
     case DISK_FORMAT_BLOBFS:
       return InitNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), std::move(device),
-                          options, std::move(outgoing_directory));
+                          options, std::move(outgoing_directory), std::move(crypt_client));
     case DISK_FORMAT_FAT:
       // For now, fatfs will only ever be in a package and never in /boot/bin, so we can hard-code
       // the path.
       return InitNativeFs("/pkg/bin/fatfs", std::move(device), options,
-                          std::move(outgoing_directory));
+                          std::move(outgoing_directory), std::move(crypt_client));
     case DISK_FORMAT_FACTORYFS:
       return InitNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), std::move(device),
-                          options, std::move(outgoing_directory));
+                          options, std::move(outgoing_directory), std::move(crypt_client));
     default:
       auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr) {
         return zx::error(ZX_ERR_NOT_SUPPORTED);
       }
       return InitNativeFs(format->binary_path().c_str(), std::move(device), options,
-                          std::move(outgoing_directory));
+                          std::move(outgoing_directory), std::move(crypt_client));
   }
 }
 
@@ -160,7 +160,7 @@ zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptio
   if (status != ZX_OK)
     return status;
   handles.client = zx::unowned_channel(client);
-  status = FsInit(zx::channel(device_handle), df, options, std::move(handles)).status_value();
+  status = FsInit(zx::channel(device_handle), df, options, std::move(handles), {}).status_value();
   if (status != ZX_OK)
     return status;
   *out_export_root = client.release();

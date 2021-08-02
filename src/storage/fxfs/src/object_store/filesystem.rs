@@ -64,7 +64,7 @@ pub trait Filesystem: TransactionHandler {
 
     /// Returns the crypt interface.
     // TODO(csuter): This is going to need to be per-store eventually.
-    fn crypt(&self) -> &Crypt;
+    fn crypt(&self) -> &dyn Crypt;
 }
 
 #[async_trait]
@@ -148,7 +148,7 @@ pub struct FxFilesystem {
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
     read_only: bool,
-    crypt: Crypt,
+    crypt: Arc<dyn Crypt>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -158,7 +158,10 @@ pub struct OpenOptions {
 }
 
 impl FxFilesystem {
-    pub async fn new_empty(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
+    pub async fn new_empty(
+        device: DeviceHolder,
+        crypt: Arc<dyn Crypt>,
+    ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         let block_size = std::cmp::max(device.block_size(), MIN_BLOCK_SIZE);
@@ -173,7 +176,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: false,
-            crypt: Crypt::new(),
+            crypt,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
@@ -183,6 +186,7 @@ impl FxFilesystem {
     async fn open_with_options(
         device: DeviceHolder,
         options: OpenOptions,
+        crypt: Arc<dyn Crypt>,
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
@@ -198,7 +202,7 @@ impl FxFilesystem {
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
             read_only: options.read_only,
-            crypt: Crypt::new(),
+            crypt,
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
@@ -211,12 +215,18 @@ impl FxFilesystem {
         Ok(filesystem.into())
     }
 
-    pub async fn open(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
-        Self::open_with_options(device, OpenOptions { trace: false, read_only: false }).await
+    pub async fn open(
+        device: DeviceHolder,
+        crypt: Arc<dyn Crypt>,
+    ) -> Result<OpenFxFilesystem, Error> {
+        Self::open_with_options(device, OpenOptions { trace: false, read_only: false }, crypt).await
     }
 
-    pub async fn open_read_only(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
-        Self::open_with_options(device, OpenOptions { trace: false, read_only: true }).await
+    pub async fn open_read_only(
+        device: DeviceHolder,
+        crypt: Arc<dyn Crypt>,
+    ) -> Result<OpenFxFilesystem, Error> {
+        Self::open_with_options(device, OpenOptions { trace: false, read_only: true }, crypt).await
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
@@ -297,8 +307,8 @@ impl Filesystem for FxFilesystem {
         }
     }
 
-    fn crypt(&self) -> &Crypt {
-        &self.crypt
+    fn crypt(&self) -> &dyn Crypt {
+        self.crypt.as_ref()
     }
 }
 
@@ -413,6 +423,7 @@ mod tests {
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                crypt::InsecureCrypt,
                 directory::Directory,
                 fsck::fsck,
                 transaction::{Options, TransactionHandler},
@@ -420,6 +431,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::future::join_all,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -430,7 +442,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
         // If compaction is not working correctly, this test will run out of space.
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_store = fs.root_store();
         let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
             .await

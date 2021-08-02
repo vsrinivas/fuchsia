@@ -80,6 +80,7 @@ source_set("fshost-registry") {
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
+    "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -165,10 +166,12 @@ source_set("block-watcher") {
     ":launcher",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_llcpp",
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/blobfs",
+    "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -254,6 +257,10 @@ executable("fshost") {
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zbi-bootfs",
   ]
+
+  if (use_fxfs) {
+    deps += [ "//src/storage/fxfs-crypt" ]
+  }
 
   if (bootfs_only) {
     deps += [ ":metrics_stub" ]
@@ -410,6 +417,9 @@ cmc_merge("test-fshost.cml") {
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
   ]
+  if (use_fxfs) {
+    sources += [ "meta/fxfs_fshost.cml" ]
+  }
 }
 
 # This is a test version of fshost, not a component with fshost tests.
@@ -485,6 +495,9 @@ cmc_merge("fshost.cml") {
   ]
   if (!bootfs_only) {
     sources += [ "meta/core_fshost.cml" ]
+  }
+  if (use_fxfs) {
+    sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
 

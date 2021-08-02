@@ -205,13 +205,8 @@ impl Fsck {
         let layer_set = store.extent_tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await?;
-        while let Some(ItemRef {
-            key: ExtentKey { range, .. },
-            value: ExtentValue { device_offset, .. },
-            ..
-        }) = iter.get()
-        {
-            if let Some((device_offset, _, _)) = device_offset {
+        while let Some(ItemRef { key: ExtentKey { range, .. }, value, .. }) = iter.get() {
+            if let ExtentValue::Some { device_offset, .. } = value {
                 let item = Item::new(
                     AllocatorKey {
                         device_range: *device_offset..*device_offset + range.end - range.start,
@@ -251,6 +246,7 @@ mod tests {
                 allocator::{
                     Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
                 },
+                crypt::InsecureCrypt,
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem},
                 record::ObjectDescriptor,
@@ -259,7 +255,7 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
-        std::ops::Bound,
+        std::{ops::Bound, sync::Arc},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -267,10 +263,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_extra_allocation() {
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
+        let fs = FxFilesystem::new_empty(
+            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            Arc::new(InsecureCrypt::new()),
+        )
         .await
         .expect("new_empty failed");
         let mut transaction = fs
@@ -290,10 +286,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocation_mismatch() {
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
+        let fs = FxFilesystem::new_empty(
+            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            Arc::new(InsecureCrypt::new()),
+        )
         .await
         .expect("new_empty failed");
         let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
@@ -319,10 +315,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_allocation() {
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
+        let fs = FxFilesystem::new_empty(
+            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            Arc::new(InsecureCrypt::new()),
+        )
         .await
         .expect("new_empty failed");
         let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
@@ -348,10 +344,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_too_many_object_refs() {
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
+        let fs = FxFilesystem::new_empty(
+            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            Arc::new(InsecureCrypt::new()),
+        )
         .await
         .expect("new_empty failed");
 
@@ -387,10 +383,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_too_few_object_refs() {
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
+        let fs = FxFilesystem::new_empty(
+            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            Arc::new(InsecureCrypt::new()),
+        )
         .await
         .expect("new_empty failed");
 

@@ -1,0 +1,53 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fxfs;
+
+using fuchsia.io;
+using zx;
+
+@discoverable
+protocol Crypt {
+    /// Creates a new key wrapped with the key identified by `wrapping_key_id`.  `owner` identifies
+    /// the owner of the key and must be suppled to UnwrapKeys.
+    CreateKey(struct {
+        wrapping_key_id uint64;
+        owner uint64;
+    }) -> (struct {
+        wrapped_key bytes:32;
+        unwrapped_key bytes:32;
+    }) error zx.status;
+
+    /// Unwraps keys that are wrapped by the key identified by `wrapping_key_id`.  `owner` must be
+    /// the same as that passed to CreateKey.  This can fail due to permission reasons, but an
+    /// incorrect key or owner will not fail; it will just return an unwrapped key that won't
+    /// actually decrpyt the data.
+    UnwrapKeys(struct {
+        wrapping_key_id uint64;
+        owner uint64;
+        keys vector<bytes:32>:8;
+    }) -> (struct {
+        unwrapped_keys vector<bytes:32>:8;
+    }) error zx.status;
+};
+
+protocol Volume {
+    /// Unlocks the volume identified by name.  `crypt` should provide all key access for the given
+    /// volume.  `outgoing_directory` will contain the root and other services exposed by the
+    /// volume.
+    Unlock(resource struct {
+        name string:fuchsia.io.MAX_FILENAME;
+        crypt client_end:Crypt;
+        outgoing_directory server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error zx.status;
+
+    /// Creates a new volume identified by name.  `crypt` should provide all key access for the
+    /// given volume.  `outgoing_directory` will contain the root and other services exposed by the
+    /// volume.
+    Create(resource struct {
+        name string:fuchsia.io.MAX_FILENAME;
+        crypt client_end:Crypt;
+        outgoing_directory server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error zx.status;
+};

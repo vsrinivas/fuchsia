@@ -5,12 +5,22 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
+    fidl_fuchsia_fxfs::CryptProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
-    fxfs::{mkfs, mount, object_store::fsck::fsck, server::FxfsServer},
+    fxfs::{
+        mkfs, mount,
+        object_store::{
+            crypt::{Crypt, InsecureCrypt},
+            fsck::fsck,
+        },
+        remote_crypt::RemoteCrypt,
+        server::FxfsServer,
+    },
     remote_block_device::RemoteBlockClient,
+    std::sync::Arc,
     storage_device::{block_device::BlockDevice, DeviceHolder},
 };
 
@@ -64,15 +74,31 @@ async fn main() -> Result<(), Error> {
     ))
     .await?;
 
+    let crypt: Arc<dyn Crypt> = match fuchsia_runtime::take_startup_handle(
+        fuchsia_runtime::HandleInfo::new(HandleType::User0, 2),
+    ) {
+        Some(handle) => Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
+            zx::Channel::from(handle),
+        )?))),
+        None => {
+            // TODO(csuter): We should find a way to ensure that InsecureCrypt isn't compiled in
+            // production builds, and make this case throw an error.
+            Arc::new(InsecureCrypt::new())
+        }
+    };
+
     match args {
         TopLevel { nested: SubCommand::Format(_) } => {
-            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?)).await?;
+            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?), crypt)
+                .await?;
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(_) } => {
-            let fs =
-                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?))
-                    .await?;
+            let fs = mount::mount(
+                DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?),
+                crypt,
+            )
+            .await?;
             let server = FxfsServer::new(fs, "default").await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
@@ -80,9 +106,10 @@ async fn main() -> Result<(), Error> {
             server.run(zx::Channel::from(startup_handle)).await
         }
         TopLevel { nested: SubCommand::Fsck(_) } => {
-            let fs = mount::mount_read_only(DeviceHolder::new(
-                BlockDevice::new(Box::new(client), true).await?,
-            ))
+            let fs = mount::mount_read_only(
+                DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
+                crypt,
+            )
             .await?;
             fsck(&fs).await
         }

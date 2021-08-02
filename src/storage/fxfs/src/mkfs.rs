@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{volume::create_root_volume, FxFilesystem},
+    crate::object_store::{crypt::Crypt, volume::create_root_volume, FxFilesystem},
     anyhow::Error,
+    std::sync::Arc,
     storage_device::DeviceHolder,
 };
 
-pub async fn mkfs(device: DeviceHolder) -> Result<(), Error> {
-    let fs = FxFilesystem::new_empty(device).await?;
+pub async fn mkfs(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+    let fs = FxFilesystem::new_empty(device, crypt).await?;
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before
         // close is called, which leads to confusing and unrelated error messages.

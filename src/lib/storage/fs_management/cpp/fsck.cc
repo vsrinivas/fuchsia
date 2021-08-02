@@ -28,6 +28,7 @@ namespace {
 
 zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, LaunchCallback cb,
                          const char* cmd_path) {
+  zx::channel crypt_client(options.crypt_client);
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
   if (!device_fd) {
@@ -51,10 +52,11 @@ zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, La
   argv.push_back("fsck");
   argv.push_back(nullptr);
 
-  zx_handle_t hnd = block_device.release();
-  uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
+  zx_handle_t handles[] = {block_device.release(), crypt_client.release()};
+  uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
   auto argc = static_cast<int>(argv.size() - 1);
-  status = static_cast<zx_status_t>(cb(argc, argv.data(), &hnd, &id, 1));
+  status = static_cast<zx_status_t>(
+      cb(argc, argv.data(), handles, ids, handles[1] == ZX_HANDLE_INVALID ? 1 : 2));
   return status;
 }
 
@@ -82,6 +84,7 @@ zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchC
 __EXPORT
 zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& options,
                  LaunchCallback cb) {
+  // N.B. Make sure to release crypt_client in any new error paths here.
   switch (df) {
     case DISK_FORMAT_FACTORYFS:
       return FsckNativeFs(device_path, options, cb,
@@ -97,6 +100,8 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& o
     default:
       auto* format = fs_management::CustomDiskFormat::Get(df);
       if (format == nullptr) {
+        if (options.crypt_client != ZX_HANDLE_INVALID)
+          zx_handle_close(options.crypt_client);
         return ZX_ERR_NOT_SUPPORTED;
       }
       return FsckNativeFs(device_path, options, cb, format->binary_path().c_str());

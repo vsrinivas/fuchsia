@@ -260,7 +260,7 @@ impl ObjectStore {
             match keys {
                 EncryptionKeys::None => None,
                 EncryptionKeys::AES256XTS(keys) => {
-                    Some(store.filesystem().crypt().unwrap(&keys, object_id)?)
+                    Some(store.filesystem().crypt().unwrap_keys(&keys, object_id).await?)
                 }
             }
         } else {
@@ -298,7 +298,7 @@ impl ObjectStore {
         store.ensure_open().await?;
         let (keys, unwrapped_keys) = if let Some(wrapping_key_id) = wrapping_key_id {
             let (keys, unwrapped_keys) =
-                store.filesystem().crypt().create_key(wrapping_key_id, object_id)?;
+                store.filesystem().crypt().create_key(wrapping_key_id, object_id).await?;
             (EncryptionKeys::AES256XTS(keys), Some(unwrapped_keys))
         } else {
             (EncryptionKeys::None, None)
@@ -446,15 +446,13 @@ impl ObjectStore {
         let mut delete_extent_mutation = None;
         // Loop over the extents and deallocate them.
         while let Some(ItemRef {
-            key: ExtentKey { object_id, attribute_id, range },
-            value: ExtentValue { device_offset, .. },
-            ..
+            key: ExtentKey { object_id, attribute_id, range }, value, ..
         }) = iter.get()
         {
             if *object_id != search_key.object_id {
                 break;
             }
-            if let Some((device_offset, _, _)) = device_offset {
+            if let ExtentValue::Some { device_offset, .. } = value {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
                 allocator.deallocate(transaction, device_range).await?;
                 delete_extent_mutation = Some(Mutation::extent(
@@ -641,7 +639,7 @@ impl ObjectStore {
     ) -> Result<bool, Error> {
         if let Mutation::Extent(ExtentMutation(
             ExtentKey { range, .. },
-            ExtentValue { device_offset: Some((device_offset, Checksums::Fletcher(checksums), _)) },
+            ExtentValue::Some { device_offset, checksums: Checksums::Fletcher(checksums), .. },
         )) = mutation
         {
             if checksums.len() == 0 {
@@ -853,11 +851,8 @@ impl Mutations for ObjectStore {
             fn major_iter(
                 iter: BoxedLayerIterator<'_, ExtentKey, ExtentValue>,
             ) -> BoxedLayerIterator<'_, ExtentKey, ExtentValue> {
-                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| {
-                    match item.value {
-                        ExtentValue { device_offset: None } => true,
-                        _ => false,
-                    }
+                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, ExtentValue>| {
+                    item.value.is_deleted()
                 }))
             }
         }
@@ -974,6 +969,7 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                crypt::InsecureCrypt,
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
@@ -997,7 +993,9 @@ mod tests {
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        FxFilesystem::new_empty(device).await.expect("new_empty failed")
+        FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed")
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1087,7 +1085,8 @@ mod tests {
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open(device).await.expect("open failed");
+        let fs =
+            FxFilesystem::open(device, Arc::new(InsecureCrypt::new())).await.expect("open failed");
 
         fs.object_manager().open_store(store_id).await.expect("open_store failed");
         fs.close().await.expect("Close failed");
@@ -1120,7 +1119,11 @@ mod tests {
                 device.reopen();
                 device
             };
-            fs = Some(FxFilesystem::open(device).await.expect("open failed"));
+            fs = Some(
+                FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
+                    .await
+                    .expect("open failed"),
+            );
             join_all((0..4).map(|_| {
                 let manager = fs.as_ref().unwrap().object_manager();
                 fasync::Task::spawn(async move {
@@ -1224,10 +1227,7 @@ mod tests {
             .seek(Bound::Included(&ExtentKey::new(child_id, 0, 0..8192).search_key()))
             .await
             .expect("seek failed");
-        assert_matches!(
-            iter.get(),
-            Some(ItemRef { value: ExtentValue { device_offset: None }, .. })
-        );
+        assert_matches!(iter.get(), Some(ItemRef { value: ExtentValue::None, .. }));
         iter.advance().await.expect("advance failed");
         assert_matches!(iter.get(), None);
     }
@@ -1272,7 +1272,7 @@ mod tests {
                     None => return false,
                     Some(ItemRef {
                         key: ExtentKey { object_id, .. },
-                        value: ExtentValue { device_offset: None },
+                        value: ExtentValue::None,
                         ..
                     }) if *object_id == child_id => return true,
                     _ => {}

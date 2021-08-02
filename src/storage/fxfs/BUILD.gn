@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/components/fuchsia_unittest_component.gni")
+import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/storage/fs_test/suite.gni")
@@ -77,6 +78,7 @@ fxfs_sources = [
 
 if (is_fuchsia) {
   fxfs_deps += [
+    ":fuchsia.fxfs-rustc",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
@@ -96,6 +98,7 @@ if (is_fuchsia) {
     "//garnet/lib/rust/io_util",
   ]
   fxfs_sources += [
+    "src/remote_crypt.rs",
     "src/server.rs",
     "src/server/directory.rs",
     "src/server/errors.rs",
@@ -131,6 +134,7 @@ fuchsia_test_package("fxfs-tests") {
 rustc_binary("fxfs") {
   edition = "2018"
   deps = [
+    ":fuchsia.fxfs-rustc",
     ":lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -153,6 +157,14 @@ rustc_binary("fxfs") {
 
 fuchsia_shell_package("fxfs-bin") {
   deps = [ ":fxfs" ]
+}
+
+fidl("fuchsia.fxfs") {
+  sources = [ "fidl/fxfs.fidl" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//zircon/vdso/zx",
+  ]
 }
 
 fs_test_suite("fxfs") {

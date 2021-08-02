@@ -26,9 +26,7 @@ pub fn merge_extents(
         return MergeResult::EmitLeft;
     }
 
-    if let (ExtentValue { device_offset: None }, ExtentValue { device_offset: None }) =
-        (left.value(), right.value())
-    {
+    if let (ExtentValue::None, ExtentValue::None) = (left.value(), right.value()) {
         if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
             // Two deletions in adjacent layers can be merged.
             return merge_deleted_extents(left, right);

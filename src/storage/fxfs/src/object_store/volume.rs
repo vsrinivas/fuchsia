@@ -131,18 +131,22 @@ mod tests {
     use {
         super::{create_root_volume, root_volume},
         crate::object_store::{
+            crypt::InsecureCrypt,
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
             transaction::{Options, TransactionHandler},
         },
         fuchsia_async as fasync,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_volume = create_root_volume(&filesystem).await.expect("create_root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
         filesystem.close().await.expect("Close failed");
@@ -151,7 +155,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_add_volume() {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         {
             let root_volume =
                 create_root_volume(&filesystem).await.expect("create_root_volume failed");
@@ -175,7 +181,9 @@ mod tests {
             filesystem.close().await.expect("Close failed");
             let device = filesystem.take_device().await;
             device.reopen();
-            let filesystem = FxFilesystem::open(device).await.expect("open failed");
+            let filesystem = FxFilesystem::open(device, Arc::new(InsecureCrypt::new()))
+                .await
+                .expect("open failed");
             let root_volume = root_volume(&filesystem)
                 .await
                 .expect("root_volume failed")

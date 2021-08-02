@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("fxfs_crypt") {
+  edition = "2018"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/storage/fxfs:fuchsia.fxfs-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+  ]
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("fxfs-crypt") {
+  manifest = "meta/fxfs_crypt.cml"
+  deps = [ ":fxfs_crypt" ]
+}

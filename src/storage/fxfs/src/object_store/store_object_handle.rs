@@ -150,7 +150,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             self.store().store_object_id,
             Mutation::extent(
                 ExtentKey::new(self.object_id, self.attribute_id, old_end..new_size),
-                ExtentValue { device_offset: Some((device_range.start, Checksums::None, 0)) },
+                ExtentValue::new(device_range.start),
             ),
         );
         self.update_allocated_size(transaction, device_range.end - device_range.start, 0).await
@@ -245,7 +245,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             {
                 break;
             }
-            if let ExtentValue { device_offset: Some((device_offset, _, _)), .. } = extent_value {
+            if let ExtentValue::Some { device_offset, .. } = extent_value {
                 if let Some(overlap) = key.overlap(extent_key) {
                     let range = device_offset + overlap.start - extent_key.range.start
                         ..device_offset + overlap.end - extent_key.range.start;
@@ -460,7 +460,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 offset += to_zero as u64;
             }
 
-            if let ExtentValue { device_offset: Some((device_offset, _, key_id)) } = extent_value {
+            if let ExtentValue::Some { device_offset, key_id, .. } = extent_value {
                 let mut device_offset = device_offset + (offset - extent_key.range.start);
 
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
@@ -607,7 +607,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             let (device_offset, to_do) = match iter.get() {
                 Some(ItemRef {
                     key: ExtentKey { object_id, attribute_id, range },
-                    value: ExtentValue { device_offset: Some((device_offset, Checksums::None, _)) },
+                    value: ExtentValue::Some { device_offset, checksums: Checksums::None, .. },
                     ..
                 }) if *object_id == self.object_id
                     && *attribute_id == self.attribute_id
@@ -701,7 +701,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 match iter.get() {
                     Some(ItemRef {
                         key: ExtentKey { object_id, attribute_id, range },
-                        value: ExtentValue { device_offset: Some((device_offset, _, _)) },
+                        value: ExtentValue::Some { device_offset, .. },
                         ..
                     }) if *object_id == self.object_id
                         && *attribute_id == self.attribute_id
@@ -726,7 +726,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                     }
                     Some(ItemRef {
                         key: ExtentKey { object_id, attribute_id, range },
-                        value: ExtentValue { device_offset: None },
+                        value: ExtentValue::None,
                         ..
                     }) if *object_id == self.object_id
                         && *attribute_id == self.attribute_id
@@ -878,8 +878,9 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
+                crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
-                record::{ExtentKey, ExtentValue, ObjectKey, ObjectKeyData, Timestamp},
+                record::{ExtentKey, ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
@@ -908,7 +909,9 @@ mod tests {
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        FxFilesystem::new_empty(device).await.expect("new_empty failed")
+        FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed")
     }
 
     async fn test_filesystem_and_object_with_key(
@@ -1305,13 +1308,8 @@ mod tests {
         let layer_set = store.extent_tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        while let Some(ItemRef {
-            key: ExtentKey { object_id, .. },
-            value: ExtentValue { device_offset },
-            ..
-        }) = iter.get()
-        {
-            assert!(*object_id != object.object_id() || device_offset.is_none());
+        while let Some(ItemRef { key: ExtentKey { object_id, .. }, value, .. }) = iter.get() {
+            assert!(*object_id != object.object_id() || value.is_deleted());
             iter.advance().await.expect("advance failed");
         }
 

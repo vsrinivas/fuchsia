@@ -311,11 +311,13 @@ mod tests {
     use {
         super::Graveyard,
         crate::object_store::{
+            crypt::InsecureCrypt,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
             transaction::{Options, TransactionHandler},
         },
         fuchsia_async as fasync,
         matches::assert_matches,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -324,7 +326,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_graveyard() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_store = fs.root_store();
 
         // Create and add two objects to the graveyard.
@@ -374,7 +378,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_graveyard_sequences() {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
         let root_store = fs.root_store();
 
         let mut transaction = fs

@@ -11,6 +11,8 @@ pub mod mount;
 pub mod object_handle;
 pub mod object_store;
 #[cfg(target_os = "fuchsia")]
+pub mod remote_crypt;
+#[cfg(target_os = "fuchsia")]
 pub mod server;
 #[cfg(test)]
 pub mod testing;

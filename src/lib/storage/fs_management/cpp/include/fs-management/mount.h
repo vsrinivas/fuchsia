@@ -50,6 +50,9 @@ struct MountOptions {
 
   // If true, puts decompression in a sandboxed process.
   bool sandbox_decompression = false;
+
+  // If set, handle to the crypt client. The handle is *always* consumed, even on error.
+  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
 };
 
 // Given the following:

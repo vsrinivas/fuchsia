@@ -32,6 +32,7 @@ namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
                          const MkfsOptions& options, bool support_fvm) {
+  zx::channel crypt_client(options.crypt_client);
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
   if (!device_fd) {
@@ -75,10 +76,10 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   argv.push_back("mkfs");
   argv.push_back(nullptr);
 
-  zx_handle_t hnd = block_device.release();
-  uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
-  status =
-      static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.data(), &hnd, &id, 1));
+  zx_handle_t handles[] = {block_device.release(), crypt_client.release()};
+  uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
+  status = static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.data(), handles, ids,
+                                       handles[1] == ZX_HANDLE_INVALID ? 1 : 2));
   return status;
 }
 
@@ -101,6 +102,7 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
 __EXPORT
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
                  const MkfsOptions& options) {
+  // N.B. Make sure to release crypt_client in any new error paths here.
   switch (df) {
     case DISK_FORMAT_FACTORYFS:
       return MkfsNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), device_path, cb,
@@ -119,6 +121,8 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
     default:
       auto* format = fs_management::CustomDiskFormat::Get(df);
       if (format == nullptr) {
+        if (options.crypt_client != ZX_HANDLE_INVALID)
+          zx_handle_close(options.crypt_client);
         return ZX_ERR_NOT_SUPPORTED;
       }
       return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options, true);

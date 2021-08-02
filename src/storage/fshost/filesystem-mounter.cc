@@ -4,12 +4,15 @@
 
 #include "filesystem-mounter.h"
 
+#include <dirent.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/sys2/llcpp/fidl.h>
 #include <fuchsia/update/verify/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
+#include <sys/stat.h>
 #include <zircon/status.h>
 
 #include <fbl/ref_ptr.h>
@@ -33,21 +36,20 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                          fs_flags);
 }
 
-zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint point,
-                                                           const char* binary,
-                                                           const MountOptions& options,
-                                                           zx::channel block_device_client,
-                                                           uint32_t fs_flags) {
+zx::status<zx::channel> FilesystemMounter::MountFilesystem(
+    FsManager::MountPoint point, const char* binary, const MountOptions& options,
+    zx::channel block_device_client, uint32_t fs_flags,
+    fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
   zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
   if (create_endpoints.is_error()) {
     return create_endpoints.take_error();
   }
   auto [export_root, server_end] = std::move(create_endpoints.value());
 
-  constexpr size_t num_handles = 2;
-  zx_handle_t handles[num_handles] = {server_end.TakeChannel().release(),
-                                      block_device_client.release()};
-  uint32_t ids[num_handles] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
+  size_t num_handles = crypt_client ? 3 : 2;
+  zx_handle_t handles[] = {server_end.TakeChannel().release(), block_device_client.release(),
+                           crypt_client.TakeChannel().release()};
+  uint32_t ids[] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID, PA_HND(PA_USER0, 2)};
 
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
@@ -108,9 +110,21 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOp
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  const char* binary_path = config_.is_set(Config::kUseFxfs) ? "/pkg/bin/fxfs" : "/pkg/bin/minfs";
+  const char* binary_path;
+  fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client;
+  if (config_.is_set(Config::kUseFxfs)) {
+    if (auto crypt_client_or = GetCryptClient(); crypt_client_or.is_error()) {
+      return crypt_client_or.error_value();
+    } else {
+      crypt_client = *std::move(crypt_client_or);
+    }
+    binary_path = "/pkg/bin/fxfs";
+  } else {
+    binary_path = "/pkg/bin/minfs";
+  }
+
   zx::status ret = MountFilesystem(FsManager::MountPoint::kData, binary_path, options,
-                                   std::move(block_device), FS_SVC);
+                                   std::move(block_device), FS_SVC, std::move(crypt_client));
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -225,6 +239,20 @@ void FilesystemMounter::TryMountPkgfs() {
     }
     pkgfs_mounted_ = true;
   }
+}
+
+zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {
+  auto crypt_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::Crypt>();
+  if (crypt_endpoints_or.is_error())
+    return zx::error(crypt_endpoints_or.status_value());
+  if (zx_status_t status =
+          fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_fxfs::Crypt>,
+                               crypt_endpoints_or->server.TakeChannel().release());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to connect to crypt service";
+    return zx::error(status);
+  }
+  return zx::ok(std::move(crypt_endpoints_or->client));
 }
 
 }  // namespace fshost

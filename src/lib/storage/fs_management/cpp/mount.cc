@@ -79,7 +79,7 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
 
 zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const MountOptions& options,
                             LaunchCallback cb, OutgoingDirectory outgoing_directory,
-                            zx::channel* out_data_root) {
+                            zx::channel* out_data_root, zx::channel crypt_client) {
   // get the device handle from the device_fd
   zx_status_t status;
   zx::channel device;
@@ -106,8 +106,9 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const Mo
 
   // launch the filesystem process
   zx::unowned_channel export_root(outgoing_directory.client);
-  status =
-      FsInit(std::move(device), df, init_options, std::move(outgoing_directory)).status_value();
+  status = FsInit(std::move(device), df, init_options, std::move(outgoing_directory),
+                  std::move(crypt_client))
+               .status_value();
   if (status != ZX_OK) {
     return status;
   }
@@ -244,6 +245,7 @@ disk_format_t detect_disk_format_log_unknown(int fd) {
 __EXPORT
 zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const MountOptions& options,
                    LaunchCallback cb) {
+  zx::channel crypt_client(options.crypt_client);
   if (options.bind_to_namespace) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -262,8 +264,9 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const MountOption
     handles.client = zx::unowned_channel(client);
   }
 
-  if ((status = fs_management::StartFilesystem(std::move(device_fd), df, options, cb,
-                                               std::move(handles), &data_root)) != ZX_OK) {
+  if ((status =
+           fs_management::StartFilesystem(std::move(device_fd), df, options, cb, std::move(handles),
+                                          &data_root, std::move(crypt_client))) != ZX_OK) {
     return status;
   }
 
@@ -298,6 +301,7 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
 __EXPORT
 zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df, const MountOptions& options,
                   LaunchCallback cb) {
+  zx::channel crypt_client(options.crypt_client);
   zx_status_t status;
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
@@ -312,8 +316,9 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df, const Mo
     handles.client = zx::unowned_channel(client);
   }
 
-  if ((status = fs_management::StartFilesystem(std::move(device_fd), df, options, cb,
-                                               std::move(handles), &data_root)) != ZX_OK) {
+  if ((status =
+           fs_management::StartFilesystem(std::move(device_fd), df, options, cb, std::move(handles),
+                                          &data_root, std::move(crypt_client))) != ZX_OK) {
     return status;
   }
 

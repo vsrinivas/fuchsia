@@ -167,20 +167,21 @@ impl FxfsServer {
 mod tests {
     use {
         crate::{
-            object_store::{volume::create_root_volume, FxFilesystem},
+            object_store::{crypt::InsecureCrypt, volume::create_root_volume, FxFilesystem},
             server::FxfsServer,
         },
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run(2, test)]
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(16384, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
+        let filesystem = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await?;
         create_root_volume(&filesystem).await?;
         let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 

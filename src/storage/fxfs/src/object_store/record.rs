@@ -219,70 +219,84 @@ pub enum Checksums {
 /// ExtentValue is the payload for an extent in the object store, which describes where the extent
 /// is physically located.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct ExtentValue {
-    /// The device offset for the extent. A value of None indicates a deleted extent; that is, the
-    /// logical range described by the extent key is considered to be deleted.  The device offset
-    /// is accompanied with the checksums and key ID for the extent.
-    pub device_offset: Option<(/* device-offset= */ u64, Checksums, /* key-id= */ u64)>,
+pub enum ExtentValue {
+    /// Indicates a deleted extent; that is, the logical range described by the extent key is
+    /// considered to be deleted.
+    None,
+    /// The location of the extent and other related information.  `key_id` identifies which
+    /// of the object's keys should be used.  `checksums` hold post-encryption checksums.
+    Some { device_offset: u64, checksums: Checksums, key_id: u64 },
 }
 
 impl ExtentValue {
     pub fn new(device_offset: u64) -> ExtentValue {
-        ExtentValue { device_offset: Some((device_offset, Checksums::None, 0)) }
+        ExtentValue::Some { device_offset, checksums: Checksums::None, key_id: 0 }
     }
 
     /// Creates an ExtentValue with a checksum
-    pub fn with_checksum(device_offset: u64, checksum: Checksums) -> ExtentValue {
-        ExtentValue { device_offset: Some((device_offset, checksum, 0)) }
+    pub fn with_checksum(device_offset: u64, checksums: Checksums) -> ExtentValue {
+        ExtentValue::Some { device_offset, checksums, key_id: 0 }
     }
 
     /// Creates an ObjectValue for a deletion of an object extent.
     pub fn deleted_extent() -> ExtentValue {
-        ExtentValue { device_offset: None }
+        ExtentValue::None
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        if let ExtentValue::None = self {
+            true
+        } else {
+            false
+        }
     }
 
     /// Returns a new ExtentValue offset by `amount`.  Both `amount` and `extent_len` must be
     /// multiples of the underlying block size.
     pub fn offset_by(&self, amount: u64, extent_len: u64) -> Self {
-        match &self.device_offset {
-            None => Self { device_offset: None },
-            Some((device_offset, checksum, key_id)) => {
-                if let Checksums::Fletcher(checksums) = checksum {
+        match self {
+            ExtentValue::None => Self::deleted_extent(),
+            ExtentValue::Some { device_offset, checksums, key_id } => {
+                if let Checksums::Fletcher(checksums) = checksums {
                     if checksums.len() > 0 {
                         let index = (amount / (extent_len / checksums.len() as u64)) as usize;
-                        return Self {
-                            device_offset: Some((
-                                device_offset + amount,
-                                Checksums::Fletcher(checksums[index..].to_vec()),
-                                *key_id,
-                            )),
+                        return ExtentValue::Some {
+                            device_offset: device_offset + amount,
+                            checksums: Checksums::Fletcher(checksums[index..].to_vec()),
+                            key_id: *key_id,
                         };
                     }
                 }
-                Self { device_offset: Some((device_offset + amount, Checksums::None, *key_id)) }
+                ExtentValue::Some {
+                    device_offset: device_offset + amount,
+                    checksums: Checksums::None,
+                    key_id: *key_id,
+                }
             }
         }
     }
 
     /// Returns a new ExtentValue after shrinking the extent from |original_len| to |new_len|.
     pub fn shrunk(&self, original_len: u64, new_len: u64) -> Self {
-        match &self.device_offset {
-            None => Self { device_offset: None },
-            Some((device_offset, checksum, key_id)) => {
-                if let Checksums::Fletcher(checksums) = checksum {
+        match self {
+            ExtentValue::None => Self::deleted_extent(),
+            ExtentValue::Some { device_offset, checksums, key_id } => {
+                if let Checksums::Fletcher(checksums) = checksums {
                     if checksums.len() > 0 {
                         let checksum_len =
                             (new_len / (original_len / checksums.len() as u64)) as usize;
-                        return Self {
-                            device_offset: Some((
-                                *device_offset,
-                                Checksums::Fletcher(checksums[..checksum_len].to_vec()),
-                                *key_id,
-                            )),
+                        return ExtentValue::Some {
+                            device_offset: *device_offset,
+                            checksums: Checksums::Fletcher(checksums[..checksum_len].to_vec()),
+                            key_id: *key_id,
                         };
                     }
                 }
-                Self { device_offset: Some((*device_offset, Checksums::None, *key_id)) }
+                ExtentValue::Some {
+                    device_offset: *device_offset,
+                    checksums: Checksums::None,
+                    key_id: *key_id,
+                }
             }
         }
     }

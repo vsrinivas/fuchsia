@@ -65,6 +65,10 @@ struct MkfsOptions {
   // The initial number of inodes to allocate space for. If 0, a default is used. Only supported
   // for blobfs.
   uint64_t num_inodes = 0;
+
+  // Handle to the crypt client for filesystems that need it.  The handle is *always* consumed, even
+  // on error.
+  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
 };
 
 struct FsckOptions {
@@ -74,6 +78,10 @@ struct FsckOptions {
   bool never_modify = false;   // Fsck still looks for problems, but does not try to resolve them.
   bool always_modify = false;  // Fsck never asks to resolve problems; it will always do it.
   bool force = false;          // Force fsck to check the filesystem integrity, even if "clean".
+
+  // Handle to the crypt client for filesystems that need it.  The handle is *always* consumed, even
+  // on error.
+  zx_handle_t crypt_client = ZX_HANDLE_INVALID;
 };
 
 // Format the provided device with a requested disk format.

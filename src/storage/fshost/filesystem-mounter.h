@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 #define SRC_STORAGE_FSHOST_FILESYSTEM_MOUNTER_H_
 
+#include <fuchsia/fxfs/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
@@ -76,13 +77,16 @@ class FilesystemMounter {
   bool FactoryMounted() const { return factory_mounted_; }
   bool DurableMounted() const { return durable_mounted_; }
 
+  zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> GetCryptClient();
+
  private:
   // Performs the mechanical action of mounting a filesystem, without
   // validating the type of filesystem being mounted.
   // Returns a channel to the filesystem's root export directory.
   zx::status<zx::channel> MountFilesystem(FsManager::MountPoint point, const char* binary,
                                           const MountOptions& options,
-                                          zx::channel block_device_client, uint32_t fs_flags);
+                                          zx::channel block_device_client, uint32_t fs_flags,
+                                          fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
 
   bool WaitForData() const { return config_.wait_for_data(); }
 
@@ -100,6 +104,7 @@ class FilesystemMounter {
   bool blob_mounted_ = false;
   bool pkgfs_mounted_ = false;
   bool factory_mounted_ = false;
+  fidl::ClientEnd<fuchsia_io::Directory> crypt_outgoing_directory_;
 };
 
 }  // namespace fshost

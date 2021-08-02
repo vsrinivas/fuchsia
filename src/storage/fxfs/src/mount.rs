@@ -3,17 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::filesystem::{FxFilesystem, OpenFxFilesystem},
+    crate::object_store::{
+        crypt::Crypt,
+        filesystem::{FxFilesystem, OpenFxFilesystem},
+    },
     anyhow::Error,
+    std::sync::Arc,
     storage_device::DeviceHolder,
 };
 
-pub async fn mount(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
-    let fs = FxFilesystem::open(device).await?;
+pub async fn mount(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<OpenFxFilesystem, Error> {
+    let fs = FxFilesystem::open(device, crypt).await?;
     Ok(fs)
 }
 
-pub async fn mount_read_only(device: DeviceHolder) -> Result<OpenFxFilesystem, Error> {
-    let fs = FxFilesystem::open_read_only(device).await?;
+pub async fn mount_read_only(
+    device: DeviceHolder,
+    crypt: Arc<dyn Crypt>,
+) -> Result<OpenFxFilesystem, Error> {
+    let fs = FxFilesystem::open_read_only(device, crypt).await?;
     Ok(fs)
 }

@@ -160,18 +160,27 @@ std::string GetTopologicalPath(int fd) {
 // binary to terminate and returns the status.
 zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
                       fidl::ClientEnd<fuchsia_io::Node> device,
-                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {}) {
+                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {},
+                      fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {}) {
   FX_CHECK(argv[argv.size() - 1] == nullptr);
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
   zx::process proc;
   int handle_count = 1;
-  zx_handle_t handles[2] = {device.TakeChannel().release()};
+  zx_handle_t handles[3] = {device.TakeChannel().release()};
+  uint32_t handle_ids[3] = {FS_HANDLE_BLOCK_DEVICE_ID};
+  bool async = false;
   if (export_root) {
-    handles[1] = export_root.TakeChannel().release();
+    handles[handle_count] = export_root.TakeChannel().release();
+    handle_ids[handle_count] = PA_DIRECTORY_REQUEST;
+    ++handle_count;
+    async = true;
+  }
+  if (crypt_client) {
+    handles[handle_count] = crypt_client.TakeChannel().release();
+    handle_ids[handle_count] = PA_HND(PA_USER0, 2);
     ++handle_count;
   }
-  uint32_t handle_ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST};
   if (zx_status_t status = launcher.Launch(
           *zx::job::default_job(), argv[0], argv.data(), nullptr, -1,
           /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_ids, handle_count, &proc, 0);
@@ -180,8 +189,7 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
     return status;
   }
 
-  // If `export_root` was supplied, don't wait for process termination.
-  if (handle_count > 1)
+  if (async)
     return ZX_OK;
 
   if (zx_status_t status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
@@ -787,7 +795,10 @@ zx_status_t BlockDevice::CheckFxfs() const {
   if (device_or.is_error()) {
     return device_or.error_value();
   }
-  return RunBinary(argv, std::move(device_or).value());
+  auto crypt_client_or = mounter_->GetCryptClient();
+  if (crypt_client_or.is_error())
+    return crypt_client_or.error_value();
+  return RunBinary(argv, std::move(device_or).value(), {}, std::move(*crypt_client_or));
 }
 
 // This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
@@ -904,7 +915,12 @@ zx_status_t BlockDevice::FormatFxfs() const {
   }
 
   fbl::Vector<const char*> argv = {"/pkg/bin/fxfs", "mkfs", nullptr};
-  if (zx_status_t status = RunBinary(argv, std::move(device)); status != ZX_OK)
+  auto crypt_client_or = mounter_->GetCryptClient();
+  crypt_client_or = mounter_->GetCryptClient();
+  if (crypt_client_or.is_error())
+    return crypt_client_or.error_value();
+  if (zx_status_t status = RunBinary(argv, std::move(device), {}, *std::move(crypt_client_or));
+      status != ZX_OK)
     return status;
 
   // Now mount and then copy all the data back.
@@ -924,8 +940,12 @@ zx_status_t BlockDevice::FormatFxfs() const {
   if (device_or.is_error()) {
     return device_or.error_value();
   }
+  crypt_client_or = mounter_->GetCryptClient();
+  if (crypt_client_or.is_error())
+    return crypt_client_or.error_value();
   if (zx_status_t status =
-          RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server));
+          RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server),
+                    *std::move(crypt_client_or));
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to mount fxfs after format";
     return status;
