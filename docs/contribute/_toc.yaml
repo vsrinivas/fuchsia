@@ -20,8 +20,9 @@ toc:
 - title: "Contributing to FIDL"
   section:
   - include: /docs/contribute/contributing-to-fidl/_toc.yaml
-- title: "Contributing to Netstack3"
-  path: /docs/contribute/contributing_to_netstack3.md
+- title: "Contributing to Netstack"
+  section:
+    - include: /docs/contribute/contributing-to-netstack/_toc.yaml
 - title: "Documentation"
   section:
   - include: /docs/contribute/docs/_toc.yaml

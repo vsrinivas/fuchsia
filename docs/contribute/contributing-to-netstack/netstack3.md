@@ -86,12 +86,13 @@ spend time doing work that we won't end up accepting.
  Once you're ready to contribute, just follow these simple steps:
 
 * Read the general instructions for [Contributing to Fuchsia](/CONTRIBUTING.md)
-* Read our [Fuchsia Networking Contributor Guide](/src/connectivity/network/CONTRIBUTING.md)
+* Read our [Fuchsia Networking Contributor Guide]
 
 ## Understanding
 
 If you're interested in diving deeper to understand Netstack3's design and
 architecture, check out [our docs](/src/connectivity/network/netstack3/docs).
 
+[Fuchsia Networking Contributor Guide]: /docs/contribute/contributing-to-netstack
 [good-first-bugs]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=%28component%3Anetworkstack%3Enetstack3+OR+component%3AConnectivity%3ELibraries%3Enet_types+OR+component%3AConnectivity%3ELibraries%3Einternet_checksum+OR+component%3AConnectivity%3ELibraries%3Epacket%29+label%3AGoodFirstBug&can=2
 [good-second-bugs]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=%28component%3Anetworkstack%3Enetstack3+OR+component%3AConnectivity%3ELibraries%3Enet_types+OR+component%3AConnectivity%3ELibraries%3Einternet_checksum+OR+component%3AConnectivity%3ELibraries%3Epacket%29+label%3AGoodSecondBug&can=2

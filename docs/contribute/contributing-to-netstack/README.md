@@ -63,12 +63,14 @@ identifier][blank_identifier]. In *Rust*, prefer destructuring assignment
 whenever possible, including when the return value is unit (`()`). When
 discarding primitive types where destructuring is not possible, use type
 annotations:
+
 ```rust
 let _useless_rand: u8 = rand::thread_rng().gen();
 ```
 
 When assigning structs, prefer explicit drops to implicitly discarding members
 using the rest pattern:
+
 ```rust
 // Bad:
 let FooStruct { foo_field_1, .. } = foo_instance;
@@ -76,6 +78,7 @@ let FooStruct { foo_field_1, .. } = foo_instance;
 // Good:
 let FooStruct { foo_field_1, foo_field_2: _ } = foo_instance;
 ```
+
 This way, when struct fields are changed, added, or removed, explicit
 acknowledgement will be required at the site of use.
 
@@ -203,6 +206,7 @@ Consider the following guidelines when writing tests:
    restate the function being called in the panic message to make it easier to
    track down the callsite. Don't repeat the type of the error, which is already
    included in the panic output. For example:
+
    ```rust
    // Bad:
    let foo_result = proxy
@@ -322,7 +326,7 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 --with //sdk/lib/fdio:tests --with //third_party/go:go_stdlib_tests
 ```
 
-[getting_started]: /docs/get-started/index.md
+[getting_started]: /docs/get-started
 [contribute_changes]: /docs/development/source_code/contribute_changes.md
 [spawn]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fuchsia-async/src/executor.rs#30
 [select]: https://docs.rs/futures/0.3.4/futures/macro.select.html
@@ -330,12 +334,12 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [spawn_await]: https://fuchsia.googlesource.com/fuchsia/+/038d2b9%5E%21/#F0
 [magic_number]: https://en.wikipedia.org/wiki/Magic_number_(programming)
 [blank_identifier]: https://golang.org/doc/effective_go.html#blank
-[rfc_process]: /docs/project/rfcs/0001_rfc_process.md
+[rfc_process]: /docs/contribute/governance/rfcs/0001_rfc_process.md
 [commit_guidelines]: https://www.git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines
 [commit_log-message-integration]: https://chromium.googlesource.com/infra/infra/+/HEAD/appengine/monorail/doc/userguide/power-users.md#commit_log-message-integration
 [flutter_philosophy]: https://github.com/flutter/flutter/wiki/Style-guide-for-Flutter-repo#philosophy
 [testability_rubrics]: /docs/concepts/testing/testability_rubric.md
-[tests_as_components]: /docs/development/testing/running_tests_as_components.md
+[tests_as_components]: /docs/development/testing/run_fuchsia_tests.md
 [netemul]: /src/connectivity/network/testing/netemul/README.md
 [change_detector_tests]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html
 [rust_65218]: https://github.com/rust-lang/rust/issues/65218
