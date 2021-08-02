@@ -20,6 +20,15 @@ guest_environments = nuc_env_fails_on_asan + [
                        vim3_env,
                      ]
 
+# List of environments that support the hypervisor.
+hypervisor_environments = [
+  astro_env,
+  nelson_env,
+  nuc_env,
+  sherlock_env,
+  vim3_env,
+]
+
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
@@ -473,9 +482,11 @@ executable("hypervisor_tests") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -492,14 +503,7 @@ fuchsia_test_package("hypervisor_tests_pkg") {
   package_name = "hypervisor-tests-pkg"
   test_components = [ ":hypervisor_tests_cmp" ]
   test_specs = {
-    environments = [
-      astro_env,
-      emu_env,
-      nelson_env,
-      nuc_env,
-      sherlock_env,
-      vim3_env,
-    ]
+    environments = hypervisor_environments
     log_settings = {
       max_severity = "ERROR"
     }
