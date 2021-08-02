@@ -98,7 +98,7 @@ bindings.
 
 As a [wire format diagram][wire-format] we have:
 
-![drawing](resources/ftp-037-transaction-header.png)
+![drawing](resources/0037_transactional_message_header_v3/transaction-header.png)
 
 ### When should a new magic number be assigned
 
