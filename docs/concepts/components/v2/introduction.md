@@ -98,8 +98,8 @@ assembled in various combinations to create new components. A component and its
 children are referred to as a _[realm][glossary.realm]_. The collective
 [parent][glossary.parent-component-instance] and
 [child][glossary.child-component-instance]
-relationships of many individual components are referred to as the _[component
-instance tree][glossary.component-instance-tree]_. A
+relationships of many individual components are referred to as the
+_[component instance tree][glossary.component-instance-tree]_. A
 _[moniker][glossary.moniker]_ is a topological path that identifies a specific
 component instance within a component instance tree. You will often see
 monikers represented as POSIX-like path strings. At its core, a component
