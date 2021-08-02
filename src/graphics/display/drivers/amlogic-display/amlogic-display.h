@@ -207,8 +207,10 @@ class AmlogicDisplay
   std::unique_ptr<amlogic_display::Osd> osd_;
   std::unique_ptr<amlogic_display::Vout> vout_;
 
-  // Monitoring
+  // Monitoring. We create a named "amlogic-display" node to allow for easier filtering
+  // of inspect tree when defining selectors and metrics.
   inspect::Inspector inspector_;
+  inspect::Node root_node_;
 
   uint64_t display_id_ = PANEL_DISPLAY_ID;
   bool display_attached_ = false;

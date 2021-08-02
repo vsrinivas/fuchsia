@@ -94,6 +94,8 @@ void Osd::WaitForRdmaIdle() {
       DISP_INFO("vsync blocked too long waiting for RDMA; dumping registers");
       dumped = true;
       Dump();
+
+      rdma_stall_count_.Add(1);
     }
 
     zx::time_utc now;
@@ -128,12 +130,14 @@ int Osd::RdmaThread() {
       break;
     }
 
+    rdma_irq_count_.Add(1);
     auto status_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
 
     // For AFBC, we simply clear the interrupt. We keep it enabled since it needs to get triggered
     // every vsync. It will get disabled if FlipOnVsync does not use AFBC.
     if (status_reg.ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
       RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
+      rdma_afbc_channel_done_count_.Add(1);
     }
 
     if (!status_reg.ChannelDone(kRdmaChannel, &(*vpu_mmio_))) {
@@ -143,6 +147,7 @@ int Osd::RdmaThread() {
       }
 
       DISP_INFO("rdma_thread: RDMA channel 1 request latched - looping until channel is done");
+      rdma_base_channel_pending_in_irq_count_.Add(1);
 
       // The RDMA request is yet to be serviced. Wait until it has completed.
       while (!status_reg.ChannelDone(kRdmaChannel)) {
@@ -159,6 +164,8 @@ int Osd::RdmaThread() {
       }
 
       DISP_INFO("rdma_thread: done waiting for RDMA channel 1 request");
+    } else {
+      rdma_base_channel_done_count_.Add(1);
     }
 
     // RDMA completed. Remove source for all finished DMA channels
@@ -221,6 +228,23 @@ int Osd::RdmaThread() {
     }
   }
   return status;
+}
+
+Osd::Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
+         uint32_t display_height, inspect::Node* parent_node)
+    : supports_afbc_(supports_afbc),
+      fb_width_(fb_width),
+      fb_height_(fb_height),
+      display_width_(display_width),
+      display_height_(display_height),
+      inspect_node_(parent_node->CreateChild("osd")) {
+  rdma_allocation_failures_ = inspect_node_.CreateUint("rdma_allocation_failures", 0);
+  rdma_irq_count_ = inspect_node_.CreateUint("rdma_irq_count", 0);
+  rdma_base_channel_pending_in_irq_count_ =
+      inspect_node_.CreateUint("rdma_base_channel_pending_in_irq_count", 0);
+  rdma_base_channel_done_count_ = inspect_node_.CreateUint("rdma_base_channel_done_count", 0);
+  rdma_afbc_channel_done_count_ = inspect_node_.CreateUint("rdma_afbc_channel_done_count", 0);
+  rdma_stall_count_ = inspect_node_.CreateUint("rdma_stalls", 0);
 }
 
 zx_status_t Osd::Init(ddk::PDev& pdev) {
@@ -309,8 +333,7 @@ int Osd::GetNextAvailableRdmaTableIndex() {
   return -1;
 }
 
-void Osd::SetColorCorrection(uint32_t rdma_table_idx,
-                             const display_config_t* config) {
+void Osd::SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* config) {
   if (!config->cc_flags) {
     // Disable color conversion engine
     SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_EN_CTRL,
@@ -370,8 +393,8 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx,
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF20_21, coef20_21);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF22, coef22);
   // TODO(b/182481217): remove when this bug is closed.
-  DISP_SPEW("color correction regs 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01, coef02_10,
-            coef11_12, coef20_21, coef22);
+  DISP_SPEW("color correction regs 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01,
+            coef02_10, coef11_12, coef20_21, coef22);
 }
 
 void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
