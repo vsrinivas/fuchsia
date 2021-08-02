@@ -8,18 +8,26 @@ single unit.
 ```fidl
 library fuchsia.examples;
 
-const uint64 MAX_STRING_LENGTH = 32;
+const MAX_STRING_LENGTH uint64 = 32;
 
-[Discoverable]
+@discoverable
 protocol Echo {
-    EchoString(string:MAX_STRING_LENGTH value) -> (string:MAX_STRING_LENGTH response);
-    SendString(string:MAX_STRING_LENGTH value);
-    -> OnString(string:MAX_STRING_LENGTH response);
+    EchoString(struct {
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        response string:MAX_STRING_LENGTH;
+    });
+    SendString(struct {
+        value string:MAX_STRING_LENGTH;
+    });
+    -> OnString(struct {
+        response string:MAX_STRING_LENGTH;
+    });
 };
 
 service EchoService {
-    Echo regular_echo;
-    Echo reversed_echo;
+    regular_echo client_end:Echo;
+    reversed_echo client_end:Echo;
 };
 ```
 
