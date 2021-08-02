@@ -7,8 +7,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/input-report",
-            "class/light"
+            "class/input-report"
         ],
         "features": [
             "build-info",

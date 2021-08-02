@@ -216,7 +216,6 @@ rustc_library("lib") {
     "src/tests/audio_tests.rs",
     "src/tests/bluetooth_earcons_tests.rs",
     "src/tests/camera_watcher_agent_tests.rs",
-    "src/tests/device_tests.rs",
     "src/tests/display_tests.rs",
     "src/tests/do_not_disturb_tests.rs",
     "src/tests/environment_tests.rs",
@@ -265,14 +264,31 @@ rustc_library("lib") {
   ]
 }
 
-fuchsia_unittest_package("setui_service_tests") {
-  component_name = "settings_lib_test"
+# TODO(fxbug.dev/81375): Remove setui_service_tests_v1 once migrated.
+fuchsia_unittest_component("setui_service_tests_v1") {
   manifest = "meta/settings_lib_test.cmx"
   deps = [
     ":lib_test",
     ":setui_service_tests_resources",
     ":tests_config",
     "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_unittest_component("setui_service_tests_v2") {
+  manifest = "meta/settings_lib_test.cml"
+  deps = [
+    ":lib_test",
+    ":setui_service_tests_resources",
+    ":tests_config",
+    "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_test_package("setui_service_tests") {
+  test_components = [
+    ":setui_service_tests_v1",
+    ":setui_service_tests_v2",
   ]
   test_specs = {
     log_settings = {

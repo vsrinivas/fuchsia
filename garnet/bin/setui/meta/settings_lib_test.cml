@@ -1,0 +1,42 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // tmp_storage.shard is included for the isolated-temp feature.
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+
+        // TODO(fxb/81849): Remove once the dependency path to inspect runtime has been removed.
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/settings_lib_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.devicesettings.DeviceSettingsManager",
+                "fuchsia.media.audio.VolumeControl",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sounds.Player",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            directory: "dev-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+
+            // Test manager makes all config data available, but we need to choose a meaningful one
+            // for our tests by specifying subdirectory as our package.
+            subdir: "setui_service_tests",
+        },
+    ],
+}
