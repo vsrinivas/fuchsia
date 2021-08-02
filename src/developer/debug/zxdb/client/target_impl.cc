@@ -71,8 +71,7 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& proce
   state_ = State::kStarting;
   uint64_t cur_mock_timestamp = mock_timestamp_;
   mock_timestamp_ += 1000;
-  OnLaunchOrAttachReply(CallbackWithTimestamp(), Err(), koid, debug::Status(), process_name,
-                        cur_mock_timestamp);
+  OnLaunchOrAttachReply(CallbackWithTimestamp(), Err(), koid, process_name, cur_mock_timestamp);
 }
 
 void TargetImpl::ImplicitlyDetach() {
@@ -210,41 +209,42 @@ void TargetImpl::OnProcessExiting(int return_code, uint64_t timestamp) {
 
 // static
 void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
-                                            CallbackWithTimestamp callback, const Err& err,
+                                            CallbackWithTimestamp callback, const Err& input_err,
                                             uint64_t koid, const debug::Status& status,
                                             const std::string& process_name, uint64_t timestamp) {
+  // The input Err indicates a transport error while the debug::Status indicates the remote error,
+  // map them to a single value.
+  Err err = input_err;
+  if (err.ok())
+    err = Err(status);
+
   if (target) {
-    target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name, timestamp);
+    target->OnLaunchOrAttachReply(std::move(callback), err, koid, process_name, timestamp);
   } else {
     // The reply that the process was launched came after the local objects were destroyed.
     if (err.has_error()) {
       // Process not launched, forward the error.
       callback(target, err, timestamp);
     } else {
-      // TODO(brettw) handle this more gracefully. Maybe kill the remote
-      // process?
-      callback(target,
-               Err("Warning: process launch race, extra process is "
-                   "likely running."),
+      // TODO(brettw) handle this more gracefully. Maybe kill the remote process?
+      callback(target, Err("Warning: process launch race, extra process is likely running."),
                timestamp);
     }
   }
 }
 
 void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err,
-                                       uint64_t koid, const debug::Status& status,
-                                       const std::string& process_name, uint64_t timestamp) {
+                                       uint64_t koid, const std::string& process_name,
+                                       uint64_t timestamp) {
   FX_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
-  Err issue_err;  // Error to send in callback.
   if (err.has_error()) {
-    // Error from transport.
+    if (err.type() == ErrType::kAlreadyExists) {
+      HandleAttachAlreadyExists(std::move(callback), koid, process_name, timestamp);
+      return;  // The above handler will issue the callback.
+    }
     state_ = State::kNone;
-    issue_err = err;
-  } else if (status.has_error()) {
-    state_ = State::kNone;
-    return HandleAttachErrorStatus(std::move(callback), koid, status, process_name, timestamp);
   } else {
     Process::StartType start_type =
         state_ == State::kAttaching ? Process::StartType::kAttach : Process::StartType::kLaunch;
@@ -253,7 +253,7 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
   }
 
   if (callback)
-    callback(GetWeakPtr(), issue_err, timestamp);
+    callback(GetWeakPtr(), err, timestamp);
 
   if (state_ == State::kRunning) {
     for (auto& observer : session()->process_observers())
@@ -261,50 +261,40 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
   }
 }
 
-void TargetImpl::HandleAttachErrorStatus(CallbackWithTimestamp callback, uint64_t koid,
-                                         const debug::Status& status,
-                                         const std::string& process_name, uint64_t timestamp) {
-  Err err;
-  if (status.has_error() && status.platform_error() &&
-      *status.platform_error() == debug_ipc::kZxErrAlreadyBound) {
-    // Already bound can mean two things. In the first case, it could be a mistake where the user
-    // is trying to attach to the same process twice.
-    if (system_->ProcessFromKoid(koid)) {
-      callback(GetWeakPtr(), Err("Process " + std::to_string(koid) + " is already being debugged."),
-               timestamp);
-      return;
-    }
-
-    // The other case for "already bound" is that the agent is attached to that process already
-    // but the debugger doesn't know about it. This can happen when connecting to an already-running
-    // debug agent. In this case, get the status to sync with the agent.
-    debug_ipc::ProcessStatusRequest request = {};
-    request.process_koid = koid;
-
-    DEBUG_LOG(Session) << "Re-attaching to process " << process_name << " (" << koid << ").";
-    session()->remote_api()->ProcessStatus(
-        request, [target = GetWeakPtr(), callback = std::move(callback), process_name, timestamp](
-                     const Err& err, debug_ipc::ProcessStatusReply reply) mutable {
-          if (!target)
-            return;
-
-          if (err.has_error())
-            return callback(target, err, timestamp);
-
-          if (reply.status.has_error()) {
-            Err error("Could not attach to process %s: %s", process_name.c_str(),
-                      reply.status.message().c_str());
-            return callback(target, err, timestamp);
-          }
-
-          return callback(target, Err(), timestamp);
-        });
+void TargetImpl::HandleAttachAlreadyExists(CallbackWithTimestamp callback, uint64_t koid,
+                                           const std::string& process_name, uint64_t timestamp) {
+  // "Already exists" can mean two things. In the first case, it could be a mistake where the user
+  // is trying to attach to the same process twice.
+  if (system_->ProcessFromKoid(koid)) {
+    callback(GetWeakPtr(), Err("Process " + std::to_string(koid) + " is already being debugged."),
+             timestamp);
     return;
-  } else {
-    err = Err("Error launching: " + status.message());
   }
 
-  callback(GetWeakPtr(), err, timestamp);
+  // The other case for "already exists" is that the agent is attached to that process already
+  // but the debugger doesn't know about it. This can happen when connecting to an already-running
+  // debug agent. In this case, get the status to sync with the agent.
+  debug_ipc::ProcessStatusRequest request = {};
+  request.process_koid = koid;
+
+  DEBUG_LOG(Session) << "Re-attaching to process " << process_name << " (" << koid << ").";
+  session()->remote_api()->ProcessStatus(
+      request, [target = GetWeakPtr(), callback = std::move(callback), process_name, timestamp](
+                   const Err& err, debug_ipc::ProcessStatusReply reply) mutable {
+        if (!target)
+          return;
+
+        if (err.has_error())
+          return callback(target, err, timestamp);
+
+        if (reply.status.has_error()) {
+          Err error("Could not attach to process %s: %s", process_name.c_str(),
+                    reply.status.message().c_str());
+          return callback(target, err, timestamp);
+        }
+
+        return callback(target, Err(), timestamp);
+      });
 }
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,

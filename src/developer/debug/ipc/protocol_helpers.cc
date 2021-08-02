@@ -25,17 +25,28 @@ void Serialize(int32_t data, MessageWriter* writer) { writer->WriteInt32(data); 
 bool Deserialize(MessageReader* reader, int32_t* data) { return reader->ReadInt32(data); }
 
 void Serialize(const debug::Status& status, MessageWriter* writer) {
-  SerializeOptional(status.platform_error(), writer);
+  writer->WriteUint32(static_cast<uint32_t>(status.type()));
+  writer->WriteUint64(status.platform_error());
   Serialize(status.message(), writer);
 }
 
 bool Deserialize(MessageReader* reader, debug::Status* status) {
-  std::optional<int64_t> platform_error;
-  std::string msg;
-  if (!DeserializeOptional(reader, &platform_error) || !Deserialize(reader, &msg))
+  uint32_t type;
+  if (!reader->ReadUint32(&type) || type >= debug::Status::kLast)
     return false;
 
-  *status = debug::Status(debug::Status::InternalValues(), platform_error, std::move(msg));
+  // The platform error value should be 0 for anything but kPlatformError types.
+  uint64_t platform_error;
+  if (!reader->ReadUint64(&platform_error) ||
+      (type != debug::Status::kPlatformError && platform_error != 0))
+    return false;
+
+  std::string msg;
+  if (!Deserialize(reader, &msg))
+    return false;
+
+  *status = debug::Status(debug::Status::InternalValues(), static_cast<debug::Status::Type>(type),
+                          platform_error, std::move(msg));
   return true;
 }
 

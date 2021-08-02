@@ -18,6 +18,18 @@ ZirconBinaryLauncher::ZirconBinaryLauncher(std::shared_ptr<sys::ServiceDirectory
 ZirconBinaryLauncher::~ZirconBinaryLauncher() = default;
 
 debug::Status ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
+  // TODO(fxbug.dev/81801) ProcessBuilder::LoadPath currently hangs forever for any binaries not
+  // in our package (which makes this code path useless for normal debugging). This does work for
+  // test binaries we package, but currently these tests are disabled so we can report the error
+  // here and avoid the hang in production.
+  //
+  // We need to evaluate whether this is a feature that can be supported on Fuchsia, and then
+  // possibly remove this entire class. For now, just return failure to avoid a hang.
+  return debug::Status(
+      debug::Status::kNotSupported,
+      "Directly launching binaries (not as components) is not currently supported.\n"
+      "See fxbug.dev/81801");
+#if 0
   if (zx_status_t status = builder_.LoadPath(argv[0]); status != ZX_OK)
     return debug::ZxStatus(status);
 
@@ -30,6 +42,7 @@ debug::Status ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) 
   stdio_handles_.err = AddStdioEndpoint(STDERR_FILENO);
 
   return debug::ZxStatus(builder_.Prepare(nullptr));
+#endif
 }
 
 std::unique_ptr<ProcessHandle> ZirconBinaryLauncher::GetProcess() const {

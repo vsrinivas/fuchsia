@@ -277,7 +277,7 @@ TEST_F(TargetImplTest, AttachToAlreadyAttached) {
   debug_ipc::AttachReply reply = {};
   reply.koid = kProcessKoid;
   reply.name = kProcessName;
-  reply.status = debug::Status(debug::Status::InternalValues(), debug_ipc::kZxErrAlreadyBound,
+  reply.status = debug::Status(debug::Status::InternalValues(), debug::Status::kAlreadyExists, 0,
                                "Already bound");
   sink().set_attach_reply(reply);
 

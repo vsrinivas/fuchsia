@@ -152,7 +152,7 @@ TEST_F(VerbBreak, BackendError) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
       "Error updating Breakpoint 1 @ 0x2345\n"
-      "System reported error: Bad handle",
+      "Bad handle",
       event.output.AsString());
 }
 

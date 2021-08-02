@@ -704,7 +704,8 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
   // See if we're already attached to this process.
   for (auto& [koid, proc] : procs_) {
     if (koid == process_koid) {
-      debug::Status error("Already attached to process " + std::to_string(proc->koid()));
+      debug::Status error(debug::Status::kAlreadyExists,
+                          "Already attached to process " + std::to_string(proc->koid()));
       DEBUG_LOG(Agent) << error.message();
       SendAttachReply(this, transaction_id, error);
       return;

@@ -88,7 +88,8 @@ TEST(Protocol, ConfigAgentReply) {
   ConfigAgentReply initial;
   initial.results.push_back(debug::Status());
   initial.results.push_back(debug::Status("This is an error message"));
-  initial.results.push_back(debug::Status(debug::Status::InternalValues(), 45, "foo"));
+  initial.results.push_back(
+      debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError, 45, "foo"));
 
   ConfigAgentReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -225,7 +226,8 @@ TEST(Protocol, LaunchRequest) {
 TEST(Protocol, LaunchReply) {
   LaunchReply initial;
   initial.inferior_type = InferiorType::kComponent;
-  initial.status = debug::Status(debug::Status::InternalValues(), 1346, "message");
+  initial.status = debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError,
+                                 1346, "message");
   initial.process_id = 0x1234;
   initial.component_id = 0x5678;
   initial.process_name = "winword.exe";
@@ -880,7 +882,8 @@ TEST(Protocol, UpdateGlobalSettingsRequest) {
 
 TEST(Protocol, UpdateGlobalSettingsReply) {
   UpdateGlobalSettingsReply initial;
-  initial.status = debug::Status(debug::Status::InternalValues(), 12345, "foo");
+  initial.status =
+      debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError, 12345, "foo");
 
   UpdateGlobalSettingsReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));

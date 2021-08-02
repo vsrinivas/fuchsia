@@ -310,26 +310,25 @@ void BreakpointImpl::SendBackendRemove() {
 
 void BreakpointImpl::OnAddOrChangeComplete(const Err& input_err,
                                            debug_ipc::AddOrChangeBreakpointReply reply) {
-  Err err = input_err;  // Could be a transport error.
-  if (err.ok() && reply.status.has_error()) {
-    // Transport succeeded but the backend failed.
-    std::stringstream ss;
-    ss << "System reported error: " << reply.status.message();
-    if (reply.status.platform_error() &&
-        *reply.status.platform_error() == debug_ipc::kZxErrNoResources) {
-      ss << std::endl
-         << "Is this a hardware breakpoint? Check \"sys-info\" to "
-            "verify the amount available within the system.";
-    } else if (reply.status.platform_error() &&
-               *reply.status.platform_error() == debug_ipc::kZxErrNotSupported) {
-      ss << std::endl
-         << "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
-            "likely not set.";
-    }
-    err = Err(ss.str());
-  }
+  // Map transport errors and remote errors to a single error.
+  Err err = input_err;
+  if (err.ok())
+    err = Err(reply.status);
 
   if (err.has_error()) {
+    // Provide a better explanation for some common failures.
+    if (err.type() == ErrType::kNoResources) {
+      err = Err(err.type(),
+                "Could not set the breakpoint.\n\n"
+                "Is this a hardware breakpoint? Check \"sys-info\" to verify the number\n"
+                "available within the system.");
+    } else if (err.type() == ErrType::kNotSupported) {
+      err = Err(err.type(),
+                "Could not set the breakpoint.\n\n"
+                "This kernel command-line flag \"kernel.enable-debugging-syscalls\" is\n"
+                "likely not set.");
+    }
+
     for (auto& observer : session()->breakpoint_observers())
       observer.OnBreakpointUpdateFailure(this, err);
   }

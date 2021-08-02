@@ -7,6 +7,10 @@
 
 #include <string>
 
+namespace debug {
+class Status;
+}
+
 namespace zxdb {
 
 // Most errors are general but in some cases we need to programmatically know a particular error.
@@ -18,6 +22,10 @@ enum class ErrType {
   kNoConnection,    // There is no connection to the debug agent.
   kCorruptMessage,  // Data was corrupted between us and the debug agent.
   kClientApi,       // An invalid client API call.
+  kNotSupported,    // The system doesn't support the requested operation.
+  kNotFound,        // For example, the processes to be attached to didn't exist.
+  kAlreadyExists,   // For example, attaching to a process or job that's already attached.
+  kNoResources,     // Ran out of something (like debug registers).
   kInput,           // Some problem getting input from the user (parse error, etc.).
   kOptimizedOut,    // Not available because of optimization in the debugged program.
   kUnsupported      // The answer is probably knowable but the debugger doesn't support it yet.
@@ -33,6 +41,10 @@ class Err {
 
   // Produces a "general" error with the given message.
   explicit Err(const std::string& msg);
+
+  // Conversion from an error that comes from the agent. It could also indicate "success" which
+  // will produce a "success" Err.
+  explicit Err(const debug::Status& debug_status);
 
   [[gnu::format(printf, 2, 3)]] explicit Err(const char* fmt, ...);
 

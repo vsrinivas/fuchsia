@@ -139,9 +139,18 @@ TEST(DynamicLoader, LoadUnload) {
 
     debug_ipc::LaunchReply launch_reply;
     agent.OnLaunch(launch_request, &launch_reply);
-    ASSERT_TRUE(launch_reply.status.ok());
 
+// TODO(fxbug.dev/81801) Currently binary loading is disabled in zircon_binary_launcher.cc because
+// it hangs for normal binaries. This test actually passes if the disabled code in the launcher is
+// enabled because the load_so_exe binary is in our package and can be loaded. But since that code
+// exits early, this is disabled.
+#if 0
+    ASSERT_TRUE(launch_reply.status.ok());
     loop->Run();
+#else
+    // Currently just validate that the correct error was sent.
+    ASSERT_EQ(launch_reply.status.type(), debug::Status::kNotSupported);
+#endif
   }
 }
 

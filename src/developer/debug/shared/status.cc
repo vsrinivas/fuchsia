@@ -11,34 +11,87 @@ namespace debug {
 
 #if defined(__Fuchsia__)
 
+// Map some Fuchsia errors to their cross-platform equivalents. Resets the status to 0 if a
+// non-platform error was generated.
+Status::Type MapFuchsiaError(zx_status_t* status) {
+  switch (*status) {
+    case ZX_ERR_NOT_SUPPORTED:
+      *status = 0;
+      return Status::kNotSupported;
+    case ZX_ERR_NOT_FOUND:
+      *status = 0;
+      return Status::kNotFound;
+    case ZX_ERR_ALREADY_EXISTS:
+      *status = 0;
+      return Status::kAlreadyExists;
+    case ZX_ERR_NO_RESOURCES:
+      *status = 0;
+      return Status::kNoResources;
+    default:
+      return Status::kPlatformError;
+  }
+}
+
 Status ZxStatus(zx_status_t s) {
   if (s == ZX_OK)
     return Status();
-  return Status(Status::InternalValues(), static_cast<int64_t>(s), zx_status_get_string(s));
+  Status::Type type = MapFuchsiaError(&s);
+  return Status(Status::InternalValues(), type, static_cast<int64_t>(s), zx_status_get_string(s));
 }
 
 Status ZxStatus(zx_status_t s, std::string msg) {
   if (s == ZX_OK)
     return Status();
-  return Status(Status::InternalValues(), static_cast<int64_t>(s), std::move(msg));
+  Status::Type type = MapFuchsiaError(&s);
+  return Status(Status::InternalValues(), type, static_cast<int64_t>(s), std::move(msg));
 }
 
 #else
 
+// Map some errno values to their cross-platform equivalents. Resets the status to 0 if a
+// non-platform error was generated.
+Status::Type MapErrnoError(int* en) {
+  switch (*en) {
+    case ENOENT:
+      *en = 0;
+      return Status::kNotFound;
+    case EEXIST:
+      *en = 0;
+      return Status::kAlreadyExists;
+    case ENOTSUP:
+      *en = 0;
+      return Status::kNotSupported;
+    default:
+      return Status::kPlatformError;
+  }
+}
+
 Status ErrnoStatus(int en) {
   if (en == 0)
     return Status();
-  return Status(Status::InternalValues(), static_cast<int64_t>(en), strerror(en));
+  Status::Type type = MapErrnoError(&en);
+  return Status(Status::InternalValues(), type, static_cast<int64_t>(en), strerror(en));
 }
 
 Status ErrnoStatus(int en, std::string msg) {
   if (en == 0)
     return Status();
-  return Status(Status::InternalValues(), static_cast<int64_t>(en), std::move(msg));
+  Status::Type type = MapErrnoError(&en);
+  return Status(Status::InternalValues(), type, static_cast<int64_t>(en), std::move(msg));
 }
 
 #endif
 
-Status::Status(std::string msg) : message_(std::move(msg)) { FX_DCHECK(!message_.empty()); }
+Status::Status(std::string msg) : type_(kGenericError), message_(std::move(msg)) {}
+
+Status::Status(Type t, std::string msg) : type_(t), message_(std::move(msg)) {
+  FX_DCHECK(t != kPlatformError && t != kSuccess && t != kLast);
+}
+
+Status::Status(InternalValues tag, Type t, uint64_t pe, std::string msg)
+    : type_(t), platform_error_(pe), message_(std::move(msg)) {
+  FX_DCHECK(t != kLast);
+  FX_DCHECK(t == kPlatformError || pe == 0);  // |pe| should be 0 for anything but platform errors.
+}
 
 }  // namespace debug

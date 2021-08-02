@@ -64,20 +64,19 @@ class TargetImpl : public Target {
   void OnProcessExiting(int return_code, uint64_t timestamp) override;
 
  private:
+  // Most logic between attaching and starting is shared so these functions handle both cases. The
+  // thunk resolves the weak pointer and issues special errors if it's gone. It also maps the
+  // transport errors in |err| and the report errors in |status| to a single error value.
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                          CallbackWithTimestamp callback, const Err& err,
                                          uint64_t koid, const debug::Status& status,
                                          const std::string& process_name, uint64_t timestamp);
   void OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err, uint64_t koid,
-                             const debug::Status& status, const std::string& process_name,
-                             uint64_t timestamp);
+                             const std::string& process_name, uint64_t timestamp);
 
-  // Different status returned by the agent can mean different things.
-  // ZX_ERR_IO = Process doesn't exist.
-  // ZX_ERR_ALREADY_BOUND = The agent is already bound.
-  void HandleAttachErrorStatus(CallbackWithTimestamp callback, uint64_t koid,
-                               const debug::Status& status, const std::string& process_name,
-                               uint64_t timestamp);
+  // Handles "already exists" error from attaching which get special logic.
+  void HandleAttachAlreadyExists(CallbackWithTimestamp callback, uint64_t koid,
+                                 const std::string& process_name, uint64_t timestamp);
 
   void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                            const debug::Status& status, Callback callback, uint64_t timestamp);
