@@ -3,6 +3,9 @@
         runner: "starnix",
         binary: "system/bin/sh",
         args: [ "-i" ],
-        mounts: [ "/:remotefs:root" ],
+        mounts: [
+            "/:remotefs:root",
+            "/tmp:tmpfs",
+        ],
     },
 }

@@ -54,6 +54,14 @@ pub fn sys_fcntl(
     arg: u64,
 ) -> Result<SyscallResult, Errno> {
     match cmd {
+        F_DUPFD => {
+            let newfd = ctx.task.files.duplicate(fd, None, FdFlags::empty())?;
+            Ok(newfd.into())
+        }
+        F_DUPFD_CLOEXEC => {
+            let newfd = ctx.task.files.duplicate(fd, None, FdFlags::CLOEXEC)?;
+            Ok(newfd.into())
+        }
         F_GETOWN => {
             let file = ctx.task.files.get(fd)?;
             Ok(file.get_async_owner().into())

@@ -129,9 +129,7 @@ impl FileOps for DirectoryFileObject {
         let new_offset = match whence {
             SeekOrigin::SET => Some(offset),
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
-            SeekOrigin::END => {
-                return Err(EINVAL);
-            }
+            SeekOrigin::END => None,
         }
         .ok_or(EINVAL)?;
 
