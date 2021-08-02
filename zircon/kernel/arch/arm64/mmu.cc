@@ -691,8 +691,18 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
     const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
     const vaddr_t index = vaddr_rel >> index_shift;
 
-    const pte_t pte = page_table[index];
+    pte_t pte = page_table[index];
 
+    // If the input range partially covers a large page, attempt to split.
+    if (index_shift > page_size_shift &&
+        (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
+        chunk_size != block_size) {
+      zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
+      // If the split failed then we just fall through and unmap the entire large page.
+      if (likely(s == ZX_OK)) {
+        pte = page_table[index];
+      }
+    }
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;

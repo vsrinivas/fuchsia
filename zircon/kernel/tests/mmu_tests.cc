@@ -24,11 +24,14 @@
 #define PGTABLE_L2_SHIFT MMU_LX_X(MMU_KERNEL_PAGE_SIZE_SHIFT, 2)
 #endif
 
+// Most mmu tests want a 'sufficiently large' aspace to play in, these constants define an aspace
+// that is large without having a discontinuity over the sign extended canonical addresses.
+constexpr vaddr_t kAspaceBase = 1UL << 20;
+constexpr size_t kAspaceSize = (1UL << 47) - kAspaceBase - (1UL << 20);
+
 static bool test_large_unaligned_region() {
   BEGIN_TEST;
-  vaddr_t base = 1UL << 20;
-  size_t size = (1UL << 47) - base - (1UL << 20);
-  ArchVmAspace aspace(1UL << 20, size, 0);
+  ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
   zx_status_t err = aspace.Init();
   EXPECT_EQ(err, ZX_OK, "init aspace");
 
@@ -83,9 +86,7 @@ static bool test_large_unaligned_region_without_map() {
   BEGIN_TEST;
 
   {
-    vaddr_t base = 1UL << 20;
-    size_t size = (1UL << 47) - base - (1UL << 20);
-    ArchVmAspace aspace(1UL << 20, size, 0);
+    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
     zx_status_t err = aspace.Init();
     EXPECT_EQ(err, ZX_OK, "init aspace");
 
@@ -142,9 +143,7 @@ static bool test_large_region_protect() {
   };
 
   for (unsigned i = 0; i < ktl::size(target_vaddrs); i++) {
-    vaddr_t base = 1UL << 20;
-    size_t size = (1UL << 47) - base - (1UL << 20);
-    ArchVmAspace aspace(1UL << 20, size, 0);
+    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
     zx_status_t err = aspace.Init();
     EXPECT_EQ(err, ZX_OK, "init aspace");
 
@@ -170,6 +169,59 @@ static bool test_large_region_protect() {
     err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
     EXPECT_EQ(err, ZX_OK, "unmap large page");
     EXPECT_EQ(mapped, 512u, "unmap large page");
+    err = aspace.Destroy();
+    EXPECT_EQ(err, ZX_OK, "destroy aspace");
+  }
+
+  END_TEST;
+}
+
+static bool test_large_region_unmap() {
+  BEGIN_TEST;
+
+  static const vaddr_t va = 1UL << PGTABLE_L1_SHIFT;
+  // Force a large page.
+  static const size_t alloc_size = 1UL << PGTABLE_L2_SHIFT;
+  static const vaddr_t alloc_end = va + alloc_size;
+
+  vaddr_t target_vaddrs[] = {
+      va,
+      va + PAGE_SIZE,
+      va + 2 * PAGE_SIZE,
+      alloc_end - 3 * PAGE_SIZE,
+      alloc_end - 2 * PAGE_SIZE,
+      alloc_end - PAGE_SIZE,
+  };
+
+  for (unsigned i = 0; i < ktl::size(target_vaddrs); i++) {
+    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
+    zx_status_t err = aspace.Init();
+    EXPECT_EQ(err, ZX_OK, "init aspace");
+
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+    size_t mapped;
+    // Use MapContiguous to create a mapping that should get backed by a large page.
+    err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+    EXPECT_EQ(err, ZX_OK, "map large page");
+    EXPECT_EQ(mapped, 512u, "map large page");
+
+    // Unmap a single small page out of the larger page.
+    err = aspace.Unmap(target_vaddrs[i], 1, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap single page");
+    EXPECT_EQ(mapped, 1u, "unmap single page");
+
+    // Ensure the single page was unmapped, but the rest of the large page is still present.
+    for (unsigned j = 0; j < ktl::size(target_vaddrs); j++) {
+      uint retrieved_flags = 0;
+      paddr_t pa;
+      zx_status_t result = aspace.Query(target_vaddrs[j], &pa, &retrieved_flags);
+      EXPECT_EQ(i == j ? ZX_ERR_NOT_FOUND : ZX_OK, result, "query page");
+    }
+
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap remaining pages");
+    EXPECT_EQ(mapped, 512u, "unmap remaining pages");
     err = aspace.Destroy();
     EXPECT_EQ(err, ZX_OK, "destroy aspace");
   }
@@ -227,9 +279,7 @@ static bool test_mapping_oom() {
       list_add_head(&node, &page->queue_node);
     }
 
-    vaddr_t base = 1UL << 20;
-    size_t size = (1UL << 47) - base - (1UL << 20);
-    ArchVmAspace aspace(base, size, 0, test_page_alloc_fn);
+    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0, test_page_alloc_fn);
     zx_status_t err = aspace.Init();
     ASSERT_EQ(err, ZX_OK, "init aspace");
 
@@ -263,13 +313,11 @@ static bool test_mapping_oom() {
 static bool test_skip_existing_mapping() {
   BEGIN_TEST;
 
-  constexpr vaddr_t kMapBase = 1UL << 20;
+  constexpr vaddr_t kMapBase = kAspaceBase;
   constexpr paddr_t kPhysBase = 0;
   constexpr size_t kNumPages = 8;
   constexpr size_t kMidPage = kNumPages / 2;
 
-  constexpr vaddr_t kAspaceBase = 1UL << 20;
-  constexpr size_t kAspaceSize = (1UL << 47) - kAspaceBase - (1UL << 20);
   ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
   zx_status_t err = aspace.Init();
   EXPECT_EQ(err, ZX_OK);
@@ -364,4 +412,5 @@ UNITTEST("create large unaligned region without mapping and ensure it can be unm
 UNITTEST("creating large vm region, and change permissions", test_large_region_protect)
 UNITTEST("trigger oom failures when creating a mapping", test_mapping_oom)
 UNITTEST("skip existing entry when mapping multiple pages", test_skip_existing_mapping)
+UNITTEST("create large vm region and unmap single pages", test_large_region_unmap)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests")
