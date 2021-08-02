@@ -162,9 +162,7 @@ void TestWait() {
 
 TEST(SyncCompletionTest, SingleWait) { ASSERT_NO_FATAL_FAILURES(TestWait<1>()); }
 
-TEST(SyncCompletionTest, MultiWait) {
-  ASSERT_NO_FATAL_FAILURES(TestWait<kMultiWaitThreadCount>());
-}
+TEST(SyncCompletionTest, MultiWait) { ASSERT_NO_FATAL_FAILURES(TestWait<kMultiWaitThreadCount>()); }
 
 template <size_t N>
 void TestWaitTimeout() {
@@ -215,9 +213,7 @@ void TestPresignalWait() {
   }
 }
 
-TEST(SyncCompletionTest, PresignalSingleWait) {
-  ASSERT_NO_FATAL_FAILURES(TestPresignalWait<1>());
-}
+TEST(SyncCompletionTest, PresignalSingleWait) { ASSERT_NO_FATAL_FAILURES(TestPresignalWait<1>()); }
 
 TEST(SyncCompletionTest, PresignalMultiWait) {
   ASSERT_NO_FATAL_FAILURES(TestPresignalWait<kMultiWaitThreadCount>());
@@ -335,6 +331,27 @@ TEST(SyncCompletionTest, SpuriousWakeupHandled) {
 
   // Final sanity checks and we are done.
   ASSERT_OK(thread.status());
+}
+
+TEST(SyncCompletionTest, CompletionSignaled) {
+  sync_completion_t sync = {};
+  const sync_completion_t& const_sync = sync;
+
+  // Initially, the completion should not be signalled.
+  ASSERT_FALSE(sync_completion_signaled(&sync));
+  ASSERT_FALSE(sync_completion_signaled(&const_sync));
+
+  // After it was explicitly signalled, sync_completion_signaled should return
+  // true.
+  sync_completion_signal(&sync);
+  ASSERT_TRUE(sync_completion_signaled(&sync));
+  ASSERT_TRUE(sync_completion_signaled(&const_sync));
+
+  // Finally, after we reset, sync_completion_signaled should go back to
+  // returning false.
+  sync_completion_reset(&sync);
+  ASSERT_FALSE(sync_completion_signaled(&sync));
+  ASSERT_FALSE(sync_completion_signaled(&const_sync));
 }
 
 }  // namespace
