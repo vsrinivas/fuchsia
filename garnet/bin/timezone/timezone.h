@@ -29,7 +29,6 @@ namespace time_zone {
 // For information on ICU ID's and timezone information see:
 // http://userguide.icu-project.org/formatparse/datetime
 class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
-  using fuchsia::deprecatedtimezone::Timezone::GetTimezoneIdCallback;
   using fuchsia::deprecatedtimezone::Timezone::GetTimezoneOffsetMinutesCallback;
   using fuchsia::deprecatedtimezone::Timezone::SetTimezoneCallback;
 
@@ -43,7 +42,6 @@ class TimezoneImpl : public fuchsia::deprecatedtimezone::Timezone {
   void GetTimezoneOffsetMinutes(int64_t milliseconds,
                                 GetTimezoneOffsetMinutesCallback callback) override;
   void SetTimezone(std::string timezone_id, SetTimezoneCallback callback) override;
-  void GetTimezoneId(GetTimezoneIdCallback callback) override;
 
   // Get the inspector for testing.
   const inspect::Inspector& inspector() { return *inspector_.inspector(); }

@@ -1,4 +1,3 @@
-protocol/member fuchsia.deprecatedtimezone/Timezone.GetTimezoneId() -> (string timezone_id)
 protocol/member fuchsia.deprecatedtimezone/Timezone.GetTimezoneOffsetMinutes(int64 milliseconds_since_epoch) -> (int32 local_offset_minutes,int32 dst_offset_minutes)
 protocol/member fuchsia.deprecatedtimezone/Timezone.SetTimezone(string timezone_id) -> (bool status)
 protocol fuchsia.deprecatedtimezone/Timezone

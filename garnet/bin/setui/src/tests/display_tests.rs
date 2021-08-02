@@ -620,12 +620,9 @@ async fn test_display_failure() {
                 let mut timezone_stream = timezone_stream_result.unwrap();
                 fasync::Task::spawn(async move {
                     while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                        if let fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                            responder,
-                        } = req
-                        {
-                            responder.send("PDT").unwrap();
-                        }
+                        // TODO(fxbug.dev/8859): Remove completely once deprecatedtimezone is
+                        // removed.
+                        panic!("unexpected call: {:?}", &req);
                     }
                 })
                 .detach();

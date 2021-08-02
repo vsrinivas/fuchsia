@@ -48,18 +48,15 @@ async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> I
                 while let Some(req) = timezone_stream.try_next().await.unwrap() {
                     #[allow(unreachable_patterns)]
                     match req {
-                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                            responder,
-                        } => {
-                            responder.send("PDT").unwrap();
-                        }
                         fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
                             timezone_id: _,
                             responder,
                         } => {
                             responder.send(true).unwrap();
                         }
-                        _ => {}
+                        _ => {
+                            panic!("unexpected call: {:?}", &req);
+                        }
                     }
                 }
             })

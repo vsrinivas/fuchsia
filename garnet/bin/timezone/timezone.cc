@@ -138,10 +138,6 @@ void TimezoneImpl::SetTimezone(std::string timezone_id, SetTimezoneCallback call
   callback(true);
 }
 
-void TimezoneImpl::GetTimezoneId(GetTimezoneIdCallback callback) {
-  callback(cached_state_ ? cached_state_->timezone_id : kDefaultTimezone);
-}
-
 void TimezoneImpl::LoadTimezone() {
   std::string timezone_id;
 

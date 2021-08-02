@@ -6,10 +6,10 @@ library fuchsia.deprecatedtimezone;
 // NOTE: this FIDL protocol is deprecated and slated for removal.  Please do
 // not add new uses that depend on it.  Use instead the following functionality:
 //
-// - For `GetTimezoneOffsetMinutes` and `GetTimezoneId`, get the timezone name
-//   from `fuchsia.intl.PropertyProvider`, and use the ICU library to compute
-//   the offset.
-// - For `SetTimezone` and `Watch`, please use `fuchsia.settings.Intl`.
+// - For `GetTimezoneOffsetMinutes`, get the timezone name from
+//   `fuchsia.intl.PropertyProvider`, and use the ICU library to compute the
+//   offset.
+// - For `SetTimezone`, please use `fuchsia.settings.Intl`.
 //
 // For more information on the ICU timezone ID format, see:
 // http://userguide.icu-project.org/datetime
@@ -27,16 +27,13 @@ protocol Timezone {
     });
 
     /// Sets the timezone for the machine based on an ICU ID.
+    ///
+    /// Do not introduce new uses: SetTimezone today exists only so it can
+    /// support the one remaining use of `GetTimezoneOffsetMinutes`.  Use
     @deprecated("use fuchsia.settings.Intl instead")
     SetTimezone(struct {
         timezone_id string;
     }) -> (struct {
         status bool;
-    });
-
-    /// Gets the timezone ID string.
-    @deprecated("use fuchsia.intl.PropertyProvider instead")
-    GetTimezoneId() -> (struct {
-        timezone_id string;
     });
 };

@@ -85,16 +85,6 @@ TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneId) {
   auto hierarchy = inspect::ReadFromVmo(timezone_->inspector().DuplicateVmo()).take_value();
   EXPECT_EQ("OK", GetHealth(hierarchy));
   EXPECT_EQ("America/Los_Angeles", GetTZ(hierarchy));
-
-  fidl::StringPtr actual_timezone = "bogus";
-  timezone_ptr->GetTimezoneId(
-      [&actual_timezone](fidl::StringPtr retval) { actual_timezone = retval; });
-  RunLoopUntilIdle();
-  ASSERT_TRUE(actual_timezone.has_value());
-  ASSERT_EQ(expected_timezone, actual_timezone.value());
-  hierarchy = inspect::ReadFromVmo(timezone_->inspector().DuplicateVmo()).take_value();
-  EXPECT_EQ("OK", GetHealth(hierarchy));
-  EXPECT_EQ("America/Los_Angeles", GetTZ(hierarchy));
 }
 
 TEST_F(DeprecatedTimeZoneUnitTest, SetTimezone_GetTimezoneOffsetMinutes) {
