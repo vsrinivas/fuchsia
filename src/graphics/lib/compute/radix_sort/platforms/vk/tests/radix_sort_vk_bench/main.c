@@ -1601,12 +1601,12 @@ main(int argc, char const * argv[])
       // timestamps are in nanoseconds
       //
       fprintf(stdout,
-              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %9.3f, %6.2f, GPU, %9u, ",
+              "%s, %u.%u.%u, %s, %s, %s, %10u, CPU, %s, %9.3f, %6.2f, GPU, %9u, ",
               pdp.deviceName,
-              (pdp.driverVersion >> 24) & 0xFF,
-              (pdp.driverVersion >> 16) & 0xFF,
-              (pdp.driverVersion >> 8) & 0xFF,
-              (pdp.driverVersion) & 0xFF,
+              // TODO(allanmac): Use undeprecated VK_API_VERSION_* once headers are updated
+              VK_VERSION_MAJOR(pdp.driverVersion),
+              VK_VERSION_MINOR(pdp.driverVersion),
+              VK_VERSION_PATCH(pdp.driverVersion),
               is_direct ? "direct" : "indirect",
               (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
               verify ? (verified ? "  OK  " : "*FAIL*") : "UNVERIFIED",
