@@ -387,17 +387,30 @@ async fn avrcp_remote_receives_set_absolute_volume_request(mut tf: AvrcpIntegrat
 
     // Get controller for mock peer
     let (c_proxy, c_server) = create_proxy::<ControllerMarker>().unwrap();
-    let _ = avrcp_svc
+    avrcp_svc
         .get_controller_for_target(&mut tf.mock_peer.peer_id().into(), c_server)
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get controller for mock peer");
 
     // Expect new SetAbsoluteVolume request on mock peer
     let mut vec = Vec::new();
     let desired_vol: u8 = 0x7F; // Valid volume range is 0x00 - 0x7F
     let datagram_len = async {
         let set_av_fut = c_proxy.set_absolute_volume(desired_vol).fuse();
-        let receive_av_fut = channel.read_datagram(&mut vec).fuse();
+        let receive_av_fut = async {
+            loop {
+                match channel.read_datagram(&mut vec).await {
+                    Err(e) => return Err(e),
+                    Ok(n) => {
+                        if n > 0 {
+                            return Ok(n);
+                        }
+                    }
+                }
+            }
+        }
+        .fuse();
         pin_mut!(set_av_fut, receive_av_fut);
         loop {
             select! {
