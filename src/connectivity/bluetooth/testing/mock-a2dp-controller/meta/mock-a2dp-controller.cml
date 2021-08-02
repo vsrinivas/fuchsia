@@ -1,0 +1,21 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/mock_a2dp_controller",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
+            from: "self",
+        },
+    ],
+}

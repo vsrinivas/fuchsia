@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("mock_a2dp_controller_bin") {
+  output_name = "mock_a2dp_controller"
+  testonly = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("mock-a2dp-controller") {
+  testonly = true
+  manifest = "meta/mock-a2dp-controller.cml"
+  deps = [ ":mock_a2dp_controller_bin" ]
+}

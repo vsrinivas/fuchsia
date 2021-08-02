@@ -156,14 +156,55 @@ group("bt-hfp-audio-gateway") {
   deps = [ ":bt-hfp-audio-gateway-default" ]
 }
 
-fuchsia_unittest_package("bt-hfp-audio-gateway-tests") {
+fuchsia_test_component("bt-hfp-audio-gateway-test-driver") {
+  manifest = "meta/bt-hfp-audio-gateway-test-driver.cml"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_component("test-component") {
+  manifest = "meta/bt-hfp-audio-gateway-tests.cml"
+}
+
+fuchsia_test_package("bt-hfp-audio-gateway-tests") {
+  test_components = [ ":test-component" ]
   deps = [
-    ":bin_test",
+    ":bt-hfp-audio-gateway-test-driver",
     ":test_config",
+
+    # The component mock for the `fuchsia.bluetooth.internal.a2dp.Controller` capability.
+    "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",
   ]
+}
+
+rustc_test("bt_hfp_a2dp_controller_bin") {
+  output_name = "bt_hfp_a2dp_controller_tests"
+  features = [ "test_a2dp_controller" ]
+  source_root = "src/a2dp.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/a2dp.rs" ]
+}
+
+fuchsia_unittest_package("bt-hfp-a2dp-controller-tests") {
+  deps = [ ":bt_hfp_a2dp_controller_bin" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-hfp-audio-gateway-tests" ]
+  deps = [
+    ":bt-hfp-a2dp-controller-tests",
+    ":bt-hfp-audio-gateway-tests",
+  ]
 }

@@ -21,7 +21,7 @@ impl Control {
         Self { proxy }
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "test_a2dp_controller"))]
     fn from_proxy(proxy: a2dp::ControllerProxy) -> Self {
         Self { proxy: Some(proxy) }
     }
@@ -65,7 +65,7 @@ impl Control {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test_a2dp_controller"))]
 mod tests {
     use super::*;
 

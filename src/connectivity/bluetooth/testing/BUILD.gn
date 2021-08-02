@@ -6,6 +6,7 @@ group("testing") {
   testonly = true
   deps = [
     "bt-test-harness",
+    "mock-a2dp-controller",
     "mock-piconet-server",
     "test-call-manager",
     "test-harness",
