@@ -4,11 +4,11 @@
 
 import 'dart:ui';
 
-import 'package:ermine/src/services/oobe/channel_service.dart';
-import 'package:ermine/src/services/oobe/privacy_consent_service.dart';
-import 'package:ermine/src/services/oobe/ssh_keys_service.dart';
-import 'package:ermine/src/states/oobe_state_impl.dart';
 import 'package:mobx/mobx.dart';
+import 'package:oobe/src/services/channel_service.dart';
+import 'package:oobe/src/services/privacy_consent_service.dart';
+import 'package:oobe/src/services/ssh_keys_service.dart';
+import 'package:oobe/src/states/oobe_state_impl.dart';
 
 /// The oobe screens the user navigates through.
 enum OobeScreen { channel, dataSharing, sshKeys, done }

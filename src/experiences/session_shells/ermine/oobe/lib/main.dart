@@ -4,11 +4,6 @@
 
 import 'dart:ui';
 
-import 'package:ermine/src/states/oobe_state.dart';
-import 'package:ermine/src/utils/fuchsia_keyboard.dart';
-import 'package:ermine/src/utils/themes.dart';
-import 'package:ermine/src/utils/widget_factory.dart';
-import 'package:ermine/src/widgets/oobe.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -18,6 +13,11 @@ import 'package:internationalization/localizations_delegate.dart'
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
+import 'package:oobe/src/states/oobe_state.dart';
+import 'package:oobe/src/utils/fuchsia_keyboard.dart';
+import 'package:oobe/src/utils/themes.dart';
+import 'package:oobe/src/utils/widget_factory.dart';
+import 'package:oobe/src/widgets/oobe.dart';
 
 Future<void> main() async {
   setupLogger(name: 'oobe');

@@ -15,7 +15,6 @@ group("shell") {
   public_deps = [
     ":ermine",
     ":images",
-    ":oobe",
   ]
 }
 
@@ -34,7 +33,6 @@ dart_library("lib") {
 
   entrypoints = [
     "main.dart",
-    "oobe_main.dart",
     "test_main.dart",
   ]
 
@@ -46,9 +44,6 @@ dart_library("lib") {
     "src/services/presenter_service.dart",
     "src/services/shortcuts_service.dart",
     "src/services/startup_service.dart",
-    "src/services/oobe/channel_service.dart",
-    "src/services/oobe/privacy_consent_service.dart",
-    "src/services/oobe/ssh_keys_service.dart",
     "src/services/settings/battery_watcher_service.dart",
     "src/services/settings/brightness_service.dart",
     "src/services/settings/channel_service.dart",
@@ -62,8 +57,6 @@ dart_library("lib") {
   states = [
     "src/states/app_state.dart",
     "src/states/app_state_impl.dart",
-    "src/states/oobe_state.dart",
-    "src/states/oobe_state_impl.dart",
     "src/states/settings_state.dart",
     "src/states/settings_state_impl.dart",
     "src/states/view_state.dart",
@@ -89,13 +82,9 @@ dart_library("lib") {
     "src/widgets/app_switcher.dart",
     "src/widgets/app_view.dart",
     "src/widgets/launch_button.dart",
-    "src/widgets/oobe.dart",
     "src/widgets/overlays.dart",
     "src/widgets/quick_settings.dart",
     "src/widgets/scrim.dart",
-    "src/widgets/oobe/channels.dart",
-    "src/widgets/oobe/data_sharing.dart",
-    "src/widgets/oobe/ssh_keys.dart",
     "src/widgets/settings/about_settings.dart",
     "src/widgets/settings/setting_details.dart",
     "src/widgets/settings/shortcut_settings.dart",
@@ -178,21 +167,6 @@ fuchsia_package("ermine") {
   }
 }
 
-flutter_component("oobe_component") {
-  main_dart = "oobe_main.dart"
-  main_package = "ermine"
-  component_name = "oobe"
-  manifest = "meta/oobe.cmx"
-  deps = [
-    ":lib",
-    ":resources",
-  ]
-}
-
-fuchsia_package("oobe") {
-  deps = [ ":oobe_component" ]
-}
-
 tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 
 static_icu_data("time_zone_list") {
@@ -214,7 +188,6 @@ resource("resources") {
   sources = [
     ermine_app_entries,
     "config/keyboard_shortcuts.json",
-    "config/privacy_policy.txt",
     rebase_path(tz_ids_path),
     rebase_path(
         "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),

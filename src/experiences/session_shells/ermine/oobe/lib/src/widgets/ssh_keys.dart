@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:ermine/src/states/oobe_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
+import 'package:oobe/src/states/oobe_state.dart';
 
 /// Defines a widget to configure software update channels.
 class SshKeys extends StatelessWidget {

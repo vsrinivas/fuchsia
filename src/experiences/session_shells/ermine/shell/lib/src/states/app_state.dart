@@ -12,7 +12,6 @@ import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/services/startup_service.dart';
 import 'package:ermine/src/states/app_state_impl.dart';
-import 'package:ermine/src/states/oobe_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/widgets/app_bar.dart';
@@ -49,7 +48,6 @@ abstract class AppState with Store {
   List<Map<String, String>> get appLaunchEntries;
 
   SettingsState get settingsState;
-  OobeState get oobeState;
 
   Action get showOverlay;
   Action get hideOverlay;

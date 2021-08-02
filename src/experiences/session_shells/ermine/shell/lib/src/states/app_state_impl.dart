@@ -14,7 +14,6 @@ import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/services/startup_service.dart';
 import 'package:ermine/src/states/app_state.dart';
-import 'package:ermine/src/states/oobe_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
@@ -114,7 +113,6 @@ class AppStateImpl with Disposable implements AppState {
     super.dispose();
 
     settingsState.dispose();
-    _oobeState?.dispose();
 
     startupService.dispose();
     focusService.dispose();
@@ -127,10 +125,6 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final SettingsState settingsState;
-
-  OobeState? _oobeState;
-  @override
-  OobeState get oobeState => _oobeState ??= OobeState.fromEnv();
 
   @override
   final Observable<bool> isIdle = false.asObservable();

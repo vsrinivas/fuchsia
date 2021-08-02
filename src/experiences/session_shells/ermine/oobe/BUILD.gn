@@ -1,0 +1,88 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_component.gni")
+
+dart_library("lib") {
+  package_name = "oobe"
+  null_safe = true
+
+  entrypoints = [ "main.dart" ]
+
+  services = [
+    "src/services/channel_service.dart",
+    "src/services/privacy_consent_service.dart",
+    "src/services/ssh_keys_service.dart",
+  ]
+
+  states = [
+    "src/states/oobe_state.dart",
+    "src/states/oobe_state_impl.dart",
+  ]
+
+  utils = [
+    "src/utils/fuchsia_keyboard.dart",
+    "src/utils/mobx_disposable.dart",
+    "src/utils/mobx_extensions.dart",
+    "src/utils/themes.dart",
+    "src/utils/widget_factory.dart",
+  ]
+
+  widgets = [
+    "src/widgets/oobe.dart",
+    "src/widgets/channels.dart",
+    "src/widgets/data_sharing.dart",
+    "src/widgets/ssh_keys.dart",
+  ]
+
+  sources = entrypoints + services + states + utils + widgets
+
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.ssh",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/mobx",
+  ]
+}
+
+flutter_component("component") {
+  main_dart = "main.dart"
+  component_name = "oobe"
+  manifest = "meta/oobe.cmx"
+  deps = [
+    ":lib",
+    ":resources",
+  ]
+}
+
+fuchsia_package("oobe") {
+  deps = [ ":component" ]
+}
+
+resource("resources") {
+  sources = [
+    "config/privacy_policy.txt",
+    rebase_path(
+        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
+  ]
+
+  outputs = [ "data/{{source_file_part}}" ]
+}

@@ -2,11 +2,4 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("ermine") {
-  public_deps = [
-    "oobe",
-    "session:workstation_routing",
-    "session:workstation_session",
-    "shell",
-  ]
-}
+include: ../../../analysis_options.yaml
