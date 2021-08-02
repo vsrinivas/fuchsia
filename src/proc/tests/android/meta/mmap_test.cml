@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/mmap_test",
+        args: [ "--gunit_filter=-*Death*:*DevZero*:*.MapCharDevice:*.MapStack:*.MapLocked:*.NonFixedAlignment:*.Prot*Only*:*.MprotectHugeLength:*.ProtExec:*ExceedLimitData*:*ExceedLimitAS:*.HugeLength:*.AccessCOWInvalidatesCachedSegments:*.MapOffsetBeyondEnd:*.MapLengthPlusOffsetOverflows:*.MmapFileWithOpath:*.ReadSharedTruncateDownThenUp:*SIGBUS*:*.ReadSharedTruncatePartialPage:*.WriteSharedTruncatePartialPage:*.InternalSigBusZeroing:*.Map32Bit:ReadWriteSharedPrivate/*" ],
+    },
+}
