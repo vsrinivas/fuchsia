@@ -245,6 +245,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0115_build_types.md
 - title: "RFC-0116: Wire format support for sparser FIDL tables"
   path: /docs/contribute/governance/rfcs/0116_fidl_sparser_tables.md
+- title: "RFC-0117: Component fuzzing framework"
+  path: /docs/contribute/governance/rfcs/0117_component_fuzzing_framework.md
 - title: "RFC-0118: SWD policy at image assembly"
   path: /docs/contribute/governance/rfcs/0118_swd_policy_at_image_assembly_rfc.md
 - title: "RFC-0119: System-absolute paths considered harmful"

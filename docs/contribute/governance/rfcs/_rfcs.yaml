@@ -1510,6 +1510,19 @@
   submitted: '2021-06-16'
   reviewed: '2021-07-21'
 
+- name: 'RFC-0117'
+  title: 'Component fuzzing framework'
+  short_description: 'A Fuchsia-native, cross-process fuzzing framework.'
+  authors: ['aarongreen@google.com']
+  file: '0117_component_fuzzing_framework.md'
+  area: ['Testing']
+  issue: ['24740']
+  gerrit_change_id: ['529348']
+  status: 'Accepted'
+  reviewers: [ 'abarth@google.com', 'anmittal@google.com', 'crjohns@google.com', 'jsankey@google.com', 'jeremymanson@google.com', mvanotti@google.com', 'satsukiu@google.com', 'shayba@google.com', 'shrike@google.com']
+  submitted: '2021-05-24'
+  reviewed: '2021-07-28'
+
 - name: 'RFC-0118'
   title: 'SWD policy at image assembly'
   short_description: 'Short-term change to apply SWD policy at image assembly time.'
