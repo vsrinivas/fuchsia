@@ -11,10 +11,29 @@ The steps are:
 
 ## 1. Prerequisites {#prerequisites}
 
+### Source code {#source-code}
+
 Before you start, complete the
 [Download the Fuchsia source code](/docs/get-started/get_fuchsia_source.md)
 guide to download the Fuchsia source code and set up the Fuchsia development
 environment on your machine.
+
+### Hardware requirements {#hardware-requirements}
+
+Fuchsia can only be built on a machine with one of the following CPU
+architecture and operating system combinations:
+
+- x86-64 Linux (Debian-based distributions only)
+- x86-64 macOS
+
+Windows and ARM64 Linux are not supported.
+
+ARM64 macOS is not officially supported, but a build may still succeed if
+commands are run in a terminal started with:
+
+```posix-terminal
+arch -x86_64 /bin/zsh
+```
 
 ## 2. Set your build configuration {#set-your-build-configuration}
 
