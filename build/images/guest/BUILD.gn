@@ -75,6 +75,7 @@ assemble_system("guest") {
     "//src/devices/bin/driver_host",
     "//src/devices/bin/driver_manager:bootfs",
     "//src/devices/bin/driverctl",
+    "//src/devices/bin/driver-index:bootfs",
     "//src/devices/bin/lsdev",
     "//src/devices/bin/unbind",
     "//src/devices/block/drivers/virtio:virtio_block",
