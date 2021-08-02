@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:ui';
 
@@ -375,7 +376,7 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   // Map key shortcuts to corresponding actions.
-  Map<String, VoidCallback> get _actions => {
+  Map<String, dynamic> get _actions => {
         'launcher': showOverlay,
         'switchNext': switchNext,
         'switchPrev': switchPrev,
@@ -385,6 +386,7 @@ class AppStateImpl with Disposable implements AppState {
         'settings': showOverlay,
         'shortcuts': showOverlay,
         'screenSaver': showScreenSaver,
+        'inspect': () => json.encode(_getInspectData()),
       };
 
   final _focusedView = Observable<ViewHandle?>(null);
@@ -565,15 +567,15 @@ class AppStateImpl with Disposable implements AppState {
         }
       });
 
-  // Adds inspect data when requested by [Inspect].
-  void _onInspect(Node node) {
+  Map<String, dynamic> _getInspectData() {
+    final data = <String, dynamic>{};
     // Overlays currently visible.
-    node.boolProperty('appBarVisible')!.setValue(appBarVisible.value);
-    node.boolProperty('sideBarVisible')!.setValue(sideBarVisible.value);
-    node.boolProperty('overlaysVisible')!.setValue(overlaysVisible.value);
+    data['appBarVisible'] = appBarVisible.value;
+    data['sideBarVisible'] = sideBarVisible.value;
+    data['overlaysVisible'] = overlaysVisible.value;
 
     // Number of running component views.
-    node.intProperty('numViews')?.setValue(views.length);
+    data['numViews'] = views.length;
 
     if (views.isNotEmpty) {
       // List of views that are currently running.
@@ -582,23 +584,53 @@ class AppStateImpl with Disposable implements AppState {
 
         // Active (focused) view.
         if (view == topView.value) {
-          node.intProperty('activeView')?.setValue(i);
+          data['activeView'] = i;
         }
 
         // View title, url, focused and viewport.
-        final viewNode = node.child('view-$i')!;
-        viewNode.stringProperty('title')!.setValue(view.title);
-        viewNode.stringProperty('url')!.setValue(view.url!);
-        viewNode.boolProperty('focused')!.setValue(view == topView.value);
+        data['view-$i'] = <String, dynamic>{};
+        final viewData = data['view-$i'];
+        viewData['title'] = view.title;
+        viewData['url'] = view.url;
+        viewData['focused'] = view == topView.value;
 
         final viewport = view.viewport;
         if (viewport != null) {
-          viewNode.stringProperty('viewportLTRB')!.setValue([
-                viewport.left,
-                viewport.top,
-                viewport.right,
-                viewport.bottom,
-              ].join(','));
+          viewData['viewportLTRB'] = [
+            viewport.left,
+            viewport.top,
+            viewport.right,
+            viewport.bottom,
+          ].join(',');
+        }
+      }
+    }
+    return data;
+  }
+
+  // Adds inspect data when requested by [Inspect].
+  void _onInspect(Node node, [Map<String, dynamic>? inspectData]) {
+    final data = inspectData ?? _getInspectData();
+    for (final entry in data.entries) {
+      if (entry.value is Map<String, dynamic>) {
+        _onInspect(node.child(entry.key)!, entry.value);
+      } else {
+        switch (entry.value.runtimeType) {
+          case bool:
+            node.boolProperty(entry.key)!.setValue(entry.value);
+            break;
+          case int:
+            node.intProperty(entry.key)!.setValue(entry.value);
+            break;
+          case double:
+            node.doubleProperty(entry.key)!.setValue(entry.value);
+            break;
+          case String:
+            node.stringProperty(entry.key)!.setValue(entry.value);
+            break;
+          default:
+            assert(false, 'Invalid inspect type: ${entry.value.runtimeType}');
+            break;
         }
       }
     }

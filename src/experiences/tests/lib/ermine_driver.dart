@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -72,6 +73,9 @@ class ErmineDriver {
     if (_driver == null) {
       fail('Unable to connect to ermine.');
     }
+
+    // Wait for shell to draw first frame.
+    await driver.waitUntilFirstFrameRasterized();
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
@@ -323,8 +327,10 @@ class ErmineDriver {
   }
 
   /// Returns the current shell snapshot from inspect data.
-  Future<ShellSnapshot> get snapshot async =>
-      ShellSnapshot(await inspectSnapshot('ermine.cmx'));
+  Future<ShellSnapshot> get snapshot async {
+    final data = await driver.requestData('inspect');
+    return ShellSnapshot(json.decode(data));
+  }
 
   /// Returns the list of launched views from inspect data.
   Future<List<ViewSnapshot>> get views async => (await snapshot).views;

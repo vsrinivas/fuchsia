@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
@@ -23,20 +22,19 @@ class ShortcutsService {
   Map<String, Set<String>> get keyboardBindings =>
       _keyboardShortcuts.bindingDescription();
 
-  void register(Map<String, VoidCallback> actions) {
+  void register(Map<String, dynamic> actions) {
     final file = File('/pkg/data/keyboard_shortcuts.json');
     final bindings = file.readAsStringSync();
 
     _keyboardShortcuts = KeyboardShortcuts.withViewRef(
       hostViewRef,
-      actions: actions,
+      actions: actions.map((k, v) => MapEntry(k, () => v())),
       bindings: bindings,
     );
 
     // Hook up actions to flutter driver handler.
     flutterDriverHandler = (command) async {
-      actions[command]?.call();
-      return '';
+      return actions[command]?.call();
     };
   }
 
