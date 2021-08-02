@@ -31,22 +31,24 @@
 
 #include "hypervisor_tests_constants.h"
 
-static constexpr uint32_t kGuestMapFlags =
+namespace {
+
+constexpr uint32_t kGuestMapFlags =
     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
-static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
-static constexpr uint32_t kInterruptVector = 32u;
-static constexpr uint64_t kTrapKey = 0x1234;
+constexpr uint32_t kInterruptVector = 32u;
+constexpr uint64_t kTrapKey = 0x1234;
 
 #ifdef __x86_64__
-static constexpr uint32_t kNmiVector = 2u;
-static constexpr uint32_t kGpFaultVector = 13u;
-static constexpr uint32_t kExceptionVector = 16u;
+constexpr uint32_t kNmiVector = 2u;
+constexpr uint32_t kGpFaultVector = 13u;
+constexpr uint32_t kExceptionVector = 16u;
 #endif
 
-#define DECLARE_TEST_FUNCTION(name) \
-  extern const char name##_start[]; \
-  extern const char name##_end[];
+#define DECLARE_TEST_FUNCTION(name)     \
+  extern "C" const char name##_start[]; \
+  extern "C" const char name##_end[];
 
 DECLARE_TEST_FUNCTION(vcpu_resume)
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
@@ -83,7 +85,7 @@ enum {
   X86_PTE_PS = 0x80,  // PS   Page size
 };
 
-typedef struct test {
+struct TestCase {
   bool supported = false;
   bool interrupts_enabled = false;
   uintptr_t host_addr = 0;
@@ -93,14 +95,14 @@ typedef struct test {
   zx::vmar vmar;
   zx::vcpu vcpu;
 
-  ~test() {
+  ~TestCase() {
     if (host_addr != 0) {
       zx::vmar::root_self()->unmap(host_addr, VMO_SIZE);
     }
   }
-} test_t;
+};
 
-static zx_status_t get_vmex_resource(zx::resource* resource) {
+zx_status_t GetVmexResource(zx::resource* resource) {
   fuchsia::kernel::VmexResourceSyncPtr vmex_resource;
   auto path = std::string("/svc/") + fuchsia::kernel::VmexResource::Name_;
   zx_status_t status =
@@ -111,7 +113,7 @@ static zx_status_t get_vmex_resource(zx::resource* resource) {
   return vmex_resource->Get(resource);
 }
 
-static zx_status_t get_hypervisor_resource(zx::resource* resource) {
+zx_status_t GetHypervisorResource(zx::resource* resource) {
   fuchsia::kernel::HypervisorResourceSyncPtr hypervisor_rsrc;
   auto path = std::string("/svc/") + fuchsia::kernel::HypervisorResource::Name_;
   zx_status_t status =
@@ -125,15 +127,14 @@ static zx_status_t get_hypervisor_resource(zx::resource* resource) {
 
 #ifdef __aarch64__
 
-static zx_status_t get_sysinfo(fuchsia::sysinfo::SysInfoSyncPtr* sysinfo) {
+zx_status_t GetSysinfo(fuchsia::sysinfo::SysInfoSyncPtr* sysinfo) {
   auto path = std::string("/svc/") + fuchsia::sysinfo::SysInfo::Name_;
   return fdio_service_connect(path.data(), sysinfo->NewRequest().TakeChannel().release());
 }
 
-static zx_status_t get_interrupt_controller_info(
-    fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
+zx_status_t GetInterruptControllerInfo(fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
   fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
-  zx_status_t status = get_sysinfo(&sysinfo);
+  zx_status_t status = GetSysinfo(&sysinfo);
   if (status != ZX_OK) {
     return status;
   }
@@ -149,18 +150,18 @@ static zx_status_t get_interrupt_controller_info(
 //
 // |start| and |end| point to the start and end of the code that will be copied into the guest for
 // execution. If |start| and |end| are null, no code is copied.
-static void setup(test_t* test, const char* start, const char* end) {
+void SetupGuest(TestCase* test, const char* start, const char* end) {
   ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
   ASSERT_EQ(zx::vmar::root_self()->map(kHostMapFlags, 0, test->vmo, 0, VMO_SIZE, &test->host_addr),
             ZX_OK);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
   zx::resource vmex_resource;
-  ASSERT_EQ(get_vmex_resource(&vmex_resource), ZX_OK);
+  ASSERT_EQ(GetVmexResource(&vmex_resource), ZX_OK);
   ASSERT_EQ(test->vmo.replace_as_executable(vmex_resource, &test->vmo), ZX_OK);
 
   zx::resource hypervisor_resource;
-  ASSERT_EQ(get_hypervisor_resource(&hypervisor_resource), ZX_OK);
+  ASSERT_EQ(GetHypervisorResource(&hypervisor_resource), ZX_OK);
   zx_status_t status = zx::guest::create(hypervisor_resource, 0, &test->guest, &test->vmar);
   test->supported = status != ZX_ERR_NOT_SUPPORTED;
   if (!test->supported) {
@@ -187,7 +188,7 @@ static void setup(test_t* test, const char* start, const char* end) {
 #endif  // __x86_64__
 
   if (start != nullptr && end != nullptr) {
-    memcpy((void*)(test->host_addr + entry), start, end - start);
+    memcpy(reinterpret_cast<void*>(test->host_addr + entry), start, end - start);
   }
 
   status = zx::vcpu::create(test->guest, 0, entry, &test->vcpu);
@@ -200,8 +201,8 @@ static void setup(test_t* test, const char* start, const char* end) {
 }
 
 #if __x86_64__
-static void setup_and_interrupt(test_t* test, const char* start, const char* end) {
-  ASSERT_NO_FATAL_FAILURE(setup(test, start, end));
+void SetupAndInterrupt(TestCase* test, const char* start, const char* end) {
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(test, start, end));
   if (!test->supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -212,7 +213,7 @@ static void setup_and_interrupt(test_t* test, const char* start, const char* end
   int ret = thrd_create(
       &thread,
       [](void* ctx) -> int {
-        test_t* test = static_cast<test_t*>(ctx);
+        TestCase* test = static_cast<TestCase*>(ctx);
         return test->vcpu.interrupt(kInterruptVector) == ZX_OK ? thrd_success : thrd_error;
       },
       test);
@@ -220,7 +221,7 @@ static void setup_and_interrupt(test_t* test, const char* start, const char* end
 }
 #endif
 
-static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcpu) {
+bool ExceptionThrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcpu) {
 #if __x86_64__
   if (guest_mem.inst_len != 12) {
     // Not the expected mov imm, (EXIT_TEST_ADDR) size.
@@ -245,7 +246,7 @@ static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem, cons
 #endif
 }
 
-static inline void resume_and_clean_exit(test_t* test) {
+void ResumeAndCleanExit(TestCase* test) {
   zx_port_packet_t packet = {};
   ASSERT_EQ(test->vcpu.resume(&packet), ZX_OK);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
@@ -254,25 +255,25 @@ static inline void resume_and_clean_exit(test_t* test) {
   EXPECT_EQ(packet.guest_mem.default_operand_size, 4u);
 #endif
   if (test->interrupts_enabled) {
-    ASSERT_FALSE(exception_thrown(packet.guest_mem, test->vcpu));
+    ASSERT_FALSE(ExceptionThrown(packet.guest_mem, test->vcpu));
   }
 }
 
-TEST(Guest, vcpu_resume) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_resume_start, vcpu_resume_end));
+TEST(Guest, VcpuResume) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_invalid_thread_reuse) {
+TEST(Guest, VcpuInvalidThreadReuse) {
   {
-    test_t test;
-    ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_resume_start, vcpu_resume_end));
+    TestCase test;
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
     if (!test.supported) {
       // The hypervisor isn't supported, so don't run the test.
       return;
@@ -283,13 +284,14 @@ TEST(Guest, vcpu_invalid_thread_reuse) {
     ASSERT_EQ(status, ZX_ERR_BAD_STATE);
   }
 
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_resume_start, vcpu_resume_end));
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
 }
 
-TEST(Guest, vcpu_read_write_state) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_read_write_state_start, vcpu_read_write_state_end));
+TEST(Guest, VcpuReadWriteState) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_read_write_state_start, vcpu_read_write_state_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -331,7 +333,7 @@ TEST(Guest, vcpu_read_write_state) {
 
   ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
@@ -390,9 +392,9 @@ TEST(Guest, vcpu_read_write_state) {
 #endif  // __x86_64__
 }
 
-TEST(Guest, vcpu_interrupt) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+TEST(Guest, VcpuInterrupt) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -401,11 +403,11 @@ TEST(Guest, vcpu_interrupt) {
 
 #if __x86_64__
   // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 #endif
 
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
 #if __x86_64__
   zx_vcpu_state_t vcpu_state;
@@ -414,9 +416,9 @@ TEST(Guest, vcpu_interrupt) {
 #endif
 }
 
-TEST(Guest, guest_set_trap_with_mem) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+TEST(Guest, GuestSetTrapWithMem) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, guest_set_trap_start, guest_set_trap_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -431,12 +433,12 @@ TEST(Guest, guest_set_trap_with_mem) {
   EXPECT_EQ(packet.key, kTrapKey);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, guest_set_trap_with_bell) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+TEST(Guest, GuestSetTrapWithBell) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, guest_set_trap_start, guest_set_trap_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -448,7 +450,7 @@ TEST(Guest, guest_set_trap_with_bell) {
   // Trap on access of TRAP_ADDR.
   ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_port_packet_t packet = {};
   ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
@@ -457,14 +459,14 @@ TEST(Guest, guest_set_trap_with_bell) {
   EXPECT_EQ(packet.guest_bell.addr, static_cast<zx_gpaddr_t>(TRAP_ADDR));
 }
 
-// Test for fxbug.dev/33986.
-TEST(Guest, guest_set_trap_with_bell_drop) {
+// TestCase for fxbug.dev/33986.
+TEST(Guest, GuestSetTrapWithBellDrop) {
   // Build the port before test so test is destructed first.
   zx::port port;
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, guest_set_trap_start, guest_set_trap_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -473,14 +475,14 @@ TEST(Guest, guest_set_trap_with_bell_drop) {
   // Trap on access of TRAP_ADDR.
   ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // The guest in test is destructed with one packet still queued on the
   // port. This should work correctly.
 }
 
-// Test for fxbug.dev/34001.
-TEST(Guest, guest_set_trap_with_bell_and_user) {
+// TestCase for fxbug.dev/34001.
+TEST(Guest, GuestSetTrapWithBellAndUser) {
   zx::port port;
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
@@ -492,8 +494,8 @@ TEST(Guest, guest_set_trap_with_bell_and_user) {
 
   // Force guest to be released and cancel all packets associated with traps.
   {
-    test_t test;
-    ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+    TestCase test;
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, guest_set_trap_start, guest_set_trap_end));
     if (!test.supported) {
       // The hypervisor isn't supported, so don't run the test.
       return;
@@ -502,7 +504,7 @@ TEST(Guest, guest_set_trap_with_bell_and_user) {
     // Trap on access of TRAP_ADDR.
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-    ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+    ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
   }
 
   ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
@@ -511,12 +513,12 @@ TEST(Guest, guest_set_trap_with_bell_and_user) {
 }
 
 // See that zx::vcpu::resume returns ZX_ERR_BAD_STATE if the port has been closed.
-TEST(Guest, guest_set_trap_close_port) {
+TEST(Guest, GuestSetTrapClosePort) {
   zx::port port;
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_start, guest_set_trap_end));
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, guest_set_trap_start, guest_set_trap_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -529,35 +531,35 @@ TEST(Guest, guest_set_trap_close_port) {
   zx_port_packet_t packet = {};
   ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_BAD_STATE);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
 #ifdef __aarch64__
 
-TEST(Guest, vcpu_wfi) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_wfi_start, vcpu_wfi_end));
+TEST(Guest, VcpuWfi) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_start, vcpu_wfi_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_wfi_pending_interrupt) {
+TEST(Guest, VcpuWfiPendingInterrupt) {
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
-  ASSERT_EQ(ZX_OK, get_interrupt_controller_info(&info));
+  ASSERT_EQ(ZX_OK, GetInterruptControllerInfo(&info));
 
-  test_t test;
+  TestCase test;
   switch (info->type) {
     case fuchsia::sysinfo::InterruptControllerType::GIC_V2:
-      ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_wfi_pending_interrupt_gicv2_start,
-                                    vcpu_wfi_pending_interrupt_gicv2_end));
+      ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_pending_interrupt_gicv2_start,
+                                         vcpu_wfi_pending_interrupt_gicv2_end));
       break;
     case fuchsia::sysinfo::InterruptControllerType::GIC_V3:
-      ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_wfi_pending_interrupt_gicv3_start,
-                                    vcpu_wfi_pending_interrupt_gicv3_end));
+      ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_pending_interrupt_gicv3_start,
+                                         vcpu_wfi_pending_interrupt_gicv3_end));
       break;
     default:
       ASSERT_TRUE(false) << "Unsupported GIC version";
@@ -571,12 +573,12 @@ TEST(Guest, vcpu_wfi_pending_interrupt) {
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_wfi_aarch32) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_wfi_aarch32_start, vcpu_wfi_aarch32_end));
+TEST(Guest, VcpuWfiAarch32) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_aarch32_start, vcpu_wfi_aarch32_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -590,20 +592,20 @@ TEST(Guest, vcpu_wfi_aarch32) {
   EXPECT_EQ(packet.guest_mem.data, 0u);
 }
 
-TEST(Guest, vcpu_fp) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_fp_start, vcpu_fp_end));
+TEST(Guest, VcpuFp) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_fp_start, vcpu_fp_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_fp_aarch32) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_fp_aarch32_start, vcpu_fp_aarch32_end));
+TEST(Guest, VcpuFpAarch32) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_fp_aarch32_start, vcpu_fp_aarch32_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -617,9 +619,9 @@ TEST(Guest, vcpu_fp_aarch32) {
   EXPECT_EQ(packet.guest_mem.data, 0u);
 }
 
-TEST(Guest, vcpu_psci_system_off) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_psci_system_off_start, vcpu_psci_system_off_end));
+TEST(Guest, VcpuPsciSystemOff) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_psci_system_off_start, vcpu_psci_system_off_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -629,9 +631,9 @@ TEST(Guest, vcpu_psci_system_off) {
   ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_UNAVAILABLE);
 }
 
-TEST(Guest, vcpu_write_state_io_aarch32) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, nullptr, nullptr));
+TEST(Guest, VcpuWriteStateIoAarch32) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, nullptr, nullptr));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -645,9 +647,9 @@ TEST(Guest, vcpu_write_state_io_aarch32) {
 
 #elif __x86_64__
 
-TEST(Guest, vcpu_interrupt_priority) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+TEST(Guest, VcpuInterruptPriority) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -655,13 +657,13 @@ TEST(Guest, vcpu_interrupt_priority) {
   test.interrupts_enabled = true;
 
   // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Check that interrupts have higher priority than exceptions.
   ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -670,9 +672,9 @@ TEST(Guest, vcpu_interrupt_priority) {
   // TODO(fxbug.dev/12585): Check that the exception is cleared.
 }
 
-TEST(Guest, vcpu_nmi) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+TEST(Guest, VcpuNmi) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -680,21 +682,21 @@ TEST(Guest, vcpu_nmi) {
   test.interrupts_enabled = true;
 
   // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Check that NMIs are handled.
   ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
   EXPECT_EQ(vcpu_state.rax, kNmiVector);
 }
 
-TEST(Guest, vcpu_nmi_priority) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+TEST(Guest, VcpuNmiPriority) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -702,13 +704,13 @@ TEST(Guest, vcpu_nmi_priority) {
   test.interrupts_enabled = true;
 
   // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Check that NMIs have higher priority than interrupts.
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -717,9 +719,9 @@ TEST(Guest, vcpu_nmi_priority) {
   // TODO(fxbug.dev/12585): Check that the interrupt is queued.
 }
 
-TEST(Guest, vcpu_exception) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_interrupt_start, vcpu_interrupt_end));
+TEST(Guest, VcpuException) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -727,49 +729,49 @@ TEST(Guest, vcpu_exception) {
   test.interrupts_enabled = true;
 
   // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Check that exceptions are handled.
   ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
   EXPECT_EQ(vcpu_state.rax, kExceptionVector);
 }
 
-TEST(Guest, vcpu_hlt) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup_and_interrupt(&test, vcpu_hlt_start, vcpu_hlt_end));
+TEST(Guest, VcpuHlt) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupAndInterrupt(&test, vcpu_hlt_start, vcpu_hlt_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_pause) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_pause_start, vcpu_pause_end));
+TEST(Guest, VcpuPause) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_pause_start, vcpu_pause_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_write_cr0) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_write_cr0_start, vcpu_write_cr0_end));
+TEST(Guest, VcpuWriteCr0) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_write_cr0_start, vcpu_write_cr0_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -784,9 +786,10 @@ TEST(Guest, vcpu_write_cr0) {
   EXPECT_EQ(vcpu_state.rax & (X86_CR0_NE | X86_CR0_CD), static_cast<uint64_t>(X86_CR0_NE));
 }
 
-TEST(Guest, vcpu_write_invalid_cr0) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_write_invalid_cr0_start, vcpu_write_invalid_cr0_end));
+TEST(Guest, VcpuWriteInvalidCr0) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_write_invalid_cr0_start, vcpu_write_invalid_cr0_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -794,22 +797,22 @@ TEST(Guest, vcpu_write_invalid_cr0) {
 
   test.interrupts_enabled = true;
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
   EXPECT_EQ(vcpu_state.rax, kGpFaultVector);
 }
 
-TEST(Guest, vcpu_compat_mode) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_compat_mode_start, vcpu_compat_mode_end));
+TEST(Guest, VcpuCompatMode) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_compat_mode_start, vcpu_compat_mode_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -819,49 +822,49 @@ TEST(Guest, vcpu_compat_mode) {
 #endif
 }
 
-TEST(Guest, vcpu_syscall) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_syscall_start, vcpu_syscall_end));
+TEST(Guest, VcpuSyscall) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_syscall_start, vcpu_syscall_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_sysenter) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_sysenter_start, vcpu_sysenter_end));
+TEST(Guest, VcpuSysenter) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_sysenter_start, vcpu_sysenter_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_sysenter_compat) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_sysenter_compat_start, vcpu_sysenter_compat_end));
+TEST(Guest, VcpuSysenterCompat) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_sysenter_compat_start, vcpu_sysenter_compat_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
-TEST(Guest, vcpu_vmcall_invalid_number) {
-  test_t test;
+TEST(Guest, VcpuVmcallInvalidNumber) {
+  TestCase test;
   ASSERT_NO_FATAL_FAILURE(
-      setup(&test, vcpu_vmcall_invalid_number_start, vcpu_vmcall_invalid_number_end));
+      SetupGuest(&test, vcpu_vmcall_invalid_number_start, vcpu_vmcall_invalid_number_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -870,15 +873,16 @@ TEST(Guest, vcpu_vmcall_invalid_number) {
   EXPECT_EQ(vcpu_state.rax, kUnknownHypercall);
 }
 
-TEST(Guest, vcpu_vmcall_invalid_cpl) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_vmcall_invalid_cpl_start, vcpu_vmcall_invalid_cpl_end));
+TEST(Guest, VcpuVmcallInvalidCpl) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_vmcall_invalid_cpl_start, vcpu_vmcall_invalid_cpl_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -887,22 +891,23 @@ TEST(Guest, vcpu_vmcall_invalid_cpl) {
   EXPECT_EQ(vcpu_state.rax, kNotPermitted);
 }
 
-TEST(Guest, vcpu_extended_registers) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_extended_registers_start, vcpu_extended_registers_end));
+TEST(Guest, VcpuExtendedRegisters) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_extended_registers_start, vcpu_extended_registers_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
   }
 
   // Guest sets xmm0.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Clear host xmm0.
   __asm__("xorps %%xmm0, %%xmm0" ::: "xmm0");
 
   // Guest reads xmm0 into rax:rbx.
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 
   // Check that the host xmm0 is restored to zero.
   bool xmm0_is_zero;
@@ -918,16 +923,16 @@ TEST(Guest, vcpu_extended_registers) {
   EXPECT_EQ(vcpu_state.rbx, 0x76543210fedcba98u);
 
   // Guest disables SSE
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
   // Guest successfully runs again
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
 // Verify that write_state with ZX_VCPU_IO only accepts valid access sizes.
-TEST(Guest, vcpu_write_state_io_invalid_size) {
-  test_t test;
+TEST(Guest, VcpuWriteStateIoInvalidSize) {
+  TestCase test;
   // Passing nullptr for start and end since we don't need to actually run the guest for this test.
-  ASSERT_NO_FATAL_FAILURE(setup(&test, nullptr, nullptr));
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, nullptr, nullptr));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -953,9 +958,10 @@ TEST(Guest, vcpu_write_state_io_invalid_size) {
   ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
 }
 
-TEST(Guest, guest_set_trap_with_io) {
-  test_t test;
-  ASSERT_NO_FATAL_FAILURE(setup(&test, guest_set_trap_with_io_start, guest_set_trap_with_io_end));
+TEST(Guest, GuestSetTrapWithIo) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, guest_set_trap_with_io_start, guest_set_trap_with_io_end));
   if (!test.supported) {
     // The hypervisor isn't supported, so don't run the test.
     return;
@@ -970,17 +976,17 @@ TEST(Guest, guest_set_trap_with_io) {
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
   EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
-  ASSERT_NO_FATAL_FAILURE(resume_and_clean_exit(&test));
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
 #endif  // __x86_64__
 
-TEST(Guest, vcpu_use_after_thread_exits) {
-  test_t test;
+TEST(Guest, VcpuUseAfterThreadExits) {
+  TestCase test;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // Do the setup on another thread so that the VCPU attaches to the other thread.
   std::thread t([&]() {
-    ASSERT_NO_FATAL_FAILURE(setup(&test, vcpu_resume_start, vcpu_resume_end));
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
     status = ZX_OK;
   });
   t.join();
@@ -991,3 +997,5 @@ TEST(Guest, vcpu_use_after_thread_exits) {
   // Shutdown the VCPU after the thread has been shutdown.
   test.vcpu.reset();
 }
+
+}  // namespace
