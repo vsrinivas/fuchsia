@@ -215,3 +215,13 @@ type PaddedTable = table {
 type PaddedTableStruct = struct {
     t PaddedTable;
 };
+
+type UnionInlinePadding = strict union {
+    1: three_padding_bytes uint8;
+    2: two_padding_bytes uint16;
+    3: one_padding_byte array<uint8, 3>;
+};
+
+type UnionInlinePaddingStruct = struct {
+    u UnionInlinePadding;
+};

@@ -51,17 +51,12 @@ pub enum Error {
 
     /// Decoding the FIDL object observed non-zero value in a padding byte.
     #[error(
-        "Decoding the FIDL object observed non-zero value in the padding at byte {}. \
-                   Padding starts at byte {}.",
-        non_zero_pos,
+        "Decoding the FIDL object observed non-zero value in the padding region starting at byte {}.",
         padding_start
     )]
     NonZeroPadding {
         /// Index of the first byte of the padding, relative to the beginning of the message.
         padding_start: usize,
-        /// Index of the byte in the padding that was non-zero, relative to the beginning of the
-        /// message.
-        non_zero_pos: usize,
     },
 
     /// The FIDL object had too many layers of out-of-line recursion.

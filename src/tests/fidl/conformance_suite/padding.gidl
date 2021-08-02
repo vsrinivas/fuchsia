@@ -1362,7 +1362,11 @@ decode_failure("BadPaddedUnionStructLowerByte") {
             0x01,
             0xee, padding:6, // should be padding:7
         ],
-        // v2 inlines so it doesn't have the same padding bytes as v1
+        v2 = [
+            num(1):8,
+            // 0xee below should be 0x00.
+            0x01, 0xee, padding:2, num(0):2, num(1):2,
+        ],
     },
     err = INVALID_PADDING_BYTE,
 }
@@ -1379,7 +1383,11 @@ decode_failure("BadPaddedUnionStructUpperByte") {
             0x01,
             padding:6, 0xee, // should be padding:7
         ],
-        // v2 inlines so it doesn't have the same padding bytes as v1
+        v2 = [
+            num(1):8,
+            // 0xee below should be 0x00.
+            0x01, padding:2, 0xee, num(0):2, num(1):2,
+        ],
     },
     err = INVALID_PADDING_BYTE,
 }
@@ -1418,6 +1426,13 @@ decode_failure("BadPaddedTableStructLowerByte") {
             0x01,
             0xee, padding:6, // should be padding:7
         ],
+        v2 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+            // 0xee below should be 0x00.
+            0x01, 0xee, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        ],
     },
     err = INVALID_PADDING_BYTE,
 }
@@ -1435,6 +1450,91 @@ decode_failure("BadPaddedTableStructUpperByte") {
 
             0x01,
             padding:6, 0xee, // should be padding:7
+        ],
+        v2 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+            // 0xee below should be 0x00.
+            0x01, 0x00, 0x00, 0xee, 0x00, 0x00, 0x01, 0x00,
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_OnePaddingByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(3):8, // ordinal
+            0x01, 0x02, 0x03, 0xee, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_TwoPaddingByte_LowerByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(2):8, // ordinal
+            0x01, 0x02, 0xee, 0x00, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_TwoPaddingByte_UpperByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(2):8, // ordinal
+            0x01, 0x02, 0x00, 0xee, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_ThreePaddingByte_LowerByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            0x01, 0xee, 0x00, 0x00, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_ThreePaddingByte_MiddleByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            0x01, 0x00, 0xee, 0x00, num(0):2, num(1):2, // inlined envelope
+        ],
+    },
+    err = INVALID_PADDING_BYTE,
+}
+
+decode_failure("UnionInlinePadding_ThreePaddingByte_UpperByte_InvalidPadding") {
+    bindings_allowlist = [rust],
+    type = UnionInlinePaddingStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            0x01, 0x00, 0x00, 0xee, num(0):2, num(1):2, // inlined envelope
         ],
     },
     err = INVALID_PADDING_BYTE,

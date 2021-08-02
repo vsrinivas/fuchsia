@@ -607,7 +607,7 @@ impl<'a> Decoder<'a> {
     fn end_of_block_padding_error(&self, start: usize, end: usize) -> Error {
         for i in start..end {
             if self.buf[i] != 0 {
-                return Error::NonZeroPadding { padding_start: start, non_zero_pos: i };
+                return Error::NonZeroPadding { padding_start: start };
             }
         }
         panic!("invalid padding bytes detected, but missing when generating error");
@@ -677,10 +677,38 @@ impl<'a> Decoder<'a> {
         }
         for i in offset..offset + len {
             if self.buf[i] != 0 {
-                return Err(Error::NonZeroPadding { padding_start: offset, non_zero_pos: i });
+                return Err(Error::NonZeroPadding { padding_start: offset });
             }
         }
         Ok(())
+    }
+
+    /// Checks the padding of the inline value portion of an envelope.
+    // check_padding could be used instead, but doing so leads to long compilation times which is why
+    // this method exists.
+    #[inline]
+    pub fn check_inline_envelope_padding(
+        &self,
+        value_offset: usize,
+        value_len: usize,
+    ) -> Result<()> {
+        debug_assert!(value_len <= 4);
+        let valid_padding = match value_len {
+            1 => {
+                self.buf[value_offset + 1] == 0
+                    && self.buf[value_offset + 2] == 0
+                    && self.buf[value_offset + 3] == 0
+            }
+            2 => self.buf[value_offset + 2] == 0 && self.buf[value_offset + 3] == 0,
+            3 => self.buf[value_offset + 3] == 0,
+            4 => true,
+            _ => unreachable!(),
+        };
+        if valid_padding {
+            Ok(())
+        } else {
+            Err(Error::NonZeroPadding { padding_start: value_offset + value_len })
+        }
     }
 
     /// Returns the inline alignment of an object of type `Target` for this decoder.
@@ -2358,7 +2386,6 @@ macro_rules! fidl_struct {
                             if (maskedval != 0) {
                                 return Err($crate::Error::NonZeroPadding {
                                     padding_start: offset + $padding_offset_v1 + (($padding_mask_v1 as u64).trailing_zeros() / 8) as usize,
-                                    non_zero_pos: offset + $padding_offset_v1 + (maskedval.trailing_zeros() / 8) as usize
                                 });
                             }
                         )*
@@ -2371,7 +2398,6 @@ macro_rules! fidl_struct {
                             if (maskedval != 0) {
                                 return Err($crate::Error::NonZeroPadding {
                                     padding_start: offset + $padding_offset_v2 + (($padding_mask_v2 as u64).trailing_zeros() / 8) as usize,
-                                    non_zero_pos: offset + $padding_offset_v2 + (maskedval.trailing_zeros() / 8) as usize
                                 });
                             }
                         )*
@@ -2508,7 +2534,6 @@ macro_rules! fidl_struct_copy {
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
                             padding_start: offset + $padding_offset_v1 + (($padding_mask_v1 as u64).trailing_zeros() / 8) as usize,
-                            non_zero_pos: offset + $padding_offset_v1 + (maskedval.trailing_zeros() / 8) as usize
                         });
                     }
                 )*
@@ -3020,20 +3045,19 @@ macro_rules! fidl_table {
                                 val_ref.decode(decoder, offset)?;
                                 Ok(())
                             };
+                            let member_inline_size = decoder.inline_size_of::<$member_ty>();
                             if inlined {
+                                decoder.check_inline_envelope_padding(next_offset, member_inline_size)?;
                                 decode_inner(decoder, next_offset)?;
                             } else {
                                 match decoder.context().wire_format_version {
                                     $crate::encoding::WireFormatVersion::V2 =>
-                                        if decoder.inline_size_of::<$member_ty>() <= 4 {
+                                        if member_inline_size <= 4 {
                                             return Err($crate::Error::InvalidInlineBitInEnvelope);
                                         },
                                     _ => (),
                                 };
-                                decoder.read_out_of_line(
-                                    decoder.inline_size_of::<$member_ty>(),
-                                    decode_inner,
-                                )?;
+                                decoder.read_out_of_line(member_inline_size, decode_inner)?;
                                 if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                                     return Err($crate::Error::InvalidNumBytesInEnvelope);
                                 }
@@ -3240,6 +3264,7 @@ where
             }
         };
         if inlined {
+            decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
             decode_inner(decoder, offset + 8)?;
         } else {
             match decoder.context().wire_format_version {
@@ -3476,6 +3501,7 @@ macro_rules! fidl_union {
                     Ok(())
                 };
                 if inlined {
+                    decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
                     decode_inner(decoder, offset + 8)?;
                 } else {
                     match decoder.context().wire_format_version {
@@ -4650,10 +4676,7 @@ mod test {
             let out = &mut Foo::new_empty();
             let result =
                 Decoder::decode_with_context(ctx, buf, &mut to_handle_info(handle_buf), out);
-            assert_matches!(
-                result,
-                Err(Error::NonZeroPadding { padding_start: 1, non_zero_pos: 1 })
-            );
+            assert_matches!(result, Err(Error::NonZeroPadding { padding_start: 1 }));
         }
     }
 
