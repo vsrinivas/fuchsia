@@ -83,21 +83,20 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   }
 
   // Configure lanes mute masks based on channels_to_use and lane enable mask.
-  if (channels_to_use != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED) {
-    uint32_t channel = 0;
-    size_t lane_start = 0;
-    for (size_t i = 0; i < kMaxLanes; ++i) {
-      for (size_t j = 0; j < 64; ++j) {
-        if (metadata.lanes_enable_mask[i] & (static_cast<uint64_t>(1) << j)) {
-          if (~channels_to_use & (1 << channel)) {
-            lanes_mutes[i] |= ((1 << channel) >> lane_start);
-          }
-          channel++;
+  uint32_t channel = 0;
+  size_t lane_start = 0;
+  for (size_t i = 0; i < kMaxLanes; ++i) {
+    for (size_t j = 0; j < 64; ++j) {
+      if (metadata.lanes_enable_mask[i] & (static_cast<uint64_t>(1) << j)) {
+        if (~channels_to_use & (1 << channel)) {
+          lanes_mutes[i] |= ((1 << channel) >> lane_start);
         }
+        channel++;
       }
-      lane_start = channel;
     }
+    lane_start = channel;
   }
+
   device_->ConfigTdmSlot(bitoffset, static_cast<uint8_t>(metadata.dai.number_of_channels - 1),
                          metadata.dai.bits_per_slot - 1, metadata.dai.bits_per_sample - 1,
                          metadata.mix_mask, metadata.dai.type == metadata::DaiType::I2s);

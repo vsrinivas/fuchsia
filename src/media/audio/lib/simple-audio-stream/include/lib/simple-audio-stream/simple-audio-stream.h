@@ -240,6 +240,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   //
   virtual zx_status_t Stop() __TA_REQUIRES(domain_token()) = 0;
 
+  // Changes which channels are considered active.
+  // Drivers can turn off hardware based on the channels that are active.
+  virtual zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) = 0;
+
   // RingBuffer interface events
   //
 
@@ -411,9 +415,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void SetGain(audio_fidl::wire::GainState target_state,
                StreamChannel::SetGainCompleter::Sync& completer);
   void SetActiveChannels(SetActiveChannelsRequestView request,
-                         SetActiveChannelsCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
+                         SetActiveChannelsCompleter::Sync& completer) override;
 
   void DeactivateStreamChannel(StreamChannel* channel) __TA_REQUIRES(domain_token(), channel_lock_);
 

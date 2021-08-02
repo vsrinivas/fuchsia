@@ -383,7 +383,6 @@ void SimpleAudioStream::CreateRingBuffer(
     return;
   }
   number_of_channels_.Set(pcm_format.number_of_channels);
-  channels_to_use_bitmask_.Set(pcm_format.channels_to_use_bitmask);
   frame_rate_.Set(pcm_format.frame_rate);
   bits_per_slot_.Set(pcm_format.bytes_per_sample * 8);
   bits_per_sample_.Set(pcm_format.valid_bits_per_sample);
@@ -519,6 +518,19 @@ void SimpleAudioStream::SetGain(audio_fidl::wire::GainState target_state,
       channel.gain_completer_.reset();
     }
   }
+}
+
+void SimpleAudioStream::SetActiveChannels(SetActiveChannelsRequestView request,
+                                          SetActiveChannelsCompleter::Sync& completer) {
+  ScopedToken t(domain_token());
+  zx_status_t status = ChangeActiveChannels(request->active_channels_bitmask);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  channels_to_use_bitmask_.Set(request->active_channels_bitmask);
+  int64_t set_time = zx::clock::get_monotonic().get();
+  completer.ReplySuccess(set_time);
 }
 
 void SimpleAudioStream::GetProperties(

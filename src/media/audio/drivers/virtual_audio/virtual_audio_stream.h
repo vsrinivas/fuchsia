@@ -61,6 +61,9 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
 
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override {
+    return ZX_ERR_NOT_SUPPORTED;  // TODO(81649): Add support.
+  }
 
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...

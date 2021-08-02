@@ -74,8 +74,6 @@ void AmlG12TdmStream::InitDaiFormats() {
         ZX_ASSERT(0);  // Not supported.
     }
   }
-
-  channels_to_use_ = std::numeric_limits<uint64_t>::max();  // Enable all.
 }
 
 zx_status_t AmlG12TdmStream::InitPDev() {
@@ -158,7 +156,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
 
-  status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
+  status = aml_audio_->InitHW(metadata_, std::numeric_limits<uint64_t>::max(), frame_rate_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to init tdm hardware %d", status);
     return status;
@@ -331,6 +329,49 @@ void AmlG12TdmStream::ProcessRingNotification() {
   NotifyPosition(resp);
 }
 
+zx_status_t AmlG12TdmStream::UpdateHardwareSettings() {
+  zx_status_t status = StopAllCodecs();  // Put codecs in safe state for format changes.
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
+    dai_formats_[i].frame_rate = frame_rate_;
+  }
+  uint64_t active_channels = active_channels_;
+  if (channels_to_use_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED) {
+    active_channels &= channels_to_use_;
+  }
+  status = aml_audio_->InitHW(metadata_, active_channels, frame_rate_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to reinitialize the HW");
+    return status;
+  }
+
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
+    zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
+    if (!format_info.is_ok()) {
+      zxlogf(ERROR, "failed to set the DAI format");
+      return format_info.status_value();
+    }
+    if (format_info->has_turn_on_delay()) {
+      int64_t delay = format_info->turn_on_delay();
+      codecs_turn_on_delay_nsec_ = std::max(codecs_turn_on_delay_nsec_, delay);
+    }
+  }
+  status = StartAllEnabledCodecs();
+  if (status != ZX_OK) {
+    return status;
+  }
+  hardware_configured_ = true;
+  return ZX_OK;
+}
+
+zx_status_t AmlG12TdmStream::ChangeActiveChannels(uint64_t mask) {
+  active_channels_ = mask;
+  return UpdateHardwareSettings();
+}
+
 zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   auto cleanup = fit::defer([this, old_codecs_turn_on_delay_nsec = codecs_turn_on_delay_nsec_] {
     codecs_turn_on_delay_nsec_ = old_codecs_turn_on_delay_nsec;
@@ -343,35 +384,11 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       break;
     }
   }
-  if (req.frames_per_second != frame_rate_ || req.channels_to_use_bitmask != channels_to_use_) {
-    zx_status_t status = StopAllCodecs();  // Put codecs in safe state for rate change
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    frame_rate_ = req.frames_per_second;
-    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-      dai_formats_[i].frame_rate = frame_rate_;
-    }
+  if (!hardware_configured_ || req.frames_per_second != frame_rate_ ||
+      req.channels_to_use_bitmask != channels_to_use_) {
     channels_to_use_ = req.channels_to_use_bitmask;
-    status = aml_audio_->InitHW(metadata_, channels_to_use_, frame_rate_);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "failed to reinitialize the HW");
-      return status;
-    }
-
-    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-      zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
-      if (!format_info.is_ok()) {
-        zxlogf(ERROR, "failed to set the DAI format");
-        return format_info.status_value();
-      }
-      if (format_info->has_turn_on_delay()) {
-        int64_t delay = format_info->turn_on_delay();
-        codecs_turn_on_delay_nsec_ = std::max(codecs_turn_on_delay_nsec_, delay);
-      }
-    }
-    status = StartAllEnabledCodecs();
+    frame_rate_ = req.frames_per_second;
+    zx_status_t status = UpdateHardwareSettings();
     if (status != ZX_OK) {
       return status;
     }
@@ -478,12 +495,15 @@ zx_status_t AmlG12TdmStream::StartAllEnabledCodecs() {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // If either:
+    // If:
     // - The setting for channels_to_use_ is disabled or
     // - The codecs ring_buffer_channels_to_use_bitmask intersects with channels_to_use_
+    // and:
+    // - The codecs ring_buffer_channels_to_use_bitmask intersects with active_channels_
     // then start the codec.
-    if (channels_to_use_ == AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED ||
-        channels_to_use_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[i]) {
+    if ((channels_to_use_ == AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED ||
+         channels_to_use_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[i]) &&
+        (active_channels_ & metadata_.codecs.ring_buffer_channels_to_use_bitmask[i])) {
       zx_status_t status = codecs_[i].Start();
       if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to restart the codec");

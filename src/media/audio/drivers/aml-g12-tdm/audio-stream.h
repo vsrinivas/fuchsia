@@ -44,6 +44,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
   zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_token()) override;
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
   // Protected for unit test.
@@ -68,6 +69,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   void UpdateCodecsGainStateFromCurrent() __TA_REQUIRES(domain_token());
   zx_status_t StopAllCodecs();
   zx_status_t StartAllEnabledCodecs();
+  zx_status_t UpdateHardwareSettings();
   virtual bool AllowNonContiguousRingBuffer() { return false; }
   int Thread();
 
@@ -75,6 +77,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
   uint32_t frame_rate_ = 0;
   int64_t codecs_turn_on_delay_nsec_ = 0;
+  bool hardware_configured_ = false;
 
   async::TaskClosureMethod<AmlG12TdmStream, &AmlG12TdmStream::ProcessRingNotification> notify_timer_
       __TA_GUARDED(domain_token()){this};
@@ -86,7 +89,8 @@ class AmlG12TdmStream : public SimpleAudioStream {
 
   zx::bti bti_;
   const ddk::GpioProtocolClient enable_gpio_;
-  uint64_t channels_to_use_;
+  uint64_t channels_to_use_ = std::numeric_limits<uint64_t>::max();  // Enable all.
+  uint64_t active_channels_ = std::numeric_limits<uint64_t>::max();  // Enable all.
   bool override_mute_ = true;
   zx::interrupt irq_;
   std::atomic<bool> running_ = false;
