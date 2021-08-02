@@ -8,13 +8,6 @@ import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
-group("components") {
-  deps = [
-    ":isolated_dev_mgr_wlandevicemonitor",
-    ":wlandevicemonitor",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
@@ -24,7 +17,7 @@ group("tests") {
 
   # TODO(https://fxbug.dev/81652): Add this test back when it's no longer flaky.
   if (!is_coverage) {
-    deps += [ ":wlandevicemonitor-tests-v2" ]
+    deps += [ ":wlandevicemonitor-tests" ]
   }
 }
 
@@ -86,16 +79,8 @@ wlandevicemonitor_srcs = [
 wlandevicemonitor_test_deps =
     [ "//src/connectivity/wlan/testing/wlantap-client" ]
 
-rustc_binary("bin") {
-  name = "wlandevicemonitor"
-  with_unit_tests = true
-  edition = "2018"
-
-  sources = wlandevicemonitor_srcs
-  deps = wlandevicemonitor_deps
-  test_deps = wlandevicemonitor_test_deps
-}
-
+# A separate binary is provided for the WLAN hardware simulation tests.  This prevents the
+# isolated device manager code from bleeding over into the production binaries.
 rustc_binary("isolated_dev_mgr_bin") {
   name = "isolated_dev_mgr_wlandevicemonitor"
   edition = "2018"
@@ -103,14 +88,6 @@ rustc_binary("isolated_dev_mgr_bin") {
   sources = wlandevicemonitor_srcs
   deps = wlandevicemonitor_deps
   features = [ "isolated_dev_mgr" ]
-}
-
-fuchsia_package_with_single_component("wlandevicemonitor") {
-  deps = [
-    ":bin",
-    ":wlan_metrics_registry",
-  ]
-  manifest = "meta/wlandevicemonitor.cmx"
 }
 
 fuchsia_package_with_single_component("isolated_dev_mgr_wlandevicemonitor") {
@@ -121,23 +98,10 @@ fuchsia_package_with_single_component("isolated_dev_mgr_wlandevicemonitor") {
   manifest = "meta/isolated_dev_mgr_wlandevicemonitor.cmx"
 }
 
-fuchsia_package_with_single_component("wlandevicemonitor-v2") {
-  deps = [
-    ":bin",
-    ":wlan_metrics_registry",
-  ]
-  manifest = "meta/wlandevicemonitor.cml"
-}
-
-fuchsia_unittest_package("wlandevicemonitor-tests") {
-  deps = [ ":bin_test" ]
-  manifest = "meta/wlandevicemonitor_bin_test.cmx"
-}
-
 # Because the IsolatedDevMgr works differently in Components Framework v2, a separate build rule is
 # needed so that different test behaviors can be conditionally compiled in.
-rustc_binary("bin_v2") {
-  name = "wlandevicemonitor-v2"
+rustc_binary("bin") {
+  name = "wlandevicemonitor"
   with_unit_tests = true
   edition = "2018"
 
@@ -147,11 +111,19 @@ rustc_binary("bin_v2") {
   features = [ "v2" ]
 }
 
+fuchsia_package_with_single_component("wlandevicemonitor") {
+  deps = [
+    ":bin",
+    ":wlan_metrics_registry",
+  ]
+  manifest = "meta/wlandevicemonitor.cml"
+}
+
 # This component orchestrates the v2 components that are required in order to
 # run the wlandevicemonitor unit tests.
 fuchsia_component("wlandevicemonitor-test-component") {
   testonly = true
-  deps = [ ":bin_v2_test" ]
+  deps = [ ":bin_test" ]
   manifest = "meta/wlandevicemonitor_bin_test.cml"
 }
 
@@ -163,7 +135,7 @@ fuchsia_component("wlandevicemonitor-test-component-exec") {
 }
 
 # This component groups up all of the dependencies to run the v2 unit tests.
-fuchsia_test_package("wlandevicemonitor-tests-v2") {
+fuchsia_test_package("wlandevicemonitor-tests") {
   test_components = [ ":wlandevicemonitor-test-component-exec" ]
 
   deps = [

@@ -1,2 +1,45 @@
-// This file is intentionally empty as part of a soft-migration.
-{}
+{
+    children: [
+        {
+            name: "wlandevicemonitor",
+            url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor#meta/wlandevicemonitor.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-wlanphy",
+            to: "#wlandevicemonitor",
+            subdir: "class/wlanphy",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-wlanif",
+            to: "#wlandevicemonitor",
+            subdir: "class/wlanif",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#wlandevicemonitor",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.wlan.device.service.DeviceService",
+            ],
+            from: "#appmgr",
+            to: "#wlandevicemonitor",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+            to: "#appmgr",
+        },
+    ],
+}

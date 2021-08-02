@@ -70,6 +70,10 @@
             moniker: "/core/wlancfg",
         },
         {
+            instance_id: "83fc3d0a58182e0fc38f890a5b0965f51c1088b97f6e78c6b75f5f2fef060d8d",
+            moniker: "/core/wlandevicemonitor",
+        },
+        {
             // TODO(fxbug.dev/73132): Entry needed to preserve /cache across the v2 migration.
             instance_id: "fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631",
             appmgr_moniker: {

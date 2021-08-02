@@ -21,7 +21,10 @@ core_name = "core-recovery"
 core_realm("core") {
   package_name = core_name
   restrict_persistent_storage = false
-  deps = [ "//src/connectivity/wlan/wlancfg:wlancfg-core-shard" ]
+  deps = [
+    "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
+    "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
+  ]
 }
 
 root_realm("root") {
@@ -36,6 +39,7 @@ recovery_packages = [
   "//src/connectivity/network:config",
   "//src/connectivity/wlan/config:default",
   "//src/connectivity/wlan/wlancfg",
+  "//src/connectivity/wlan/wlandevicemonitor",
   "//src/connectivity/wlan/wlanstack",
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/recovery/system:system_recovery",

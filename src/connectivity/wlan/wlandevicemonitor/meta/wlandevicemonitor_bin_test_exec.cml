@@ -9,7 +9,7 @@
     children: [
         {
             name: "test",
-            url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor-tests-v2#meta/wlandevicemonitor-test-component.cm",
+            url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor-tests#meta/wlandevicemonitor-test-component.cm",
         },
         {
             name: "isolated_dev_mgr",

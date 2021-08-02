@@ -88,7 +88,6 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
-                "fuchsia.wlan.device.service.DeviceMonitor",
                 "fuchsia.wlan.device.service.DeviceService",
             ],
         },
@@ -520,6 +519,12 @@
             path: "/svc_for_sys/fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
         },
 
+        // From wlandevicemonitor
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            path: "/svc_for_sys/fuchsia.wlan.device.service.DeviceMonitor",
+        },
+
         // From session_manager
         {
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
@@ -619,7 +624,6 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
-                "fuchsia.wlan.device.service.DeviceMonitor",
                 "fuchsia.wlan.device.service.DeviceService",
             ],
             from: "self",

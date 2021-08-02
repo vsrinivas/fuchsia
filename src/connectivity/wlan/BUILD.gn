@@ -30,7 +30,7 @@ group("drivers") {
 # also include an appropriate target under config/.
 common_packages = [
   "wlancfg",
-  "wlandevicemonitor",
+  "wlandevicemonitor:wlandevicemonitor",
   "//src/connectivity/location/regulatory_region",
 ]
 

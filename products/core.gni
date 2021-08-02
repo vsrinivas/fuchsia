@@ -31,6 +31,7 @@ product_system_image_deps = [
 core_realm_package_name = "core"
 core_realm_shards = [
   "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/developer/remote-control:laboratory-core-shard",
