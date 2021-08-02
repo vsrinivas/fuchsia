@@ -150,8 +150,7 @@ class TestServerEvent final : public TestServerBase {
 };
 
 TEST_F(FileV2, WaitTimeOut) {
-  TestServerEvent* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(StartServer<TestServerEvent>());
   ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_STATUS(ZX_ERR_TIMED_OUT,
@@ -283,8 +282,7 @@ class TestServerChannel final : public TestServerBase {
 };
 
 TEST_F(FileV2, ReadWriteChannel) {
-  TestServerChannel* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_NO_FAILURES(StartServer<TestServerChannel>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
@@ -323,8 +321,7 @@ class TestServerStream final : public TestServerBase {
 };
 
 TEST_F(FileV2, ReadWriteStream) {
-  TestServerStream* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
+  ASSERT_NO_FAILURES(StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }

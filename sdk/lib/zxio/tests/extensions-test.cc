@@ -113,8 +113,7 @@ TEST_F(ExtensionNode, CloseError) {
       completer.Reply(ZX_ERR_IO);
     }
   };
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  ASSERT_NO_FAILURES(StartServer<TestServer>());
 
   ASSERT_STATUS(ZX_ERR_IO, zxio_close(&node.io));
 }
@@ -172,8 +171,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
   };
   MyIo node(std::move(client_end_));
 
-  TestServerBase* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
+  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
 
   ASSERT_FALSE(node.read_called());
   ASSERT_OK(zxio_readv(*node, nullptr, 0, 0, nullptr));

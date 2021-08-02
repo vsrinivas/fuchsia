@@ -127,8 +127,7 @@ class TestServerEvent final : public CloseCountingFileServer {
 };
 
 TEST_F(File, WaitTimeOut) {
-  TestServerEvent* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(StartServer<TestServerEvent>());
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
@@ -174,8 +173,7 @@ TEST_F(File, GetVmoPropagatesError) {
       completer.Reply(kGetBufferError, nullptr);
     }
   };
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  ASSERT_NO_FAILURES(StartServer<TestServer>());
   ASSERT_NO_FAILURES(OpenFile());
 
   zx::vmo vmo;
@@ -274,8 +272,7 @@ class TestServerChannel final : public CloseCountingFileServer {
 };
 
 TEST_F(File, ReadWriteChannel) {
-  TestServerChannel* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_NO_FAILURES(StartServer<TestServerChannel>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
@@ -306,8 +303,7 @@ class TestServerStream final : public CloseCountingFileServer {
 };
 
 TEST_F(File, ReadWriteStream) {
-  TestServerStream* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
+  ASSERT_NO_FAILURES(StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
@@ -326,8 +322,7 @@ class Remote : public File {
 };
 
 TEST_F(Remote, ReadWriteChannel) {
-  TestServerChannel* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_NO_FAILURES(StartServer<TestServerChannel>());
   ASSERT_OK(OpenRemote());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
