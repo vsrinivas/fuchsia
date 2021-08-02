@@ -85,6 +85,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   final Observable<bool?> optedIntoUpdates = Observable<bool?>(null);
 
+  @override
+  final Observable<String> currentChannel = Observable<String>('');
+
   final List<String> _timezones;
 
   @override
@@ -161,6 +164,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     channelService.onChanged = () {
       runInAction(() {
         optedIntoUpdates.value = channelService.optedIntoUpdates;
+        currentChannel.value = channelService.currentChannel;
       });
     };
   }

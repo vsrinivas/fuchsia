@@ -38,12 +38,7 @@ class ChannelService extends TaskService {
     dispose();
   }
 
-  String get channel => _currentChannel;
-  set channel(String name) {
-    _currentChannel = name;
-    _control.setTarget(name);
-    onChanged();
-  }
+  String get currentChannel => _shortNames[_currentChannel] ?? _currentChannel;
 
   bool get optedIntoUpdates =>
       ((_shortNames[_currentChannel] ?? _currentChannel) != 'devhost') &&

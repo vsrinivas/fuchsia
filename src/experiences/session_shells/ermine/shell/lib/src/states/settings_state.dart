@@ -57,6 +57,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<bool?> get brightnessAuto;
   ObservableValue<IconData> get brightnessIcon;
   ObservableValue<bool?> get optedIntoUpdates;
+  ObservableValue<String> get currentChannel;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(

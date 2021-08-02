@@ -173,6 +173,27 @@ class _ListSettings extends StatelessWidget {
                               ),
                   );
                 }),
+                // Channel
+                ListTile(
+                  enabled: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.cloud_download),
+                  title: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(Strings.channel),
+                      SizedBox(width: 48),
+                      Expanded(
+                        child: Text(
+                          appState.settingsState.currentChannel.value,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 // Feedback
                 ListTile(
                   enabled: true,
@@ -233,13 +254,6 @@ class _ListSettings extends StatelessWidget {
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.bluetooth_connected),
                   title: Text(Strings.bluetooth),
-                ),
-                // Channel
-                ListTile(
-                  enabled: false,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.cloud_download),
-                  title: Text(Strings.channel),
                 ),
                 // Keyboard Input
                 ListTile(
