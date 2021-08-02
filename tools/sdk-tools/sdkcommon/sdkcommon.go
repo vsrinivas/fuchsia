@@ -11,11 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -427,15 +427,11 @@ func (sdk SDKProperties) getDeviceSSHAddress(device *deviceInfo) (string, error)
 	// TODO(fxbug.dev/74863): Migrate f* to use get-ssh-address.
 	// ffx target get-ssh-address returns the full IPv6 address with port.
 	// f* does some manipulation for sshPort, just want the host address.
-	if strings.Contains(fullAddr, "[") && strings.Contains(fullAddr, "]") {
-		re := regexp.MustCompile(`\[(.*?)\]`)
-		match := re.FindStringSubmatch(fullAddr)
-		if len(match) < 2 {
-			return "", fmt.Errorf("Unable to find matching IP address, output from get-ssh-address: %v", fullAddr)
-		}
-		return match[1], nil
+	host, _, err := net.SplitHostPort(fullAddr)
+	if err != nil {
+		return "", fmt.Errorf("Unable to find valid IP address, output from ffx target get-ssh-address: %v", fullAddr)
 	}
-	return fullAddr, nil
+	return host, nil
 }
 
 func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey string,
@@ -846,7 +842,10 @@ func (sdk SDKProperties) updateConfigIfDeviceIsDiscoverable(deviceConfig *Device
 	for _, discoverableDevice := range discoverableDevices {
 		if deviceConfig.DeviceName == discoverableDevice.Name {
 			deviceConfig.Discoverable = true
-			deviceConfig.DeviceIP = discoverableDevice.IpAddr
+			// If DeviceIP is empty, update it from ffx target list output.
+			if deviceConfig.DeviceIP == "" {
+				deviceConfig.DeviceIP = discoverableDevice.IpAddr
+			}
 			return *deviceConfig
 		}
 	}
