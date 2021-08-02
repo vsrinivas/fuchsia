@@ -23,7 +23,7 @@ recommend it.)
 Before we start, let's define a few terms. A simplified view of the FIDL
 toolchain can be summarized as follows:
 
-![Simplified toolchain](resources/nnnn_fidl_toolchain/simplified_toolchain.png)
+![Simplified toolchain](resources/0097_fidl_toolchain/simplified_toolchain.png)
 
 The [FIDL language](/docs/reference/fidl/language/language.md) is embodied by
 `fidlc`, which represents the **frontend compiler** (or **frontend** for short).
@@ -409,7 +409,7 @@ A **percolating node** is provided sources of the library and object files of
 direct dependencies of the library to the tool, and generates an end result and
 target object files.
 
-![A percolating node](resources/nnnn_fidl_toolchain/percolating_node.png)
+![A percolating node](resources/0097_fidl_toolchain/percolating_node.png)
 
 As an example, most fidlgen backends follow this pattern today: their sources
 are JSON IR, and their end result is generated code. They do not have dependent
@@ -430,7 +430,7 @@ humans, and the other parsed by tools.
 A **whole view node** is provided sources, including all transitively reachable
 dependent libraries to the tool being invoked, and generates an end result.
 
-![A whole view node](resources/nnnn_fidl_toolchain/whole_view_node.png)
+![A whole view node](resources/0097_fidl_toolchain/whole_view_node.png)
 
 As an example, the [`measure-tape`] requires the IR of all transitively
 reachable libraries required to define the type being compiled, and would
