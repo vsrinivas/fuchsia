@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/fidl/transformer/transformer.h"
-
 #include <lib/fidl/internal.h>
+#include <lib/fidl/transformer.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -595,7 +594,7 @@ class Transformer {
         field_type = coded_table->fields[f].type;
         f++;
       }
-      zx_status_t status = TransformEnvelope(field_type, src_body_offset, dst_body_offset);
+      status = TransformEnvelope(field_type, src_body_offset, dst_body_offset);
       if (status != ZX_OK) {
         return status;
       }
@@ -698,10 +697,12 @@ class Transformer {
 
 }  // namespace
 
-zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
-                           const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
-                           uint32_t dst_num_bytes_capacity, uint32_t* out_dst_num_bytes,
-                           const char** out_error_msg) {
+zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transformation,
+                                                const fidl_type_t* type, const uint8_t* src_bytes,
+                                                uint32_t src_num_bytes, uint8_t* dst_bytes,
+                                                uint32_t dst_num_bytes_capacity,
+                                                uint32_t* out_dst_num_bytes,
+                                                const char** out_error_msg) {
   if (transformation == FIDL_TRANSFORMATION_NONE) {
     // Fast path - directly copy if no transformation needs to be performed.
     if (dst_num_bytes_capacity < src_num_bytes) {

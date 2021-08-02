@@ -2,12 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("transformer") {
-  public = [ "transformer.h" ]
-  sources = [ "transformer.cc" ]
-  public_deps = [ "//zircon/public/lib/fidl_base" ]
-}
-
 group("tests") {
   testonly = true
 

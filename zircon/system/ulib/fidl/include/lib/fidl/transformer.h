@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_TRANSFORMER_TRANSFORMER_H_
-#define SRC_LIB_FIDL_TRANSFORMER_TRANSFORMER_H_
+#ifndef LIB_FIDL_TRANSFORMER_H_
+#define LIB_FIDL_TRANSFORMER_H_
 
 #include <zircon/fidl.h>
 #include <zircon/types.h>
@@ -16,8 +16,11 @@ typedef uint32_t fidl_transformation_t;
 #define FIDL_TRANSFORMATION_V1_TO_V2 ((fidl_transformation_t)1u)
 #define FIDL_TRANSFORMATION_V2_TO_V1 ((fidl_transformation_t)2u)
 
-// fidl_transform converts bytes from one version of the FIDL wire format to another.
-// It is intended to be used short-term to facilitate migrations.
+// internal__fidl_transform__may_break converts bytes from one version of the FIDL wire format
+// to another.
+//
+// It is intended to be used short-term to facilitate migrations and
+// MAY CHANGE OR BREAK AT ANY TIME WITHOUT NOTICE.
 //
 // |transformation| indicates the type of transformation to perform.
 //
@@ -29,11 +32,13 @@ typedef uint32_t fidl_transformation_t;
 // Upon failure (and if provided) this function writes an error message
 // to |out_error_msg|. The caller is not responsible for the memory backing the
 // error message.
-zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
-                           const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
-                           uint32_t dst_num_bytes_capacity, uint32_t* out_dst_num_bytes,
-                           const char** out_error_msg);
+zx_status_t internal__fidl_transform__may_break(fidl_transformation_t transformation,
+                                                const fidl_type_t* type, const uint8_t* src_bytes,
+                                                uint32_t src_num_bytes, uint8_t* dst_bytes,
+                                                uint32_t dst_num_bytes_capacity,
+                                                uint32_t* out_dst_num_bytes,
+                                                const char** out_error_msg);
 
 __END_CDECLS
 
-#endif  // SRC_LIB_FIDL_TRANSFORMER_TRANSFORMER_H_
+#endif  // LIB_FIDL_TRANSFORMER_H_

@@ -20,6 +20,7 @@ zx_library("fidl_base") {
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",
     "lib/fidl/trace.h",
+    "lib/fidl/transformer.h",
     "lib/fidl/visitor.h",
     "lib/fidl/walker.h",
   ]
@@ -30,6 +31,7 @@ zx_library("fidl_base") {
     "formatting.cc",
     "handle_close_many.cc",
     "internal.c",
+    "transformer.cc",
     "txn_header.c",
     "validate_string.cc",
     "walker.cc",

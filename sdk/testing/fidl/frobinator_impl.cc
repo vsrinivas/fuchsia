@@ -52,5 +52,9 @@ void FrobinatorImpl::SendEventHandle(zx::event event) {}
 void FrobinatorImpl::SendProtocol(fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol> ep) {
 }
 
+void FrobinatorImpl::SendBasicUnion(fidl::test::frobinator::BasicUnion u) {
+  send_basic_union_received_value_ = u.v();
+}
+
 }  // namespace test
 }  // namespace fidl

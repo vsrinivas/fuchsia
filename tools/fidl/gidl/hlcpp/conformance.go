@@ -64,9 +64,11 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	}
 	{{- end }}
 	auto bytes = {{ .Bytes }};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = {{ .Handles }};
 	auto {{ .ActualValueVar }} =
-	    fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<{{ .ValueType }}>({{ .WireFormatHeader }}, std::move(bytes), std::move(handles));
 	{{ .EqualityCheck }}
 	{{- /* The handles are closed in the destructor of .ValueVar */}}
 	fidl::test::util::ForgetHandles(std::move(value));
@@ -108,8 +110,10 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 	const auto handle_defs = {{ .HandleDefs }};
 	{{- end }}
 	auto bytes = {{ .Bytes }};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = {{ .Handles }};
-	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }});
+	fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>({{ .WireFormatHeader }}, std::move(bytes), std::move(handles), {{ .ErrorCode }});
 	{{- if .HandleDefs }}
 	for (const auto handle_def : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
@@ -136,8 +140,8 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, ValueType, ActualValueVar, EqualityCheck, Bytes, Handles, HandleKoidVectorName string
-	FuchsiaOnly                                                                                      bool
+	Name, HandleDefs, ValueType, ActualValueVar, EqualityCheck, Bytes, Handles, HandleKoidVectorName, WireFormatHeader string
+	FuchsiaOnly                                                                                                        bool
 }
 
 type encodeFailureCase struct {
@@ -146,8 +150,8 @@ type encodeFailureCase struct {
 }
 
 type decodeFailureCase struct {
-	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
-	FuchsiaOnly                                            bool
+	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode, WireFormatHeader string
+	FuchsiaOnly                                                              bool
 }
 
 // Generate generates High-Level C++ tests.
@@ -193,7 +197,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuild := valueBuilder.String()
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForEncode(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -225,7 +229,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		equalityCheck := BuildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -238,6 +242,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				FuchsiaOnly:          fuchsiaOnly,
 				EqualityCheck:        equalityCheck,
 				HandleKoidVectorName: handleKoidVectorName,
+				WireFormatHeader:     wireFormatHeader(encoding.WireFormat),
 			})
 		}
 	}
@@ -257,7 +262,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		valueBuild := valueBuilder.String()
 		errorCode := cppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range supportedWireFormats {
+		for _, wireFormat := range supportedEncodeWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
 				HandleDefs:  handleDefs,
@@ -284,29 +289,46 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		errorCode := cppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueType:   valueType,
-				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandleInfos(encoding.Handles),
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
+				Name:             testCaseName(decodeFailure.Name, encoding.WireFormat),
+				HandleDefs:       handleDefs,
+				ValueType:        valueType,
+				Bytes:            BuildBytes(encoding.Bytes),
+				Handles:          BuildRawHandleInfos(encoding.Handles),
+				ErrorCode:        errorCode,
+				FuchsiaOnly:      fuchsiaOnly,
+				WireFormatHeader: wireFormatHeader(encoding.WireFormat),
 			})
 		}
 	}
 	return decodeFailureCases, nil
 }
 
-var supportedWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
+func wireFormatHeader(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("fidl::test::util::k%sHeader", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
-func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedWireFormats {
+var supportedEncodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+}
+var supportedDecodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
+}
+
+func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedEncodeWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
+}
+func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedDecodeWireFormats {
 		if wireFormat == wf {
 			return true
 		}

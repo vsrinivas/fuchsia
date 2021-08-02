@@ -362,6 +362,8 @@ enum {
   kFidlWireFormatMagicNumberInitial = 1,
 };
 
+#define FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2 0x02
+
 typedef struct fidl_message_header {
   zx_txid_t txid;
   uint8_t flags[3];

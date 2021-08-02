@@ -99,6 +99,15 @@ class HLCPPIncomingMessage {
   // |Encode| method.
   zx_status_t Decode(const fidl_type_t* type, const char** error_msg_out);
 
+  // Decodes the message in-place when the header is not part of the byte
+  // message and instead specified as an argument. Otherwise identical to
+  // Decode().
+  //
+  // This function MAY BREAK OR BE REMOVED AT ANY TIME. DO NOT USE IT.
+  zx_status_t DecodeWithExternalHeader_InternalMayBreak(const fidl_message_header_t& header,
+                                                        const fidl_type_t* type,
+                                                        const char** error_msg_out);
+
   // Read a message from the given channel.
   //
   // The bytes read from the channel are stored in bytes() and the handles

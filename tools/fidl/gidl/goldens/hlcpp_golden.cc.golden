@@ -460,9 +460,26 @@ TEST(Conformance, GoldenBoolStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenBoolStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenBoolStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, bool(true));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenBoolStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenBoolStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, bool(true));
 
@@ -473,9 +490,26 @@ TEST(Conformance, GoldenIntStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenIntStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenIntStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, int16_t(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenIntStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenIntStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, int16_t(1ull));
 
@@ -486,9 +520,26 @@ TEST(Conformance, GoldenUintStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenUintStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenUintStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, uint16_t(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenUintStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenUintStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, uint16_t(1ull));
 
@@ -499,9 +550,26 @@ TEST(Conformance, GoldenFloatStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenFloatStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenFloatStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, float(0));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenFloatStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenFloatStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, float(0));
 
@@ -512,9 +580,26 @@ TEST(Conformance, GoldenDoubleStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenDoubleStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenDoubleStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, double(0));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenDoubleStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenDoubleStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, double(0));
 
@@ -527,9 +612,28 @@ TEST(Conformance, GoldenStringStruct_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenStringStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenStringStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_STR_EQ(f1.v, "abcd");
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStringStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenStringStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_STR_EQ(f1.v, "abcd");
 
@@ -542,9 +646,28 @@ TEST(Conformance, GoldenNullableStringStructNonNull_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_STR_EQ((*f1.v), "abcd");
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStringStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_STR_EQ((*f1.v), "abcd");
 
@@ -556,9 +679,27 @@ TEST(Conformance, GoldenNullableStringStructNull_V1_Decode) {
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_NULL(f1.v);
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStringStructNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStringStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_NULL(f1.v);
 
@@ -569,9 +710,26 @@ TEST(Conformance, GoldenEnumStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenEnumStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenEnumStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, conformance::GoldenEnum(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenEnumStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenEnumStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, conformance::GoldenEnum(1ull));
 
@@ -582,9 +740,26 @@ TEST(Conformance, GoldenBitsStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenBitsStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenBitsStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_EQ(f1.v, static_cast<conformance::GoldenBits>(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenBitsStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenBitsStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_EQ(f1.v, static_cast<conformance::GoldenBits>(1ull));
 
@@ -599,9 +774,30 @@ TEST(Conformance, GoldenTableStruct_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenTableStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenTableStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_TRUE(f2.has_v());
+ASSERT_EQ(f2.v(), int16_t(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenTableStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenTableStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_TRUE(f2.has_v());
@@ -617,9 +813,29 @@ TEST(Conformance, GoldenUnionStruct_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenUnionStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenUnionStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2.Which(), conformance::GoldenUnion::Tag::kV);
+ASSERT_EQ(f2.v(), int16_t(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenUnionStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenUnionStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2.Which(), conformance::GoldenUnion::Tag::kV);
@@ -635,9 +851,29 @@ TEST(Conformance, GoldenNullableUnionStructNonNull_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2->Which(), conformance::GoldenUnion::Tag::kV);
+ASSERT_EQ(f2->v(), int16_t(1ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2->Which(), conformance::GoldenUnion::Tag::kV);
@@ -652,9 +888,27 @@ TEST(Conformance, GoldenNullableUnionStructNull_V1_Decode) {
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_NULL(f1.v);
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableUnionStructNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableUnionStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_NULL(f1.v);
 
@@ -665,9 +919,30 @@ TEST(Conformance, GoldenByteArrayStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenByteArrayStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenByteArrayStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2[0], uint8_t(1ull));
+ASSERT_EQ(f2[1], uint8_t(2ull));
+ASSERT_EQ(f2[2], uint8_t(3ull));
+ASSERT_EQ(f2[3], uint8_t(4ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenByteArrayStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenByteArrayStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2[0], uint8_t(1ull));
@@ -682,9 +957,30 @@ TEST(Conformance, GoldenStructArrayStruct_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenStructArrayStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenStructArrayStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+[[maybe_unused]] auto& f3 = f2[0];
+ASSERT_EQ(f3.v, int16_t(1ull));
+[[maybe_unused]] auto& f4 = f2[1];
+ASSERT_EQ(f4.v, int16_t(2ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStructArrayStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenStructArrayStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 [[maybe_unused]] auto& f3 = f2[0];
@@ -702,9 +998,42 @@ TEST(Conformance, GoldenByteVectorStruct_V1_Decode) {
 0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04,
 0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenByteVectorStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenByteVectorStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2.size(), 12);
+ASSERT_EQ(f2[0], uint8_t(1ull));
+ASSERT_EQ(f2[1], uint8_t(2ull));
+ASSERT_EQ(f2[2], uint8_t(3ull));
+ASSERT_EQ(f2[3], uint8_t(4ull));
+ASSERT_EQ(f2[4], uint8_t(1ull));
+ASSERT_EQ(f2[5], uint8_t(2ull));
+ASSERT_EQ(f2[6], uint8_t(3ull));
+ASSERT_EQ(f2[7], uint8_t(4ull));
+ASSERT_EQ(f2[8], uint8_t(1ull));
+ASSERT_EQ(f2[9], uint8_t(2ull));
+ASSERT_EQ(f2[10], uint8_t(3ull));
+ASSERT_EQ(f2[11], uint8_t(4ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenByteVectorStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenByteVectorStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2.size(), 12);
@@ -730,9 +1059,33 @@ TEST(Conformance, GoldenStructVectorStruct_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenStructVectorStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenStructVectorStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2.size(), 2);
+[[maybe_unused]] auto& f3 = f2[0];
+ASSERT_EQ(f3.v, int16_t(1ull));
+[[maybe_unused]] auto& f4 = f2[1];
+ASSERT_EQ(f4.v, int16_t(2ull));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenStructVectorStruct_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenStructVectorStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2.size(), 2);
@@ -749,9 +1102,28 @@ TEST(Conformance, GoldenNullableStructNonNull_V1_Decode) {
 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+ASSERT_EQ(f2->v, bool(true));
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStructNonNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 ASSERT_EQ(f2->v, bool(true));
@@ -763,9 +1135,26 @@ TEST(Conformance, GoldenNullableStructNull_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_NULL(f1.v);
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+
+TEST(Conformance, GoldenNullableStructNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_NULL(f1.v);
 
@@ -793,10 +1182,52 @@ zx_handle_info_t{
 	auto bytes = std::vector<uint8_t>{
 0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{
 handle_defs[0],};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenHandleBasicRightsStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenHandleBasicRightsStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+
+	zx_info_handle_basic_t f3_info;
+	ASSERT_OK(zx_object_get_info(f2.get(), ZX_INFO_HANDLE_BASIC, &f3_info, sizeof(f3_info), nullptr, nullptr));
+	ASSERT_EQ(f3_info.koid, handle_koids[0]);
+	ASSERT_TRUE(f3_info.type == 0 || 0 == ZX_OBJ_TYPE_NONE);
+	ASSERT_TRUE(f3_info.rights == 49155 || 49155 == ZX_RIGHT_SAME_RIGHTS);
+	
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Decode) {
+	const auto handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(53251),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 53251,
+	.unused = 0u,
+},
+};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenHandleBasicRightsStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 
@@ -831,10 +1262,52 @@ zx_handle_info_t{
 	auto bytes = std::vector<uint8_t>{
 0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{
 handle_defs[0],};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+[[maybe_unused]] auto& f2 = f1.v;
+
+	zx_info_handle_basic_t f3_info;
+	ASSERT_OK(zx_object_get_info(f2.get(), ZX_INFO_HANDLE_BASIC, &f3_info, sizeof(f3_info), nullptr, nullptr));
+	ASSERT_EQ(f3_info.koid, handle_koids[0]);
+	ASSERT_TRUE(f3_info.type == 0 || 0 == ZX_OBJ_TYPE_NONE);
+	ASSERT_TRUE(f3_info.rights == 2147483648 || 2147483648 == ZX_RIGHT_SAME_RIGHTS);
+	
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Decode) {
+	const auto handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(2147483648),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 2147483648,
+	.unused = 0u,
+},
+};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_OK(zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 [[maybe_unused]] auto& f2 = f1.v;
 
@@ -853,9 +1326,28 @@ TEST(Conformance, GoldenNullableHandleStructNull_V1_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
 	auto value =
-	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(std::move(bytes), std::move(handles));
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles));
+	[[maybe_unused]] auto& f1 = value;
+ASSERT_FALSE(f1.v.is_valid());
+
+	fidl::test::util::ForgetHandles(std::move(value));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+TEST(Conformance, GoldenNullableHandleStructNull_V2_Decode) {
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto value =
+	    fidl::test::util::DecodedBytes<conformance::GoldenNullableHandleStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles));
 	[[maybe_unused]] auto& f1 = value;
 ASSERT_FALSE(f1.v.is_valid());
 
@@ -881,7 +1373,20 @@ TEST(Conformance, GoldenStringStructNullBody_V1_Decode_Failure) {
 0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
 	auto handles = std::vector<zx_handle_info_t>{};
-	fidl::test::util::CheckDecodeFailure<conformance::GoldenStringStruct>(std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS);
+	fidl::test::util::CheckDecodeFailure<conformance::GoldenStringStruct>(fidl::test::util::kV1Header, std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(Conformance, GoldenStringStructNullBody_V2_Decode_Failure) {
+	auto bytes = std::vector<uint8_t>{
+0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	// TODO(fxbug.dev/81889) Remove the following line once the transformer is no longer needed.
+	bytes.reserve(ZX_CHANNEL_MAX_MSG_BYTES); // For transforming V2 -> V1
+	auto handles = std::vector<zx_handle_info_t>{};
+	fidl::test::util::CheckDecodeFailure<conformance::GoldenStringStruct>(fidl::test::util::kV2Header, std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS);
 }
 

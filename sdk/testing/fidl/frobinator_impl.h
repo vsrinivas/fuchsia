@@ -20,6 +20,7 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
   FrobinatorImpl(fit::closure on_destroy = [] {});
   ~FrobinatorImpl();
 
+  uint32_t send_basic_union_received_value_ = 0;
   std::vector<std::string> frobs;
   std::vector<std::string> grobs;
   fit::closure on_destroy_;
@@ -31,6 +32,7 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
   void FailHardest(bool fail, FailHardestCallback callback) override;
   void SendEventHandle(zx::event event) override;
   void SendProtocol(fidl::InterfaceHandle<fidl::test::frobinator::EmptyProtocol> ep) override;
+  void SendBasicUnion(fidl::test::frobinator::BasicUnion u) override;
 };
 
 }  // namespace test

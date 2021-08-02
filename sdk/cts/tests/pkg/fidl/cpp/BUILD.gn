@@ -76,6 +76,7 @@ cts_source_set("test_sources") {
     "stub_controller_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
+    "wire_format_v2_decode_test.cc",
   ]
 
   deps = [

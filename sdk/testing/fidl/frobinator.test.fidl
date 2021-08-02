@@ -7,6 +7,10 @@ using zx;
 
 protocol EmptyProtocol {};
 
+type BasicUnion = union {
+    1: v uint32;
+};
+
 protocol Frobinator {
     Frob(struct {
         value string;
@@ -38,5 +42,8 @@ protocol Frobinator {
     });
     SendProtocol(resource struct {
         ep client_end:EmptyProtocol;
+    });
+    SendBasicUnion(struct {
+        union BasicUnion;
     });
 };

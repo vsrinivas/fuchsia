@@ -18,7 +18,7 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     inputs = [ gidl_file ]
     fidl = conformance_suite_fidl_target
     deps = [
-      "//src/lib/fidl/transformer",
+      "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/zxtest",
     ]
   }

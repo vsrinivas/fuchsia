@@ -19,6 +19,11 @@ namespace fidl {
 namespace test {
 namespace util {
 
+constexpr fidl_message_header_t kV1Header = {};
+constexpr fidl_message_header_t kV2Header = {
+    .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+};
+
 inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {
   return a.operation == b.operation && a.handle == b.handle && a.type == b.type &&
          a.rights == b.rights && a.result == b.result;
@@ -76,7 +81,10 @@ Output RoundTrip(const Input& input) {
       std::move(outgoing_msg.bytes()),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.size())));
   outgoing_msg.ClearHandlesUnsafe();
-  EXPECT_EQ(ZX_OK, incoming_message.Decode(Output::FidlType, &err_msg), "%s", err_msg);
+  EXPECT_EQ(ZX_OK,
+            incoming_message.DecodeWithExternalHeader_InternalMayBreak(kV1Header, Output::FidlType,
+                                                                       &err_msg),
+            "%s", err_msg);
   fidl::Decoder decoder(std::move(incoming_message));
   Output output;
   Output::Decode(&decoder, &output, 0);
@@ -90,7 +98,9 @@ Output DecodedBytes(std::vector<uint8_t> input) {
                                HandleInfoPart());
 
   const char* error = nullptr;
-  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
+  EXPECT_EQ(ZX_OK,
+            message.DecodeWithExternalHeader_InternalMayBreak(kV1Header, Output::FidlType, &error),
+            "%s", error);
 
   fidl::Decoder decoder(std::move(message));
   Output output;
@@ -100,15 +110,19 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 }
 
 template <class Output>
-Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos) {
+Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> bytes,
+                    std::vector<zx_handle_info_t> handle_infos) {
   HLCPPIncomingMessage message(
       BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()),
                static_cast<uint32_t>(bytes.size())),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
                      static_cast<uint32_t>(handle_infos.size())));
+  bytes.resize(bytes.capacity());  // To avoid container overflow during V2 -> V1 transform
 
   const char* error = nullptr;
-  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
+  EXPECT_EQ(ZX_OK,
+            message.DecodeWithExternalHeader_InternalMayBreak(header, Output::FidlType, &error),
+            "%s", error);
 
   fidl::Decoder decoder(std::move(message));
   Output output;
@@ -164,16 +178,20 @@ bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
 }
 
 template <class Output>
-void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_info_t> handle_infos,
+void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t> input,
+                        std::vector<zx_handle_info_t> handle_infos,
                         const zx_status_t expected_failure_code) {
   HLCPPIncomingMessage message(
       BytePart(input.data(), static_cast<uint32_t>(input.capacity()),
                static_cast<uint32_t>(input.size())),
       HandleInfoPart(handle_infos.data(), static_cast<uint32_t>(handle_infos.capacity()),
                      static_cast<uint32_t>(handle_infos.size())));
+  input.resize(input.capacity());  // To avoid container overflow during V2 -> V1 transform
 
   const char* error = nullptr;
-  EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error), "%s", error);
+  EXPECT_EQ(expected_failure_code,
+            message.DecodeWithExternalHeader_InternalMayBreak(header, Output::FidlType, &error),
+            "%s", error);
 }
 
 template <class Input>

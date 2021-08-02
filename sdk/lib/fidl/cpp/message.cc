@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/trace.h>
+#include <lib/fidl/transformer.h>
 #include <string.h>
 
 #ifdef __Fuchsia__
@@ -38,6 +39,31 @@ HLCPPIncomingMessage& HLCPPIncomingMessage::operator=(HLCPPIncomingMessage&& oth
 }
 
 zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** error_msg_out) {
+  return DecodeWithExternalHeader_InternalMayBreak(header(), type, error_msg_out);
+}
+
+zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
+    const fidl_message_header_t& header, const fidl_type_t* type, const char** error_msg_out) {
+  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+    auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+
+    uint32_t num_bytes = 0;
+    zx_status_t status = internal__fidl_transform__may_break(
+        FIDL_TRANSFORMATION_V2_TO_V1, type, bytes_.data(), bytes_.actual(), transformer_bytes.get(),
+        ZX_CHANNEL_MAX_MSG_BYTES, &num_bytes, error_msg_out);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if (num_bytes > bytes_.capacity()) {
+      *error_msg_out = "transformed bytes exceeds message buffer capacity";
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    memcpy(bytes_.data(), transformer_bytes.get(), num_bytes);
+    bytes_.set_actual(num_bytes);
+  }
+
   fidl_trace(WillHLCPPDecode, type, bytes_.data(), bytes_.actual(), handles_.actual());
   zx_status_t status = fidl_decode_etc_skip_unknown_handles(
       type, bytes_.data(), bytes_.actual(), handles_.data(), handles_.actual(), error_msg_out);
