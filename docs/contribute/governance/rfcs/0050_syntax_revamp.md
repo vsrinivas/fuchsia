@@ -1050,7 +1050,7 @@ marker defined above.
 
 With this added functionality, the build pipeline will be extended as follows:
 
-![Visualization: build pipeline strategy](resources/ftp-050-strategy.png)
+![Visualization: build pipeline strategy](resources/0050_syntax_revamp/strategy.png)
 
 That is:
 
