@@ -794,7 +794,20 @@ impl ComponentInstance {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                routing::route_and_delete_storage(use_storage.clone(), &self).await?;
+                match routing::route_and_delete_storage(use_storage.clone(), &self).await {
+                    Ok(()) => (),
+                    Err(ModelError::RoutingError { .. }) => {
+                        // If the routing for this storage capability is invalid then there's no
+                        // storage for us to delete. Ignore this error, and proceed.
+                    }
+                    Err(e) => {
+                        // We received an error we weren't expecting, but we still want to destroy
+                        // this instance. It's bad to leave storage state undeleted, but it would
+                        // be worse to not continue with destroying this instance. Log the error,
+                        // and proceed.
+                        warn!("failed to delete storage during instance destruction for component {}, proceeding with destruction anyway: {}", self.abs_moniker, e);
+                    }
+                }
             }
         }
         Ok(())

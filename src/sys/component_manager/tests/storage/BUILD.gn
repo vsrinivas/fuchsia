@@ -47,6 +47,23 @@ rustc_binary("storage_realm_coll_bin") {
   sources = [ "storage_realm_coll.rs" ]
 }
 
+rustc_binary("storage_realm_coll_invalid_route_bin") {
+  name = "storage_realm_coll_invalid_route"
+  edition = "2018"
+  source_root = "storage_realm_coll_invalid_route.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "storage_realm_coll_invalid_route.rs" ]
+}
+
 rustc_binary("storage_user_bin") {
   name = "storage_user"
   edition = "2018"
@@ -54,6 +71,15 @@ rustc_binary("storage_user_bin") {
   deps = [ "//src/lib/syslog/rust:syslog" ]
 
   sources = [ "storage_user.rs" ]
+}
+
+rustc_binary("only_exits_bin") {
+  name = "only_exits"
+  edition = "2018"
+  source_root = "only_exits.rs"
+  deps = []
+
+  sources = [ "only_exits.rs" ]
 }
 
 fuchsia_component("memfs") {
@@ -75,13 +101,25 @@ fuchsia_component("storage_realm_coll") {
   manifest = "meta/storage_realm_coll.cml"
 }
 
+fuchsia_component("storage_realm_coll_invalid_route") {
+  deps = [ ":storage_realm_coll_invalid_route_bin" ]
+  manifest = "meta/storage_realm_coll_invalid_route.cml"
+}
+
+fuchsia_component("only_exits") {
+  deps = [ ":only_exits_bin" ]
+  manifest = "meta/only_exits.cml"
+}
+
 fuchsia_unittest_package("storage_integration_test") {
   manifest = "meta/storage_integration_test.cmx"
   deps = [
     ":memfs",
+    ":only_exits",
     ":storage_integration_test_bin",
     ":storage_realm",
     ":storage_realm_coll",
+    ":storage_realm_coll_invalid_route",
     ":storage_user",
   ]
 }

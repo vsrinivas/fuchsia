@@ -1,0 +1,57 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/storage_realm_coll_invalid_route",
+    },
+    collections: [
+        {
+            name: "coll_bad_route",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+        },
+        {
+            event: [
+                "purged",
+                "stopped",
+            ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "TestEventStream",
+            subscriptions: [
+                {
+                    event: "stopped",
+                    mode: "async",
+                },
+                {
+                    event: "purged",
+                    mode: "async",
+                },
+            ],
+        },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#coll_bad_route" ],
+        },
+    ],
+}
