@@ -35,7 +35,7 @@ pub fn sys_mmap(
     prot: u32,
     flags: u32,
     fd: FdNumber,
-    offset: usize,
+    offset: u64,
 ) -> Result<SyscallResult, Errno> {
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
@@ -46,7 +46,14 @@ pub fn sys_mmap(
         not_implemented!("mmap flag MAP_32BIT not implemented.");
         return Err(ENOSYS);
     }
-    if flags & !(MAP_PRIVATE | MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE | MAP_STACK)
+    if flags
+        & !(MAP_PRIVATE
+            | MAP_SHARED
+            | MAP_ANONYMOUS
+            | MAP_FIXED
+            | MAP_POPULATE
+            | MAP_NORESERVE
+            | MAP_STACK)
         != 0
     {
         not_implemented!("mmap: flags: 0x{:x}", flags);
@@ -61,7 +68,7 @@ pub fn sys_mmap(
     if length == 0 {
         return Err(EINVAL);
     }
-    if offset as u64 % *PAGE_SIZE != 0 {
+    if offset % *PAGE_SIZE != 0 {
         return Err(EINVAL);
     }
 
@@ -120,15 +127,20 @@ pub fn sys_mmap(
         options |= MappingOptions::SHARED;
     }
 
-    let try_map = |addr, flags| {
-        ctx.task.mm.map(addr, Arc::clone(&vmo), vmo_offset as u64, length, flags, options)
-    };
+    let try_map =
+        |addr, flags| ctx.task.mm.map(addr, Arc::clone(&vmo), vmo_offset, length, flags, options);
     let addr = match try_map(addr, zx_flags) {
         Err(EINVAL) if zx_flags.contains(zx::VmarFlags::SPECIFIC) && (flags & MAP_FIXED == 0) => {
             try_map(UserAddress::default(), zx_flags - zx::VmarFlags::SPECIFIC)
         }
         result => result,
     }?;
+
+    if flags & MAP_POPULATE != 0 {
+        let _result = vmo.op_range(zx::VmoOp::COMMIT, vmo_offset, length as u64);
+        // "The mmap() call doesn't fail if the mapping cannot be populated."
+    }
+
     Ok(addr.into())
 }
 

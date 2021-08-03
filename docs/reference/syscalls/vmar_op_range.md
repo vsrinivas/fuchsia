@@ -32,7 +32,9 @@ zx_status_t zx_vmar_op_range(zx_handle_t handle,
 The supported operations are:
 
 **ZX_VMO_OP_DECOMMIT** - Deprecated. Use **ZX_VMAR_OP_DECOMMIT** instead.
+
 **ZX_VMAR_OP_DECOMMIT** - Requires the **ZX_RIGHT_WRITE** right, and applies only to writable mappings.
+
 **ZX_VMAR_OP_MAP_RANGE** - Populates entries in the CPU page tables (or architectural equivalent) for committed pages in the given range. Entries for uncommitted pages in the range are not populated. Fails if entries already exist for any page in the range (this may change in the future).
 
 The operation's semantics are otherwise as described by [`zx_vmo_op_range()`].
