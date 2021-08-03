@@ -609,7 +609,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
   GenerateObject([&]() {
     GenerateDeclName(value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    GenerateObjectMember("anonymous", value.is_request_or_response);
+    GenerateObjectMember("is_request_or_response", value.is_request_or_response);
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);

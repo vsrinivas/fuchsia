@@ -283,7 +283,7 @@
         "column": 9,
         "length": 32
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -339,7 +339,7 @@
         "column": 12,
         "length": 31
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -395,7 +395,7 @@
         "column": 9,
         "length": 32
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -451,7 +451,7 @@
         "column": 12,
         "length": 31
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {

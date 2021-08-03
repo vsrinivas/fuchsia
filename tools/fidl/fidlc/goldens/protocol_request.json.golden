@@ -307,7 +307,7 @@
         "column": 20,
         "length": 51
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -364,7 +364,7 @@
         "column": 27,
         "length": 51
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -421,7 +421,7 @@
         "column": 15,
         "length": 51
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -478,7 +478,7 @@
         "column": 22,
         "length": 51
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {

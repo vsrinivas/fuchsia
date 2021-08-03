@@ -1,7 +1,7 @@
 {{#if struct_declarations}}
 ## **STRUCTS**
 {{#each struct_declarations}}
-{{~ #unless anonymous}}
+{{~ #unless is_request_or_response}}
 ### {{rpn name}} {{#if resource}}[resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute}{{/if}} {#{{rpn name}} data-text="{{rpn name}}"}
 {{> filename }}
 

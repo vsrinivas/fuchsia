@@ -132,7 +132,7 @@
         "column": 9,
         "length": 32
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -190,7 +190,7 @@
         "column": 12,
         "length": 31
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -246,7 +246,7 @@
         "column": 11,
         "length": 33
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {

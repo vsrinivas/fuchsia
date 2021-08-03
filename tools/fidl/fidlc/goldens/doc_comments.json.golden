@@ -986,7 +986,7 @@
         "column": 6,
         "length": 6
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "doc",

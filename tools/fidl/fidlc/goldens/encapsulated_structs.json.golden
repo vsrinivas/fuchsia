@@ -98,7 +98,7 @@
         "column": 6,
         "length": 9
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -171,7 +171,7 @@
         "column": 6,
         "length": 9
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -244,7 +244,7 @@
         "column": 6,
         "length": 14
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -301,7 +301,7 @@
         "column": 6,
         "length": 23
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -398,7 +398,7 @@
         "column": 6,
         "length": 25
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -475,7 +475,7 @@
         "column": 6,
         "length": 14
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {

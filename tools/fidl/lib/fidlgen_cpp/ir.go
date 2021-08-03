@@ -546,7 +546,7 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 
 	for _, v := range r.Structs {
 		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
-		if v.Anonymous {
+		if v.IsRequestOrResponse {
 			continue
 		}
 		decls[v.Name] = c.compileStruct(v)

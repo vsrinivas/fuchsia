@@ -182,7 +182,7 @@ func NewRoot(ir fidlgen.Root, outputBase string, templates *template.Template, o
 	allStructs := ir.Structs
 	ir.Structs = make([]fidlgen.Struct, 0)
 	for _, member := range allStructs {
-		if member.Anonymous {
+		if member.IsRequestOrResponse {
 			continue
 		}
 		ir.Structs = append(ir.Structs, member)

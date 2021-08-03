@@ -26,7 +26,7 @@
         "column": 6,
         "length": 3
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {

@@ -109,7 +109,7 @@
         "column": 6,
         "length": 21
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {

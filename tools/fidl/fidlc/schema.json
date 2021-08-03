@@ -1207,8 +1207,8 @@
                 "^experimental_": {}
             },
             "properties": {
-                "anonymous": {
-                    "description": "Flag indicating that struct is anonymous",
+                "is_request_or_response": {
+                    "description": "Flag indicating that struct is used as a top level method request/response struct",
                     "type": "boolean"
                 },
                 "location": {

@@ -224,7 +224,7 @@
         "column": 11,
         "length": 58
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -281,7 +281,7 @@
         "column": 12,
         "length": 58
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -338,7 +338,7 @@
         "column": 11,
         "length": 58
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {

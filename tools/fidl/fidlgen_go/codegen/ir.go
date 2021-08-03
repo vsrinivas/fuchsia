@@ -1089,7 +1089,7 @@ func Compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.Structs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
-		if v.Anonymous {
+		if v.IsRequestOrResponse {
 			// these Structs still need to have their correct name (...Response or
 			// ...Request) generated, which occurs in compileMethod. Only then
 			// are they appended to r.Structs.

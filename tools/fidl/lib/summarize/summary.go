@@ -91,7 +91,7 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 // addStructs adds the elements corresponding to the FIDL structs.
 func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	for _, st := range structs {
-		if st.Anonymous {
+		if st.IsRequestOrResponse {
 			// Disregard anonymous structs for API summarization.
 			continue
 		}

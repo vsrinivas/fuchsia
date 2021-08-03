@@ -1581,7 +1581,7 @@ func Compile(r fidlgen.Root) Root {
 	}
 
 	for _, v := range r.Structs {
-		if v.Anonymous {
+		if v.IsRequestOrResponse {
 			c.requestResponsePayload[v.Name] = v
 		} else {
 			root.Structs = append(root.Structs, c.compileStruct(v))

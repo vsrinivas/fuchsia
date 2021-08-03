@@ -285,7 +285,7 @@
         "column": 12,
         "length": 46
       },
-      "anonymous": true,
+      "is_request_or_response": true,
       "members": [
         {
           "type": {
@@ -338,7 +338,7 @@
         "column": 6,
         "length": 13
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "maybe_attributes": [
         {
           "name": "on_struct",

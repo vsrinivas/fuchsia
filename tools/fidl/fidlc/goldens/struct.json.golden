@@ -17,7 +17,7 @@
         "column": 6,
         "length": 6
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {
@@ -90,7 +90,7 @@
         "column": 6,
         "length": 11
       },
-      "anonymous": false,
+      "is_request_or_response": false,
       "members": [
         {
           "type": {

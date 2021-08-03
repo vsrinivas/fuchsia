@@ -618,6 +618,16 @@ func (d *Decl) GetName() EncodedCompoundIdentifier {
 	return d.Name
 }
 
+// Layout represents data specific to bits/enums/structs/tables/unions. All
+// layouts are decls, but not all decls are layouts (e.g. protocols).
+type Layout struct {
+	NamingContext []string `json:"maybe_naming_context,omitempty"`
+}
+
+func (l *Layout) IsAnonymous() bool {
+	return len(l.NamingContext) > 0
+}
+
 // Assert that declarations conform to the Declaration interface
 var _ = []Declaration{
 	(*Union)(nil),
@@ -705,11 +715,12 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Decl
-	Anonymous    bool           `json:"anonymous"`
-	Members      []StructMember `json:"members"`
-	Resourceness `json:"resource"`
-	TypeShapeV1  TypeShape `json:"type_shape_v1"`
-	TypeShapeV2  TypeShape `json:"type_shape_v2"`
+	Layout
+	IsRequestOrResponse bool           `json:"is_request_or_response"`
+	Members             []StructMember `json:"members"`
+	Resourceness        `json:"resource"`
+	TypeShapeV1         TypeShape `json:"type_shape_v1"`
+	TypeShapeV2         TypeShape `json:"type_shape_v2"`
 
 	MethodResult *MethodResult
 }
