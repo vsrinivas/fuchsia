@@ -76,8 +76,7 @@ pub struct BssDescriptionCreator {
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,
-    pub capability_info: u16,
-    pub channel: fidl_fuchsia_wlan_common::WlanChannel,
+    pub channel: fidl_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
 
@@ -85,6 +84,22 @@ pub struct BssDescriptionCreator {
     pub protection_cfg: FakeProtectionCfg,
     pub ssid: Ssid,
     pub rates: Vec<u8>,
+
+    // *** Modifiable capability_info bits
+    // The privacy, ess, and ibss bits are reserved for the
+    // macro to set since they are implied by protection_cfg
+    // and bss_type.
+    pub cf_pollable: bool,
+    pub cf_poll_req: bool,
+    pub short_preamble: bool,
+    pub spectrum_mgmt: bool,
+    pub qos: bool,
+    pub short_slot_time: bool,
+    pub apsd: bool,
+    pub radio_measurement: bool,
+    pub delayed_block_ack: bool,
+    pub immediate_block_ack: bool,
+
     pub ies_overrides: IesOverrides,
 }
 
@@ -109,6 +124,32 @@ impl BssDescriptionCreator {
             ies_updater.set_raw(&wpa1_vendor_ie[..]).context("set WPA1 vendor IE")?;
         }
 
+        let capability_info = mac::CapabilityInfo(0)
+            .with_cf_pollable(self.cf_pollable)
+            .with_cf_poll_req(self.cf_poll_req)
+            .with_short_preamble(self.short_preamble)
+            .with_spectrum_mgmt(self.spectrum_mgmt)
+            .with_qos(self.qos)
+            .with_short_slot_time(self.short_slot_time)
+            .with_apsd(self.apsd)
+            .with_radio_measurement(self.radio_measurement)
+            .with_delayed_block_ack(self.delayed_block_ack)
+            .with_immediate_block_ack(self.immediate_block_ack);
+
+        // Some values of capability_info are not permitted to be set by
+        // the macro since otherwise the BssDescription will be trivially invalid.
+        let capability_info = match self.protection_cfg {
+            FakeProtectionCfg::Open => capability_info.with_privacy(false),
+            _ => capability_info.with_privacy(true),
+        };
+        let capability_info = match self.bss_type {
+            fidl_internal::BssType::Infrastructure => {
+                capability_info.with_ess(true).with_ibss(false)
+            }
+            _ => panic!("{:?} is not supported", self.bss_type),
+        };
+        let capability_info = capability_info.0;
+
         for ovr in self.ies_overrides.overrides {
             match ovr {
                 IeOverride::Remove(ie_type) => ies_updater.remove(&ie_type),
@@ -129,11 +170,11 @@ impl BssDescriptionCreator {
             beacon_period: self.beacon_period,
             timestamp: self.timestamp,
             local_time: self.local_time,
-            capability_info: self.capability_info,
+            capability_info,
+            ies: ies_updater.finalize(),
             channel: self.channel,
             rssi_dbm: self.rssi_dbm,
             snr_db: self.snr_db,
-            ies: ies_updater.finalize(),
         })
     }
 }
@@ -223,17 +264,19 @@ pub fn build_fake_bss_description_creator__(
         },
         rssi_dbm: 0,
         snr_db: 0,
-
-        capability_info: mac::CapabilityInfo(0)
-            .with_privacy(match protection_cfg {
-                FakeProtectionCfg::Open => false,
-                _ => true,
-            })
-            .0,
-
         protection_cfg,
         ssid: (*b"fake-ssid").into(),
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+        cf_pollable: false,
+        cf_poll_req: false,
+        short_preamble: false,
+        spectrum_mgmt: false,
+        qos: false,
+        short_slot_time: false,
+        apsd: false,
+        radio_measurement: false,
+        delayed_block_ack: false,
+        immediate_block_ack: false,
         ies_overrides: IesOverrides::new(),
     }
 }
@@ -294,10 +337,87 @@ macro_rules! fake_bss_description {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*,
+        crate::bss::{BssDescription, Protection},
+        ie::IeType,
+    };
 
     #[test]
-    fn test_fake_bss_macro_ies() {
+    fn macro_sanity_test() {
+        let fidl_bss_description = fake_fidl_bss_description!(Open);
+        let bss_description = fake_bss_description!(Open);
+        assert_eq!(
+            BssDescription::from_fidl(fidl_bss_description)
+                .expect("Failed to convert fake_fidl_bss_description value"),
+            bss_description
+        );
+    }
+
+    #[test]
+    fn fake_protection_cfg_privacy_bit_and_protection() {
+        let bss = fake_bss_description!(Open);
+        assert!(!mac::CapabilityInfo(bss.capability_info).privacy());
+        assert_eq!(bss.protection(), Protection::Open);
+
+        let bss = fake_bss_description!(Wep);
+        assert!(mac::CapabilityInfo(bss.capability_info).privacy());
+        assert_eq!(bss.protection(), Protection::Wep);
+
+        let bss = fake_bss_description!(Wpa1);
+        assert!(mac::CapabilityInfo(bss.capability_info).privacy());
+        assert_eq!(bss.protection(), Protection::Wpa1);
+
+        let bss = fake_bss_description!(Wpa2);
+        assert!(mac::CapabilityInfo(bss.capability_info).privacy());
+        assert_eq!(bss.protection(), Protection::Wpa2Personal);
+    }
+
+    #[test]
+    fn set_capability_info_bits() {
+        macro_rules! check_bit {
+            ($bit_name:ident) => {{
+                let bss = fake_bss_description!(Open, $bit_name: true);
+                assert!(mac::CapabilityInfo(bss.capability_info).$bit_name());
+                let bss = fake_bss_description!(Open, $bit_name: false);
+                assert!(!mac::CapabilityInfo(bss.capability_info).$bit_name());
+            }}
+        }
+        check_bit!(cf_pollable);
+        check_bit!(cf_poll_req);
+        check_bit!(short_preamble);
+        check_bit!(spectrum_mgmt);
+        check_bit!(qos);
+        check_bit!(short_slot_time);
+        check_bit!(apsd);
+        check_bit!(radio_measurement);
+        check_bit!(delayed_block_ack);
+        check_bit!(immediate_block_ack);
+
+        let bss =
+            fake_bss_description!(Open, cf_pollable: true, apsd: false, immediate_block_ack: true);
+        assert!(mac::CapabilityInfo(bss.capability_info).cf_pollable());
+        assert!(!mac::CapabilityInfo(bss.capability_info).apsd());
+        assert!(mac::CapabilityInfo(bss.capability_info).immediate_block_ack());
+    }
+
+    #[test]
+    fn simple_default_override() {
+        let bss = fake_fidl_bss_description!(Open);
+        assert_eq!(bss.beacon_period, 100);
+
+        let bss = fake_fidl_bss_description!(Open, beacon_period: 50);
+        assert_eq!(bss.beacon_period, 50);
+    }
+
+    #[test]
+    #[should_panic(expected = "Personal is not supported")]
+    fn unsupported_bss_type() {
+        fake_fidl_bss_description!(Open, bss_type: fidl_internal::BssType::Personal);
+    }
+
+    #[test]
+    fn ies_overrides() {
         let bss = fake_bss_description!(Wpa1Wpa2,
             ssid: Ssid::from("fuchsia"),
             rates: vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
