@@ -104,10 +104,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             let networks = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy)
                 .await
                 .context("scan failed")?;
-            let bss_desc = networks
+            let bss_description = networks
                 .into_iter()
                 .filter(|bss_info| bss_info.ssid.as_slice() == opt.target_ssid.as_bytes())
-                .map(|bss_info| bss_info.bss_desc)
+                .map(|bss_info| bss_info.bss_description)
                 .next()
                 .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
             wlan_iface.scan_success = true;
@@ -125,7 +125,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     &wlan_iface.sme_proxy,
                     opt.target_ssid.as_bytes().to_vec(),
                     opt.target_pwd.as_bytes().to_vec(),
-                    bss_desc,
+                    bss_description,
                 )
                 // TODO(fxbug.dev/29881): when this bug is fixed, consider removing this timeout
                 .on_timeout(WLAN_CONNECT_TIMEOUT_SECONDS.seconds().after_now(), || {

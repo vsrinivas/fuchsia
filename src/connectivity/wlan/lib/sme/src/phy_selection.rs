@@ -217,7 +217,7 @@ mod tests {
         crate::test_utils::*,
         wlan_common::{
             channel::{Cbw, Channel, Phy},
-            fake_bss,
+            fake_bss_description,
             ie::{fake_ies::fake_vht_op_bytes, IeType},
             test_utils::fake_stas::IesOverrides,
             RadioConfig,
@@ -349,7 +349,7 @@ mod tests {
         {
             let want = (fidl_common::Phy::Vht, fidl_common::ChannelBandwidth::Cbw80);
             let got = derive_phy_cbw(
-                &fake_bss!(Open,
+                &fake_bss_description!(Open,
                     channel: fidl_common::WlanChannel {
                         primary: 123,
                         cbw: fidl_common::ChannelBandwidth::Cbw80P80,
@@ -366,7 +366,7 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::ChannelBandwidth::Cbw40);
             let got = derive_phy_cbw(
-                &fake_bss!(Open,
+                &fake_bss_description!(Open,
                     channel: fidl_common::WlanChannel {
                         primary: 123,
                         cbw: fidl_common::ChannelBandwidth::Cbw80P80,
@@ -383,7 +383,7 @@ mod tests {
         {
             let want = (fidl_common::Phy::Ht, fidl_common::ChannelBandwidth::Cbw20);
             let got = derive_phy_cbw(
-                &fake_bss!(Open,
+                &fake_bss_description!(Open,
                     channel: fidl_common::WlanChannel {
                         primary: 123,
                         cbw: fidl_common::ChannelBandwidth::Cbw80P80,

@@ -94,7 +94,7 @@ struct InternalSavedNetworkData {
 #[derive(Debug, Clone, PartialEq)]
 struct InternalBss<'a> {
     saved_network_info: InternalSavedNetworkData,
-    scanned_bss_info: &'a types::Bss,
+    scanned_bss: &'a types::Bss,
     multiple_bss_candidates: bool,
     hasher: WlanHasher,
 }
@@ -104,8 +104,8 @@ impl InternalBss<'_> {
     /// and (3) recent failures to connect to this BSS. No single factor is enough to decide which
     /// BSS to connect to.
     fn score(&self) -> i8 {
-        let mut score = self.scanned_bss_info.rssi;
-        let channel = Channel::from(self.scanned_bss_info.channel);
+        let mut score = self.scanned_bss.rssi;
+        let channel = Channel::from(self.scanned_bss.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
         if channel.is_5ghz() && score >= RSSI_CUTOFF_5G_PREFERENCE {
@@ -118,7 +118,7 @@ impl InternalBss<'_> {
             .saved_network_info
             .recent_failures
             .iter()
-            .filter(|failure| failure.bssid == self.scanned_bss_info.bssid)
+            .filter(|failure| failure.bssid == self.scanned_bss.bssid)
             .map(|failure| {
                 if failure.reason == FailureReason::CredentialRejected {
                     SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED
@@ -140,7 +140,7 @@ impl InternalBss<'_> {
         self.saved_network_info
             .recent_failures
             .iter()
-            .filter(|failure| failure.bssid == self.scanned_bss_info.bssid)
+            .filter(|failure| failure.bssid == self.scanned_bss.bssid)
             .count()
             .try_into()
             .unwrap_or_else(|e| {
@@ -153,7 +153,7 @@ impl InternalBss<'_> {
         self.saved_network_info
             .recent_disconnects
             .iter()
-            .filter(|d| d.bssid == self.scanned_bss_info.bssid && d.uptime < SHORT_CONNECT_DURATION)
+            .filter(|d| d.bssid == self.scanned_bss.bssid && d.uptime < SHORT_CONNECT_DURATION)
             .collect::<Vec<_>>()
             .len()
     }
@@ -170,19 +170,19 @@ impl InternalBss<'_> {
     }
 
     fn to_string_without_pii(&self) -> String {
-        let channel = Channel::from(self.scanned_bss_info.channel);
-        let rssi = self.scanned_bss_info.rssi;
+        let channel = Channel::from(self.scanned_bss.channel);
+        let rssi = self.scanned_bss.rssi;
         let recent_failure_count = self.recent_failure_count();
         let recent_short_connection_count = self.recent_short_connections();
         format!(
             "{}({:4}), {}, {:>4}dBm, channel {:8}, score {:4}{}{}{}{}",
             self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             self.saved_security_type_to_string(),
-            self.hasher.hash_mac_addr(&self.scanned_bss_info.bssid),
+            self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
             rssi,
             channel,
             self.score(),
-            if !self.scanned_bss_info.compatible { ", NOT compatible" } else { "" },
+            if !self.scanned_bss.compatible { ", NOT compatible" } else { "" },
             if recent_failure_count > 0 {
                 format!(", {} recent failures", recent_failure_count)
             } else {
@@ -201,12 +201,12 @@ impl<'a> WriteInspect for InternalBss<'a> {
     fn write_inspect(&self, writer: &InspectNode, key: &str) {
         inspect_insert!(writer, var key: {
             ssid_hash: self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
-            bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss_info.bssid),
-            rssi: self.scanned_bss_info.rssi,
+            bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
+            rssi: self.scanned_bss.rssi,
             score: self.score(),
             security_type_saved: self.saved_security_type_to_string(),
-            channel: InspectWlanChan(&self.scanned_bss_info.channel),
-            compatible: self.scanned_bss_info.compatible,
+            channel: InspectWlanChan(&self.scanned_bss.channel),
+            compatible: self.scanned_bss.compatible,
             recent_failure_count: self.recent_failure_count(),
             saved_network_has_ever_connected: self.saved_network_info.has_ever_connected,
         });
@@ -428,7 +428,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
             let multiple_bss_candidates = scan_result.entries.len() > 1;
             for bss in &scan_result.entries {
                 merged_networks.push(InternalBss {
-                    scanned_bss_info: bss,
+                    scanned_bss: bss,
                     multiple_bss_candidates,
                     saved_network_info: InternalSavedNetworkData {
                         network_id: types::NetworkIdentifier {
@@ -498,7 +498,7 @@ fn select_best_connection_candidate<'a>(
         })
         .filter(|bss| {
             // Filter out incompatible BSSs
-            if !bss.scanned_bss_info.compatible {
+            if !bss.scanned_bss.compatible {
                 trace!("BSS is incompatible, filtering: {:?}", bss);
                 return false;
             };
@@ -521,12 +521,12 @@ fn select_best_connection_candidate<'a>(
             types::ConnectionCandidate {
                 network: bss.saved_network_info.network_id.clone(),
                 credential: bss.saved_network_info.credential.clone(),
-                observed_in_passive_scan: Some(bss.scanned_bss_info.observed_in_passive_scan),
-                bss: Some(bss.scanned_bss_info.bss_desc.clone()),
+                observed_in_passive_scan: Some(bss.scanned_bss.observed_in_passive_scan),
+                bss_description: Some(bss.scanned_bss.bss_description.clone()),
                 multiple_bss_candidates: Some(bss.multiple_bss_candidates),
             },
-            bss.scanned_bss_info.channel,
-            bss.scanned_bss_info.bssid,
+            bss.scanned_bss.channel,
+            bss.scanned_bss.bssid,
         )
     })
 }
@@ -579,13 +579,13 @@ async fn augment_bss_with_active_scan(
         })?;
 
         // Find the bss in the results
-        let bss_desc = directed_scan_result
+        let bss_description = directed_scan_result
             .drain(..)
             .find_map(|mut network| {
                 if network.ssid == selected_network.network.ssid {
                     for bss in network.entries.drain(..) {
                         if bss.bssid == bssid {
-                            return Some(bss.bss_desc);
+                            return Some(bss.bss_description);
                         }
                     }
                 }
@@ -595,12 +595,12 @@ async fn augment_bss_with_active_scan(
                 info!("BSS info will lack active scan augmentation, proceeding anyway.");
             })?;
 
-        Ok(bss_desc)
+        Ok(bss_description)
     }
 
     match get_enhanced_bss_description(&selected_network, channel, bssid, iface_manager).await {
         Ok(new_bss_desc) => {
-            types::ConnectionCandidate { bss: Some(new_bss_desc), ..selected_network }
+            types::ConnectionCandidate { bss_description: Some(new_bss_desc), ..selected_network }
         }
         Err(()) => selected_network,
     }
@@ -632,7 +632,7 @@ fn record_metrics_on_scan(
         cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
 
         // Check if the network was found via active scan.
-        if bsss.iter().any(|bss| bss.scanned_bss_info.observed_in_passive_scan == false) {
+        if bsss.iter().any(|bss| bss.scanned_bss.observed_in_passive_scan == false) {
             num_actively_scanned_networks += 1;
         };
     }
@@ -673,8 +673,9 @@ mod tests {
             access_point::state_machine as ap_fsm,
             config_management::SavedNetworksManager,
             util::testing::{
-                create_mock_cobalt_sender_and_receiver, generate_channel, generate_random_bss_desc,
-                generate_random_channel, poll_for_and_validate_sme_scan_request_and_send_results,
+                create_mock_cobalt_sender_and_receiver, generate_channel,
+                generate_random_bss_description, generate_random_channel,
+                poll_for_and_validate_sme_scan_request_and_send_results,
                 validate_sme_scan_request_and_send_results,
             },
         },
@@ -964,19 +965,19 @@ mod tests {
         let expected_result = vec![
             InternalBss {
                 saved_network_info: expected_internal_data_1.clone(),
-                scanned_bss_info: &mock_scan_results[0].entries[0],
+                scanned_bss: &mock_scan_results[0].entries[0],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
                 saved_network_info: expected_internal_data_1.clone(),
-                scanned_bss_info: &mock_scan_results[0].entries[1],
+                scanned_bss: &mock_scan_results[0].entries[1],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
                 saved_network_info: expected_internal_data_1,
-                scanned_bss_info: &mock_scan_results[0].entries[2],
+                scanned_bss: &mock_scan_results[0].entries[2],
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
@@ -988,7 +989,7 @@ mod tests {
                     recent_failures: Vec::new(),
                     recent_disconnects: Vec::new(),
                 },
-                scanned_bss_info: &mock_scan_results[1].entries[0],
+                scanned_bss: &mock_scan_results[1].entries[0],
                 multiple_bss_candidates: false,
                 hasher: hasher.clone(),
             },
@@ -1038,7 +1039,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss,
+            scanned_bss: &bss,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1048,27 +1049,26 @@ mod tests {
 
     #[fuchsia::test]
     fn test_score_bss_prefers_less_short_connections() {
-        let bss_info_worse =
+        let bss_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
-        let bss_info_better =
+        let bss_better =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
         let (_test_id, mut internal_data) = generate_random_saved_network();
         let short_uptime = zx::Duration::from_seconds(30);
         let okay_uptime = zx::Duration::from_minutes(100);
         // Record a short uptime for the worse network and a long enough uptime for the better one.
-        let mut disconnects =
-            vec![disconnect_with_bssid_uptime(bss_info_worse.bssid, short_uptime)];
-        disconnects.push(disconnect_with_bssid_uptime(bss_info_better.bssid, okay_uptime));
+        let mut disconnects = vec![disconnect_with_bssid_uptime(bss_worse.bssid, short_uptime)];
+        disconnects.push(disconnect_with_bssid_uptime(bss_better.bssid, okay_uptime));
         internal_data.recent_disconnects = disconnects;
         let bss_worse = InternalBss {
             saved_network_info: internal_data.clone(),
-            scanned_bss_info: &bss_info_worse,
+            scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             saved_network_info: internal_data,
-            scanned_bss_info: &bss_info_better,
+            scanned_bss: &bss_better,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1078,24 +1078,24 @@ mod tests {
 
     #[fuchsia::test]
     fn test_score_bss_prefers_less_failures() {
-        let bss_info_worse =
+        let bss_worse =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
-        let bss_info_better =
+        let bss_better =
             types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
         let (_test_id, mut internal_data) = generate_random_saved_network();
         // Add many test failures for the worse BSS and one for the better BSS
-        let mut failures = vec![connect_failure_with_bssid(bss_info_worse.bssid); 12];
-        failures.push(connect_failure_with_bssid(bss_info_better.bssid));
+        let mut failures = vec![connect_failure_with_bssid(bss_worse.bssid); 12];
+        failures.push(connect_failure_with_bssid(bss_better.bssid));
         internal_data.recent_failures = failures;
         let bss_worse = InternalBss {
             saved_network_info: internal_data.clone(),
-            scanned_bss_info: &bss_info_worse,
+            scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             saved_network_info: internal_data,
-            scanned_bss_info: &bss_info_better,
+            scanned_bss: &bss_better,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1107,23 +1107,23 @@ mod tests {
     fn test_score_bss_prefers_stronger_with_failures() {
         // Test test that if one network has a few network failures but is 5 Ghz instead of 2.4,
         // the 5 GHz network has a higher score.
-        let bss_info_worse =
+        let bss_worse =
             types::Bss { rssi: -35, channel: generate_channel(3), ..generate_random_bss() };
-        let bss_info_better =
+        let bss_better =
             types::Bss { rssi: -35, channel: generate_channel(36), ..generate_random_bss() };
         let (_test_id, mut internal_data) = generate_random_saved_network();
         // Set the failure list to have 0 failures for the worse BSS and 4 failures for the
         // stronger BSS.
-        internal_data.recent_failures = vec![connect_failure_with_bssid(bss_info_better.bssid); 2];
+        internal_data.recent_failures = vec![connect_failure_with_bssid(bss_better.bssid); 2];
         let bss_worse = InternalBss {
             saved_network_info: internal_data.clone(),
-            scanned_bss_info: &bss_info_worse,
+            scanned_bss: &bss_worse,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             saved_network_info: internal_data,
-            scanned_bss_info: &bss_info_better,
+            scanned_bss: &bss_better,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1135,15 +1135,15 @@ mod tests {
         // If two BSS are identical other than one failed to connect with wrong credentials and
         // the other failed with a few connect failurs, the one with wrong credentials has a lower
         // score.
-        let bss_info_worse =
+        let bss_worse =
             types::Bss { rssi: -30, channel: generate_channel(44), ..generate_random_bss() };
-        let bss_info_better =
+        let bss_better =
             types::Bss { rssi: -30, channel: generate_channel(44), ..generate_random_bss() };
         let (_test_id, mut internal_data) = generate_random_saved_network();
         // Add many test failures for the worse BSS and one for the better BSS
-        let mut failures = vec![connect_failure_with_bssid(bss_info_better.bssid); 4];
+        let mut failures = vec![connect_failure_with_bssid(bss_better.bssid); 4];
         failures.push(ConnectFailure {
-            bssid: bss_info_worse.bssid,
+            bssid: bss_worse.bssid,
             time: zx::Time::get_monotonic(),
             reason: FailureReason::CredentialRejected,
         });
@@ -1151,13 +1151,13 @@ mod tests {
 
         let bss_worse = InternalBss {
             saved_network_info: internal_data.clone(),
-            scanned_bss_info: &bss_info_worse,
+            scanned_bss: &bss_worse,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             saved_network_info: internal_data,
-            scanned_bss_info: &bss_info_better,
+            scanned_bss: &bss_better,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1185,7 +1185,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -14,
             channel: generate_channel(36),
@@ -1199,12 +1199,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info1,
+            scanned_bss: &bss_1,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info2 = types::Bss {
+        let bss_2 = types::Bss {
             compatible: true,
             rssi: -10,
             channel: generate_channel(1),
@@ -1218,12 +1218,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info2,
+            scanned_bss: &bss_2,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info3 = types::Bss {
+        let bss_3 = types::Bss {
             compatible: true,
             rssi: -8,
             channel: generate_channel(1),
@@ -1237,7 +1237,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info3,
+            scanned_bss: &bss_3,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1249,22 +1249,20 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
-                    observed_in_passive_scan: Some(bss_info1.observed_in_passive_scan),
+                    bss_description: Some(bss_1.bss_description.clone()),
+                    observed_in_passive_scan: Some(bss_1.observed_in_passive_scan),
                     multiple_bss_candidates: Some(true),
                 },
-                bss_info1.channel,
-                bss_info1.bssid
+                bss_1.channel,
+                bss_1.bssid
             ))
         );
 
         // make the 5GHz network into a 2.4GHz network
         let mut modified_network = networks[0].clone();
-        let modified_bss_info = types::Bss {
-            channel: generate_channel(6),
-            ..modified_network.scanned_bss_info.clone()
-        };
-        modified_network.scanned_bss_info = &modified_bss_info;
+        let modified_bss =
+            types::Bss { channel: generate_channel(6), ..modified_network.scanned_bss.clone() };
+        modified_network.scanned_bss = &modified_bss;
         networks[0] = modified_network;
 
         // all networks are 2.4GHz, strongest RSSI network returned
@@ -1274,14 +1272,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(networks[2].scanned_bss_info.bss_desc.clone()),
+                    bss_description: Some(networks[2].scanned_bss.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[2].scanned_bss_info.observed_in_passive_scan
+                        networks[2].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                networks[2].scanned_bss_info.channel,
-                networks[2].scanned_bss_info.bssid
+                networks[2].scanned_bss.channel,
+                networks[2].scanned_bss.bssid
             ))
         );
     }
@@ -1306,7 +1304,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -34,
             channel: generate_channel(3),
@@ -1320,12 +1318,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info1,
+            scanned_bss: &bss_1,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info2 = types::Bss {
+        let bss_2 = types::Bss {
             compatible: true,
             rssi: -50,
             channel: generate_channel(3),
@@ -1339,7 +1337,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info2,
+            scanned_bss: &bss_2,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1351,23 +1349,23 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss_description: Some(bss_1.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[0].scanned_bss_info.observed_in_passive_scan
+                        networks[0].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info1.channel,
-                bss_info1.bssid
+                bss_1.channel,
+                bss_1.bssid
             ))
         );
 
         // mark the stronger network as having some failures
         let num_failures = 4;
         networks[0].saved_network_info.recent_failures =
-            vec![connect_failure_with_bssid(bss_info1.bssid); num_failures];
+            vec![connect_failure_with_bssid(bss_1.bssid); num_failures];
         networks[1].saved_network_info.recent_failures =
-            vec![connect_failure_with_bssid(bss_info1.bssid); num_failures];
+            vec![connect_failure_with_bssid(bss_1.bssid); num_failures];
 
         // weaker network (with no failures) returned
         assert_eq!(
@@ -1376,20 +1374,20 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info2.bss_desc.clone()),
+                    bss_description: Some(bss_2.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[1].scanned_bss_info.observed_in_passive_scan
+                        networks[1].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info2.channel,
-                bss_info2.bssid
+                bss_2.channel,
+                bss_2.bssid
             ))
         );
 
         // give them both the same number of failures
         networks[1].saved_network_info.recent_failures =
-            vec![connect_failure_with_bssid(bss_info2.bssid.clone()); num_failures];
+            vec![connect_failure_with_bssid(bss_2.bssid.clone()); num_failures];
 
         // stronger network returned
         assert_eq!(
@@ -1398,14 +1396,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss_description: Some(bss_1.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[0].scanned_bss_info.observed_in_passive_scan
+                        networks[0].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info1.channel,
-                bss_info1.bssid
+                bss_1.channel,
+                bss_1.bssid
             ))
         );
     }
@@ -1430,7 +1428,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -14,
             channel: generate_channel(1),
@@ -1444,12 +1442,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info1,
+            scanned_bss: &bss_1,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info2 = types::Bss {
+        let bss_2 = types::Bss {
             compatible: false,
             rssi: -10,
             channel: generate_channel(1),
@@ -1463,12 +1461,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info2,
+            scanned_bss: &bss_2,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info3 = types::Bss {
+        let bss_3 = types::Bss {
             compatible: true,
             rssi: -12,
             channel: generate_channel(1),
@@ -1482,7 +1480,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info3,
+            scanned_bss: &bss_3,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1494,22 +1492,21 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info3.bss_desc.clone()),
+                    bss_description: Some(bss_3.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[2].scanned_bss_info.observed_in_passive_scan
+                        networks[2].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info3.channel,
-                bss_info3.bssid
+                bss_3.channel,
+                bss_3.bssid
             ))
         );
 
         // mark the stronger network as incompatible
         let mut modified_network = networks[2].clone();
-        let modified_bss_info =
-            types::Bss { compatible: false, ..modified_network.scanned_bss_info.clone() };
-        modified_network.scanned_bss_info = &modified_bss_info;
+        let modified_bss = types::Bss { compatible: false, ..modified_network.scanned_bss.clone() };
+        modified_network.scanned_bss = &modified_bss;
         networks[2] = modified_network;
 
         // other network returned
@@ -1519,14 +1516,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(networks[0].scanned_bss_info.bss_desc.clone()),
+                    bss_description: Some(networks[0].scanned_bss.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[0].scanned_bss_info.observed_in_passive_scan
+                        networks[0].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(true),
                 },
-                networks[0].scanned_bss_info.channel,
-                networks[0].scanned_bss_info.bssid
+                networks[0].scanned_bss.channel,
+                networks[0].scanned_bss.bssid
             ))
         );
     }
@@ -1551,7 +1548,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
+        let bss_1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
@@ -1560,12 +1557,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info1,
+            scanned_bss: &bss_1,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
+        let bss_2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
         networks.push(InternalBss {
             saved_network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
@@ -1574,7 +1571,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info2,
+            scanned_bss: &bss_2,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1586,14 +1583,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info2.bss_desc.clone()),
+                    bss_description: Some(bss_2.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[1].scanned_bss_info.observed_in_passive_scan
+                        networks[1].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info2.channel,
-                bss_info2.bssid
+                bss_2.channel,
+                bss_2.bssid
             ))
         );
 
@@ -1608,14 +1605,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    bss: Some(bss_info1.bss_desc.clone()),
+                    bss_description: Some(bss_1.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[0].scanned_bss_info.observed_in_passive_scan
+                        networks[0].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info1.channel,
-                bss_info1.bssid
+                bss_1.channel,
+                bss_1.bssid
             ))
         );
     }
@@ -1640,7 +1637,7 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -14,
             channel: generate_channel(1),
@@ -1654,12 +1651,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info1,
+            scanned_bss: &bss_1,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info2 = types::Bss {
+        let bss_2 = types::Bss {
             compatible: false,
             rssi: -10,
             channel: generate_channel(1),
@@ -1673,12 +1670,12 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info2,
+            scanned_bss: &bss_2,
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
 
-        let bss_info3 = types::Bss {
+        let bss_3 = types::Bss {
             compatible: true,
             rssi: -12,
             channel: generate_channel(1),
@@ -1692,7 +1689,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &bss_info3,
+            scanned_bss: &bss_3,
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1704,14 +1701,14 @@ mod tests {
                 types::ConnectionCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    bss: Some(bss_info3.bss_desc.clone()),
+                    bss_description: Some(bss_3.bss_description.clone()),
                     observed_in_passive_scan: Some(
-                        networks[2].scanned_bss_info.observed_in_passive_scan
+                        networks[2].scanned_bss.observed_in_passive_scan
                     ),
                     multiple_bss_candidates: Some(false),
                 },
-                bss_info3.channel,
-                bss_info3.bssid
+                bss_3.channel,
+                bss_3.bssid
             ))
         );
 
@@ -1732,16 +1729,16 @@ mod tests {
                     },
                     "selected": {
                         ssid_hash: networks[2].hasher.hash_ssid(&networks[2].saved_network_info.network_id.ssid),
-                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss_info.bssid),
-                        rssi: i64::from(networks[2].scanned_bss_info.rssi),
+                        bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid),
+                        rssi: i64::from(networks[2].scanned_bss.rssi),
                         score: i64::from(networks[2].score()),
                         security_type_saved: networks[2].saved_security_type_to_string(),
                         channel: {
                             cbw: inspect::testing::AnyProperty,
-                            primary: u64::from(networks[2].scanned_bss_info.channel.primary),
-                            secondary80: u64::from(networks[2].scanned_bss_info.channel.secondary80),
+                            primary: u64::from(networks[2].scanned_bss.channel.primary),
+                            secondary80: u64::from(networks[2].scanned_bss.channel.secondary80),
                         },
-                        compatible: networks[2].scanned_bss_info.compatible,
+                        compatible: networks[2].scanned_bss.compatible,
                         recent_failure_count: networks[2].recent_failure_count(),
                         saved_network_has_ever_connected: networks[2].saved_network_info.has_ever_connected,
                     },
@@ -1894,7 +1891,7 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -14,
             channel: generate_channel(36),
@@ -1903,15 +1900,15 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss: Some(bss_info1.bss_desc.clone()),
+            bss_description: Some(bss_1.bss_description.clone()),
             observed_in_passive_scan: Some(false), // was actively scanned
             multiple_bss_candidates: Some(false),
         };
 
         let fut = augment_bss_with_active_scan(
             connect_req.clone(),
-            bss_info1.channel,
-            bss_info1.bssid,
+            bss_1.channel,
+            bss_1.bssid,
             test_values.iface_manager.clone(),
         );
         pin_mut!(fut);
@@ -1932,7 +1929,7 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bss_info1 = types::Bss {
+        let bss_1 = types::Bss {
             compatible: true,
             rssi: -14,
             channel: generate_channel(36),
@@ -1941,15 +1938,15 @@ mod tests {
         let connect_req = types::ConnectionCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            bss: Some(bss_info1.bss_desc.clone()),
+            bss_description: Some(bss_1.bss_description.clone()),
             observed_in_passive_scan: Some(true), // was passively scanned
             multiple_bss_candidates: Some(true),
         };
 
         let fut = augment_bss_with_active_scan(
             connect_req.clone(),
-            bss_info1.channel,
-            bss_info1.bssid,
+            bss_1.channel,
+            bss_1.bssid,
             test_values.iface_manager.clone(),
         );
         pin_mut!(fut);
@@ -1962,7 +1959,7 @@ mod tests {
             ssids: vec![test_id_1.ssid.clone()],
             channels: vec![36],
         });
-        let new_bss_desc = generate_random_bss_desc();
+        let new_bss_desc = generate_random_bss_description();
         let mock_scan_results = vec![
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
@@ -1976,10 +1973,10 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: generate_random_bss_desc(),
+                bss_description: generate_random_bss_description(),
             },
             fidl_sme::BssInfo {
-                bssid: bss_info1.bssid.clone(),
+                bssid: bss_1.bssid.clone(),
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 0,
                 snr_db: 0,
@@ -1990,7 +1987,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: new_bss_desc.clone(),
+                bss_description: new_bss_desc.clone(),
             },
         ];
         validate_sme_scan_request_and_send_results(
@@ -2000,11 +1997,11 @@ mod tests {
             mock_scan_results,
         );
 
-        // The connect_req comes out the other side with the new bss_desc
+        // The connect_req comes out the other side with the new bss_description
         assert_eq!(
             exec.run_singlethreaded(fut),
             types::ConnectionCandidate {
-                bss: Some(new_bss_desc),
+                bss_description: Some(new_bss_desc),
                 // observed_in_passive_scan should still be true, since the network was found in a
                 // passive scan prior to the directed active scan augmentation.
                 observed_in_passive_scan: Some(true),
@@ -2029,15 +2026,15 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bss_desc1 = generate_random_bss_desc();
-        let bss_desc1_active = generate_random_bss_desc();
+        let bss_desc1 = generate_random_bss_description();
+        let bss_desc1_active = generate_random_bss_description();
         let test_id_2 = types::NetworkIdentifier {
             ssid: "bar".as_bytes().to_vec(),
             type_: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
-        let bss_desc2 = generate_random_bss_desc();
-        let bss_desc2_active = generate_random_bss_desc();
+        let bss_desc2 = generate_random_bss_description();
+        let bss_desc2_active = generate_random_bss_description();
 
         // insert some new saved networks
         assert!(exec
@@ -2095,7 +2092,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: bss_desc1.clone(),
+                bss_description: bss_desc1.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -2109,7 +2106,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa1,
                 compatible: true,
-                bss_desc: bss_desc2.clone(),
+                bss_description: bss_desc2.clone(),
             },
         ];
         validate_sme_scan_request_and_send_results(
@@ -2139,7 +2136,7 @@ mod tests {
             },
             protection: fidl_sme::Protection::Wpa3Enterprise,
             compatible: true,
-            bss_desc: bss_desc1_active.clone(),
+            bss_description: bss_desc1_active.clone(),
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2156,7 +2153,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss: Some(bss_desc1_active.clone()),
+                bss_description: Some(bss_desc1_active.clone()),
                 observed_in_passive_scan: Some(true),
                 multiple_bss_candidates: Some(false)
             })
@@ -2207,7 +2204,7 @@ mod tests {
             },
             protection: fidl_sme::Protection::Wpa1,
             compatible: true,
-            bss_desc: bss_desc2_active.clone(),
+            bss_description: bss_desc2_active.clone(),
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2223,7 +2220,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
-                bss: Some(bss_desc2_active.clone()),
+                bss_description: Some(bss_desc2_active.clone()),
                 observed_in_passive_scan: Some(true),
                 multiple_bss_candidates: Some(false)
             })
@@ -2363,7 +2360,7 @@ mod tests {
                     // The network ID should match network config for recording connect results.
                     network: wpa_network_id.clone(),
                     credential,
-                    bss: Some(wpa2_scan_result.entries[0].bss_desc.clone()),
+                    bss_description: Some(wpa2_scan_result.entries[0].bss_description.clone()),
                     observed_in_passive_scan: Some(
                         wpa2_scan_result.entries[0].observed_in_passive_scan
                     ),
@@ -2393,7 +2390,7 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bss_desc_1 = generate_random_bss_desc();
+        let bss_desc_1 = generate_random_bss_description();
 
         // insert saved networks
         assert!(exec
@@ -2436,7 +2433,7 @@ mod tests {
                 // This network is WPA3, but should still match against the desired WPA2 network
                 protection: fidl_sme::Protection::Wpa3Personal,
                 compatible: true,
-                bss_desc: bss_desc_1.clone(),
+                bss_description: bss_desc_1.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -2450,7 +2447,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa1,
                 compatible: true,
-                bss_desc: generate_random_bss_desc(),
+                bss_description: generate_random_bss_description(),
             },
         ];
         validate_sme_scan_request_and_send_results(
@@ -2467,7 +2464,7 @@ mod tests {
             Some(types::ConnectionCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                bss: Some(bss_desc_1),
+                bss_description: Some(bss_desc_1),
                 // This code path can't know if the network would have been observed in a passive
                 // scan, since it never performs a passive scan.
                 observed_in_passive_scan: None,
@@ -2551,7 +2548,7 @@ mod tests {
             snr_db: rng.gen_range(-20, 50),
             observed_in_passive_scan: rng.gen::<bool>(),
             compatible: rng.gen::<bool>(),
-            bss_desc: generate_random_bss_desc(),
+            bss_description: generate_random_bss_description(),
         }
     }
 
@@ -2618,7 +2615,7 @@ mod tests {
         let test_bss_1 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss_info: &test_bss_1,
+            scanned_bss: &test_bss_1,
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2626,7 +2623,7 @@ mod tests {
         let test_bss_2 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss_info: &test_bss_2,
+            scanned_bss: &test_bss_2,
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2635,7 +2632,7 @@ mod tests {
         let test_bss_3 = types::Bss { observed_in_passive_scan: false, ..generate_random_bss() };
         mock_scan_results.push(InternalBss {
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss_info: &test_bss_3,
+            scanned_bss: &test_bss_3,
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2649,7 +2646,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 recent_disconnects: Vec::new(),
             },
-            scanned_bss_info: &test_bss_4,
+            scanned_bss: &test_bss_4,
             multiple_bss_candidates: false,
             hasher: hasher.clone(),
         });

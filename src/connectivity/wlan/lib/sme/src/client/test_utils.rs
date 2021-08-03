@@ -18,7 +18,7 @@ use {
     wlan_common::{
         assert_variant,
         bss::Protection,
-        channel, fake_fidl_bss,
+        channel, fake_fidl_bss_description,
         ie::{
             fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
             *,
@@ -41,7 +41,7 @@ pub fn fake_bss_info() -> BssInfo {
         vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
         probe_resp_wsc: None,
         wmm_param: None,
-        bss_desc: fake_fidl_bss!(Wpa2, ssid: [55, 11, 22, 3, 9, 70].to_vec()),
+        bss_description: fake_fidl_bss_description!(Wpa2, ssid: [55, 11, 22, 3, 9, 70].to_vec()),
     }
 }
 

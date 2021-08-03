@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_construct_bss_description() {
         let ies = beacon_frame_ies();
-        let bss_desc = construct_bss_description(
+        let bss_description = construct_bss_description(
             BSSID,
             TIMESTAMP,
             TimeUnit(BEACON_INTERVAL),
@@ -187,7 +187,7 @@ mod tests {
         .expect("expect convert_beacon to succeed");
 
         assert_eq!(
-            bss_desc,
+            bss_description,
             fidl_internal::BssDescription {
                 bssid: BSSID.0,
                 bss_type: fidl_internal::BssType::Infrastructure,

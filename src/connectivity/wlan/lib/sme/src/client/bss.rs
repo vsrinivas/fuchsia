@@ -45,7 +45,7 @@ impl ClientConfig {
             probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
             compatible: self.is_bss_compatible(bss, device_info),
-            bss_desc: bss.clone().to_fidl(),
+            bss_description: bss.clone().to_fidl(),
         }
     }
 
@@ -119,7 +119,7 @@ pub struct BssInfo {
     pub vht_cap: Option<fidl_internal::VhtCapabilities>,
     pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
     pub wmm_param: Option<ie::WmmParam>,
-    pub bss_desc: fidl_internal::BssDescription,
+    pub bss_description: fidl_internal::BssDescription,
 }
 
 #[cfg(test)]
@@ -131,7 +131,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
             channel::Cbw,
-            fake_bss,
+            fake_bss_description,
             ie::{
                 self,
                 fake_ies::{fake_ht_cap_bytes, fake_vht_cap_bytes},
@@ -145,30 +145,30 @@ mod tests {
     fn verify_protection_compatibility() {
         // Compatible:
         let cfg = ClientConfig::default();
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Open)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa1Wpa2TkipOnly)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2TkipOnly)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa2Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Open)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2Wpa3)));
 
         // Not compatible:
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa1)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa3)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Wpa3Transition)));
-        assert!(!cfg.is_bss_protection_compatible(&fake_bss!(Eap)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Eap)));
 
         // WEP support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wep)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wep)));
 
         // WPA1 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa1)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
 
         // WPA3 support is configurable to be on or off:
         let cfg = ClientConfig::from_config(Config::default(), true);
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa3)));
-        assert!(cfg.is_bss_protection_compatible(&fake_bss!(Wpa3Transition)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
     }
 
     #[test]
@@ -176,17 +176,18 @@ mod tests {
         // Compatible:
         let cfg = ClientConfig::default();
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        assert!(cfg.are_bss_channel_and_data_rates_compatible(&fake_bss!(Open), &device_info));
+        assert!(cfg
+            .are_bss_channel_and_data_rates_compatible(&fake_bss_description!(Open), &device_info));
 
         // Not compatible:
-        let bss = fake_bss!(Open, rates: vec![140, 255]);
+        let bss = fake_bss_description!(Open, rates: vec![140, 255]);
         assert!(!cfg.are_bss_channel_and_data_rates_compatible(&bss, &device_info));
     }
 
     #[test]
     fn convert_bss() {
         let cfg = ClientConfig::default();
-        let bss_desc = fake_bss!(Wpa2,
+        let bss_description = fake_bss_description!(Wpa2,
             ssid: vec![],
             bssid: [0u8; 6],
             rssi_dbm: -30,
@@ -201,7 +202,7 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
+        let bss_info = cfg.convert_bss_description(&bss_description, None, &device_info);
 
         assert_eq!(
             bss_info,
@@ -218,13 +219,13 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: bss_desc.to_fidl(),
+                bss_description: bss_description.to_fidl(),
             }
         );
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
-        let bss_desc = fake_bss!(Wpa2,
+        let bss_description = fake_bss_description!(Wpa2,
             ssid: vec![],
             bssid: [0u8; 6],
             rssi_dbm: -30,
@@ -238,7 +239,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, Some(wmm_param), &device_info);
+        let bss_info = cfg.convert_bss_description(&bss_description, Some(wmm_param), &device_info);
 
         assert_eq!(
             bss_info,
@@ -255,11 +256,11 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: Some(wmm_param),
-                bss_desc: bss_desc.to_fidl(),
+                bss_description: bss_description.to_fidl(),
             }
         );
 
-        let bss_desc = fake_bss!(Wep,
+        let bss_description = fake_bss_description!(Wep,
             ssid: vec![],
             bssid: [0u8; 6],
             rssi_dbm: -30,
@@ -273,7 +274,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
+        let bss_info = cfg.convert_bss_description(&bss_description, None, &device_info);
         assert_eq!(
             bss_info,
             BssInfo {
@@ -289,12 +290,12 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: bss_desc.to_fidl(),
+                bss_description: bss_description.to_fidl(),
             },
         );
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        let bss_desc = fake_bss!(Wep,
+        let bss_description = fake_bss_description!(Wep,
             ssid: vec![],
             bssid: [0u8; 6],
             rssi_dbm: -30,
@@ -308,7 +309,7 @@ mod tests {
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
                 .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
         );
-        let bss_info = cfg.convert_bss_description(&bss_desc, None, &device_info);
+        let bss_info = cfg.convert_bss_description(&bss_description, None, &device_info);
         assert_eq!(
             bss_info,
             BssInfo {
@@ -324,7 +325,7 @@ mod tests {
                 vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-                bss_desc: bss_desc.to_fidl(),
+                bss_description: bss_description.to_fidl(),
             },
         );
     }

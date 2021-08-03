@@ -1147,18 +1147,18 @@ impl ClientState {
                     ClientSmeStatus::Connecting(associated.bss.ssid().to_vec())
                 }
                 LinkState::LinkUp { .. } => {
-                    let bss_desc = &associated.bss;
+                    let bss_description = &associated.bss;
                     ClientSmeStatus::Connected(ServingApInfo {
-                        bssid: bss_desc.bssid.clone(),
-                        ssid: bss_desc.ssid().to_vec(),
+                        bssid: bss_description.bssid.clone(),
+                        ssid: bss_description.ssid().to_vec(),
                         rssi_dbm: associated.last_rssi,
                         snr_db: associated.last_snr,
                         signal_report_time: associated.last_signal_report_time,
-                        channel: Channel::from(bss_desc.channel),
-                        protection: bss_desc.protection(),
-                        ht_cap: bss_desc.raw_ht_cap(),
-                        vht_cap: bss_desc.raw_vht_cap(),
-                        probe_resp_wsc: bss_desc.probe_resp_wsc(),
+                        channel: Channel::from(bss_description.channel),
+                        protection: bss_description.protection(),
+                        ht_cap: bss_description.raw_ht_cap(),
+                        vht_cap: bss_description.raw_vht_cap(),
+                        probe_resp_wsc: bss_description.probe_resp_wsc(),
                         wmm_param: associated.wmm_param,
                     })
                 }
@@ -1413,7 +1413,7 @@ mod tests {
     use wlan_common::{
         assert_variant,
         bss::Protection as BssProtection,
-        fake_bss,
+        fake_bss_description,
         hasher::WlanHasher,
         ie::{
             fake_ies::{
@@ -2183,7 +2183,9 @@ mod tests {
     #[test]
     fn increment_att_id_on_disassociate_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        ));
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -2195,14 +2197,19 @@ mod tests {
         };
 
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
+        assert_associating(
+            state,
+            &fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        );
         assert_eq!(h.context.att_id, 1);
     }
 
     #[test]
     fn log_disconnect_ctx_on_disassoc_from_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        ));
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -2213,7 +2220,10 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
+        assert_associating(
+            state,
+            &fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        );
 
         assert_data_tree!(h._inspector, root: contains {
             state_events: {
@@ -2242,7 +2252,7 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(state, &fake_bss!(Wpa2, ssid: b"wpa2".to_vec()));
+        assert_associating(state, &fake_bss_description!(Wpa2, ssid: b"wpa2".to_vec()));
 
         assert_data_tree!(h._inspector, root: contains {
             state_events: {
@@ -2304,7 +2314,9 @@ mod tests {
     #[test]
     fn disconnect_reported_on_deauth_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        ));
 
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -2332,7 +2344,9 @@ mod tests {
     #[test]
     fn disconnect_reported_on_disassoc_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        ));
 
         let deauth_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
@@ -2360,7 +2374,9 @@ mod tests {
     #[test]
     fn disconnect_reported_on_manual_disconnect() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
+        ));
 
         let _state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
@@ -2378,7 +2394,7 @@ mod tests {
     #[test]
     fn disconnect_reported_on_manual_disconnect_with_wsc() {
         let mut h = TestHelper::new();
-        let bss = fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
+        let bss = fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
             get_vendor_ie_bytes_for_wsc_ie(&fake_probe_resp_wsc_ie_bytes()).expect("getting vendor ie bytes")
         ));
         println!("{:02x?}", bss);
@@ -2401,7 +2417,7 @@ mod tests {
     #[test]
     fn bss_channel_switch_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss!(Open,
+        let state = link_up_state(Box::new(fake_bss_description!(Open,
                                                      ssid: b"bar".to_vec(),
                                                      bssid: [8; 6],
                                                      channel: fidl_common::WlanChannel {
@@ -2426,7 +2442,7 @@ mod tests {
     #[test]
     fn join_failure_capabilities_incompatible_softmac() {
         let (mut command, _receiver) = connect_command_one();
-        command.bss = Box::new(fake_bss!(Open,
+        command.bss = Box::new(fake_bss_description!(Open,
             ssid: b"foo".to_vec(),
             bssid: [7, 7, 7, 7, 7, 7],
             // Set a fake basic rate that our mocked client can't support, causing
@@ -2445,7 +2461,7 @@ mod tests {
     #[test]
     fn join_failure_capabilities_incompatible_fullmac() {
         let (mut command, _receiver) = connect_command_one();
-        command.bss = Box::new(fake_bss!(Open,
+        command.bss = Box::new(fake_bss_description!(Open,
             ssid: b"foo".to_vec(),
             bssid: [7, 7, 7, 7, 7, 7],
             // Set a fake basic rate that our mocked client can't support, causing
@@ -2555,8 +2571,9 @@ mod tests {
         let mut h = TestHelper::new();
         let time_a = now();
 
-        let state =
-            link_up_state(Box::new(fake_bss!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6])));
+        let state = link_up_state(Box::new(
+            fake_bss_description!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6]),
+        ));
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
         let serving_ap_info = assert_variant!(state.status(),
                                                      ClientSmeStatus::Connected(serving_ap_info) =>
@@ -2737,7 +2754,7 @@ mod tests {
         let mut h = TestHelper::new();
         let wmm_param = None;
         let state = link_up_state_with_wmm(
-            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
             wmm_param,
         );
 
@@ -2758,7 +2775,7 @@ mod tests {
             *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
         existing_wmm_param.wmm_info.ap_wmm_info().set_uapsd(false);
         let state = link_up_state_with_wmm(
-            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
             Some(existing_wmm_param),
         );
 
@@ -2778,7 +2795,7 @@ mod tests {
         let existing_wmm_param =
             *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
         let state = link_up_state_with_wmm(
-            Box::new(fake_bss!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
+            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
             Some(existing_wmm_param),
         );
 
@@ -3026,7 +3043,9 @@ mod tests {
     fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [7, 7, 7, 7, 7, 7])),
+            bss: Box::new(
+                fake_bss_description!(Open, ssid: b"foo".to_vec(), bssid: [7, 7, 7, 7, 7, 7]),
+            ),
             responder: Some(responder),
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
@@ -3037,7 +3056,9 @@ mod tests {
     fn connect_command_two() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8, 8, 8, 8, 8, 8])),
+            bss: Box::new(
+                fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8, 8, 8, 8, 8, 8]),
+            ),
             responder: Some(responder),
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
@@ -3048,7 +3069,7 @@ mod tests {
     fn connect_command_wep() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss!(Wep, ssid: b"wep".to_vec())),
+            bss: Box::new(fake_bss_description!(Wep, ssid: b"wep".to_vec())),
             responder: Some(responder),
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
             radio_cfg: RadioConfig::default(),
@@ -3062,7 +3083,7 @@ mod tests {
         let (responder, receiver) = Responder::new();
         let wpa_ie = make_wpa1_ie();
         let cmd = ConnectCommand {
-            bss: Box::new(fake_bss!(Wpa1, ssid: b"wpa1".to_vec())),
+            bss: Box::new(fake_bss_description!(Wpa1, ssid: b"wpa1".to_vec())),
             responder: Some(responder),
             protection: Protection::LegacyWpa(Rsna {
                 negotiated_protection: NegotiatedProtection::from_legacy_wpa(&wpa_ie)
@@ -3078,7 +3099,7 @@ mod tests {
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
-        let bss = fake_bss!(Wpa2, ssid: b"wpa2".to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: b"wpa2".to_vec());
         let rsne = Rsne::wpa2_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
@@ -3097,7 +3118,7 @@ mod tests {
         supplicant: MockSupplicant,
     ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
         let (responder, receiver) = Responder::new();
-        let bss = fake_bss!(Wpa3, ssid: b"wpa3".to_vec());
+        let bss = fake_bss_description!(Wpa3, ssid: b"wpa3".to_vec());
         let rsne = Rsne::wpa3_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
@@ -3224,7 +3245,7 @@ mod tests {
     }
 
     fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
-        let bss = fake_bss!(Wpa2, bssid: bssid, ssid: b"foo".to_vec());
+        let bss = fake_bss_description!(Wpa2, bssid: bssid, ssid: b"foo".to_vec());
         let rsne = Rsne::wpa2_rsne();
         let rsna = Rsna {
             negotiated_protection: NegotiatedProtection::from_rsne(&rsne)

@@ -100,7 +100,7 @@ pub struct Bss {
     /// Compatible with this device's network stack.
     pub compatible: bool,
     /// The BSS description with information that SME needs for connecting.
-    pub bss_desc: fidl_internal::BssDescription,
+    pub bss_description: fidl_internal::BssDescription,
 }
 
 /// Data for connecting to a specific network and keeping track of what is connected to.
@@ -112,7 +112,7 @@ pub struct ConnectionCandidate {
     //                        this information is related and derived from latent scans. In
     //                        `ConnectionCandidate`, replace these fields with a single optional
     //                        field of the new `struct`.
-    pub bss: Option<fidl_internal::BssDescription>,
+    pub bss_description: Option<fidl_internal::BssDescription>,
     pub observed_in_passive_scan: Option<bool>,
     pub multiple_bss_candidates: Option<bool>,
 }

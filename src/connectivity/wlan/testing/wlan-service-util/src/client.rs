@@ -55,7 +55,7 @@ pub async fn connect(
     let credential = credential_from_bytes(target_pwd)?;
     let mut req = fidl_sme::ConnectRequest {
         ssid: target_ssid,
-        bss_desc: target_bss_desc,
+        bss_description: target_bss_desc,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
@@ -256,10 +256,10 @@ mod tests {
         pin_utils::pin_mut,
         rand::Rng as _,
         std::convert::TryInto as _,
-        wlan_common::{assert_variant, fake_fidl_bss},
+        wlan_common::{assert_variant, fake_fidl_bss_description},
     };
 
-    fn generate_random_bss_desc() -> fidl_fuchsia_wlan_internal::BssDescription {
+    fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
         let mut rng = rand::thread_rng();
         fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
@@ -791,7 +791,7 @@ mod tests {
 
         let target_ssid = ssid.as_bytes();
         let target_password = password.as_bytes();
-        let target_bss_desc = generate_random_bss_desc();
+        let target_bss_desc = generate_random_bss_description();
 
         let fut =
             connect(&client_sme, target_ssid.to_vec(), target_password.to_vec(), target_bss_desc);
@@ -841,7 +841,7 @@ mod tests {
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "password".as_bytes();
-        let target_bss_desc = generate_random_bss_desc();
+        let target_bss_desc = generate_random_bss_description();
 
         let fut = connect(
             &client_sme,
@@ -870,7 +870,7 @@ mod tests {
 
         let target_ssid = "TestAp".as_bytes();
         let target_password = "".as_bytes();
-        let target_bss_desc = generate_random_bss_desc();
+        let target_bss_desc = generate_random_bss_description();
 
         let fut = connect(
             &client_sme,
@@ -902,7 +902,7 @@ mod tests {
             Poll::Ready(ClientSmeRequest::Connect { req, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
                 assert_eq_credentials(&req.credential, &expected_credential);
-                assert_eq!(req.bss_desc, expected_bss_desc);
+                assert_eq!(req.bss_description, expected_bss_desc);
             }
             _ => panic!("expected a Connect request"),
         }
@@ -1135,7 +1135,7 @@ mod tests {
     fn clone_bss_info(bss_info: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
         fidl_sme::BssInfo {
             ssid: bss_info.ssid.clone(),
-            bss_desc: bss_info.bss_desc.clone(),
+            bss_description: bss_info.bss_description.clone(),
             ..*bss_info
         }
     }
@@ -1238,7 +1238,7 @@ mod tests {
             channel,
             protection,
             compatible,
-            bss_desc: fake_fidl_bss!(
+            bss_description: fake_fidl_bss_description!(
                 protection => protection,
                 bssid: bssid,
                 ssid: ssid,

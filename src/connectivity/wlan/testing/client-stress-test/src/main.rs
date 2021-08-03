@@ -114,21 +114,23 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 if opt.connect_test_enabled {
                     let start = Instant::now();
                     // NOTE: This scan is independent from the scans gated by `scan_test_enabled`
-                    //       above. It is used solely to get the BSS information needed to connect.
+                    //       above. It is used solely to get the information needed to connect.
                     let networks = wlan_service_util::client::passive_scan(&wlaniface.sme_proxy)
                         .await
                         .context("scan failed")?;
-                    let bss_desc = networks
+                    let bss_description = networks
                         .into_iter()
-                        .filter(|bss_info| bss_info.ssid.as_slice() == opt.target_ssid.as_bytes())
-                        .map(|bss_info| bss_info.bss_desc)
+                        .filter(|peer_sta_info| {
+                            peer_sta_info.ssid.as_slice() == opt.target_ssid.as_bytes()
+                        })
+                        .map(|peer_sta_info| peer_sta_info.bss_description)
                         .next()
-                        .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
+                        .ok_or_else(|| format_err!("no station responding for SSID"))?;
                     let result = wlan_service_util::client::connect(
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
                         opt.target_pwd.as_bytes().to_vec(),
-                        bss_desc,
+                        bss_description,
                     )
                     .await;
                     match result {

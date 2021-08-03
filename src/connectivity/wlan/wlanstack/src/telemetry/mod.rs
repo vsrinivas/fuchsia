@@ -840,7 +840,7 @@ mod tests {
             assert_variant,
             bss::Protection as BssProtection,
             channel::{Cbw, Channel},
-            fake_bss,
+            fake_bss_description,
             ie::fake_ies::fake_probe_resp_wsc_ie,
         },
         wlan_sme::client::{
@@ -1753,13 +1753,13 @@ mod tests {
             num_rsna_key_frame_exchange_timeout: 0,
             result: ConnectResult::Success,
             candidate_network: Some(CandidateNetwork {
-                bss: fake_bss!(Open),
+                bss: fake_bss_description!(Open),
                 multiple_bss_candidates: true,
             }),
             attempts: 1,
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
-                ssid: fake_bss!(Open).ssid().to_vec(),
+                ssid: fake_bss_description!(Open).ssid().to_vec(),
                 disconnect_source: DisconnectSource::User(
                     fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
                 ),

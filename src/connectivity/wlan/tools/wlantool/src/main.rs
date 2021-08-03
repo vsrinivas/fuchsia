@@ -249,7 +249,7 @@ async fn do_client_connect(
     async fn try_get_bss_desc(
         mut events: ScanTransactionEventStream,
     ) -> Result<fidl_internal::BssDescription, Error> {
-        let mut bss_desc = None;
+        let mut bss_description = None;
         while let Some(event) = events
             .try_next()
             .await
@@ -257,10 +257,11 @@ async fn do_client_connect(
         {
             match event {
                 ScanTransactionEvent::OnResult { mut aps } => {
-                    if bss_desc.is_none() {
+                    if bss_description.is_none() {
                         // Write the first encountered `BssDescription`. Any additional information
                         // is ignored.
-                        bss_desc = Some(aps.drain(0..).next().expect("empty scan result").bss_desc);
+                        bss_description =
+                            Some(aps.drain(0..).next().expect("empty scan result").bss_description);
                         // TODO(seanolson): Can the loop break here, or is it important to read the
                         //                  stream until `OnFinished` (or `OnError`) is
                         //                  encountered?
@@ -272,7 +273,7 @@ async fn do_client_connect(
                 }
             }
         }
-        bss_desc.ok_or_else(|| format_err!("failed to find BSS information for SSID"))
+        bss_description.ok_or_else(|| format_err!("failed to find BSS information for SSID"))
     }
 
     println!(
@@ -303,11 +304,11 @@ async fn do_client_connect(
         channels: vec![],
     });
     sme.scan(&mut req, remote).context("error sending scan request")?;
-    let bss_desc = try_get_bss_desc(local.take_event_stream()).await?;
+    let bss_description = try_get_bss_desc(local.take_event_stream()).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
         ssid,
-        bss_desc,
+        bss_description,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: phy.is_some(),

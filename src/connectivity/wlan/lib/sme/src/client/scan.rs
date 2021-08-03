@@ -340,7 +340,7 @@ mod tests {
     use crate::test_utils;
     use fuchsia_inspect::Inspector;
     use itertools;
-    use wlan_common::{assert_variant, fake_fidl_bss, hasher::WlanHasher};
+    use wlan_common::{assert_variant, fake_fidl_bss_description, hasher::WlanHasher};
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
@@ -361,7 +361,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [1; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"foo".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"foo".to_vec())
                 },
             },
             &sme_inspect,
@@ -371,7 +371,7 @@ mod tests {
                 txn_id: txn_id + 100, // mismatching transaction id
                 bss: fidl_internal::BssDescription {
                     bssid: [2; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"bar".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"bar".to_vec())
                 },
             },
             &sme_inspect,
@@ -381,7 +381,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [3; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"qux".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"qux".to_vec())
                 },
             },
             &sme_inspect,
@@ -418,7 +418,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [1; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"bar".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"bar".to_vec())
                 },
             },
             &sme_inspect,
@@ -429,7 +429,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [1; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"baz".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"baz".to_vec())
                 },
             },
             &sme_inspect,
@@ -462,13 +462,13 @@ mod tests {
             .expect("expected a ScanRequest");
         let txn_id = req.txn_id;
 
-        let mut bss = fake_fidl_bss!(Open, ssid: b"ssid".to_vec());
+        let mut bss = fake_fidl_bss_description!(Open, ssid: b"ssid".to_vec());
         // Add an extra IE so we can distinguish this result.
         let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
         bss.ies.extend_from_slice(ie_marker1);
         sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect);
 
-        let mut bss = fake_fidl_bss!(Open, ssid: b"ssid".to_vec());
+        let mut bss = fake_fidl_bss_description!(Open, ssid: b"ssid".to_vec());
         // Add an extra IE so we can distinguish this result.
         let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         bss.ies.extend_from_slice(ie_marker2);
@@ -565,7 +565,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [1; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"foo".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"foo".to_vec())
                 },
             },
             &sme_inspect,
@@ -581,7 +581,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [2; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"bar".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"bar".to_vec())
                 },
             },
             &sme_inspect,
@@ -640,7 +640,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [1; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"foo".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"foo".to_vec())
                 },
             },
             &sme_inspect,
@@ -665,7 +665,7 @@ mod tests {
                 txn_id,
                 bss: fidl_internal::BssDescription {
                     bssid: [2; 6],
-                    ..fake_fidl_bss!(Open, ssid: b"bar".to_vec())
+                    ..fake_fidl_bss_description!(Open, ssid: b"bar".to_vec())
                 },
             },
             &sme_inspect,

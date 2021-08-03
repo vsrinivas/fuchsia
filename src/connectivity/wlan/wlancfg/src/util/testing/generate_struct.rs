@@ -30,7 +30,7 @@ pub fn generate_channel(channel: u8) -> fidl_common::WlanChannel {
     }
 }
 
-pub fn generate_random_bss_desc() -> fidl_fuchsia_wlan_internal::BssDescription {
+pub fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
     let mut rng = rand::thread_rng();
     fidl_fuchsia_wlan_internal::BssDescription {
         bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
@@ -66,6 +66,6 @@ pub fn generate_random_bss_info() -> fidl_sme::BssInfo {
             6 => fidl_sme::Protection::Wpa3Enterprise,
             _ => panic!(),
         },
-        bss_desc: generate_random_bss_desc(),
+        bss_description: generate_random_bss_description(),
     }
 }

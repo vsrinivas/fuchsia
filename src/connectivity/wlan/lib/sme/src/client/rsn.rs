@@ -235,13 +235,13 @@ pub fn get_wpa3_rsna(
 mod tests {
     use super::*;
     use crate::test_utils::fake_device_info;
-    use wlan_common::{assert_variant, fake_bss};
+    use wlan_common::{assert_variant, fake_bss_description};
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 
     #[test]
     fn test_get_rsna_password_for_unprotected_network() {
-        let bss = fake_bss!(Open);
+        let bss = fake_bss_description!(Open);
         let credential = fidl_sme::Credential::Password("somepass".as_bytes().to_vec());
         let rsna = get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss);
         assert!(rsna.is_err(), "expect error when password is supplied for unprotected network")
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_get_rsna_no_password_for_protected_network() {
-        let bss = fake_bss!(Wpa2);
+        let bss = fake_bss_description!(Wpa2);
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let rsna = get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss);
         assert!(rsna.is_err(), "expect error when no password is supplied for protected network")
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_get_rsna_psk() {
-        let bss = fake_bss!(Wpa2);
+        let bss = fake_bss_description!(Wpa2);
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful RSNA with valid PSK");
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_wpa2_get_auth_method() {
-        let bss = fake_bss!(Wpa2);
+        let bss = fake_bss_description!(Wpa2);
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         let protection = get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful RSNA with valid PSK");
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_wpa2_get_auth_config() {
-        let bss = fake_bss!(Wpa2);
+        let bss = fake_bss_description!(Wpa2);
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         let protection = get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful RSNA with valid PSK");
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn test_get_rsna_invalid_psk() {
-        let bss = fake_bss!(Wpa2);
+        let bss = fake_bss_description!(Wpa2);
         // PSK too short
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 31]);
         get_wpa2_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_get_rsna_wpa3() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let credential = fidl_sme::Credential::Password(vec![0xBB; 8]);
         get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful SAE RSNA with valid credential");
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_get_auth_method() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let credential = fidl_sme::Credential::Password(vec![0xBB; 8]);
         let protection = get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful SAE RSNA with valid credential");
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_get_auth_config() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let credential = fidl_sme::Credential::Password(vec![0xBB; 8]);
         let protection = get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect("expected successful SAE RSNA with valid credential");
@@ -326,7 +326,7 @@ mod tests {
 
     #[test]
     fn test_get_rsna_wpa3_psk_fails() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let credential = fidl_sme::Credential::Psk(vec![0xAA; 32]);
         get_wpa3_rsna(&fake_device_info(CLIENT_ADDR), &credential, &bss)
             .expect_err("expected WPA3 RSNA failure with PSK");
@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_sme_auth_config() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let mut device_info = fake_device_info([0xaa; 6]);
         device_info.driver_features = vec![fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth];
         let auth_config = get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_driver_sme_auth_config() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let mut device_info = fake_device_info([0xaa; 6]);
         device_info.driver_features = vec![fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth];
         let auth_config = get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_sme_auth_config_preferred() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let mut device_info = fake_device_info([0xaa; 6]);
         device_info.driver_features = vec![
             fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth,
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_wpa3_invalid_auth_config() {
-        let bss = fake_bss!(Wpa3);
+        let bss = fake_bss_description!(Wpa3);
         let mut device_info = fake_device_info([0xaa; 6]);
         device_info.driver_features = vec![];
         get_wpa3_auth_config(&device_info, vec![0xbb; 8], &bss)

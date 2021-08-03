@@ -1221,7 +1221,7 @@ mod tests {
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
                 create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                generate_random_bss_desc, poll_sme_req,
+                generate_random_bss_description, poll_sme_req,
             },
         },
         async_trait::async_trait,
@@ -1244,7 +1244,7 @@ mod tests {
         wlan_common::{
             assert_variant,
             channel::{Cbw, Phy},
-            fake_fidl_bss, RadioConfig,
+            fake_fidl_bss_description, RadioConfig,
         },
     };
 
@@ -1269,7 +1269,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(generate_random_bss_desc()),
+                bss_description: Some(generate_random_bss_description()),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2015,7 +2015,7 @@ mod tests {
                         network: network_id.clone().into(),
                         credential,
                         observed_in_passive_scan: Some(true),
-                        bss: Some(generate_random_bss_desc()),
+                        bss_description: Some(generate_random_bss_description()),
                         multiple_bss_candidates: Some(true),
                     },
                     reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2110,7 +2110,7 @@ mod tests {
                 network,
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(generate_random_bss_desc()),
+                bss_description: Some(generate_random_bss_description()),
                 multiple_bss_candidates: None,
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -2138,7 +2138,7 @@ mod tests {
                 network: network.clone(),
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(generate_random_bss_desc()),
+                bss_description: Some(generate_random_bss_description()),
                 multiple_bss_candidates: Some(true),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
@@ -4997,7 +4997,9 @@ mod tests {
         let network = Some(client_types::ConnectionCandidate {
             network: network_id.into(),
             credential: credential,
-            bss: Some(fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70])),
+            bss_description: Some(
+                fake_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+            ),
             observed_in_passive_scan: Some(true),
             multiple_bss_candidates: Some(true),
         });
@@ -5067,7 +5069,9 @@ mod tests {
         let network = Some(client_types::ConnectionCandidate {
             network: network_id.into(),
             credential: credential,
-            bss: Some(fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70])),
+            bss_description: Some(
+                fake_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+            ),
             observed_in_passive_scan: Some(true),
             multiple_bss_candidates: Some(true),
         });

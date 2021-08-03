@@ -298,7 +298,7 @@ fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
         channel: bss.channel.into(),
         protection: bss.protection.into(),
         compatible: bss.compatible,
-        bss_desc: bss.bss_desc,
+        bss_description: bss.bss_description,
     }
 }
 
@@ -462,8 +462,8 @@ mod tests {
         let results_fut = collect_scan(&proxy);
         pin_mut!(results_fut);
         assert_variant!(exec.run_until_stalled(&mut results_fut), Poll::Ready(results) => {
-            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_desc).collect::<Vec<_>>();
-            let received_scan_results = results.into_iter().map(|bss| bss.bss_desc).collect::<Vec<_>>();
+            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
+            let received_scan_results = results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
             assert_eq!(sent_scan_results, received_scan_results);
         })
     }
@@ -548,7 +548,7 @@ mod tests {
             ies.extend_from_slice(&[221, 250]);
             ies.extend((0..250).map(|_| rng.gen::<u8>()))
         }
-        let bss_desc = fidl_fuchsia_wlan_internal::BssDescription {
+        let bss_description = fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
             bss_type: fidl_fuchsia_wlan_internal::BssType::Infrastructure,
             beacon_period: rng.gen::<u16>(),
@@ -565,19 +565,19 @@ mod tests {
             snr_db: rng.gen::<i8>(),
         };
         let bss_info = BssInfo {
-            bssid: bss_desc.bssid.clone(),
+            bssid: bss_description.bssid.clone(),
             ssid,
-            rssi_dbm: bss_desc.rssi_dbm,
-            snr_db: bss_desc.snr_db,
+            rssi_dbm: bss_description.rssi_dbm,
+            snr_db: bss_description.snr_db,
             signal_report_time: zx::Time::ZERO,
-            channel: Channel::from(bss_desc.channel),
+            channel: Channel::from(bss_description.channel),
             protection: Protection::Open,
             compatible: rng.gen::<bool>(),
             ht_cap: None,
             vht_cap: None,
             probe_resp_wsc: None,
             wmm_param: None,
-            bss_desc: bss_desc,
+            bss_description: bss_description,
         };
         bss_info
     }

@@ -546,7 +546,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_variant, fake_bss,
+            assert_variant, fake_bss_description,
             ie::IeType,
             test_utils::{
                 fake_frames::{
@@ -562,36 +562,42 @@ mod tests {
 
     #[test]
     fn test_known_protection() {
-        assert_eq!(Protection::Open, fake_bss!(Open).protection());
-        assert_eq!(Protection::Wep, fake_bss!(Wep).protection());
-        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).protection());
-        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).protection());
-        assert_eq!(Protection::Wpa1Wpa2PersonalTkipOnly, fake_bss!(Wpa1Wpa2TkipOnly).protection());
-        assert_eq!(Protection::Wpa2PersonalTkipOnly, fake_bss!(Wpa2TkipOnly).protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).protection());
-        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2TkipCcmp).protection());
-        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).protection());
-        assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).protection());
-        assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).protection());
-        assert_eq!(Protection::Wpa2Enterprise, fake_bss!(Wpa2Enterprise).protection());
-        assert_eq!(Protection::Wpa3Enterprise, fake_bss!(Wpa3Enterprise).protection());
+        assert_eq!(Protection::Open, fake_bss_description!(Open).protection());
+        assert_eq!(Protection::Wep, fake_bss_description!(Wep).protection());
+        assert_eq!(Protection::Wpa1, fake_bss_description!(Wpa1).protection());
+        assert_eq!(Protection::Wpa1, fake_bss_description!(Wpa1Enhanced).protection());
+        assert_eq!(
+            Protection::Wpa1Wpa2PersonalTkipOnly,
+            fake_bss_description!(Wpa1Wpa2TkipOnly).protection()
+        );
+        assert_eq!(
+            Protection::Wpa2PersonalTkipOnly,
+            fake_bss_description!(Wpa2TkipOnly).protection()
+        );
+        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss_description!(Wpa1Wpa2).protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss_description!(Wpa2TkipCcmp).protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss_description!(Wpa2).protection());
+        assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss_description!(Wpa2Wpa3).protection());
+        assert_eq!(Protection::Wpa3Personal, fake_bss_description!(Wpa3).protection());
+        assert_eq!(Protection::Wpa2Enterprise, fake_bss_description!(Wpa2Enterprise).protection());
+        assert_eq!(Protection::Wpa3Enterprise, fake_bss_description!(Wpa3Enterprise).protection());
     }
 
     #[test]
     fn test_pmf_configs_supported() {
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_wpa2_mfpc_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Wpa2Personal, bss.protection());
 
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_wpa2_mfpr_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Wpa2Personal, bss.protection());
 
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_wpa2_wpa3_mfpr_rsne()[2..].to_vec())
         );
@@ -601,14 +607,14 @@ mod tests {
     #[test]
     fn test_downgrade() {
         // If Wpa3 doesn't use MFP, ignore it and use Wpa2 instead.
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_wpa2_wpa3_no_mfp_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Wpa2Personal, bss.protection());
 
         // Downgrade to Wpa1 as well.
-        let bss = fake_bss!(Wpa1,
+        let bss = fake_bss_description!(Wpa1,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, invalid_wpa3_rsne()[2..].to_vec())
         );
@@ -617,19 +623,19 @@ mod tests {
 
     #[test]
     fn test_unknown_protection() {
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, fake_unknown_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Unknown, bss.protection());
 
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, invalid_wpa3_rsne()[2..].to_vec())
         );
         assert_eq!(Protection::Unknown, bss.protection());
 
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::RSNE, invalid_wpa3_enterprise_192_bit_rsne()[2..].to_vec())
         );
@@ -638,28 +644,28 @@ mod tests {
 
     #[test]
     fn test_needs_eapol_exchange() {
-        assert!(fake_bss!(Wpa1).needs_eapol_exchange());
-        assert!(fake_bss!(Wpa2).needs_eapol_exchange());
+        assert!(fake_bss_description!(Wpa1).needs_eapol_exchange());
+        assert!(fake_bss_description!(Wpa2).needs_eapol_exchange());
 
-        assert!(!fake_bss!(Open).needs_eapol_exchange());
-        assert!(!fake_bss!(Wep).needs_eapol_exchange());
+        assert!(!fake_bss_description!(Open).needs_eapol_exchange());
+        assert!(!fake_bss_description!(Wep).needs_eapol_exchange());
     }
 
     #[test]
     fn test_wpa_ie() {
         let mut buf = vec![];
-        fake_bss!(Wpa1)
+        fake_bss_description!(Wpa1)
             .wpa_ie()
             .expect("failed to find WPA1 IE")
             .write_into(&mut buf)
             .expect("failed to serialize WPA1 IE");
         assert_eq!(fake_wpa1_ie_body(false), buf);
-        fake_bss!(Wpa2).wpa_ie().expect_err("found unexpected WPA1 IE");
+        fake_bss_description!(Wpa2).wpa_ie().expect_err("found unexpected WPA1 IE");
     }
 
     #[test]
     fn test_latest_standard_ac() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             ies_overrides: IesOverrides::new()
                 .set(IeType::VHT_CAPABILITIES, vec![0; fidl_internal::VHT_CAP_LEN as usize])
                 .set(IeType::VHT_OPERATION, vec![0; fidl_internal::VHT_OP_LEN as usize]),
@@ -669,7 +675,7 @@ mod tests {
 
     #[test]
     fn test_latest_standard_n() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, vec![0; fidl_internal::HT_CAP_LEN as usize])
                 .set(IeType::HT_OPERATION, vec![0; fidl_internal::HT_OP_LEN as usize])
@@ -681,7 +687,7 @@ mod tests {
 
     #[test]
     fn test_latest_standard_g() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
@@ -699,7 +705,7 @@ mod tests {
 
     #[test]
     fn test_latest_standard_b() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
@@ -717,7 +723,7 @@ mod tests {
 
     #[test]
     fn test_latest_standard_b_with_basic() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
@@ -735,7 +741,7 @@ mod tests {
 
     #[test]
     fn test_latest_standard_a() {
-        let bss = fake_bss!(Open,
+        let bss = fake_bss_description!(Open,
             channel: fidl_common::WlanChannel {
                 primary: 36,
                 secondary80: 0,
@@ -753,22 +759,22 @@ mod tests {
 
     #[test]
     fn test_candidacy() {
-        let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: -10).candidacy();
+        let bss_candidacy = fake_bss_description!(Wpa2, rssi_dbm: -10).candidacy();
         assert_eq!(
             bss_candidacy,
             BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: -10 }
         );
 
-        let bss_candidacy = fake_bss!(Open, rssi_dbm: -10).candidacy();
+        let bss_candidacy = fake_bss_description!(Open, rssi_dbm: -10).candidacy();
         assert_eq!(bss_candidacy, BssCandidacy { protection: Protection::Open, rssi_dbm: -10 });
 
-        let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: -20).candidacy();
+        let bss_candidacy = fake_bss_description!(Wpa2, rssi_dbm: -20).candidacy();
         assert_eq!(
             bss_candidacy,
             BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: -20 }
         );
 
-        let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: 0).candidacy();
+        let bss_candidacy = fake_bss_description!(Wpa2, rssi_dbm: 0).candidacy();
         assert_eq!(
             bss_candidacy,
             BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: i8::MIN }
@@ -785,18 +791,30 @@ mod tests {
         //  Two BSSDescription values with the same protection and RSSI are equivalent.
         assert_eq!(
             Ordering::Equal,
-            fake_bss!(Wpa2, rssi_dbm: -10)
+            fake_bss_description!(Wpa2, rssi_dbm: -10)
                 .candidacy()
-                .cmp(&fake_bss!(Wpa2, rssi_dbm: -10).candidacy())
+                .cmp(&fake_bss_description!(Wpa2, rssi_dbm: -10).candidacy())
         );
 
         // Higher security is better.
-        assert_bss_comparison(&fake_bss!(Wpa1, rssi_dbm: -10), &fake_bss!(Wpa2, rssi_dbm: -50));
-        assert_bss_comparison(&fake_bss!(Open, rssi_dbm: -10), &fake_bss!(Wpa2, rssi_dbm: -50));
+        assert_bss_comparison(
+            &fake_bss_description!(Wpa1, rssi_dbm: -10),
+            &fake_bss_description!(Wpa2, rssi_dbm: -50),
+        );
+        assert_bss_comparison(
+            &fake_bss_description!(Open, rssi_dbm: -10),
+            &fake_bss_description!(Wpa2, rssi_dbm: -50),
+        );
         // Higher RSSI is better if security is equivalent.
-        assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: -50), &fake_bss!(Wpa2, rssi_dbm: -10));
+        assert_bss_comparison(
+            &fake_bss_description!(Wpa2, rssi_dbm: -50),
+            &fake_bss_description!(Wpa2, rssi_dbm: -10),
+        );
         // Having an RSSI measurement is always better than not having any measurement
-        assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: 0), &fake_bss!(Wpa2, rssi_dbm: -100));
+        assert_bss_comparison(
+            &fake_bss_description!(Wpa2, rssi_dbm: 0),
+            &fake_bss_description!(Wpa2, rssi_dbm: -100),
+        );
     }
 
     #[test]
@@ -824,7 +842,7 @@ mod tests {
         ];
         let vht_op = vec![0x01, 0x9b, 0x00, 0xfc, 0xff];
 
-        let bss = fake_bss!(Wpa2,
+        let bss = fake_bss_description!(Wpa2,
             ies_overrides: IesOverrides::new()
                 .set(IeType::SSID, b"ssidie".to_vec())
                 .set(IeType::SUPPORTED_RATES, vec![0x81, 0x82, 0x83])

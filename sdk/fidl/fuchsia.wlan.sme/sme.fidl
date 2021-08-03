@@ -51,7 +51,7 @@ type BssInfo = struct {
     channel fuchsia.wlan.common.WlanChannel;
     protection Protection;
     compatible bool;
-    bss_desc fuchsia.wlan.internal.BssDescription;
+    bss_description fuchsia.wlan.internal.BssDescription;
 };
 
 type ScanErrorCode = strict enum {
@@ -135,7 +135,7 @@ type Credential = flexible union {
 
 type ConnectRequest = struct {
     ssid ieee80211.Ssid;
-    bss_desc fuchsia.wlan.internal.BssDescription;
+    bss_description fuchsia.wlan.internal.BssDescription;
     /// Informs SME whether multiple candidates were available, for metrics.
     multiple_bss_candidates bool;
     credential Credential;

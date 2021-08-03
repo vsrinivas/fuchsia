@@ -261,7 +261,7 @@ async fn handle_client_request_connect(
         target: client_types::ConnectionCandidate {
             network: network_id,
             credential: network_config.credential.clone(),
-            bss: None,
+            bss_description: None,
             observed_in_passive_scan: None,
             multiple_bss_candidates: None,
         },
@@ -344,7 +344,7 @@ async fn handle_client_request_save_network(
         target: client_types::ConnectionCandidate {
             network: net_id,
             credential: credential,
-            bss: None,
+            bss_description: None,
             observed_in_passive_scan: None,
             multiple_bss_candidates: None,
         },
@@ -497,7 +497,7 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
-        wlan_common::{assert_variant, fake_fidl_bss},
+        wlan_common::{assert_variant, fake_fidl_bss_description},
     };
 
     /// Only used to tell us what disconnect request was given to the IfaceManager so that we
@@ -574,15 +574,17 @@ mod tests {
         ) -> Result<oneshot::Receiver<()>, Error> {
             let _ = self.disconnected_ifaces.pop();
             let ssid = connect_req.target.network.ssid;
-            // SME needs BSS information to connect. If none is provided in the connect request,
+            // SME needs a BssDescription to connect. If none is provided in the connect request,
             // then static testing BSS information is used. Note that this differs from production
             // behavior where join scans are issued as needed and network information is aggregated
             // and stored.
-            let bss_desc =
-                connect_req.target.bss.unwrap_or_else(|| fake_fidl_bss!(Wpa2, ssid: ssid.clone()));
+            let bss_description = connect_req
+                .target
+                .bss_description
+                .unwrap_or_else(|| fake_fidl_bss_description!(Wpa2, ssid: ssid.clone()));
             let mut req = fidl_sme::ConnectRequest {
                 ssid,
-                bss_desc,
+                bss_description,
                 credential: sme_credential_from_policy(&connect_req.target.credential),
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: false,

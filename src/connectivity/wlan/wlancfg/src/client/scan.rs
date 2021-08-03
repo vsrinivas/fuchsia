@@ -323,7 +323,7 @@ fn insert_bss_to_network_bss_map(
                 timestamp_nanos: 0, // TODO(mnck): find where this comes from
                 observed_in_passive_scan,
                 compatible: bss.compatible,
-                bss_desc: bss.bss_desc,
+                bss_description: bss.bss_description,
             });
         };
     }
@@ -334,8 +334,8 @@ fn network_bss_map_to_scan_result(
 ) -> Vec<types::ScanResult> {
     let mut scan_results: Vec<types::ScanResult> = bss_by_network
         .drain()
-        .map(|(SmeNetworkIdentifier { ssid, protection }, bss_infos)| {
-            let compatibility = if bss_infos.iter().any(|bss| bss.compatible) {
+        .map(|(SmeNetworkIdentifier { ssid, protection }, bss_entries)| {
+            let compatibility = if bss_entries.iter().any(|bss| bss.compatible) {
                 fidl_policy::Compatibility::Supported
             } else {
                 fidl_policy::Compatibility::DisallowedNotSupported
@@ -343,7 +343,7 @@ fn network_bss_map_to_scan_result(
             types::ScanResult {
                 ssid: ssid,
                 security_type_detailed: protection,
-                entries: bss_infos,
+                entries: bss_entries,
                 compatibility: compatibility,
             }
         })
@@ -526,7 +526,7 @@ mod tests {
                 SavedNetworksManager,
             },
             util::testing::{
-                generate_random_bss_desc, generate_random_bss_info,
+                generate_random_bss_description, generate_random_bss_info,
                 validate_sme_scan_request_and_send_results,
             },
         },
@@ -684,9 +684,9 @@ mod tests {
         combined_fidl_aps: Vec<fidl_policy::ScanResult>,
     }
     fn create_scan_ap_data() -> MockScanData {
-        let bss_desc1 = generate_random_bss_desc();
-        let bss_desc2 = generate_random_bss_desc();
-        let bss_desc3 = generate_random_bss_desc();
+        let bss_desc1 = generate_random_bss_description();
+        let bss_desc2 = generate_random_bss_description();
+        let bss_desc3 = generate_random_bss_description();
         let passive_input_aps = vec![
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -700,7 +700,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: bss_desc1.clone(),
+                bss_description: bss_desc1.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
@@ -714,7 +714,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
-                bss_desc: bss_desc2.clone(),
+                bss_description: bss_desc2.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [7, 8, 9, 10, 11, 12],
@@ -728,7 +728,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: false,
-                bss_desc: bss_desc3.clone(),
+                bss_description: bss_desc3.clone(),
             },
         ];
         // input_aps contains some duplicate SSIDs, which should be
@@ -750,7 +750,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: true,
-                        bss_desc: bss_desc1.clone(),
+                        bss_description: bss_desc1.clone(),
                     },
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
@@ -764,7 +764,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: false,
-                        bss_desc: bss_desc3.clone(),
+                        bss_description: bss_desc3.clone(),
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -784,7 +784,7 @@ mod tests {
                     },
                     observed_in_passive_scan: true,
                     compatible: true,
-                    bss_desc: bss_desc2.clone(),
+                    bss_description: bss_desc2.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -831,8 +831,8 @@ mod tests {
             },
         ];
 
-        let bss_desc4 = generate_random_bss_desc();
-        let bss_desc5 = generate_random_bss_desc();
+        let bss_desc4 = generate_random_bss_description();
+        let bss_desc5 = generate_random_bss_description();
         let active_input_aps = vec![
             fidl_sme::BssInfo {
                 bssid: [9, 9, 9, 9, 9, 9],
@@ -846,7 +846,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: bss_desc4.clone(),
+                bss_description: bss_desc4.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [8, 8, 8, 8, 8, 8],
@@ -860,7 +860,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
                 compatible: true,
-                bss_desc: bss_desc5.clone(),
+                bss_description: bss_desc5.clone(),
             },
         ];
         let combined_internal_aps = vec![
@@ -880,7 +880,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: true,
-                        bss_desc: bss_desc1.clone(),
+                        bss_description: bss_desc1.clone(),
                     },
                     types::Bss {
                         bssid: [7, 8, 9, 10, 11, 12],
@@ -894,7 +894,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: false,
-                        bss_desc: bss_desc3.clone(),
+                        bss_description: bss_desc3.clone(),
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -914,7 +914,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_desc: bss_desc4,
+                    bss_description: bss_desc4,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -933,7 +933,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_desc: bss_desc5,
+                    bss_description: bss_desc5,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -952,7 +952,7 @@ mod tests {
                     },
                     observed_in_passive_scan: true,
                     compatible: true,
-                    bss_desc: bss_desc2,
+                    bss_description: bss_desc2,
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -1558,7 +1558,7 @@ mod tests {
         let mut bss_by_network = HashMap::new();
 
         // Create some input data with duplicated BSSID and Network Identifiers
-        let passive_bss_desc = generate_random_bss_desc();
+        let passive_bss_desc = generate_random_bss_description();
         let passive_input_aps = vec![
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -1572,7 +1572,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: passive_bss_desc.clone(),
+                bss_description: passive_bss_desc.clone(),
             },
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -1586,7 +1586,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: generate_random_bss_desc(),
+                bss_description: generate_random_bss_description(),
             },
         ];
 
@@ -1608,7 +1608,7 @@ mod tests {
             },
             observed_in_passive_scan: true,
             compatible: true,
-            bss_desc: passive_bss_desc.clone(),
+            bss_description: passive_bss_desc.clone(),
         }];
 
         insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true);
@@ -1616,7 +1616,7 @@ mod tests {
         assert_eq!(bss_by_network[&expected_id], expected_bss);
 
         // Create some input data with one duplicate BSSID and one new BSSID
-        let active_bss_desc = generate_random_bss_desc();
+        let active_bss_desc = generate_random_bss_description();
         let active_input_aps = vec![
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
@@ -1630,7 +1630,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: generate_random_bss_desc(),
+                bss_description: generate_random_bss_description(),
             },
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
@@ -1644,7 +1644,7 @@ mod tests {
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_desc: active_bss_desc.clone(),
+                bss_description: active_bss_desc.clone(),
             },
         ];
 
@@ -1662,7 +1662,7 @@ mod tests {
                 },
                 observed_in_passive_scan: true,
                 compatible: true,
-                bss_desc: passive_bss_desc.clone(),
+                bss_description: passive_bss_desc.clone(),
             },
             types::Bss {
                 bssid: [1, 2, 3, 4, 5, 6],
@@ -1676,7 +1676,7 @@ mod tests {
                 },
                 observed_in_passive_scan: false,
                 compatible: true,
-                bss_desc: active_bss_desc.clone(),
+                bss_description: active_bss_desc.clone(),
             },
         ];
 
@@ -2237,7 +2237,7 @@ mod tests {
                 timestamp_nanos: 0,
                 observed_in_passive_scan: true,
                 compatible: bss_info.compatible,
-                bss_desc: bss_info.bss_desc,
+                bss_description: bss_info.bss_description,
             }],
         }];
         // Create mock scan data and send it via the SME

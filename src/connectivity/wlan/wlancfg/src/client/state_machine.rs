@@ -340,7 +340,7 @@ async fn handle_connecting_error_and_retry(
     }
 }
 
-/// The CONNECTING state checks for the required bss information in the connection request. If not
+/// The CONNECTING state checks for the required station information in the connection request. If not
 /// present, the state first requests an SME scan. For a failed scan, retry connection by passing a
 /// next_network to the DISCONNECTING state, as long as there haven't been too many attempts.
 /// Next, it requests an SME connect. It handles the SME connect response:
@@ -387,10 +387,10 @@ async fn connecting_state<'a>(
         None => {}
     }
 
-    // If detailed bss information was not provided, perform a scan to discover it
+    // If detailed station information was not provided, perform a scan to discover it
     let network_selector = common_options.network_selector.clone();
-    let scan_future = match options.connect_request.target.bss {
-        Some(ref bss_desc) => {
+    let scan_future = match options.connect_request.target.bss_description {
+        Some(ref bss_description) => {
             let multiple_bss_candidates =
                 options.connect_request.target.multiple_bss_candidates.unwrap_or_else(|| {
                     // Where target.bss.is_some(), multiple_bss_candidates will always be Some as well.
@@ -398,7 +398,7 @@ async fn connecting_state<'a>(
                     true
                 });
             future::ready(SmeOperation::ScanResult(Some((
-                bss_desc.clone(),
+                bss_description.clone(),
                 multiple_bss_candidates,
             ))))
             .boxed()
@@ -415,11 +415,13 @@ async fn connecting_state<'a>(
                         find_result
                             .map(
                                 |types::ConnectionCandidate {
-                                     bss,
+                                     bss_description,
                                      multiple_bss_candidates,
                                      ..
                                  }| {
-                                    bss.map(|bss| (bss, multiple_bss_candidates.unwrap_or(true)))
+                                    bss_description.map(|bss_description| {
+                                        (bss_description, multiple_bss_candidates.unwrap_or(true))
+                                    })
                                 },
                             )
                             .unwrap_or(None),
@@ -435,22 +437,22 @@ async fn connecting_state<'a>(
         select! {
             // Monitor the SME operations
             completed_future = internal_futures.select_next_some() => match completed_future {
-                SmeOperation::ScanResult(bss_info) => {
-                    let bss_info = match bss_info {
-                        Some(bss_info) => bss_info,
+                SmeOperation::ScanResult(bss_description) => {
+                    let (bss_description, multiple_bss_candidates) = match bss_description {
+                        Some((bss_description, multiple_bss_candidates)) => (bss_description, multiple_bss_candidates),
                         None => {
                             info!("Failed to find a BSS to connect to.");
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
-                    let bssid = Box::new(bss_info.0.bssid.clone());
+                    let bssid = Box::new(bss_description.bssid.clone());
                     // Send a connect request to the SME
                     let (connect_txn, remote) = create_proxy()
                         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
                     let mut sme_connect_request = fidl_sme::ConnectRequest {
                         ssid: options.connect_request.target.network.ssid.clone(),
-                        bss_desc: bss_info.0,
-                        multiple_bss_candidates: bss_info.1,
+                        bss_description,
+                        multiple_bss_candidates,
                         credential: sme_credential_from_policy(&options.connect_request.target.credential),
                         radio_cfg: RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl(),
                         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
@@ -660,7 +662,7 @@ async fn connected_state(
                                     reason: types::ConnectReason::RetryAfterDisconnectDetected,
                                     target: types::ConnectionCandidate {
                                         // strip out the bss info to force a new scan
-                                        bss: None,
+                                        bss_description: None,
                                         observed_in_passive_scan: None,
                                         ..options.currently_fulfilled_request.target.clone()
                                     }
@@ -747,7 +749,7 @@ mod tests {
                 listener,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_desc, generate_random_bss_info, poll_sme_req,
+                    generate_random_bss_description, generate_random_bss_info, poll_sme_req,
                     validate_sme_scan_request_and_send_results,
                 },
             },
@@ -872,7 +874,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -881,7 +883,7 @@ mod tests {
                 },
                 credential: Credential::Password("five0".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -935,7 +937,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -1041,7 +1043,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1050,7 +1052,7 @@ mod tests {
                 },
                 credential: Credential::Password("12345".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1103,7 +1105,7 @@ mod tests {
         });
         let scan_results = vec![fidl_sme::BssInfo {
             ssid: next_network_ssid.as_bytes().to_vec(),
-            bss_desc: bss_desc.clone(),
+            bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wep,
             ..generate_random_bss_info()
@@ -1126,7 +1128,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
@@ -1242,7 +1244,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1251,7 +1253,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1304,7 +1306,7 @@ mod tests {
         });
         let scan_results = vec![fidl_sme::BssInfo {
             ssid: next_network_ssid.as_bytes().to_vec(),
-            bss_desc: bss_desc.clone(),
+            bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Wpa3Personal,
             ..generate_random_bss_info()
@@ -1328,7 +1330,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, .. }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
             }
@@ -1341,7 +1343,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1350,7 +1352,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1425,7 +1427,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -1508,7 +1510,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1517,7 +1519,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1617,7 +1619,7 @@ mod tests {
         });
         let mut scan_results = vec![fidl_sme::BssInfo {
             ssid: next_network_ssid.as_bytes().to_vec(),
-            bss_desc: bss_desc.clone(),
+            bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
             ..generate_random_bss_info()
@@ -1650,7 +1652,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
@@ -1731,7 +1733,7 @@ mod tests {
         };
         let config_net_id =
             network_config::NetworkIdentifier::from(next_network_identifier.clone());
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         // save network to check that failed connect is recorded
         assert!(exec
             .run_singlethreaded(
@@ -1746,7 +1748,7 @@ mod tests {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1775,7 +1777,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -1885,13 +1887,13 @@ mod tests {
             .is_none());
         let before_recording = zx::Time::get_monotonic();
 
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: next_network_identifier,
                 credential: next_credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -1920,7 +1922,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.as_bytes().to_vec());
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, true);
@@ -1975,7 +1977,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1984,7 +1986,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2031,7 +2033,7 @@ mod tests {
         let duplicate_request = types::ConnectRequest {
             target: {
                 types::ConnectionCandidate {
-                    bss: None, // this incoming request should be deduped regardless of the bss info
+                    bss_description: None, // this incoming request should be deduped regardless of the bss info
                     ..connect_request.clone().target
                 }
             },
@@ -2054,7 +2056,7 @@ mod tests {
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential.clone()));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-                assert_eq!(req.bss_desc, bss_desc);
+                assert_eq!(req.bss_description, bss_description);
                 assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -2110,7 +2112,7 @@ mod tests {
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2119,7 +2121,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2163,7 +2165,7 @@ mod tests {
         // Send a different connect request
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
-        let bss_desc2 = generate_random_bss_desc();
+        let bss_desc2 = generate_random_bss_description();
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2172,7 +2174,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc2.clone()),
+                bss_description: Some(bss_desc2.clone()),
                 multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -2206,7 +2208,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn: _, control_handle: _ }) => {
                 assert_eq!(req.ssid, first_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_description, bss_description.clone());
                 // Don't bother sending response, listener is gone
             }
         );
@@ -2225,7 +2227,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, bss_desc2.clone());
+                assert_eq!(req.bss_description, bss_desc2.clone());
                 assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -2309,7 +2311,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2318,7 +2320,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2393,7 +2395,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn: _, control_handle: _ }) => {
                 assert_eq!(req.ssid, first_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_description, bss_description.clone());
                 // Don't bother sending response, listener is gone
             }
         );
@@ -2436,7 +2438,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -2470,7 +2472,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2479,14 +2481,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2607,20 +2609,20 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Build the values for the connected state.
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier { ssid: network_ssid, type_: security },
                 credential,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
@@ -2651,7 +2653,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_desc.bssid);
+            assert_eq!(disconnect.bssid, bss_description.bssid);
         });
 
         // Disconnect telemetry event sent
@@ -2696,7 +2698,7 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         // Enter the connecting state without a targeted BSS
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2706,7 +2708,7 @@ mod tests {
                 },
                 credential,
                 observed_in_passive_scan: None,
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: None,
             },
             reason: types::ConnectReason::RetryAfterFailedConnectAttempt,
@@ -2729,7 +2731,7 @@ mod tests {
         // Send a scan for the requested network
         let mut scan_results = vec![fidl_sme::BssInfo {
             ssid: network_ssid.clone(),
-            bss_desc: bss_desc.clone(),
+            bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
             ..generate_random_bss_info()
@@ -2790,7 +2792,7 @@ mod tests {
             .disconnect_list
             .get_recent(zx::Time::ZERO);
         assert_variant!(disconnects.as_slice(), [disconnect] => {
-            assert_eq!(disconnect.bssid, bss_desc.bssid);
+            assert_eq!(disconnect.bssid, bss_description.bssid);
         });
     }
 
@@ -2801,7 +2803,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2810,14 +2812,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2876,7 +2878,7 @@ mod tests {
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2885,14 +2887,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -2923,7 +2925,7 @@ mod tests {
         );
 
         // Send a different connect request
-        let second_bss_desc = generate_random_bss_desc();
+        let second_bss_desc = generate_random_bss_description();
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
@@ -2934,7 +2936,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(second_bss_desc.clone()),
+                bss_description: Some(second_bss_desc.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -2960,7 +2962,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, second_network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, second_bss_desc.clone());
+                assert_eq!(req.bss_description, second_bss_desc.clone());
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -3079,7 +3081,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let network_ssid = "foo";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3088,7 +3090,7 @@ mod tests {
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3116,7 +3118,7 @@ mod tests {
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let initial_state = connected_state(common_options, options);
         let fut = run_state_machine(initial_state);
@@ -3168,14 +3170,14 @@ mod tests {
         });
 
         // Check for a scan to find a new BSS to reconnect with
-        let new_bss_desc = generate_random_bss_desc();
+        let new_bss_desc = generate_random_bss_description();
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::BssInfo {
             ssid: network_ssid.as_bytes().to_vec(),
-            bss_desc: new_bss_desc.clone(),
+            bss_description: new_bss_desc.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
             ..generate_random_bss_info()
@@ -3207,7 +3209,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, network_ssid.as_bytes().to_vec());
-                assert_eq!(req.bss_desc, new_bss_desc.clone());
+                assert_eq!(req.bss_description, new_bss_desc.clone());
                 assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -3254,7 +3256,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "foo";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3263,14 +3265,14 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
-            bssid: bss_desc.bssid,
+            bssid: bss_description.bssid,
         };
         let initial_state = connected_state(test_values.common_options, options);
         let fut = run_state_machine(initial_state);
@@ -3386,7 +3388,7 @@ mod tests {
 
         let previous_network_ssid = "foo";
         let next_network_ssid = "bar";
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3395,7 +3397,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::ProactiveNetworkSwitch,
@@ -3467,7 +3469,7 @@ mod tests {
                 assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
                 assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-                assert_eq!(req.bss_desc, bss_desc.clone());
+                assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -3535,7 +3537,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::IdleInterfaceAutoconnect,
@@ -3603,7 +3605,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -3653,7 +3655,7 @@ mod tests {
         pin_mut!(sme_fut);
 
         // Create a connect request so that the state machine does not immediately exit.
-        let bss_desc = generate_random_bss_desc();
+        let bss_description = generate_random_bss_description();
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3662,7 +3664,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: Some(bss_desc.clone()),
+                bss_description: Some(bss_description.clone()),
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::RegulatoryChangeReconnect,
@@ -3784,7 +3786,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss: None,
+                bss_description: None,
                 multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,

@@ -96,7 +96,7 @@ impl WlanFacade {
         let mut hashmap = HashMap::new();
         for bss in results.drain(..) {
             let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
-            entry.push(Box::new(bss.bss_desc));
+            entry.push(Box::new(bss.bss_description));
         }
 
         Ok(hashmap)

@@ -338,7 +338,7 @@ mod tests {
             SelectNetworkFailure,
         },
         anyhow::format_err,
-        wlan_common::{assert_variant, fake_bss},
+        wlan_common::{assert_variant, fake_bss_description},
         wlan_rsn::auth,
     };
 
@@ -373,7 +373,7 @@ mod tests {
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
             assert_eq!(stats.result, ConnectResult::Success);
-            let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+            let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
             let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
             assert_eq!(stats.candidate_network, Some(candidate_network));
         });
@@ -384,7 +384,7 @@ mod tests {
         let mut stats_collector = StatsCollector::default();
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn test_no_pending_connect_stats() {
-        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert_variant!(
             StatsCollector::default().report_candidate_network(candidate_network),
@@ -605,7 +605,7 @@ mod tests {
         stats_collector: &mut StatsCollector,
     ) -> Result<ConnectStats, StatsError> {
         assert!(stats_collector.report_connect_started(SSID.to_vec()).is_none());
-        let bss = fake_bss!(Wpa2, ssid: SSID.to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());

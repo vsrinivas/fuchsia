@@ -68,7 +68,7 @@ const DEFAULT_MOCK_IES: &'static [u8] = &[
     0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
 ];
 
-pub struct BssCreator {
+pub struct BssDescriptionCreator {
     // *** Fields already in fidl_internal::BssDescription
     pub bssid: [u8; 6],
     pub bss_type: fidl_internal::BssType,
@@ -87,8 +87,8 @@ pub struct BssCreator {
     pub ies_overrides: IesOverrides,
 }
 
-impl BssCreator {
-    pub fn create_bss(self) -> Result<fidl_internal::BssDescription, anyhow::Error> {
+impl BssDescriptionCreator {
+    pub fn create_bss_description(self) -> Result<fidl_internal::BssDescription, anyhow::Error> {
         let mut ies_updater = ie::IesUpdater::new(DEFAULT_MOCK_IES.to_vec());
         ies_updater.set(IeType::SSID, &self.ssid[..]).context("set SSID")?;
 
@@ -206,8 +206,10 @@ impl From<fidl_sme::Protection> for FakeProtectionCfg {
     }
 }
 
-pub fn build_fake_bss_creator__(protection_cfg: FakeProtectionCfg) -> BssCreator {
-    BssCreator {
+pub fn build_fake_bss_description_creator__(
+    protection_cfg: FakeProtectionCfg,
+) -> BssDescriptionCreator {
+    BssDescriptionCreator {
         bssid: [7, 1, 2, 77, 53, 8],
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: 100,
@@ -263,29 +265,29 @@ fn derive_wpa1_vendor_ies(protection_cfg: FakeProtectionCfg) -> Option<Vec<u8>> 
 }
 
 #[macro_export]
-macro_rules! fake_fidl_bss {
+macro_rules! fake_fidl_bss_description {
     ($protection_type:ident $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
         let protection = $crate::test_utils::fake_stas::FakeProtectionCfg::$protection_type;
-        $crate::fake_fidl_bss!(protection => protection $(, $bss_key: $bss_value)*)
+        $crate::fake_fidl_bss_description!(protection => protection $(, $bss_key: $bss_value)*)
     }};
     (protection => $protection_type:expr $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
-        let bss_creator = $crate::test_utils::fake_stas::BssCreator {
+        let bss_description_creator = $crate::test_utils::fake_stas::BssDescriptionCreator {
             $(
                 $bss_key: $bss_value,
             )*
-            ..$crate::test_utils::fake_stas::build_fake_bss_creator__($protection_type.into())
+            ..$crate::test_utils::fake_stas::build_fake_bss_description_creator__($protection_type.into())
         };
-        bss_creator.create_bss().expect("expect creating BSS to succeed")
+        bss_description_creator.create_bss_description().expect("expect creating BSS to succeed")
     }};
 }
 
 #[macro_export]
-macro_rules! fake_bss {
+macro_rules! fake_bss_description {
     ($protection_type:ident $(, $bss_key:ident: $bss_value:expr)* $(,)?) => {{
-        let fidl_bss = $crate::fake_fidl_bss!($protection_type $(, $bss_key: $bss_value)*);
-        let bss = $crate::bss::BssDescription::from_fidl(fidl_bss)
+        let fidl_bss = $crate::fake_fidl_bss_description!($protection_type $(, $bss_key: $bss_value)*);
+        let bss_description = $crate::bss::BssDescription::from_fidl(fidl_bss)
             .expect("expect BSS conversion to succeed");
-        bss
+        bss_description
     }}
 }
 
@@ -295,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_fake_bss_macro_ies() {
-        let bss = fake_bss!(Wpa1Wpa2,
+        let bss = fake_bss_description!(Wpa1Wpa2,
             ssid: b"fuchsia".to_vec(),
             rates: vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
             ies_overrides: IesOverrides::new()

@@ -165,12 +165,12 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     wlan_service_util::client::passive_scan(&wlan_client_iface.sme_proxy)
                         .await
                         .context("scan failed")?;
-                let bss_desc = networks
+                let bss_description = networks
                     .into_iter()
-                    .filter(|bss_info| bss_info.ssid.as_slice() == target_ssid)
-                    .map(|bss_info| bss_info.bss_desc)
+                    .filter(|peer_sta_info| peer_sta_info.ssid.as_slice() == target_ssid)
+                    .map(|peer_sta_info| peer_sta_info.bss_description)
                     .next()
-                    .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
+                    .ok_or_else(|| format_err!("no station responding for SSID"))?;
                 wlan_client_results.found_ap_in_scan = true;
 
                 // Connect to network, if found in scan results
@@ -179,7 +179,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         &wlan_client_iface.sme_proxy,
                         target_ssid.to_vec(),
                         target_pwd.to_vec(),
-                        bss_desc,
+                        bss_description,
                     )
                     .await;
 
