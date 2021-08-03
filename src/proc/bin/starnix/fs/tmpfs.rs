@@ -12,7 +12,7 @@ use crate::devices::*;
 use crate::fd_impl_directory;
 use crate::fs::pipe::Pipe;
 use crate::fs::*;
-use crate::mm::vmo::round_up_to_system_page_size;
+use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
 
@@ -221,22 +221,19 @@ impl FsNodeOps for VmoFileNode {
 
     fn truncate(&self, node: &FsNode, length: u64) -> Result<(), Errno> {
         let mut info = node.info_write();
-        let storage = round_up_to_system_page_size(length as usize);
-        let shrink = storage < info.storage_size;
-        if storage != info.storage_size {
-            self.vmo.set_size(storage as u64).map_err(|_| ENOMEM)?;
-            info.storage_size = storage;
+        if info.size == length as usize {
+            return Ok(());
         }
+        self.vmo.set_size(length).map_err(|status| match status {
+            zx::Status::NO_MEMORY => ENOMEM,
+            zx::Status::OUT_OF_RANGE => ENOMEM,
+            _ => impossible_error(status),
+        })?;
         info.size = length as usize;
+        info.storage_size = self.vmo.get_size().map_err(impossible_error)? as usize;
         let time = fuchsia_runtime::utc_time();
         info.time_access = time;
         info.time_modify = time;
-        // Make sure there is no stale data if the file
-        // is truncated smaller then larger.
-        let padding = (info.storage_size - info.size) as u64;
-        if shrink && padding > 0 {
-            self.vmo.op_range(zx::VmoOp::ZERO, length, padding).map_err(|_| EIO)?;
-        }
         Ok(())
     }
 }

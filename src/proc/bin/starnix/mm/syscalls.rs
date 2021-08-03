@@ -151,6 +151,16 @@ pub fn sys_munmap(
     Ok(SUCCESS)
 }
 
+pub fn sys_msync(
+    _ctx: &SyscallContext<'_>,
+    _addr: UserAddress,
+    _length: usize,
+    _flags: u32,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!("msync not implemented");
+    Ok(SUCCESS)
+}
+
 pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.mm.set_brk(addr)?.into())
 }
