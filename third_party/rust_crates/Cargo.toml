@@ -266,6 +266,7 @@ memchr = { path = "ask2patch/memchr" }
 regex-automata = { path = "ask2patch/regex-automata" }
 same-file = { path = "ask2patch/same-file" }
 streaming-stats = { path = "ask2patch/streaming-stats" }
+termcolor = { path = "ask2patch/termcolor" }
 walkdir = { path = "ask2patch/walkdir" }
 
 ### Empty Forks: empty forks kept only for satisfying cargo's resolution
@@ -296,7 +297,6 @@ libm = { path = "forks/libm" }
 nom_locate = { path = "forks/nom_locate" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
-termcolor = { path = "forks/termcolor" }
 tracing-core = { path = "forks/tracing-core" }
 trust-dns-resolver = { path = "forks/trust-dns-resolver" }
 zstd-sys = { path = "forks/zstd-sys" }

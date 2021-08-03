@@ -2226,7 +2226,7 @@ rust_library("codespan-reporting-v0_11_1") {
   ]
 
   deps = []
-  deps += [ ":termcolor-v1_1_0" ]
+  deps += [ ":termcolor-v1_1_2" ]
   deps += [ ":unicode-width-v0_1_5" ]
 
   rustenv = []
@@ -8969,7 +8969,7 @@ rust_library("simplelog-v0_8_0") {
   deps = []
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":termcolor-v1_1_0" ]
+  deps += [ ":termcolor-v1_1_2" ]
 
   rustenv = []
 
@@ -9514,10 +9514,10 @@ rust_library("term-v0_5_1") {
   ]
 }
 
-rust_library("termcolor-v1_1_0") {
+rust_library("termcolor-v1_1_2") {
   crate_name = "termcolor"
-  crate_root = "//third_party/rust_crates/forks/termcolor/src/lib.rs"
-  output_name = "termcolor-aa3f8d5c992f6147"
+  crate_root = "//third_party/rust_crates/ask2patch/termcolor/src/lib.rs"
+  output_name = "termcolor-8a22f3c4f465f166"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -9533,8 +9533,8 @@ rust_library("termcolor-v1_1_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=aa3f8d5c992f6147",
-    "-Cextra-filename=-aa3f8d5c992f6147",
+    "-Cmetadata=8a22f3c4f465f166",
+    "-Cextra-filename=-8a22f3c4f465f166",
   ]
 }
 
