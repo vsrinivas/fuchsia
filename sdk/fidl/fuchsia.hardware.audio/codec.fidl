@@ -31,15 +31,15 @@ type GainFormat = table {
     /// Specifies what the numbers for gain represent, e.g. a percentage.
     1: type GainType;
 
-    /// Minimum gain. Must be included.
+    /// Minimum gain. Required.
     2: min_gain float32;
 
-    /// Maximum gain. Must be included.
+    /// Maximum gain. Required.
     3: max_gain float32;
 
     /// Gain step in decibels, this value must not be negative, but may be zero to convey an
     /// effectively continuous range of values. Must not exceed `max_gain_db` - `min_gain_db`.
-    /// Must be included.
+    /// Required.
     4: gain_step float32;
 
     /// Gain mute capability. If not included, mute is not supported.

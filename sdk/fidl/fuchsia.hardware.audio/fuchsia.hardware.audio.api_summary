@@ -1,5 +1,10 @@
 const fuchsia.hardware.audio/CLOCK_DOMAIN_EXTERNAL uint32 4294967295
 const fuchsia.hardware.audio/CLOCK_DOMAIN_MONOTONIC uint32 0
+table/member fuchsia.hardware.audio/ChannelAttributes.max_frequency uint32
+table/member fuchsia.hardware.audio/ChannelAttributes.min_frequency uint32
+table fuchsia.hardware.audio/ChannelAttributes
+table/member fuchsia.hardware.audio/ChannelSet.attributes vector<fuchsia.hardware.audio/ChannelAttributes>:64
+table fuchsia.hardware.audio/ChannelSet
 protocol/member fuchsia.hardware.audio/Codec.GetDaiFormats() -> (fuchsia.hardware.audio/Codec_GetDaiFormats_Result result)
 protocol/member fuchsia.hardware.audio/Codec.GetGainFormat() -> (fuchsia.hardware.audio/GainFormat gain_format)
 protocol/member fuchsia.hardware.audio/Codec.GetInfo() -> (fuchsia.hardware.audio/CodecInfo info)
@@ -108,7 +113,9 @@ strict enum fuchsia.hardware.audio/GainType uint8
 enum/member fuchsia.hardware.audio/GetVmoError.INTERNAL_ERROR 2
 enum/member fuchsia.hardware.audio/GetVmoError.INVALID_ARGS 1
 strict enum fuchsia.hardware.audio/GetVmoError uint32
+const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_IN_RING_BUFFER uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_TO_USE uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_CHANNEL_SETS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_FORMATS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE uint32 8
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT uint32 8
@@ -137,6 +144,12 @@ struct/member fuchsia.hardware.audio/PcmSupportedFormats.number_of_channels vect
 struct/member fuchsia.hardware.audio/PcmSupportedFormats.sample_formats vector<fuchsia.hardware.audio/SampleFormat>:3
 struct/member fuchsia.hardware.audio/PcmSupportedFormats.valid_bits_per_sample vector<uint8>:8
 struct fuchsia.hardware.audio/PcmSupportedFormats
+table/member fuchsia.hardware.audio/PcmSupportedFormats2.bytes_per_sample vector<uint8>:8
+table/member fuchsia.hardware.audio/PcmSupportedFormats2.channel_sets vector<fuchsia.hardware.audio/ChannelSet>:64
+table/member fuchsia.hardware.audio/PcmSupportedFormats2.frame_rates vector<uint32>:64
+table/member fuchsia.hardware.audio/PcmSupportedFormats2.sample_formats vector<fuchsia.hardware.audio/SampleFormat>:3
+table/member fuchsia.hardware.audio/PcmSupportedFormats2.valid_bits_per_sample vector<uint8>:8
+table fuchsia.hardware.audio/PcmSupportedFormats2
 enum/member fuchsia.hardware.audio/PlugDetectCapabilities.CAN_ASYNC_NOTIFY 1
 enum/member fuchsia.hardware.audio/PlugDetectCapabilities.HARDWIRED 0
 strict enum fuchsia.hardware.audio/PlugDetectCapabilities uint32
@@ -193,6 +206,7 @@ table/member fuchsia.hardware.audio/StreamProperties.product string:256
 table/member fuchsia.hardware.audio/StreamProperties.unique_id array<uint8,16>
 table fuchsia.hardware.audio/StreamProperties
 table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats fuchsia.hardware.audio/PcmSupportedFormats
+table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats2 fuchsia.hardware.audio/PcmSupportedFormats2
 table fuchsia.hardware.audio/SupportedFormats
 const fuchsia.hardware.audio/UNIQUE_ID_SIZE uint32 16
 library fuchsia.hardware.audio
