@@ -158,13 +158,13 @@ zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t*
 // The |tag| will be truncated if it is longer than |FX_LOG_MAX_TAG_LEN|.
 // No message is written if |message| is NULL.
 zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity, const char* tag,
-                           const char* msg, ...);
+                           const char* msg, ...) __PRINTFLIKE(4, 5);
 
 // Similar to fx_logger_logf(), but also takes the file path and the line number of where the log
 // originated from.
 zx_status_t fx_logger_logf_with_source(fx_logger_t* logger, fx_log_severity_t severity,
                                        const char* tag, const char* file, int line, const char* msg,
-                                       ...);
+                                       ...) __PRINTFLIKE(6, 7);
 
 // Writes formatted message to a logger using varargs.
 // The message will be discarded if |severity| is less than the logger's
