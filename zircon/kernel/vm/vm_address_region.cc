@@ -245,14 +245,18 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  // If size overflows, it'll become 0 and get rejected in
-  // CreateSubVmarInternal.
-  size = ROUNDUP(size, PAGE_SIZE);
-
-  // Make sure that vmo_offset is aligned and that a mapping of this size
-  // wouldn't overflow the vmo offset.
-  if (!IS_PAGE_ALIGNED(vmo_offset) || vmo_offset + size < vmo_offset) {
+  if (!IS_PAGE_ALIGNED(vmo_offset)) {
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  size_t mapping_size = ROUNDUP_PAGE_SIZE(size);
+  // Make sure that rounding up the page size did not overflow.
+  if (mapping_size < size) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  // Make sure that a mapping of this size wouldn't overflow the vmo offset.
+  if (vmo_offset + mapping_size < vmo_offset) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   // If we're mapping it with a specific permission, we should allow
@@ -269,7 +273,7 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
 
   fbl::RefPtr<VmAddressRegionOrMapping> res;
   zx_status_t status =
-      CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, ktl::move(vmo),
+      CreateSubVmarInternal(mapping_offset, mapping_size, align_pow2, vmar_flags, ktl::move(vmo),
                             vmo_offset, arch_mmu_flags, name, &res);
   if (status != ZX_OK) {
     return status;

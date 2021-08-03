@@ -847,7 +847,7 @@ TEST(Vmar, InvalidArgsTest) {
   EXPECT_EQ(
       zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo,
                   UINT64_MAX + 1 - zx_system_get_page_size(), zx_system_get_page_size(), &map_addr),
-      ZX_ERR_INVALID_ARGS);
+      ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo,
                         UINT64_MAX + 1 - 2 * zx_system_get_page_size(), zx_system_get_page_size(),
                         &map_addr),
@@ -874,9 +874,9 @@ TEST(Vmar, InvalidArgsTest) {
                              &region_addr),
             ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, bad_size, &map_addr),
-            ZX_ERR_INVALID_ARGS);
+            ZX_ERR_OUT_OF_RANGE);
   EXPECT_EQ(zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, 0, vmo, 0, bad_size, &map_addr),
-            ZX_ERR_INVALID_ARGS);
+            ZX_ERR_OUT_OF_RANGE);
   // Attempt bad protect/unmaps
   EXPECT_EQ(
       zx_vmar_map(vmar, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,

@@ -88,6 +88,8 @@ range of memory.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 
+**ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
+
 ## SEE ALSO
 
  - [`zx_vmar_map()`]

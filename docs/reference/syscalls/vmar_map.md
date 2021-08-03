@@ -107,8 +107,7 @@ non-zero when neither **ZX_VM_SPECIFIC** nor
 **ZX_VM_SPECIFIC_OVERWRITE** are given,
 **ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both given,
 *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds,
-*vmar_offset* or *vmo_offset* or *len* are not page-aligned,
-`vmo_offset + ROUNDUP(len, PAGE_SIZE)` overflows.
+*vmar_offset* or *vmo_offset* or *len* are not page-aligned.
 
 **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
 
@@ -125,6 +124,8 @@ In a future build this error will no longer occur.
 **ZX_ERR_NO_MEMORY**  **ZX_VM_SPECIFIC** has been specified,
 **ZX_VM_SPECIFIC_OVERWRITE** has not been specified,
 and the requested range overlaps with another mapping.
+
+**ZX_ERR_OUT_OF_RANGE** `vmo_offset + ROUNDUP(len, PAGE_SIZE)` overflows.
 
 ## NOTES
 
