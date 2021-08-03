@@ -2,6 +2,9 @@
 
 <<../../_v2_banner.md>>
 
+Caution: service capabilities are experimental and in development. Their
+behavior and APIs could change at any time.
+
 [Service capabilities][glossary.service-capability] allow components
 to connect to [FIDL services][glossary.service]
 provided either by other components or the component framework itself.
