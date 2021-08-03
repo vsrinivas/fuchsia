@@ -97,7 +97,7 @@ vboot_action = {
 #     [list of one label] Must be a `zbi()` target defined earlier in the file.
 #
 #   output_name (optional, default: `target_name`)
-#   output_extension (optional, default: `".vboot"`)
+#   output_extension (optional, default: `".signed"`)
 #     [string] Determines the file name, in `root_out_dir`.
 #
 template("vboot") {
@@ -113,7 +113,7 @@ template("vboot") {
       output_file += ".${invoker.output_extension}"
     }
   } else {
-    output_file += ".vboot"
+    output_file += ".signed"
   }
   output_file = "$root_out_dir/$output_file"
 

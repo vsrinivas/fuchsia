@@ -131,7 +131,7 @@ TEST_fx-mkzedboot-vboot() {
   # Set up "list-build-artifacts" mock for chromebook builds.
   cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
 if [[ "$@" == "--allow-empty --type zbi.signed mkzedboot" ]] ; then
-  echo "zedboot.zbi.vboot"
+  echo "zedboot.zbi.signed"
 fi
 EOF
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
@@ -165,7 +165,7 @@ EOF
 
   # We should have copied the Signed ZBI version of Zedboot.
   source "${BT_TEMP_DIR}/bin/dd.mock_state"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "out/default/zedboot.zbi.vboot"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "out/default/zedboot.zbi.signed"
 }
 
 BT_RUN_TESTS "$@"

@@ -210,14 +210,14 @@ if (custom_signing_script != "") {
           }
           name = "${zedboot_metadata_slot}.signed"
           bootserver_pave_zedboot = [ "--zircona" ]
-          path = "zedboot.zbi.vboot"
+          path = "zedboot.zbi.signed"
           type = "zbi.signed"
         },
       ]
-      update_target = [ "zedboot.signed=zedboot.zbi.vboot" ]
+      update_target = [ "zedboot.signed=zedboot.zbi.signed" ]
       if (use_zedboot_as_recovery) {
         mkzedboot_mode = [ "vboot" ]
-        image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.vboot" ]
+        image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
       }
     }
   }

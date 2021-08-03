@@ -316,12 +316,9 @@ template("generated_board_config") {
           if (name == "zedboot") {
             # Zedboot's name is different depending on if, and how, it's post-
             # processed for booting by the board's bootloaders.
-            if (custom_signing_script != "") {
+            if (custom_signing_script != "" || use_vboot) {
               name = "zedboot.signed"
               zbi = "zedboot.zbi.signed"
-            } else if (use_vboot) {
-              name = "zedboot.signed"
-              zbi = "zedboot.zbi.vboot"
             } else {
               zbi = "zedboot.zbi"
             }

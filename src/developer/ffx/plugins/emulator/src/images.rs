@@ -195,7 +195,7 @@ mod test {
         },
         {
           "name": "zircon-vboot",
-          "path": "fuchsia.vboot",
+          "path": "fuchsia.zbi.signed",
           "type": "vboot"
         },
         {
