@@ -31,6 +31,10 @@ tmp                     .req x9
 
 .section .text
 FUNCTION(mexec_asm)
+// Mask all interrupts before going further. Once we've dsiabled the caches and
+// MMU we don't want to take an unexpected exception because we may no
+// longer have the machinery in place to handle it.
+    msr     daifset, 0xf
 
 // Turn off the caches and MMU
     mrs     tmp, sctlr_el1      // Read the SCTLR into a temp
@@ -65,6 +69,9 @@ FUNCTION(mexec_asm)
     hvc     #1
 
 1:
+// We're now running EL2. Just like we did above, mask all interrupts before going further.
+    msr     daifset, 0xf
+
 // Reset SCTLR_EL2 to default state, turning off caches and MMU.
     movlit  tmp, SCTLR_EL2_RES1
     msr     sctlr_el2, tmp
