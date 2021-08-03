@@ -19,7 +19,7 @@ fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
         flags |= zx::VmarFlags::PERM_READ;
     }
     if prot & PROT_WRITE != 0 {
-        flags |= zx::VmarFlags::PERM_WRITE;
+        flags |= zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
     }
     if prot & PROT_EXEC != 0 {
         flags |= zx::VmarFlags::PERM_EXECUTE;
