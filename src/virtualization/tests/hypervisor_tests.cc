@@ -66,6 +66,7 @@ DECLARE_TEST_FUNCTION(vcpu_wfi_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_fp)
 DECLARE_TEST_FUNCTION(vcpu_fp_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_psci_system_off)
+DECLARE_TEST_FUNCTION(vcpu_dc_set_way_ops)
 #elif __x86_64__
 DECLARE_TEST_FUNCTION(vcpu_hlt)
 DECLARE_TEST_FUNCTION(vcpu_pause)
@@ -598,6 +599,13 @@ TEST(Guest, VcpuWriteStateIoAarch32) {
   zx_vcpu_io_t io{};
   io.access_size = 1;
   ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_IO, &io, sizeof(io)), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(Guest, DataCacheSetWayOperations) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_dc_set_way_ops_start, vcpu_dc_set_way_ops_end));
+
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }
 
 #elif __x86_64__

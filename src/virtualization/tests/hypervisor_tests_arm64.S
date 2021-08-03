@@ -251,3 +251,14 @@ FUNCTION vcpu_psci_system_off_start
     movlit x0, PSCI64_SYSTEM_OFF
     smc #0
 FUNCTION vcpu_psci_system_off_end
+
+// Test set/way d-cache operations.
+//
+// These are trapped and emulated by the hypervisor.
+FUNCTION vcpu_dc_set_way_ops_start
+    mov x0, #0
+    dc  csw, x0    // Clean L1 cache, set/way 0.
+    dc  cisw, x0   // Clean/Invalidate L1 cache, set/way 0.
+    dc  isw, x0    // Invalidate L1 cache, set/way 0.
+    test_complete
+FUNCTION vcpu_dc_set_way_ops_end
