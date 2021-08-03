@@ -9,15 +9,13 @@
 # 3. `families`: of hardware the driver applies to. It could be `Generic`. Always a list.
 # 4. `platforms`: the driver applies to. It could be `Generic`. Always a list.
 # 5. `areas`: the driver applies to. Always a list.
-# 6. `status`: either `Supported` or `Experimental`.
-# 7. `path`: where the driver source code is located.
+# 6. `path`: where the driver source code is located.
 
 - short_description: 'Amlogic g12 audio subsystem driver for PDM'
   vendor: ['Amlogic']
   families: ['g12']
   platforms: ['S905d2', 'T931', 'S905d3']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/aml-g12-pdm'
 
 - short_description: 'Amlogic g12 audio subsystem driver for TDM'
@@ -25,7 +23,6 @@
   families: ['g12']
   platforms: ['S905d2', 'T931', 'S905d3']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/aml-g12-tdm'
 
 - short_description: 'Realtek Alc5514 audio hardware codec driver'
@@ -33,7 +30,6 @@
   families: ['']
   platforms: ['Alc5514']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/alc5514'
 
 - short_description: 'Realtek Alc5663 audio hardware codec driver'
@@ -41,7 +37,6 @@
   families: ['']
   platforms: ['Alc5663']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/alc5663'
 
 - short_description: 'Maxim max98373 audio hardware codec driver'
@@ -49,7 +44,6 @@
   families: ['']
   platforms: ['Max98373']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/max98373'
 
 - short_description: 'Maxim max98927 audio hardware codec driver'
@@ -57,7 +51,6 @@
   families: ['']
   platforms: ['Max98927']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/max98927'
 
 - short_description: 'TI tas27xx audio hardware codec driver'
@@ -65,7 +58,6 @@
   families: ['']
   platforms: ['Tas2770']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/tas27xx'
 
 - short_description: 'TI tas5720 audio hardware codec driver'
@@ -73,7 +65,6 @@
   families: ['']
   platforms: ['Tas5720']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/tas5720'
 
 - short_description: 'TI tas5782 audio hardware codec driver'
@@ -81,7 +72,6 @@
   families: ['']
   platforms: ['Tas5782']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/tas5782'
 
 - short_description: 'TI tas58xx audio hardware codec driver'
@@ -89,7 +79,6 @@
   families: ['']
   platforms: ['Tas58xx']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/codecs/tas58xx'
 
 - short_description: 'Test driver for DAI audio drivers'
@@ -97,7 +86,6 @@
   families: ['generic']
   platforms: ['generic']
   areas: ['Media', 'Audio', 'Testing']
-  status: 'Supported'
   path: '/src/media/audio/drivers/dai-test'
 
 - short_description: 'Intel HDMI HDA codec driver'
@@ -105,7 +93,6 @@
   families: ['HDA']
   platforms: ['generic']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/intel-hda/codecs/hdmi'
 
 - short_description: 'QEMU HDA codec driver'
@@ -113,7 +100,6 @@
   families: ['generic']
   platforms: ['generic']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/intel-hda/codecs/qemu'
 
 - short_description: 'Readtek HDA codec driver'
@@ -121,7 +107,6 @@
   families: ['HDA']
   platforms: ['generic']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/intel-hda/codecs/realtek'
 
 - short_description: 'Intel HDA controller driver'
@@ -129,7 +114,6 @@
   families: ['HDA']
   platforms: ['generic']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/intel-hda/controller'
 
 - short_description: 'Mediatek 8167s audio subsystem driver for TDM input'
@@ -137,7 +121,6 @@
   families: ['']
   platforms: ['8167s_ref']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/mt8167-tdm-input'
 
 - short_description: 'Mediatek 8167s audio subsystem driver for TDM output'
@@ -145,7 +128,6 @@
   families: ['']
   platforms: ['8167s_ref']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/mt8167-tdm-output'
 
 - short_description: 'USB audio driver'
@@ -153,7 +135,6 @@
   families: ['generic']
   platforms: ['generic']
   areas: ['Media', 'Audio', 'Usb']
-  status: 'Supported'
   path: '/src/media/audio/drivers/usb-audio'
 
 - short_description: 'Virtual audio used for testing'
@@ -161,5 +142,4 @@
   families: ['generic']
   platforms: ['generic']
   areas: ['Media', 'Audio']
-  status: 'Supported'
   path: '/src/media/audio/drivers/virtual_audio'
