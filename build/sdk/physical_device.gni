@@ -1,0 +1,72 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/board.gni")
+import("//build/json/validate_json.gni")
+
+# Generates a physical device manifest JSON from a board definition.
+#
+# There is normally a single such target in the build graph that generates
+# metadata for the currently active board. The resulting metadata is uploaded
+# to the artifact repository.
+#
+# A release builder subsequently fetches all available device profiles metadata
+# and incorporates them into the single SDK release artifact.
+#
+# This build rule does not have any require attributes. It pulls its values
+# from the build environment.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("physical_device_manifest") {
+  # The following vars are defined in a board definition file.
+  arch = target_cpu
+  description = board_description
+  name = board_name
+
+  # This is the most recent schema.
+  schema = "//build/sdk/meta/physical_device-0bd5d21f.json"
+
+  # Schema ID must match the schema file.
+  schema_id = "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json"
+
+  manifest_contents = {
+    schema_id = schema_id
+    data = {
+      type = "physical_device"
+      name = name
+      description = description
+      hardware = {
+        cpu = {
+          arch = arch
+        }
+      }
+    }
+  }
+  manifest_file = "$target_gen_dir/physical_device.json"
+
+  write_file(manifest_file, manifest_contents, "json")
+
+  # Verify that the metadata complies with the specified schema.
+  validate_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    data = manifest_file
+    schema = schema
+    sources = [
+      # Included schemata.
+      "//build/sdk/meta/common.json",
+      "//build/sdk/meta/hardware-f6f47515.json",
+    ]
+    allow_comments = true
+  }
+}

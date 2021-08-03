@@ -14,7 +14,6 @@
                 "format": "tgz"
             }
         ],
-        "kind": "product_bundle-02",
         "manifests": {
             "flash": {
                 "hw_revision": "x64",
@@ -65,7 +64,8 @@
                 "format": "tgz",
                 "repo_uri": "https://storage.googleapis.com/fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
             }
-        ]
+        ],
+        "type": "product_bundle"
     },
-    "version": "http://fuchsia.com/schemas/sdk/product_bundle-02.json"
+    "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
 }

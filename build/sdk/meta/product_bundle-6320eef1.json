@@ -8,10 +8,6 @@
             "properties": {
                 "data": {
                     "properties": {
-                        "description": {
-                            "description": "A human readable description of the product bundle.",
-                            "type": "string"
-                        },
                         "device_refs": {
                             "description": "A list of physical or virtual device names this product can run on.",
                             "items": {
@@ -53,14 +49,14 @@
                             "minItems": 1,
                             "type": "array"
                         },
-                        "kind": {
+                        "type": {
                             "allOf": [
                                 {
                                     "$ref": "common.json#/definitions/kind"
                                 },
                                 {
                                     "enum": [
-                                        "product_bundle-02"
+                                        "product_bundle"
                                     ]
                                 }
                             ]
@@ -68,9 +64,8 @@
                     },
                     "required": [
                         "device_refs",
-                        "manifests",
                         "images",
-                        "kind",
+                        "type",
                         "name",
                         "packages"
                     ],
@@ -137,6 +132,6 @@
         }
     },
     "description": "Artifacts required to boot and run software on a device.",
-    "id": "http://fuchsia.com/schemas/sdk/product_bundle-02.json",
+    "id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
     "type": "object"
 }

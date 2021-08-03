@@ -16,14 +16,15 @@
                 "data": {
                     "description": "The payload."
                 },
-                "version": {
-                    "description": "An opaque version of the data held in the envelope.",
+                "schema_id": {
+                    "description": "The value of the '$id' property of the schema that constraints this JSON document.",
+                    "minLength": 1,
                     "type": "string"
                 }
             },
             "required": [
-                "version",
-                "data"
+                "data",
+                "schema_id"
             ],
             "type": "object"
         },
@@ -71,8 +72,7 @@
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/kind",
-                    "description": "The type of the element"
+                    "$ref": "#/definitions/kind"
                 }
             },
             "required": [
@@ -102,19 +102,23 @@
                 {
                     "properties": {
                         "data": {
-                            "description": "Base kind for SDK elements",
+                            "description": "Base type for SDK elements",
                             "properties": {
-                                "kind": {
-                                    "description": "The kind of the element",
+                                "description": {
+                                    "description": "A human readable description of the SDK element.",
+                                    "maxLength": 1024,
                                     "type": "string"
                                 },
                                 "name": {
                                     "description": "The name of the element",
                                     "type": "string"
+                                },
+                                "type": {
+                                    "$ref": "#/definitions/kind"
                                 }
                             },
                             "required": [
-                                "kind",
+                                "type",
                                 "name"
                             ],
                             "type": "object"

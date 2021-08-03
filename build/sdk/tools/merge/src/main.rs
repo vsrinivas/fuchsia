@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::bail;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::iter::{FromIterator, Iterator};
@@ -141,6 +142,7 @@ fn merge_common_part<F: TarballContent>(
         ElementType::License => merge_data(&part.meta, base, complement, output),
         ElementType::LoadableModule => merge_loadable_module(&part.meta, base, complement, output),
         ElementType::Sysroot => merge_sysroot(&part.meta, base, complement, output),
+        _ => bail!("Unsupported element type {:?}", part.kind),
     }
 }
 
@@ -165,6 +167,7 @@ fn copy_part_as_is<F: TarballContent>(
         ElementType::License => Box::new(source.get_metadata::<Data>(&part.meta)?),
         ElementType::LoadableModule => Box::new(source.get_metadata::<LoadableModule>(&part.meta)?),
         ElementType::Sysroot => Box::new(source.get_metadata::<Sysroot>(&part.meta)?),
+        _ => bail!("Unsupported element type {:?}", part.kind),
     };
     let mut paths = provider.get_all_files();
     paths.push(part.meta.clone());

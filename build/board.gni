@@ -6,6 +6,9 @@ declare_args() {
   # Board name used for paving and amber updates.
   board_name = ""
 
+  # Human readable board description corresponding to the board name.
+  board_description = ""
+
   # A list of driver package labels to include in the 'base' package set. Used
   # by the board definition rather than the product definition.
   board_driver_package_labels = []

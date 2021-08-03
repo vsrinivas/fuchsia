@@ -32,7 +32,7 @@
         }
     },
     "description": "Hardware requirements for running a product image.",
-    "id": "http://fuchsia.com/schemas/sdk/hardware.json",
+    "id": "http://fuchsia.com/schemas/sdk/hardware-f6f47515.json",
     "oneOf": [
         {
             "$ref": "#/definitions/requirements"

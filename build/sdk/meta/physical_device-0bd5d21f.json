@@ -10,7 +10,7 @@
                     "allOf": [
                         {
                             "properties": {
-                                "kind": {
+                                "type": {
                                     "allOf": [
                                         {
                                             "$ref": "common.json#/definitions/kind"
@@ -25,12 +25,12 @@
                             }
                         },
                         {
-                            "$ref": "hardware.json#/definitions/requirements"
+                            "$ref": "hardware-f6f47515.json#/definitions/requirements"
                         }
                     ],
                     "required": [
                         "hardware",
-                        "kind",
+                        "type",
                         "name"
                     ]
                 }
@@ -39,6 +39,6 @@
         }
     ],
     "description": "A physical device specification.",
-    "id": "http://fuchsia.com/schemas/sdk/physical_device.json",
+    "id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json",
     "type": "object"
 }

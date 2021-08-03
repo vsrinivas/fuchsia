@@ -42,20 +42,23 @@ impl JsonObject for TestObject {
 macro_rules! test_validation {
     (
         name = $name:ident,
-        kind = $kind:ident,
+        kind = $kind:ty,
         data = $data:expr,
         valid = $valid:expr,
     ) => {
         #[test]
         fn $name() {
             use crate::json::JsonObject;
+            use serde_json::to_value;
 
             let object =
-                $kind::new($data.as_bytes()).expect("Metadata object could not be deserialized");
+                <$kind>::new($data.as_bytes()).expect("Expected deserialzation to succeed");
             if $valid {
-                object.validate().expect("Validation should have succeeded");
+                object.validate().expect(
+                    format!("Expected validation to succeed for {:?}", to_value(&object)).as_str(),
+                );
             } else {
-                assert!(object.validate().is_err(), "Validation should have failed");
+                assert!(object.validate().is_err(), "Expected validation to fail");
             }
         }
     };

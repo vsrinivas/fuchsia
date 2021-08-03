@@ -33,5 +33,5 @@
             "type": "object"
         }
     },
-    "id": "http://fuchsia.com/schema/build/sdk/meta/emu_manifest.json"
+    "id": "http://fuchsia.com/schemas/sdk/emu_manifest.json"
 }

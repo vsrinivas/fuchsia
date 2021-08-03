@@ -7,6 +7,7 @@ import("emulation/emulation_arm64.gni")
 target_cpu = "arm64"
 
 board_name = "qemu-arm64"
+board_description = "A generic emulated arm64 device."
 
 _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",

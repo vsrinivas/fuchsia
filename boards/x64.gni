@@ -6,6 +6,7 @@ import("common/x64-common.gni")
 
 target_cpu = "x64"
 board_name = "x64"
+board_description = "A generic x64 device"
 
 # Use legacy serial for bootfs.
 _bootfs_deps = [ "//boards/kernel_cmdline:serial-legacy" ]

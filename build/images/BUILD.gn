@@ -23,6 +23,7 @@ import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
+import("//build/sdk/physical_device.gni")
 import("//build/security.gni")
 import("//build/security/verify_build.gni")
 import("//build/security/verify_routes.gni")
@@ -2868,6 +2869,10 @@ compiled_action("uefi-disk") {
   }
 }
 
+physical_device_manifest("physical_device_manifest") {
+  testonly = true
+}
+
 group("images") {
   testonly = true
   deps = [
@@ -2895,6 +2900,9 @@ group("default-images") {
 
     # The outputs from ffx assembly
     "assembly",
+
+    # Device manifest
+    ":physical_device_manifest",
   ]
 
   if (recovery_is_zedboot) {

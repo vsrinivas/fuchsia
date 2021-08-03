@@ -32,5 +32,15 @@ pub enum ElementType {
     HostTool,
     License,
     LoadableModule,
+    PhysicalDevice,
+    ProductBundle,
     Sysroot,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Envelope<D> {
+    /// The value of the $id field of the schema constraining the envelope.
+    pub schema_id: String,
+    pub data: D,
 }

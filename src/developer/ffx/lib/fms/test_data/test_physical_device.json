@@ -6,8 +6,8 @@
                 "arch": "arm64"
             }
         },
-        "kind": "physical_device",
-        "name": "generic-arm64"
+        "name": "generic-arm64",
+        "type": "physical_device"
     },
-    "version": "http://fuchsia.com/schemas/sdk/physical_device.json"
+    "schema_id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json"
 }

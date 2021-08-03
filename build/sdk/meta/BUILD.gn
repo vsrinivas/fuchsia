@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
 import("//build/sdk/sdk_documentation.gni")
 
 # This list should only contain schemas that are currently exported outside of
@@ -18,12 +17,12 @@ schemas = [
   "emu_manifest.json",
   "fidl_library.json",
   "flash_manifest-02.json",
-  "hardware.json",
+  "hardware-f6f47515.json",
   "host_tool.json",
   "loadable_module.json",
   "manifest.json",
-  "physical_device.json",
-  "product_bundle-02.json",
+  "physical_device-0bd5d21f.json",
+  "product_bundle-6320eef1.json",
   "sysroot.json",
 ]
 
@@ -47,6 +46,8 @@ source_set("schemas") {
 }
 
 if (is_host) {
+  import("//build/rust/rustc_library.gni")
+
   rustc_library("rust") {
     name = "sdk_metadata"
 
@@ -56,9 +57,11 @@ if (is_host) {
 
     deps = [
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:url-v1_7_2",
       "//third_party/rust_crates:valico",
     ]
 
@@ -78,6 +81,9 @@ if (is_host) {
       "src/lib.rs",
       "src/loadable_module.rs",
       "src/manifest.rs",
+      "src/metadata.rs",
+      "src/physical_device.rs",
+      "src/product_bundle.rs",
       "src/sysroot.rs",
       "src/testing.rs",
     ]
@@ -90,12 +96,15 @@ if (is_host) {
       "dart_library.json",
       "data.json",
       "documentation.json",
+      "emu_manifest.json",
       "fidl_library.json",
-      "hardware.json",
+      "flash_manifest-02.json",
+      "hardware-f6f47515.json",
       "host_tool.json",
       "loadable_module.json",
       "manifest.json",
-      "physical_device.json",
+      "physical_device-0bd5d21f.json",
+      "product_bundle-6320eef1.json",
       "sysroot.json",
     ]
   }

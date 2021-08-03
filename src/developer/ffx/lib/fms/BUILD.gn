@@ -2,55 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/testing/test_spec.gni")
+if (is_host) {
+  import("//build/rust/rustc_library.gni")
+  import("//build/rust/rustc_test.gni")
+  import("//build/testing/test_spec.gni")
 
-schemas = [
-  "//build/sdk/meta/common.json",
-  "//build/sdk/meta/emu_manifest.json",
-  "//build/sdk/meta/flash_manifest-02.json",
-  "//build/sdk/meta/hardware.json",
-  "//build/sdk/meta/physical_device.json",
-  "//build/sdk/meta/product_bundle-02.json",
-]
+  rustc_library("lib") {
+    name = "fms"
+    edition = "2018"
+    with_unit_tests = true
 
-source_set("schemas") {
-  inputs = schemas
-}
+    deps = [
+      "//build/sdk/meta:rust",
+      "//third_party/rust_crates:anyhow",
+    ]
 
-rustc_library("lib") {
-  name = "fms"
-  edition = "2018"
-  with_unit_tests = true
+    inputs = [
+      "test_data/test_physical_device.json",
+      "test_data/test_product_bundle.json",
+    ]
 
-  deps = [
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:valico",
-  ]
+    sources = [ "src/lib.rs" ]
+  }
 
-  non_rust_deps = [ ":schemas" ]
+  group("fms") {
+    deps = [ ":lib" ]
+  }
 
-  inputs = schemas
-  inputs += [
-    "test_data/test_physical_device.json",
-    "test_data/test_product_bundle.json",
-  ]
-
-  sources = [
-    "src/lib.rs",
-    "src/physical_device.rs",
-    "src/product_bundle.rs",
-  ]
-}
-
-group("fms") {
-  deps = [ ":lib" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  group("tests") {
+    testonly = true
+    deps = [ ":lib_test" ]
+  }
 }
