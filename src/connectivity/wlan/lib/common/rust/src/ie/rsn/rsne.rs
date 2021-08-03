@@ -21,7 +21,7 @@ use wlan_bitfield::bitfield;
 use thiserror::Error;
 
 macro_rules! if_remaining (
-  ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
+  ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)) );
 );
 
 // IEEE 802.11-2016, 9.4.2.25.1
