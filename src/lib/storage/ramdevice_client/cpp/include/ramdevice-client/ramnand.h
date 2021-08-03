@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef RAMDEVICE_CLIENT_RAMNAND_H_
-#define RAMDEVICE_CLIENT_RAMNAND_H_
+#ifndef SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
+#define SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
 
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
@@ -108,4 +108,4 @@ class RamNand {
 
 }  // namespace ramdevice_client
 
-#endif  // RAMDEVICE_CLIENT_RAMNAND_H_
+#endif  // SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_

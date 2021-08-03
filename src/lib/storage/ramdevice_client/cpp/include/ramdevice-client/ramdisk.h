@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef RAMDEVICE_CLIENT_RAMDISK_H_
-#define RAMDEVICE_CLIENT_RAMDISK_H_
+#ifndef SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMDISK_H_
+#define SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMDISK_H_
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -102,4 +102,4 @@ zx_status_t ramdisk_destroy(ramdisk_client_t* client);
 
 __END_CDECLS
 
-#endif  // RAMDEVICE_CLIENT_RAMDISK_H_
+#endif  // SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMDISK_H_

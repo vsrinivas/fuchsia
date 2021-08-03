@@ -1,0 +1,78 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("headers_config") {
+  include_dirs = [ "include" ]
+}
+
+shared_library("ramdevice-client") {
+  public_configs = [ ":headers_config" ]
+  public = [
+    "include/ramdevice-client/ramdisk.h",
+    "include/ramdevice-client/ramnand.h",
+  ]
+  sources = [
+    "ramdisk.cc",
+    "ramnand.cc",
+  ]
+  public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+static_library("ramdevice-client-static") {
+  public_configs = [ ":headers_config" ]
+  public = [
+    "include/ramdevice-client/ramdisk.h",
+    "include/ramdevice-client/ramnand.h",
+  ]
+  sources = [
+    "ramdisk.cc",
+    "ramnand.cc",
+  ]
+  public_deps = [
+    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}

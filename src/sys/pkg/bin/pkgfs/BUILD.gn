@@ -84,10 +84,10 @@ foreach(testpkg, go_test_packages) {
     deps = [ ":pmd" ]
     non_go_deps = [
       "//sdk/lib/fdio",
-      "//zircon/system/ulib/ramdevice-client",
+      "//src/lib/storage/ramdevice_client/cpp:ramdevice-client",
     ]
     include_dirs =
-        [ rebase_path("//zircon/system/ulib/ramdevice-client/include") ]
+        [ rebase_path("//src/lib/storage/ramdevice_client/cpp/include") ]
   }
 
   test_component_target = "${test_target}_component"
