@@ -251,8 +251,10 @@ template("assemble_system") {
   }
 
   system_image_deps = []
-  if (defined(invoker.system_image_deps)) {
+  if (defined(invoker.system_image_deps) && !bootfs_only) {
     system_image_deps += invoker.system_image_deps
+  } else {
+    not_needed(invoker, [ "system_image_deps" ])
   }
 
   embed_fvm_in_zbi = false
