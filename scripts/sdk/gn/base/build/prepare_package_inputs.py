@@ -296,9 +296,17 @@ def _build_manifest(args):
     binaries = [f for f in expanded_files if _is_binary(f)]
     _write_build_ids_txt(sorted(binaries), args.build_ids_file)
 
+    # Omit any excluded_files from the expanded_files written to the depfile.
+    gen_dir = os.path.normpath(os.path.join(args.out_dir, 'gen'))
+    roots = [gen_dir, args.root_dir, args.out_dir]
+    excluded_files_set = set(args.exclude_file)
+    expanded_deps_files = [path for path in expanded_files
+                           if make_package_path(path, roots)
+                           not in excluded_files_set]
+
     _write_gn_deps_file(
         args.depfile_path, args.manifest_path, component_manifests,
-        args.out_dir, expanded_files)
+        args.out_dir, expanded_deps_files)
     return 0
 
 
