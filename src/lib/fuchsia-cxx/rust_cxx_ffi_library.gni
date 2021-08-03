@@ -1,0 +1,241 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_staticlib.gni")
+
+# Defines a Rust library with a C++ FFI generated using the 'cxx' crate.
+# See https://docs.rs/cxx/ for general docs for the 'cxx' crate.
+#
+# This template provides the build machinery to use the 'cxx' crate to generate a Rust/C++ FFI when
+# you want to use a Rust library from a C++ codebase or, vice versa, to define a Rust interface for
+# a C++ library.
+#
+# The template produces a source_set that includes the generated FFI header and implementation,
+# plus any specified 'sources', and that depends on a Rust static library built from the specified
+# 'rust_sources' and 'rust_deps'.
+#
+# For example, to create a C++ API for a Rust library "foo", you could create a "src/lib.rs" file
+# containing a #[cxx::bridge] module and accompanying implementations (following the 'cxx' crate
+# docs), a "ffi.h" with the user-facing C++ API you want, a "ffi.cc" implementation that includes
+# the generated "lib.rs.h" header, and the following build targets:
+#
+#  rustc_library("foo") {
+#    ...
+#  }
+#
+#  rust_cxx_ffi_library("foo-ffi") {
+#    rust_sources = [
+#      "src/lib.rs",
+#      "src/other.rs",
+#    ]
+#    bridge_sources = [ "src/lib.rs" ]
+#    rust_deps = [ ":foo" ]
+#    sources = [
+#      "ffi.h",
+#      "ffi.c"
+#    ]
+#  }
+#
+# Then you can depend on the source_set from other Rust or C++ targets:
+#
+#  test("foo-ffi-test") {
+#    sources = [ "ffi-test.cc" ]
+#    deps = [
+#      ":foo-ffi",
+#    ]
+#  }
+#
+#  rustc_library("uses-foo") {
+#    sources = [ "src/lib.rs" ]
+#    deps = [
+#      ":foo-ffi",
+#    ]
+#  }
+#
+# For a real example, see //src/lib/process_builder/ffi
+#
+# Parameters
+#
+#   name (optional)
+#     Name of the crate as defined in its manifest file. Unspecified if not set explicitly.
+#
+#   rust_sources (required)
+#     List of Rust source files which the Rust library is allowed to compile. The Rust compiler
+#     discovers source files by following `mod` declarations starting at the `rust_source_root`. The
+#     discovered source files must match this list.
+#     Type: list of paths
+#
+#   bridge_sources (required)
+#     The subset of `rust_sources` which contain a `#[cxx::bridge]` module.
+#     Type: list of paths
+#
+#   rust_source_root (optional)
+#     Location of the crate root. Defaults to `./src/lib.rs`.
+#     Type: path
+#
+#   rust_deps (optional)
+#     List of dependencies required by the Rust static library target. Technically optional, but at
+#     minimum you'll need "//third_party/rust_crates:cxx".
+#     Type: list of paths
+#     Default: []
+#
+#   cpp_sources (optional)
+#     List of C++ source files to compile into the final source_set.
+#     Type: list of paths
+#
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     These all have their usual GN meaning and are applied to the final source_set.
+#
+template("rust_cxx_ffi_library") {
+  assert(defined(invoker.rust_sources),
+         "rust_sources must be defined for $target_name")
+
+  rust_lib_target = "${target_name}_rustc_library"
+  generated_rs_target = "${target_name}_staticlib_source_root_rs"
+  rust_staticlib_target = "${target_name}_rustc_staticlib"
+  config_target = "${target_name}_config"
+
+  # compiled_action's default assumption is that the executable output_name == target_name, which
+  # is true for generated 3P Rust executable targets.
+  cxxbridge_cmd_tool = "//third_party/rust_crates:cxxbridge"
+
+  if (defined(invoker.rust_source_root)) {
+    rust_source_root = invoker.rust_source_root
+  } else {
+    rust_source_root = "src/lib.rs"
+  }
+  source_gen_dir = get_path_info(rust_source_root, "gen_dir")
+
+  generation_targets = []
+  generated_sources = []
+  foreach(src, invoker.bridge_sources) {
+    assert(invoker.rust_sources + [ src ] - [ src ] != invoker.rust_sources,
+           "rust_sources must contain all bridge_sources, including $src")
+
+    target_prefix = "${target_name}_" + string_replace(src, "/", "_")
+    gen_target = "${target_prefix}_cxxbridge"
+    generation_targets += [ ":$gen_target" ]
+
+    include_stem = get_path_info(get_path_info(src, "dir"), "abspath")
+    source_file = get_path_info(src, "file")
+    generated_header = "$source_gen_dir/$include_stem/$source_file.h"
+    generated_impl = "$source_gen_dir/$include_stem/$source_file.cc"
+    generated_sources += [
+      generated_header,
+      generated_impl,
+    ]
+
+    compiled_action(gen_target) {
+      tool = cxxbridge_cmd_tool
+      sources = [ src ]
+      outputs = [
+        generated_header,
+        generated_impl,
+      ]
+      args = [
+        "-o",
+        rebase_path(generated_header, root_build_dir),
+        "-o",
+        rebase_path(generated_impl, root_build_dir),
+        rebase_path(src, root_build_dir),
+      ]
+      visibility = [ ":*" ]
+    }
+  }
+
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  } else {
+    package_name = target_name
+  }
+
+  rust_deps = [ "//third_party/rust_crates:cxx" ]
+  if (defined(invoker.rust_deps)) {
+    rust_deps += invoker.rust_deps
+  }
+
+  # This allows other Rust libraries or even other rust_cxx_ffi_library targets to depend on this,
+  # so that multiple CXX FFI bridges can be composed, where the rustc_staticlib target alone does
+  # not.
+  rustc_library(rust_lib_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    name = package_name
+    edition = "2018"
+    source_root = rust_source_root
+    sources = invoker.rust_sources
+
+    # Depending on the generation targets above avoids noisy build failures if there's an issue
+    # in the cxxbridge section, since then this will definitely fail too.
+    deps = generation_targets + rust_deps
+  }
+
+  generated_file(generated_rs_target) {
+    outputs = [ "$source_gen_dir/staticlib_source_root.rs" ]
+    contents = "pub use " + package_name + "::*;"
+  }
+
+  # Create a staticlib from the rustc_library above. This uses a generated source_root that just
+  # re-exports all of the library's symbols.
+  rustc_staticlib(rust_staticlib_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    edition = "2018"
+    _generated_outputs = get_target_outputs(":$generated_rs_target")
+    source_root = _generated_outputs[0]
+    sources = [ source_root ]
+    deps = [
+      ":$generated_rs_target",
+      ":$rust_lib_target",
+    ]
+  }
+
+  config(config_target) {
+    include_dirs = [ source_gen_dir ]
+  }
+
+  source_set(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    sources = []
+    if (defined(invoker.cpp_sources)) {
+      sources += invoker.cpp_sources
+    }
+    sources += generated_sources
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += generation_targets
+    deps += [
+      ":$rust_lib_target",
+      ":$rust_staticlib_target",
+      "//src/lib/fuchsia-cxx:cxx_lib",
+    ]
+
+    if (!defined(public_configs)) {
+      public_configs = []
+    }
+    public_configs += [ ":$config_target" ]
+  }
+}

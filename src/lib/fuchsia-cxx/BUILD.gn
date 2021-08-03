@@ -1,0 +1,25 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Included automatically by rust_cxx_ffi_library.gni targets
+source_set("cxx_lib") {
+  # This visibility list exists so that we can review new usages of cxx to build Rust/C++ FFIs as
+  # they are created, since it is still new to Fuchsia.
+  #
+  # You are welcome to add new usages and entries to this list, and add the OWNERS of this
+  # directory to the review. If you are doing something novel with cxx, it would be a good idea to
+  # reach out ahead of time with to be sure your usage sounds OK.
+  #
+  # It is recommended that you read https://docs.rs/cxx first to understand how cxx works, and to
+  # understand what cxx does (and does not) do. All C++ code is still "unsafe" from the Rust
+  # perspective; cxx just helps with building the Rust side of the FFI layer safely.
+  visibility = []
+
+  cxx_crate = "//third_party/rust_crates/vendor/cxx"
+  sources = [
+    "$cxx_crate/include/cxx.h",
+    "$cxx_crate/src/cxx.cc",
+  ]
+  defines = [ "RUST_CXX_NO_EXCEPTIONS" ]
+}

@@ -951,7 +951,7 @@ group("zstd-safe") {
 }
 
 group("cxxbridge") {
-  deps = [ ":cxxbridge-cmd-cxxbridge-v1_0_50" ]
+  public_deps = [ ":cxxbridge-cmd-cxxbridge-v1_0_50" ]
 }
 
 rust_library("adler32-v1_0_4") {

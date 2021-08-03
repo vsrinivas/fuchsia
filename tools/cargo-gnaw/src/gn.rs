@@ -55,7 +55,7 @@ pub fn write_top_level_rule<'a, W: io::Write>(
     }
     writeln!(
         output,
-        include_str!("../templates/entry_gn_rules.template"),
+        include_str!("../templates/top_level_gn_rule.template"),
         group_name = pkg.name,
         dep_name = target_name,
     )?;
@@ -81,7 +81,7 @@ pub fn write_binary_top_level_rule<'a, W: io::Write>(
     }
     writeln!(
         output,
-        include_str!("../templates/entry_gn_rules.template"),
+        include_str!("../templates/top_level_binary_gn_rule.template"),
         group_name = rule_name,
         dep_name = target.gn_target_name(),
     )?;

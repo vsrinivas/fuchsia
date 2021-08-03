@@ -9,7 +9,7 @@ group("package-with-bin") {
 }
 
 group("foo-output") {
-  deps = [ ":package-with-bin-foo-binary-v0_1_0" ]
+  public_deps = [ ":package-with-bin-foo-binary-v0_1_0" ]
 }
 
 executable("package-with-bin-foo-binary-v0_1_0") {
