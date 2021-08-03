@@ -7,6 +7,12 @@
             "metric_id": 1,
             "metric_type": "Occurrence",
             "event_codes": []
+        },
+        {
+            "selector": "bootstrap/driver_manager:root/amlogic-display/osd:rdma_stalls",
+            "metric_id": 2,
+            "metric_type": "Occurrence",
+            "event_codes": []
         }
     ]
 }

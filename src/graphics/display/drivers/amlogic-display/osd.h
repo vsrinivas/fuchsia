@@ -166,14 +166,7 @@ struct RdmaChannelContainer {
 class Osd {
  public:
   Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
-      uint32_t display_height, inspect::Node* parent_node)
-      : supports_afbc_(supports_afbc),
-        fb_width_(fb_width),
-        fb_height_(fb_height),
-        display_width_(display_width),
-        display_height_(display_height),
-        inspect_node_(parent_node->CreateChild("osd")),
-        rdma_allocation_failures_(inspect_node_.CreateUint("rdma_allocation_failures", 0)) {}
+      uint32_t display_height, inspect::Node* parent_node);
 
   zx_status_t Init(ddk::PDev& pdev);
   void HwInit();
@@ -274,6 +267,11 @@ class Osd {
 
   inspect::Node inspect_node_;
   inspect::UintProperty rdma_allocation_failures_;
+  inspect::UintProperty rdma_irq_count_;
+  inspect::UintProperty rdma_base_channel_pending_in_irq_count_;
+  inspect::UintProperty rdma_base_channel_done_count_;
+  inspect::UintProperty rdma_afbc_channel_done_count_;
+  inspect::UintProperty rdma_stall_count_;
 };
 
 }  // namespace amlogic_display
