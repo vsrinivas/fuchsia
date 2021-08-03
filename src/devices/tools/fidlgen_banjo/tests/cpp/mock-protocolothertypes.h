@@ -496,22 +496,22 @@ public:
     }
 
     virtual void InterfaceValue(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) {
-        std::tuple<other_types_protocol_t> ret = mock_value_.Call(intf);
+        std::tuple<other_types_protocol_t> ret = mock_value_.Call(other_types_protocol_t{intf_ops, intf_ctx});
         *out_intf = std::get<0>(ret);
     }
 
     virtual void InterfaceReference(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) {
-        std::tuple<other_types_protocol_t> ret = mock_reference_.Call(intf);
+        std::tuple<other_types_protocol_t> ret = mock_reference_.Call(other_types_protocol_t{intf_ops, intf_ctx});
         *out_intf = std::get<0>(ret);
     }
 
     virtual void InterfaceAsync(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) {
-        std::tuple<other_types_protocol_t> ret = mock_async_.Call(intf);
+        std::tuple<other_types_protocol_t> ret = mock_async_.Call(other_types_protocol_t{intf_ops, intf_ctx});
         callback(cookie, std::get<0>(ret));
     }
 
     virtual void InterfaceAsyncRefernce(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) {
-        std::tuple<other_types_protocol_t> ret = mock_async_refernce_.Call(intf);
+        std::tuple<other_types_protocol_t> ret = mock_async_refernce_.Call(other_types_protocol_t{intf_ops, intf_ctx});
         callback(cookie, std::get<0>(ret));
     }
 

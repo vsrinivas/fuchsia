@@ -414,7 +414,14 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                                     match ir.get_declaration(identifier).unwrap() {
                                         Declaration::Interface => {
                                             if not_callback(identifier, ir).unwrap() {
-                                                name
+                                                let ty_name =
+                                                    type_to_cpp_str(&param._type, false, ir)
+                                                        .unwrap();
+                                                format!(
+                                                    "{ty_name}{{{name}_ops, {name}_ctx}}",
+                                                    ty_name = ty_name,
+                                                    name = name
+                                                )
                                             } else {
                                                 format!("*{}", name)
                                             }

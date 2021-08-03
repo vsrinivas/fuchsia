@@ -53,7 +53,7 @@ public:
     }
 
     virtual void BakerRegister(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops) {
-        mock_register_.Call(intf);
+        mock_register_.Call(cookie_maker_protocol_t{intf_ops, intf_ctx});
     }
 
     virtual void BakerDeRegister() {
