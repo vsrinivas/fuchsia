@@ -11,6 +11,7 @@ use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 use crate::devices::*;
 use crate::fd_impl_seekable;
 use crate::fs::*;
+use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
@@ -137,7 +138,7 @@ impl FileOps for RemoteFileObject {
         prot -= zx::VmarFlags::PERM_EXECUTE;
         let (mut vmo, _size) = self.zxio.vmo_get(prot).map_err(Errno::from_status_like_fdio)?;
         if has_execute {
-            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).expect("replace_as_executable failed");
+            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
         }
         Ok(vmo)
     }

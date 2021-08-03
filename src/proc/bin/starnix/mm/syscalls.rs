@@ -12,6 +12,7 @@ use crate::mm::*;
 use crate::not_implemented;
 use crate::syscalls::*;
 use crate::types::*;
+use crate::vmex_resource::VMEX_RESOURCE;
 
 fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
     let mut flags = zx::VmarFlags::empty();
@@ -82,12 +83,15 @@ pub fn sys_mmap(
     }
 
     let vmo = if flags & MAP_ANONYMOUS != 0 {
-        let vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
+        let mut vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
             zx::Status::NO_MEMORY => ENOMEM,
             _ => impossible_error(s),
         })?;
         vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
             .map_err(impossible_error)?;
+        if zx_flags.contains(zx::VmarFlags::PERM_EXECUTE) {
+            vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
+        }
         vmo
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
