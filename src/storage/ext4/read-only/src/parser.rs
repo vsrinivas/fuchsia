@@ -129,7 +129,7 @@ impl<T: 'static + Reader> Parser<T> {
         //
         // A 1024 byte block size means the padding takes block 0 and the Super Block takes
         // block 1. This means the Block Group Descriptors start in block 2.
-        let bg_descriptor_offset = if block_size >= MIN_EXT4_SIZE {
+        let bgd_table_offset = if block_size >= MIN_EXT4_SIZE {
             // Padding and Super Block both fit in the first block, so offset to the next
             // block.
             block_size
@@ -139,11 +139,11 @@ impl<T: 'static + Reader> Parser<T> {
             block_size * 2
         };
 
-        // TODO(vfcc): Only checking the first block group.
-        // There are potentially N block groups.
+        let bgd_offset = (inode_number - 1) as usize / sb.e2fs_ipg.get() as usize
+            * size_of::<BlockGroupDesc32>();
         let bgd = BlockGroupDesc32::parse_offset(
             self.reader.clone(),
-            bg_descriptor_offset,
+            bgd_table_offset + bgd_offset,
             ParsingError::InvalidBlockGroupDesc(block_size),
         )?;
 
@@ -304,16 +304,23 @@ impl<T: 'static + Reader> Parser<T> {
         }
     }
 
-    /// Read all raw data for a given file (directory entry).
+    /// Read all raw data for a given inode. For a file, this will be the file data. For a symlink.
+    /// this will be the symlink target.
     ///
     /// Currently does not support extent trees, only basic "flat" trees.
-    pub fn read_file(&self, inode: u32) -> Result<Vec<u8>, ParsingError> {
+    pub fn read_data(&self, inode: u32) -> Result<Vec<u8>, ParsingError> {
         let inode = self.inode(inode)?;
+        let mut data = Vec::with_capacity(inode.size());
+
+        // Check for symlink with inline data
+        if u16::from(inode.e2di_mode) & 0xa000 != 0 && u32::from(inode.e2di_nblock) == 0 {
+            data.extend_from_slice(&inode.e2di_blocks[..inode.size()]);
+            return Ok(data);
+        }
+
         let root_extent = inode.root_extent_header()?;
         let entry_count = root_extent.eh_ecount.get();
         let mut size_remaining = inode.size();
-
-        let mut data = Vec::with_capacity(inode.size());
 
         match root_extent.eh_depth.get() {
             0 => {
@@ -408,7 +415,7 @@ impl<T: 'static + Reader> Parser<T> {
             let entry_type = EntryType::from_u8(entry.e2d_type)?;
             match entry_type {
                 EntryType::RegularFile => {
-                    let data = my_self.read_file(entry.e2d_ino.into())?;
+                    let data = my_self.read_data(entry.e2d_ino.into())?;
                     let bytes = data.as_slice();
                     tree.add_entry(path.clone(), read_only_const(bytes))
                         .map_err(|_| ParsingError::BadFile(path.join("/")))?;
@@ -482,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    fn read_file() {
+    fn read_data() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
@@ -491,7 +498,7 @@ mod tests {
         assert_eq!(entry.e2d_ino.get(), 15);
         assert_eq!(entry.name().unwrap(), "file1");
 
-        let data = parser.read_file(entry.e2d_ino.into()).expect("File data");
+        let data = parser.read_data(entry.e2d_ino.into()).expect("File data");
         let compare = "file1 contents.\n";
         assert_eq!(data.len(), compare.len());
         assert_eq!(str::from_utf8(data.as_slice()).expect("File data"), compare);
@@ -542,7 +549,7 @@ mod tests {
                 let entry_type = EntryType::from_u8(entry.e2d_type).expect("Entry Type");
                 match entry_type {
                     EntryType::RegularFile => {
-                        let data = my_self.read_file(entry.e2d_ino.into()).expect("File data");
+                        let data = my_self.read_data(entry.e2d_ino.into()).expect("File data");
 
                         let mut hasher = Sha256::new();
                         hasher.input(&data);

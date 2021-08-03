@@ -108,7 +108,7 @@ impl FsNodeOps for ExtFile {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         let vmo = self.vmo.get_or_try_init(|| {
             let bytes =
-                self.inner.fs().parser.read_file(self.inner.inode_num).map_err(ext_error)?;
+                self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
             let vmo = zx::Vmo::create(bytes.len() as u64).map_err(vmo_error)?;
             vmo.write(&bytes, 0).map_err(vmo_error)?;
             Ok(Arc::new(vmo))
