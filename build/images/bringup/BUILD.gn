@@ -3,51 +3,50 @@
 # found in the LICENSE file.
 
 import("//build/images/args.gni")
+import("//build/images/assemble_system.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
-import("//build/images/vbmeta.gni")
 import("//build/images/vboot/vboot.gni")
-import("//build/unification/future/images/devmgr_config.gni")
-import("//build/zbi/zbi.gni")
 
 assert(current_toolchain == target_toolchain)
 
-# XXX: Temporary solution: we grab every package in the build and ensure that
-# these are contributing to the bootfs_manifest that we generate.
-_system_image_deps = [
-  "//build/images:packages",
-  "//build/input:system_image",
-]
-
-action("devmgr_config.txt") {
+assemble_system("bringup") {
   testonly = true
+  board_name = board_name
+  output_dir = root_build_dir
+  use_esp = target_cpu != "arm64" && !use_vboot
 
-  script = "../manifest.py"
-  outputs = [ "$target_out_dir/devmgr_config.txt" ]
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  deps = _system_image_deps
+  include_version_and_epoch = true
+  include_component_id_index = true
+  include_shell_commands = false
 
-  foreach(entry, devmgr_config) {
-    args += [ "--entry=$entry" ]
-  }
-}
+  cmdline_deps = [ "//build/input:bootfs" ]
+  recovery = recovery_label
 
-devmgr_config("devmgr_config") {
-  label = ":devmgr_config.txt"
-  testonly = true
-}
+  base_packages = []
+  base_driver_packages = [ "//:additional_base_driver_packages" ]
 
-zbi("bringup") {
-  testonly = true
-
-  output_dir = root_out_dir
-
-  deps = [
-    ":devmgr_config",
+  bootfs_labels = [
+    "//build/images:driver-manager-base-config",
     "//build/input:bootfs",
-    "//zircon/kernel",
+    "//build/input:system_image",
+    "//:additional_base_driver_packages",
+    "//:additional_base_packages",
+    "//:additional_cache_packages",
+    "//:additional_universe_packages",
   ]
-  deps += _system_image_deps
+
+  # blobfs arguments
+  blob_layout_format = blob_layout_format
+  compress_blobs = compress_blobs
+
+  # zbi arguments
+  if (custom_signing_script != "") {
+    zbi_signing_script = custom_signing_script
+  } else if (use_vboot) {
+    zbi_signing_script = vboot_action.script
+    zbi_signing_args = vboot_action.args
+  }
 
   metadata = {
     images = [
@@ -74,6 +73,20 @@ zbi("bringup") {
       },
     ]
 
+    if (use_vbmeta) {
+      images += [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "zircon-a"
+          path = "bringup.vbmeta"
+          type = "vbmeta"
+
+          archive = true
+          bootserver_pave = [ "--vbmetaa" ]
+        },
+      ]
+    }
+
     image_paths = [
       "IMAGE_ZIRCONA_ZBI=bringup.zbi",
 
@@ -98,46 +111,5 @@ zbi("bringup") {
       "IMAGE_NETBOOT_RAM=bringup.zbi",
       "IMAGE_NETBOOT_ZBI=bringup.zbi",
     ]
-  }
-}
-
-if (custom_signing_script != "") {
-  custom_signed_zbi("signed") {
-    output_name = "bringup.zbi"
-    testonly = true
-    deps = [ ":bringup" ]
-    zbi_outputs = get_target_outputs(":bringup")
-    zbi = [ zbi_outputs[0] ]
-  }
-}
-
-if (use_vbmeta) {
-  vbmeta("bringup.vbmeta") {
-    generate_image = true
-    output_name = "bringup"
-    testonly = true
-    if (custom_signing_script != "") {
-      deps = [ ":signed" ]
-      zbi_outputs = get_target_outputs(":signed")
-      zbi = [ zbi_outputs[0] ]
-    } else {
-      deps = [ ":bringup" ]
-      zbi_outputs = get_target_outputs(":bringup")
-      zbi = [ zbi_outputs[0] ]
-    }
-
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "zircon-a"
-          path = "bringup.vbmeta"
-          type = "vbmeta"
-
-          archive = true
-          bootserver_pave = [ "--vbmetaa" ]
-        },
-      ]
-    }
   }
 }

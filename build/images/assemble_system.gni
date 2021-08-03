@@ -190,6 +190,7 @@ template("assemble_system") {
     image_assembler = "${image_name}_image_assembler"
     copy_vbmeta = "${image_name}_copy_vbmeta"
     copy_zbi = "${image_name}_copy_zbi"
+    copy_zbi_signed = "${image_name}_copy_zbi_signed"
     copy_zbi_manifest = "${image_name}_copy_zbi_manifest"
     copy_images = "${image_name}_copy_images"
     config_data = "${image_name}_config-data"
@@ -584,18 +585,9 @@ template("assemble_system") {
       output_name = parts[0]
     }
 
-    if (use_vbmeta) {
-      copy(labels.copy_vbmeta) {
-        forward_variables_from(invoker, [ "testonly" ])
-        sources = [ files.vbmeta ]
-        outputs = [ "${invoker.output_dir}/${output_name}.vbmeta" ]
-        deps = [ ":${labels.image_assembler}" ]
-      }
-    }
-
     copy(labels.copy_zbi) {
       forward_variables_from(invoker, [ "testonly" ])
-      sources = [ files.zbi_final ]
+      sources = [ files.zbi ]
       outputs = [ "${invoker.output_dir}/${output_name}.zbi" ]
       deps = [ ":${labels.image_assembler}" ]
     }
@@ -607,12 +599,33 @@ template("assemble_system") {
       deps = [ ":${labels.image_assembler}" ]
     }
 
+    if (defined(invoker.zbi_signing_script)) {
+      copy(labels.copy_zbi_signed) {
+        forward_variables_from(invoker, [ "testonly" ])
+        sources = [ files.zbi_signed ]
+        outputs = [ "${invoker.output_dir}/${output_name}.zbi.signed" ]
+        deps = [ ":${labels.image_assembler}" ]
+      }
+    }
+
+    if (use_vbmeta) {
+      copy(labels.copy_vbmeta) {
+        forward_variables_from(invoker, [ "testonly" ])
+        sources = [ files.vbmeta ]
+        outputs = [ "${invoker.output_dir}/${output_name}.vbmeta" ]
+        deps = [ ":${labels.image_assembler}" ]
+      }
+    }
+
     group(labels.copy_images) {
       forward_variables_from(invoker, [ "testonly" ])
       public_deps = [
         ":${labels.copy_zbi_manifest}",
         ":${labels.copy_zbi}",
       ]
+      if (defined(invoker.zbi_signing_script)) {
+        public_deps += [ ":${labels.copy_zbi_signed}" ]
+      }
       if (use_vbmeta) {
         public_deps += [ ":${labels.copy_vbmeta}" ]
       }

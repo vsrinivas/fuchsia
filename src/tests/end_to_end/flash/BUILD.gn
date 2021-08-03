@@ -37,7 +37,7 @@ if (is_host) {
       "$root_build_dir/flash.sh",
       "$root_build_dir/fuchsia.vbmeta",
       "$root_build_dir/host_x64/fastboot",
-      "$root_build_dir/obj/build/images/fvm.fastboot.blk",
+      "$root_build_dir/obj/build/images/fuchsia/fuchsia/fvm.fastboot.blk",
       "$root_build_dir/zedboot.vbmeta",
     ]
 

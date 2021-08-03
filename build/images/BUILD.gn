@@ -36,16 +36,38 @@ import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 import("//src/sys/pkg/bin/system-updater/epoch/generate_epoch.gni")
 
+labels = {
+  images = "//build/images/fuchsia"
+  images_prime = "//build/images/fuchsia:fuchsia_prime"
+  images_netboot = "//build/images/fuchsia:netboot"
+  minfs = "//build/images:data.blk"
+}
+
+supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
+files = {
+  outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
+  gendir = "${outdir}/gen"
+
+  zbi = "${outdir}/fuchsia.zbi"
+  blobfs = "${outdir}/blob.blk"
+  fvm_sparse = "${outdir}/fvm.sparse.blk"
+  blobs_json = "${gendir}/blobs.json"
+
+  extracted_zbi_json = "$target_out_dir/fuchsia.zbi.json"
+  extracted_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
+
+  if (supports_fastboot_fvm) {
+    fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+  }
+}
+
 recovery_is_zedboot =
     get_label_info(recovery_label, "label_with_toolchain") ==
     get_label_info("//build/images/zedboot", "label_with_toolchain")
 
-# update_manifest is for the "update.manifest" target below.
-update_manifest = []
-
 # Dependencies for all image targets referenced by paver_targets, i.e., the
 # images needed by the generated pave scripts.
-default_image_deps = []
+default_image_deps = [ labels.images ]
 
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
@@ -185,292 +207,6 @@ shell_commands("shell-commands") {
 }
 
 ###
-### Fuchsia system image.  This aggregates contributions from all the
-### package() targets enabled in the build.
-###
-
-monolith_meta_far_merkle_index =
-    "$target_out_dir/monolith_meta_far_merkle_index"
-generate_package_metadata("monolith_meta_far_merkle_index") {
-  testonly = fuchsia_zbi_testonly
-  outputs = [ monolith_meta_far_merkle_index ]
-  data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = [
-    ":base_packages",
-    ":meta_packages",
-  ]
-}
-
-# The pkgsvr index is a manifest mapping `package_name/package_version` to
-# the merkleroot of the package's meta.far file.
-pkgsvr_index = "$target_out_dir/pkgsvr_index"
-
-action("pkgsvr_index") {
-  visibility = [ "//build/images/*" ]
-  testonly = fuchsia_zbi_testonly
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":monolith_meta_far_merkle_index" ]
-  inputs = [ monolith_meta_far_merkle_index ]
-
-  script = "//build/images/manifest_content_expand.sh"
-  depfile = "${target_out_dir}/${target_name}.d"
-  args = [
-    rebase_path(monolith_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-}
-
-preinstall_meta_far_merkle_index =
-    "$target_out_dir/preinstall_meta_far_merkle_index"
-generate_package_metadata("preinstall_meta_far_merkle_index") {
-  testonly = fuchsia_zbi_testonly
-  outputs = [ preinstall_meta_far_merkle_index ]
-  data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = [ ":cache_packages" ]
-}
-
-#
-# The cache index is another manifest mapping `package_name/package_version` to
-# the merkleroot of the package's meta.far file, only for cache packages
-cache_index = "$target_out_dir/cache_index"
-
-action("cache_index") {
-  visibility = [ "//build/images/*" ]
-  testonly = fuchsia_zbi_testonly
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":preinstall_meta_far_merkle_index" ]
-  inputs = [ preinstall_meta_far_merkle_index ]
-
-  script = "//build/images/manifest_content_expand.sh"
-  depfile = "${target_out_dir}/${target_name}.d"
-  args = [
-    rebase_path(preinstall_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-}
-
-# Generate a response file that lists the content of all
-# fuchsia_system_package() instances that the system image directly
-# depends on. This excludes anything reachable from :base_packages
-# and :meta_packages intentionally.
-#
-# This also checks that this dependency tree does not include any
-# regular fuchsia_package() instance, which would be an error, since
-# the system image cannot include any components.
-#
-system_image_fuchsia_system_packages("system_image_fuchsia_packages") {
-  testonly = fuchsia_zbi_testonly
-  deps = [ "//build/input:system_image" ]
-  filter_packages = "system_only"
-}
-
-# Generate a response file that lists the content of all
-# fuchsia_system_package() instances reachable from :base_packages
-# and :meta_packages. This is seldom used when a base package requires
-# its own driver to be installed in the system image.
-#
-# This also checks that any such driver package has set its
-# 'allowed_in_extra_deps' argument to true.
-#
-system_image_fuchsia_system_packages("system_image_extra_driver_packages") {
-  testonly = fuchsia_zbi_testonly
-  deps = [
-    ":base_packages",
-    ":meta_packages",
-  ]
-  filter_packages = "extras"
-}
-
-# The system_image "package" manifest is everything that appears in /system.
-generate_manifest("system_image.manifest") {
-  visibility = [ "//build/images/*" ]
-  testonly = fuchsia_zbi_testonly
-
-  # Now each package() target in the build contributes manifest entries.
-  # For system_image packages, these contain binaries that need their
-  # references resolved from the auxiliary manifests or /boot (above).
-  deps = [
-    ":system_image_extra_driver_packages",
-    ":system_image_fuchsia_packages",
-  ]
-  sources = []
-  sources += get_target_outputs(deps[0])
-  sources += get_target_outputs(deps[1])
-
-  args = [
-    "@" + rebase_path(sources[0], root_build_dir),
-    "@" + rebase_path(sources[1], root_build_dir),
-  ]
-
-  args += [ "--entry-manifest=" +
-            get_label_info(":$target_name", "label_no_toolchain") ]
-
-  # Add the meta/package JSON file that makes this the "system_image" package.
-  json = "system_meta_package_json"
-  sources += [ json ]
-  args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
-
-  # Add the static packages (pkgsvr) index.
-  deps += [ ":pkgsvr_index" ]
-  sources += [ pkgsvr_index ]
-  args += [ "--entry=data/static_packages=" +
-            rebase_path(pkgsvr_index, root_build_dir) ]
-
-  # Add the cache packages index.
-  deps += [ ":cache_index" ]
-  sources += [ cache_index ]
-  args += [ "--entry=data/cache_packages=" +
-            rebase_path(cache_index, root_build_dir) ]
-}
-system_manifest_outputs = get_target_outputs(":system_image.manifest")
-
-# The prime version of the system_image has an extra "dummy" file.
-# The prime images are used to have an alternate known-compatible OTA
-# target for integration testing.
-action("system_image_prime.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  script = "manifest.py"
-  outputs = [ "$target_out_dir/$target_name" ]
-
-  deps = [ ":system_image.manifest" ]
-  sources = system_manifest_outputs + [
-              "system_image_prime_meta_package.json",
-              "dummy/example.txt",
-            ]
-  args = [
-    "--output",
-    rebase_path(outputs[0], root_build_dir),
-    "--rewrite",
-    "meta/package={target}=" +
-        rebase_path("system_image_prime_meta_package.json", root_build_dir),
-    "--manifest",
-    rebase_path(system_manifest_outputs[0], root_build_dir),
-    "--reset-rewrite",
-    "--entry",
-    "data/dummy/example.txt=" +
-        rebase_path("dummy/example.txt", root_build_dir),
-  ]
-}
-
-# Generate, sign, and seal the system_image package file.
-pm_build("system_image.meta") {
-  package_name = "system_image"
-  visibility = [ "//build/images/*" ]
-  testonly = fuchsia_zbi_testonly
-  manifest = ":system_image.manifest"
-}
-
-# Now generate the blob manifest.  This lists all the source files
-# that need to go into the blobfs image.  That is everything from the
-# system_image manifest, everything from each package manifest, and
-# all the synthesized meta.far files.
-blob_manifest = "$target_out_dir/blob.manifest"
-
-collect_blob_manifest("blob.manifest") {
-  testonly = true
-  visibility = [ "//build/images/*" ]
-  outputs = [ blob_manifest ]
-  deps = [
-    ":base_packages",
-    ":cache_packages",
-    ":meta_packages",
-    ":system_image.meta",
-    pkgfs_package_label,
-  ]
-}
-
-blob_image_path = "$target_out_dir/blob.blk"
-rebased_blob_path = rebase_path(blob_image_path, root_build_dir)
-blob_size_list = "$root_build_dir/blobs.json"
-
-blobfs_tool = "//zircon/tools/blobfs(${host_toolchain})"
-blobfs_tool_dir = get_label_info(blobfs_tool, "root_out_dir")
-blobfs_binary = "$blobfs_tool_dir/blobfs"
-
-# Pack up all the blobs!
-action("blob.blk") {
-  visibility = [ "//build/images/*" ]
-
-  testonly = true
-  deps = [
-    ":blob.manifest",
-    blobfs_tool,
-  ]
-  outputs = [
-    blob_image_path,
-    blob_size_list,
-  ]
-  depfile = blob_image_path + ".d"
-  inputs = [
-    blob_manifest,
-    blobfs_binary,
-  ]
-  script = "mkblobfs.sh"
-
-  # tell the wrapper script where to find blobfs, and the image file
-  args = rebase_path([
-                       blobfs_binary,
-                       blob_image_path,
-                     ],
-                     root_build_dir)
-
-  # args for the blobfs tool itself
-  args += [
-    "--depfile",
-    "--json-output",
-    rebase_path(blob_size_list, root_build_dir),
-  ]
-  if (compress_blobs) {
-    args += [ "--compress" ]
-  }
-  args += [
-    rebase_path(blob_image_path, root_build_dir),
-    "create",
-    "--manifest",
-    rebase_path(blob_manifest, root_build_dir),
-  ]
-
-  if (defined(blob_layout_format) &&
-      blob_layout_format == "deprecated_padded") {
-    args += [ "--deprecated_padded_format" ]
-  } else {
-    # The only other defined value is "compact".
-    assert(!defined(blob_layout_format) || blob_layout_format == "compact",
-           "blob_layout_format must be 'deprecated_padded' or 'compact'.")
-  }
-
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "blob"
-        path = rebased_blob_path
-        type = "blk"
-      },
-    ]
-    image_paths = [ "IMAGE_BLOB_RAW=$rebased_blob_path" ]
-  }
-
-  if (fuchsia_static_pkgs_goldens != []) {
-    deps += [ ":static_pkgs_verify_files" ]
-  }
-}
-
-default_image_deps += [ ":blob.blk" ]
-
-# The prime images are used to have an alternate known-compatible OTA
-# target for integration testing.
-pm_build("system_image_prime.meta") {
-  package_name = "system_image_prime"
-  visibility = [ ":*" ]
-  testonly = true
-  manifest = ":system_image_prime.manifest"
-}
-
-###
 ### Zircon Boot Images
 ###
 
@@ -495,313 +231,12 @@ group("qemu-kernel") {
 
 default_image_deps += [ ":qemu-kernel" ]
 
-# Generate the /boot/config/devmgr file.  This looks like a kernel command
-# line file, but is read by devmgr (in addition to kernel command line
-# arguments), not by the kernel or boot loader.
-action("devmgr_config.txt") {
-  visibility = [
-    ":devmgr_config",
-    ":devmgr_config_prime.txt",
-    ":fuchsia",
-    ":fuchsia.vbmeta",
-    ":fuchsia.vbmeta__vb_desc",
-    ":fuchsia.vbmeta__zbi_props",
-    "assembly/*",
-  ]
-  testonly = fuchsia_zbi_testonly
-  script = "manifest.py"
-  outputs = [ "$target_out_dir/devmgr_config.txt" ]
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  sources = []
-  deps = [ ":system_image.manifest" ]
-
-  pkgfs = "bin/" + pkgfs_binary_name
-  pkgfs_label = pkgfs_package_label
-  pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
-                      get_label_info(pkgfs_label, "name")
-  pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
-  system_image_merkleroot = "$target_out_dir/system_image.meta/meta.far.merkle"
-
-  deps += [
-    ":system_image.meta",
-    "//build/info:latest-commit-date",
-    pkgfs_label,
-  ]
-  sources += [
-    pkgfs_blob_manifest,
-    system_image_merkleroot,
-  ]
-
-  args += [ "--entry=devmgr.require-system=true" ]
-
-  # Add the pkgfs command line, embedding the merkleroot of the system image.
-  args += [
-    "--contents",
-    "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
-    "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
-    "--no-contents",
-    "--reset-rewrite",
-  ]
-
-  # Embed the pkgfs blob manifest with the "zircon.system.pkgfs.file."
-  # prefix on target file names.
-  args += [
-    "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
-    "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
-    "--reset-rewrite",
-  ]
-
-  # Add the backstop UTC value from the integration repo latest commit
-  args += [
-    "--contents",
-    "--entry=clock.backstop=" +
-        rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
-    "--no-contents",
-    "--reset-rewrite",
-  ]
-
-  inputs = [ build_info_files.minimum_utc_stamp ]
-
-  foreach(entry, devmgr_config) {
-    args += [ "--entry=$entry" ]
-  }
-}
-
-devmgr_config("devmgr_config") {
-  testonly = fuchsia_zbi_testonly
-  label = ":devmgr_config.txt"
-}
-
-# Generate the prime /boot/config/devmgr file. Points to system_image_prime
-# instead of system_image
-# The prime images are used to have an alternate known-compatible OTA
-# target for integration testing.
-action("devmgr_config_prime.txt") {
-  visibility = [
-    ":devmgr_config_prime",
-    ":fuchsia_prime",
-    ":fuchsia_prime.vbmeta",
-    ":fuchsia_prime.vbmeta__vb_desc",
-    ":fuchsia_prime.vbmeta__zbi_props",
-  ]
-  testonly = true
-  script = "manifest.py"
-  outputs = [ "$target_out_dir/devmgr_config_prime.txt" ]
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-  deps = [ ":devmgr_config.txt" ]
-  devmgr_config_outputs = get_target_outputs(":devmgr_config.txt")
-  sources = devmgr_config_outputs
-  args += [
-    "--exclude",
-    "zircon.system.pkgfs.cmd",
-    "--manifest",
-    rebase_path(devmgr_config_outputs[0], root_build_dir),
-    "--reset-exclude",
-  ]
-
-  pkgfs = "bin/" + pkgfs_binary_name
-  system_image_merkleroot =
-      "$target_out_dir/system_image_prime.meta/meta.far.merkle"
-
-  deps += [ ":system_image_prime.meta" ]
-  sources += [ system_image_merkleroot ]
-
-  # Add the pkgfs command line, embedding the merkleroot of the system image.
-  args += [
-    "--contents",
-    "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
-    "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
-    "--no-contents",
-    "--reset-rewrite",
-  ]
-}
-
-devmgr_config("devmgr_config_prime") {
-  label = ":devmgr_config_prime.txt"
-  testonly = true
-}
-
-zbi("fuchsia_unverified") {
-  testonly = fuchsia_zbi_testonly
-
-  output_dir = root_out_dir
-
-  deps = [
-    "//build/input:bootfs",
-    "//zircon/kernel",
-  ]
-
-  deps += [ ":devmgr_config" ]
-}
-
-if (fuchsia_zbi_kernel_cmdline_goldens != []) {
-  verify_kernel_cmdline("kernel_cmdline_verify_files") {
-    testonly = fuchsia_zbi_testonly
-    zbi = "$root_out_dir/fuchsia_unverified.zbi"
-    goldens = fuchsia_zbi_kernel_cmdline_goldens
-    zbi_target = ":fuchsia_unverified"
-  }
-}
-if (fuchsia_zbi_bootfs_filelist_goldens != []) {
-  verify_bootfs_filelist("bootfs_filelist_verify_files") {
-    testonly = fuchsia_zbi_testonly
-    zbi = "$root_out_dir/fuchsia_unverified.zbi"
-    goldens = fuchsia_zbi_bootfs_filelist_goldens
-    zbi_target = ":fuchsia_unverified"
-  }
-}
-if (fuchsia_static_pkgs_goldens != []) {
-  verify_static_pkgs("static_pkgs_verify_files") {
-    # This depends on blob_manifest which has testonly=true.
-    testonly = true
-    zbi = "$root_out_dir/fuchsia_unverified.zbi"
-    zbi_target = ":fuchsia_unverified"
-    blobfs_manifest = blob_manifest
-    blobfs_manifest_target = ":blob.manifest"
-    goldens = fuchsia_static_pkgs_goldens
-  }
-}
-
 # Verifies that capabilities used by components are correctly routed to
 # those components. Statically validating the expose-offer-use chain and
 # the rights chain.
 verify_routes("verify_capability_routes") {
   testonly = true
   allowlist = fuchsia_verify_routes_exceptions_allowlist
-}
-
-# The main bootable image, which requires `blob.blk` to appear on some
-# attached storage device at runtime.
-copy("fuchsia") {
-  testonly = fuchsia_zbi_testonly
-  sources = [ "$root_out_dir/fuchsia_unverified.zbi" ]
-  outputs = [ "$root_out_dir/fuchsia.zbi" ]
-  deps = [ ":fuchsia_unverified" ]
-
-  if (check_production_eligibility) {
-    # Check no rule that depends on non_production_tag is included in the final
-    # ZBI composition. This dependency might be set on rule that does not have
-    # testonly=true but is only suitable for userdebug, but not user build.
-    # We set check_production_eligibility to true only for user build.
-    assert_no_deps = [ "//build/validate:non_production_tag" ]
-  }
-
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":fuchsia", "label_with_toolchain")
-        name = "zircon-a"
-        path = "fuchsia.zbi"
-        type = "zbi"
-
-        archive = true
-        bootserver_pave = []
-
-        # TODO(fxbug.dev/31931): we want to reduce the usage of mexec, but currently we
-        # do not have sufficient boot control on x64.
-        if (target_cpu == "x64") {
-          bootserver_pave += [ "--boot" ]
-        }
-        if (custom_signing_script == "" && !use_vboot) {
-          bootserver_pave += [
-            "--zircona",
-            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
-            # zircon-r, so for now zedboot is being paved to this slot.
-            # "--zirconb",
-          ]
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        }
-      },
-    ]
-
-    image_paths = [
-      "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
-
-      # TODO(mcgrathr): The complete ZBI can be used with a separate
-      # kernel too, the kernel image in it will just be ignored.  So
-      # just use the primary ZBI for this until all uses are
-      # converted to using the ZBI alone.  Then remove this as
-      # IMAGE_BOOT_RAM variable should no longer be in use.
-      "IMAGE_BOOT_RAM=fuchsia.zbi",
-    ]
-  }
-
-  if (fuchsia_zbi_kernel_cmdline_goldens != []) {
-    deps += [ ":kernel_cmdline_verify_files" ]
-  }
-  if (fuchsia_zbi_bootfs_filelist_goldens != []) {
-    deps += [ ":bootfs_filelist_verify_files" ]
-  }
-}
-default_image_deps += [ ":fuchsia" ]
-
-if (!use_vboot && custom_signing_script == "") {
-  update_manifest += [
-    {
-      target = "zbi"
-      dep = ":fuchsia"
-    },
-  ]
-}
-
-# ZBI tool JSON output doesn't record paths of input files so there's no easy
-# way to find out where each of the binaries in bootfs entry came from. Rather,
-# we extract the ZBI and then pass this directory as an input to the elfinfo.py
-# script which computes the ELF sizes.
-#
-# TODO(phosek): Try to come up with a more efficient solution that does not
-# require extract the ZBI.
-
-fuchsia_zbi_json = "$target_out_dir/fuchsia.zbi.json"
-fuchsia_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
-
-zx_host_tool_action("extract_bootfs") {
-  hermetic_deps = false
-
-  visibility = [ ":elf_sizes.json" ]
-  testonly = true
-  tool = "//zircon/tools/zbi"
-  inputs = [ "$root_out_dir/fuchsia.zbi" ]
-  outputs = [ fuchsia_zbi_json ]
-  deps = [ ":fuchsia" ]
-  args = [
-    "--extract",
-    "--output-dir=" + rebase_path(fuchsia_zbi_bootfs_dir, root_build_dir),
-    "--json-output=" + rebase_path(fuchsia_zbi_json, root_build_dir),
-    rebase_path(inputs[0], root_out_dir),
-  ]
-}
-
-action("elf_sizes.json") {
-  testonly = true
-  hermetic_deps = false
-  script = "elfinfo.py"
-  deps = [
-    ":blob.blk",
-    ":extract_bootfs",
-  ]
-  sources = [
-    blob_size_list,
-    fuchsia_zbi_json,
-  ]
-  outputs = [ "$root_build_dir/$target_name" ]
-  args = [
-    "--sizes",
-    rebase_path(outputs[0], root_build_dir),
-    "--blobs",
-    rebase_path(blob_size_list, root_build_dir),
-    "--zbi",
-    rebase_path(fuchsia_zbi_json, root_build_dir),
-    "--bootfs-dir",
-    rebase_path(fuchsia_zbi_bootfs_dir, root_build_dir),
-  ]
 }
 
 # This action runs a script that checks all vtables in fuchsia binaries are
@@ -815,7 +250,7 @@ action("check_vtables_in_rodata") {
 
   # Ensure that all fuchsia binaries listed in `binaries.json` are created
   # first.
-  deps = [ ":fuchsia" ]
+  deps = [ labels.images ]
 
   args = [
     # Ignore these specific libunwind symbols for now because these are from
@@ -845,208 +280,10 @@ action("check_vtables_in_rodata") {
   ]
 }
 
-# Generate the prime fuchsia.zbi.
-# The prime images are used to have an alternate known-compatible OTA
-# target for integration testing.
-zbi("fuchsia_prime") {
-  testonly = true
-
-  output_dir = root_out_dir
-
-  deps = [
-    "//build/input:bootfs",
-    "//zircon/kernel",
-  ]
-  deps += [ ":devmgr_config_prime" ]
-}
-
-unsigned_zbi_prime = {
-  dep = ":fuchsia_prime"
-  updater = "zbi"
-}
-
-if (custom_signing_script != "") {
-  custom_signed_zbi("signed") {
-    output_name = "fuchsia.zbi"
-    testonly = true
-    deps = [ ":fuchsia" ]
-    zbi_outputs = get_target_outputs(":fuchsia")
-    zbi = [ zbi_outputs[0] ]
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          bootserver_pave = [ "--zircona" ]
-          name = "zircon-a.signed"
-          path = "$output_name.signed"
-          type = "zbi.signed"
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        },
-      ]
-      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
-    }
-  }
-} else if (use_vboot) {
-  # ChromeOS vboot images.
-  vboot("signed") {
-    testonly = true
-    output_name = "fuchsia.zbi"
-    deps = [ ":fuchsia" ]
-
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          bootserver_pave = [ "--zircona" ]
-          name = "zircon-a.signed"
-          path = "$output_name.vboot"
-          type = "zbi.signed"
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        },
-      ]
-      image_paths = [ "IMAGE_ZIRCONA_SIGNEDZBI=$output_name.signed" ]
-    }
-  }
-}
-
-if (custom_signing_script != "" || use_vboot) {
-  default_image_deps += [ ":signed" ]
-  update_manifest += [
-    {
-      target = "zbi.signed"
-      dep = ":signed"
-    },
-  ]
-}
-
-# Sign fuchsia_prime.zbi, if neccessary.
-# The *_prime images are used to have an alternate
-# known-compatible OTA target for integration testing.
-if (custom_signing_script != "") {
-  custom_signed_zbi("fuchsia_prime_signed") {
-    output_name = "fuchsia_prime.zbi"
-    testonly = true
-    deps = [ ":fuchsia_prime" ]
-    zbi_outputs = get_target_outputs(":fuchsia_prime")
-    zbi = [ zbi_outputs[0] ]
-  }
-  zbi_prime = {
-    dep = ":fuchsia_prime_signed"
-    updater = "zbi.signed"
-  }
-  not_needed([ "unsigned_zbi_prime" ])
-} else if (use_vboot) {
-  # ChromeOS vboot images.
-  vboot("fuchsia_prime_signed") {
-    testonly = true
-    output_name = "fuchsia_prime.zbi"
-    deps = [ ":fuchsia_prime" ]
-  }
-
-  zbi_prime = {
-    dep = ":fuchsia_prime_signed"
-    updater = "zbi.signed"
-  }
-  not_needed([ "unsigned_zbi_prime" ])
-} else {
-  zbi_prime = unsigned_zbi_prime
-}
-
-if (use_vbmeta) {
-  vbmeta("fuchsia.vbmeta") {
-    generate_image = true
-    output_name = "fuchsia"
-    testonly = true
-    if (custom_signing_script != "") {
-      deps = [ ":signed" ]
-      zbi_outputs = get_target_outputs(":signed")
-      zbi = [ zbi_outputs[0] ]
-    } else {
-      deps = [ ":fuchsia" ]
-      zbi_outputs = get_target_outputs(":fuchsia")
-      zbi = [ zbi_outputs[0] ]
-    }
-
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          name = "zircon-a"
-          path = "fuchsia.vbmeta"
-          type = "vbmeta"
-
-          bootserver_pave = [ "--vbmetaa" ]
-
-          fastboot_flash = []
-          if (vbmeta_a_partition != "") {
-            fastboot_flash += [ vbmeta_a_partition ]
-          }
-          if (vbmeta_b_partition != "") {
-            fastboot_flash += [ vbmeta_b_partition ]
-          }
-        },
-      ]
-      image_paths = [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
-    }
-  }
-
-  vbmeta("fuchsia_prime.vbmeta") {
-    generate_image = true
-    output_name = "fuchsia_prime"
-    testonly = true
-    if (custom_signing_script != "") {
-      deps = [ ":fuchsia_prime_signed" ]
-      zbi_outputs = get_target_outputs(":fuchsia_prime_signed")
-      zbi = [ zbi_outputs[0] ]
-    } else {
-      deps = [ ":fuchsia_prime" ]
-      zbi_outputs = get_target_outputs(":fuchsia_prime")
-      zbi = [ zbi_outputs[0] ]
-    }
-  }
-
-  default_image_deps += [ ":fuchsia.vbmeta" ]
-
-  update_manifest += [
-    {
-      target = "fuchsia.vbmeta"
-      source = "$root_build_dir/fuchsia.vbmeta"
-      dep = ":fuchsia.vbmeta"
-    },
-  ]
-}
-
-###
-### Complete images for booting and installing the whole system.
-###
-
-# deps, inputs and args for the filesystem_sizes.json action.
-filesystem_sizes_deps = []
-filesystem_sizes_inputs = []
-filesystem_sizes_args = []
-
-data_image_path = "$target_out_dir/data.blk"
-
 # data.blk creates minfs data partition. The partition is included in fvm.blk
 # and fvm.sparse.blk. To increase the size of the data partition, increase
 # the total size of the fvm images using |fvm_image_size|.
+data_image_path = "$target_out_dir/data.blk"
 compiled_action("data.blk") {
   testonly = true
 
@@ -1080,375 +317,211 @@ compiled_action("data.blk") {
   }
 }
 
-default_image_deps += [ ":data.blk" ]
-
-# Create a default value of zero for calculating filesystem sizes.
-fvm_max_disk_size_default_zero = 0
-if (fvm_max_disk_size != false) {
-  fvm_max_disk_size_default_zero = fvm_max_disk_size
+group("fvm.sparse.blk") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
 }
 
-fvm_blob_partition = {
-  type = "blob"
-  dep = ":blob.blk"
-
-  if (blobfs_product_minimum_inodes != false) {
-    minimum_inodes = blobfs_product_minimum_inodes
-  } else if (blobfs_board_minimum_inodes != false) {
-    minimum_inodes = blobfs_board_minimum_inodes
-  }
-
-  if (blobfs_product_minimum_data_bytes != false) {
-    minimum_data_bytes = blobfs_product_minimum_data_bytes
-  } else if (blobfs_board_minimum_data_bytes != false) {
-    minimum_data_bytes = blobfs_board_minimum_data_bytes
-  }
-
-  if (blobfs_product_maximum_bytes != false) {
-    maximum_bytes = blobfs_product_maximum_bytes
-  } else if (blobfs_board_maximum_bytes != false) {
-    maximum_bytes = blobfs_board_maximum_bytes
+# This is a hack, because an internal repo is relying on the old path.
+# Remove this when the repo switches to the correct path.
+if (!bootfs_only) {
+  old_fvm_blob_label = "//build/images:fvm.blob.sparse.blk"
+  old_fvm_blob_sparse = get_label_info(old_fvm_blob_label, "target_out_dir") +
+                        "/" + get_label_info(old_fvm_blob_label, "name")
+  new_fvm_blob_sparse =
+      get_label_info(labels.images, "target_out_dir") + "/" +
+      get_label_info(labels.images, "name") + "/fvm.blob.sparse.blk"
+  copy("copy_fvm_blob_sparse") {
+    testonly = fuchsia_zbi_testonly
+    sources = [ new_fvm_blob_sparse ]
+    outputs = [ old_fvm_blob_sparse ]
+    deps = [ "${labels.images}" ]
   }
 }
 
-fvm_data_partition = {
-  type = "data"
-  dep = ":data.blk"
-
-  if (minfs_product_minimum_inodes != false) {
-    minimum_inodes = minfs_product_minimum_inodes
-  } else if (minfs_board_minimum_inodes != false) {
-    minimum_inodes = minfs_board_minimum_inodes
-  }
-
-  if (minfs_product_minimum_data_bytes != false) {
-    minimum_data_bytes = minfs_product_minimum_data_bytes
-  } else if (minfs_board_minimum_data_bytes != false) {
-    minimum_data_bytes = minfs_board_minimum_data_bytes
-  }
-
-  if (minfs_product_maximum_bytes != false) {
-    maximum_bytes = minfs_product_maximum_bytes
-  } else if (minfs_board_maximum_bytes != false) {
-    maximum_bytes = minfs_board_maximum_bytes
+group("fvm.blob.sparse.blk") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
+  if (!bootfs_only) {
+    public_deps += [ ":copy_fvm_blob_sparse" ]
   }
 }
 
-# The rule for generating raw fvm.blk. Normally, fastboot fvm images should be
-# used in place of the raw images. But it is needed when the build is not configured
-# to generate the fastboot image, or when users run "fx netboot", which needs to
-# build the netboot.zbi target that depends on fvm.blk
-fvm_raw_path = "$target_out_dir/fvm.blk"
-generate_fvm("fvm.blk") {
-  testonly = true
-
-  output_name = fvm_raw_path
-  rebased_output_name = rebase_path(output_name, root_build_dir)
-
-  args = fvm_create_args
-  if (fvm_image_size != false) {
-    args += [
-      "--length",
-      "${fvm_image_size}",
-    ]
-  }
-  partitions = [
-    fvm_blob_partition,
-    fvm_data_partition,
-  ]
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = add_qemu_to_build_archives
-        name = "storage-full"
-        path = rebased_output_name
-        type = "blk"
-      },
-    ]
-    image_paths = [ "IMAGE_FVM_RAW=$rebased_output_name" ]
-  }
+group("fvm.fastboot.blk") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
 }
 
-fvm_sparse_blk_path = "$target_out_dir/fvm.sparse.blk"
-
-# fvm.sparse.blk creates a sparse FVM partition image containing the blob
-# partition produced by blob.blk and the data partition produced by data.blk.
-# fvm.sparse.blk is primarily invoked and used by the paver boot, via `fx
-# pave`.
-generate_fvm("fvm.sparse.blk") {
-  testonly = true
-
-  output_name = fvm_sparse_blk_path
-  rebased_output_name = rebase_path(output_name, root_build_dir)
-  deps = [
-    ":blob.blk",
-    ":data.blk",
-  ]
-  args = fvm_sparse_args
-  partitions = [
-    fvm_blob_partition,
-    fvm_data_partition,
-  ]
-
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = true
-        bootserver_pave = [ "--fvm" ]
-        name = "storage-sparse"
-        path = rebased_output_name
-        type = "blk"
-      },
-    ]
-    image_paths = [ "IMAGE_FVM_SPARSE=$rebased_output_name" ]
-  }
+group("fuchsia") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
 }
-default_image_deps += [ ":fvm.sparse.blk" ]
 
-fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
-fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
-
-filesystem_sizes_deps += [
-  ":blob.blk",
-  ":data.blk",
-  ":fvm.sparse.blk",
-  blobfs_tool_target,
-  fvm_tool_target,
-  minfs_tool_target,
-]
-filesystem_sizes_inputs += [
-  blob_image_path,
-  data_image_path,
-  fvm_sparse_blk_path,
-  fvm_tool_path,
-  blobfs_tool_path,
-  minfs_tool_path,
-]
-filesystem_sizes_args += [
-  "--fvm-blk",
-  rebase_path(fvm_sparse_blk_path),
-  "--blob-blk",
-  rebase_path(blob_image_path),
-  "--data-blk",
-  rebase_path(data_image_path),
-  "--fvm-tool",
-  rebase_path(fvm_tool_path, root_build_dir),
-  "--blobfs-tool",
-  rebase_path(blobfs_tool_path, root_build_dir),
-  "--minfs-tool",
-  rebase_path(minfs_tool_path, root_build_dir),
-  "--max-fvm-contents-size",
-  "$fvm_max_disk_size_default_zero",
-  "--blobfs-capacity",
-  blobfs_capacity,
-  "--max-blob-contents-size",
-  max_blob_contents_size,
-  "--max-blob-image-size",
-  max_blob_image_size,
-  "--max-data-contents-size",
-  max_data_contents_size,
-  "--max-data-image-size",
-  max_data_image_size,
-]
-
-# fvm.blob.sparse.blk creates a sparse FVM partition image containing the blob
-# partition produced by blob.blk and an empty data partition that will be
-# formatted on first boot.
-fvm_blob_sparse_blk_path = "$target_out_dir/fvm.blob.sparse.blk"
-rebased_fvm_blob_sparse_blk_path =
-    rebase_path(fvm_blob_sparse_blk_path, root_build_dir)
-generate_fvm("fvm.blob.sparse.blk") {
-  testonly = true
-  output_name = fvm_blob_sparse_blk_path
-  deps = [ ":blob.blk" ]
-  args = fvm_sparse_args
-  with_empty_minfs = true
-  partitions = [ fvm_blob_partition ]
-
-  metadata = {
-    image_paths = [ "IMAGE_FVM_BLOB_SPARSE=$rebased_fvm_blob_sparse_blk_path" ]
-
-    if (include_fvm_blob_sparse) {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-
-          # Hack: Infra expects bootserver_pave to be present
-          # in the GN graph for this image to be built.
-          bootserver_pave = []
-          name = "fvm.blob.sparse"
-          path = rebased_fvm_blob_sparse_blk_path
-          type = "blk"
-        },
-      ]
-    }
-  }
+group("fuchsia.vbmeta") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
 }
-default_image_deps += [ ":fvm.blob.sparse.blk" ]
 
-# If |fvm_partition| is specified, generate a FVM format suitable for fastboot
-# flashing. The image will be used for emu/qemu as well.
-#
-# FVM isn't used for bootfs_only (bringup) builds, and we need to explicitly
-# omit it to avoid transitively pulling in conflicting fuchsia.zbi targets
-# (fxbug.dev/46415).
-supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
-if (supports_fastboot_fvm) {
-  fvm_generation_args = []
-  fvm_partitions = []
-  fvm_inputs = []
-  fvm_deps = []
-  fvm_compression = fvm_fastboot_compression
-  if (fvm_emmc_partition_size != false) {
-    # If "fvm_emmc_partition_size" is specified, generate for emmc devices.
-    fvm_generation_args = fvm_create_args
-    fvm_generation_args += [
-      "--length",
-      "$fvm_emmc_partition_size",
-      "--resize-image-file-to-fit",
-    ]
-    fvm_partitions = [
-      fvm_blob_partition,
-      fvm_data_partition,
-    ]
+group("signed") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "${labels.images}" ]
+}
 
-    # eMMC FVM images use LZ4 compression by default.
-    if (fvm_compression == "default") {
-      fvm_compression = "lz4"
-    }
-  } else if (fvm_ftl_nand_page_size != false) {
-    # For raw NAND devices that support flashing via fastboot, generate the NAND
-    # FVM image as well which contains the necessary OOB bytes to initialize the
-    # FTL.
-    assert(fvm_ftl_nand_oob_size != false,
-           "fvm_ftl_nand_oob_size must be specified")
-    assert(fvm_ftl_nand_pages_per_block != false,
-           "fvm_ftl_nand_pages_per_block must be specified")
-    assert(fvm_ftl_nand_block_count != false,
-           "fvm_ftl_nand_block_count must be specified")
-    fvm_generation_args = [
-      "ftl-raw-nand",
-      "--nand-page-size",
-      "$fvm_ftl_nand_page_size",
-      "--nand-oob-size",
-      "$fvm_ftl_nand_oob_size",
-      "--nand-pages-per-block",
-      "$fvm_ftl_nand_pages_per_block",
-      "--nand-block-count",
-      "$fvm_ftl_nand_block_count",
+# We only calculate filesystem sizes for non-bootfs-only builds.
+if (!bootfs_only) {
+  # ZBI tool JSON output doesn't record paths of input files so there's no easy
+  # way to find out where each of the binaries in bootfs entry came from. Rather,
+  # we extract the ZBI and then pass this directory as an input to the elfinfo.py
+  # script which computes the ELF sizes.
+  #
+  # TODO(phosek): Try to come up with a more efficient solution that does not
+  # require extract the ZBI.
+  zx_host_tool_action("extract_bootfs") {
+    hermetic_deps = false
 
-      # Make sure to use fvm.blob.sparse.blk, which has an empty minfs
-      # partition. This triggers the device to re-generate minfs at runtime
-      # using the proper encryption keys.
-      "--sparse",
-      rebase_path(fvm_blob_sparse_blk_path),
-    ]
-
-    if (fvm_max_disk_size != false) {
-      fvm_generation_args += [
-        "--max-disk-size",
-        "$fvm_max_disk_size",
-      ]
-    }
-
-    fvm_inputs = [ fvm_blob_sparse_blk_path ]
-    fvm_deps = [ ":fvm.blob.sparse.blk" ]
-
-    # NAND FVM images use no compression by default.
-    if (fvm_compression == "default") {
-      fvm_compression = "none"
-    }
-  } else {
-    assert(
-        false,
-        "|fvm_partition| is specified. But failed to determine the target format.")
-  }
-
-  if (fvm_compression != "none") {
-    fvm_generation_args += [
-      "--compress",
-      fvm_compression,
-    ]
-  }
-
-  generate_fvm("fvm.fastboot.blk") {
+    visibility = [ ":elf_sizes.json" ]
     testonly = true
-
-    output_name = "$target_out_dir/fvm.fastboot.blk"
-    rebased_output_name = rebase_path(output_name, root_build_dir)
-
-    args = fvm_generation_args
-    partitions = fvm_partitions
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          name = "fvm.fastboot"
-          path = rebased_output_name
-          type = "blk"
-          fastboot_flash = [ fvm_partition ]
-        },
-      ]
-      image_paths = [ "IMAGE_FVM_FASTBOOT=$rebased_output_name" ]
-    }
-    inputs = fvm_inputs
-    deps = fvm_deps
+    tool = "//zircon/tools/zbi"
+    inputs = [ files.zbi ]
+    outputs = [ files.extracted_zbi_json ]
+    deps = [ labels.images ]
+    args = [
+      "--extract",
+      "--output-dir=" +
+          rebase_path(files.extracted_zbi_bootfs_dir, root_build_dir),
+      "--json-output=" + rebase_path(files.extracted_zbi_json, root_build_dir),
+      rebase_path(files.zbi, root_out_dir),
+    ]
   }
-  default_image_deps += [ ":fvm.fastboot.blk" ]
-} else {
-  default_image_deps += [ ":fvm.blk" ]
-}
 
-zbi_input("fvm.blk_ramdisk") {
-  testonly = true
+  action("elf_sizes.json") {
+    testonly = true
+    hermetic_deps = false
+    script = "elfinfo.py"
+    deps = [
+      ":extract_bootfs",
+      labels.images,
+    ]
+    sources = [
+      files.blobs_json,
+      files.extracted_zbi_json,
+    ]
+    outputs = [ "$root_build_dir/$target_name" ]
+    args = [
+      "--sizes",
+      rebase_path(outputs[0], root_build_dir),
+      "--blobs",
+      rebase_path(files.blobs_json, root_build_dir),
+      "--zbi",
+      rebase_path(files.extracted_zbi_json, root_build_dir),
+      "--bootfs-dir",
+      rebase_path(files.extracted_zbi_bootfs_dir, root_build_dir),
+    ]
+  }
 
-  type = "ramdisk"
-  args = [ "--compress=$zbi_compression" ]
+  # deps, inputs and args for the filesystem_sizes.json action.
+  filesystem_sizes_deps = []
+  filesystem_sizes_inputs = []
+  filesystem_sizes_args = []
 
-  # Use data_deps and not deps so that the contents of the fvm don't get
-  # included in the dependent zbi.
-  data_deps = [ ":fvm.blk" ]
+  # Create a default value of zero for calculating filesystem sizes.
+  fvm_max_disk_size_default_zero = 0
+  if (fvm_max_disk_size != false) {
+    fvm_max_disk_size_default_zero = fvm_max_disk_size
+  }
 
-  sources = [ "$target_out_dir/fvm.blk" ]
-}
+  fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
+  fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
 
-# This rolls the primary ZBI together with a compressed RAMDISK image of
-# fvm.blk into a fat ZBI that boots the full system without using any real
-# storage.  The system decompresses the fvm.blk image into memory and then
-# sees that RAM disk just as if it were a real disk on the device.
-zbi("netboot") {
-  testonly = true
-
-  output_dir = root_out_dir
-
-  deps = [
-    ":fuchsia",
-    ":fvm.blk_ramdisk",
+  filesystem_sizes_deps += [
+    ":data.blk",
+    blobfs_tool_target,
+    fvm_tool_target,
+    labels.images,
+    minfs_tool_target,
+  ]
+  filesystem_sizes_inputs += [
+    files.blobfs,
+    files.fvm_sparse,
+    data_image_path,
+    fvm_tool_path,
+    blobfs_tool_path,
+    minfs_tool_path,
+  ]
+  filesystem_sizes_args += [
+    "--fvm-blk",
+    rebase_path(files.fvm_sparse),
+    "--blob-blk",
+    rebase_path(files.blobfs),
+    "--data-blk",
+    rebase_path(data_image_path),
+    "--fvm-tool",
+    rebase_path(fvm_tool_path, root_build_dir),
+    "--blobfs-tool",
+    rebase_path(blobfs_tool_path, root_build_dir),
+    "--minfs-tool",
+    rebase_path(minfs_tool_path, root_build_dir),
+    "--max-fvm-contents-size",
+    "$fvm_max_disk_size_default_zero",
+    "--blobfs-capacity",
+    blobfs_capacity,
+    "--max-blob-contents-size",
+    max_blob_contents_size,
+    "--max-blob-image-size",
+    max_blob_image_size,
+    "--max-data-contents-size",
+    max_data_contents_size,
+    "--max-data-image-size",
+    max_data_image_size,
   ]
 
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        archive = enable_netboot
-        bootserver_netboot = [ "--boot" ]
-        name = "netboot"
-        path = "netboot.zbi"
-        type = "zbi"
-      },
-    ]
-    image_paths = [
-      "IMAGE_NETBOOT_ZBI=netboot.zbi",
+  action("filesystem_sizes.json") {
+    testonly = true
+    hermetic_deps = false
+    script = "format_filesystem_sizes.py"
+    deps = filesystem_sizes_deps
+    if (recovery_is_zedboot) {
+      deps += [ "zedboot:zbi" ]
+    }
+    output_name = "$root_build_dir/filesystem_sizes.json"
+    outputs = [ output_name ]
 
-      # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
-      # too, the kernel image in it will just be ignored.  So just use the
-      # primary ZBI for this until all uses are converted to using the ZBI
-      # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
-      # longer be in use.
-      "IMAGE_NETBOOT_RAM=netboot.zbi",
+    inputs = filesystem_sizes_inputs
+    inputs += [ files.zbi ]
+    if (recovery_is_zedboot) {
+      # Can't use get_target_outputs() because this defined in another file.
+      inputs += [ "$root_out_dir/zedboot.zbi" ]
+    }
+
+    args = filesystem_sizes_args + [
+             "--fuchsia-zbi",
+             rebase_path(files.zbi, root_build_dir),
+             "--max-fuchsia-zbi-size",
+             "$max_fuchsia_zbi_size",
+             "--output",
+             rebase_path(output_name),
+           ]
+    if (recovery_is_zedboot) {
+      args += [
+        "--zedboot-zbi",
+        rebase_path("$root_out_dir/zedboot.zbi"),
+        "--max-zedboot-zbi-size",
+        "$max_zedboot_zbi_size",
+      ]
+    }
+  }
+}
+
+# Pseudo-target to record information about the sizes of filesystems assembled
+# during the build for later analysis.
+# TODO(fxbug.dev/81871): Only include this for builds theaat generated blobfs,
+# once this targets is no longer hardcoded in infra.
+group("record_filesystem_sizes") {
+  testonly = true
+  if (!bootfs_only) {
+    deps = [
+      ":elf_sizes.json",
+      ":filesystem_sizes.json",
     ]
   }
 }
@@ -1494,15 +567,6 @@ if (use_gigaboot) {
       out_path = rebase_path(esp_outputs[0], root_build_dir)
     },
   ]
-
-  if (custom_signing_script == "") {
-    update_manifest += [
-      {
-        dep = ":esp"
-        target = "bootloader"
-      },
-    ]
-  }
 }
 
 foreach(firmware, firmware_prebuilts) {
@@ -1573,14 +637,6 @@ foreach(firmware, firmware_prebuilts) {
 
   default_image_deps += [ ":$name" ]
 
-  update_manifest += [
-    {
-      target = name
-      dep = ":$name"
-      source = "$root_out_dir/$name.img"
-    },
-  ]
-
   if (defined(firmware.partition)) {
     firmware_info += [
       {
@@ -1648,52 +704,6 @@ group("board_tools") {
 
 default_image_deps += [ ":board_tools" ]
 
-action("filesystem_sizes.json") {
-  testonly = true
-  hermetic_deps = false
-  script = "format_filesystem_sizes.py"
-  deps = filesystem_sizes_deps + [ ":fuchsia" ]
-  if (recovery_is_zedboot) {
-    deps += [ "zedboot:zbi" ]
-  }
-  output_name = "$root_build_dir/filesystem_sizes.json"
-  outputs = [ output_name ]
-  fuchsia_target_outputs = get_target_outputs(":fuchsia")
-
-  inputs = filesystem_sizes_inputs + fuchsia_target_outputs
-  if (recovery_is_zedboot) {
-    # Can't use get_target_outputs() because this defined in another file.
-    inputs += [ "$root_out_dir/zedboot.zbi" ]
-  }
-
-  args = filesystem_sizes_args + [
-           "--fuchsia-zbi",
-           rebase_path(fuchsia_target_outputs[0]),
-           "--max-fuchsia-zbi-size",
-           "$max_fuchsia_zbi_size",
-           "--output",
-           rebase_path(output_name),
-         ]
-  if (recovery_is_zedboot) {
-    args += [
-      "--zedboot-zbi",
-      rebase_path("$root_out_dir/zedboot.zbi"),
-      "--max-zedboot-zbi-size",
-      "$max_zedboot_zbi_size",
-    ]
-  }
-}
-
-# Pseudo-target to record information about the sizes of filesystems assembled
-# during the build for later analysis.
-group("record_filesystem_sizes") {
-  testonly = true
-  deps = [
-    ":elf_sizes.json",
-    ":filesystem_sizes.json",
-  ]
-}
-
 ###
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
@@ -1705,10 +715,8 @@ action("flash_script") {
   script = "//build/images/generate_flash_script.sh"
   outputs = [ "$root_out_dir/flash.sh" ]
 
-  if (custom_signing_script != "") {
+  if (custom_signing_script != "" || use_vboot) {
     image_suffix = "zbi.signed"
-  } else if (use_vboot) {
-    image_suffix = "zbi.vboot"
   } else {
     image_suffix = "zbi"
   }
@@ -1817,18 +825,16 @@ action("flash_script") {
       },
     ]
   }
-
   if (supports_fastboot_fvm) {
-    image_path = get_target_outputs(":fvm.fastboot.blk")
     args += [
-      "--fvm-image=" + rebase_path(image_path[0], root_build_dir),
+      "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
       "--fvm=${fvm_partition}",
     ]
-    deps += [ ":fvm.fastboot.blk" ]
+    deps += [ labels.images ]
     parts += [
       {
         name = fvm_partition
-        path = rebase_path(image_path[0], root_build_dir)
+        path = rebase_path(files.fvm_fastboot, root_build_dir)
       },
     ]
   }
@@ -2001,16 +1007,15 @@ foreach(info, firmware_info) {
 }
 
 if (supports_fastboot_fvm) {
-  archive_deps += [ ":fvm.fastboot.blk" ]
-  image_path = get_target_outputs(":fvm.fastboot.blk")
+  archive_deps += [ labels.images ]
   archive_args += [
-    "--fvm-image=" + get_path_info(image_path[0], "file"),
+    "--fvm-image=" + get_path_info(files.fvm_fastboot, "file"),
     "--fvm=${fvm_partition}",
   ]
   archive_parts += [
     {
       name = fvm_partition
-      path = get_path_info(image_path[0], "file")
+      path = get_path_info(files.fvm_fastboot, "file")
     },
   ]
 }
@@ -2091,11 +1096,8 @@ paver_targets = [
     # reaching fuchsia.zbi must be excluded from the build graph.
     if (bootfs_only) {
       deps += [ "bringup" ]
-      if (use_vbmeta) {
-        deps += [ "//build/images/bringup:bringup.vbmeta" ]
-      }
     } else {
-      deps += [ ":netboot" ]
+      deps += [ labels.images_netboot ]
     }
     metadata = {
       images = [
@@ -2115,9 +1117,6 @@ paver_targets = [
     deps = [ ":bootserver" ]
     if (bootfs_only) {
       deps += [ "bringup" ]
-      if (use_vbmeta) {
-        deps += [ "//build/images/bringup:bringup.vbmeta" ]
-      }
       switch = "--netboot="
     } else {
       deps += default_image_deps
@@ -2146,9 +1145,6 @@ if (recovery_is_zedboot) {
       deps = [ ":bootserver" ]
       if (bootfs_only) {
         deps += [ "bringup" ]
-        if (use_vbmeta) {
-          deps += [ "//build/images/bringup:bringup.vbmeta" ]
-        }
         switch = "--netboot="
       } else {
         deps += [ "zedboot" ]
@@ -2270,22 +1266,6 @@ group("archives") {
 ### Amber updates.
 ###
 
-# update_packages.manifest.json contains the same entries as the pkgsvr_index
-# but additionally includes the system_image package.
-
-update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
-generate_package_metadata("update_meta_far_merkle_index") {
-  testonly = true
-  outputs = [ update_meta_far_merkle_index ]
-  data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = [
-    ":base_packages",
-    ":cache_packages",
-    ":meta_packages",
-    ":system_image.meta",
-  ]
-}
-
 recovery_images_list = root_build_dir + "/recovery_images_list"
 generated_file("recovery_images_list") {
   testonly = true
@@ -2295,253 +1275,8 @@ generated_file("recovery_images_list") {
   deps = [ recovery_label ]
 }
 
-action("update_packages.manifest.json") {
-  visibility = [ ":update.manifest" ]
-  testonly = true
-
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":update_meta_far_merkle_index" ]
-  inputs = [ update_meta_far_merkle_index ]
-
-  depfile = "${target_gen_dir}/${target_name}.d"
-
-  script = "generate_packages_json.py"
-  args = [
-    "--input_file",
-    rebase_path(update_meta_far_merkle_index, root_build_dir),
-    "--output_file",
-    rebase_path(outputs[0], root_build_dir),
-    "--depfile",
-    rebase_path(depfile, root_build_dir),
-  ]
-}
-
 generate_epoch("epoch.json") {
   output_file = "${target_out_dir}/${target_name}"
-}
-
-# The update package manifest contains the pkgsvr_index and the target
-# system kernel images.
-action("update.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  additional_update_manifest_entries = [
-    {
-      target = "packages.json"
-      dep = ":update_packages.manifest.json"
-    },
-    {
-      target = "epoch.json"
-      dep = ":epoch.json"
-    },
-
-    # Add the meta/package JSON file that makes this the "update" package.
-    {
-      target = "meta/package"
-      source = "update_package_json"
-    },
-    {
-      target = "version"
-      source = build_info_files.version
-    },
-    {
-      target = "board"
-      source = board_name_file
-    },
-  ]
-
-  script = "manifest.py"
-
-  outputs = [ "$target_out_dir/$target_name" ]
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-
-  recovery_images_list_outputs = get_target_outputs(":recovery_images_list")
-  sources = recovery_images_list_outputs
-
-  deps = [
-    ":recovery_images_list",
-    # This dep ensures the version file included below is always generated,
-    # which is presently significant only really for bringup, as bringup still
-    # attempts to build this target.
-    # "//build/info:build-info",
-  ]
-
-  # If the build version is using the latest-commit-date, then include the
-  # generation of that file as one of the dependencies.
-  if (build_info_files.version == build_info_files.latest_commit_date) {
-    deps += [ "//build/info:latest-commit-date" ]
-  }
-
-  # Use metadata from recovery labels to create manifest targets
-  args += [
-    "--manifest",
-    rebase_path(recovery_images_list_outputs[0], root_build_dir),
-  ]
-
-  # Each entry optionally specifies deps or sources that are added to that of
-  # this action, as well as a `target` to be included in the generated
-  # manifest.
-  foreach(entry, update_manifest + additional_update_manifest_entries) {
-    entry_source = ""
-    if (defined(entry.dep)) {
-      deps += [ entry.dep ]
-    }
-
-    # Add the appropriate "source" to the update action, based on the entry's
-    # defined source or dep.
-    entry_source = ""
-
-    if (defined(entry.source)) {
-      # If the entry defines sources, those take precedence.
-      entry_source = entry.source
-    } else if (defined(entry.dep)) {
-      # If the entry defines a dep, but not a source, use the first output as
-      # the target's source.
-      dep_outputs = []
-      dep_outputs = get_target_outputs(entry.dep)
-      entry_source = dep_outputs[0]
-    } else {
-      assert("entry for target '${entry.target}' had no source: ${entry}")
-    }
-
-    # Add the entry's source to the action's set of source files, for proper
-    # input dependency tracking.
-    sources += [ entry_source ]
-
-    # Rebase the file's path against the root build dir so that it can be passed
-    # to the tool via args.
-    entry_source = rebase_path(entry_source, root_build_dir)
-    args += [ "--entry=${entry.target}=${entry_source}" ]
-  }
-}
-
-pm_build("update.meta") {
-  visibility = [ "//build/images/*" ]
-  testonly = true
-  manifest = ":update.manifest"
-  package_name = "update"
-}
-
-###
-### Generate an update package with system_image_prime and fuchsia_prime.
-###
-
-# The prime images are used to have an alternate known-compatible OTA
-# target for integration testing.
-
-update_prime_meta_far_merkle_index =
-    "$target_out_dir/update_prime_meta_far_merkle_index"
-generate_package_metadata("update_prime_meta_far_merkle_index") {
-  testonly = true
-  outputs = [ update_prime_meta_far_merkle_index ]
-  data_keys = [ "meta_far_merkle_index_entries" ]
-  deps = [
-    ":base_packages",
-    ":meta_packages",
-    ":system_image_prime.meta",
-  ]
-}
-
-action("update_prime_packages.manifest") {
-  visibility = [ ":update_prime.manifest" ]
-  testonly = true
-
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":update_prime_meta_far_merkle_index" ]
-  inputs = [ update_prime_meta_far_merkle_index ]
-
-  script = "//build/images/manifest_content_expand.sh"
-  depfile = "${target_out_dir}/${target_name}.d"
-  args = [
-    rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
-}
-
-action("update_prime_packages.manifest.json") {
-  visibility = [ ":update_prime.manifest" ]
-  testonly = true
-
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":update_prime_meta_far_merkle_index" ]
-  inputs = [ update_prime_meta_far_merkle_index ]
-
-  depfile = "${target_gen_dir}/${target_name}.d"
-
-  script = "generate_packages_json.py"
-
-  args = [
-    "--input_file",
-    rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
-    "--output_file",
-    rebase_path(outputs[0], root_build_dir),
-    "--depfile",
-    rebase_path(depfile, root_build_dir),
-  ]
-}
-
-action("update_prime.manifest") {
-  visibility = [ ":*" ]
-  testonly = true
-  script = "manifest.py"
-
-  outputs = [ "$target_out_dir/$target_name" ]
-
-  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-
-  deps = [
-    ":update.manifest",
-    ":update_prime_packages.manifest",
-    ":update_prime_packages.manifest.json",
-    zbi_prime.dep,
-  ]
-  update_manifest_outputs = get_target_outputs(":update.manifest")
-  update_prime_packages_manifest_outputs =
-      get_target_outputs(":update_prime_packages.manifest")
-  update_prime_packages_manifest_json_outputs =
-      get_target_outputs(":update_prime_packages.manifest.json")
-  zbi_outputs = get_target_outputs(zbi_prime.dep)
-
-  sources = update_manifest_outputs
-  args += [
-    "--rewrite",
-    "meta/package={target}=" +
-        rebase_path("update_package_json", root_build_dir),
-    "--rewrite",
-    "packages={target}=" +
-        rebase_path(update_prime_packages_manifest_outputs[0], root_build_dir),
-    "--rewrite",
-    "packages.json={target}=" +
-        rebase_path(update_prime_packages_manifest_json_outputs[0],
-                    root_build_dir),
-    "--rewrite",
-    zbi_prime.updater + "={target}=" +
-        rebase_path(zbi_outputs[0], root_build_dir),
-  ]
-
-  if (use_vbmeta) {
-    deps += [ ":fuchsia_prime.vbmeta" ]
-    fuchsia_prime_vbmeta = get_target_outputs(":fuchsia_prime.vbmeta")
-    args += [
-      "--rewrite",
-      "fuchsia.vbmeta={target}=" +
-          rebase_path(fuchsia_prime_vbmeta[0], root_build_dir),
-    ]
-  }
-
-  args += [
-    "--manifest",
-    rebase_path(update_manifest_outputs[0], root_build_dir),
-  ]
-}
-
-pm_build("update_prime.meta") {
-  visibility = [ ":*" ]
-  testonly = true
-  manifest = ":update_prime.manifest"
-  package_name = "update_prime"
 }
 
 # This output is a manifest of manifests that is usable as an input to `pm
@@ -2555,10 +1290,8 @@ generate_package_metadata("all_package_manifests.list") {
   rebase = root_build_dir
   deps = [
     ":packages",
-    ":system_image.meta",
-    ":system_image_prime.meta",
-    ":update.meta",
-    ":update_prime.meta",
+    labels.images,
+    labels.images_prime,
   ]
 }
 
@@ -2628,8 +1361,8 @@ tagged_snapshot_manifests = [
     deps = [
       ":base_packages",
       ":meta_packages",
-      ":system_image.meta",
-      ":update.meta",
+      labels.images,
+      labels.images_prime,
     ]
   },
   {
@@ -2740,6 +1473,7 @@ group("updates") {
     ":root_component_index_metadata",
     ":system_snapshot",
   ]
+
   if (!is_coverage) {
     deps += [ ":verify_capability_routes" ]
   }
@@ -2844,12 +1578,12 @@ compiled_action("uefi-disk") {
     inputs += [
       fvm_tool_path,
       data_image_path,
-      blob_image_path,
+      files.blobfs,
     ]
     deps += [
-      "//build/images:blob.blk",
-      "//build/images:data.blk",
       "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
+      labels.images,
+      labels.minfs,
     ]
   }
 
@@ -2881,7 +1615,7 @@ group("images") {
   ]
 
   if (!bootfs_only) {
-    deps += [ ":netboot" ]
+    deps += [ labels.images_netboot ]
   }
 }
 
@@ -2897,9 +1631,6 @@ group("default-images") {
     ":flash_script",
     ":qemu-kernel",
     recovery_label,
-
-    # The outputs from ffx assembly
-    "assembly",
 
     # Device manifest
     ":physical_device_manifest",

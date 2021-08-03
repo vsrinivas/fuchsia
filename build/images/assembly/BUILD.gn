@@ -87,84 +87,67 @@ files = {
   fvm_fastboot = "${outdir}/fvm.fastboot.blk"
 }
 
+if (bootfs_only) {
+  old_images_label = "//build/images/bringup"
+} else {
+  old_images_label = "//build/images/fuchsia"
+}
+
 old_labels = {
-  base_package = "//build/images:system_image.meta"
-  base_static_packages = "//build/images:pkgsvr_index"
-  base_cache_packages = "//build/images:cache_index"
+  base_package = old_images_label
+  base_static_packages = old_images_label
+  base_cache_packages = old_images_label
+  zbi = old_images_label
+  zbi_manifest = old_images_label
 
-  # `bootfs_only` is only set by 'bringup', which uses different assembly
-  # targets and differently named files in the previous assembly implementation
-  # than `core` and above.  That difference should go away as
-  # //build/images/BUILD.gn is ported over to using ffx assembly.
-  if (bootfs_only) {
-    zbi = "//build/images/bringup"
-    zbi_manifest = zbi
-
-    if (use_vbmeta) {
-      vbmeta = "//build/images/bringup:bringup.vbmeta"
-    }
-  } else {
-    if (custom_signing_script != "" || use_vboot) {
-      zbi = "//build/images:signed"
-    } else {
-      zbi = "//build/images:fuchsia"
-    }
-    zbi_manifest = "//build/images:fuchsia_unverified"
-
-    if (use_vbmeta) {
-      vbmeta = "//build/images:fuchsia.vbmeta"
-    }
+  if (use_vbmeta) {
+    vbmeta = old_images_label
   }
 
-  update_package = "//build/images:update.meta"
-  blobfs = "//build/images:blob.blk"
-  fvm = "//build/images:fvm.blk"
-  fvm_sparse = "//build/images:fvm.sparse.blk"
-  fvm_blob_sparse = "//build/images:fvm.blob.sparse.blk"
-  fvm_fastboot = "//build/images:fvm.fastboot.blk"
+  update_package = old_images_label
+  blobfs = old_images_label
+  fvm = old_images_label
+  fvm_sparse = old_images_label
+  fvm_blob_sparse = old_images_label
+  fvm_fastboot = old_images_label
 }
 
 old_files = {
-  base_package = get_label_info(old_labels.base_package, "target_out_dir") +
-                 "/system_image.meta/meta.far"
+  build_images_out_dir = get_label_info("//build/images", "target_out_dir")
+  if (bootfs_only) {
+    outdir = "${build_images_out_dir}/bringup/bringup"
+  } else {
+    outdir = "${build_images_out_dir}/fuchsia/fuchsia"
+  }
+  gendir = "${outdir}/gen"
+
+  base_package = "${outdir}/base.far"
 
   # bootfs_only is only set by 'bringup', which uses different assembly targets
   # in the previous assembly implements.
   if (bootfs_only) {
-    # The zbi created by //build/images/bringup
-    zbi = "${root_build_dir}/bringup.zbi"
-    zbi_manifest = "${zbi}.json"
-
-    # The vbmeta for bringup.
-    vbmeta = "${root_build_dir}/bringup.vbmeta"
-    vbmeta_salt = "${vbmeta}.salt"
+    zbi_name = "bringup"
   } else {
-    if (custom_signing_script != "") {
-      # The vendor-processed zbi created by //build/images:signed
-      zbi = "${root_build_dir}/fuchsia.zbi.signed"
-    } else if (use_vboot) {
-      # The vboot-processed zbi created by //build/images:signed
-      zbi = "${root_build_dir}/fuchsia.zbi.vboot"
-    } else {
-      # The zbi created by //build/images:fuchsia
-      zbi = "${root_build_dir}/fuchsia.zbi"
-    }
-    zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"
-
-    # The vbmeta for zbi
-    vbmeta = "${root_build_dir}/fuchsia.vbmeta"
-    vbmeta_salt = "${vbmeta}.salt"
+    zbi_name = "fuchsia"
   }
-
-  update_package = "${root_build_dir}/obj/build/images/update.meta/meta.far"
-  blobfs = "${root_build_dir}/obj/build/images/blob.blk"
+  if (custom_signing_script != "" || use_vboot) {
+    zbi_extension = "zbi.signed"
+  } else {
+    zbi_extension = "zbi"
+  }
+  zbi = "${outdir}/${zbi_name}.${zbi_extension}"
+  zbi_manifest = "${gendir}/zbi.json"
+  vbmeta = "${outdir}/${zbi_name}.vbmeta"
+  vbmeta_salt = "${vbmeta}.salt"
+  update_package = "${outdir}/update.far"
+  blobfs = "${outdir}/blob.blk"
   minfs = "${root_build_dir}/obj/build/images/data.blk"
-  fvm = "${root_build_dir}/obj/build/images/fvm.blk"
-  fvm_sparse = "${root_build_dir}/obj/build/images/fvm.sparse.blk"
-  fvm_blob_sparse = "${root_build_dir}/obj/build/images/fvm.blob.sparse.blk"
-  fvm_fastboot = "${root_build_dir}/obj/build/images/fvm.fastboot.blk"
-  base_cache_packages = "${root_build_dir}/obj/build/images/cache_index"
-  base_static_packages = "$root_build_dir/obj/build/images/pkgsvr_index"
+  fvm = "${outdir}/fvm.blk"
+  fvm_sparse = "${outdir}/fvm.sparse.blk"
+  fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+  fvm_fastboot = "${outdir}/fvm.fastboot.blk"
+  base_cache_packages = "${gendir}/data/cache_packages"
+  base_static_packages = "${gendir}/data/static_packages"
 }
 
 if (uses_base_package) {
@@ -189,12 +172,15 @@ if (uses_base_package) {
     old_update_meta_contents = "${old_update_package_dir}/meta/contents"
     old_update_meta_package = "${old_update_package_dir}/meta/package"
   }
+}
 
+if (use_vbmeta) {
+  vbmeta_salt = rebase_path(old_files.vbmeta_salt, root_build_dir)
+}
+
+if (uses_base_package) {
   rebased_files = {
-    gendir = rebase_path(files.gendir, root_build_dir)
-    outdir = rebase_path(files.outdir, root_build_dir)
     minfs = rebase_path(old_files.minfs, root_build_dir)
-
     if (uses_base_package) {
       old_base_package = rebase_path(old_files.base_package, root_build_dir)
       old_base_package_dir =
@@ -210,18 +196,6 @@ if (uses_base_package) {
           rebase_path(extracted_files.update_package_dir, root_build_dir)
     }
   }
-}
-
-# Select the correct vbmeta and salt depending on if it is bootfs_only or not.
-if (use_vbmeta) {
-  if (bootfs_only) {
-    vbmeta_label = "//build/images/bringup:bringup.vbmeta"
-    vbmeta_file = "$root_build_dir/bringup.vbmeta"
-  } else {
-    vbmeta_label = "//build/images:fuchsia.vbmeta"
-    vbmeta_file = "$root_build_dir/fuchsia.vbmeta"
-  }
-  vbmeta_salt = rebase_path("${vbmeta_file}.salt", root_build_dir)
 }
 
 assemble_system("fuchsia") {
@@ -333,7 +307,7 @@ assemble_system("fuchsia") {
   }
 
   if (use_vbmeta) {
-    deps = [ vbmeta_label ]
+    deps = [ old_images_label ]
     salt_file = vbmeta_salt
   }
 }

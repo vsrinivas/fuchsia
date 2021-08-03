@@ -76,17 +76,16 @@ if (is_linux) {
 
   host_test_data("copy_images") {
     sources = [
-      get_label_info("//build/images:fvm.blk($target_toolchain)",
-                     "target_out_dir") + "/fvm.blk",
-      get_label_info("//build/images:fuchsia($target_toolchain)",
+      get_label_info("//build/images/fuchsia($target_toolchain)",
+                     "target_out_dir") + "/fuchsia/fvm.blk",
+      get_label_info("//build/images/fuchsia($target_toolchain)",
                      "root_out_dir") + "/fuchsia.zbi",
       "${root_build_dir}/packages.tar.gz",
     ]
     outputs = [ "${_build_out}/{{source_file_part}}" ]
     deps = [
       "//build/gn:package_archive($target_toolchain)",
-      "//build/images:fuchsia($target_toolchain)",
-      "//build/images:fvm.blk($target_toolchain)",
+      "//build/images/fuchsia($target_toolchain)",
     ]
     if (target_cpu == "x64") {
       sources += [ "${root_build_dir}/multiboot.bin" ]
