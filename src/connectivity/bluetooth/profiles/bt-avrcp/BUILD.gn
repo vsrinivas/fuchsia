@@ -80,6 +80,8 @@ rustc_binary("bin") {
     "src/tests/mod.rs",
     "src/types.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("component") {

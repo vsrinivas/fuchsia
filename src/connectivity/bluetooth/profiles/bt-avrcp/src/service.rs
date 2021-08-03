@@ -525,14 +525,15 @@ pub fn run_services(
 ) -> Result<impl Future<Output = Result<(), Error>> + '_, Error> {
     let sender_avrcp = sender.clone();
     let sender_test = sender.clone();
-    fs.dir("svc")
+    let _ = fs
+        .dir("svc")
         .add_fidl_service_at(PeerManagerExtMarker::NAME, move |stream| {
             spawn_test_avrcp_client(stream, sender_test.clone());
         })
         .add_fidl_service_at(PeerManagerMarker::NAME, move |stream| {
             spawn_avrcp_client(stream, sender_avrcp.clone());
         });
-    fs.take_and_serve_directory_handle()?;
+    let _ = fs.take_and_serve_directory_handle()?;
     info!("Running fidl service");
     Ok(fs.collect::<()>().map(|_| Err(format_err!("FIDL service listener returned"))))
 }

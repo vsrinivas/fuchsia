@@ -8,15 +8,13 @@ use {
     fuchsia_async::DurationExt,
     fuchsia_zircon as zx,
     futures::{
-        future::{AbortHandle, Abortable, FutureExt},
-        select,
+        future::FutureExt,
         stream::{SelectAll, StreamExt, TryStreamExt},
     },
     log::{error, info, trace},
     notification_stream::NotificationStream,
     packet_encoding::{Decodable, Encodable},
     parking_lot::RwLock,
-    pin_utils::pin_mut,
     rand::Rng,
     std::{convert::TryInto, sync::Arc},
 };
@@ -148,80 +146,73 @@ fn handle_notification(
     }
 }
 
-/// Starts a task to attempt an outgoing L2CAP connection to remote's AVRCP control channel.
+/// Attempt an outgoing L2CAP connection to remote's AVRCP control channel.
 /// The control channel should be in `Connecting` state before spawning this task.
-fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
-    fasync::Task::spawn(async move {
-        let random_delay: zx::Duration =
-            zx::Duration::from_nanos(rand::thread_rng().gen_range(
-                MIN_CONNECTION_EST_TIME.into_nanos(),
-                MAX_CONNECTION_EST_TIME.into_nanos(),
-            ));
-        trace!(
-            "AVRCP waiting {:?} millis before establishing connection",
-            random_delay.into_millis()
-        );
-        fuchsia_async::Timer::new(random_delay.after_now()).await;
-        let (peer_id, profile_service) = {
-            let peer_guard = peer.read();
-            // Return early if we are not in the `Connecting` state.
-            if !peer_guard.control_channel.is_connecting() {
-                return;
-            }
-            (peer_guard.peer_id, peer_guard.profile_proxy.clone())
-        };
+async fn make_connection(peer: Arc<RwLock<RemotePeer>>) {
+    let random_delay: zx::Duration = zx::Duration::from_nanos(
+        rand::thread_rng()
+            .gen_range(MIN_CONNECTION_EST_TIME.into_nanos(), MAX_CONNECTION_EST_TIME.into_nanos()),
+    );
+    trace!("AVRCP waiting {:?} millis before establishing connection", random_delay.into_millis());
+    fuchsia_async::Timer::new(random_delay.after_now()).await;
+    let (peer_id, profile_service) = {
+        let peer_guard = peer.read();
+        // Return early if we are not in the `Connecting` state.
+        if !peer_guard.control_channel.is_connecting() {
+            return;
+        }
+        (peer_guard.peer_id, peer_guard.profile_proxy.clone())
+    };
 
-        match profile_service
-            .connect(
-                &mut peer_id.into(),
-                &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-                    psm: Some(bredr::PSM_AVCTP),
-                    ..bredr::L2capParameters::EMPTY
-                }),
-            )
-            .await
-        {
-            Err(fidl_err) => {
-                let mut peer_guard = peer.write();
-                error!("Profile service connect error: {:?}", fidl_err);
-                peer_guard.inspect().metrics().connection_error();
-                peer_guard.reset_connection(false);
-            }
-            Ok(Ok(channel)) => {
-                let mut peer_guard = peer.write();
-                let channel = match channel.try_into() {
-                    Ok(chan) => chan,
-                    Err(e) => {
-                        error!("Unable to make peer {} from socket: {:?}", peer_id, e);
-                        peer_guard.inspect().metrics().connection_error();
-                        peer_guard.reset_connection(false);
-                        return;
-                    }
-                };
-                if peer_guard.control_channel.is_connecting() {
-                    let peer = AvcPeer::new(channel);
-                    trace!("Successfully established outgoing connection for peer {}", peer_id);
-                    peer_guard.set_control_connection(peer);
-                } else {
-                    trace!("Connection collision from peer {} while making outgoing.", peer_id);
-
-                    // An incoming l2cap connection was made while we were making an
-                    // outgoing one. Drop both connections, per spec, and attempt
-                    // to reconnect.
-                    peer_guard.reset_connection(true);
-                }
-            }
-            Ok(Err(e)) => {
-                error!("Couldn't connect to peer {}: {:?}", peer_id, e);
-                let mut peer_guard = peer.write();
-                peer_guard.inspect().metrics().connection_error();
-                if peer_guard.control_channel.is_connecting() {
+    match profile_service
+        .connect(
+            &mut peer_id.into(),
+            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                psm: Some(bredr::PSM_AVCTP),
+                ..bredr::L2capParameters::EMPTY
+            }),
+        )
+        .await
+    {
+        Err(fidl_err) => {
+            let mut peer_guard = peer.write();
+            warn!("Profile service connect error: {:?}", fidl_err);
+            peer_guard.inspect().metrics().connection_error();
+            peer_guard.reset_connection(false);
+        }
+        Ok(Ok(channel)) => {
+            let mut peer_guard = peer.write();
+            let channel = match channel.try_into() {
+                Ok(chan) => chan,
+                Err(e) => {
+                    error!("Unable to make peer {} from socket: {:?}", peer_id, e);
+                    peer_guard.inspect().metrics().connection_error();
                     peer_guard.reset_connection(false);
+                    return;
                 }
+            };
+            if peer_guard.control_channel.is_connecting() {
+                let peer = AvcPeer::new(channel);
+                trace!("Successfully established outgoing connection for peer {}", peer_id);
+                peer_guard.set_control_connection(peer);
+            } else {
+                trace!("Connection collision from peer {} while making outgoing.", peer_id);
+
+                // An incoming l2cap connection was made while we were making an
+                // outgoing one. Drop both connections, per spec, and attempt
+                // to reconnect.
+                peer_guard.reset_connection(true);
             }
         }
-    })
-    .detach()
+        Ok(Err(e)) => {
+            error!("Couldn't connect to peer {}: {:?}", peer_id, e);
+            let mut peer_guard = peer.write();
+            peer_guard.inspect().metrics().connection_error();
+            if peer_guard.control_channel.is_connecting() {
+                peer_guard.reset_connection(false);
+            }
+        }
+    }
 }
 
 /// Checks for supported notification on the peer and registers for notifications.
@@ -235,46 +226,37 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
         NotificationEventId::EventVolumeChanged,
     ];
 
-    let supported_notifications: Vec<NotificationEventId> =
+    let local_supported: HashSet<NotificationEventId> =
         SUPPORTED_NOTIFICATIONS.iter().cloned().collect();
 
     // look up what notifications we support on this peer first. Consider updating this from
     // time to time.
-    let remote_supported_notifications = match get_supported_events_internal(peer.clone()).await {
+    let remote_supported = match get_supported_events_internal(peer.clone()).await {
         Ok(x) => x,
         Err(_) => return,
     };
 
-    let supported_notifications: Vec<NotificationEventId> = remote_supported_notifications
-        .into_iter()
-        .filter(|k| supported_notifications.contains(k))
-        .collect();
+    let supported_notifications = remote_supported.intersection(&local_supported);
 
     let mut notification_streams = SelectAll::new();
 
     for notif in supported_notifications {
         trace!("creating notification stream for {:?}", notif);
-        let stream =
-            NotificationStream::new(peer.clone(), notif, 1).map_ok(move |data| (notif, data));
+        let stream = NotificationStream::new(peer.clone(), notif.clone(), 1)
+            .map_ok(move |data| (notif, data));
         notification_streams.push(stream);
     }
 
-    pin_mut!(notification_streams);
-    loop {
-        if select! {
-            event_result = notification_streams.select_next_some() => {
-                match event_result {
-                    Ok((notif, data)) => {
-                        handle_notification(&notif, &peer, &data[..])
-                            .unwrap_or_else(|e| { error!("Error decoding packet from peer {:?}", e); true} )
-                    },
-                    Err(Error::CommandNotSupported) => false,
-                    Err(_) => true,
-                }
+    while let Some(event_result) = notification_streams.next().await {
+        match event_result.map(|(notif, data)| handle_notification(&notif, &peer, &data[..])) {
+            Err(Error::CommandNotSupported) => continue,
+            Err(_) => break,
+            Ok(Err(e)) => {
+                warn!("Error decoding packet from peer {:?}", e);
+                break;
             }
-            complete => true
-        } {
-            break;
+            Ok(Ok(true)) => break,
+            Ok(Ok(false)) => continue,
         }
     }
     trace!("stopping notifications for {:?}", peer.read().peer_id);
@@ -282,57 +264,23 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
 
 /// Starts a task to poll notifications on the remote peer. Aborted when the peer connection is
 /// reset.
-fn start_notifications_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
-    let (handle, registration) = AbortHandle::new_pair();
-    fasync::Task::spawn(
-        Abortable::new(
-            async move {
-                pump_notifications(peer).await;
-            },
-            registration,
-        )
-        .map(|_| ()),
-    )
-    .detach();
-    handle
+fn start_notifications_processing_task(peer: Arc<RwLock<RemotePeer>>) -> fasync::Task<()> {
+    fasync::Task::spawn(pump_notifications(peer).map(|_| ()))
 }
 
 /// Starts a task to poll control messages from the peer. Aborted when the peer connection is
 /// reset. Started when we have a connection to the remote peer and we have any type of valid SDP
 /// profile from the peer.
-fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
-    let (handle, registration) = AbortHandle::new_pair();
-    fasync::Task::spawn(
-        Abortable::new(
-            async move {
-                process_control_stream(peer).await;
-            },
-            registration,
-        )
-        .map(|_| ()),
-    )
-    .detach();
-    handle
+fn start_control_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> fasync::Task<()> {
+    fasync::Task::spawn(process_control_stream(peer).map(|_| ()))
 }
 
 /// Starts a task to poll browse messages from the peer.
 /// Started when we have a browse connection to the remote peer as well as an already
 /// established control connection.
 /// Aborted when the peer connection is reset.
-fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHandle {
-    let (handle, registration) = AbortHandle::new_pair();
-
-    fasync::Task::spawn(
-        Abortable::new(
-            async move {
-                process_browse_stream(peer).await;
-            },
-            registration,
-        )
-        .map(|_| ()),
-    )
-    .detach();
-    handle
+fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> fasync::Task<()> {
+    fasync::Task::spawn(process_browse_stream(peer).map(|_| ()))
 }
 
 /// State observer task around a remote peer. Takes a change stream from the remote peer that wakes
@@ -342,114 +290,94 @@ fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHa
 pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
     trace!("state_watcher starting");
     let mut change_stream = peer.read().state_change_listener.take_change_stream();
+    let id = peer.read().id();
     let peer_weak = Arc::downgrade(&peer);
     drop(peer);
 
-    let mut control_channel_abort_handle: Option<AbortHandle> = None;
-    let mut browse_channel_abort_handle: Option<AbortHandle> = None;
-    let mut notification_poll_abort_handle: Option<AbortHandle> = None;
+    let mut make_connection_task = fasync::Task::spawn(futures::future::ready(()));
+    let mut control_channel_task: Option<fasync::Task<()>> = None;
+    let mut browse_channel_task: Option<fasync::Task<()>> = None;
+    let mut notification_poll_task: Option<fasync::Task<()>> = None;
 
     while let Some(_) = change_stream.next().await {
         trace!("state_watcher command received");
-        if let Some(peer) = peer_weak.upgrade() {
-            let mut peer_guard = peer.write();
+        let peer = match peer_weak.upgrade() {
+            Some(peer) => peer,
+            None => break,
+        };
+        let mut peer_guard = peer.write();
 
-            // The old tasks need to be cleaned up. Potentially terminate the channel
-            // processing tasks and the notification processing task.
-            // Reset the `cancel_tasks` flag so that we don't fall into a loop of
-            // constantly clearing the tasks.
-            if peer_guard.cancel_tasks {
-                browse_channel_abort_handle.take().map(|a| {
-                    trace!("state_watcher: clearing previous browse channel task.");
-                    a.abort()
-                });
-                control_channel_abort_handle.take().map(|a| {
-                    trace!("state_watcher: clearing previous control channel task.");
-                    a.abort()
-                });
-                notification_poll_abort_handle.take().map(|a| a.abort());
-                peer_guard.cancel_tasks = false;
+        // The old tasks need to be cleaned up. Potentially terminate the channel
+        // processing tasks and the notification processing task.
+        // Reset the `cancel_tasks` flag so that we don't fall into a loop of
+        // constantly clearing the tasks.
+        if peer_guard.cancel_tasks {
+            if browse_channel_task.take().is_some() {
+                trace!("state_watcher: clearing previous browse channel task.");
             }
+            if control_channel_task.take().is_some() {
+                trace!("state_watcher: clearing previous control channel task.");
+            }
+            notification_poll_task = None;
+            peer_guard.cancel_tasks = false;
+        }
 
-            trace!("state_watcher control channel {:?}", peer_guard.control_channel);
-            match peer_guard.control_channel.state() {
-                &PeerChannelState::Connecting => {}
-                &PeerChannelState::Disconnected => {
-                    // Have we discovered service profile data on the peer?
-                    if (peer_guard.target_descriptor.is_some()
-                        || peer_guard.controller_descriptor.is_some())
-                        && peer_guard.attempt_connection
-                    {
-                        trace!("Starting make_connection task for peer {:?}", peer_guard.peer_id);
-                        peer_guard.attempt_connection = false;
-                        peer_guard.control_channel.connecting();
-                        start_make_connection_task(peer.clone());
-                    }
-                }
-                &PeerChannelState::Connected(_) => {
-                    // If we have discovered profile data on this peer, start processing requests
-                    // over the control stream.
-                    if (peer_guard.target_descriptor.is_some()
-                        || peer_guard.controller_descriptor.is_some())
-                        && control_channel_abort_handle.is_none()
-                    {
-                        trace!(
-                            "state_watcher: Starting control stream task for peer {}",
-                            peer_guard.id()
-                        );
-                        control_channel_abort_handle =
-                            Some(start_control_stream_processing_task(peer.clone()));
-                    }
-
-                    if peer_guard.target_descriptor.is_some()
-                        && notification_poll_abort_handle.is_none()
-                    {
-                        notification_poll_abort_handle =
-                            Some(start_notifications_processing_task(peer.clone()));
-                    }
+        trace!("state_watcher control channel {:?}", peer_guard.control_channel);
+        match peer_guard.control_channel.state() {
+            &PeerChannelState::Connecting => {}
+            &PeerChannelState::Disconnected => {
+                // Have we discovered service profile data on the peer?
+                if peer_guard.discovered() && peer_guard.attempt_connection {
+                    trace!("Starting make_connection task for peer {}", id);
+                    peer_guard.attempt_connection = false;
+                    peer_guard.control_channel.connecting();
+                    make_connection_task = fasync::Task::spawn(make_connection(peer.clone()));
                 }
             }
-
-            match peer_guard.browse_channel.state() {
-                &PeerChannelState::Connecting => {}
-                &PeerChannelState::Disconnected => {
-                    if let Some(ref abort_handle) = browse_channel_abort_handle {
-                        abort_handle.abort();
-                        browse_channel_abort_handle = None;
-                    }
+            &PeerChannelState::Connected(_) => {
+                // If we have discovered profile data on this peer, start processing requests
+                // over the control stream.
+                if peer_guard.discovered() && control_channel_task.is_none() {
+                    trace!("state_watcher: Starting control stream task for peer {}", id);
+                    control_channel_task = Some(start_control_stream_processing_task(peer.clone()));
                 }
-                &PeerChannelState::Connected(_) => {
-                    // The Browse channel must be established after the control channel.
-                    // Ensure that the control channel exists before starting the browse task.
-                    if control_channel_abort_handle.is_none() {
-                        trace!("Received Browse connection before Control .. disconnecting");
-                        peer_guard.browse_channel.disconnect();
-                        continue;
-                    }
-                    // We always use the newest Browse connection.
-                    browse_channel_abort_handle =
-                        Some(start_browse_stream_processing_task(peer.clone()));
+
+                if peer_guard.target_descriptor.is_some() && notification_poll_task.is_none() {
+                    notification_poll_task =
+                        Some(start_notifications_processing_task(peer.clone()));
                 }
             }
-        } else {
-            break;
+        }
+
+        match peer_guard.browse_channel.state() {
+            &PeerChannelState::Connecting => {}
+            &PeerChannelState::Disconnected => {
+                browse_channel_task = None;
+            }
+            &PeerChannelState::Connected(_) => {
+                // The Browse channel must be established after the control channel.
+                // Ensure that the control channel exists before starting the browse task.
+                if control_channel_task.is_none() {
+                    trace!("Received Browse connection before Control .. disconnecting");
+                    peer_guard.browse_channel.disconnect();
+                    continue;
+                }
+                // We always use the newest Browse connection.
+                browse_channel_task = Some(start_browse_stream_processing_task(peer.clone()));
+            }
         }
     }
 
     trace!("state_watcher shutting down. aborting processors");
 
+    let _ = make_connection_task.cancel();
+
     // Stop processing state changes on the browse channel.
     // This needs to happen before stopping the control channel.
-    if let Some(ref abort_handle) = browse_channel_abort_handle {
-        abort_handle.abort();
-    }
+    drop(browse_channel_task.take());
 
     // Stop processing state changes on the control channel.
-    if let Some(ref abort_handle) = control_channel_abort_handle {
-        abort_handle.abort();
-    }
+    drop(control_channel_task.take());
 
-    if let Some(ref abort_handle) = notification_poll_abort_handle {
-        abort_handle.abort();
-    }
+    drop(notification_poll_task.take());
 }

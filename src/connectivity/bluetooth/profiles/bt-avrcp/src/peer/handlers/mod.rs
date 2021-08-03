@@ -99,7 +99,7 @@ impl Continuations {
             Occupied(mut entry) => {
                 let packet = entry.get_mut().pop_front();
                 if entry.get().is_empty() {
-                    entry.remove();
+                    drop(entry.remove());
                 }
                 packet
             }
@@ -111,15 +111,15 @@ impl Continuations {
     // If an existing continuation exists, it's replaced.
     fn insert_remaining_packets(&self, pdu_id: &PduId, packets: Vec<Vec<u8>>) {
         if packets.is_empty() {
-            self.remaining_packets.lock().remove_entry(pdu_id);
+            self.clear_continuation(pdu_id);
         } else {
-            self.remaining_packets.lock().insert(pdu_id.clone(), VecDeque::from(packets));
+            let _ = self.remaining_packets.lock().insert(pdu_id.clone(), VecDeque::from(packets));
         }
     }
 
     // Removes remaining packets given a pdu_id
     fn clear_continuation(&self, pdu_id: &PduId) {
-        self.remaining_packets.lock().remove_entry(pdu_id);
+        drop(self.remaining_packets.lock().remove_entry(pdu_id));
     }
 
     // remove all continuations
@@ -1406,7 +1406,7 @@ mod test {
         let handle_cmd = cmd_handler.handle_command_internal(command);
         pin_utils::pin_mut!(handle_cmd);
         assert!(exec.run_until_stalled(&mut handle_cmd).is_pending());
-        exec.wake_next_timer();
+        let _ = exec.wake_next_timer();
         // we should still be pending.
         assert!(exec.run_until_stalled(&mut handle_cmd).is_pending());
         // we drop the mock command and if the expected interim wasn't called, the test will fail
@@ -1734,7 +1734,7 @@ mod test {
         let handle_cmd = cmd_handler.handle_command_internal(command);
         pin_utils::pin_mut!(handle_cmd);
         assert!(exec.run_until_stalled(&mut handle_cmd).is_pending());
-        exec.wake_next_timer();
+        let _ = exec.wake_next_timer();
         // we should be ready right away
         assert!(exec.run_until_stalled(&mut handle_cmd).is_ready());
         // we drop the mock command and if the expected reject wasn't called, the test will fail

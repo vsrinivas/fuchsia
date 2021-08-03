@@ -16,6 +16,7 @@ use {
     matches::assert_matches,
     packet_encoding::{Decodable, Encodable},
     pin_utils::pin_mut,
+    std::collections::HashSet,
     std::convert::TryFrom,
 };
 
@@ -358,7 +359,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                         .expect("unable to encode packets for event");
                     let _ = avc_command
                         .send_response(AvcResponseType::ImplementedStable, &packets[0][..]);
-                    packets.remove(0);
+                    drop(packets.remove(0));
                     additional_packets = packets;
                 }
                 PduId::RequestContinuingResponse => {
@@ -377,7 +378,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                             &additional_packets[0][..],
                         );
                     }
-                    additional_packets.remove(0);
+                    drop(additional_packets.remove(0));
                 }
                 PduId::RegisterNotification => {
                     let register_notification_command = RegisterNotificationCommand::decode(body)
@@ -603,7 +604,10 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
             }
             res = events_fut => {
                 expected_commands -= 1;
-                assert_eq!(res?, Ok(vec![NotificationEvent::TrackPosChanged, NotificationEvent::BattStatusChanged, NotificationEvent::VolumeChanged]));
+                let mut expected_set: HashSet<NotificationEvent> = [NotificationEvent::TrackPosChanged, NotificationEvent::BattStatusChanged, NotificationEvent::VolumeChanged].iter().cloned().collect();
+                for item in res?.expect("supported events should be Ok") {
+                    assert!(expected_set.remove(&item), "Missing {:?} in Events Supported.", item);
+                }
             }
             res = get_media_attributes_fut => {
                 expected_commands -= 1;

@@ -89,7 +89,7 @@ impl Controller {
 
     /// Send a GetCapabilities command requesting all supported events by the peer.
     /// Returns the supported NotificationEventIds by the peer or an error.
-    pub async fn get_supported_events(&self) -> Result<Vec<NotificationEventId>, Error> {
+    pub async fn get_supported_events(&self) -> Result<HashSet<NotificationEventId>, Error> {
         self.peer.get_supported_events().await
     }
 

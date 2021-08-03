@@ -71,26 +71,26 @@ impl RemotePeerInspect {
 
     pub fn record_target_features(&mut self, service: AvrcpService) {
         if let AvrcpService::Target { features, protocol_version, .. } = service {
-            self.target_info.as_mut().map(|desc| {
+            if let Some(desc) = self.target_info.as_mut() {
                 inspect_log!(
                     desc,
                     features: format!("{:?}", features),
                     version: format!("{:?}", protocol_version)
                 );
-            });
+            }
             self.metrics_node.target_features(self.peer_id, features);
         }
     }
 
     pub fn record_controller_features(&mut self, service: AvrcpService) {
         if let AvrcpService::Controller { features, protocol_version, .. } = service {
-            self.controller_info.as_mut().map(|desc| {
+            if let Some(desc) = self.controller_info.as_mut() {
                 inspect_log!(
                     desc,
                     features: format!("{:?}", features),
                     version: format!("{:?}", protocol_version)
                 );
-            });
+            }
             self.metrics_node.controller_features(self.peer_id, features);
         }
     }

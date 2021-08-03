@@ -16,7 +16,7 @@ use {
     parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         convert::TryFrom,
         mem::{discriminant, Discriminant},
         sync::Arc,
@@ -230,10 +230,16 @@ impl RemotePeer {
         &self.inspect
     }
 
+    /// Returns true if this peer is considered discovered, i.e. has service descriptors for
+    /// either controller or target.
+    fn discovered(&self) -> bool {
+        self.target_descriptor.is_some() || self.controller_descriptor.is_some()
+    }
+
     /// Caches the current value of this controller notification event for future controller event
     /// listeners and forwards the event to current controller listeners queues.
     fn handle_new_controller_notification_event(&mut self, event: ControllerEvent) {
-        self.notification_cache.insert(discriminant(&event), event.clone());
+        let _ = self.notification_cache.insert(discriminant(&event), event.clone());
 
         // remove all the dead listeners from the list.
         self.controller_listeners.retain(|i| !i.is_closed());
@@ -415,15 +421,15 @@ async fn send_vendor_dependent_command_internal(
 /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
 async fn get_supported_events_internal(
     peer: Arc<RwLock<RemotePeer>>,
-) -> Result<Vec<NotificationEventId>, Error> {
+) -> Result<HashSet<NotificationEventId>, Error> {
     let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
     trace!("Getting supported events: {:?}", cmd);
     let buf = send_vendor_dependent_command_internal(peer.clone(), &cmd).await?;
     let capabilities =
         GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-    let mut event_ids = vec![];
+    let mut event_ids = HashSet::new();
     for event_id in capabilities.event_ids() {
-        event_ids.push(NotificationEventId::try_from(event_id)?);
+        let _ = event_ids.insert(NotificationEventId::try_from(event_id)?);
     }
     Ok(event_ids)
 }
@@ -525,7 +531,7 @@ impl RemotePeerHandle {
     /// Retrieve the events supported by the peer by issuing a GetCapabilities command.
     pub fn get_supported_events(
         &self,
-    ) -> impl Future<Output = Result<Vec<NotificationEventId>, Error>> + '_ {
+    ) -> impl Future<Output = Result<HashSet<NotificationEventId>, Error>> + '_ {
         get_supported_events_internal(self.peer.clone())
     }
 
@@ -607,7 +613,7 @@ mod tests {
         // Advance time by the maximum amount of time it would take to establish
         // a connection.
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // Peer should have requested a connection.
         let (_remote, channel) = Channel::create();
@@ -652,7 +658,7 @@ mod tests {
         // Advance time by the maximum amount of time it would take to establish
         // a connection.
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // Peer should have requested a connection.
         let (remote, channel) = Channel::create();
@@ -676,7 +682,7 @@ mod tests {
 
         // Advance time by some arbitrary amount before peer decides to reconnect.
         exec.set_fake_time(5.seconds().after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // Peer reconnects with a new l2cap connection. Keep the old one alive to validate that it's
         // closed.
@@ -728,7 +734,7 @@ mod tests {
 
         // Advance time by the maximum amount of time it would take to establish a connection.
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // We expect to initiate an outbound connection through the profile server.
         let (remote, channel) = Channel::create();
@@ -753,7 +759,7 @@ mod tests {
         // Advance time by LESS than the CONNECTION_THRESHOLD amount.
         let advance_time = CONNECTION_THRESHOLD.into_nanos() - 100;
         exec.set_fake_time(advance_time.nanos().after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // Simulate inbound connection.
         let (remote2, channel2) = Channel::create();
@@ -778,7 +784,7 @@ mod tests {
         // Advance time by the maximum amount of time it would take to establish
         // a connection.
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let (remote3, channel3) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
@@ -833,7 +839,7 @@ mod tests {
 
         // Advance time by the maximum amount of time it would take to establish a connection.
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         // We expect to initiate an outbound connection through the profile server. Simulate error.
         match exec.run_until_stalled(&mut next_request_fut) {
