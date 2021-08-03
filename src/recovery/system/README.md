@@ -51,7 +51,7 @@ Load the system you've just built onto your device.
 
 ### Unit
 
-Run the recovery integration test:
+Run the system recovery unit tests:
 
 ```sh
 $ fx test -s 5 system_recovery_tests
