@@ -267,7 +267,7 @@ impl<'a> TestEnvironment<'a> {
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        config: &InterfaceConfig,
+        if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
@@ -275,7 +275,7 @@ impl<'a> TestEnvironment<'a> {
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, config).await
+        self.install_endpoint(endpoint, if_config, None).await
     }
 
     /// Joins `network` with by creating an endpoint with `ep_config` and
@@ -299,17 +299,20 @@ impl<'a> TestEnvironment<'a> {
             .create_endpoint_with(ep_name, ep_config)
             .await
             .context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_config).await
+        self.install_endpoint(endpoint, if_config, None).await
     }
 
-    /// Installs and configures `endpoint` in this environment with `config`.
+    /// Installs and configures the endpoint in this environment.
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
         config: &InterfaceConfig,
+        name: Option<String>,
     ) -> Result<TestInterface<'a>> {
-        let interface =
-            endpoint.into_interface_in_environment(self).await.context("failed to add endpoint")?;
+        let interface = endpoint
+            .into_interface_in_environment_with_name(self, name)
+            .await
+            .context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
         let () = match config {
             InterfaceConfig::StaticIp(addr) => {
@@ -578,17 +581,61 @@ impl<'a> TestEndpoint<'a> {
     }
 
     /// Adds this endpoint to `stack`, returning the interface identifier.
-    pub async fn add_to_stack(&self, stack: &net_stack::StackProxy) -> Result<u64> {
-        Ok(match self.get_device().await.context("get_device failed")? {
+    pub async fn add_to_stack(&self, environment: &TestEnvironment<'a>) -> Result<u64> {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        match self.get_device().await.context("get_device failed")? {
             netemul_network::DeviceConnection::Ethernet(eth) => {
-                stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
+                stack.add_ethernet_interface(&self.name, eth).await.squash_result()
             }
             netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
                 let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
+                        net_stack::InterfaceConfig::EMPTY,
+                        &mut net_stack::DeviceDefinition::Ethernet(
+                            net_stack::EthernetDeviceDefinition {
+                                network_device: device,
+                                mac: mac,
+                            },
+                        ),
+                    )
+                    .await
+                    .squash_result()
+            }
+        }
+    }
+
+    async fn add_to_stack_with_name(
+        &self,
+        environment: &TestEnvironment<'a>,
+        name: String,
+    ) -> Result<u64> {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        let netstack = environment
+            .connect_to_service::<netstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
+        match self.get_device().await.context("get_device failed")? {
+            netemul_network::DeviceConnection::Ethernet(eth) => netstack
+                .add_ethernet_device(
+                    &self.name,
+                    &mut netstack::InterfaceConfig { name, filepath: String::new(), metric: 0 },
+                    eth,
+                )
+                .await
+                .context("add_ethernet_device FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .map(u64::from)
+                .context("add_ethernet_device failed"),
+            netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+                let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
+                stack
+                    .add_interface(
                         net_stack::InterfaceConfig {
-                            name: None,
+                            name: Some(name),
                             topopath: None,
                             metric: None,
                             ..net_stack::InterfaceConfig::EMPTY
@@ -601,9 +648,9 @@ impl<'a> TestEndpoint<'a> {
                         ),
                     )
                     .await
-                    .squash_result()?
+                    .squash_result()
             }
-        })
+        }
     }
 
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
@@ -612,11 +659,27 @@ impl<'a> TestEndpoint<'a> {
         self,
         environment: &TestEnvironment<'a>,
     ) -> Result<TestInterface<'a>> {
-        let stack = environment.connect_to_service::<net_stack::StackMarker>()?;
-        let netstack = environment.connect_to_service::<netstack::NetstackMarker>()?;
-        let id = self.add_to_stack(&stack).await.with_context(|| {
+        self.into_interface_in_environment_with_name(environment, None).await
+    }
+
+    async fn into_interface_in_environment_with_name(
+        self,
+        environment: &TestEnvironment<'a>,
+        name: Option<String>,
+    ) -> Result<TestInterface<'a>> {
+        let id = match name {
+            Some(name) => self.add_to_stack_with_name(environment, name).await,
+            None => self.add_to_stack(environment).await,
+        }
+        .with_context(|| {
             format!("failed to add {} to environment {}", self.name, environment.name)
         })?;
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        let netstack = environment
+            .connect_to_service::<netstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
         Ok(TestInterface { endpoint: self, id, stack, netstack })
     }
 }

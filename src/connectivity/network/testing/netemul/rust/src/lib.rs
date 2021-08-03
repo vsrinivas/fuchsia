@@ -256,7 +256,7 @@ impl<'a> TestRealm<'a> {
         &self,
         network: &TestNetwork<'a>,
         ep_name: S,
-        config: &InterfaceConfig,
+        if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
@@ -264,7 +264,7 @@ impl<'a> TestRealm<'a> {
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, config).await
+        self.install_endpoint(endpoint, if_config, None).await
     }
 
     /// Joins `network` with by creating an endpoint with `ep_config` and
@@ -287,17 +287,20 @@ impl<'a> TestRealm<'a> {
             .create_endpoint_with(ep_name, ep_config)
             .await
             .context("failed to create endpoint")?;
-        self.install_endpoint(endpoint, if_config).await
+        self.install_endpoint(endpoint, if_config, None).await
     }
 
-    /// Installs and configures `endpoint` in this realm with `config`.
+    /// Installs and configures the endpoint in this realm.
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
         config: &InterfaceConfig,
+        name: Option<String>,
     ) -> Result<TestInterface<'a>> {
-        let interface =
-            endpoint.into_interface_in_realm(self).await.context("failed to add endpoint")?;
+        let interface = endpoint
+            .into_interface_in_realm_with_name(self, name)
+            .await
+            .context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
         let () = match config {
             InterfaceConfig::StaticIp(addr) => {
@@ -577,7 +580,10 @@ impl<'a> TestEndpoint<'a> {
     }
 
     /// Adds this endpoint to `stack`, returning the interface identifier.
-    pub async fn add_to_stack(&self, stack: &fnet_stack::StackProxy) -> Result<u64> {
+    pub async fn add_to_stack(&self, realm: &TestRealm<'a>) -> Result<u64> {
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .context("failed to connect to stack")?;
         Ok(match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
                 stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
@@ -586,12 +592,7 @@ impl<'a> TestEndpoint<'a> {
                 let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
-                        fnet_stack::InterfaceConfig {
-                            name: None,
-                            topopath: None,
-                            metric: None,
-                            ..fnet_stack::InterfaceConfig::EMPTY
-                        },
+                        fnet_stack::InterfaceConfig::EMPTY,
                         &mut fnet_stack::DeviceDefinition::Ethernet(
                             fnet_stack::EthernetDeviceDefinition {
                                 network_device: device,
@@ -605,15 +606,70 @@ impl<'a> TestEndpoint<'a> {
         })
     }
 
+    async fn add_to_stack_with_name(&self, realm: &TestRealm<'a>, name: String) -> Result<u64> {
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        let netstack = realm
+            .connect_to_protocol::<fnetstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
+        match self.get_device().await.context("get_device failed")? {
+            fnetemul_network::DeviceConnection::Ethernet(eth) => netstack
+                .add_ethernet_device(
+                    &self.name,
+                    &mut fnetstack::InterfaceConfig { name, filepath: String::new(), metric: 0 },
+                    eth,
+                )
+                .await
+                .context("add_ethernet_device FIDL error")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .map(u64::from)
+                .context("add_ethernet_device failed"),
+            fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+                let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
+                stack
+                    .add_interface(
+                        fnet_stack::InterfaceConfig {
+                            name: Some(name),
+                            topopath: None,
+                            metric: None,
+                            ..fnet_stack::InterfaceConfig::EMPTY
+                        },
+                        &mut fnet_stack::DeviceDefinition::Ethernet(
+                            fnet_stack::EthernetDeviceDefinition {
+                                network_device: device,
+                                mac: mac,
+                            },
+                        ),
+                    )
+                    .await
+                    .squash_result()
+            }
+        }
+    }
+
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
     /// `realm`, returning a [`TestInterface`] on success.
     pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
-        let stack = realm.connect_to_protocol::<fnet_stack::StackMarker>()?;
-        let netstack = realm.connect_to_protocol::<fnetstack::NetstackMarker>()?;
-        let id = self
-            .add_to_stack(&stack)
-            .await
-            .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
+        self.into_interface_in_realm_with_name(realm, None).await
+    }
+
+    async fn into_interface_in_realm_with_name(
+        self,
+        realm: &TestRealm<'a>,
+        name: Option<String>,
+    ) -> Result<TestInterface<'a>> {
+        let id = match name {
+            Some(name) => self.add_to_stack_with_name(realm, name).await,
+            None => self.add_to_stack(realm).await,
+        }
+        .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
+        let stack = realm
+            .connect_to_protocol::<fnet_stack::StackMarker>()
+            .context("failed to connect to stack")?;
+        let netstack = realm
+            .connect_to_protocol::<fnetstack::NetstackMarker>()
+            .context("failed to connect to netstack")?;
         Ok(TestInterface { endpoint: self, id, stack, netstack })
     }
 }

@@ -220,12 +220,14 @@ async fn test_no_duplicate_interface_names() -> Result {
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new()?;
-    let (_realm, stack, device) = sandbox
+    let (realm, stack, device) = sandbox
         .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
             name,
         )
         .await?;
-    let id = device.add_to_stack(&stack).await?;
+
+    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+
     let interface = stack
         .list_interfaces()
         .await
@@ -247,12 +249,13 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
 #[variants_test]
 async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let (_realm, stack, device) = sandbox
+    let (realm, stack, device) = sandbox
         .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
             name,
         )
         .await?;
-    let id = device.add_to_stack(&stack).await?;
+
+    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
 
     // Netstack3 doesn't allow addresses to be added while link is down.
     let () =
@@ -543,7 +546,7 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
         .await
         .context("failed to create netstack realm")?;
 
-    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -594,7 +597,8 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
         .await
         .context("failed to create netstack realm")?;
 
-    let id = device.add_to_stack(&stack).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+
     if enabled {
         let () = stack
             .enable_interface(id)
