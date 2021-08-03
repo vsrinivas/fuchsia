@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hypervisor_tests_constants.h"
+#include "src/virtualization/tests/hypervisor/constants.h"
 
 #define IA32_GS_BASE              0xc0000101
 #define X86_MSR_IA32_STAR         0xc0000081

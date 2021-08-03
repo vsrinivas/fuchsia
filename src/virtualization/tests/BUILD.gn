@@ -20,15 +20,6 @@ guest_environments = nuc_env_fails_on_asan + [
                        vim3_env,
                      ]
 
-# List of environments that support the hypervisor.
-hypervisor_environments = [
-  astro_env,
-  nelson_env,
-  nuc_env,
-  sherlock_env,
-  vim3_env,
-]
-
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
@@ -40,11 +31,11 @@ group("tests") {
   testonly = true
   deps = [
     ":guest_unit_tests",
-    ":hypervisor_tests_pkg",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
     ":virtualization_net_tests_pkg",
     ":virtualization_vsock_tests_pkg",
+    "hypervisor",
   ]
 
   # TODO(fxbug.dev/12616): These tests currently do not work on arm64.
@@ -467,47 +458,6 @@ fuchsia_package("virtualization_test_utils_pkg") {
     ":virtio_rng_test_util_cmp",
     ":virtio_vsock_test_util_cmp",
   ]
-}
-
-executable("hypervisor_tests") {
-  testonly = true
-
-  sources = [
-    "hypervisor_tests_${target_cpu}.S",
-    "hypervisor_tests_constants.h",
-    "hypervisor_tests_old.cc",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/lib/fdio",
-    "//src/lib/fxl/test:test_settings",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
-  ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-fuchsia_test_component("hypervisor_tests_cmp") {
-  component_name = "hypervisor_tests"
-  deps = [ ":hypervisor_tests" ]
-  manifest = "meta/hypervisor_tests.cmx"
-}
-
-fuchsia_test_package("hypervisor_tests_pkg") {
-  package_name = "hypervisor-tests-pkg"
-  test_components = [ ":hypervisor_tests_cmp" ]
-  test_specs = {
-    environments = hypervisor_environments
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }
 
 icd_filename = "libvulkan_intel.so"
