@@ -35,22 +35,3 @@ pub struct ComponentShowCommand {
     /// partial url or name of the component
     pub filter: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    const CMD_NAME: &'static [&'static str] = &["show"];
-
-    #[test]
-    fn test_command() {
-        fn check(args: &[&str], expected_filter: String) {
-            assert_eq!(
-                ComponentShowCommand::from_args(CMD_NAME, args),
-                Ok(ComponentShowCommand { filter: expected_filter })
-            )
-        }
-
-        let test_filter = "http://test.com";
-        check(&[test_filter], test_filter.to_string());
-    }
-}

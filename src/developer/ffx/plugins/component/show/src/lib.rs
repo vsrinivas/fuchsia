@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, Subcommand},
-    errors::ffx_error,
+    anyhow::{format_err, Context, Result},
+    component_hub::{io::Directory, show::find_components},
     ffx_component::COMPONENT_SHOW_HELP,
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
@@ -27,14 +26,19 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, Subcommand::Show).await;
-    component.print_details(&filter).map_err(|e| {
-        ffx_error!(
-            "'{}' was not found in the component tree: {}\n{}",
+    let components =
+        find_components(filter.to_string(), ".".to_string(), ".".to_string(), hub_dir).await?;
+
+    if components.is_empty() {
+        return Err(format_err!(
+            "'{}' was not found in the component tree\n{}",
             filter,
-            e,
             COMPONENT_SHOW_HELP
-        )
-    })?;
+        ));
+    }
+
+    for component in components {
+        println!("{}", component);
+    }
     Ok(())
 }

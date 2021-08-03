@@ -5,3 +5,4 @@
 /// This library provides methods for getting information about v2/CML components using the hub.
 pub mod io;
 pub mod list;
+pub mod show;

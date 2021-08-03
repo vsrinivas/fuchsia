@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {component_hub::io::Directory, component_hub::list::Component, std::path::PathBuf};
+use {
+    component_hub::io::Directory, component_hub::list::Component,
+    component_hub::show::find_components, std::path::PathBuf,
+};
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn list() {
@@ -21,4 +24,41 @@ async fn list() {
     assert!(!child.is_running);
     assert!(!child.is_cmx);
     assert!(child.children.is_empty());
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn show() {
+    let hub_path = PathBuf::from("/hub");
+    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+
+    let components =
+        find_components("test.cm".to_string(), ".".to_string(), ".".to_string(), hub_dir)
+            .await
+            .unwrap();
+
+    assert_eq!(components.len(), 1);
+    let component = &components[0];
+
+    // The test runner may include a specific hash in the component URL
+    assert!(component.url.starts_with("fuchsia-pkg://fuchsia.com/component_hub_integration_test"));
+    assert!(component.url.ends_with("#meta/test.cm"));
+
+    assert_eq!(component.moniker, ".");
+    assert_eq!(component.component_type, "CML static component");
+
+    assert!(component.resolved.is_some());
+    let resolved = component.resolved.as_ref().unwrap();
+
+    let incoming_capabilities = &resolved.incoming_capabilities;
+    assert_eq!(incoming_capabilities.len(), 2);
+
+    let incoming_capability = &incoming_capabilities[0];
+    assert_eq!(incoming_capability, "fuchsia.logger.LogSink");
+
+    let incoming_capability = &incoming_capabilities[1];
+    assert_eq!(incoming_capability, "hub");
+
+    // We do not verify the contents of the execution, because they are largely dependent on
+    // the Rust Test Runner
+    assert!(component.execution.is_some());
 }

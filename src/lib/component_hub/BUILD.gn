@@ -25,6 +25,7 @@ rustc_library("component_hub") {
     "src/io.rs",
     "src/lib.rs",
     "src/list.rs",
+    "src/show.rs",
   ]
 }
 
