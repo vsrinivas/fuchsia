@@ -40,7 +40,7 @@ ast_enum_of_structs! {
 
         /// A floating point literal: `1f64` or `1.0e10f64`.
         ///
-        /// Must be finite. May not be infinte or NaN.
+        /// Must be finite. May not be infinite or NaN.
         Float(LitFloat),
 
         /// A boolean literal: `true` or `false`.
@@ -238,7 +238,7 @@ impl LitStr {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 
     pub fn suffix(&self) -> &str {
@@ -269,7 +269,7 @@ impl LitByteStr {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 
     pub fn suffix(&self) -> &str {
@@ -300,7 +300,7 @@ impl LitByte {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 
     pub fn suffix(&self) -> &str {
@@ -331,7 +331,7 @@ impl LitChar {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 
     pub fn suffix(&self) -> &str {
@@ -406,7 +406,7 @@ impl LitInt {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 }
 
@@ -478,7 +478,7 @@ impl LitFloat {
     }
 
     pub fn set_span(&mut self, span: Span) {
-        self.repr.token.set_span(span)
+        self.repr.token.set_span(span);
     }
 }
 
@@ -502,6 +502,24 @@ impl From<Literal> for LitFloat {
 impl Display for LitFloat {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         self.repr.token.fmt(formatter)
+    }
+}
+
+impl LitBool {
+    pub fn new(value: bool, span: Span) -> Self {
+        LitBool { value, span }
+    }
+
+    pub fn value(&self) -> bool {
+        self.value
+    }
+
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.span = span;
     }
 }
 
@@ -1419,7 +1437,7 @@ mod value {
         }
 
         let suffix = s;
-        if suffix.is_empty() || crate::ident::xid_ok(&suffix) {
+        if suffix.is_empty() || crate::ident::xid_ok(suffix) {
             let mut repr = value.to_string();
             if negative {
                 repr.insert(0, '-');

@@ -57,6 +57,17 @@ impl Lifetime {
             ident: Ident::new(&symbol[1..], span),
         }
     }
+
+    pub fn span(&self) -> Span {
+        self.apostrophe
+            .join(self.ident.span())
+            .unwrap_or(self.apostrophe)
+    }
+
+    pub fn set_span(&mut self, span: Span) {
+        self.apostrophe = span;
+        self.ident.set_span(span);
+    }
 }
 
 impl Display for Lifetime {
@@ -97,7 +108,7 @@ impl Ord for Lifetime {
 
 impl Hash for Lifetime {
     fn hash<H: Hasher>(&self, h: &mut H) {
-        self.ident.hash(h)
+        self.ident.hash(h);
     }
 }
 

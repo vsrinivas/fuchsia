@@ -172,17 +172,10 @@ impl Generics {
 
     /// Initializes an empty `where`-clause if there is not one present already.
     pub fn make_where_clause(&mut self) -> &mut WhereClause {
-        // This is Option::get_or_insert_with in Rust 1.20.
-        if self.where_clause.is_none() {
-            self.where_clause = Some(WhereClause {
-                where_token: <Token![where]>::default(),
-                predicates: Punctuated::new(),
-            });
-        }
-        match &mut self.where_clause {
-            Some(where_clause) => where_clause,
-            None => unreachable!(),
-        }
+        self.where_clause.get_or_insert_with(|| WhereClause {
+            where_token: <Token![where]>::default(),
+            predicates: Punctuated::new(),
+        })
     }
 }
 
@@ -598,6 +591,7 @@ ast_struct! {
 #[cfg(feature = "parsing")]
 pub mod parsing {
     use super::*;
+    use crate::ext::IdentExt;
     use crate::parse::{Parse, ParseStream, Result};
 
     #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
@@ -631,6 +625,15 @@ pub mod parsing {
                     params.push_value(GenericParam::Const(ConstParam {
                         attrs,
                         ..input.parse()?
+                    }));
+                } else if input.peek(Token![_]) {
+                    params.push_value(GenericParam::Type(TypeParam {
+                        attrs,
+                        ident: input.call(Ident::parse_any)?,
+                        colon_token: None,
+                        bounds: Punctuated::new(),
+                        eq_token: None,
+                        default: None,
                     }));
                 } else {
                     return Err(lookahead.error());
@@ -870,7 +873,7 @@ pub mod parsing {
                 eq_token: {
                     if input.peek(Token![=]) {
                         let eq_token = input.parse()?;
-                        default = Some(input.parse::<Expr>()?);
+                        default = Some(path::parsing::const_argument(input)?);
                         Some(eq_token)
                     } else {
                         None

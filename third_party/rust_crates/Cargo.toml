@@ -234,7 +234,7 @@ pathdiff = "0.2.0"
 parking = "2"
 pem = "0.8.3"
 petgraph = "0.5.1"
-proc-macro2 = "1.0.24"
+proc-macro2 = "1.0.28"
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
@@ -429,7 +429,7 @@ rustflags = ["--cfg=underscore_consts", "--cfg=deprecated_proc_macro"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
-[gn.package.proc-macro2."1.0.24"]
+[gn.package.proc-macro2."1.0.28"]
 rustflags = ["--cfg=span_locations", "--cfg=lexerror_display", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 [gn.package.proc-macro-hack."0.5.19"]
@@ -557,7 +557,7 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.parking_lot_core."0.6.2"]
 [gn.package.pulldown-cmark."0.6.0"]
 [gn.package.rayon-core."1.7.0"]
-[gn.package.syn."1.0.58"]
+[gn.package.syn."1.0.74"]
 [gn.package.test-case."1.1.0"]
 [gn.package.wasm-bindgen."0.2.60"]
 

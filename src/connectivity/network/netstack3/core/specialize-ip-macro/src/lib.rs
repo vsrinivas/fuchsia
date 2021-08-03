@@ -772,7 +772,6 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
         Stmt::Item(Item::Macro(x)) => &mut x.attrs,
         Stmt::Item(Item::Macro2(x)) => &mut x.attrs,
         Stmt::Item(Item::Verbatim(_)) => &mut dummy,
-        Stmt::Item(Item::__Nonexhaustive) => unreachable!(),
         Stmt::Expr(expr) | Stmt::Semi(expr, _) => match expr {
             Expr::Box(x) => &mut x.attrs,
             Expr::Array(x) => &mut x.attrs,
@@ -814,7 +813,8 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
             Expr::TryBlock(x) => &mut x.attrs,
             Expr::Yield(x) => &mut x.attrs,
             Expr::Verbatim(_) => &mut dummy,
-            Expr::__Nonexhaustive => unreachable!(),
+            Expr::__TestExhaustive(_) => unreachable!(),
         },
+        Stmt::Item(Item::__TestExhaustive(_)) => unreachable!(),
     })
 }

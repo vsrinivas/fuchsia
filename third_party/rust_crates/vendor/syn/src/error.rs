@@ -236,7 +236,7 @@ impl Error {
     /// Add another error message to self such that when `to_compile_error()` is
     /// called, both errors will be emitted together.
     pub fn combine(&mut self, another: Error) {
-        self.messages.extend(another.messages)
+        self.messages.extend(another.messages);
     }
 }
 
@@ -349,7 +349,7 @@ impl std::error::Error for Error {}
 
 impl From<LexError> for Error {
     fn from(err: LexError) -> Self {
-        Error::new(Span::call_site(), format!("{:?}", err))
+        Error::new(err.span(), "lex error")
     }
 }
 

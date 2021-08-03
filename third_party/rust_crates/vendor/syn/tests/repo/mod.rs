@@ -8,10 +8,14 @@ use std::path::Path;
 use tar::Archive;
 use walkdir::DirEntry;
 
-const REVISION: &str = "72da5a9d85a522b11e80d0fdd1fd95247d442604";
+const REVISION: &str = "716394d6581b60c75cfdd88b8e5b876f2db88b62";
 
 #[rustfmt::skip]
 static EXCLUDE: &[&str] = &[
+    // Rustc loses some attributes
+    // https://github.com/rust-lang/rust/issues/84879
+    "src/test/ui/proc-macro/issue-81555.rs",
+
     // Compile-fail expr parameter in const generic position: f::<1 + 2>()
     "src/test/ui/const-generics/closing-args-token.rs",
     "src/test/ui/const-generics/const-expression-parameter.rs",
@@ -22,16 +26,19 @@ static EXCLUDE: &[&str] = &[
     "src/test/ui/issues/issue-34074.rs",
     "src/test/ui/proc-macro/trait-fn-args-2015.rs",
 
+    // Excessive nesting
+    "src/test/ui/issues/issue-74564-if-expr-stack-overflow.rs",
+
     // Not actually test cases
     "src/test/rustdoc-ui/test-compile-fail2.rs",
     "src/test/rustdoc-ui/test-compile-fail3.rs",
     "src/test/ui/include-single-expr-helper.rs",
     "src/test/ui/include-single-expr-helper-1.rs",
-    "src/test/ui/issues/auxiliary/issue-21146-inc.rs",
     "src/test/ui/json-bom-plus-crlf-multifile-aux.rs",
     "src/test/ui/lint/expansion-time-include.rs",
     "src/test/ui/macros/auxiliary/macro-comma-support.rs",
     "src/test/ui/macros/auxiliary/macro-include-items-expr.rs",
+    "src/test/ui/parser/auxiliary/issue-21146-inc.rs",
 ];
 
 pub fn base_dir_filter(entry: &DirEntry) -> bool {

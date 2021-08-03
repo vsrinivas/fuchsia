@@ -72,8 +72,31 @@ ast_enum_of_structs! {
         /// A pattern that matches any value: `_`.
         Wild(PatWild),
 
+        // The following is the only supported idiom for exhaustive matching of
+        // this enum.
+        //
+        //     match expr {
+        //         Pat::Box(e) => {...}
+        //         Pat::Ident(e) => {...}
+        //         ...
+        //         Pat::Wild(e) => {...}
+        //
+        //         #[cfg(test)]
+        //         Pat::__TestExhaustive(_) => unimplemented!(),
+        //         #[cfg(not(test))]
+        //         _ => { /* some sane fallback */ }
+        //     }
+        //
+        // This way we fail your tests but don't break your library when adding
+        // a variant. You will be notified by a test failure when a variant is
+        // added, so that you can add code to handle it, but your library will
+        // continue to compile and work for downstream users in the interim.
+        //
+        // Once `deny(reachable)` is available in rustc, Pat will be
+        // reimplemented as a non_exhaustive enum.
+        // https://github.com/rust-lang/rust/issues/44109#issuecomment-521781237
         #[doc(hidden)]
-        __Nonexhaustive,
+        __TestExhaustive(crate::private),
     }
 }
 
@@ -500,7 +523,7 @@ pub mod parsing {
                 attrs,
                 member,
                 colon_token: input.parse()?,
-                pat: Box::new(multi_pat(input)?),
+                pat: Box::new(multi_pat_with_leading_vert(input)?),
             });
         }
 
@@ -579,7 +602,7 @@ pub mod parsing {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value = multi_pat(&content)?;
+            let value = multi_pat_with_leading_vert(&content)?;
             elems.push_value(value);
             if content.is_empty() {
                 break;
@@ -678,7 +701,7 @@ pub mod parsing {
 
         let mut elems = Punctuated::new();
         while !content.is_empty() {
-            let value = multi_pat(&content)?;
+            let value = multi_pat_with_leading_vert(&content)?;
             elems.push_value(value);
             if content.is_empty() {
                 break;
