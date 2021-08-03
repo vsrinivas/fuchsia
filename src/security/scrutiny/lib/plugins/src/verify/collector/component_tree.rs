@@ -8,7 +8,7 @@ use {
         package::collector::ROOT_RESOURCE,
     },
     crate::verify::collection::V2ComponentTree,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::component_tree::ComponentTreeBuilder,
     cm_rust::{ComponentDecl, FidlIntoNative},
     cm_types::Url,
@@ -82,7 +82,7 @@ impl V2ComponentTreeDataCollector {
         config_path: &str,
         model: &Arc<DataModel>,
     ) -> Result<RuntimeConfig> {
-        let zbi = &model.get::<Zbi>()?;
+        let zbi = &model.get::<Zbi>().context("Unable to find the zbi model.")?;
         match zbi.bootfs.get(config_path) {
             Some(config_data) => Ok(RuntimeConfig::try_from(decode_persistent::<
                 component_internal::Config,
@@ -95,7 +95,9 @@ impl V2ComponentTreeDataCollector {
 impl DataCollector for V2ComponentTreeDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let decls_by_url = self.get_decls(&model)?;
-        let runtime_config = self.get_runtime_config(DEFAULT_CONFIG_PATH, &model)?;
+        let runtime_config = self.get_runtime_config(DEFAULT_CONFIG_PATH, &model).context(
+            format!("Unable to get the runtime config at path {:?}", DEFAULT_CONFIG_PATH),
+        )?;
         let root_url =
             runtime_config.root_component_url.unwrap_or(Url::new(DEFAULT_ROOT_URL.to_string())?);
 

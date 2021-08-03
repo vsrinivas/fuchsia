@@ -153,6 +153,7 @@ Verification Errors:
 /// A small shim interface around the Scrutiny framework that takes the
 /// `stamp`, `depfile` and `allowlist` paths from the build.
 fn main() -> Result<()> {
+    simplelog::SimpleLogger::init(simplelog::LevelFilter::Error, simplelog::Config::default())?;
     let args = App::new("scrutiny_verify_routes")
         .version("1.0")
         .author("Fuchsia Authors")

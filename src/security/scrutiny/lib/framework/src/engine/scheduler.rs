@@ -82,7 +82,7 @@ impl CollectorInstance {
                     }
 
                     if let Err(e) = data_collector.collect(Arc::clone(&model)) {
-                        error!("Collector failed with error {}", e);
+                        error!("Collector failed with error {:#}", e);
                     }
 
                     {
