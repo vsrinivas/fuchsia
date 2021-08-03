@@ -110,9 +110,9 @@ type LowLightMode = strict enum {
 // Any other theme information, such as guidance as to how to pick a theme,
 // should be communicated using `ThemeMode`.
 type ThemeType = strict enum {
-    /// When `ThemeType` is set to `DEFAULT` it is up to the specific product to
-    /// determine what that actually means. It is not directly related to either
-    /// `LIGHT` or `DARK`.
+    /// When `ThemeType` is set to `DEFAULT` it is up to the specific
+    /// [product](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products?hl=en#products)
+    /// to determine what that actually means.
     DEFAULT = 0;
     LIGHT = 1;
     DARK = 2;
