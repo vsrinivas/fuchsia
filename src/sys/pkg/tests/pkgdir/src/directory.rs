@@ -937,4 +937,15 @@ async fn assert_unsupported_directory_calls(
         zx::Status::from_raw(parent.watch(0, 0, h0).await.unwrap()),
         zx::Status::NOT_SUPPORTED
     );
+
+    // Verify nodeGetFlags() is not supported.
+    let (status, flags) = parent.node_get_flags().await.unwrap();
+    assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
+    assert_eq!(flags, 0);
+
+    // Verify nodeSetFlags() is not supported.
+    assert_eq!(
+        zx::Status::from_raw(parent.node_set_flags(0).await.unwrap()),
+        zx::Status::NOT_SUPPORTED
+    );
 }

@@ -11,8 +11,11 @@ use {
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_RIGHT_READABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_FLAG_APPEND,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_zircon as zx,
     io_util::directory::open_file,
@@ -381,4 +384,91 @@ async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
     let (status, bytes) = clone.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
+}
+
+#[fuchsia::test]
+async fn get_flags() {
+    for dir in dirs_to_test().await {
+        get_flags_per_package_source(dir).await
+    }
+}
+
+async fn get_flags_per_package_source(root_dir: DirectoryProxy) {
+    assert_get_flags_content_file(&root_dir).await;
+    assert_get_flags_meta_file(&root_dir, "meta").await;
+    assert_get_flags_meta_file(&root_dir, "meta/file").await;
+}
+
+/// Opens a file and verifies the result of GetFlags() and NodeGetFlags().
+async fn assert_get_flags(
+    root_dir: &DirectoryProxy,
+    path: &str,
+    open_flag: u32,
+    status_flags: u32,
+    right_flags: u32,
+) {
+    let file = open_file(&root_dir, path, open_flag).await.unwrap();
+
+    // The flags returned by GetFlags() do NOT always match the flags the file is opened with
+    // because File servers each AND the open flag with some other flags. The `status_flags` and
+    // `right_flags` parameters are meant to account for these implementation differences.
+    let expected_flags = open_flag & (status_flags | right_flags);
+
+    // Verify GetFlags() produces the expected result.
+    let (status, flags) = file.get_flags().await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(flags, expected_flags);
+
+    // NodeGetFlags() and GetFlags() should have the same result.
+    let (status, flags) = file.node_get_flags().await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(flags, expected_flags);
+}
+
+async fn assert_get_flags_content_file(root_dir: &DirectoryProxy) {
+    // Content files are served by blobfs, which uses the VFS library to filter out some of the
+    // open flags before returning.
+    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/storage/vfs/cpp/file_connection.cc;l=125;drc=6a01adba247f273496ee8b9227c24252a459a534
+    let status_flags = OPEN_FLAG_APPEND | OPEN_FLAG_NODE_REFERENCE;
+    let right_flags =
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN | OPEN_RIGHT_EXECUTABLE;
+
+    for open_flag in [
+        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_NO_REMOTE,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NO_REMOTE,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NOT_DIRECTORY,
+    ] {
+        assert_get_flags(&root_dir, "file", open_flag, status_flags, right_flags).await;
+    }
+}
+
+async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
+    // Meta files are served by thinfs, which filter out some of the open flags before returning.
+    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/thinfs/zircon/rpc/rpc.go;l=562-565;drc=fb0bf809980ed37f43a15e4292fb10bf943cb00e
+    let status_flags = OPEN_FLAG_APPEND;
+    let right_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE;
+
+    for open_flag in [
+        0,
+        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_ADMIN,
+        OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NO_REMOTE,
+        OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_POSIX,
+        OPEN_FLAG_NOT_DIRECTORY,
+    ] {
+        assert_get_flags(&root_dir, path, open_flag, status_flags, right_flags).await;
+    }
 }
