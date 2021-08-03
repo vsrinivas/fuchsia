@@ -11,7 +11,6 @@ group("developer") {
     "ffx",
     "forensics",
     "fuchsia-criterion",
-    "kcounter_inspect",
     "remote-control",
     "tracing",
   ]
@@ -26,7 +25,6 @@ group("tests") {
     "//src/developer/ffx:tests",
     "//src/developer/forensics:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
-    "//src/developer/kcounter_inspect/tests:kcounter_inspect_tests",
     "//src/developer/memory:tests",
     "//src/developer/remote-control:tests",
     "//src/developer/shell:tests",

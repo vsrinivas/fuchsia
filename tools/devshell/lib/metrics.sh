@@ -81,7 +81,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell iquery"
     "shell join"
     "shell josh"
-    "shell kcounter_inspect"
     "shell limbo_client"
     "shell link"
     "shell locate"

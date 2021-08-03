@@ -121,7 +121,6 @@ group("cmx_allowlist") {
     "//src/developer/debug/*",
     "//src/developer/forensics/*",
     "//src/developer/fuchsia-criterion/*",
-    "//src/developer/kcounter_inspect/*",
     "//src/developer/memory/*",
     "//src/developer/remote-control/*",
     "//src/developer/shell/*",
