@@ -2115,14 +2115,12 @@ mod tests {
         }
         const COUNTER_WITH_STORAGE: &str = "counter-with-storage";
         const COUNTER_WITHOUT_STORAGE: &str = "counter-without-storage";
-        const COUNTER_STORAGE_URL: &str =
-            "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter_storage.cm";
         let TestRealm { realm } = TestRealm::new(
             &sandbox,
             RealmOptions {
                 children: Some(vec![
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_STORAGE_URL.to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_WITH_STORAGE.to_string()),
                         exposes: Some(vec![COUNTER_A_PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![

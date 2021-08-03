@@ -2,5 +2,53 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/connectivity/network/testing/netemul-v2/test-support/meta/common.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/counter",
+    },
+    capabilities: [
+        { protocol: "fuchsia.netemul.test.Counter" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.netemul.network.NetworkContext",
+                "fuchsia.netemul.test.CounterA",
+                "fuchsia.netemul.test.CounterB",
+            ],
+            from: "parent",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "dev",
+
+            // TODO(https://fxbug.dev/77059): remove write permissions once they
+            // are no longer required to connect to services.
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.netemul.test.Counter",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.netemul.test.Counter",
+            from: "self",
+            as: "fuchsia.netemul.test.CounterA",
+        },
+        {
+            protocol: "fuchsia.netemul.test.Counter",
+            from: "self",
+            as: "fuchsia.netemul.test.CounterB",
+        },
+    ],
 }

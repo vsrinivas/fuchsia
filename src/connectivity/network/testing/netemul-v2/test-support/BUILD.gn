@@ -43,9 +43,3 @@ fuchsia_component("counter") {
   manifest = "meta/counter.cml"
   deps = [ ":bin" ]
 }
-
-fuchsia_component("counter_storage") {
-  testonly = true
-  manifest = "meta/counter_storage.cml"
-  deps = [ ":bin" ]
-}
