@@ -140,6 +140,14 @@ impl Store {
         let mut cursor = Cursor::new(bytes);
         while cursor.position() < bytes_len {
             let client_name_length = cursor.read_u64::<LittleEndian>()?;
+            let bytes_remaining = bytes_len - cursor.position();
+            if client_name_length > bytes_remaining {
+                return Err(format_err!(
+                    "client_name_length overflow: client_name_length={} bytes_remaining={}",
+                    client_name_length,
+                    bytes_remaining
+                ));
+            }
             let mut client_name = Vec::new();
             client_name.resize(client_name_length as usize, 0);
             cursor.read(&mut client_name[..])?;
@@ -149,6 +157,14 @@ impl Store {
             let mut client_data = HashMap::new();
             for _ in 0..client_entries {
                 let key_length = cursor.read_u64::<LittleEndian>()?;
+                let bytes_remaining = bytes_len - cursor.position();
+                if key_length > bytes_remaining {
+                    return Err(format_err!(
+                        "key_length overflow: key_length={} bytes_remaining={}",
+                        key_length,
+                        bytes_remaining
+                    ));
+                }
                 let mut key_bytes = Vec::new();
                 key_bytes.resize(key_length as usize, 0);
                 cursor.read(&mut key_bytes[..])?;
@@ -158,6 +174,15 @@ impl Store {
                 let val_type = val_type[0];
 
                 let val_length = cursor.read_u64::<LittleEndian>()?;
+                let bytes_remaining = bytes_len - cursor.position();
+                if val_length > bytes_remaining {
+                    return Err(format_err!(
+                        "val_length overflow: val_length={} bytes_remaining={}",
+                        val_length,
+                        bytes_remaining
+                    ));
+                }
+
                 let mut val_bytes = Vec::new();
                 val_bytes.resize(val_length as usize, 0);
                 cursor.read(&mut val_bytes[..])?;
@@ -194,9 +219,7 @@ impl StoreManager {
     pub fn new<P: Into<PathBuf>>(backing_file: P) -> Result<StoreManager, Error> {
         let backing_file = backing_file.into();
         let store = match fs::read(&backing_file) {
-            Ok(buf) => {
-                Store::deserialize(buf)?
-            }
+            Ok(buf) => Store::deserialize(buf)?,
             Err(e) => {
                 if e.kind() != ErrorKind::NotFound {
                     return Err(format_err!(format!("{}", e)));
@@ -291,6 +314,17 @@ mod tests {
 
     fn get_tmp_store_manager(tmp_dir: &TempDir) -> StoreManager {
         StoreManager::new(tmp_dir.path().join("stash.store")).unwrap()
+    }
+
+    /// Store the data supplied. Return the bytes of the store file.
+    fn write_tmp_store(id: &str, values: HashMap<String, Value>) -> Result<Vec<u8>, Error> {
+        let tmp_dir = TempDir::new().unwrap();
+        let mut sm = get_tmp_store_manager(&tmp_dir);
+
+        let test_client_name = id.to_string();
+
+        sm.store.data.insert(test_client_name.clone(), values);
+        sm.store.serialize()
     }
 
     #[test]
@@ -552,5 +586,78 @@ mod tests {
 
         new_file_size = fs::metadata(&file_path).unwrap().len();
         assert!(curr_file_size > new_file_size);
+    }
+
+    #[test]
+    fn test_store_reader_with_client_name_length_error() -> Result<(), Error> {
+        let mut types: HashMap<String, Value> = HashMap::new();
+        types.insert("integer".to_string(), Value::Intval(42));
+
+        let mut store_bytes = write_tmp_store("test", types)?;
+        // Change structure name length to more than the bytes in the buffer
+        store_bytes[0] = 255;
+        let result = Store::deserialize(store_bytes);
+        assert!(result.is_err());
+        let got = format!("{}", result.unwrap_err());
+        assert!(got.starts_with("client_name_length overflow"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_store_reader_with_key_length_error() -> Result<(), Error> {
+        let mut types: HashMap<String, Value> = HashMap::new();
+        types.insert("integer".to_string(), Value::Intval(42));
+
+        let mut store_bytes = write_tmp_store("test", types)?;
+        // Change key length to more than the bytes in the buffer
+        store_bytes[20] = 255;
+        let result = Store::deserialize(store_bytes);
+        assert!(result.is_err());
+        let got = format!("{}", result.unwrap_err());
+        assert!(got.starts_with("key_length overflow"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_store_reader_with_value_length_error() -> Result<(), Error> {
+        let mut types: HashMap<String, Value> = HashMap::new();
+        types.insert("integer".to_string(), Value::Intval(42));
+
+        let mut store_bytes = write_tmp_store("test", types)?;
+        // Change value length to more than the bytes in the buffer
+        store_bytes[36] = 255;
+        let result = Store::deserialize(store_bytes);
+        assert!(result.is_err());
+        let got = format!("{}", result.unwrap_err());
+        assert!(got.starts_with("val_length overflow"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_stash_reader_with_value_length_exact_length() -> Result<(), Error> {
+        let mut types: HashMap<String, Value> = HashMap::new();
+        types.insert("integer".to_string(), Value::Intval(42));
+
+        let mut store_bytes = write_tmp_store("test", types)?;
+        // Use exact length, this should be ok.
+        store_bytes[36] = 8; // It's already 8 but it keeps it consistent with the other tests.
+        let result = Store::deserialize(store_bytes);
+        assert!(!result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_stash_reader_with_value_length_one_over_length() -> Result<(), Error> {
+        let mut types: HashMap<String, Value> = HashMap::new();
+        types.insert("integer".to_string(), Value::Intval(42));
+
+        let mut store_bytes = write_tmp_store("test", types)?;
+        // Change value length to one more than the bytes in the buffer
+        store_bytes[36] = 9;
+        let result = Store::deserialize(store_bytes);
+        assert!(result.is_err());
+        let got = format!("{}", result.unwrap_err());
+        assert!(got.starts_with("val_length overflow"));
+        Ok(())
     }
 }
