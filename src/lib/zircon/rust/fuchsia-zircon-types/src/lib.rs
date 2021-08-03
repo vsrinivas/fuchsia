@@ -526,9 +526,6 @@ pub const ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE: u32 = 1 << 4;
 pub const ZX_VMO_CHILD_RESIZABLE: u32 = 1 << 2;
 pub const ZX_VMO_CHILD_SLICE: u32 = 1 << 3;
 pub const ZX_VMO_CHILD_NO_WRITE: u32 = 1 << 5;
-// Old clone flags that are on the path to deprecation.
-pub const ZX_VMO_CHILD_COPY_ON_WRITE: u32 = 1 << 4;
-pub const ZX_VMO_CHILD_PRIVATE_PAGER_COPY: u32 = 1 << 4;
 
 // channel write size constants
 pub const ZX_CHANNEL_MAX_MSG_HANDLES: u32 = 64;
