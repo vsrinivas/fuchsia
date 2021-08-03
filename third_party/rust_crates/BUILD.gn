@@ -389,7 +389,7 @@ group("nom") {
 }
 
 group("nom_locate") {
-  deps = [ ":nom_locate-v2_0_0" ]
+  deps = [ ":nom_locate-v2_1_0" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -5424,10 +5424,10 @@ rust_library("nom-v5_0_0") {
   ]
 }
 
-rust_library("nom_locate-v2_0_0") {
+rust_library("nom_locate-v2_1_0") {
   crate_name = "nom_locate"
-  crate_root = "//third_party/rust_crates/forks/nom_locate/src/lib.rs"
-  output_name = "nom_locate-9b54fbce8f44d169"
+  crate_root = "//third_party/rust_crates/vendor/nom_locate/src/lib.rs"
+  output_name = "nom_locate-7e01b57d7a23ba7a"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5443,8 +5443,8 @@ rust_library("nom_locate-v2_0_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9b54fbce8f44d169",
-    "-Cextra-filename=-9b54fbce8f44d169",
+    "-Cmetadata=7e01b57d7a23ba7a",
+    "-Cextra-filename=-7e01b57d7a23ba7a",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",

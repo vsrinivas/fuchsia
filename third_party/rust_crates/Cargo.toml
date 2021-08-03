@@ -294,7 +294,6 @@ combine = { path = "forks/combine" }
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
 fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
 libm = { path = "forks/libm" }
-nom_locate = { path = "forks/nom_locate" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 tracing-core = { path = "forks/tracing-core" }

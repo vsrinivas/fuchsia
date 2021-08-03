@@ -114,6 +114,8 @@ use nom::{
     AsBytes, Compare, CompareResult, Err, FindSubstring, FindToken, IResult, InputIter,
     InputLength, InputTake, InputTakeAtPosition, Offset, ParseTo, Slice,
 };
+#[cfg(feature = "stable-deref-trait")]
+use stable_deref_trait::StableDeref;
 
 /// A LocatedSpan is a set of meta information about the location of a token, including extra
 /// information.
@@ -138,6 +140,21 @@ pub struct LocatedSpan<T, X = ()> {
     /// Example: the parsed file name
     pub extra: X,
 }
+
+impl<T, X> core::ops::Deref for LocatedSpan<T, X> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.fragment
+    }
+}
+
+#[cfg(feature = "stable-deref-trait")]
+/// Optionally impl StableDeref so that this type works harmoniously with other
+/// crates that rely on this marker trait, such as `rental` and `lazy_static`.
+/// LocatedSpan is largely just a wrapper around the contained type `T`, so
+/// this marker trait is safe to implement whenever T already implements
+/// StableDeref.
+unsafe impl<T: StableDeref, X> StableDeref for LocatedSpan<T, X> {}
 
 impl<T: AsBytes> LocatedSpan<T, ()> {
     /// Create a span for a particular input with default `offset` and
@@ -250,17 +267,28 @@ impl<T: AsBytes, X> LocatedSpan<T, X> {
         &self.fragment
     }
 
-    fn get_columns_and_bytes_before(&self) -> (usize, &[u8]) {
+    // Attempt to get the "original" data slice back, by extending
+    // self.fragment backwards by self.offset.
+    // Note that any bytes truncated from after self.fragment will not
+    // be recovered.
+    fn get_unoffsetted_slice(&self) -> &[u8] {
         let self_bytes = self.fragment.as_bytes();
         let self_ptr = self_bytes.as_ptr();
-        let before_self = unsafe {
+        unsafe {
             assert!(
                 self.offset <= isize::max_value() as usize,
                 "offset is too big"
             );
             let orig_input_ptr = self_ptr.offset(-(self.offset as isize));
-            slice::from_raw_parts(orig_input_ptr, self.offset)
-        };
+            slice::from_raw_parts(
+                orig_input_ptr,
+                self.offset + self_bytes.len(),
+            )
+        }
+    }
+
+    fn get_columns_and_bytes_before(&self) -> (usize, &[u8]) {
+        let before_self = &self.get_unoffsetted_slice()[..self.offset];
 
         let column = match memchr::memrchr(b'\n', before_self) {
             None => self.offset + 1,
@@ -268,6 +296,43 @@ impl<T: AsBytes, X> LocatedSpan<T, X> {
         };
 
         (column, &before_self[self.offset - (column - 1)..])
+    }
+
+    /// Return the line that contains this LocatedSpan.
+    ///
+    /// The `get_column` and `get_utf8_column` functions returns
+    /// indexes that corresponds to the line returned by this function.
+    ///
+    /// Note that if this LocatedSpan ends before the end of the
+    /// original data, the result of calling `get_line_beginning()`
+    /// will not include any data from after the LocatedSpan.
+    ///
+    /// ```
+    /// # extern crate nom_locate;
+    /// # extern crate nom;
+    /// # use nom_locate::LocatedSpan;
+    /// # use nom::{Slice, FindSubstring};
+    /// #
+    /// # fn main() {
+    /// let program = LocatedSpan::new(
+    ///     "Hello World!\
+    ///     \nThis is a multi-line input\
+    ///     \nthat ends after this line.\n");
+    /// let multi = program.find_substring("multi").unwrap();
+    ///
+    /// assert_eq!(
+    ///     program.slice(multi..).get_line_beginning(),
+    ///     "This is a multi-line input".as_bytes(),
+    /// );
+    /// # }
+    /// ```
+    pub fn get_line_beginning(&self) -> &[u8] {
+        let column0 = self.get_column() - 1;
+        let the_line = &self.get_unoffsetted_slice()[self.offset - column0..];
+        match memchr::memchr(b'\n', &the_line[column0..]) {
+            None => the_line,
+            Some(pos) => &the_line[..column0 + pos],
+        }
     }
 
     /// Return the column index, assuming 1 byte = 1 column.
@@ -346,6 +411,12 @@ impl<T: AsBytes, X> LocatedSpan<T, X> {
     pub fn naive_get_utf8_column(&self) -> usize {
         let before_self = self.get_columns_and_bytes_before().1;
         naive_num_chars(before_self) + 1
+    }
+}
+
+impl<T: AsBytes, X: Default> From<T> for LocatedSpan<T, X> {
+    fn from(i: T) -> Self {
+        Self::new_extra(i, X::default())
     }
 }
 
@@ -510,68 +581,26 @@ impl_input_iter!(
     Map<Iter<'a, Self::Item>, fn(&u8) -> u8>
 );
 
-/// Implement nom::Compare for a specific fragment type.
-///
-/// # Parameters
-/// * `$fragment_type` - The LocatedSpan's `fragment` type
-/// * `$compare_to_type` - The type to be comparable to `LocatedSpan<$fragment_type, X>`
-///
-/// # Example of use
-///
-/// NB: This example is an extract from the nom_locate source code.
-///
-/// ````ignore
-/// #[macro_use]
-/// extern crate nom_locate;
-/// impl_compare!(&'b str, &'a str);
-/// impl_compare!(&'b [u8], &'a [u8]);
-/// impl_compare!(&'b [u8], &'a str);
-/// ````
+impl<A: Compare<B>, B: Into<LocatedSpan<B>>, X> Compare<B> for LocatedSpan<A, X> {
+    #[inline(always)]
+    fn compare(&self, t: B) -> CompareResult {
+        self.fragment.compare(t.into().fragment)
+    }
+
+    #[inline(always)]
+    fn compare_no_case(&self, t: B) -> CompareResult {
+        self.fragment.compare_no_case(t.into().fragment)
+    }
+}
+
 #[macro_export]
+#[deprecated(
+    since = "2.1.0",
+    note = "this implementation has been generalized and no longer requires a macro"
+)]
 macro_rules! impl_compare {
-    ( $fragment_type:ty, $compare_to_type:ty ) => {
-        impl<'a, 'b, X> Compare<$compare_to_type> for LocatedSpan<$fragment_type, X> {
-            #[inline(always)]
-            fn compare(&self, t: $compare_to_type) -> CompareResult {
-                self.fragment.compare(t)
-            }
-
-            #[inline(always)]
-            fn compare_no_case(&self, t: $compare_to_type) -> CompareResult {
-                self.fragment.compare_no_case(t)
-            }
-        }
-    };
+    ( $fragment_type:ty, $compare_to_type:ty ) => {};
 }
-
-impl_compare!(&'b str, &'a str);
-impl_compare!(&'b [u8], &'a [u8]);
-impl_compare!(&'b [u8], &'a str);
-
-impl<A: Compare<B>, B, X, Y> Compare<LocatedSpan<B, X>> for LocatedSpan<A, Y> {
-    #[inline(always)]
-    fn compare(&self, t: LocatedSpan<B, X>) -> CompareResult {
-        self.fragment.compare(t.fragment)
-    }
-
-    #[inline(always)]
-    fn compare_no_case(&self, t: LocatedSpan<B, X>) -> CompareResult {
-        self.fragment.compare_no_case(t.fragment)
-    }
-}
-
-// TODO(future): replace impl_compare! with below default specialization?
-// default impl<A: Compare<B>, B, X> Compare<B> for LocatedSpan<A, X> {
-//     #[inline(always)]
-//     fn compare(&self, t: B) -> CompareResult {
-//         self.fragment.compare(t)
-//     }
-//
-//     #[inline(always)]
-//     fn compare_no_case(&self, t: B) -> CompareResult {
-//         self.fragment.compare_no_case(t)
-//     }
-// }
 
 /// Implement nom::Slice for a specific fragment type and range type.
 ///
@@ -761,28 +790,15 @@ impl_extend_into!(&'a [u8], u8, Vec<u8>);
 
 #[cfg(feature = "std")]
 #[macro_export]
+#[deprecated(
+    since = "2.1.0",
+    note = "this implementation has been generalized and no longer requires a macro"
+)]
 macro_rules! impl_hex_display {
-    ($fragment_type:ty) => {
-        #[cfg(feature = "alloc")]
-        impl<'a, X> nom::HexDisplay for LocatedSpan<$fragment_type, X> {
-            fn to_hex(&self, chunk_size: usize) -> String {
-                self.fragment.to_hex(chunk_size)
-            }
-
-            fn to_hex_from(&self, chunk_size: usize, from: usize) -> String {
-                self.fragment.to_hex_from(chunk_size, from)
-            }
-        }
-    };
+    ($fragment_type:ty) => {};
 }
 
-#[cfg(feature = "std")]
-impl_hex_display!(&'a str);
-#[cfg(feature = "std")]
-impl_hex_display!(&'a [u8]);
-
 /// Capture the position of the current fragment
-
 #[macro_export]
 macro_rules! position {
     ($input:expr,) => {

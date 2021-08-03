@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v2.1.0
+
+This release mostly brings some new trait implementations for convenience.
+
+* [Change tests text for copyright reasons](https://github.com/fflorent/nom_locate/pull/56)
+* [Implement `From<T>` for `LocatedSpan`](https://github.com/fflorent/nom_locate/pull/57)
+* [Implement `Deref` for `LocatedSpan`, returning the fragment](https://github.com/fflorent/nom_locate/pull/58)
+* [Optionally implement `StableDeref` as well](https://github.com/fflorent/nom_locate/pull/65), if the `stable-deref-trait` feature is enabled.
+* [Generalize `Compare`](https://github.com/fflorent/nom_locate/pull/58)
+* [Generalize `HexDisplay`, and deprecated the `impl_hex_display!` macro which no longer does anything](https://github.com/fflorent/nom_locate/pull/58)
+* [Add `LocatedSpan::get_line_beginning`](https://github.com/fflorent/nom_locate/pull/66), which returns the beginning of a line up to the end of the LocatedSpan. Useful to display human-friendly errors.
+
+
 ## v2.0.0
 
 This release brings several breaking changes:

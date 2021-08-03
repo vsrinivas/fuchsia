@@ -249,3 +249,76 @@ fn test_escaped_string() {
     assert_eq!(span.fragment(), &"");
     assert_eq!(remaining, "foo\"bar".to_string());
 }
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+named!(plague<StrSpan, Vec<StrSpan> >, do_parse!(
+    ojczyzno: call!(find_substring, "Ojczyzno") >>
+    jak: many0!(call!(find_substring, "jak ")) >>
+    zielona: call!(find_substring, "Zielona") >>
+    take_until!(".") >> tag!(".") >>
+    ({
+        let mut res = vec![ojczyzno];
+        res.extend(jak);
+        res.push(zielona);
+        res
+    })
+));
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[test]
+fn it_locates_complex_fragments() {
+    // Pan Tadeusz. https://pl.m.wikisource.org/wiki/Pan_Tadeusz_(wyd._1834)/Ksi%C4%99ga_pierwsza
+    let input = "Litwo! Ojczyzno moja! ty jestes jak zdrowie;
+Ile cie trzeba cenic, ten tylko sie dowie
+Kto cie stracil. Dzis pieknosc twa w calej ozdobie
+Widze i opisuje, bo tesknie po tobie.
+
+Panno swieta, co jasnej bronisz Czestochowy
+I w Ostrej swiecisz Bramie! Ty, co grod zamkowy
+
+Nowogrodzki ochraniasz z jego wiernym ludem!
+Jak mnie dziecko do zdrowia powrocilas cudem,
+(Gdy od placzacej matki, pod Twoje opieke
+Ofiarowany, martwa podnioslem powieke;
+I zaraz moglem pieszo, do Twych swiatyn progu
+Isc za wrocone zycie podziekowac Bogu;)
+Tak nas powrocisz cudem na Ojczyzny lono.
+Tymczasem przenos moje dusze uteskniona
+Do tych pagorkow lesnych, do tych lak zielonych,
+Szeroko nad blekitnym Niemnem rosciagnionych;
+Do tych pol malowanych zbozem rozmaitem,
+Wyzlacanych pszenica, posrebrzanych zytem;
+Gdzie bursztynowy swierzop, gryka jak snieg biala,
+Gdzie panienskim rumiencem dziecielina pala,
+A wszystko przepasane jakby wstega, miedza
+Zielona, na niej zrzadka ciche grusze siedza.";
+
+    let expected = vec![
+        Position {
+            line: 1,
+            column: 8,
+            offset: 7,
+            fragment_len: 8,
+        },
+        Position {
+            line: 1,
+            column: 33,
+            offset: 32,
+            fragment_len: 4,
+        },
+        Position {
+            line: 21,
+            column: 35,
+            offset: 823,
+            fragment_len: 4,
+        },
+        Position {
+            line: 24,
+            column: 1,
+            offset: 928,
+            fragment_len: 7,
+        },
+    ];
+
+    test_str_fragments(plague, input, expected);
+}

@@ -52,6 +52,13 @@ fn it_should_call_new_for_u8_successfully() {
 }
 
 #[test]
+fn it_should_convert_from_u8_successfully() {
+    let input = &b"foobar"[..];
+    assert_eq!(BytesSpan::new(input), input.into());
+    assert_eq!(BytesSpanEx::new_extra(input, "extra"), input.into());
+}
+
+#[test]
 fn it_should_call_new_for_str_successfully() {
     let input = &"foobar"[..];
     let output = StrSpan {
@@ -62,6 +69,13 @@ fn it_should_call_new_for_str_successfully() {
     };
 
     assert_eq!(StrSpan::new(input), output);
+}
+
+#[test]
+fn it_should_convert_from_str_successfully() {
+    let input = &"foobar"[..];
+    assert_eq!(StrSpan::new(input), input.into());
+    assert_eq!(StrSpanEx::new_extra(input, "extra"), input.into());
 }
 
 #[test]
@@ -377,4 +391,132 @@ fn it_should_capture_position() {
     assert_eq!(s.offset, 4);
     assert_eq!(s.line, 2);
     assert_eq!(t, "def");
+}
+
+#[test]
+fn it_should_deref_to_fragment() {
+    let input = &"foobar"[..];
+    assert_eq!(*StrSpanEx::new_extra(input, "extra"), input);
+    let input = &b"foobar"[..];
+    assert_eq!(*BytesSpanEx::new_extra(input, "extra"), input);
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn it_should_display_hex() {
+    use nom::HexDisplay;
+    assert_eq!(
+        StrSpan::new(&"abc"[..]).to_hex(4),
+        "00000000\t61 62 63    \tabc\n".to_owned()
+    );
+    assert_eq!(
+        BytesSpanEx::new_extra(&b"abc"[..], "extra").to_hex(4),
+        "00000000\t61 62 63    \tabc\n".to_owned()
+    );
+}
+
+#[test]
+fn line_of_empty_span_is_empty() {
+    assert_eq!(StrSpan::new("").get_line_beginning(), "".as_bytes());
+}
+
+#[test]
+fn line_of_single_line_start_is_whole() {
+    assert_eq!(
+        StrSpan::new("A single line").get_line_beginning(),
+        "A single line".as_bytes(),
+    );
+}
+#[test]
+fn line_of_single_line_end_is_whole() {
+    let data = "A single line";
+    assert_eq!(
+        StrSpan::new(data).slice(data.len()..).get_line_beginning(),
+        "A single line".as_bytes(),
+    );
+}
+
+#[test]
+fn line_of_start_is_first() {
+    assert_eq!(
+        StrSpan::new(
+            "One line of text\
+             \nFollowed by a second\
+             \nand a third\n"
+        )
+        .get_line_beginning(),
+        "One line of text".as_bytes(),
+    );
+}
+
+#[test]
+fn line_of_nl_is_before() {
+    let data = "One line of text\
+         \nFollowed by a second\
+         \nand a third\n";
+    assert_eq!(
+        StrSpan::new(data)
+            .slice(data.find('\n').unwrap()..)
+            .get_line_beginning(),
+        "One line of text".as_bytes(),
+    );
+}
+
+#[test]
+fn line_of_end_after_nl_is_empty() {
+    let data = "One line of text\
+         \nFollowed by a second\
+         \nand a third\n";
+    assert_eq!(
+        StrSpan::new(data).slice(data.len()..).get_line_beginning(),
+        "".as_bytes(),
+    );
+}
+
+#[test]
+fn line_of_end_no_nl_is_last() {
+    let data = "One line of text\
+         \nFollowed by a second\
+         \nand a third";
+    assert_eq!(
+        StrSpan::new(data).slice(data.len()..).get_line_beginning(),
+        "and a third".as_bytes(),
+    );
+}
+
+/// This test documents how `get_line_beginning()` differs from
+/// a hypotetical `get_line()` method.
+#[test]
+fn line_begining_may_ot_be_entire_len() {
+    let data = "One line of text\
+         \nFollowed by a second\
+         \nand a third";
+    let by = "by";
+    let pos = data.find_substring(by).unwrap();
+    assert_eq!(
+        StrSpan::new(data).slice(pos..pos+by.len()).get_line_beginning(),
+        "Followed by".as_bytes(),
+    );
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn line_for_non_ascii_chars() {
+    let data = StrSpan::new(
+        "Några rader text på Svenska.\
+         \nFörra raden var först, den här är i mitten\
+         \noch här är sista raden.\n",
+    );
+    let s = data.slice(data.find_substring("först").unwrap()..);
+    assert_eq!(
+        format!(
+            "{line_no:3}: {line_text}\n    {0:>lpos$}^- The match\n",
+            "",
+            line_no = s.location_line(),
+            line_text = core::str::from_utf8(s.get_line_beginning()).unwrap(),
+            lpos = s.get_utf8_column(),
+        ),
+        "  2: Förra raden var först, den här är i mitten\
+       \n                     ^- The match\n",
+    );
 }
