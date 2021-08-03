@@ -4,13 +4,13 @@
 
 #ifndef LIB_SYSLOG_STRUCTURED_BACKEND_CPP_FUCHSIA_SYSLOG_H_
 #define LIB_SYSLOG_STRUCTURED_BACKEND_CPP_FUCHSIA_SYSLOG_H_
+
+#include <lib/stdcompat/optional.h>
+#include <lib/stdcompat/string_view.h>
+#include <lib/syslog/structured_backend/fuchsia_syslog.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <stdint.h>
-
-#include "lib/stdcompat/optional.h"
-#include "lib/stdcompat/string_view.h"
-#include "lib/syslog/structured_backend/fuchsia_syslog.h"
 
 namespace fuchsia_syslog {
 
@@ -19,11 +19,11 @@ namespace fuchsia_syslog {
 // touch these values.
 // LogBuffers store the state of a log record that is in the process of being
 // encoded.
-// A LogBuffer is initialized by calling BeginRecord, is finalized (made read-only)
-// by calling EndRecord, and is written to the LogSink by calling FlushRecord.
+// A LogBuffer is initialized by calling BeginRecord,
+// and is written to the LogSink by calling FlushRecord.
 // Calling BeginRecord on a LogBuffer will always initialize it to its
 // clean state.
-class LogBuffer {
+class LogBuffer final {
  public:
   // Initializes a LogBuffer
   // buffer -- The buffer to initialize
@@ -51,7 +51,7 @@ class LogBuffer {
   // pid -- The process ID that generated the message.
 
   // tid -- The thread ID that generated the message.
-  void BeginRecord(LogSeverity severity, cpp17::optional<cpp17::string_view> file_name,
+  void BeginRecord(FuchsiaLogSeverity severity, cpp17::optional<cpp17::string_view> file_name,
                    unsigned int line, cpp17::optional<cpp17::string_view> message,
                    cpp17::optional<cpp17::string_view> condition, bool is_printf,
                    zx::unowned_socket socket, uint32_t dropped_count, zx_koid_t pid,
@@ -99,7 +99,9 @@ class LogBuffer {
     }
     return view.value().length();
   }
-  log_buffer_t data_;
+  fuchsia_syslog_log_buffer_t data_;
 };
+
 }  // namespace fuchsia_syslog
+
 #endif  // LIB_SYSLOG_STRUCTURED_BACKEND_CPP_FUCHSIA_SYSLOG_H_

@@ -154,6 +154,7 @@ sdk://pkg/sys_cpp_testing
 sdk://pkg/sys_inspect_cpp
 sdk://pkg/sys_service_cpp
 sdk://pkg/syslog
+sdk://pkg/syslog_structured_backend
 sdk://pkg/sysroot
 sdk://pkg/trace
 sdk://pkg/trace-engine

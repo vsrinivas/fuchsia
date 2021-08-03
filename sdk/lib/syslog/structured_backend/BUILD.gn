@@ -5,14 +5,13 @@
 import("//build/cpp/sdk_source_set.gni")
 
 sdk_source_set("structured_backend") {
-  category = "internal"
+  category = "partner"
 
-  sdk_name = "fuchsia_syslog_backend"
+  sdk_name = "syslog_structured_backend"
 
   include_base = "//sdk"
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics.stream",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/fdio",
     "//zircon/public/lib/async-cpp",

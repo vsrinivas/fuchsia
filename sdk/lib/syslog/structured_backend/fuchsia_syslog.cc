@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/syslog/structured_backend/cpp/fuchsia_syslog.h"
-
 #include <assert.h>
 #include <fcntl.h>
-#include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
@@ -16,21 +13,21 @@
 #include <lib/fdio/fdio.h>
 #include <lib/stdcompat/variant.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/syslog/structured_backend/fuchsia_syslog.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/time.h>
 
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
-#include "lib/zx/socket.h"
-#include "lib/zx/time.h"
-
 namespace {
 
 // Represents a byte offset that has no alignment guarantees.
-class ByteOffset {
+class ByteOffset final {
  public:
   ByteOffset(const ByteOffset& other) = default;
   ByteOffset(ByteOffset&& other) = default;
@@ -85,7 +82,7 @@ namespace fuchsia_syslog {
 // aligned to alignof(T). Operations are done with respect
 // to words, not bytes.
 template <typename T>
-class WordOffset {
+class WordOffset final {
  public:
   WordOffset() = delete;
   WordOffset(const WordOffset& other) {
@@ -198,7 +195,7 @@ struct Field final {
 
 // HeaderField structure for a Record
 // see https://fuchsia.dev/fuchsia-src/reference/diagnostics/logs/encoding?hl=en#header
-struct HeaderFields {
+struct HeaderFields final {
   using Type = Field<0, 3>;
   using SizeWords = Field<4, 15>;
   using Reserved = Field<16, 55>;
@@ -207,7 +204,7 @@ struct HeaderFields {
 
 // ArgumentField structure for an Argument
 // see https://fuchsia.dev/fuchsia-src/reference/diagnostics/logs/encoding?hl=en#arguments
-struct ArgumentFields {
+struct ArgumentFields final {
   using Type = Field<0, 3>;
   using SizeWords = Field<4, 15>;
   using NameRefVal = Field<16, 30>;
@@ -220,7 +217,7 @@ using log_word_t = uint64_t;
 
 // Represents a slice of a buffer of type T.
 template <typename T>
-class DataSlice {
+class DataSlice final {
  public:
   DataSlice(T* ptr, WordOffset<T> slice) : ptr_(ptr), slice_(slice) {}
 
@@ -256,16 +253,16 @@ static DataSlice<const char> SliceFromArray(const char (&array)[size]) {
       array, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(size - 1)));
 }
 
-struct RecordState {
+struct RecordState final {
   RecordState()
       : arg_size(WordOffset<log_word_t>::FromByteOffset(
-            ByteOffset::FromBuffer(0, sizeof(log_buffer_t::data)))),
-        current_key_size(ByteOffset::FromBuffer(0, sizeof(log_buffer_t::data))),
+            ByteOffset::FromBuffer(0, sizeof(fuchsia_syslog_log_buffer_t::data)))),
+        current_key_size(ByteOffset::FromBuffer(0, sizeof(fuchsia_syslog_log_buffer_t::data))),
         cursor(WordOffset<log_word_t>::FromByteOffset(
-            ByteOffset::FromBuffer(0, sizeof(log_buffer_t::data)))) {}
+            ByteOffset::FromBuffer(0, sizeof(fuchsia_syslog_log_buffer_t::data)))) {}
   // Header of the record itself
   uint64_t* header;
-  LogSeverity log_severity;
+  FuchsiaLogSeverity log_severity;
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
   WordOffset<log_word_t> arg_size;
@@ -286,20 +283,20 @@ struct RecordState {
   // is valid for the duration of the call (which our macros
   // will ensure for current users).
   cpp17::optional<cpp17::string_view> msg_string;
-  static RecordState* CreatePtr(log_buffer_t* buffer) {
+  static RecordState* CreatePtr(fuchsia_syslog_log_buffer_t* buffer) {
     return reinterpret_cast<RecordState*>(&buffer->record_state);
   }
 };
-static_assert(sizeof(RecordState) <= sizeof(log_buffer_t::record_state),
+static_assert(sizeof(RecordState) <= sizeof(fuchsia_syslog_log_buffer_t::record_state),
               "Expected sizeof(RecordState) <= sizeof(LogBuffer::record_state)");
 static_assert(std::alignment_of<RecordState>() == sizeof(uint64_t),
               "Expected std::alignment_of<RecordState>() == sizeof(uint64_t)");
 
 // Used for accessing external data buffers provided by clients.
 // Used by the Encoder to do in-place encoding of data
-class ExternalDataBuffer {
+class ExternalDataBuffer final {
  public:
-  explicit ExternalDataBuffer(log_buffer_t* buffer)
+  explicit ExternalDataBuffer(fuchsia_syslog_log_buffer_t* buffer)
       : buffer_(&buffer->data[0]), cursor_(RecordState::CreatePtr(buffer)->cursor) {}
 
   ExternalDataBuffer(log_word_t* data, size_t length, WordOffset<log_word_t>& cursor)
@@ -352,7 +349,7 @@ class ExternalDataBuffer {
 
 // Encoder for structured logs
 template <typename T>
-class Encoder {
+class Encoder final {
  public:
   explicit Encoder(T& buffer) { buffer_ = &buffer; }
 
@@ -457,7 +454,7 @@ const char kDroppedLogsFieldName[] = "dropped_logs";
 const char kFileFieldName[] = "file";
 const char kLineFieldName[] = "line";
 
-void BeginRecordInternal(log_buffer_t* buffer, LogSeverity severity,
+void BeginRecordInternal(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity severity,
                          cpp17::optional<cpp17::string_view> file_name, unsigned int line,
                          cpp17::optional<cpp17::string_view> msg,
                          cpp17::optional<cpp17::string_view> condition, bool is_printf,
@@ -516,7 +513,7 @@ void BeginRecordInternal(log_buffer_t* buffer, LogSeverity severity,
   encoder.AppendArgumentValue(record, static_cast<uint64_t>(line));
 }
 
-void BeginRecord(log_buffer_t* buffer, LogSeverity severity,
+void BeginRecord(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity severity,
                  cpp17::optional<cpp17::string_view> file_name, unsigned int line,
                  cpp17::optional<cpp17::string_view> message,
                  cpp17::optional<cpp17::string_view> condition, bool is_printf,
@@ -525,7 +522,8 @@ void BeginRecord(log_buffer_t* buffer, LogSeverity severity,
                       std::move(socket), dropped_count, pid, tid);
 }
 
-void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, cpp17::string_view value) {
+void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key,
+                   cpp17::string_view value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -537,7 +535,7 @@ void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, cpp17::string_v
                                                       ByteOffset::Unbounded(value.size()))));
 }
 
-void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, int64_t value) {
+void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key, int64_t value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -547,7 +545,7 @@ void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, int64_t value) 
   encoder.AppendArgumentValue(*state, value);
 }
 
-void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, uint64_t value) {
+void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key, uint64_t value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -557,7 +555,7 @@ void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, uint64_t value)
   encoder.AppendArgumentValue(*state, value);
 }
 
-void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, double value) {
+void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key, double value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
@@ -567,7 +565,7 @@ void WriteKeyValue(log_buffer_t* buffer, cpp17::string_view key, double value) {
   encoder.AppendArgumentValue(*state, value);
 }
 
-void EndRecord(log_buffer_t* buffer) {
+void EndRecord(fuchsia_syslog_log_buffer_t* buffer) {
   auto* state = RecordState::CreatePtr(buffer);
   if (state->ended) {
     return;
@@ -578,7 +576,7 @@ void EndRecord(log_buffer_t* buffer) {
   encoder.End(*state);
 }
 
-bool FlushRecord(log_buffer_t* buffer) {
+bool FlushRecord(fuchsia_syslog_log_buffer_t* buffer) {
   auto* state = RecordState::CreatePtr(buffer);
   if (!state->encode_success) {
     return false;
@@ -596,17 +594,17 @@ bool FlushRecord(log_buffer_t* buffer) {
 
 static cpp17::optional<cpp17::string_view> CStringToStringView(const char* str, size_t len) {
   if (!str) {
-    return std::nullopt;
+    return cpp17::nullopt;
   }
   return cpp17::string_view(str, len);
 }
 
 __BEGIN_CDECLS
-void syslog_begin_record(log_buffer_t* buffer, LogSeverity severity, const char* file_name,
-                         size_t file_name_length, unsigned int line, const char* message,
-                         size_t message_length, const char* condition, size_t condition_length,
-                         bool is_printf, zx_handle_t socket, uint32_t dropped_count, zx_koid_t pid,
-                         zx_koid_t tid) {
+void syslog_begin_record(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity severity,
+                         const char* file_name, size_t file_name_length, unsigned int line,
+                         const char* message, size_t message_length, const char* condition,
+                         size_t condition_length, bool is_printf, zx_handle_t socket,
+                         uint32_t dropped_count, zx_koid_t pid, zx_koid_t tid) {
   fuchsia_syslog::BeginRecord(buffer, severity, CStringToStringView(file_name, file_name_length),
                               line, CStringToStringView(message, message_length),
                               CStringToStringView(condition, condition_length), is_printf,
@@ -614,27 +612,27 @@ void syslog_begin_record(log_buffer_t* buffer, LogSeverity severity, const char*
 }
 
 // Writes a key/value pair to the buffer.
-void syslog_write_key_value_string(log_buffer_t* buffer, const char* key, size_t key_length,
-                                   const char* value, size_t value_length) {
+void syslog_write_key_value_string(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                   size_t key_length, const char* value, size_t value_length) {
   fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(),
                                 CStringToStringView(value, value_length).value());
 }
 
 // Writes a key/value pair to the buffer.
-void syslog_write_key_value_int64(log_buffer_t* buffer, const char* key, size_t key_length,
-                                  int64_t value) {
+void syslog_write_key_value_int64(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                  size_t key_length, int64_t value) {
   fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(), value);
 }
 
 // Writes a key/value pair to the buffer.
-void syslog_write_key_value_uint64(log_buffer_t* buffer, const char* key, size_t key_length,
-                                   uint64_t value) {
+void syslog_write_key_value_uint64(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                   size_t key_length, uint64_t value) {
   fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(), value);
 }
 
 // Writes a key/value pair to the buffer.
-void syslog_write_key_value_double(log_buffer_t* buffer, const char* key, size_t key_length,
-                                   double value) {
+void syslog_write_key_value_double(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                   size_t key_length, double value) {
   fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(), value);
 }
 
@@ -642,10 +640,10 @@ void syslog_write_key_value_double(log_buffer_t* buffer, const char* key, size_t
 // before flush, and the buffer is considered "read-only"
 // after calling this until BeginRecord is called
 // again on the buffer to re-initialize it.
-void syslog_end_record(log_buffer_t* buffer) { fuchsia_syslog::EndRecord(buffer); }
+void syslog_end_record(fuchsia_syslog_log_buffer_t* buffer) { fuchsia_syslog::EndRecord(buffer); }
 
 // Writes the LogBuffer to the socket.
-bool syslog_flush_record(log_buffer_t* buffer) {
+bool syslog_flush_record(fuchsia_syslog_log_buffer_t* buffer) {
   fuchsia_syslog::EndRecord(buffer);
   return fuchsia_syslog::FlushRecord(buffer);
 }

@@ -1,0 +1,4 @@
+{
+  "pkg/syslog_structured_backend/include/lib/syslog/structured_backend/cpp/fuchsia_syslog.h": "c7326ae10ae0d227cc6d474728be6265",
+  "pkg/syslog_structured_backend/include/lib/syslog/structured_backend/fuchsia_syslog.h": "f5d7bf98e062e59e86e90061b9ab0241"
+}

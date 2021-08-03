@@ -45,7 +45,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     buffer.FlushRecord();
   }
 
-  void BeginRecord(fuchsia_syslog::LogBuffer* buffer, LogSeverity severity,
+  void BeginRecord(fuchsia_syslog::LogBuffer* buffer, FuchsiaLogSeverity severity,
                    cpp17::optional<cpp17::string_view> file_name, unsigned int line,
                    cpp17::optional<cpp17::string_view> msg,
                    cpp17::optional<cpp17::string_view> condition) {
@@ -53,14 +53,14 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
                         GetKoid(zx_process_self()), GetKoid(zx_thread_self()));
   }
 
-  void BeginRecordPrintf(fuchsia_syslog::LogBuffer* buffer, LogSeverity severity,
+  void BeginRecordPrintf(fuchsia_syslog::LogBuffer* buffer, FuchsiaLogSeverity severity,
                          cpp17::optional<cpp17::string_view> file_name, unsigned int line,
                          cpp17::optional<cpp17::string_view> msg) {
     buffer->BeginRecord(severity, file_name, line, msg, std::nullopt /* condition */, true,
                         socket_.borrow(), 0, GetKoid(zx_process_self()), GetKoid(zx_thread_self()));
   }
 
-  static LogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severity) {
+  static FuchsiaLogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severity) {
     switch (severity) {
       case fuchsia::diagnostics::Severity::TRACE:
         return FUCHSIA_LOG_TRACE;
@@ -125,7 +125,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
   void EmitLog(fuchsia::validate::logs::RecordSpec& spec,
                fuchsia::validate::logs::PrintfRecordSpec* printf_spec) {
     fuchsia_syslog::LogBuffer buffer;
-    LogSeverity severity;
+    FuchsiaLogSeverity severity;
     switch (spec.record.severity) {
       case fuchsia::diagnostics::Severity::DEBUG:
         severity = FUCHSIA_LOG_DEBUG;
@@ -195,7 +195,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
   }
 
  private:
-  LogSeverity min_log_level_ = FUCHSIA_LOG_INFO;
+  FuchsiaLogSeverity min_log_level_ = FUCHSIA_LOG_INFO;
   zx::socket socket_;
   fuchsia::logger::LogSinkPtr log_sink_;
   std::unique_ptr<sys::ComponentContext> context_;
