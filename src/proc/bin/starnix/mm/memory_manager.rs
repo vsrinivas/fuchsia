@@ -399,6 +399,7 @@ impl MemoryManager {
             zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
             zx::Status::NOT_SUPPORTED => ENODEV,
             zx::Status::NO_MEMORY => ENOMEM,
+            zx::Status::OUT_OF_RANGE => ENOMEM,
             _ => impossible_error(status),
         }
     }
