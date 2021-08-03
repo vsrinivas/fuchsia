@@ -6,9 +6,9 @@
 // they are handled only by logging to debug.
 macro_rules! responder_send {
     ($responder:expr, $arg:expr) => {
-        $responder.send($arg).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
+        $responder.send($arg).unwrap_or_else(|e| debug!("Responder send error: {:?}", e))
     };
     ($responder:expr, $arg1:expr, $arg2:expr) => {
-        $responder.send($arg1, $arg2).unwrap_or_else(|e| debug!("Responder send error: {:?}", e));
+        $responder.send($arg1, $arg2).unwrap_or_else(|e| debug!("Responder send error: {:?}", e))
     };
 }
