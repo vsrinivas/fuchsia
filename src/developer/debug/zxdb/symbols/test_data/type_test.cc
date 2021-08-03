@@ -128,7 +128,7 @@ EXPORT StructWithEnums GetStructWithEnums() { return StructWithEnums(); }
 
 EXPORT nullptr_t GetNullPtrT(int i) {
   // The compiler seems to want to strip this unless it does something.
-  volatile int dummy = 0;
+  volatile int dummy __attribute__((unused)) = 0;
   dummy = i;
   return nullptr;
 }
