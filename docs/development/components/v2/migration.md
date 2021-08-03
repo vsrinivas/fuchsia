@@ -576,7 +576,7 @@ Do the following:
     fuchsia_test_package("font_provider_tests") {
       test_components = [ ":font_provider_test" ]
       deps = [
-        ":fonts_test_driver",
+        ":test_driver",
         ":mock_font_resolver",
       ]
     }
