@@ -9,3 +9,9 @@ config_data("force-device-scale-factor--2") {
   sources = [ "force_device_scale_factor__2.json" ]
   outputs = [ "config.json" ]
 }
+
+config_data("force-device-scale-factor--1_25") {
+  for_pkg = "web_engine"
+  sources = [ "force_device_scale_factor__1_25.json" ]
+  outputs = [ "config.json" ]
+}
