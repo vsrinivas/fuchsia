@@ -453,9 +453,6 @@ int main(int argc, char** argv) {
   bool is_max_bad_blocks_set = false;
   DiskType disk_type = DiskType::File;
 
-  bool resize_image_file_to_fit = false;
-  bool length_is_lower_bound = false;
-  uint32_t flags = 0;
   size_t block_count = 0;
   storage::volume_image::RawNandOptions options;
 
@@ -480,7 +477,7 @@ int main(int argc, char** argv) {
       }
     } else if (!strcmp(argv[i], "--compress")) {
       if (!strcmp(argv[++i], "lz4")) {
-        flags |= fvm::kSparseFlagLz4;
+        // This flag does nothing.
       } else {
         fprintf(stderr, "Invalid compression type\n");
         return -1;
@@ -500,9 +497,9 @@ int main(int argc, char** argv) {
         return -1;
       }
     } else if (!strcmp(argv[i], "--resize-image-file-to-fit")) {
-      resize_image_file_to_fit = true;
+      // This flag does nothing.
     } else if (!strcmp(argv[i], "--length-is-lowerbound")) {
-      length_is_lower_bound = true;
+      // This flag does nothing.
     } else if (!strcmp(argv[i], "--android-sparse-format")) {
       // This flag does not do anything.
     } else if (!strcmp(argv[i], "--nand-page-size")) {
