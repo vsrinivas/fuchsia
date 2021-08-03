@@ -49,7 +49,9 @@ Usage:
 record_screen [-num-frames <#>] [-duration <d>] [-v]
         [-out path/file%.jpg|file%.png|file.gif]
 
-At least one of -num-frames and -duration arguments should be present.
+If neither -num-frames nor -duration arguments are present, the FEMU
+screen will be recorded until ctrl-c (SIGINT) is received. In this case,
+ctrl-c (SIGINT) is needed to stop recording and to write images to disk.
 
 Output file can be jpg, png or gif format. For jpg/png files, filename
 should contain a '%' symbol representing image number.
@@ -69,10 +71,6 @@ func (c *recordScreenCmd) SetFlags(f *flag.FlagSet) {
 func (c *recordScreenCmd) ValidateArgs() error {
 	if c.imageOutput == "" {
 		return fmt.Errorf("-out flag is required")
-	}
-
-	if c.numFrames == 0 && c.duration == 0 {
-		return fmt.Errorf("-num-frames and -duration cannot be both zero")
 	}
 
 	var err error = nil

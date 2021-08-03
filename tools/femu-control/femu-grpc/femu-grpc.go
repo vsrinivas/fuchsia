@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	pb "go.fuchsia.dev/fuchsia/tools/femu-control/femu-grpc/proto"
@@ -58,10 +61,6 @@ type StreamScreenOpts struct {
 }
 
 func NewStreamScreenOpts(format string, numFrames uint, duration time.Duration) (StreamScreenOpts, error) {
-	if numFrames == 0 && duration == 0 {
-		return StreamScreenOpts{}, fmt.Errorf("wrong options: NumFrames and Duration cannot be both 0")
-	}
-
 	if format == "" {
 		format = "PNG"
 	}
@@ -121,6 +120,13 @@ func (emu *FemuGrpcClient) StreamScreen(opts StreamScreenOpts) (Frames, error) {
 	if err != nil {
 		return frames, err
 	}
+
+	signalChannel := make(chan os.Signal, 2)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGINT)
+	go func() {
+		<-signalChannel
+		cancel()
+	}()
 
 	for {
 		screenshot, err := stream.Recv()

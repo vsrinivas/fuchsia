@@ -104,8 +104,8 @@ func TestStreamScreen(t *testing.T) {
 		{
 			name:           "num-frames and duration both missing",
 			flags:          fmt.Sprintf("-out %v/screen%%.png", tmpDir),
-			expectedStatus: "usage error",
-			expectedError:  "-num-frames and -duration cannot be both zero",
+			expectedStatus: "success",
+			cleanup:        func() { os.RemoveAll(tmpDir) },
 		},
 		{
 			name:           "path is not directory",
