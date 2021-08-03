@@ -70,83 +70,88 @@ template("target_archive_common") {
     _data_sources = filter_include(invoker.data_sources, [ "*.c" ])
   }
 
-  _data_objects = []
-  foreach(_data_source, _data_sources) {
-    _data_objects += [ _target_archive_name + "/obj/" +
-                       get_path_info(_data_source, "name") + ".o" ]
-  }
+  if (_data_sources != []) {
+    #
+    # Only define these targets if there is a `.c` file
+    #
+    _data_objects = []
+    foreach(_data_source, _data_sources) {
+      _data_objects += [ _target_archive_name + "/obj/" +
+                         get_path_info(_data_source, "name") + ".o" ]
+    }
 
-  _data_binaries = []
-  foreach(_data_source, _data_sources) {
-    _data_binaries += [ _target_archive_name + "/bin/" +
-                        get_path_info(_data_source, "name") + ".bin" ]
-  }
+    _data_binaries = []
+    foreach(_data_source, _data_sources) {
+      _data_binaries += [ _target_archive_name + "/bin/" +
+                          get_path_info(_data_source, "name") + ".bin" ]
+    }
 
-  #
-  # Action: Compile the header structure.
-  #
-  # Expects a single `.c` file.
-  #
-  _data_to_object = target_name + "_data_to_object"
+    #
+    # Action: Compile the header structure.
+    #
+    # Expects a single `.c` file.
+    #
+    _data_to_object = target_name + "_data_to_object"
 
-  toolchain_utils_action(_data_to_object) {
-    # clang
-    utils = [ "cc" ]
+    toolchain_utils_action(_data_to_object) {
+      # clang
+      utils = [ "cc" ]
 
-    # input dependencies
-    inputs = invoker.data_sources
+      # input dependencies
+      inputs = invoker.data_sources
 
-    # NOTE: only one data source is supported
-    outputs = [ _data_objects[0] ]
+      # NOTE: only one data source is supported
+      outputs = [ _data_objects[0] ]
 
-    # common args
-    args = [ "--compile" ]
+      # common args
+      args = [ "--compile" ]
 
-    # single `.c` file
-    args += [ rebase_path(_data_sources[0]) ]
+      # single `.c` file
+      args += [ rebase_path(_data_sources[0]) ]
 
-    # NOTE: only a single `.o` file is supported
-    args += [
-      "-o",
-      rebase_path(outputs[0]),
-    ]
+      # NOTE: only a single `.o` file is supported
+      args += [
+        "-o",
+        rebase_path(outputs[0]),
+      ]
 
-    # includes
-    if (defined(invoker.data_include_dirs)) {
-      foreach(_include_dir, invoker.data_include_dirs) {
-        args += [
-          "-I",
-          rebase_path(_include_dir),
-        ]
+      # includes
+      if (defined(invoker.data_include_dirs)) {
+        foreach(_include_dir, invoker.data_include_dirs) {
+          args += [
+            "-I",
+            rebase_path(_include_dir),
+          ]
+        }
+      }
+
+      # defines
+      if (defined(invoker.defines)) {
+        foreach(_define, invoker.defines) {
+          args += [
+            "-D",
+            _define,
+          ]
+        }
       }
     }
 
-    # defines
-    if (defined(invoker.defines)) {
-      foreach(_define, invoker.defines) {
-        args += [
-          "-D",
-          _define,
-        ]
-      }
+    #
+    # Action: Dump the .rodata section of the compiled header structure.
+    #
+    _object_to_binary = target_name + "_object_to_binary"
+
+    toolchain_utils_action(_object_to_binary) {
+      utils = [ "objcopy" ]
+      deps = [ ":${_data_to_object}" ]
+      inputs = get_target_outputs(":${_data_to_object}")
+      outputs = [ _data_binaries[0] ]
+      args = [
+        rebase_path(inputs[0]),
+        "/dev/null",
+        "--dump-section=.rodata=" + rebase_path(outputs[0]),
+      ]
     }
-  }
-
-  #
-  # Action: Dump the .rodata section of the compiled header structure.
-  #
-  _object_to_binary = target_name + "_object_to_binary"
-
-  toolchain_utils_action(_object_to_binary) {
-    utils = [ "objcopy" ]
-    deps = [ ":${_data_to_object}" ]
-    inputs = get_target_outputs(":${_data_to_object}")
-    outputs = [ _data_binaries[0] ]
-    args = [
-      rebase_path(inputs[0]),
-      "/dev/null",
-      "--dump-section=.rodata=" + rebase_path(outputs[0]),
-    ]
   }
 
   #
@@ -179,7 +184,9 @@ template("target_archive_common") {
   }
 
   #
-  # Build a target archive from the target binary and SPIR-V modules.
+  # Build a target archive from a target binary and SPIR-V modules.
+  #
+  # If it exists, the target binary is listed first.
   #
   compiled_action(target_name) {
     tool = "//src/graphics/lib/compute/tools/target_archive"
@@ -188,15 +195,21 @@ template("target_archive_common") {
       _target_archive_file_h,
       _target_archive_file_S,
     ]
-    sources = get_target_outputs(":${_object_to_binary}") +
-              get_target_outputs(":${_spirv_modules}")
+
+    sources = []
+    deps = []
+
+    if (defined(invoker.data_sources)) {
+      sources += get_target_outputs(":${_object_to_binary}")
+      deps += [ ":${_object_to_binary}" ]
+    }
+
+    sources += get_target_outputs(":${_spirv_modules}")
+    deps += [ ":${_spirv_modules}" ]
+
     args = [ invoker.target_archive_name ] +
            rebase_path([ _target_archive_name ], root_build_dir) +
            rebase_path(sources, root_build_dir)
-    deps = [
-      ":${_object_to_binary}",
-      ":${_spirv_modules}",
-    ]
   }
 }
 
