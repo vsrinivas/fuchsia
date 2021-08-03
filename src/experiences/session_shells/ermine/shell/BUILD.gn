@@ -76,6 +76,7 @@ dart_library("lib") {
     "src/widgets/quick_settings.dart",
     "src/widgets/scrim.dart",
     "src/widgets/settings/about_settings.dart",
+    "src/widgets/settings/channel_settings.dart",
     "src/widgets/settings/setting_details.dart",
     "src/widgets/settings/shortcut_settings.dart",
     "src/widgets/settings/timezone_settings.dart",

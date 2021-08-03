@@ -42,6 +42,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       (() => settingsPage.value == SettingsPage.about).asComputed();
 
   @override
+  late final channelPageVisible =
+      (() => settingsPage.value == SettingsPage.channel).asComputed();
+
+  @override
   final wifiStrength = Observable<WiFiStrength>(WiFiStrength.good);
 
   @override
@@ -86,6 +90,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
 
   @override
   final Observable<String> currentChannel = Observable<String>('');
+
+  @override
+  final Observable<List<String>> availableChannels =
+      Observable<List<String>>(['']);
 
   final List<String> _timezones;
 
@@ -164,6 +172,20 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       runInAction(() {
         optedIntoUpdates.value = channelService.optedIntoUpdates;
         currentChannel.value = channelService.currentChannel;
+        // Ensure current channel is listed first in available channels
+        List<String> channels;
+        if (channelService.channels.contains(currentChannel.value)) {
+          channels = channelService.channels;
+          int index = channels.indexOf(currentChannel.value);
+          if (index != 0) {
+            channels
+              ..removeAt(index)
+              ..insert(0, currentChannel.value);
+          }
+        } else {
+          channels = [currentChannel.value]..addAll(availableChannels.value);
+        }
+        availableChannels.value = channels;
       });
     };
   }
@@ -230,6 +252,16 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   late final Action showTimezoneSettings = () {
     settingsPage.value = SettingsPage.timezone;
+  }.asAction();
+
+  @override
+  late final Action showChannelSettings = () {
+    settingsPage.value = SettingsPage.channel;
+  }.asAction();
+
+  @override
+  late final Action setTargetChannel = (String value) {
+    channelService.targetChannel = value;
   }.asAction();
 
   @override

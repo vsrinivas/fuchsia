@@ -762,4 +762,9 @@ class Strings {
         name: 'updates and privacy text',
         desc: 'The updates and privacy text for workstation.',
       );
+  static String get currentChannel => Intl.message(
+        'Current Channel',
+        name: 'current channel',
+        desc: 'The label for "Current Channel" text field.',
+      );
 }

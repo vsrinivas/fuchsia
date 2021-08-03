@@ -4,6 +4,7 @@
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/settings/about_settings.dart';
+import 'package:ermine/src/widgets/settings/channel_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,11 @@ class QuickSettings extends StatelessWidget {
                       state: state,
                       onChange: (tz) => state.updateTimezone([tz])),
                 if (state.aboutPageVisible.value) AboutSettings(state),
+                if (state.channelPageVisible.value)
+                  ChannelSettings(
+                    state: state,
+                    onChange: (channel) => state.setTargetChannel([channel]),
+                  ),
               ],
             ),
           );
@@ -193,6 +199,8 @@ class _ListSettings extends StatelessWidget {
                       ),
                     ],
                   ),
+                  trailing: Icon(Icons.arrow_right),
+                  onTap: appState.settingsState.showChannelSettings,
                 ),
                 // Feedback
                 ListTile(

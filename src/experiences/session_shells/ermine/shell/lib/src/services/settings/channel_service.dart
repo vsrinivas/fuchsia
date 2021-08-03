@@ -18,18 +18,19 @@ class ChannelService extends TaskService {
 
   late String _currentChannel;
   late List<String> _availableChannels;
+  String _targetChannel = '';
 
   @override
   Future<void> start() async {
     Incoming.fromSvcPath().connectToService(_control);
 
+    await _control.getTargetList().then((channels) {
+      _availableChannels = channels;
+    });
+
     await _control.getTarget().then((name) {
       _currentChannel = _shortNames[name] ?? name;
       onChanged();
-    });
-
-    await _control.getTargetList().then((channels) {
-      _availableChannels = channels;
     });
   }
 
@@ -45,6 +46,14 @@ class ChannelService extends TaskService {
       ((_shortNames[_currentChannel] ?? _currentChannel) != 'fuchsia.com');
 
   List<String> get channels => _availableChannels;
+
+  set targetChannel(String channel) {
+    // If channel name was converted to a short name, convert back.
+    var longNames = _shortNames.map((k, v) => MapEntry(v, k));
+    _targetChannel = longNames[channel] ?? channel;
+    _control.setTarget(_targetChannel);
+    onChanged();
+  }
 
   /// Returns the mapping of internal channel name to it's short name.
   static final _shortNames = <String, String>{

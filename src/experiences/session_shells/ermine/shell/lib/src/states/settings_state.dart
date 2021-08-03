@@ -41,6 +41,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<bool> get shortcutsPageVisible;
   ObservableValue<bool> get timezonesPageVisible;
   ObservableValue<bool> get aboutPageVisible;
+  ObservableValue<bool> get channelPageVisible;
   ObservableValue<WiFiStrength> get wifiStrength;
   ObservableValue<BatteryCharge> get batteryCharge;
   ObservableValue<String> get dateTime;
@@ -58,6 +59,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<IconData> get brightnessIcon;
   ObservableValue<bool?> get optedIntoUpdates;
   ObservableValue<String> get currentChannel;
+  ObservableValue<List<String>> get availableChannels;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -79,4 +81,6 @@ abstract class SettingsState with Store implements TaskService {
   Action get setBrightnessLevel;
   Action get setBrightnessAuto;
   Action get showAboutSettings;
+  Action get showChannelSettings;
+  Action get setTargetChannel;
 }
