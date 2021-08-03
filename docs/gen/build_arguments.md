@@ -1030,7 +1030,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:101
+From //zircon/kernel/params.gni:114
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1750,6 +1750,38 @@ From //out/not-default/args.gn:6
 **Overridden from the default:** `true`
 
 From //build/config/BUILDCONFIG.gn:29
+
+### jtrace_enabled
+Please refer to https://fuchsia.dev/fuchsia-src/development/debugging/jtrace
+for a description of these configuration options.
+
+Note that the special value "auto" is used only by the default definitions
+of the entries (below).  It acts as a special value which automatically
+chooses a default based on whether or not JTRACE is configured for
+persistent tracing, while still allowing a user to explicitly override the
+value regardless of whether persistent tracing is enabled or not.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/params.gni:103
+
+### jtrace_last_entry_storage
+
+**Current value (from the default):** `0`
+
+From //zircon/kernel/params.gni:104
+
+### jtrace_target_buffer_size
+
+**Current value (from the default):** `"auto"`
+
+From //zircon/kernel/params.gni:105
+
+### jtrace_use_large_entries
+
+**Current value (from the default):** `"auto"`
+
+From //zircon/kernel/params.gni:106
 
 ### kernel_base
 
