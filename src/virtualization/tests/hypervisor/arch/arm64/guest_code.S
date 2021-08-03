@@ -26,6 +26,7 @@
 
 .set PSCI64_SYSTEM_OFF,         0x84000008
 
+// Move a constant to a register, emitting multiple `mov` operations if required.
 .macro movlit reg, literal
 mov \reg, #((\literal) & 0xffff)
 .ifne (((\literal) >> 16) & 0xffff)
@@ -40,35 +41,63 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 .endm
 
 // Define new function 'name'.
-// Local label '1:' used by other macros to compute offsets.
+//
+// The function should be terminated by a call to the END_FUNCTION macro:
+//
+//   FUNCTION foo
+//       mov x0, #1
+//       add x0, x1, x2
+//   END_FUNCTION
+//
+// Two symbols '<name>_start' and '<name>_end' are defined surrounding the
+// function.
+//
+// Additionally, a macro "exception_vector" is defined within the scope
+// that will skip to default location for the ARM64 exception vectors,
+// when this block of code is copied to location 0 in memory.
 .macro FUNCTION name
+    .align 5
+
+    // Define the symbol "${name}_start".
+    .global \name\()_start
+    .type \name\()_start, STT_FUNC
+    \name\()_start:
+
+    // Define the symbol "name".
     .global \name
     .type \name, STT_FUNC
     \name:
-    1:
-.endm
 
-// Adjusts current text location to position at a specific exception handler.
-.macro exception_vector base offset
-    2:
-    .skip (\base + \offset) - (2b - 1b)
+    // Adjusts current text location to position at a specific exception handler.
+    .macro exception_vector base offset
+        .skip (\base + \offset) - (. - \name)
+    .endm
+
+    // Define the end of the current function.
+    .macro END_FUNCTION
+      .purgem exception_vector
+      .purgem END_FUNCTION
+
+      // Define the symbol "${name}_end".
+      .global \name\()_end
+      \name\()_end:
+    .endm
 .endm
 
 // Signals test completion by writing 0 to EXIT_TEST_ADDR.
-.macro test_complete arch=aarch64
-    .ifc \arch, aarch64
-        mov x0, EXIT_TEST_ADDR
-        str xzr, [x0]
-    .else
-        .ifc \arch, aarch32
-            .word 0xE3A01000    // aarch32: movw r1, 0
-            .word 0xE30F0000    // aarch32: movw r0, [lower]EXIT_TEST_ADDR
-            .word 0xE34000FF    // aarch32: movw r0, [upper]EXIT_TEST_ADDR
-            .word 0xE5801000    // aarch32: str  r0, [r1]
-        .else
-            .error "Unsupported architecture"
-        .endif
-    .endif
+.macro test_complete
+    mov x0, EXIT_TEST_ADDR
+    str xzr, [x0]
+    b   .
+.endm
+
+// Signals test completion by writing 0 to EXIT_TEST_ADDR.
+.macro test_complete_aarch32
+    .word 0xE3A01000    // aarch32:     movw r1, 0
+    .word 0xE30F0000    // aarch32:     movw r0, [lower]EXIT_TEST_ADDR
+    .word 0xE34000FF    // aarch32:     movw r0, [upper]EXIT_TEST_ADDR
+    .word 0xE5801000    // aarch32:     str  r0, [r1]
+    .word 0xEAFFFFFE    // aarch32: 1:  b    1b
 .endm
 
 // Drop exception level from EL1 to EL0 and, if requested, switch execution
@@ -86,22 +115,21 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
     msr spsr_el1, x0
     isb
 
-    mov x0, xzr
-    add x0, x0, 2f - 1b // resume execution at label '2' ahead
-    msr elr_el1, x0     // store exception link register
-    eret                // resume at el0 using specified arch.
-    2:
+    adr x0, .Ldrop_to_el0_end\@          // resume execution at label ahead
+    msr elr_el1, x0                      // store exception link register
+    eret                                 // resume at el0 using specified arch.
+.Ldrop_to_el0_end\@:
 .endm
 
 .text
 
 // Test vcpu_resume.
-FUNCTION vcpu_resume_start
+FUNCTION vcpu_resume
     test_complete
-FUNCTION vcpu_resume_end
+END_FUNCTION
 
 // Test vcpu_read_state and vcpu_write_state.
-FUNCTION vcpu_read_write_state_start
+FUNCTION vcpu_read_write_state
     add x1, x1, #1
     add x2, x2, #2
     add x3, x3, #3
@@ -137,26 +165,26 @@ FUNCTION vcpu_read_write_state_start
     cmp sp, #128 // Set ZC bits of CPSR.
 
     test_complete
-FUNCTION vcpu_read_write_state_end
+END_FUNCTION
 
 // Test vcpu_interrupt.
-FUNCTION vcpu_interrupt_start
+FUNCTION vcpu_interrupt
     msr daifclr, #2
     b .
 
     exception_vector CURRENT_EL_ELx_BASE, IRQ_EXC_OFFSET
     test_complete
-FUNCTION vcpu_interrupt_end
+END_FUNCTION
 
 // Test guest_set_trap using a memory-based trap.
-FUNCTION guest_set_trap_start
+FUNCTION guest_set_trap
     mov x0, TRAP_ADDR
     str xzr, [x0]
     test_complete
-FUNCTION guest_set_trap_end
+END_FUNCTION
 
 // Test wfi instruction handling.
-FUNCTION vcpu_wfi_start
+FUNCTION vcpu_wfi
     // Setup the virtual timer by:
     // 1. Setting the compare value to 0.
     // 2. Enabling the virtual timer.
@@ -166,10 +194,10 @@ FUNCTION vcpu_wfi_start
 
     wfi
     test_complete
-FUNCTION vcpu_wfi_end
+END_FUNCTION
 
 // Test wfi handling with pending interrupt in LR (GICv2).
-FUNCTION vcpu_wfi_pending_interrupt_gicv2_start
+FUNCTION vcpu_wfi_pending_interrupt_gicv2
     msr daifclr, #2
     b .
 
@@ -179,10 +207,10 @@ FUNCTION vcpu_wfi_pending_interrupt_gicv2_start
     ldr w1, [x0, GICC_IAR_OFFSET]
     wfi
     test_complete
-FUNCTION vcpu_wfi_pending_interrupt_gicv2_end
+END_FUNCTION
 
 // Test wfi handling with pending interrupt in LR (GICv3).
-FUNCTION vcpu_wfi_pending_interrupt_gicv3_start
+FUNCTION vcpu_wfi_pending_interrupt_gicv3
     msr daifclr, #2
     b .
 
@@ -193,11 +221,11 @@ FUNCTION vcpu_wfi_pending_interrupt_gicv3_start
     dsb sy
     wfi
     test_complete
-FUNCTION vcpu_wfi_pending_interrupt_gicv3_end
+END_FUNCTION
 
 // Test wfi instruction handling.
 // Execution of WFI at EL0 on AARCH32 is propagated to EL1 / AARCH64.
-FUNCTION vcpu_wfi_aarch32_start
+FUNCTION vcpu_wfi_aarch32
     drop_to_el0 aarch32
     .word 0xE320F003         // aarch32: wfi
 
@@ -208,14 +236,14 @@ FUNCTION vcpu_wfi_aarch32_start
     // time in the absence of a Wakeup event, the trap will be taken.
     //
     // We therefore complete the test at this point.
-    test_complete aarch32
+    test_complete_aarch32
 
     exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
     test_complete
-FUNCTION vcpu_wfi_aarch32_end
+END_FUNCTION
 
 // Test floating-point instruction handling with trapping between levels.
-FUNCTION vcpu_fp_start
+FUNCTION vcpu_fp
     drop_to_el0
 
     // Access vector registers.
@@ -230,35 +258,35 @@ FUNCTION vcpu_fp_start
     mov x0, CPACR_EL1_FPEN_NO_TRAP
     msr cpacr_el1, x0
     eret
-FUNCTION vcpu_fp_end
+END_FUNCTION
 
 // Test wfi instruction handling.
-FUNCTION vcpu_fp_aarch32_start
+FUNCTION vcpu_fp_aarch32
     drop_to_el0 aarch32
     // Load double precision register d0 from address 0.
     // This should trigger floating point exception.
     .word 0xE3A00000         // aarch32: mov r0, 0
     .word 0xED900B00         // aarch32: vldr d0, [r0]
-    test_complete aarch32
+    test_complete_aarch32
 
     exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
     mov x0, CPACR_EL1_FPEN_NO_TRAP
     msr cpacr_el1, x0
     eret
-FUNCTION vcpu_fp_aarch32_end
+END_FUNCTION
 
-FUNCTION vcpu_psci_system_off_start
+FUNCTION vcpu_psci_system_off
     movlit x0, PSCI64_SYSTEM_OFF
     smc #0
-FUNCTION vcpu_psci_system_off_end
+END_FUNCTION
 
 // Test set/way d-cache operations.
 //
 // These are trapped and emulated by the hypervisor.
-FUNCTION vcpu_dc_set_way_ops_start
+FUNCTION vcpu_dc_set_way_ops
     mov x0, #0
     dc  csw, x0    // Clean L1 cache, set/way 0.
     dc  cisw, x0   // Clean/Invalidate L1 cache, set/way 0.
     dc  isw, x0    // Invalidate L1 cache, set/way 0.
     test_complete
-FUNCTION vcpu_dc_set_way_ops_end
+END_FUNCTION
