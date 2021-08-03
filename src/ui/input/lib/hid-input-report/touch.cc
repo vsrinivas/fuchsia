@@ -124,7 +124,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   return ParseResult::kOk;
 }
 
-ParseResult Touch::CreateDescriptor(fidl::AnyAllocator& allocator,
+ParseResult Touch::CreateDescriptor(fidl::AnyArena& allocator,
                                     fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
   fuchsia_input_report::wire::TouchInputDescriptor input(allocator);
 
@@ -175,7 +175,7 @@ ParseResult Touch::CreateDescriptor(fidl::AnyAllocator& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
                                     fuchsia_input_report::wire::InputReport& input_report) {
   if (len != report_size_) {
     return ParseResult::kReportSizeMismatch;

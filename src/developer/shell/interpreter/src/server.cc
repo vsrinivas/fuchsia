@@ -217,7 +217,7 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
   FX_DCHECK(context != nullptr);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_shell::wire::Location> locations(allocator, 1);
 
   locations[0].Allocate(allocator);

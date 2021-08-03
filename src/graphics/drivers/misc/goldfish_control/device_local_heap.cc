@@ -24,7 +24,7 @@ namespace {
 
 static const char* kTag = "goldfish-device-local-heap";
 
-fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyAllocator& allocator) {
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& allocator) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
   coherency_domain_support.set_cpu_supported(allocator, false)
       .set_ram_supported(allocator, false)
@@ -78,7 +78,7 @@ void DeviceLocalHeap::DestroyResource(DestroyResourceRequestView request,
 }
 
 void DeviceLocalHeap::Bind(zx::channel server_request) {
-  auto allocator = std::make_unique<fidl::FidlAllocator<512>>();
+  auto allocator = std::make_unique<fidl::Arena<512>>();
   fuchsia_sysmem2::wire::HeapProperties heap_properties = GetHeapProperties(*allocator.get());
   BindWithHeapProperties(std::move(server_request), std::move(allocator),
                          std::move(heap_properties));

@@ -117,28 +117,28 @@ client_->MakeMove(args, [](fidl::WireResponse<TicTacToe::MakeMove>* response) {
 
 ## Creating LLCPP views and objects
 
-### Create LLCPP objects using the FidlAllocator
+### Create LLCPP objects using the Arena
 
-The FIDL allocator (`fidl::FidlAllocator`) can allocate LLCPP objects. It
+The FIDL arena (`fidl::Arena`) can allocate LLCPP objects. It
 manages the lifetime of the allocated LLCPP objects (it owns the objects). As
-soon as the allocator is deleted, all the objects it has allocated are
+soon as the arena is deleted, all the objects it has allocated are
 deallocated and their destructors are called.
 
-The FIDL allocator is defined in
-[lib/fidl/llcpp/fidl_allocator.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/fidl_allocator.h).
+The FIDL arena is defined in
+[lib/fidl/llcpp/arena.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/arena.h).
 
-The objects are first allocated within a buffer which belongs to the allocator
-(this is a field of the allocator). The default size of the buffer is 512 bytes.
-A different size can be selected using `fidl::FidlAllocator<size>`.
+The objects are first allocated within a buffer which belongs to the arena
+(this is a field of the arena). The default size of the buffer is 512 bytes.
+A different size can be selected using `fidl::Arena<size>`.
 
-When this buffer is full, the allocator allocates more buffers on the heap. Each
+When this buffer is full, the arena allocates more buffers on the heap. Each
 of these buffers is 16 KiB (if it needs to allocate an object bigger, it will
 use a buffer which fit the bigger size).
 
-The standard pattern for using the allocator is:
+The standard pattern for using the arena is:
 
-*   Define a local variable allocator of type fidl::FidlAllocator.
-*   Allocate objects using the allocator.
+*   Define a local variable arena of type fidl::Arena.
+*   Allocate objects using the arena.
 *   Send the allocated objects by making a FIDL method call or making a reply
     via a completer.
 *   Leave the function; everything is deallocated.

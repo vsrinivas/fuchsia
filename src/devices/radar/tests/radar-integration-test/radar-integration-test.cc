@@ -154,7 +154,7 @@ TEST_F(RadarIntegrationTest, Reconnect) {
 }
 
 TEST_F(RadarIntegrationTest, BurstFormat) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   sync_completion_t completion;
   sync_completion_reset(&completion);
@@ -214,7 +214,7 @@ TEST_F(RadarIntegrationTest, ReadManyBursts) {
   constexpr uint32_t kVmoCount = 10;
   constexpr uint32_t kBurstCount = 303;  // Read for about 10 seconds.
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   sync_completion_t completion;
   sync_completion_reset(&completion);
@@ -278,7 +278,7 @@ TEST_F(RadarIntegrationTest, ReadManyBurstsMultipleClients) {
   constexpr uint32_t kVmoCount = 10;
   constexpr uint32_t kBurstCount = 303;  // Read for about 10 seconds.
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   struct {
     fidl::WireSharedClient<BurstReader> client;

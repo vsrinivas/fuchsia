@@ -203,7 +203,7 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
 }
 
 acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
-    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source) {
   auto& spi_bus = res->Data.SpiSerialBus;
   fuchsia_hardware_spi::wire::SpiChannel result(allocator);
@@ -228,7 +228,7 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
 }
 
 acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
-    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source) {
   auto& i2c_bus = res->Data.I2cSerialBus;
   fuchsia_hardware_i2c::wire::I2CChannel result(allocator);

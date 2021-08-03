@@ -60,8 +60,8 @@ class MockMessage : public Message {
 };
 
 // Fill a ParameterSet with a particular pattern of values.
-static fidl::VectorView<fuchsia_tee::wire::Parameter> CreateParameters(
-    fidl::AnyAllocator& allocator, size_t num_params) {
+static fidl::VectorView<fuchsia_tee::wire::Parameter> CreateParameters(fidl::AnyArena& allocator,
+                                                                       size_t num_params) {
   uint8_t byte_val = 0;
   auto inc = [&byte_val]() { return byte_val++; };
 
@@ -113,7 +113,7 @@ class MessageTest : public zxtest::Test {
 
 // Tests that the ParameterSet can be converted to a message and back.
 TEST_F(MessageTest, ParameterSetInvertabilityTest) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   constexpr size_t kParameterSetSize = 4;
 
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameters_in =

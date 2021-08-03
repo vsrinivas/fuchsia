@@ -79,7 +79,7 @@ class OnlyLlcpp {
   }
 
   template <typename... Args>
-  static OnlyLlcpp WithX(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static OnlyLlcpp WithX(::fidl::AnyArena& allocator, Args&&... args) {
     OnlyLlcpp result;
     result.set_x(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -93,7 +93,7 @@ class OnlyLlcpp {
   }
 
   template <typename... Args>
-  void set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
     set_x(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }

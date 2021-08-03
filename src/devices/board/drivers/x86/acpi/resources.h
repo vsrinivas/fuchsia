@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_
-#define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_
+#ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_RESOURCES_H_
+#define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_RESOURCES_H_
 
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
@@ -82,10 +82,10 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out);
 // |acpi| - ACPI implementation.
 // |device| - Device to which this resource belongs.
 // |res| - Resource to parse.
-// |allocator| - FIDL allocator to allocate returned SpiChannel with.
+// |allocator| - FIDL arena to allocate returned SpiChannel with.
 // |resource_source| - Pointer which will have the ResourceSource's handle put into it.
 acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
-    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source);
 
 // Parse the given I2C resource.
@@ -93,9 +93,9 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
 // |acpi| - ACPI implementation.
 // |device| - Device to which this resource belongs.
 // |res| - Resource to parse.
-// |allocator| - FIDL allocator to allocate returned I2CChannel with.
+// |allocator| - FIDL arena to allocate returned I2CChannel with.
 // |resource_source| - Pointer which will have the ResourceSource's handle put into it.
 acpi::status<fuchsia_hardware_i2c::wire::I2CChannel> resource_parse_i2c(
-    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyAllocator& allocator,
+    acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source);
-#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_RESOURCES_H_
+#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_RESOURCES_H_

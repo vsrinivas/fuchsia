@@ -103,14 +103,14 @@ bool ImageFormatConvertSysmemToZx(const fuchsia_sysmem_PixelFormat* pixel_format
                                   zx_pixel_format_t* zx_pixel_format_out);
 
 fpromise::result<fuchsia_sysmem2::wire::PixelFormat> ImageFormatConvertZxToSysmem_v2(
-    fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
+    fidl::AnyArena& allocator, zx_pixel_format_t zx_pixel_format);
 fpromise::result<fuchsia_sysmem::wire::PixelFormat> ImageFormatConvertZxToSysmem_v1(
-    fidl::AnyAllocator& allocator, zx_pixel_format_t zx_pixel_format);
+    fidl::AnyArena& allocator, zx_pixel_format_t zx_pixel_format);
 bool ImageFormatConvertZxToSysmem(zx_pixel_format_t zx_pixel_format,
                                   fuchsia_sysmem_PixelFormat* pixel_format_out);
 
 fpromise::result<fuchsia_sysmem2::wire::ImageFormat> ImageConstraintsToFormat(
-    fidl::AnyAllocator& allocator, const fuchsia_sysmem2::wire::ImageFormatConstraints& constraints,
+    fidl::AnyArena& allocator, const fuchsia_sysmem2::wire::ImageFormatConstraints& constraints,
     uint32_t width, uint32_t height);
 fpromise::result<fuchsia_sysmem::wire::ImageFormat2> ImageConstraintsToFormat(
     const fuchsia_sysmem::wire::ImageFormatConstraints& constraints, uint32_t width,

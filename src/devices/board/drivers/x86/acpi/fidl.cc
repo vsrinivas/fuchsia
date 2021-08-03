@@ -98,7 +98,7 @@ EvaluateObjectFidlHelper EvaluateObjectFidlHelper::FromRequest(acpi::Acpi* acpi,
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
-EvaluateObjectFidlHelper::Evaluate(fidl::AnyAllocator& alloc) {
+EvaluateObjectFidlHelper::Evaluate(fidl::AnyArena& alloc) {
   auto path = ValidateAndLookupPath(request_path_.data());
   if (path.is_error()) {
     return path.take_error();
@@ -165,7 +165,7 @@ acpi::status<std::vector<ACPI_OBJECT>> EvaluateObjectFidlHelper::DecodeParameter
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
-EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyAllocator& alloc, ACPI_OBJECT* value) {
+EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyArena& alloc, ACPI_OBJECT* value) {
   auto result = EncodeObject(alloc, value);
   if (result.is_error()) {
     return result.take_error();
@@ -183,7 +183,7 @@ EvaluateObjectFidlHelper::EncodeReturnValue(fidl::AnyAllocator& alloc, ACPI_OBJE
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::EncodeObject(
-    fidl::AnyAllocator& alloc, ACPI_OBJECT* value) {
+    fidl::AnyArena& alloc, ACPI_OBJECT* value) {
   fuchsia_hardware_acpi::wire::Object result;
   switch (value->Type) {
     case ACPI_TYPE_INTEGER: {

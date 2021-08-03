@@ -33,7 +33,7 @@ class EvaluateObjectFidlHelper {
   // replies on the completer given in |completer| if the call succeeds.
   // If something fails, acpi::error() is returned with a value that indicates what went wrong.
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> Evaluate(
-      fidl::AnyAllocator& alloc);
+      fidl::AnyArena& alloc);
 
   // These methods are public for unit tests only.
   // Validate that the path supplied in the request is a child of the device,
@@ -47,9 +47,9 @@ class EvaluateObjectFidlHelper {
 
   // Take the given ACPI_OBJECT and turn it into a DeviceEvaluateObjectResult.
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeReturnValue(
-      fidl::AnyAllocator& alloc, ACPI_OBJECT* value);
+      fidl::AnyArena& alloc, ACPI_OBJECT* value);
 
-  acpi::status<fuchsia_hardware_acpi::wire::Object> EncodeObject(fidl::AnyAllocator& alloc,
+  acpi::status<fuchsia_hardware_acpi::wire::Object> EncodeObject(fidl::AnyArena& alloc,
                                                                  ACPI_OBJECT* value);
   acpi::status<> DecodeObject(const fuchsia_hardware_acpi::wire::Object& obj, ACPI_OBJECT* out);
 

@@ -50,7 +50,7 @@ class {{ .Name }} {
   }
 
   template <typename... Args>
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::AnyArena& allocator, Args&&... args) {
     {{ $.Name }} result;
     result.set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator,
                            std::forward<Args>(args)...));
@@ -64,7 +64,7 @@ class {{ .Name }} {
   }
 
   template <typename... Args>
-  void set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_{{ .Name }}(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = {{ .WireOrdinalName }};
     set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
   }

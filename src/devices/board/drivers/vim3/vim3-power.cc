@@ -226,7 +226,7 @@ zx_status_t Vim3::PowerInit() {
   }
 
   // Add voltage regulator
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   fidl::VectorView<vreg::PwmVregMetadataEntry> pwm_vreg_entries(allocator, VREG_COUNT);
 
   pwm_vreg_entries[PWM_AO_D_VREG] = vreg::BuildMetadata(

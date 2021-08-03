@@ -44,7 +44,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
   // doesn't need any V1 APIs.
   void MatchDriversV1(MatchDriversV1RequestView request,
                       MatchDriversV1Completer::Sync& completer) override {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fidl::VectorView<fuchsia_driver_framework::wire::MatchedDriver> drivers(allocator,
                                                                             driver_urls.size());
     size_t index = 0;

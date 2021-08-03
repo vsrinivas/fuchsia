@@ -180,7 +180,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeInteger) {
 
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   obj.set_integer_val(alloc, 42);
 
   auto status = helper.DecodeObject(obj, &out);
@@ -200,7 +200,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeString) {
 
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   obj.set_string_val(alloc, "test string");
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
@@ -220,7 +220,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeBuffer) {
 
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
   obj.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kBuffer),
                                                                     countof(kBuffer)));
@@ -242,7 +242,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePowerResource) {
 
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   facpi::PowerResource power;
   power.resource_order = 9;
   power.system_level = 32;
@@ -265,7 +265,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeProcessorVal) {
 
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   facpi::Processor processor;
   processor.pblk_address = 0xd00dfeed;
   processor.pblk_length = 0xabc;
@@ -293,7 +293,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeReference) {
                                         "\\_SB_", fidl::VectorView<facpi::Object>(nullptr, 0));
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   facpi::Handle ref;
   ref.object_type = facpi::ObjectType::kDevice;
   ref.path = "PCI0.I2C0";
@@ -321,7 +321,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParentReferenceFails) {
                                         "\\_SB_", fidl::VectorView<facpi::Object>(nullptr, 0));
   facpi::Object obj;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   facpi::Handle ref;
   ref.object_type = facpi::ObjectType::kDevice;
   ref.path = "\\";
@@ -339,7 +339,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePackage) {
   facpi::Object obj;
   facpi::ObjectList list;
   ACPI_OBJECT out;
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
 
   obj.set_integer_val(alloc, 32);
   elements.emplace_back(obj);
@@ -378,7 +378,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodePackage) {
 }
 
 TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   std::vector<facpi::Object> params;
   facpi::Object object;
   object.set_integer_val(alloc, 32);
@@ -410,7 +410,7 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
 TEST_F(FidlEvaluateObjectTest, TestEncodeInt) {
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
                                         fidl::VectorView<facpi::Object>(nullptr, 0));
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   ACPI_OBJECT obj = {.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 320}};
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
@@ -423,7 +423,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeInt) {
 TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
                                         fidl::VectorView<facpi::Object>(nullptr, 0));
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   ACPI_OBJECT obj = {.String = {
                          .Type = ACPI_TYPE_STRING,
                          .Length = 3,
@@ -440,7 +440,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeString) {
 TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
                                         fidl::VectorView<facpi::Object>(nullptr, 0));
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
   ACPI_OBJECT obj = {.Buffer = {
                          .Type = ACPI_TYPE_BUFFER,
@@ -460,7 +460,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeProcessorVal) {
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
                                         fidl::VectorView<facpi::Object>(nullptr, 0));
 
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   ACPI_OBJECT obj = {
       .Processor =
           {
@@ -489,7 +489,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReference) {
 
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot()->FindByPath("\\_SB_"),
                                         "\\_SB_", fidl::VectorView<facpi::Object>(nullptr, 0));
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   ACPI_OBJECT obj = {.Reference = {
                          .Type = ACPI_TYPE_LOCAL_REFERENCE,
                          .ActualType = ACPI_TYPE_DEVICE,
@@ -518,7 +518,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeParentReferenceFails) {
                          .ActualType = ACPI_TYPE_DEVICE,
                          .Handle = acpi_.GetDeviceRoot(),
                      }};
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   auto status = helper.EncodeObject(alloc, &obj);
   ASSERT_EQ(status.status_value(), AE_ACCESS);
 }
@@ -547,7 +547,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodePackage) {
               .Elements = const_cast<acpi_object *>(kObjects),
           },
   };
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
 
   auto result = helper.EncodeObject(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
@@ -571,7 +571,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
   acpi::EvaluateObjectFidlHelper helper(&acpi_, acpi_.GetDeviceRoot(), "\\",
                                         fidl::VectorView<facpi::Object>(nullptr, 0));
 
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   auto result = helper.EncodeReturnValue(alloc, &obj);
   ASSERT_OK(result.zx_status_value());
   ASSERT_FALSE(result.value().is_err());

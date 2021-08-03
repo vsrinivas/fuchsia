@@ -139,7 +139,7 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
     std::lock_guard lock(magma_mutex);
     if (!CheckSystemDevice(completer))
       return;
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     std::vector<msd_icd_info_t> msd_icd_infos;
     this->magma_system_device->GetIcdList(&msd_icd_infos);
     std::vector<fuchsia_gpu_magma::wire::IcdInfo> icd_infos;

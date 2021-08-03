@@ -53,7 +53,7 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
   fidl::WireClient client(std::move(local), loop.dispatcher());
 
   auto [observer, send] = CreateEventPair();
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::Resource r(allocator);
   r.set_handle(allocator, std::move(send));
   auto result = client->SendResource(r);
@@ -80,7 +80,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
     void GetResource(GetResourceRequestView request,
                      GetResourceCompleter::Sync& completer) override {
       auto [observer, send] = CreateEventPair();
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       test::wire::Resource r(allocator);
       r.set_handle(allocator, std::move(send));
       observer_ = std::move(observer);
@@ -147,7 +147,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote), server);
 
   auto [observer, send] = CreateEventPair();
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::Resource r(allocator);
   r.set_handle(allocator, std::move(send));
   ASSERT_OK(server_binding->ResourceEvent(r));

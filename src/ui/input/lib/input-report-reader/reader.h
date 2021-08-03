@@ -40,7 +40,7 @@ class InputReportReader;
 //      int64_t x;
 //      int64_t y;
 //      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-//                             fidl::AnyAllocator& allocator);
+//                             fidl::AnyArena& allocator);
 //   };
 //
 //   InputReportReaderManager<TouchScreenReport> input_report_readers_;
@@ -50,15 +50,15 @@ class InputReportReaderManager {
  public:
   // Assert that our template type `Report` has the following function:
   //      void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-  //                             fidl::AnyAllocator& allocator);
+  //                             fidl::AnyArena& allocator);
   DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(
       has_to_fidl_input_report, ToFidlInputReport,
       void (C::*)(fuchsia_input_report::wire::InputReport& input_report,
-                  fidl::AnyAllocator& allocator));
+                  fidl::AnyArena& allocator));
   static_assert(
       has_to_fidl_input_report<Report>::value,
       "Report must implement void ToFidlInputReport(fuchsia_input_report::wire::InputReport& "
-      "input_report, fidl::AnyAllocator& allocator);");
+      "input_report, fidl::AnyArena& allocator);");
 
   // This class can't be moved because the InputReportReaders are pointing to the main class.
   DISALLOW_COPY_ASSIGN_AND_MOVE(InputReportReaderManager);
@@ -134,7 +134,7 @@ class InputReportReader : public fidl::WireServer<fuchsia_input_report::InputRep
 
   fbl::Mutex report_lock_;
   std::optional<ReadInputReportsCompleter::Async> completer_ TA_GUARDED(&report_lock_);
-  fidl::FidlAllocator<kInputReportBufferSize> report_allocator_ __TA_GUARDED(report_lock_);
+  fidl::Arena<kInputReportBufferSize> report_allocator_ __TA_GUARDED(report_lock_);
   fbl::RingBuffer<Report, fuchsia_input_report::wire::kMaxDeviceReportCount> reports_data_
       __TA_GUARDED(report_lock_);
 

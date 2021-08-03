@@ -35,7 +35,7 @@ zx_status_t Vim3::RegistersInit() {
       },
   };
 
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   fidl::VectorView<registers::MmioMetadataEntry> mmio_entries(allocator, MMIO_COUNT);
 
   mmio_entries[RESET_MMIO] = registers::BuildMetadata(allocator, RESET_MMIO);

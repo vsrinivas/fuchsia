@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 #define LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 
 namespace fidl {
 
@@ -13,14 +13,14 @@ template <typename T>
 class ObjectView final {
  public:
   ObjectView() = default;
-  // Allocates an object using the allocator.
+  // Allocates an object using an arena.
   template <typename... Args>
-  explicit ObjectView(AnyAllocator& allocator, Args&&... args)
+  explicit ObjectView(AnyArena& allocator, Args&&... args)
       : object_(allocator.Allocate<T>(std::forward<Args>(args)...)) {}
   ObjectView(std::nullptr_t) {}  // NOLINT
 
-  // These methods are the only way to reference data which is not managed by a FidlAllocator.
-  // Their usage is dicouraged. The lifetime of the referenced string must be longer than the
+  // These methods are the only way to reference data which is not managed by a Arena.
+  // Their usage is discouraged. The lifetime of the referenced string must be longer than the
   // lifetime of the created StringView.
   //
   // For example:
@@ -54,9 +54,9 @@ class ObjectView final {
 
   explicit operator bool() const noexcept { return object_ != nullptr; }
 
-  // Allocates an object using the allocator.
+  // Allocates an object using an arena.
   template <typename... Args>
-  void Allocate(AnyAllocator& allocator, Args&&... args) {
+  void Allocate(AnyArena& allocator, Args&&... args) {
     object_ = allocator.Allocate<T>(std::forward<Args>(args)...);
   }
 

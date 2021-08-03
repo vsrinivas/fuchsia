@@ -330,7 +330,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
 
  private:
   zx_status_t PrepareSession();
-  zx::status<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyAllocator& alloc);
+  zx::status<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyArena& alloc);
   zx_status_t PrepareDescriptors();
   buffer_descriptor_t* descriptor(uint16_t idx);
   void* data(uint64_t offset);

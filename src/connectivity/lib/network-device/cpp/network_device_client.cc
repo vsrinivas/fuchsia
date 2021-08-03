@@ -142,7 +142,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
   };
   auto open_session = [this, name]() -> fpromise::promise<void, zx_status_t> {
     fpromise::bridge<void, zx_status_t> bridge;
-    fidl::FidlAllocator alloc;
+    fidl::Arena alloc;
     zx::status session_info = MakeSessionInfo(alloc);
     if (session_info.is_error()) {
       return fpromise::make_error_promise(session_info.error_value());
@@ -364,8 +364,7 @@ NetworkDeviceClient::WatchStatus(uint8_t port_id, StatusCallback callback, uint3
       std::move(watcher_endpoints->client), dispatcher_, std::move(callback))));
 }
 
-zx::status<netdev::wire::SessionInfo> NetworkDeviceClient::MakeSessionInfo(
-    fidl::AnyAllocator& alloc) {
+zx::status<netdev::wire::SessionInfo> NetworkDeviceClient::MakeSessionInfo(fidl::AnyArena& alloc) {
   uint64_t descriptor_length_words = session_config_.descriptor_length / sizeof(uint64_t);
   ZX_DEBUG_ASSERT_MSG(descriptor_length_words <= std::numeric_limits<uint8_t>::max(),
                       "session descriptor length %ld (%ld words) overflows uint8_t",

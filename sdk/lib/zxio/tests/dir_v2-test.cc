@@ -93,7 +93,7 @@ TEST_F(DirV2, Enumerate) {
 
         // Sends a different entry every time.
         void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
-          fidl::FidlAllocator allocator;
+          fidl::Arena allocator;
           fidl::VectorView<fio2::wire::DirectoryEntry> entry(allocator, 1);
           entry[0].Allocate(allocator);
           switch (count_) {

@@ -202,7 +202,7 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto capabilities = node.CreateCapabilities(allocator);
   if (capabilities.is_error()) {
     return capabilities.take_error();
@@ -292,7 +292,7 @@ std::string Node::TopoName() const {
 }
 
 zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
-    fidl::AnyAllocator& allocator) const {
+    fidl::AnyArena& allocator) const {
   std::vector<fdf::wire::DriverCapabilities> capabilities;
   capabilities.reserve(parents_.size());
   for (const Node* parent : parents_) {
@@ -816,7 +816,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
            url.data(), open.FormatDescription().c_str());
     }
   };
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fsys::wire::ChildDecl child_decl(allocator);
   child_decl.set_name(allocator, fidl::StringView::FromExternal(name))
       .set_url(allocator, fidl::StringView::FromExternal(url))

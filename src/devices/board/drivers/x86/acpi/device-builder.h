@@ -89,7 +89,7 @@ class DeviceBuilder {
   }
 
   zx::status<zx_device_t*> Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
-                                 fidl::AnyAllocator& allocator);
+                                 fidl::AnyArena& allocator);
 
   void SetBusType(BusType t) {
     ZX_ASSERT(bus_type_ == kUnknown || bus_type_ == t);
@@ -132,8 +132,8 @@ class DeviceBuilder {
   // "DeviceChildEntry" representing this child. |callback| the index of the child device on the
   // bus.
   using InferBusTypeCallback = std::function<size_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
-  acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
-                               acpi::Manager* manager, InferBusTypeCallback callback);
+  acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& allocator, acpi::Manager* manager,
+                               InferBusTypeCallback callback);
 
   BusType GetBusType() { return bus_type_; }
   uint32_t GetBusId() { return bus_id_.value_or(UINT32_MAX); }
@@ -147,7 +147,7 @@ class DeviceBuilder {
   // Special HID/CID value for using a device tree "compatible" property. See
   // https://www.kernel.org/doc/html/latest/firmware-guide/acpi/enumeration.html#device-tree-namespace-link-device-id
   constexpr static const char* kDeviceTreeLinkID = "PRP0001";
-  zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyAllocator& allocator);
+  zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyArena& allocator);
   zx::status<> BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
                               std::vector<zx_device_str_prop_t>& str_props);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);

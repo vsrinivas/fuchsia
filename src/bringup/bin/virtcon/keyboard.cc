@@ -123,7 +123,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   }
 
   // Generate the OutputReport.
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view;
   if (caps_lock) {

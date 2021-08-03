@@ -75,7 +75,7 @@ class TestSession {
   const zx::channel& channel() const { return session_.channel(); }
 
  private:
-  fidl::FidlAllocator<> alloc_;
+  fidl::Arena<> alloc_;
   uint16_t descriptors_count_{};
   uint64_t buffer_length_{};
   fidl::WireSyncClient<netdev::Session> session_;

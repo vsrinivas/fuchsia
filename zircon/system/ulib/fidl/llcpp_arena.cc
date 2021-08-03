@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 
 #include <iostream>
 
 namespace fidl {
 
-AnyAllocator::~AnyAllocator() { Clean(); }
+AnyArena::~AnyArena() { Clean(); }
 
-void AnyAllocator::Clean() {
+void AnyArena::Clean() {
   // Call all the destructors (starting with the last allocated object).
   // Because we only work with views, the destructors only close handles.
   while (last_destructor_ != nullptr) {
@@ -27,8 +27,8 @@ void AnyAllocator::Clean() {
   }
 }
 
-uint8_t* AnyAllocator::Allocate(size_t size, size_t count,
-                                void (*destructor_function)(uint8_t*, size_t)) {
+uint8_t* AnyArena::Allocate(size_t size, size_t count,
+                            void (*destructor_function)(uint8_t*, size_t)) {
   // Total size needed for the allocation (the header used for the deallocation and the data).
   size_t block_size = FIDL_ALIGN(size * count);
   // Checks that the multiplication didn't overflow.
@@ -39,7 +39,7 @@ uint8_t* AnyAllocator::Allocate(size_t size, size_t count,
   if (available_size_ < block_size) {
     // The data doesn't fit within the current block => allocate a new block.
     // Note: the data available at the end of the current block is lost forever (until the
-    // deallocation of the allocator).
+    // deallocation of the arena).
     available_size_ = (block_size > ExtraBlock::kExtraSize) ? block_size : ExtraBlock::kExtraSize;
     size_t extra_block_size = available_size_ + FIDL_ALIGN(sizeof(ExtraBlock*));
     last_extra_block_ = new (new uint8_t[extra_block_size]) ExtraBlock(last_extra_block_);

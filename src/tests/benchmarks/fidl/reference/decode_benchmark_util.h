@@ -5,8 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
@@ -21,10 +21,10 @@ namespace decode_benchmark_util {
 
 template <typename BuilderFunc, typename DecodeFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFunc decode) {
-  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyAllocator&>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyArena&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  fidl::FidlAllocator<65536> allocator;
+  fidl::Arena<65536> allocator;
   FidlType aligned_value = builder(allocator);
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
   ZX_ASSERT(encoded.ok());

@@ -40,7 +40,7 @@ TEST(FidlExamples, Structs) {
 
 // [START unions]
 TEST(FidlExamples, Unions) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(allocator, 1);
   auto str_val = fuchsia_examples::wire::JsonValue::WithStringValue(allocator, "1");
   ASSERT_TRUE(int_val.is_int_value());
@@ -50,7 +50,7 @@ TEST(FidlExamples, Unions) {
 
 // [START tables]
 TEST(FidlExamples, Tables) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_examples::wire::User user(allocator);
   user.set_age(allocator, 30);
   user.set_name(allocator, allocator, "jdoe");

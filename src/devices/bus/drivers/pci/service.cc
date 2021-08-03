@@ -23,7 +23,7 @@ static_assert(PciFidl::wire::kBaseConfigSize == PCI_BASE_CONFIG_SIZE);
 void Bus::GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& completer) {
   fbl::AutoLock devices_lock(&devices_lock_);
   size_t dev_cnt = devices_.size();
-  fidl::FidlAllocator<kAllocatorSize> allocator;
+  fidl::Arena<kAllocatorSize> allocator;
 
   size_t dev_idx = 0;
   fidl::VectorView<PciFidl::wire::Device> devices(allocator, dev_cnt);

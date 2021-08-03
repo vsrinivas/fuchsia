@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_STRING_VIEW_H_
 #define LIB_FIDL_LLCPP_STRING_VIEW_H_
 
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/walker.h>
 #include <lib/stdcompat/string_view.h>
@@ -24,9 +24,8 @@ class StringView final : private VectorView<const char> {
   explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
   explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
 
-  // Allocates a string using the allocator.
-  StringView(AnyAllocator& allocator, cpp17::string_view from)
-      : VectorView(allocator, from.size()) {
+  // Allocates a string using an arena.
+  StringView(AnyArena& allocator, cpp17::string_view from) : VectorView(allocator, from.size()) {
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }
 
@@ -41,8 +40,8 @@ class StringView final : private VectorView<const char> {
     static_assert(N > 0, "String should not be empty");
   }
 
-  // These methods are the only way to reference data which is not managed by a FidlAllocator.
-  // Their usage is dicouraged. The lifetime of the referenced string must be longer than the
+  // These methods are the only way to reference data which is not managed by a Arena.
+  // Their usage is discouraged. The lifetime of the referenced string must be longer than the
   // lifetime of the created StringView.
   //
   // For example:
@@ -51,7 +50,7 @@ class StringView final : private VectorView<const char> {
   static StringView FromExternal(cpp17::string_view from) { return StringView(from); }
   static StringView FromExternal(const char* data, size_t size) { return StringView(data, size); }
 
-  void Set(AnyAllocator& allocator, cpp17::string_view from) {
+  void Set(AnyArena& allocator, cpp17::string_view from) {
     Allocate(allocator, from.size());
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }

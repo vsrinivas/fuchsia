@@ -83,14 +83,14 @@ class Cr50SpiTest : public zxtest::Test,
   }
   void ReceiveVector(ReceiveVectorRequestView request,
                      ReceiveVectorCompleter::Sync& completer) override {
-    fidl::FidlAllocator<> alloc;
+    fidl::Arena<> alloc;
     fidl::VectorView<uint8_t> out(alloc, request->size);
     ASSERT_NO_FATAL_FAILURES(Exchange(fidl::VectorView<uint8_t>(), &out));
     completer.Reply(ZX_OK, out);
   }
   void ExchangeVector(ExchangeVectorRequestView request,
                       ExchangeVectorCompleter::Sync& completer) override {
-    fidl::FidlAllocator<> alloc;
+    fidl::Arena<> alloc;
     fidl::VectorView<uint8_t> out(alloc, request->txdata.count());
     ASSERT_NO_FATAL_FAILURES(Exchange(request->txdata, &out));
     completer.Reply(ZX_OK, out);

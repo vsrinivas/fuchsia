@@ -6,7 +6,7 @@
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
 
@@ -88,7 +88,7 @@ struct PlatformCostsEntry {
   const std::list<const UsagePixelFormatCostEntry>& costs;
 };
 
-static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_modifier, double cost,
+static void AddRgbaPixelFormat(fidl::AnyArena& allocator, uint64_t format_modifier, double cost,
                                std::list<const UsagePixelFormatCostEntry>& result) {
   // Both RGBA and BGRA versions have similar cost, if they're supported.
   for (auto format : {fuchsia_sysmem2::wire::PixelFormatType::kBgra32,
@@ -120,7 +120,7 @@ static void AddRgbaPixelFormat(fidl::AnyAllocator& allocator, uint64_t format_mo
 // opportunity cost of that time will almost certainly be more than any real savings from updating
 // this number.
 constexpr size_t kAllocatorSize = 3792;
-fidl::FidlAllocator<kAllocatorSize> allocator;
+fidl::Arena<kAllocatorSize> allocator;
 
 const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;

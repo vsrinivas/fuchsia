@@ -102,7 +102,7 @@ class RegistersDeviceTest : public zxtest::Test {
   std::map<uint64_t, std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_registers::Device>>>
       clients_;
 
-  fidl::FidlAllocator<2048> allocator_;
+  fidl::Arena<2048> allocator_;
 };
 
 TEST_F(RegistersDeviceTest, EncodeDecodeTest) {

@@ -25,7 +25,7 @@ std::optional<float> parse_as_float(const std::string& s) {
 }
 
 // [START contents]
-fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
   std::optional<float> maybe_float = parse_as_float(s);
   if (maybe_float) {
     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_float);

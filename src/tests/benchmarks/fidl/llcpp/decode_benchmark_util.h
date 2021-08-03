@@ -5,8 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_DECODE_BENCHMARK_UTIL_H_
 
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -21,7 +21,7 @@ namespace llcpp_benchmarks {
 
 template <typename BuilderFunc>
 bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyAllocator&>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyArena&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -31,7 +31,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   while (state->KeepRunning()) {
     // construct a new object each iteration, so that the handle close cost is included in the
     // decode time.
-    fidl::FidlAllocator<65536> allocator;
+    fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
     // encode the value.
     fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);

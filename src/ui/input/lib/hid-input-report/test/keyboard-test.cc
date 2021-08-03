@@ -198,7 +198,7 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   hid_input_report::Keyboard keyboard;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
   led_view[0] = fuchsia_input_report::wire::LedType::kNumLock;
   led_view[1] = fuchsia_input_report::wire::LedType::kScrollLock;

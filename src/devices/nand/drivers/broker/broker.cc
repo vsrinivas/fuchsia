@@ -71,7 +71,7 @@ class Broker : public DeviceType {
 
   // fidl interface.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fidl::ObjectView<fuchsia_hardware_nand::wire::Info> info(allocator);
     completer.Reply(Query(info.get()), info);
   }

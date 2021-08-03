@@ -154,7 +154,7 @@ zx_status_t SimpleAudioStream::NotifyPlugDetect() {
   fbl::AutoLock channel_lock(&channel_lock_);
   for (auto& channel : stream_channels_) {
     if (channel.plug_completer_) {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       audio_fidl::wire::PlugState plug_state(allocator);
       plug_state.set_plugged(allocator, pd_flags_ & AUDIO_PDNF_PLUGGED)
           .set_plug_state_time(allocator, plug_time_);
@@ -424,7 +424,7 @@ void SimpleAudioStream::WatchGainState(StreamChannel* channel,
   ScopedToken t(domain_token());
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state_) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state_.can_mute) {
       gain_state.set_muted(allocator, cur_gain_state_.cur_mute);
@@ -449,7 +449,7 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
   // Reply is delayed if there is no change since the last reported plugged state.
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::PlugState plug_state(allocator);
     plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug_time_);
     channel->last_reported_plugged_state_ =
@@ -536,7 +536,7 @@ void SimpleAudioStream::SetActiveChannels(SetActiveChannelsRequestView request,
 void SimpleAudioStream::GetProperties(
     fidl::WireServer<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::StreamProperties stream_properties(allocator);
   stream_properties.set_unique_id(allocator);
   for (size_t i = 0; i < audio_fidl::wire::kUniqueIdSize; ++i) {
@@ -612,7 +612,7 @@ void SimpleAudioStream::GetSupportedFormats(
     }
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<audio_fidl::wire::SupportedFormats> fidl_formats(allocator,
                                                                     fidl_compatible_formats.size());
   // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
@@ -641,7 +641,7 @@ void SimpleAudioStream::GetSupportedFormats(
 void SimpleAudioStream::GetProperties(GetPropertiesRequestView request,
                                       GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
   ring_buffer_properties.set_fifo_depth(allocator, fifo_depth_)
       .set_external_delay(allocator, external_delay_nsec_)

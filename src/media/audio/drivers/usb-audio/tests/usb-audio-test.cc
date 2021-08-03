@@ -320,7 +320,7 @@ TEST(UsbAudioTest, SetAndGetGain) {
 
   constexpr float kTestGain = -12.f;
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(allocator, kTestGain);
     auto status =
@@ -397,7 +397,7 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -421,7 +421,7 @@ TEST(UsbAudioTest, RingBuffer) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)

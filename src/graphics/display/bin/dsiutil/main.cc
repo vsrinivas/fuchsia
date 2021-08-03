@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
   } else {
     tbuf[0] = 0x29;
   }
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = mipi_dsi::MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   auto response =

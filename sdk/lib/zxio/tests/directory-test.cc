@@ -24,7 +24,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
   explicit TestDirectoryServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    fidl::FidlAllocator fidl_allocator;
+    fidl::Arena fidl_allocator;
     auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory(fidl_allocator);
     completer.Reply(std::move(node_info));
   }
@@ -63,7 +63,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     ASSERT_OK(zx::event::create(0u, &file_event));
 
     fuchsia_io::wire::FileObject file = {.event = std::move(file_event)};
-    fidl::FidlAllocator fidl_allocator;
+    fidl::Arena fidl_allocator;
     auto node_info = fuchsia_io::wire::NodeInfo::WithFile(fidl_allocator, std::move(file));
 
     fidl::WireEventSender<fuchsia_io::File> sender(std::move(file_server));

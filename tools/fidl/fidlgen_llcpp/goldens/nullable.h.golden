@@ -93,7 +93,7 @@ class SimpleUnion {
   }
 
   template <typename... Args>
-  static SimpleUnion WithA(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static SimpleUnion WithA(::fidl::AnyArena& allocator, Args&&... args) {
     SimpleUnion result;
     result.set_a(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
@@ -107,7 +107,7 @@ class SimpleUnion {
   }
 
   template <typename... Args>
-  void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
     set_a(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
@@ -132,7 +132,7 @@ class SimpleUnion {
   }
 
   template <typename... Args>
-  static SimpleUnion WithB(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static SimpleUnion WithB(::fidl::AnyArena& allocator, Args&&... args) {
     SimpleUnion result;
     result.set_b(
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
@@ -146,7 +146,7 @@ class SimpleUnion {
   }
 
   template <typename... Args>
-  void set_b(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_b(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
     set_b(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }

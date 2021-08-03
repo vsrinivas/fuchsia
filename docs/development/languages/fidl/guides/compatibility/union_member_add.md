@@ -107,7 +107,7 @@ std::string reader(const fidl_test::JsonValue& value) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
   std::optional<int32_t> maybe_int = parse_as_int(s);
   if (maybe_int) {
     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_int);
@@ -414,7 +414,7 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 - Readers can replace the default case by handling the new variant directly.
 
 ```diff
-  fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+  fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
 +   std::optional<float> maybe_float = parse_as_float(s);
 +   if (maybe_float) {
 +     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_float);

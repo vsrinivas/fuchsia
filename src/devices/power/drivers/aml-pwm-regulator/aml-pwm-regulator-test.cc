@@ -29,7 +29,7 @@ class TestPwmRegulator : public AmlPwmRegulator {
 };
 
 TEST(AmlPwmRegulatorTest, RegulatorTest) {
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   ddk::MockPwm pwm_;
   auto regulator_ = TestPwmRegulator::Create(
       vreg::BuildMetadata(allocator, 0, 1250, 690'000, 1'000, 11), pwm_.GetProto());

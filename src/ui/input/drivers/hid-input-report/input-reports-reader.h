@@ -59,7 +59,7 @@ class InputReportsReader : public fidl::WireServer<fuchsia_input_report::InputRe
       __TA_GUARDED(readers_lock_);
   std::optional<fidl::ServerBindingRef<fuchsia_input_report::InputReportsReader>> binding_
       __TA_GUARDED(readers_lock_);
-  fidl::FidlAllocator<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(readers_lock_);
+  fidl::Arena<kFidlReportBufferSize> report_allocator_ __TA_GUARDED(readers_lock_);
   fbl::RingBuffer<fuchsia_input_report::wire::InputReport,
                   fuchsia_input_report::wire::kMaxDeviceReportCount>
       reports_data_ __TA_GUARDED(readers_lock_);

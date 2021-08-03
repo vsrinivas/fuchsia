@@ -54,7 +54,7 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
   return ParseResult::kOk;
 }
 
-ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
+ParseResult Sensor::CreateDescriptor(fidl::AnyArena& allocator,
                                      fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
   fuchsia_input_report::wire::SensorInputDescriptor input(allocator);
 
@@ -78,7 +78,7 @@ ParseResult Sensor::CreateDescriptor(fidl::AnyAllocator& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+ParseResult Sensor::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
                                      fuchsia_input_report::wire::InputReport& input_report) {
   fuchsia_input_report::wire::SensorInputReport sensor_report(allocator);
 

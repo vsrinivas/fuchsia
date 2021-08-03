@@ -824,14 +824,14 @@ void VPartitionManager::AllocatePartition(AllocatePartitionRequestView request,
 }
 
 void VPartitionManager::Query(QueryRequestView request, QueryCompleter::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeInfo> info(allocator);
   QueryInternal(info.get());
   completer.Reply(ZX_OK, info);
 }
 
 void VPartitionManager::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> info(allocator);
 
   {

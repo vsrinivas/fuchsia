@@ -154,7 +154,7 @@ TEST(CreateCommandFidl, CommandStructure) {
   uint8_t tbuf[2];
   uint8_t rbuf[2];
 
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_virtual_channel_id());
@@ -171,7 +171,7 @@ TEST(CreateCommandFidl, CommandStructure) {
 }
 
 TEST(CreateCommandFidl, GenShortWrite0T1) {
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(0, 0, false, allocator);
 
   ASSERT_OK(res.status_value());
@@ -180,14 +180,14 @@ TEST(CreateCommandFidl, GenShortWrite0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortWrite0T2) {
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(0, 0, true, allocator);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, res.status_value());
 }
 
 TEST(CreateCommandFidl, GenShortWrite1T1) {
   uint8_t tbuf[1];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
@@ -197,7 +197,7 @@ TEST(CreateCommandFidl, GenShortWrite1T1) {
 
 TEST(CreateCommandFidl, DcsShortWrite0T1) {
   uint8_t tbuf[1];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
@@ -207,7 +207,7 @@ TEST(CreateCommandFidl, DcsShortWrite0T1) {
 
 TEST(CreateCommandFidl, GenShortWrite2T1) {
   uint8_t tbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
@@ -217,7 +217,7 @@ TEST(CreateCommandFidl, GenShortWrite2T1) {
 
 TEST(CreateCommandFidl, DcsShortWrite1T1) {
   uint8_t tbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
@@ -227,7 +227,7 @@ TEST(CreateCommandFidl, DcsShortWrite1T1) {
 
 TEST(CreateCommandFidl, GenLongWriteT1) {
   uint8_t tbuf[4];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, false, allocator);
 
   ASSERT_OK(res.status_value());
@@ -237,7 +237,7 @@ TEST(CreateCommandFidl, GenLongWriteT1) {
 
 TEST(CreateCommandFidl, DcsLongWriteT1) {
   uint8_t tbuf[4];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), 0, true, allocator);
 
   ASSERT_OK(res.status_value());
@@ -247,7 +247,7 @@ TEST(CreateCommandFidl, DcsLongWriteT1) {
 
 TEST(CreateCommandFidl, GenShortRead0T1) {
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(0, sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -259,7 +259,7 @@ TEST(CreateCommandFidl, GenShortRead0T1) {
 TEST(CreateCommandFidl, GenShortRead1T1) {
   uint8_t tbuf[1];
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -271,7 +271,7 @@ TEST(CreateCommandFidl, GenShortRead1T1) {
 TEST(CreateCommandFidl, DcsShortRead0T1) {
   uint8_t tbuf[1];
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -283,7 +283,7 @@ TEST(CreateCommandFidl, DcsShortRead0T1) {
 TEST(CreateCommandFidl, GenShortRead2T1) {
   uint8_t tbuf[2];
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), false, allocator);
   ASSERT_OK(res.status_value());
   ASSERT_TRUE(res->has_dsi_data_type());
@@ -295,7 +295,7 @@ TEST(CreateCommandFidl, GenShortRead2T1) {
 TEST(CreateCommandFidl, InvalidDcsReadT1) {
   uint8_t tbuf[2];
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   EXPECT_TRUE(res.status_value() == ZX_ERR_INVALID_ARGS);
 }
@@ -303,7 +303,7 @@ TEST(CreateCommandFidl, InvalidDcsReadT1) {
 TEST(CreateCommandFidl, InvalidReadT1) {
   uint8_t tbuf[3];
   uint8_t rbuf[2];
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(sizeof(tbuf), sizeof(rbuf), true, allocator);
   EXPECT_TRUE(res.status_value() == ZX_ERR_INVALID_ARGS);
 }

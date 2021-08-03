@@ -1653,7 +1653,7 @@ uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
 }
 
 zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
-    fidl::AnyAllocator& allocator, const std::vector<const Driver*>& drivers) {
+    fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers) {
   std::vector<fdd::wire::DriverInfo> driver_info_vec;
   // TODO(fxbug.dev/80033): Support base drivers.
   for (const auto& driver : drivers) {
@@ -1731,7 +1731,7 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
     }
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto result = GetDriverInfo(allocator, driver_list);
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
@@ -1794,7 +1794,7 @@ zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface*
 }
 
 zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
-    fidl::AnyAllocator& allocator, const std::vector<fbl::RefPtr<Device>>& devices) {
+    fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices) {
   std::vector<fdd::wire::DeviceInfo> device_info_vec;
   for (const auto& device : devices) {
     if (device->props().size() > fdm::wire::kPropertiesMax) {
@@ -1911,7 +1911,7 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
     }
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto result = GetDeviceInfo(allocator, device_list);
   if (result.is_error()) {
     completer.ReplyError(result.status_value());

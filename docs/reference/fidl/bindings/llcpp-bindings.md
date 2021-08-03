@@ -297,7 +297,7 @@ Given the [table][lang-tables] definition:
 The FIDL toolchain `User` class with the following methods:
 
 * `User()`: Default constructor, initializes with all fields unset.
-* `User(::fidl::AnyAllocator& allocator)`: Constructor which allocates the frame but with all
+* `User(::fidl::AnyArena& allocator)`: Constructor which allocates the frame but with all
 fields unset.
 * `User(User&&)`: Default move constructor.
 * `~User()`: Default destructor.
@@ -312,11 +312,11 @@ fields unset.
   methods. Calling these methods without first setting the variant leads to an
   assertion error.
 * `void set_age(::fidl::ObjectView<uint8>)`: set age an already allocated value.
-* `void set_age(::fidl::AnyAllocator&, uint8_t)`: set age with the given value. The allocator is
+* `void set_age(::fidl::AnyArena&, uint8_t)`: set age with the given value. The allocator is
   used to allocate the storage.
 * `void set_age(std::nullptr_t)`: unset age.
 * `void set_name(::fidl::ObjectView<::fidl::StringView>)`: set name with an already allocated value.
-* `void set_name(::fidl::AnyAllocator&, ::fidl::AnyAllocator&, std::string_view)`: set name with the
+* `void set_name(::fidl::AnyArena&, ::fidl::AnyArena&, std::string_view)`: set name with the
   given value. The storage for the storage of the value (StringView) and the storage of the string
   are allocated using the two allocators. The same allocator should be given to the two allocator
   arguments.
@@ -326,7 +326,7 @@ In order to build a table, one additional class is generated: `User::Frame`.
 
 `User::Frame` is a container for the table's internal storage, and is allocated
 separately from the builder because LLCPP maintains the object layout of the
-underlying wire format. It is only use internally by `User(::fidl::AnyAllocator&)`.
+underlying wire format. It is only use internally by `User(::fidl::AnyArena&)`.
 
 `User::Frame` has the following methods:
 

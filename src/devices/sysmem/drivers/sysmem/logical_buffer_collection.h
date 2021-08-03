@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl-async-2/fidl_struct.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/channel.h>
 
 #include <list>
@@ -46,7 +46,7 @@ struct ConstraintInfoSnapshot {
 // processed.  Ignoring new channel closes is fine/good.
 class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> {
  public:
-  using FidlAllocator = fidl::FidlAllocator<>;
+  using Arena = fidl::Arena<>;
   using CollectionMap = std::map<BufferCollection*, fbl::RefPtr<BufferCollection>>;
 
   ~LogicalBufferCollection();

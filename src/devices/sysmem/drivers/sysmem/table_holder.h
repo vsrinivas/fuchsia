@@ -6,7 +6,7 @@
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_HOLDER_H_
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/sysmem-version/sysmem-version.h>
 
 #include <cstddef>
@@ -18,13 +18,13 @@
 
 // TableHolder<>
 //
-// This class holds a table instance and its corresponding fidl::FidlAllocator.
+// This class holds a table instance and its corresponding fidl::Arena.
 // For the benefit of tables which see ongoing churn, we allow cloning the
 // table into a new allocator before the unused space due to churn +
-// fidl::FidlAllocator not reclaiming space incrementally causes too much
+// fidl::Arena not reclaiming space incrementally causes too much
 // memory use.
 //
-// As required by fidl::FidlAllocator which is an arena allocator, the table is
+// As required by fidl::Arena which is an arena allocator, the table is
 // always deleted before its allocator is deleted.
 
 class TableHolderBase {
@@ -41,7 +41,7 @@ class TableHolderBase {
 
   void CountChurn();
 
-  fidl::AnyAllocator& allocator();
+  fidl::AnyArena& allocator();
 
  private:
   TableSet& table_set_;
@@ -57,7 +57,7 @@ struct GetCloneFunction<fuchsia_sysmem2::wire::HeapProperties> {
 template <>
 struct GetCloneFunction<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers> {
   constexpr static auto value =
-      [](fidl::AnyAllocator& allocator,
+      [](fidl::AnyArena& allocator,
          const fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers& to_copy)
       -> fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers {
     // struct copy; no allocator involvement
@@ -74,7 +74,7 @@ struct GetCloneFunction<fuchsia_sysmem2::wire::BufferUsage> {
 };
 template <>
 struct GetCloneFunction<fuchsia_sysmem2::wire::BufferCollectionInfo> {
-  constexpr static auto value = [](fidl::AnyAllocator& allocator,
+  constexpr static auto value = [](fidl::AnyArena& allocator,
                                    const fuchsia_sysmem2::wire::BufferCollectionInfo& to_copy)
       -> fuchsia_sysmem2::wire::BufferCollectionInfo {
     constexpr uint32_t kAllRights = std::numeric_limits<uint32_t>::max();

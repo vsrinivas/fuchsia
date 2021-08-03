@@ -27,7 +27,7 @@ QueryService::QueryService(async_dispatcher_t* dispatcher, Blobfs* blobfs, Runne
 void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   static_assert(sizeof(kFsName) < fuchsia_fs::wire::kMaxFsNameLength, "Blobfs name too long");
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
   if (request->query & FilesystemInfoQuery::kTotalBytes) {

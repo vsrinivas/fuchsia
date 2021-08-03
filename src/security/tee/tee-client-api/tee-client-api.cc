@@ -197,8 +197,8 @@ zx_status_t CreateVmoWithName(uint64_t size, uint32_t options, std::string_view 
   return s;
 }
 
-void PreprocessValue(fidl::AnyAllocator& allocator, uint32_t param_type,
-                     const TEEC_Value& teec_value, fuchsia_tee::wire::Parameter* out_parameter) {
+void PreprocessValue(fidl::AnyArena& allocator, uint32_t param_type, const TEEC_Value& teec_value,
+                     fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
   fuchsia_tee::wire::Direction direction;
@@ -228,7 +228,7 @@ void PreprocessValue(fidl::AnyAllocator& allocator, uint32_t param_type,
   out_parameter->set_value(allocator, std::move(value));
 }
 
-TEEC_Result PreprocessTemporaryMemref(fidl::AnyAllocator& allocator, uint32_t param_type,
+TEEC_Result PreprocessTemporaryMemref(fidl::AnyArena& allocator, uint32_t param_type,
                                       const TEEC_TempMemoryReference& temp_memory_ref,
                                       fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
@@ -280,7 +280,7 @@ TEEC_Result PreprocessTemporaryMemref(fidl::AnyAllocator& allocator, uint32_t pa
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessWholeMemref(fidl::AnyAllocator& allocator,
+TEEC_Result PreprocessWholeMemref(fidl::AnyArena& allocator,
                                   const TEEC_RegisteredMemoryReference& memory_ref,
                                   fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
@@ -317,7 +317,7 @@ TEEC_Result PreprocessWholeMemref(fidl::AnyAllocator& allocator,
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessPartialMemref(fidl::AnyAllocator& allocator, uint32_t param_type,
+TEEC_Result PreprocessPartialMemref(fidl::AnyArena& allocator, uint32_t param_type,
                                     const TEEC_RegisteredMemoryReference& memory_ref,
                                     fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
@@ -369,7 +369,7 @@ TEEC_Result PreprocessPartialMemref(fidl::AnyAllocator& allocator, uint32_t para
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessOperation(fidl::AnyAllocator& allocator, const TEEC_Operation* operation,
+TEEC_Result PreprocessOperation(fidl::AnyArena& allocator, const TEEC_Operation* operation,
                                 fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
   ZX_DEBUG_ASSERT(out_parameter_set);
 
@@ -902,7 +902,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   fuchsia_tee::wire::Uuid app_uuid_fidl;
   ConvertTeecUuidToZxUuid(*destination, &app_uuid_fidl);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
   TEEC_Result processing_rc = PreprocessOperation(allocator, operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {
@@ -996,7 +996,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
   TEEC_Result processing_rc = PreprocessOperation(allocator, operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {

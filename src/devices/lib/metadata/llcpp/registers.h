@@ -13,7 +13,7 @@ namespace registers {
 
 using fuchsia_hardware_registers::wire::Mask;
 template <typename T>
-Mask BuildMask(fidl::AnyAllocator& allocator, T mask) {
+Mask BuildMask(fidl::AnyArena& allocator, T mask) {
   if constexpr (std::is_same_v<T, uint8_t>) {
     return Mask::WithR8(allocator, mask);
   }
@@ -39,8 +39,8 @@ struct MaskEntryBuilder {
 using fuchsia_hardware_registers::wire::MaskEntry;
 using fuchsia_hardware_registers::wire::RegistersMetadataEntry;
 template <typename T>
-RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bind_id,
-                                     uint32_t mmio_id, std::vector<MaskEntryBuilder<T>> masks) {
+RegistersMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t bind_id, uint32_t mmio_id,
+                                     std::vector<MaskEntryBuilder<T>> masks) {
   fidl::VectorView<MaskEntry> built_masks(allocator, masks.size());
   for (uint32_t i = 0; i < masks.size(); i++) {
     built_masks[i].Allocate(allocator);
@@ -58,14 +58,14 @@ RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bin
 }
 
 using fuchsia_hardware_registers::wire::MmioMetadataEntry;
-MmioMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t id) {
+MmioMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t id) {
   MmioMetadataEntry entry(allocator);
   entry.set_id(allocator, id);
   return entry;
 }
 
 using fuchsia_hardware_registers::wire::Metadata;
-Metadata BuildMetadata(fidl::AnyAllocator& allocator, fidl::VectorView<MmioMetadataEntry> mmio,
+Metadata BuildMetadata(fidl::AnyArena& allocator, fidl::VectorView<MmioMetadataEntry> mmio,
                        fidl::VectorView<RegistersMetadataEntry> registers) {
   Metadata metadata(allocator);
   metadata.set_mmio(allocator, std::move(mmio));

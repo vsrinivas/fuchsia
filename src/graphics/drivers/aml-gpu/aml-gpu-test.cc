@@ -98,7 +98,7 @@ class TestAmlGpu {
     EXPECT_FALSE(properties.supports_protected_mode);
 
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       Metadata metadata(allocator);
       metadata.set_supports_protected_mode(allocator, false);
       {
@@ -114,7 +114,7 @@ class TestAmlGpu {
     EXPECT_FALSE(properties.supports_protected_mode);
 
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       Metadata metadata(allocator);
       metadata.set_supports_protected_mode(allocator, true);
       {

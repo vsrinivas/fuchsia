@@ -419,7 +419,7 @@ void IntelHDAStreamBase::GetSupportedFormats(
     }
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<audio_fidl::wire::SupportedFormats> fidl_formats(allocator,
                                                                     fidl_compatible_formats.size());
   for (size_t i = 0; i < fidl_compatible_formats.size(); ++i) {
@@ -569,7 +569,7 @@ void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
 
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state_) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state_.can_mute) {
       gain_state.set_muted(allocator, cur_gain_state_.cur_mute);
@@ -656,7 +656,7 @@ void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
   // Reply is delayed if there is no change since the last reported plugged state.
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::PlugState plug_state(allocator);
     plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug.plug_state_time);
     channel->last_reported_plugged_state_ =
@@ -669,7 +669,7 @@ void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
 void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) {
   for (auto& channel : stream_channels_) {
     if (channel.plug_completer_) {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       audio_fidl::wire::PlugState plug_state(allocator);
       plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug_time);
       channel.plug_completer_->Reply(std::move(plug_state));
@@ -682,7 +682,7 @@ void IntelHDAStreamBase::GetProperties(
     StreamChannel* channel,
     fidl::WireServer<audio_fidl::StreamConfig>::GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock obj_lock(&obj_lock_);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::StreamProperties response(allocator);
 
   fidl::Array<uint8_t, audio_fidl::wire::kUniqueIdSize> unique_id = {};

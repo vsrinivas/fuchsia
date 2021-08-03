@@ -125,7 +125,7 @@ TEST(LlcppTypesTests, ArrayLayoutTest) {
 }
 
 TEST(LlcppTypesTests, StringView) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fidl::StringView view;
   EXPECT_TRUE(view.empty());
@@ -141,7 +141,7 @@ TEST(LlcppTypesTests, StringView) {
 }
 
 TEST(LlcppTypesTests, VectorView) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fidl::VectorView<int> view;
   EXPECT_TRUE(view.empty());
@@ -208,7 +208,7 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
   std::unique_ptr<fidl::OwnedEncodedMessage<VectorStruct>> encoded;
 
   {
-    fidl::FidlAllocator<vector_view_count * sizeof(uint32_t)> allocator;
+    fidl::Arena<vector_view_count * sizeof(uint32_t)> allocator;
     VectorStruct vector_struct = {
         .v = fidl::VectorView<uint32_t>(allocator, vector_view_count),
     };

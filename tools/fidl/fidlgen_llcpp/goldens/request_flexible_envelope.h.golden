@@ -80,7 +80,7 @@ class StrictFoo {
   }
 
   template <typename... Args>
-  static StrictFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static StrictFoo WithS(::fidl::AnyArena& allocator, Args&&... args) {
     StrictFoo result;
     result.set_s(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
@@ -95,7 +95,7 @@ class StrictFoo {
   }
 
   template <typename... Args>
-  void set_s(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_s(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
     set_s(::fidl::ObjectView<::fidl::StringView>(allocator,
@@ -127,7 +127,7 @@ class StrictFoo {
   }
 
   template <typename... Args>
-  static StrictFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static StrictFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
     StrictFoo result;
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
@@ -142,7 +142,7 @@ class StrictFoo {
   }
 
   template <typename... Args>
-  void set_i(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
     set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
@@ -223,7 +223,7 @@ class FlexibleFoo {
   }
 
   template <typename... Args>
-  static FlexibleFoo WithS(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static FlexibleFoo WithS(::fidl::AnyArena& allocator, Args&&... args) {
     FlexibleFoo result;
     result.set_s(::fidl::ObjectView<::fidl::StringView>(
         allocator, std::forward<Args>(args)...));
@@ -238,7 +238,7 @@ class FlexibleFoo {
   }
 
   template <typename... Args>
-  void set_s(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_s(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
     set_s(::fidl::ObjectView<::fidl::StringView>(allocator,
@@ -270,7 +270,7 @@ class FlexibleFoo {
   }
 
   template <typename... Args>
-  static FlexibleFoo WithI(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static FlexibleFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
     FlexibleFoo result;
     result.set_i(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
@@ -285,7 +285,7 @@ class FlexibleFoo {
   }
 
   template <typename... Args>
-  void set_i(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
     set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));

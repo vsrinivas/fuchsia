@@ -111,7 +111,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
     pcm_format.number_of_channels = number_of_channels;
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, std::move(pcm_format));
 
@@ -150,7 +150,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = number_of_channels;
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, std::move(pcm_format));
 
@@ -214,7 +214,7 @@ TEST_F(AudioStreamInTest, Inspect) {
 
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, std::move(pcm_format));
 

@@ -405,7 +405,7 @@ void FsManager::ReportMinfsCorruption() {
     }
     auto client = fidl::BindSyncClient(std::move(*client_end));
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_feedback::wire::CrashReport report(allocator);
     report.set_program_name(allocator, allocator, "minfs");
     report.set_crash_signature(allocator, allocator, "fuchsia-corrupted-minfs");

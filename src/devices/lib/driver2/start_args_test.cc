@@ -11,7 +11,7 @@ namespace fdf = fuchsia_driver_framework;
 namespace frunner = fuchsia_component_runner;
 
 TEST(StartArgsTest, SymbolValue) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdf::wire::NodeSymbol> symbol_entries(allocator, 1);
   symbol_entries[0].Allocate(allocator);
   symbol_entries[0].set_name(allocator, "sym").set_address(allocator, 0xfeed);
@@ -22,7 +22,7 @@ TEST(StartArgsTest, SymbolValue) {
 }
 
 TEST(StartArgsTest, ProgramValue) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
   program_entries[0].key.Set(allocator, "key-for-str");
   program_entries[0].value.set_str(allocator, "value-for-str");
@@ -42,7 +42,7 @@ TEST(StartArgsTest, ProgramValue) {
 TEST(StartArgsTest, NsValue) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
   ns_entries[0].Allocate(allocator);
   ns_entries[0].set_path(allocator, "/svc").set_directory(allocator, std::move(endpoints->client));

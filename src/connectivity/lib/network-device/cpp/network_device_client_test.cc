@@ -228,7 +228,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
   }
 
  protected:
-  fidl::FidlAllocator<> alloc_;
+  fidl::Arena<> alloc_;
 };
 
 TEST_F(NetDeviceTest, TestRxTx) {

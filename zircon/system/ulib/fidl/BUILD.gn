@@ -86,6 +86,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/connect_service.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/extract_resource_on_destruction.h",
+                    "lib/fidl/llcpp/arena.h",
                     "lib/fidl/llcpp/fidl_allocator.h",
                     "lib/fidl/llcpp/internal/client_details.h",
                     "lib/fidl/llcpp/internal/server_details.h",
@@ -107,12 +108,12 @@ if (is_fuchsia) {
                   ] + llcpp_wavl_tree_headers
 
     sources = [
+      "llcpp_arena.cc",
       "llcpp_async_binding.cc",
       "llcpp_async_transaction.cc",
       "llcpp_client_base.cc",
       "llcpp_coding.c",
       "llcpp_encoding.cc",
-      "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
       "llcpp_result.cc",
       "llcpp_server.cc",
@@ -158,6 +159,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/array.h",
                     "lib/fidl/llcpp/coding.h",
                     "lib/fidl/llcpp/envelope.h",
+                    "lib/fidl/llcpp/arena.h",
                     "lib/fidl/llcpp/fidl_allocator.h",
                     "lib/fidl/llcpp/object_view.h",
                     "lib/fidl/llcpp/soft_migration.h",
@@ -167,9 +169,9 @@ if (is_fuchsia) {
                   ] + llcpp_wavl_tree_headers
 
     sources = [
+      "llcpp_arena.cc",
       "llcpp_coding.c",
       "llcpp_encoding.cc",
-      "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
       "llcpp_result.cc",
     ]

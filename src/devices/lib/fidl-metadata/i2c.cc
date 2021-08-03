@@ -7,7 +7,7 @@
 
 namespace fidl_metadata::i2c {
 zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Channel> channels) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator, channels.size());
 
   for (size_t i = 0; i < channels.size(); i++) {

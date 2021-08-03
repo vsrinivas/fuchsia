@@ -53,7 +53,7 @@ enum class Gt6853Device::DeviceCommand : uint8_t {
 };
 
 void Gt6853InputReport::ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                                          fidl::AnyAllocator& allocator) {
+                                          fidl::AnyArena& allocator) {
   fidl::VectorView<fuchsia_input_report::wire::ContactInputReport> input_contacts(allocator,
                                                                                   num_contacts);
   for (size_t i = 0; i < num_contacts; i++) {
@@ -142,7 +142,7 @@ void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
       .unit = {.type = fuchsia_input_report::wire::UnitType::kNone, .exponent = 0},
   };
 
-  fidl::FidlAllocator<kDescriptorBufferSize> allocator;
+  fidl::Arena<kDescriptorBufferSize> allocator;
 
   fuchsia_input_report::wire::DeviceInfo device_info;
   device_info.vendor_id = static_cast<uint32_t>(fuchsia_input_report::wire::VendorId::kGoogle);

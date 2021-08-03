@@ -10,7 +10,7 @@
 
 #include <fbl/string_printf.h>
 
-#include "lib/fidl/llcpp/fidl_allocator.h"
+#include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
 
 namespace sysmem_driver {
@@ -18,7 +18,7 @@ namespace sysmem_driver {
 zx::duration kGuardCheckInterval = zx::sec(5);
 namespace {
 
-fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyAllocator& allocator,
+fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& allocator,
                                                           bool is_cpu_accessible) {
   using fuchsia_sysmem2::wire::CoherencyDomainSupport;
   using fuchsia_sysmem2::wire::HeapProperties;

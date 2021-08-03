@@ -54,7 +54,7 @@ public:
     return *this;
   }
   template <typename... Args>
-  {{ $.Name }}& set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
+  {{ $.Name }}& set_{{ .Name }}(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->{{ .Name }}_.data =
         ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...);
@@ -64,9 +64,9 @@ public:
   {{- end }}
 
   {{ .Name }}() = default;
-  explicit {{ .Name }}(::fidl::AnyAllocator& allocator)
+  explicit {{ .Name }}(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a FidlAllocator).
+  // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or for another table.
   explicit {{ .Name }}(::fidl::ObjectView<Frame_>&& frame)
@@ -84,7 +84,7 @@ public:
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .HasPointer }};
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -204,9 +204,9 @@ public:
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be allocated outside a
-  // FidlAllocator.
+  // Arena.
   // Once created, a frame can only be used for one single table.
   class Frame_ final {
   public:

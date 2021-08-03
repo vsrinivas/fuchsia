@@ -86,7 +86,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
 
   void UnregisterVmos(UnregisterVmosRequestView request,
                       UnregisterVmosCompleter::Sync& completer) override {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fidl::VectorView<zx::vmo> vmos(allocator, request->vmo_ids.count());
 
     fbl::AutoLock lock(&lock_);

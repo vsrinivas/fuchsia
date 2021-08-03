@@ -30,7 +30,7 @@ class AstBuilder {
   AstBuilder& operator=(AstBuilder&&) = delete;
   AstBuilder& operator=(const AstBuilder&) = delete;
 
-  fidl::AnyAllocator& allocator() { return allocator_; }
+  fidl::AnyArena& allocator() { return allocator_; }
 
   // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for sending to
   // Shell::AddNodes.
@@ -175,7 +175,7 @@ class AstBuilder {
  private:
   uint64_t file_id_;
   uint64_t next_id_;
-  fidl::FidlAllocator<8192> allocator_;
+  fidl::Arena<8192> allocator_;
   std::vector<fuchsia_shell::wire::NodeDefinition> nodes_;
 
   struct FidlNodeIdPair {

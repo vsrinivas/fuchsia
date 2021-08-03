@@ -41,7 +41,7 @@ class TestServerBase : public fio2::testing::File_TestBase {
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     if (request->query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
@@ -134,7 +134,7 @@ class TestServerEvent final : public TestServerBase {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));
@@ -304,7 +304,7 @@ class TestServerStream final : public TestServerBase {
         completer.Close(ZX_ERR_INTERNAL);
         return;
       }
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
                               fio2::wire::Representation::WithFile(allocator, allocator));

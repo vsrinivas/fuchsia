@@ -37,7 +37,7 @@ enum class DeviceType : uint32_t {
 
 template <typename T>
 fidl::ObjectView<T> Extract(const uint8_t* data, size_t len, hid::Attributes attr,
-                            fidl::AnyAllocator& allocator) {
+                            fidl::AnyArena& allocator) {
   double value;
   if (!hid::ExtractAsUnitType(data, len, attr, &value)) {
     return fidl::ObjectView<T>();
@@ -56,13 +56,12 @@ class Device {
     return ParseResult::kNotImplemented;
   }
 
-  virtual ParseResult CreateDescriptor(fidl::AnyAllocator& allocator,
+  virtual ParseResult CreateDescriptor(fidl::AnyArena& allocator,
                                        fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
     return ParseResult::kNotImplemented;
   }
 
-  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len,
-                                       fidl::AnyAllocator& allocator,
+  virtual ParseResult ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
                                        fuchsia_input_report::wire::InputReport& input_report) {
     return ParseResult::kNotImplemented;
   }

@@ -137,7 +137,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                 zx_status_t expected_epitaph = ZX_OK) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(epitaph);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
 
     auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(pkg_endpoints.is_ok());
@@ -291,7 +291,7 @@ TEST_F(DriverHostTest, Start_IncomingServices) {
 // Start a single driver, and return an error on start.
 TEST_F(DriverHostTest, Start_ReturnError) {
   zx_status_t error = ZX_ERR_STOP;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
   symbols[0].set_name(allocator, "error");
@@ -310,7 +310,7 @@ void Func() { called = true; }
 
 // Start a single driver, and receive a call to a shared function.
 TEST_F(DriverHostTest, Start_NodeSymbols) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
   symbols[0].set_name(allocator, "func");
@@ -330,7 +330,7 @@ TEST_F(DriverHostTest, Start_DifferentDispatcher) {
   set_driver_host(std::move(driver_host));
 
   async_dispatcher_t* dispatcher = nullptr;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
   symbols[0].set_name(allocator, "dispatcher");
@@ -366,7 +366,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
 
@@ -381,7 +381,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
     driver_start_args.set_ns(allocator);
@@ -394,7 +394,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   endpoints = fidl::CreateEndpoints<fdf::Driver>();
   ASSERT_TRUE(endpoints.is_ok());
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     // DriverStartArgs::program not set.
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries1(allocator, 1);
     entries1[0].Allocate(allocator);
@@ -416,7 +416,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   ASSERT_TRUE(endpoints.is_ok());
   {
     // DriverStartArgs::program is missing "binary" entry.
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries2(allocator, 1);
     entries2[0].Allocate(allocator);
     entries2[0].set_path(allocator, "/pkg");
@@ -455,7 +455,7 @@ TEST_F(DriverHostTest, InvalidHandleRights) {
 TEST_F(DriverHostTest, Start_InvalidBinary) {
   zx_status_t epitaph = ZX_OK;
   TestTransaction transaction(epitaph);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_TRUE(pkg_endpoints.is_ok());

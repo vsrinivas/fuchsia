@@ -1980,7 +1980,7 @@ void encode_nested_nullable_structs() {
 #endif
 
 TEST(TrackingPtr, encode_string_view_with_fidl_allocator) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   const char input[] = "abcd";
   StringStruct str = {.str = fidl::StringView(allocator, input)};
 
@@ -2639,7 +2639,7 @@ TEST(Iovec, MatchNeededVectorBufferCount) {
 }
 
 TEST(Iovec, TooFewBytes) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   const char input[] = "abcd";
   StringStruct str = {.str = fidl::StringView(allocator, input)};
 

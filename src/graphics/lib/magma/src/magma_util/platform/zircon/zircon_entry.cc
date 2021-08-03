@@ -8,7 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -182,7 +182,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(completer))
       return;
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     std::vector<msd_icd_info_t> msd_icd_infos;
     this->magma_system_device_->GetIcdList(&msd_icd_infos);
     std::vector<fuchsia_gpu_magma::wire::IcdInfo> icd_infos;

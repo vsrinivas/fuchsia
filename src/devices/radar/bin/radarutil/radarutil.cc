@@ -6,7 +6,7 @@
 
 #include <fuchsia/hardware/radar/llcpp/fidl.h>
 #include <lib/async/time.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,7 +178,7 @@ zx_status_t RadarUtil::RegisterVmos() {
     return burst_size.status();
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   std::vector<zx::vmo> vmos(vmo_count_);
 
@@ -220,7 +220,7 @@ zx_status_t RadarUtil::UnregisterVmos() {
     return burst_size.status();
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fidl::VectorView<uint32_t> vmo_ids(allocator, vmo_count_);
 

@@ -70,7 +70,7 @@ zx_status_t FtdiI2c::Enable() {
 zx_status_t FtdiI2c::Bind() { return DdkAdd("ftdi-i2c"); }
 
 void FtdiI2c::DdkInit(ddk::InitTxn txn) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_hardware_i2c::wire::I2CChannel> i2c_channels(allocator,
                                                                         i2c_devices_.size());
   for (size_t i = 0; i < i2c_devices_.size(); i++) {

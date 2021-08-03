@@ -6,7 +6,7 @@
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 
 #include <zxtest/zxtest.h>
 
@@ -73,7 +73,7 @@ TEST_F(AcpiClientTest, TestCallDsmFails) {
 }
 
 TEST_F(AcpiClientTest, TestCallDsmSucceeds) {
-  fidl::FidlAllocator<> alloc;
+  fidl::Arena<> alloc;
   facpi::Object obj;
   obj.set_integer_val(alloc, 320);
   response_.emplace(obj);

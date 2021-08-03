@@ -80,7 +80,7 @@ class ExampleFooResult {
   }
 
   template <typename... Args>
-  static ExampleFooResult WithResponse(::fidl::AnyAllocator& allocator,
+  static ExampleFooResult WithResponse(::fidl::AnyArena& allocator,
                                        Args&&... args) {
     ExampleFooResult result;
     result.set_response(
@@ -97,7 +97,7 @@ class ExampleFooResult {
   }
 
   template <typename... Args>
-  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
     set_response(
         ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>(
@@ -128,8 +128,7 @@ class ExampleFooResult {
   }
 
   template <typename... Args>
-  static ExampleFooResult WithErr(::fidl::AnyAllocator& allocator,
-                                  Args&&... args) {
+  static ExampleFooResult WithErr(::fidl::AnyArena& allocator, Args&&... args) {
     ExampleFooResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -143,7 +142,7 @@ class ExampleFooResult {
   }
 
   template <typename... Args>
-  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
     set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));

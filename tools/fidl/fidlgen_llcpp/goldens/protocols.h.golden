@@ -239,7 +239,7 @@ class WithErrorSyntaxHandleInResultResult {
 
   template <typename... Args>
   static WithErrorSyntaxHandleInResultResult WithResponse(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxHandleInResultResult result;
     result.set_response(
         ::fidl::ObjectView<
@@ -259,7 +259,7 @@ class WithErrorSyntaxHandleInResultResult {
   }
 
   template <typename... Args>
-  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxHandleInResultResult::Ordinal::kResponse;
     set_response(
@@ -301,7 +301,7 @@ class WithErrorSyntaxHandleInResultResult {
 
   template <typename... Args>
   static WithErrorSyntaxHandleInResultResult WithErr(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxHandleInResultResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -316,7 +316,7 @@ class WithErrorSyntaxHandleInResultResult {
   }
 
   template <typename... Args>
-  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxHandleInResultResult::Ordinal::kErr;
     set_err(
@@ -414,7 +414,7 @@ class WithErrorSyntaxResponseAsStructResult {
 
   template <typename... Args>
   static WithErrorSyntaxResponseAsStructResult WithResponse(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxResponseAsStructResult result;
     result.set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
@@ -434,7 +434,7 @@ class WithErrorSyntaxResponseAsStructResult {
   }
 
   template <typename... Args>
-  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxResponseAsStructResult::Ordinal::kResponse;
     set_response(
@@ -476,7 +476,7 @@ class WithErrorSyntaxResponseAsStructResult {
 
   template <typename... Args>
   static WithErrorSyntaxResponseAsStructResult WithErr(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxResponseAsStructResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -491,7 +491,7 @@ class WithErrorSyntaxResponseAsStructResult {
   }
 
   template <typename... Args>
-  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxResponseAsStructResult::Ordinal::kErr;
     set_err(
@@ -586,7 +586,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
 
   template <typename... Args>
   static WithErrorSyntaxErrorAsPrimitiveResult WithResponse(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_response(
         ::fidl::ObjectView<::fidl_test_protocols::wire::
@@ -606,7 +606,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
   }
 
   template <typename... Args>
-  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kResponse;
     set_response(
@@ -648,7 +648,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
 
   template <typename... Args>
   static WithErrorSyntaxErrorAsPrimitiveResult WithErr(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxErrorAsPrimitiveResult result;
     result.set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -663,7 +663,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
   }
 
   template <typename... Args>
-  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::
         WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::kErr;
     set_err(
@@ -744,7 +744,7 @@ class TheUnion {
   }
 
   template <typename... Args>
-  static TheUnion WithV(::fidl::AnyAllocator& allocator, Args&&... args) {
+  static TheUnion WithV(::fidl::AnyArena& allocator, Args&&... args) {
     TheUnion result;
     result.set_v(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
@@ -758,7 +758,7 @@ class TheUnion {
   }
 
   template <typename... Args>
-  void set_v(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_v(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::TheUnion::Ordinal::kV;
     set_v(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
@@ -836,7 +836,7 @@ class WithErrorSyntaxErrorAsEnumResult {
 
   template <typename... Args>
   static WithErrorSyntaxErrorAsEnumResult WithResponse(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+      ::fidl::AnyArena& allocator, Args&&... args) {
     WithErrorSyntaxErrorAsEnumResult result;
     result.set_response(
         ::fidl::ObjectView<
@@ -856,7 +856,7 @@ class WithErrorSyntaxErrorAsEnumResult {
   }
 
   template <typename... Args>
-  void set_response(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kResponse;
     set_response(
@@ -897,8 +897,8 @@ class WithErrorSyntaxErrorAsEnumResult {
   }
 
   template <typename... Args>
-  static WithErrorSyntaxErrorAsEnumResult WithErr(
-      ::fidl::AnyAllocator& allocator, Args&&... args) {
+  static WithErrorSyntaxErrorAsEnumResult WithErr(::fidl::AnyArena& allocator,
+                                                  Args&&... args) {
     WithErrorSyntaxErrorAsEnumResult result;
     result.set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(
         allocator, std::forward<Args>(args)...));
@@ -914,7 +914,7 @@ class WithErrorSyntaxErrorAsEnumResult {
   }
 
   template <typename... Args>
-  void set_err(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
         Ordinal::kErr;
     set_err(::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnum>(

@@ -81,7 +81,7 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) 
   return buf;
 }
 
-static zx_status_t ConvertOpteeToZxResult(fidl::AnyAllocator& allocator, uint32_t optee_return_code,
+static zx_status_t ConvertOpteeToZxResult(fidl::AnyArena& allocator, uint32_t optee_return_code,
                                           uint32_t optee_return_origin,
                                           fuchsia_tee::wire ::OpResult* zx_result) {
   ZX_DEBUG_ASSERT(zx_result != nullptr);
@@ -281,7 +281,7 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
                                OpenSession2Completer::Sync& completer) {
   constexpr uint32_t kInvalidSession = 0;
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_tee::wire::OpResult result(allocator);
 
   auto create_result =
@@ -342,7 +342,7 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
 void OpteeClient::InvokeCommand(
     InvokeCommandRequestView request,
     fidl::WireServer<fuchsia_tee::Application>::InvokeCommandCompleter::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_tee::wire::OpResult result(allocator);
 
   if (open_sessions_.find(request->session_id) == open_sessions_.end()) {

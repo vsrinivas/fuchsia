@@ -262,7 +262,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 
   fidl::ClientEnd<frunner::ComponentController> StartDriver(DriverRunner& driver_runner,
                                                             Driver driver) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
     program_entries[0].key.Set(allocator, "binary");

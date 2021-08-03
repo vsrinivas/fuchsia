@@ -7,7 +7,7 @@
 namespace driver::testing {
 
 zx::status<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> client_end) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> ns_entries(allocator,
                                                                                        1);
   ns_entries[0].Allocate(allocator);

@@ -50,7 +50,7 @@ zxio_node_attributes_t ToZxioNodeAttributes(const fio2::wire::NodeAttributes& at
   return zxio_attr;
 }
 
-fio2::wire::NodeAttributes ToIo2NodeAttributes(fidl::AnyAllocator& allocator,
+fio2::wire::NodeAttributes ToIo2NodeAttributes(fidl::AnyArena& allocator,
                                                const zxio_node_attributes_t& attr) {
   fio2::wire::NodeAttributes node_attributes(allocator);
   if (attr.has.protocols) {
@@ -205,7 +205,7 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr
 }
 
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* attr) {
-  fidl::FidlAllocator<1024> allocator;
+  fidl::Arena<1024> allocator;
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))

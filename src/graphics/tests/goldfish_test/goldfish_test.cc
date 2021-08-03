@@ -211,7 +211,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 64)
         .set_height(allocator, 64)
@@ -240,7 +240,7 @@ TEST(GoldfishControlTests, GoldfishControlTest) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 64)
         .set_height(allocator, 64)
@@ -642,7 +642,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     create_params.set_size(allocator, kBufferSizeBytes)
         .set_memory_property(allocator,
@@ -668,7 +668,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy3), ZX_OK);
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 64)
         .set_height(allocator, 64)
@@ -685,7 +685,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_DataBuffer) {
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy4), ZX_OK);
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     create_params.set_size(allocator, kBufferSizeBytes)
         .set_memory_property(allocator,
@@ -720,7 +720,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_InvalidVmo) {
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 16)
         .set_height(allocator, 16)
@@ -819,7 +819,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   {
     // Verify that a CreateColorBuffer2() call without width will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without width
     create_params.set_height(allocator, 64)
@@ -837,7 +837,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   {
     // Verify that a CreateColorBuffer2() call without height will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without height
     create_params.set_width(allocator, 64)
@@ -855,7 +855,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   {
     // Verify that a CreateColorBuffer2() call without color format will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without format
     create_params.set_width(allocator, 64)
@@ -873,7 +873,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateColorBuffer2Args) {
   {
     // Verify that a CreateColorBuffer2() call without memory property will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without memory property
     create_params.set_width(allocator, 64)
@@ -962,7 +962,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
   {
     // Verify that a CreateBuffer2() call without width will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     // Without size
     create_params.set_memory_property(allocator,
@@ -978,7 +978,7 @@ TEST(GoldfishControlTests, GoldfishControlTest_CreateBuffer2Args) {
   {
     // Verify that a CreateBuffer2() call without memory property will fail.
     EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     // Without memory property
     create_params.set_size(allocator, 4096);
@@ -1326,7 +1326,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
   {
     // Verify that a CreateColorBuffer2() call with host-visible memory property,
     // but without physical address will fail.
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // Without physical address
     create_params.set_width(allocator, 64)
@@ -1344,7 +1344,7 @@ TEST(GoldfishHostMemoryTests, GoldfishHostVisibleColorBuffer) {
 
   EXPECT_EQ(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_copy), ZX_OK);
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 64)
         .set_height(allocator, 64)
@@ -1443,7 +1443,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
 
   fidl::WireSyncClient<fuchsia_hardware_goldfish::ControlDevice> control(std::move(channel));
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, 64)
         .set_height(allocator, 64)

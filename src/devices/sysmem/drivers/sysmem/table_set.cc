@@ -16,9 +16,9 @@ constexpr uint32_t kChurnCountThreshold = 256;
 
 }  // namespace
 
-TableSet::TableSet() : allocator_(std::make_unique<FidlAllocator>()) {}
+TableSet::TableSet() : allocator_(std::make_unique<Arena>()) {}
 
-fidl::AnyAllocator& TableSet::allocator() {
+fidl::AnyArena& TableSet::allocator() {
   CountChurn();
   return *allocator_;
 }
@@ -32,7 +32,7 @@ void TableSet::MitigateChurn() {
 
 void TableSet::GcTables() {
   auto old_allocator = std::move(allocator_);
-  allocator_ = std::make_unique<FidlAllocator>();
+  allocator_ = std::make_unique<Arena>();
   {
     TRACE_DURATION("gfx", "TableSet::MitigateChurn() clone_to_new_allocator() loop");
     for (auto table_holder_base : tables_) {

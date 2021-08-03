@@ -64,8 +64,8 @@ T AlignUp(T value, T divisor) {
 
 // Helper function to build owned HeapProperties table with coherency domain support.
 fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
-    fidl::AnyAllocator& allocator, bool cpu_supported, bool ram_supported,
-    bool inaccessible_supported, bool need_clear, bool need_flush) {
+    fidl::AnyArena& allocator, bool cpu_supported, bool ram_supported, bool inaccessible_supported,
+    bool need_clear, bool need_flush) {
   using fuchsia_sysmem2::wire::CoherencyDomainSupport;
   using fuchsia_sysmem2::wire::HeapProperties;
 

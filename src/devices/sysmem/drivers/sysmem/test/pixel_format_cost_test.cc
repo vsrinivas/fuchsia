@@ -13,7 +13,7 @@ namespace sysmem_driver {
 namespace {
 
 TEST(PixelFormatCost, Afbc) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fuchsia_sysmem2::wire::BufferCollectionConstraints constraints(allocator);
   constraints.set_image_format_constraints(allocator, allocator, 2);
@@ -53,7 +53,7 @@ TEST(PixelFormatCost, Afbc) {
 }
 
 TEST(PixelFormatCost, IntelTiling) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   constexpr uint32_t kUnknownPid = 0;
   constexpr uint32_t kUnknownVid = 0;
@@ -144,7 +144,7 @@ TEST(PixelFormatCost, IntelTiling) {
 }
 
 TEST(PixelFormatCost, ArmTransactionElimination) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fuchsia_sysmem2::wire::BufferCollectionConstraints constraints(allocator);
   constraints.set_image_format_constraints(allocator, allocator, 2);
@@ -180,7 +180,7 @@ TEST(PixelFormatCost, ArmTransactionElimination) {
 }
 
 TEST(PixelFormatCost, AfbcWithFlags) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   // Formats are in ascending preference order (descending cost order).
   std::array modifier_list = {

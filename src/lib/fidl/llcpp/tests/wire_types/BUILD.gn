@@ -67,7 +67,7 @@ test("fidl_llcpp_builder_tests_bin") {
   if (is_fuchsia) {
     sources += [
       # These tests use Zircon handles.
-      "fidl_allocator_test.cc",
+      "arena_test.cc",
 
       # These tests use fbl.
       "memory_test.cc",

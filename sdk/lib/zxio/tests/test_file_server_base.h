@@ -36,7 +36,7 @@ class TestFileServerBase : public fuchsia_io::testing::File_TestBase {
 class TestReadFileServer : public TestFileServerBase {
  public:
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final {
-    fidl::FidlAllocator fidl_allocator;
+    fidl::Arena fidl_allocator;
     fidl::VectorView<uint8_t> read_data(fidl_allocator, sizeof(kTestData));
     memcpy(read_data.mutable_data(), kTestData, sizeof(kTestData));
     completer.Reply(ZX_OK, read_data);

@@ -169,7 +169,7 @@ zx_status_t Message::TryInitializeBuffer(fuchsia_tee::wire::Buffer* buffer,
 }
 
 zx_status_t Message::CreateOutputParameterSet(
-    fidl::AnyAllocator& allocator, size_t starting_param_index,
+    fidl::AnyArena& allocator, size_t starting_param_index,
     fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
   ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
 
@@ -224,7 +224,7 @@ zx_status_t Message::CreateOutputParameterSet(
   return ZX_OK;
 }
 
-fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyAllocator& allocator,
+fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyArena& allocator,
                                                              const MessageParam& optee_param) {
   fuchsia_tee::wire::Value zx_value(allocator);
 
@@ -257,7 +257,7 @@ fuchsia_tee::wire::Value Message::CreateOutputValueParameter(fidl::AnyAllocator&
   return zx_value;
 }
 
-zx_status_t Message::CreateOutputBufferParameter(fidl::AnyAllocator& allocator,
+zx_status_t Message::CreateOutputBufferParameter(fidl::AnyArena& allocator,
                                                  const MessageParam& optee_param,
                                                  fuchsia_tee::wire::Buffer* out_buffer) {
   ZX_DEBUG_ASSERT(out_buffer != nullptr);

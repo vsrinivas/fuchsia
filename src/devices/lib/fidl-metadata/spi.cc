@@ -7,7 +7,7 @@
 
 namespace fidl_metadata::spi {
 zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Channel> channels) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_hardware_spi::wire::SpiChannel> spi_channels(allocator, channels.size());
 
   for (size_t i = 0; i < channels.size(); i++) {

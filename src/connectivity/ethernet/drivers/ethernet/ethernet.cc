@@ -605,7 +605,7 @@ void EthDev::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& complet
 void EthDev::GetFifos(GetFifosRequestView request, GetFifosCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_ethernet::wire::Fifos> fifos(allocator);
   completer.Reply(GetFifosLocked(fifos.get()), fifos);
 }

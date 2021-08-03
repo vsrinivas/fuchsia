@@ -7,7 +7,7 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/clock.h>
@@ -2310,7 +2310,7 @@ LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
   TRACE_DURATION("gfx", "LogicalBufferCollection:GenerateUnpopulatedBufferCollectionInfo", "this",
                  this);
 
-  fidl::AnyAllocator& fidl_allocator = table_set_.allocator();
+  fidl::AnyArena& fidl_allocator = table_set_.allocator();
 
   fuchsia_sysmem2::wire::BufferCollectionInfo result(fidl_allocator);
 

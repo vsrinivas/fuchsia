@@ -31,7 +31,7 @@ zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
 
 }  // namespace
 
-acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator& allocator,
+acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& allocator,
                                             acpi::Manager* manager, InferBusTypeCallback callback) {
   if (!handle_ || !parent_) {
     // Skip the root device.
@@ -152,7 +152,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyAllocator
 }
 
 zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
-                                              fidl::AnyAllocator& allocator) {
+                                              fidl::AnyArena& allocator) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -215,7 +215,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* pla
   return zx::ok(zx_device_);
 }
 
-zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAllocator& allocator) {
+zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyArena& allocator) {
   using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c::wire::I2CChannel;
   return std::visit(

@@ -17,7 +17,7 @@ std::optional<int32_t> parse_as_int(const std::string& s) {
 }
 
 // [START contents]
-fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
   std::optional<int32_t> maybe_int = parse_as_int(s);
   if (maybe_int) {
     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_int);

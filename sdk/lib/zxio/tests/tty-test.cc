@@ -40,7 +40,7 @@ class WindowSizeTtyServer : public fuchsia_hardware_pty::testing::Device_TestBas
       return;
     }
     fuchsia_io::wire::Tty tty = {.event = std::move(event)};
-    fidl::FidlAllocator fidl_allocator;
+    fidl::Arena fidl_allocator;
     auto node_info = fuchsia_io::wire::NodeInfo::WithTty(fidl_allocator, std::move(tty));
     completer.Reply(node_info);
   }

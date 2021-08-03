@@ -62,7 +62,7 @@ class Control : public ControlType,
                        zx_status_t>;
 
   CreateBuffer2Result CreateBuffer2(
-      fidl::AnyAllocator& allocator, zx::vmo vmo,
+      fidl::AnyArena& allocator, zx::vmo vmo,
       fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params);
 
   // |fidl::WireServer<fuchsia_hardware_goldfish::ControlDevice>|

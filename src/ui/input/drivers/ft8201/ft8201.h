@@ -42,7 +42,7 @@ struct Ft8201InputReport {
   size_t num_contacts;
 
   void ToFidlInputReport(fuchsia_input_report::wire::InputReport& input_report,
-                         fidl::AnyAllocator& allocator);
+                         fidl::AnyArena& allocator);
 };
 
 class Ft8201Device;

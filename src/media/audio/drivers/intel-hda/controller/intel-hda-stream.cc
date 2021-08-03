@@ -282,7 +282,7 @@ void IntelHDAStream::DeactivateLocked() {
 void IntelHDAStream::GetProperties(GetPropertiesRequestView request,
                                    GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties properties(allocator);
   // We don't know what our FIFO depth is going to be if our format has not been set yet.
   properties.set_fifo_depth(allocator, bytes_per_frame_ ? fifo_depth_ : 0);

@@ -416,7 +416,7 @@ TEST_P(BufferTest, TestCreate2) {
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
   dut_->RegisterBufferHandle(buffer_vmo);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
   create_params.set_size(allocator, kSize).set_memory_property(allocator, memory_property);
   if (is_host_visible) {
@@ -491,7 +491,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_AlreadyExists) {
   ASSERT_OK(buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &copy_vmo));
 
   dut_->RegisterBufferHandle(buffer_vmo);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
   create_params.set_size(allocator, kSize)
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
@@ -523,7 +523,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     // missing size
     create_params.set_memory_property(allocator,
@@ -546,7 +546,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params2(allocator);
     // missing memory property
     create_params2.set_size(allocator, kSize);
@@ -565,7 +565,7 @@ TEST_F(ControlDeviceTest, CreateBuffer2_InvalidVmo) {
   zx::vmo buffer_vmo;
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
   create_params.set_size(allocator, kSize)
       .set_memory_property(allocator, fuchsia_hardware_goldfish::wire::kMemoryPropertyDeviceLocal);
@@ -608,7 +608,7 @@ TEST_P(ColorBufferTest, TestCreate) {
 
   dut_->RegisterBufferHandle(buffer_vmo);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
   create_params.set_width(allocator, kWidth)
       .set_height(allocator, kHeight)
@@ -732,7 +732,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
   dut_->RegisterBufferHandle(buffer_vmo);
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, kWidth)
         .set_height(allocator, kHeight)
@@ -747,7 +747,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_AlreadyExists) {
   }
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, kWidth)
         .set_height(allocator, kHeight)
@@ -778,7 +778,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // missing width
     create_params.set_height(allocator, kHeight)
@@ -803,7 +803,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // missing height
     create_params.set_width(allocator, kWidth)
@@ -828,7 +828,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // missing format
     create_params.set_width(allocator, kWidth)
@@ -853,7 +853,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // missing memory property
     create_params.set_width(allocator, kWidth)
@@ -878,7 +878,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidArgs) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     // missing physical address
     create_params.set_width(allocator, kWidth)
@@ -908,7 +908,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
   ASSERT_OK(zx::vmo::create(kSize, 0u, &buffer_vmo));
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, kWidth)
         .set_height(allocator, kHeight)
@@ -923,7 +923,7 @@ TEST_F(ControlDeviceTest, CreateColorBuffer2_InvalidVmo) {
   }
 
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, kWidth)
         .set_height(allocator, kHeight)
@@ -953,7 +953,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
 
     dut_->RegisterBufferHandle(buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params(allocator);
     create_params.set_size(allocator, kSize)
         .set_memory_property(allocator,
@@ -982,7 +982,7 @@ TEST_F(ControlDeviceTest, GetBufferHandle_Success) {
 
     dut_->RegisterBufferHandle(color_buffer_vmo);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params create_params(allocator);
     create_params.set_width(allocator, kWidth)
         .set_height(allocator, kHeight)

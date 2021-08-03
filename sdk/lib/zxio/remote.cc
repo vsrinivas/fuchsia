@@ -529,7 +529,7 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
     default:
       return ZX_ERR_INTERNAL;
   }
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_io2::wire::AdvisoryLockRequest lock_req;
   lock_req.Allocate(allocator);
   lock_req.set_type(allocator, lock_type);
@@ -833,7 +833,7 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
 
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
   Remote rio(io);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_io2::wire::UnlinkOptions options(allocator);
   auto io_flags = fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory;
   if (flags & AT_REMOVEDIR) {

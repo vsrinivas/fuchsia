@@ -8,7 +8,7 @@
 
 TEST(Table, TablePrimitive) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   table.set_x(allocator, 3).set_y(allocator, 100);
 
@@ -21,7 +21,7 @@ TEST(Table, TablePrimitive) {
 
 TEST(Table, TableVectorOfStruct) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<test::wire::CopyableStruct> structs(allocator, 2);
   structs[0].x = 30;
   structs[1].x = 42;
@@ -39,14 +39,14 @@ TEST(Table, TableVectorOfStruct) {
 
 TEST(Table, EmptyTable) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::SampleEmptyTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
 }
 
 TEST(Table, NotEmptyTable) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   ASSERT_TRUE(table.IsEmpty());
   table.set_x(allocator, 3).set_y(allocator, 100);
@@ -55,7 +55,7 @@ TEST(Table, NotEmptyTable) {
 
 TEST(Table, Getters) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::SampleTable table(allocator);
   EXPECT_FALSE(table.has_x());
   table.set_x(allocator, 3);
@@ -69,7 +69,7 @@ TEST(Table, Getters) {
 
 TEST(Table, SubTables) {
   namespace test = fidl_llcpp_types_test;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   test::wire::TableWithSubTables table(allocator);
 
   // Test setting a field which is a table.

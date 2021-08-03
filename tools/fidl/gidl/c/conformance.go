@@ -41,7 +41,7 @@ TEST(C_Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_t> handle_defs = {{ .HandleDefs }};
 	{{- end }}
-	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	std::vector<uint8_t> bytes = {{ .Bytes }};
 	std::vector<zx_handle_t> handles = {{ .Handles }};

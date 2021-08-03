@@ -39,7 +39,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
       completer.ReplyError(match.status_value());
       return;
     }
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_driver_framework::wire::MatchedDriver driver(allocator);
     driver.set_url(allocator, fidl::StringView::FromExternal(match->url));
     if (match->node_index) {

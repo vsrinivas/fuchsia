@@ -170,7 +170,7 @@ zx_status_t CompositeDevice::TryAssemble() {
 
   Coordinator* coordinator = nullptr;
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fdm::wire::Fragment> fragments(allocator, bound_.size_slow());
 
   // Create all of the proxies for the fragment devices, in the same process

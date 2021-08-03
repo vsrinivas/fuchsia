@@ -5,8 +5,8 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_ENCODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_ENCODE_BENCHMARK_UTIL_H_
 
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
@@ -19,7 +19,7 @@ namespace encode_benchmark_util {
 
 template <typename BuilderFunc, typename EncodeFunc>
 bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFunc encode) {
-  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyAllocator&>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyArena&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -27,7 +27,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   state->DeclareStep("Teardown/WallTime");
 
   while (state->KeepRunning()) {
-    fidl::FidlAllocator<65536> allocator;
+    fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: Encode.
@@ -43,12 +43,12 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   }
 
   // Encode the input with fidl::Encode and compare againt encode().
-  fidl::FidlAllocator<65536> allocator;
+  fidl::Arena<65536> allocator;
   FidlType aligned_value = builder(allocator);
   ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
   ZX_ASSERT(encoded.ok());
 
-  fidl::FidlAllocator<65536> allocator2;
+  fidl::Arena<65536> allocator2;
   aligned_value = builder(allocator2);
   std::vector<uint8_t> reference_bytes;
   const char* error;

@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 #define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
@@ -41,10 +41,10 @@ class VectorView {
 
   VectorView() {}
 
-  // Allocates a vector using the allocator.
-  VectorView(AnyAllocator& allocator, size_t count)
+  // Allocates a vector using an arena.
+  VectorView(AnyArena& allocator, size_t count)
       : count_(count), data_(allocator.AllocateVector<T>(count)) {}
-  VectorView(AnyAllocator& allocator, size_t initial_count, size_t capacity)
+  VectorView(AnyArena& allocator, size_t initial_count, size_t capacity)
       : count_(initial_count), data_(allocator.AllocateVector<T>(capacity)) {
     ZX_DEBUG_ASSERT(initial_count <= capacity);
   }
@@ -59,7 +59,7 @@ class VectorView {
     data_ = other.data_;
   }
 
-  // These methods are the only way to reference data which is not managed by a FidlAllocator.
+  // These methods are the only way to reference data which is not managed by a Arena.
   // Their usage is discouraged. The lifetime of the referenced vector must be longer than the
   // lifetime of the created VectorView.
   //
@@ -111,7 +111,7 @@ class VectorView {
 
   fidl_vector_t* impl() { return this; }
 
-  void Allocate(AnyAllocator& allocator, size_t count) {
+  void Allocate(AnyArena& allocator, size_t count) {
     count_ = count;
     data_ = allocator.AllocateVector<T>(count);
   }

@@ -128,7 +128,7 @@ std::string reader(const fidl_test::JsonValue& value) {
 ### LLCPP {#llcpp-init}
 
 ```cpp
-fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
   std::optional<float> maybe_float = parse_as_float(s);
   if (maybe_float) {
     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_float);
@@ -303,7 +303,7 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 - Remove references to the soon-to-be-removed variant from any switch statements on the union tag. These must be temporarily handled as part of a default case.
 
 ```diff
-  fidl_test::wire::JsonValue writer(fidl::AnyAllocator& allocator, const std::string& s) {
+  fidl_test::wire::JsonValue writer(fidl::AnyArena& allocator, const std::string& s) {
 -   std::optional<float> maybe_float = parse_as_float(s);
 -   if (maybe_float) {
 -     return fidl_test::wire::JsonValue::WithIntValue(allocator, *maybe_float);

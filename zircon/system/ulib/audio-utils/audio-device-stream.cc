@@ -119,7 +119,7 @@ zx_status_t AudioDeviceStream::SetGain(float gain) {
 }
 
 zx_status_t AudioDeviceStream::SetGainParams() {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::GainState gain_state(allocator);
   gain_state.set_muted(allocator, muted_)
       .set_agc_enabled(allocator, agc_enabled_)
@@ -254,7 +254,7 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;
   pcm_format.valid_bits_per_sample = sample_size_;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, std::move(pcm_format));
 

@@ -431,7 +431,7 @@ void Control::CreateColorBuffer2(CreateColorBuffer2RequestView request,
 }
 
 Control::CreateBuffer2Result Control::CreateBuffer2(
-    fidl::AnyAllocator& allocator, zx::vmo vmo,
+    fidl::AnyArena& allocator, zx::vmo vmo,
     fuchsia_hardware_goldfish::wire::CreateBuffer2Params create_params) {
   using fuchsia_hardware_goldfish::ControlDevice;
   using fuchsia_hardware_goldfish::wire::ControlDeviceCreateBuffer2Response;
@@ -515,7 +515,7 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
 void Control::CreateBuffer2(CreateBuffer2RequestView request,
                             CreateBuffer2Completer::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto result =
       CreateBuffer2(allocator, std::move(request->vmo), std::move(request->create_params));
   if (result.is_ok()) {
@@ -611,7 +611,7 @@ void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
     return;
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   ControlDeviceGetBufferHandleInfoResponse response;
   response.info.Allocate(allocator);

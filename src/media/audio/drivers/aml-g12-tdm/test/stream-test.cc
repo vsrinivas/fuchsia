@@ -1137,7 +1137,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 4;

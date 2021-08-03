@@ -80,7 +80,7 @@ class SimpleTable final {
     return *this;
   }
   template <typename... Args>
-  SimpleTable& set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+  SimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -111,7 +111,7 @@ class SimpleTable final {
     return *this;
   }
   template <typename... Args>
-  SimpleTable& set_y(::fidl::AnyAllocator& allocator, Args&&... args) {
+  SimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -120,12 +120,12 @@ class SimpleTable final {
   }
 
   SimpleTable() = default;
-  explicit SimpleTable(::fidl::AnyAllocator& allocator)
+  explicit SimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit SimpleTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~SimpleTable() = default;
@@ -140,7 +140,7 @@ class SimpleTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 96;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -258,10 +258,10 @@ class SimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;
@@ -321,7 +321,7 @@ class ReverseOrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  ReverseOrdinalTable& set_z(::fidl::AnyAllocator& allocator, Args&&... args) {
+  ReverseOrdinalTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -352,7 +352,7 @@ class ReverseOrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  ReverseOrdinalTable& set_y(::fidl::AnyAllocator& allocator, Args&&... args) {
+  ReverseOrdinalTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -383,7 +383,7 @@ class ReverseOrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  ReverseOrdinalTable& set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+  ReverseOrdinalTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -392,12 +392,12 @@ class ReverseOrdinalTable final {
   }
 
   ReverseOrdinalTable() = default;
-  explicit ReverseOrdinalTable(::fidl::AnyAllocator& allocator)
+  explicit ReverseOrdinalTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit ReverseOrdinalTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~ReverseOrdinalTable() = default;
@@ -415,7 +415,7 @@ class ReverseOrdinalTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 72;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -534,10 +534,10 @@ class ReverseOrdinalTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;
@@ -595,7 +595,7 @@ class OlderSimpleTable final {
     return *this;
   }
   template <typename... Args>
-  OlderSimpleTable& set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+  OlderSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -604,12 +604,12 @@ class OlderSimpleTable final {
   }
 
   OlderSimpleTable() = default;
-  explicit OlderSimpleTable(::fidl::AnyAllocator& allocator)
+  explicit OlderSimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit OlderSimpleTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~OlderSimpleTable() = default;
@@ -625,7 +625,7 @@ class OlderSimpleTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -743,10 +743,10 @@ class OlderSimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;
@@ -802,7 +802,7 @@ class NewerSimpleTable final {
     return *this;
   }
   template <typename... Args>
-  NewerSimpleTable& set_x(::fidl::AnyAllocator& allocator, Args&&... args) {
+  NewerSimpleTable& set_x(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -833,7 +833,7 @@ class NewerSimpleTable final {
     return *this;
   }
   template <typename... Args>
-  NewerSimpleTable& set_y(::fidl::AnyAllocator& allocator, Args&&... args) {
+  NewerSimpleTable& set_y(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -864,7 +864,7 @@ class NewerSimpleTable final {
     return *this;
   }
   template <typename... Args>
-  NewerSimpleTable& set_z(::fidl::AnyAllocator& allocator, Args&&... args) {
+  NewerSimpleTable& set_z(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.data =
         ::fidl::ObjectView<int64_t>(allocator, std::forward<Args>(args)...);
@@ -873,12 +873,12 @@ class NewerSimpleTable final {
   }
 
   NewerSimpleTable() = default;
-  explicit NewerSimpleTable(::fidl::AnyAllocator& allocator)
+  explicit NewerSimpleTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit NewerSimpleTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~NewerSimpleTable() = default;
@@ -894,7 +894,7 @@ class NewerSimpleTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 120;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -1012,10 +1012,10 @@ class NewerSimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;
@@ -1076,7 +1076,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v1(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v1(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v1_.data =
@@ -1108,7 +1108,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v2(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v2(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v2_.data =
@@ -1140,7 +1140,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v3(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v3(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v3_.data =
@@ -1172,7 +1172,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v4(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v4(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v4_.data =
@@ -1204,7 +1204,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v5(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v5(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v5_.data =
@@ -1236,7 +1236,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v6(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v6(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v6_.data =
@@ -1268,7 +1268,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v7(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v7(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v7_.data =
@@ -1300,7 +1300,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v8(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v8(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v8_.data =
@@ -1332,7 +1332,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v9(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v9(::fidl::AnyArena& allocator,
                                     Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v9_.data =
@@ -1364,7 +1364,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v10(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v10(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v10_.data =
@@ -1396,7 +1396,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v11(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v11(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v11_.data =
@@ -1428,7 +1428,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v12(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v12(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v12_.data =
@@ -1460,7 +1460,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v13(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v13(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v13_.data =
@@ -1492,7 +1492,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v14(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v14(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v14_.data =
@@ -1524,7 +1524,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v15(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v15(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v15_.data =
@@ -1556,7 +1556,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v16(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v16(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v16_.data =
@@ -1588,7 +1588,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v17(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v17(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v17_.data =
@@ -1620,7 +1620,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v18(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v18(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v18_.data =
@@ -1652,7 +1652,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v19(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v19(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v19_.data =
@@ -1684,7 +1684,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v20(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v20(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v20_.data =
@@ -1716,7 +1716,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v21(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v21(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v21_.data =
@@ -1748,7 +1748,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v22(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v22(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v22_.data =
@@ -1780,7 +1780,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v23(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v23(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v23_.data =
@@ -1812,7 +1812,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v24(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v24(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v24_.data =
@@ -1844,7 +1844,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v25(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v25(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v25_.data =
@@ -1876,7 +1876,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v26(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v26(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v26_.data =
@@ -1908,7 +1908,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v27(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v27(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v27_.data =
@@ -1940,7 +1940,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v28(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v28(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v28_.data =
@@ -1972,7 +1972,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v29(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v29(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v29_.data =
@@ -2004,7 +2004,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v30(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v30(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v30_.data =
@@ -2036,7 +2036,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v31(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v31(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v31_.data =
@@ -2068,7 +2068,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v32(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v32(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v32_.data =
@@ -2100,7 +2100,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v33(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v33(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v33_.data =
@@ -2132,7 +2132,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v34(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v34(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v34_.data =
@@ -2164,7 +2164,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v35(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v35(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v35_.data =
@@ -2196,7 +2196,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v36(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v36(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v36_.data =
@@ -2228,7 +2228,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v37(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v37(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v37_.data =
@@ -2260,7 +2260,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v38(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v38(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v38_.data =
@@ -2292,7 +2292,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v39(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v39(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v39_.data =
@@ -2324,7 +2324,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v40(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v40(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v40_.data =
@@ -2356,7 +2356,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v41(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v41(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v41_.data =
@@ -2388,7 +2388,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v42(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v42(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v42_.data =
@@ -2420,7 +2420,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v43(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v43(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v43_.data =
@@ -2452,7 +2452,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v44(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v44(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v44_.data =
@@ -2484,7 +2484,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v45(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v45(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v45_.data =
@@ -2516,7 +2516,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v46(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v46(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v46_.data =
@@ -2548,7 +2548,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v47(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v47(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v47_.data =
@@ -2580,7 +2580,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v48(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v48(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v48_.data =
@@ -2612,7 +2612,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v49(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v49(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v49_.data =
@@ -2644,7 +2644,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v50(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v50(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v50_.data =
@@ -2676,7 +2676,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v51(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v51(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v51_.data =
@@ -2708,7 +2708,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v52(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v52(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v52_.data =
@@ -2740,7 +2740,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v53(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v53(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v53_.data =
@@ -2772,7 +2772,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v54(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v54(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v54_.data =
@@ -2804,7 +2804,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v55(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v55(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v55_.data =
@@ -2836,7 +2836,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v56(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v56(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v56_.data =
@@ -2868,7 +2868,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v57(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v57(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v57_.data =
@@ -2900,7 +2900,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v58(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v58(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v58_.data =
@@ -2932,7 +2932,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v59(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v59(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v59_.data =
@@ -2964,7 +2964,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v60(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v60(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v60_.data =
@@ -2996,7 +2996,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v61(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v61(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v61_.data =
@@ -3028,7 +3028,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v62(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v62(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v62_.data =
@@ -3060,7 +3060,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v63(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v63(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v63_.data =
@@ -3092,7 +3092,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v64(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v64(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v64_.data =
@@ -3124,7 +3124,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v65(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v65(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v65_.data =
@@ -3156,7 +3156,7 @@ class GreaterThan64OrdinalTable final {
     return *this;
   }
   template <typename... Args>
-  GreaterThan64OrdinalTable& set_v66(::fidl::AnyAllocator& allocator,
+  GreaterThan64OrdinalTable& set_v66(::fidl::AnyArena& allocator,
                                      Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v66_.data =
@@ -3166,12 +3166,12 @@ class GreaterThan64OrdinalTable final {
   }
 
   GreaterThan64OrdinalTable() = default;
-  explicit GreaterThan64OrdinalTable(::fidl::AnyAllocator& allocator)
+  explicit GreaterThan64OrdinalTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit GreaterThan64OrdinalTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~GreaterThan64OrdinalTable() = default;
@@ -3191,7 +3191,7 @@ class GreaterThan64OrdinalTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 1584;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -3310,10 +3310,10 @@ class GreaterThan64OrdinalTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;
@@ -3412,12 +3412,12 @@ class EmptyTable final {
   class Frame_;
 
   EmptyTable() = default;
-  explicit EmptyTable(::fidl::AnyAllocator& allocator)
+  explicit EmptyTable(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit EmptyTable(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~EmptyTable() = default;
@@ -3432,7 +3432,7 @@ class EmptyTable final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -3549,10 +3549,10 @@ class EmptyTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;

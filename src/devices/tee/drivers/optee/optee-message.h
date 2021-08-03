@@ -219,7 +219,7 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
                                   MessageParam* out_param);
 
   zx_status_t CreateOutputParameterSet(
-      fidl::AnyAllocator& allocator, size_t starting_param_index,
+      fidl::AnyArena& allocator, size_t starting_param_index,
       fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set);
 
  private:
@@ -248,9 +248,9 @@ class Message : public MessageBase<std::unique_ptr<SharedMemory>> {
     std::unique_ptr<SharedMemory> shared_memory_;
   };
 
-  fuchsia_tee::wire::Value CreateOutputValueParameter(fidl::AnyAllocator& allocator,
+  fuchsia_tee::wire::Value CreateOutputValueParameter(fidl::AnyArena& allocator,
                                                       const MessageParam& optee_param);
-  zx_status_t CreateOutputBufferParameter(fidl::AnyAllocator& allocator,
+  zx_status_t CreateOutputBufferParameter(fidl::AnyArena& allocator,
                                           const MessageParam& optee_param,
                                           fuchsia_tee::wire::Buffer* out_buffer);
 
@@ -273,7 +273,7 @@ class OpenSessionMessage : public Message {
   uint32_t return_origin() const { return header()->return_origin; }
 
   zx_status_t CreateOutputParameterSet(
-      fidl::AnyAllocator& allocator,
+      fidl::AnyArena& allocator,
       fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
     return Message::CreateOutputParameterSet(allocator, kNumFixedOpenSessionParams,
                                              out_parameter_set);
@@ -322,7 +322,7 @@ class InvokeCommandMessage : public Message {
   uint32_t return_origin() const { return header()->return_origin; }
 
   zx_status_t CreateOutputParameterSet(
-      fidl::AnyAllocator& allocator,
+      fidl::AnyArena& allocator,
       fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
     return Message::CreateOutputParameterSet(allocator, 0, out_parameter_set);
   }

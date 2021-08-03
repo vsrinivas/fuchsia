@@ -17,7 +17,7 @@ bool BuilderBenchmark(perftest::RepeatState* state, BuilderFunc builder, SetupFu
 
     state->NextStep();  // End: Setup. Begin: Build
 
-    fidl::FidlAllocator<65536> allocator;
+    fidl::Arena<65536> allocator;
     [[maybe_unused]] auto result = builder(allocator, buildContext);
 
     state->NextStep();  // End: Build. Start: Teardown

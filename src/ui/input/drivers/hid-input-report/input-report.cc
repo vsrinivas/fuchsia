@@ -143,7 +143,7 @@ void InputReport::GetInputReportsReader(GetInputReportsReaderRequestView request
 
 void InputReport::GetDescriptor(GetDescriptorRequestView request,
                                 GetDescriptorCompleter::Sync& completer) {
-  fidl::FidlAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
+  fidl::Arena<kFidlDescriptorBufferSize> descriptor_allocator;
   fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
 
   hid_device_info_t info;

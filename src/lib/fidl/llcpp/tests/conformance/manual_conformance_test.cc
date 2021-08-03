@@ -211,7 +211,7 @@ TEST(ComplexTable, SuccessEmpty) {
   // clang-format on
   // encode
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     llcpp_misc::wire::ComplexTable input(allocator);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
     ASSERT_TRUE(encoded.ok());
@@ -297,7 +297,7 @@ TEST(ComplexTable, Success) {
   int32_t xunion_i = 0xdeadbeef;
   // encode
   {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     llcpp_misc::wire::SimpleTable simple_table(allocator);
     simple_table.set_x(allocator, table_x).set_y(allocator, table_y);
     llcpp_misc::wire::SampleXUnion xu;

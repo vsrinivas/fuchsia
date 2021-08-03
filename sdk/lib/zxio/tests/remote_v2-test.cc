@@ -117,7 +117,7 @@ TEST_F(RemoteV2, GetAttributes) {
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
 
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       fio2::wire::NodeAttributes nodes_attributes(allocator);
       nodes_attributes.set_content_size(allocator, content_size)
           .set_protocols(allocator, fio2::wire::NodeProtocols::kFile)

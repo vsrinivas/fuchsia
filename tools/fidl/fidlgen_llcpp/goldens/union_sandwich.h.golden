@@ -89,7 +89,7 @@ class UnionSize8Alignment4 {
   }
 
   template <typename... Args>
-  static UnionSize8Alignment4 WithVariant(::fidl::AnyAllocator& allocator,
+  static UnionSize8Alignment4 WithVariant(::fidl::AnyArena& allocator,
                                           Args&&... args) {
     UnionSize8Alignment4 result;
     result.set_variant(
@@ -105,7 +105,7 @@ class UnionSize8Alignment4 {
   }
 
   template <typename... Args>
-  void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
         kVariant;
     set_variant(
@@ -183,7 +183,7 @@ class UnionSize36Alignment4 {
   }
 
   template <typename... Args>
-  static UnionSize36Alignment4 WithVariant(::fidl::AnyAllocator& allocator,
+  static UnionSize36Alignment4 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
     UnionSize36Alignment4 result;
     result.set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
@@ -199,7 +199,7 @@ class UnionSize36Alignment4 {
   }
 
   template <typename... Args>
-  void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize36Alignment4::Ordinal::
         kVariant;
     set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
@@ -277,7 +277,7 @@ class UnionSize12Alignment4 {
   }
 
   template <typename... Args>
-  static UnionSize12Alignment4 WithVariant(::fidl::AnyAllocator& allocator,
+  static UnionSize12Alignment4 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
     UnionSize12Alignment4 result;
     result.set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
@@ -293,7 +293,7 @@ class UnionSize12Alignment4 {
   }
 
   template <typename... Args>
-  void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize12Alignment4::Ordinal::
         kVariant;
     set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
@@ -373,7 +373,7 @@ class UnionSize24Alignment8 {
   }
 
   template <typename... Args>
-  static UnionSize24Alignment8 WithVariant(::fidl::AnyAllocator& allocator,
+  static UnionSize24Alignment8 WithVariant(::fidl::AnyArena& allocator,
                                            Args&&... args) {
     UnionSize24Alignment8 result;
     result.set_variant(::fidl::ObjectView<
@@ -392,7 +392,7 @@ class UnionSize24Alignment8 {
   }
 
   template <typename... Args>
-  void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize24Alignment8::Ordinal::
         kVariant;
     set_variant(::fidl::ObjectView<

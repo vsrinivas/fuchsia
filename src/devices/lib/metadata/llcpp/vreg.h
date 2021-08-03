@@ -12,7 +12,7 @@
 namespace vreg {
 
 using fuchsia_hardware_vreg::wire::PwmVregMetadataEntry;
-PwmVregMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t pwm_index,
+PwmVregMetadataEntry BuildMetadata(fidl::AnyArena& allocator, uint32_t pwm_index,
                                    uint32_t period_ns, uint32_t min_voltage_uv,
                                    uint32_t voltage_step_uv, uint32_t num_steps) {
   PwmVregMetadataEntry entry(allocator);
@@ -25,8 +25,7 @@ PwmVregMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t pwm_i
 }
 
 using fuchsia_hardware_vreg::wire::Metadata;
-Metadata BuildMetadata(fidl::AnyAllocator& allocator,
-                       fidl::VectorView<PwmVregMetadataEntry> pwm_vreg) {
+Metadata BuildMetadata(fidl::AnyArena& allocator, fidl::VectorView<PwmVregMetadataEntry> pwm_vreg) {
   Metadata metadata(allocator);
   metadata.set_pwm_vreg(allocator, std::move(pwm_vreg));
   return metadata;

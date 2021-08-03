@@ -116,7 +116,7 @@ TEST(LoggerTest, Create_NoLogSink) {
   // Setup namespace.
   auto pkg = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
   ns_entries[0].Allocate(allocator);
   ns_entries[0].set_path(allocator, "/pkg").set_directory(allocator, std::move(pkg->client));

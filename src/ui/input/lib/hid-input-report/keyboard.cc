@@ -113,7 +113,7 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
   return ParseOutputReportDescriptor(hid_report_descriptor);
 };
 
-ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
+ParseResult Keyboard::CreateDescriptor(fidl::AnyArena& allocator,
                                        fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
   fuchsia_input_report::wire::KeyboardDescriptor keyboard(allocator);
 
@@ -153,8 +153,7 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyAllocator& allocator,
   return ParseResult::kOk;
 }
 
-ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len,
-                                       fidl::AnyAllocator& allocator,
+ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::AnyArena& allocator,
                                        fuchsia_input_report::wire::InputReport& input_report) {
   if (len != input_report_size_) {
     return ParseResult::kReportSizeMismatch;

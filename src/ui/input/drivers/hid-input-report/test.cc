@@ -629,7 +629,7 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
 
   auto sync_client = GetSyncClient();
   // Make an output report.
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
   led_view[0] = fuchsia_input_report::wire::LedType::kNumLock;
   led_view[1] = fuchsia_input_report::wire::LedType::kScrollLock;

@@ -39,13 +39,13 @@ std::vector<zx_handle_t> BuildHandles{{ .Name }}() {
 	return {{ .HandleDefs }};
 }
 
-{{ .Type }} BuildFromHandles{{ .Name }}(fidl::AnyAllocator& allocator, const std::vector<zx_handle_t>& handle_defs) {
+{{ .Type }} BuildFromHandles{{ .Name }}(fidl::AnyArena& allocator, const std::vector<zx_handle_t>& handle_defs) {
   {{ .ValueBuild }}
   auto result =  {{ .ValueVar }};
   return result;
 }
 
-{{ .Type }} Build{{ .Name }}(fidl::AnyAllocator& allocator) {
+{{ .Type }} Build{{ .Name }}(fidl::AnyArena& allocator) {
   return BuildFromHandles{{ .Name }}(allocator, BuildHandles{{ .Name }}());
 }
 {{- else }}
@@ -53,13 +53,13 @@ std::tuple<> BuildEmptyContext{{ .Name }}() {
 	return std::make_tuple();
 }
 
-{{ .Type }} BuildFromEmptyContext{{ .Name }}(fidl::AnyAllocator& allocator, std::tuple<> _context) {
+{{ .Type }} BuildFromEmptyContext{{ .Name }}(fidl::AnyArena& allocator, std::tuple<> _context) {
 	{{ .ValueBuild }}
 	auto result = {{ .ValueVar }};
 	return result;
 }
 
-{{ .Type }} Build{{ .Name }}(fidl::AnyAllocator& allocator) {
+{{ .Type }} Build{{ .Name }}(fidl::AnyArena& allocator) {
   {{ .ValueBuild }}
   auto result = {{ .ValueVar }};
   return result;

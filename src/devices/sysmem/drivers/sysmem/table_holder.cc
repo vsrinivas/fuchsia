@@ -17,4 +17,4 @@ TableHolderBase::~TableHolderBase() { table_set_.UntrackTableHolder(this); }
 
 void TableHolderBase::CountChurn() { table_set_.CountChurn(); }
 
-fidl::AnyAllocator& TableHolderBase::allocator() { return table_set_.allocator(); }
+fidl::AnyArena& TableHolderBase::allocator() { return table_set_.allocator(); }

@@ -33,7 +33,7 @@ namespace {
 
 static const char* kTag = "goldfish-host-visible-heap";
 
-fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyAllocator& allocator) {
+fuchsia_sysmem2::wire::HeapProperties GetHeapProperties(fidl::AnyArena& allocator) {
   fuchsia_sysmem2::wire::CoherencyDomainSupport coherency_domain_support(allocator);
   coherency_domain_support.set_cpu_supported(allocator, true)
       .set_ram_supported(allocator, true)
@@ -89,7 +89,7 @@ zx_status_t CheckSingleBufferSettings(
 }
 
 fpromise::result<fuchsia_hardware_goldfish::wire::CreateColorBuffer2Params, zx_status_t>
-GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
+GetCreateColorBuffer2Params(fidl::AnyArena& allocator,
                             const fuchsia_sysmem2::wire::SingleBufferSettings& buffer_settings,
                             uint64_t paddr) {
   using fuchsia_hardware_goldfish::wire::ColorBufferFormatType;
@@ -145,7 +145,7 @@ GetCreateColorBuffer2Params(fidl::AnyAllocator& allocator,
 }
 
 fuchsia_hardware_goldfish::wire::CreateBuffer2Params GetCreateBuffer2Params(
-    fidl::AnyAllocator& allocator,
+    fidl::AnyArena& allocator,
     const fuchsia_sysmem2::wire::SingleBufferSettings& single_buffer_settings, uint64_t paddr) {
   using fuchsia_hardware_goldfish::wire::CreateBuffer2Params;
   using fuchsia_sysmem2::wire::PixelFormatType;
@@ -325,7 +325,7 @@ void HostVisibleHeap::CreateResource(CreateResourceRequestView request,
   auto cleanup_handle = fit::defer([this, id] { control()->FreeBufferHandle(id); });
 
   if (is_image) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     // ColorBuffer creation.
     auto create_params = GetCreateColorBuffer2Params(allocator, request->buffer_settings, paddr);
     if (create_params.is_error()) {
@@ -352,7 +352,7 @@ void HostVisibleHeap::CreateResource(CreateResourceRequestView request,
     // ColorBuffer can be leaked.
     ZX_DEBUG_ASSERT(result.value().hw_address_page_offset == 0u);
   } else {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     // Data buffer creation.
     auto create_params = GetCreateBuffer2Params(allocator, request->buffer_settings, paddr);
 
@@ -421,7 +421,7 @@ void HostVisibleHeap::DestroyResource(DestroyResourceRequestView request,
 }
 
 void HostVisibleHeap::Bind(zx::channel server_request) {
-  auto allocator = std::make_unique<fidl::FidlAllocator<512>>();
+  auto allocator = std::make_unique<fidl::Arena<512>>();
   fuchsia_sysmem2::wire::HeapProperties heap_properties = GetHeapProperties(*allocator.get());
   BindWithHeapProperties(std::move(server_request), std::move(allocator),
                          std::move(heap_properties));

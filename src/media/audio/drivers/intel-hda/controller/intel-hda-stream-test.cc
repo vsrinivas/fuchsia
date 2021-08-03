@@ -185,7 +185,7 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
 
   {
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_gain_db(allocator, kTestGain);
       auto status =
@@ -322,7 +322,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
 
   {
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_gain_db(allocator, kTestGain);
       auto status =
@@ -340,7 +340,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
       EXPECT_OK(gain_state.status());
       EXPECT_EQ(kTestGain2, gain_state->gain_state.gain_db());
     });
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(allocator, kTestGain2);
     auto status =

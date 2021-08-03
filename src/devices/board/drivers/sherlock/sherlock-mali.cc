@@ -71,7 +71,7 @@ zx_status_t Sherlock::MaliInit() {
   mali_dev.bti_list = mali_btis;
   mali_dev.bti_count = countof(mali_btis);
   using fuchsia_hardware_gpu_amlogic::wire::Metadata;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   Metadata metadata(allocator);
   metadata.set_supports_protected_mode(allocator, true);
   fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);

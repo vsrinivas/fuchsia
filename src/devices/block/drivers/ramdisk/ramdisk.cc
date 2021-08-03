@@ -217,7 +217,7 @@ void Ramdisk::SleepAfter(SleepAfterRequestView request, SleepAfterCompleter::Syn
 
 void Ramdisk::GetBlockCounts(GetBlockCountsRequestView request,
                              GetBlockCountsCompleter::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_ramdisk::wire::BlockWriteCounts> block_counts(allocator);
   {
     fbl::AutoLock lock(&lock_);

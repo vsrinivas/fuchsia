@@ -138,7 +138,7 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
 
   bool autobind = config.libname.empty();
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   auto& props = dev->props();
   auto& str_props = dev->str_props();
   fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator,
@@ -195,7 +195,7 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
     return matched_drivers;
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fdf::wire::NodeAddArgs args(allocator);
   args.set_properties(allocator, std::move(props));
 

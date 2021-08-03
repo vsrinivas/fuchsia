@@ -264,7 +264,7 @@ void AmlHdmiDevice::EdidTransfer(EdidTransferRequestView request,
   auto status = hdmi_dw_->EdidTransfer(op_list, request->ops.count());
 
   if (status == ZX_OK) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fidl::VectorView<fidl::VectorView<uint8_t>> reads(allocator, read_cnt);
     size_t read_ops_cnt = 0;
     for (size_t i = 0; i < request->ops.count(); ++i) {

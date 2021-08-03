@@ -146,7 +146,7 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
       fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
       fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(
@@ -248,7 +248,7 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
       fuchsia_hardware_block_verified::wire::HashFunction::kSha256;
   fuchsia_hardware_block_verified::wire::BlockSize block_size =
       fuchsia_hardware_block_verified::wire::BlockSize::kSize4096;
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_hardware_block_verified::wire::Config config(allocator);
   config.set_hash_function(
       fidl::ObjectView<fuchsia_hardware_block_verified::wire::HashFunction>::FromExternal(

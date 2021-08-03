@@ -120,7 +120,7 @@ void Cr50SpiDevice::TpmImplConnectServer(zx::channel server) {
 void Cr50SpiDevice::Read(ReadRequestView request, ReadCompleter::Sync &completer) {
   // Cr50 ignores locality, so we do too. See section 33 of
   // https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf.
-  fidl::FidlAllocator<fuchsia_hardware_tpmimpl::wire::kTpmMaxDataTransfer> alloc;
+  fidl::Arena<fuchsia_hardware_tpmimpl::wire::kTpmMaxDataTransfer> alloc;
   if (request->count > fuchsia_hardware_tpmimpl::wire::kTpmMaxDataTransfer) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

@@ -27,7 +27,7 @@ static const struct reg_val_pair ENC_LUT_GEN[] = {
     {VPU_ENCP_VIDEO_EN, 1},           {0xFFFFFFFF, 0},
 };
 
-void TranslateDisplayMode(fidl::AnyAllocator& allocator, const display_mode_t& in_mode,
+void TranslateDisplayMode(fidl::AnyArena& allocator, const display_mode_t& in_mode,
                           const ColorParam& in_color, DisplayMode* out_mode) {
   // Serves to translate between banjo struct display_mode_t and fidl struct DisplayMode
   fuchsia_hardware_hdmi::wire::StandardDisplayMode mode{
@@ -144,7 +144,7 @@ zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
   WRITE32_REG(HHI, HHI_VDAC_CNTL0_G12A, 0);
   WRITE32_REG(HHI, HHI_VDAC_CNTL1_G12A, 8);  // set Cdac_pwd [whatever that is]
 
-  fidl::FidlAllocator<2048> allocator;
+  fidl::Arena<2048> allocator;
   DisplayMode translated_mode(allocator);
   TranslateDisplayMode(allocator, mode, color_, &translated_mode);
   auto res = hdmi_.ModeSet(1, translated_mode);  // only supports 1 display for now

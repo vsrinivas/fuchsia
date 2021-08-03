@@ -116,7 +116,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
                                   const char* name, zx_status_t expected_status = ZX_OK,
                                   const device_metadata_t* metadata = nullptr,
                                   size_t metadata_count = 0) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   std::vector<fuchsia_device_manager::wire::DeviceFragment> fragments = {};
   for (size_t i = 0; i < fragment_count; ++i) {
     // Define a union type to avoid violating the strict aliasing rule.

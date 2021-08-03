@@ -87,7 +87,7 @@ ParseResult ConsumerControl::ParseReportDescriptor(
 };
 
 ParseResult ConsumerControl::CreateDescriptor(
-    fidl::AnyAllocator& allocator, fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
+    fidl::AnyArena& allocator, fuchsia_input_report::wire::DeviceDescriptor& descriptor) {
   fuchsia_input_report::wire::ConsumerControlInputDescriptor input(allocator);
 
   // Set the buttons array.
@@ -110,7 +110,7 @@ ParseResult ConsumerControl::CreateDescriptor(
 }
 
 ParseResult ConsumerControl::ParseInputReport(
-    const uint8_t* data, size_t len, fidl::AnyAllocator& allocator,
+    const uint8_t* data, size_t len, fidl::AnyArena& allocator,
     fuchsia_input_report::wire::InputReport& input_report) {
   fuchsia_input_report::wire::ConsumerControlInputReport consumer_report(allocator);
 

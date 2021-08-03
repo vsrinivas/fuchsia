@@ -510,7 +510,7 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
 }
 
 void OpteeController::GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   fuchsia_tee::wire::OsRevision os_rev(allocator);
   os_rev.set_major(allocator, os_revision().major);
   os_rev.set_minor(allocator, os_revision().minor);

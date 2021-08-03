@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_SET_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_TABLE_SET_H_
 
-#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/arena.h>
 
 #include <unordered_set>
 
@@ -15,7 +15,7 @@ class TableSet {
  public:
   TableSet();
 
-  fidl::AnyAllocator& allocator();
+  fidl::AnyArena& allocator();
 
   void CountChurn();
   void MitigateChurn();
@@ -24,13 +24,13 @@ class TableSet {
  private:
   friend class TableHolderBase;
 
-  using FidlAllocator = fidl::FidlAllocator<>;
+  using Arena = fidl::Arena<>;
 
   void TrackTableHolder(TableHolderBase* table_holder);
 
   void UntrackTableHolder(TableHolderBase* table_holder);
 
-  std::unique_ptr<FidlAllocator> allocator_;
+  std::unique_ptr<Arena> allocator_;
   std::unordered_set<TableHolderBase*> tables_;
   uint32_t churn_count_ = 0;
 };

@@ -133,7 +133,7 @@ zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
 }
 
 zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fuchsia_hardware_audio::wire::DaiFormat format2;
   format2.number_of_channels = format.number_of_channels;
@@ -191,7 +191,7 @@ zx::status<GainState> SimpleCodecClient::GetGainState() {
 }
 
 void SimpleCodecClient::SetGainState(GainState state) {
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
 
   fuchsia_hardware_audio::wire::GainState state2(allocator);
   state2.set_gain_db(allocator, state.gain);

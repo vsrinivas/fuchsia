@@ -401,9 +401,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
                                   bool autobind);
 
   zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
-      fidl::AnyAllocator& allocator, const std::vector<const Driver*>& drivers);
+      fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
   zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
-      fidl::AnyAllocator& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
+      fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
 
   // fuchsia.driver.development/DriverDevelopment interface
   void RestartDriverHosts(RestartDriverHostsRequestView request,

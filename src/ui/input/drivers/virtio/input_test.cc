@@ -157,7 +157,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   const uint8_t* report = hid_mouse.GetReport(&report_size);
 
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
 
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
@@ -179,7 +179,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -201,7 +201,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -221,7 +221,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -242,7 +242,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -262,7 +262,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -282,7 +282,7 @@ TEST_F(VirtioInputTest, MouseTest) {
   // Parse the HID report.
   report = hid_mouse.GetReport(&report_size);
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
     EXPECT_EQ(hid_input_report::ParseResult::kOk,
               mouse.ParseInputReport(report, report_size, report_allocator, input_report));
@@ -333,7 +333,7 @@ TEST_F(VirtioInputTest, KeyboardTest) {
   const uint8_t* report = hid_keyboard.GetReport(&report_size);
 
   {
-    fidl::FidlAllocator<2048> report_allocator;
+    fidl::Arena<2048> report_allocator;
     fuchsia_input_report::wire::InputReport input_report(report_allocator);
 
     EXPECT_EQ(hid_input_report::ParseResult::kOk,

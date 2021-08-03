@@ -89,8 +89,7 @@ class UnionWithHandle {
   }
 
   template <typename... Args>
-  static UnionWithHandle WithH(::fidl::AnyAllocator& allocator,
-                               Args&&... args) {
+  static UnionWithHandle WithH(::fidl::AnyArena& allocator, Args&&... args) {
     UnionWithHandle result;
     result.set_h(
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
@@ -104,7 +103,7 @@ class UnionWithHandle {
   }
 
   template <typename... Args>
-  void set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
+  void set_h(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
     set_h(
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
@@ -178,7 +177,7 @@ class TableWithHandle final {
     return *this;
   }
   template <typename... Args>
-  TableWithHandle& set_h(::fidl::AnyAllocator& allocator, Args&&... args) {
+  TableWithHandle& set_h(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->h_.data =
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...);
@@ -187,12 +186,12 @@ class TableWithHandle final {
   }
 
   TableWithHandle() = default;
-  explicit TableWithHandle(::fidl::AnyAllocator& allocator)
+  explicit TableWithHandle(::fidl::AnyArena& allocator)
       : frame_ptr_(::fidl::ObjectView<Frame_>(allocator)) {}
-  // This constructor allows a user controlled allocation (not using a
-  // FidlAllocator). It should only be used when performance is key. As soon as
-  // the frame is given to the table, it must not be used directly or for
-  // another table.
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
   explicit TableWithHandle(::fidl::ObjectView<Frame_>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableWithHandle() = default;
@@ -208,7 +207,7 @@ class TableWithHandle final {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
   static constexpr bool HasPointer = true;
 
-  void Allocate(::fidl::AnyAllocator& allocator) {
+  void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame_>(allocator);
   }
@@ -334,10 +333,10 @@ class TableWithHandle final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  // Frame_s are managed automatically by the FidlAllocator class.
+  // Frame_s are managed automatically by the Arena class.
   // The only direct usage is when performance is key and a frame needs to be
-  // allocated outside a FidlAllocator. Once created, a frame can only be used
-  // for one single table.
+  // allocated outside a Arena. Once created, a frame can only be used for one
+  // single table.
   class Frame_ final {
    public:
     Frame_() = default;

@@ -393,7 +393,7 @@ class SimpleClient {
   uint16_t tx_depth() const { return tx_depth_; }
 
  private:
-  fidl::FidlAllocator<> alloc_;
+  fidl::Arena<> alloc_;
 
   fidl::WireSyncClient<fuchsia_hardware_network::Device> device_;
   zx::vmo data_vmo_;
@@ -580,7 +580,7 @@ class TunTest : public gtest::RealLoopFixture {
 
   async::Loop tun_ctl_loop_;
   TunCtl tun_ctl_;
-  fidl::FidlAllocator<> alloc_;
+  fidl::Arena<> alloc_;
 };
 
 template <class T>

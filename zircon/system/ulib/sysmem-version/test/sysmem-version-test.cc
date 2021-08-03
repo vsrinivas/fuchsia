@@ -405,7 +405,7 @@ TEST(SysmemVersion, EncodedEquality) {
 
 TEST(SysmemVersion, BufferUsage) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomBufferUsage();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1BufferUsage(allocator, snap_1->value()).take_value();
@@ -417,7 +417,7 @@ TEST(SysmemVersion, BufferUsage) {
 
 TEST(SysmemVersion, PixelFormat) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomPixelFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1PixelFormat(allocator, snap_1->value());
@@ -430,7 +430,7 @@ TEST(SysmemVersion, PixelFormat) {
 
 TEST(SysmemVersion, ColorSpace) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomColorSpace();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1ColorSpace(allocator, snap_1->value());
@@ -443,7 +443,7 @@ TEST(SysmemVersion, ColorSpace) {
 
 TEST(SysmemVersion, ImageFormatConstraints) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomImageFormatConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1ImageFormatConstraints(allocator, snap_1->value()).take_value();
@@ -458,7 +458,7 @@ TEST(SysmemVersion, ImageFormatConstraints) {
 
 TEST(SysmemVersion, BufferMemoryConstraints) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomBufferMemoryConstraints();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1BufferMemoryConstraints(allocator, snap_1->value()).take_value();
@@ -472,7 +472,7 @@ TEST(SysmemVersion, BufferMemoryConstraints) {
 
 TEST(SysmemVersion, ImageFormat) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomImageFormat();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2 = sysmem::V2CopyFromV1ImageFormat(allocator, snap_1->value()).take_value();
@@ -486,7 +486,7 @@ TEST(SysmemVersion, ImageFormat) {
 
 TEST(SysmemVersion, BufferMemorySettings) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomBufferMemorySettings();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2CopyFromV1BufferMemorySettings(allocator, snap_1->value());
@@ -499,7 +499,7 @@ TEST(SysmemVersion, BufferMemorySettings) {
 
 TEST(SysmemVersion, SingleBufferSettings) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomSingleBufferSettings();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1_result = sysmem::V2CopyFromV1SingleBufferSettings(allocator, snap_1->value());
@@ -525,7 +525,7 @@ TEST(SysmemVersion, SingleBufferSettings) {
 
 TEST(SysmemVersion, VmoBuffer) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomVmoBuffer();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1 = sysmem::V2MoveFromV1VmoBuffer(allocator, std::move(snap_1->value()));
@@ -547,7 +547,7 @@ TEST(SysmemVersion, VmoBuffer) {
 
 TEST(SysmemVersion, BufferCollectionInfo) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomBufferCollectionInfo();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
     auto v2_1_result =
@@ -576,7 +576,7 @@ TEST(SysmemVersion, BufferCollectionInfo) {
 
 TEST(SysmemVersion, BufferCollectionConstraints) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     auto v1_1 = V1RandomBufferCollectionConstraints();
     auto v1_aux_1 = V1RandomBufferCollectionConstraintsAuxBuffers();
     auto snap_1 = SnapMoveFrom(std::move(v1_1));
@@ -630,7 +630,7 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
 
 TEST(SysmemVersion, CoherencyDomainSupport) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     bool cpu_supported;
     bool ram_supported;
     bool inaccessible_supported;
@@ -656,7 +656,7 @@ TEST(SysmemVersion, CoherencyDomainSupport) {
 
 TEST(SysmemVersion, HeapProperties) {
   for (uint32_t run = 0; run < kRunCount; ++run) {
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     bool cpu_supported;
     bool ram_supported;
     bool inaccessible_supported;

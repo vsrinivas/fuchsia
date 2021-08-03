@@ -70,7 +70,7 @@ fuchsia_device_manager::wire::DeviceProperty convert_device_prop(const zx_device
 }
 
 fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
-    const zx_device_str_prop_t& prop, fidl::AnyAllocator& allocator) {
+    const zx_device_str_prop_t& prop, fidl::AnyArena& allocator) {
   ZX_ASSERT(property_value_type_valid(prop.property_value.value_type));
 
   auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
@@ -266,7 +266,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     props_list.push_back(convert_device_prop(props[i]));
   }
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props_list = {};
   for (size_t i = 0; i < str_prop_count; i++) {
     if (!property_value_type_valid(str_props[i].property_value.value_type)) {
@@ -1052,7 +1052,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
   }
 
   VLOGD(1, *dev, "create-composite");
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   std::vector<fuchsia_device_manager::wire::DeviceFragment> compvec = {};
   for (size_t i = 0; i < comp_desc->fragments_count; i++) {
     fuchsia_device_manager::wire::DeviceFragment dc;

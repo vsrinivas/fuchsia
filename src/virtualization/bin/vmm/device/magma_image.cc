@@ -291,7 +291,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       return vk::Result::eErrorInitializationFailed;
     }
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     fuchsia_ui_composition::wire::RegisterBufferCollectionArgs args(allocator);
     args.set_export_token(allocator, std::move(export_token));
     args.set_buffer_collection_token(allocator, std::move(scenic_token_endpoint_));

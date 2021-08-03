@@ -25,7 +25,7 @@ class EchoServerImpl : public fidl::WireServer<ProtocolType> {
 
 template <typename ProtocolType, typename BuilderFunc>
 bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
-  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyAllocator&>;
+  using FidlType = std::invoke_result_t<BuilderFunc, fidl::AnyArena&>;
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   state->DeclareStep("Setup/WallTime");
@@ -42,7 +42,7 @@ bool EchoCallBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   typename fidl::WireSyncClient<ProtocolType> client(std::move(endpoints->client));
 
   while (state->KeepRunning()) {
-    fidl::FidlAllocator<65536> allocator;
+    fidl::Arena<65536> allocator;
     FidlType aligned_value = builder(allocator);
 
     state->NextStep();  // End: Setup. Begin: EchoCall.

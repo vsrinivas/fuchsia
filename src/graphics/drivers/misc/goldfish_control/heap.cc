@@ -34,7 +34,7 @@ Heap::Heap(Control* control, const char* tag)
 Heap::~Heap() { loop_.Shutdown(); }
 
 void Heap::BindWithHeapProperties(zx::channel server_request,
-                                  std::unique_ptr<fidl::FidlAllocator<512>> allocator,
+                                  std::unique_ptr<fidl::Arena<512>> allocator,
                                   fuchsia_sysmem2::wire::HeapProperties heap_properties) {
   async::PostTask(loop_.dispatcher(),
                   [server_end = fidl::ServerEnd<fuchsia_sysmem2::Heap>(std::move(server_request)),
