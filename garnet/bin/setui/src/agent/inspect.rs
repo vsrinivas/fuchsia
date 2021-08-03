@@ -16,8 +16,8 @@ use crate::clock;
 use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::{filter, MessageEvent, MessengerType};
-use crate::service;
 use crate::service::TryFromWithClient;
+use crate::{service, trace};
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
@@ -135,6 +135,8 @@ impl InspectAgent {
         let mut agent = InspectAgent { inspect_node: node, last_requests: HashMap::new() };
 
         fasync::Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(nonce, "inspect_agent");
             let event = message_rx.fuse();
             let agent_event = context.receptor.fuse();
             futures::pin_mut!(agent_event, event);
@@ -142,9 +144,19 @@ impl InspectAgent {
             loop {
                 futures::select! {
                     message_event = event.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "message_event"
+                        );
                         agent.process_message_event(message_event);
                     },
                     agent_message = agent_event.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "agent_event"
+                        );
                         if let MessageEvent::Message(
                                 service::Payload::Agent(Payload::Invocation(_invocation)), client)
                                 = agent_message {

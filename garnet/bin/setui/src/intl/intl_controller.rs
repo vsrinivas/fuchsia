@@ -62,9 +62,12 @@ impl controller::Handle for IntlController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetIntlInfo(info) => Some(self.set(info).await),
-            Request::Get => {
-                Some(self.client.read_setting_info::<IntlInfo>().await.into_handler_result())
-            }
+            Request::Get => Some(
+                self.client
+                    .read_setting_info::<IntlInfo>(fuchsia_trace::generate_nonce())
+                    .await
+                    .into_handler_result(),
+            ),
             _ => None,
         }
     }
@@ -98,8 +101,12 @@ impl IntlController {
 
         self.write_intl_info_to_service(info.clone()).await;
 
-        let current = self.client.read_setting::<IntlInfo>().await;
-        self.client.write_setting(current.merge(info).into(), false).await.into_handler_result()
+        let nonce = fuchsia_trace::generate_nonce();
+        let current = self.client.read_setting::<IntlInfo>(nonce).await;
+        self.client
+            .write_setting(current.merge(info).into(), false, nonce)
+            .await
+            .into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.

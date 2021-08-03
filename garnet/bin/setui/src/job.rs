@@ -20,6 +20,7 @@
 use crate::clock::now;
 use crate::payload_convert;
 use crate::service::message;
+use crate::trace;
 
 use core::fmt::{Debug, Formatter};
 use core::pin::Pin;
@@ -90,6 +91,7 @@ pub mod data {
 pub mod work {
     use super::{data, Signature};
     use crate::service::message;
+    use crate::trace::TracingNonce;
     use async_trait::async_trait;
 
     pub enum Load {
@@ -112,14 +114,19 @@ pub mod work {
             self,
             messenger: message::Messenger,
             store: Option<data::StoreHandle>,
+            nonce: TracingNonce,
         ) {
             match self {
                 Load::Sequential(load, _) => {
-                    load.execute(messenger, store.expect("all sequential loads should have store"))
-                        .await;
+                    load.execute(
+                        messenger,
+                        store.expect("all sequential loads should have store"),
+                        nonce,
+                    )
+                    .await;
                 }
                 Load::Independent(load) => {
-                    load.execute(messenger).await;
+                    load.execute(messenger, nonce).await;
                 }
             }
         }
@@ -141,14 +148,19 @@ pub mod work {
         /// Called when the [Job](super::Job) processing is ready for the encapsulated
         /// [Workload](super::Workload) be executed. The provided [StoreHandle](data::StoreHandle)
         /// is specific to the parent [Job](super::Job) group.
-        async fn execute(self: Box<Self>, messenger: message::Messenger, store: data::StoreHandle);
+        async fn execute(
+            self: Box<Self>,
+            messenger: message::Messenger,
+            store: data::StoreHandle,
+            nonce: TracingNonce,
+        );
     }
 
     #[async_trait]
     pub trait Independent {
         /// Called when a [Workload](super::Workload) should run. All workload specific logic should
         /// be encompassed in this method.
-        async fn execute(self: Box<Self>, messenger: message::Messenger);
+        async fn execute(self: Box<Self>, messenger: message::Messenger, nonce: TracingNonce);
     }
 }
 
@@ -277,12 +289,14 @@ impl Info {
             .map(|signature| stores.entry(*signature).or_insert_with(Default::default).clone());
 
         Box::pin(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(nonce, "job execution");
             let start = now();
             let mut state = State::Executing;
             std::mem::swap(&mut state, &mut self.state);
 
             if let State::Ready(job) = state {
-                job.workload.execute(messenger, store).await;
+                job.workload.execute(messenger, store, nonce).await;
                 self.state = State::Executed;
                 callback(self, execution::Details { start_time: start, end_time: now() });
             } else {
@@ -440,7 +454,7 @@ mod tests {
             receptor.get_signature(),
         )));
 
-        job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new())))).await;
+        job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new()))), 0).await;
 
         // Confirm received value matches the value sent from workload.
         assert_matches!(

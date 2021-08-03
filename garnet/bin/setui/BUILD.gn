@@ -52,6 +52,8 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -261,6 +263,7 @@ rustc_library("lib") {
     "src/tests/stream_volume_tests.rs",
     "src/tests/test_failure_utils.rs",
     "src/tests/volume_change_earcons_tests.rs",
+    "src/trace.rs",
   ]
 }
 

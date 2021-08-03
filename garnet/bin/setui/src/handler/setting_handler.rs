@@ -9,6 +9,7 @@ use crate::payload_convert;
 use crate::service::message::{MessageClient, Messenger, Signature};
 use crate::service_context::ServiceContext;
 use crate::storage::StorageInfo;
+use crate::{trace, trace_guard};
 use async_trait::async_trait;
 use core::convert::TryFrom;
 use fuchsia_async as fasync;
@@ -200,6 +201,13 @@ impl ClientImpl {
 
         // Process MessageHub requests
         fasync::Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(
+                nonce,
+
+                "setting handler",
+                "setting_type" => format!("{:?}", client.setting_type).as_str()
+            );
             while let Ok((payload, message_client)) = context.receptor.next_of::<Payload>().await {
                 let setting_type = client.setting_type;
 
@@ -209,6 +217,7 @@ impl ClientImpl {
                     // current value from controller and then notify the caller as if it was a
                     // change in value.
                     Command::HandleRequest(Request::Rebroadcast) => {
+                        trace!(nonce, "handle rebroadcast");
                         // Fetch the current value
                         let controller_reply =
                             Self::process_request(setting_type, &controller, Request::Get).await;
@@ -220,11 +229,20 @@ impl ClientImpl {
 
                         reply(message_client, controller_reply);
                     }
-                    Command::HandleRequest(request) => reply(
-                        message_client,
-                        Self::process_request(setting_type, &controller, request.clone()).await,
-                    ),
+                    Command::HandleRequest(request) => {
+                        trace!(nonce, "handle request");
+                        reply(
+                            message_client,
+                            Self::process_request(setting_type, &controller, request.clone()).await,
+                        );
+                    }
                     Command::ChangeState(state) => {
+                        trace!(
+                            nonce,
+
+                            "change state",
+                            "state" => format!("{:?}", state).as_str()
+                        );
                         match state {
                             State::Startup => {
                                 if let Some(Err(e)) = controller.change_state(state).await {
@@ -324,6 +342,8 @@ pub mod persist {
     use crate::message::base::{Audience, MessageEvent};
     use crate::service;
     use crate::storage;
+    use crate::trace;
+    use crate::trace::TracingNonce;
     use futures::StreamExt;
 
     pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
@@ -374,19 +394,36 @@ pub mod persist {
             self.base.notify(event).await;
         }
 
-        pub(crate) async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
+        pub(crate) async fn read_setting_info<T: HasSettingType>(
+            &self,
+            nonce: TracingNonce,
+        ) -> SettingInfo {
+            let guard = trace_guard!(
+                nonce,
+
+                "read_setting_info send",
+                "setting_type" => format!("{:?}", T::SETTING_TYPE).as_str()
+            );
             let mut receptor = self
                 .base
                 .messenger
                 .message(
                     storage::Payload::Request(storage::StorageRequest::Read(
                         T::SETTING_TYPE.into(),
+                        nonce,
                     ))
                     .into(),
                     Audience::Address(service::Address::Storage),
                 )
                 .send();
+            drop(guard);
 
+            trace!(
+                nonce,
+
+                "read_setting_info receive",
+                "setting_type" => format!("{:?}", T::SETTING_TYPE).as_str()
+            );
             while let Ok((payload, _)) = receptor.next_of::<storage::Payload>().await {
                 if let storage::Payload::Response(storage::StorageResponse::Read(
                     StorageInfo::SettingInfo(setting_info),
@@ -401,8 +438,11 @@ pub mod persist {
             panic!("Did not get a read response");
         }
 
-        pub(crate) async fn read_setting<T: HasSettingType + TryFrom<SettingInfo>>(&self) -> T {
-            let setting_info = self.read_setting_info::<T>().await;
+        pub(crate) async fn read_setting<T: HasSettingType + TryFrom<SettingInfo>>(
+            &self,
+            nonce: TracingNonce,
+        ) -> T {
+            let setting_info = self.read_setting_info::<T>(nonce).await;
             if let Ok(info) = setting_info.clone().try_into() {
                 info
             } else {
@@ -420,8 +460,16 @@ pub mod persist {
             &self,
             setting_info: SettingInfo,
             write_through: bool,
+            nonce: TracingNonce,
         ) -> Result<UpdateState, ControllerError> {
             let setting_type = (&setting_info).into();
+            let fst = format!("{:?}", setting_type);
+            let guard = trace_guard!(
+                nonce,
+
+                "write_setting send",
+                "setting_type" => fst.as_str()
+            );
             let mut receptor = self
                 .base
                 .messenger
@@ -429,12 +477,20 @@ pub mod persist {
                     storage::Payload::Request(storage::StorageRequest::Write(
                         setting_info.clone().into(),
                         write_through,
+                        nonce,
                     ))
                     .into(),
                     Audience::Address(service::Address::Storage),
                 )
                 .send();
+            drop(guard);
 
+            trace!(
+                nonce,
+
+                "write_setting receive",
+                "setting_type" => fst.as_str()
+            );
             while let Some(response) = receptor.next().await {
                 if let MessageEvent::Message(
                     service::Payload::Storage(storage::Payload::Response(
@@ -444,6 +500,12 @@ pub mod persist {
                 ) = response
                 {
                     if let Ok(UpdateState::Updated) = result {
+                        trace!(
+                            nonce,
+
+                            "write_setting notify",
+                            "setting_type" => fst.as_str()
+                        );
                         self.notify(Event::Changed(setting_info)).await;
                     }
 

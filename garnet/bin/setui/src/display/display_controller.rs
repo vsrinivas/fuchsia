@@ -136,6 +136,7 @@ impl BrightnessManager for () {
         client: &ClientProxy,
         _: bool,
     ) -> SettingHandlerResult {
+        let nonce = fuchsia_trace::generate_nonce();
         if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
                 SettingType::Display,
@@ -143,7 +144,7 @@ impl BrightnessManager for () {
                 format!("{:?}", info).into(),
             ));
         }
-        client.write_setting(info.into(), false).await.into_handler_result()
+        client.write_setting(info.into(), false, nonce).await.into_handler_result()
     }
 }
 
@@ -170,6 +171,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         client: &ClientProxy,
         always_send: bool,
     ) -> SettingHandlerResult {
+        let nonce = fuchsia_trace::generate_nonce();
         if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
                 SettingType::Display,
@@ -177,7 +179,7 @@ impl BrightnessManager for ExternalBrightnessControl {
                 format!("{:?}", info).into(),
             ));
         }
-        let update_state = client.write_setting(info.into(), false).await?;
+        let update_state = client.write_setting(info.into(), false, nonce).await?;
         if (update_state == UpdateState::Unchanged && !always_send) {
             return Ok(None);
         }
@@ -233,7 +235,8 @@ where
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Restore => {
-                let display_info = self.client.read_setting::<DisplayInfo>().await;
+                let display_info =
+                    self.client.read_setting::<DisplayInfo>(fuchsia_trace::generate_nonce()).await;
                 assert!(display_info.is_finite());
 
                 // Load and set value.
@@ -244,7 +247,8 @@ where
                 )
             }
             Request::SetDisplayInfo(mut set_display_info) => {
-                let display_info = self.client.read_setting::<DisplayInfo>().await;
+                let display_info =
+                    self.client.read_setting::<DisplayInfo>(fuchsia_trace::generate_nonce()).await;
                 assert!(display_info.is_finite());
 
                 if let Some(theme) = set_display_info.theme {
@@ -261,9 +265,12 @@ where
                         .await,
                 )
             }
-            Request::Get => {
-                Some(self.client.read_setting_info::<DisplayInfo>().await.into_handler_result())
-            }
+            Request::Get => Some(
+                self.client
+                    .read_setting_info::<DisplayInfo>(fuchsia_trace::generate_nonce())
+                    .await
+                    .into_handler_result(),
+            ),
             _ => None,
         }
     }

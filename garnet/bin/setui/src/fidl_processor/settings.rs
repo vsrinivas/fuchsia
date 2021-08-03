@@ -27,9 +27,11 @@ macro_rules! request_respond {
         $request:expr,
         $success:expr,
         $error:expr,
-        $marker:ty $(,)?
+        $marker:ty
+        $(, $debug:expr)?
     ) => {{
         use ::fidl::endpoints::ProtocolMarker;
+        #[allow(dead_code)]
         use $crate::fidl_common::FidlResponseErrorLogger;
 
         match $context.request($setting_type, $request).await {
@@ -37,6 +39,7 @@ macro_rules! request_respond {
             _ => $responder.send(&mut $error),
         }
         .log_fidl_response_error(<$marker as ProtocolMarker>::DEBUG_NAME);
+        $($debug;)?
     }};
 }
 

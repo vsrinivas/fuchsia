@@ -28,6 +28,7 @@
             "fuchsia.media.sounds.Player",
             "fuchsia.recovery.policy.Device",
             "fuchsia.stash.Store",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.policy.DeviceListenerRegistry"
         ]

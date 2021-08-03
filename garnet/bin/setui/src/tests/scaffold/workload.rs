@@ -5,14 +5,15 @@
 use crate::job::{self, data};
 use crate::service::message::{Audience, Messenger, Signature};
 use crate::service::test::Payload;
+use crate::trace::TracingNonce;
+use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::sync::Arc;
-
-use async_trait::async_trait;
 
 pub(crate) mod channel {
     use crate::job;
     use crate::service::message::Messenger;
+    use crate::trace::TracingNonce;
     use async_trait::async_trait;
     use futures::channel::mpsc::UnboundedSender;
 
@@ -33,7 +34,7 @@ pub(crate) mod channel {
 
     #[async_trait]
     impl job::work::Independent for Workload {
-        async fn execute(self: Box<Self>, _messenger: Messenger) {
+        async fn execute(self: Box<Self>, _messenger: Messenger, _nonce: TracingNonce) {
             self.state_sender.unbounded_send(State::Execute).expect("should succeed");
         }
     }
@@ -50,12 +51,18 @@ impl StubWorkload {
 
 #[async_trait]
 impl job::work::Independent for StubWorkload {
-    async fn execute(self: Box<Self>, _messenger: Messenger) {}
+    async fn execute(self: Box<Self>, _messenger: Messenger, _nonce: TracingNonce) {}
 }
 
 #[async_trait]
 impl job::work::Sequential for StubWorkload {
-    async fn execute(self: Box<Self>, _messenger: Messenger, _store: job::data::StoreHandle) {}
+    async fn execute(
+        self: Box<Self>,
+        _messenger: Messenger,
+        _store: job::data::StoreHandle,
+        _nonce: TracingNonce,
+    ) {
+    }
 }
 
 /// [Workload] provides a simple implementation of [Workload](job::Workload) for sending a test
@@ -75,14 +82,19 @@ impl Workload {
 
 #[async_trait]
 impl job::work::Independent for Workload {
-    async fn execute(self: Box<Self>, messenger: Messenger) {
+    async fn execute(self: Box<Self>, messenger: Messenger, _nonce: TracingNonce) {
         messenger.message(self.payload.into(), Audience::Messenger(self.target)).send().ack();
     }
 }
 
 #[async_trait]
 impl job::work::Sequential for Workload {
-    async fn execute(self: Box<Self>, messenger: Messenger, _store: data::StoreHandle) {
+    async fn execute(
+        self: Box<Self>,
+        messenger: Messenger,
+        _store: data::StoreHandle,
+        _nonce: TracingNonce,
+    ) {
         messenger
             .message(self.payload.clone().into(), Audience::Messenger(self.target))
             .send()
@@ -109,7 +121,12 @@ impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync
 impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync>
     job::work::Sequential for Sequential<T>
 {
-    async fn execute(self: Box<Self>, messenger: Messenger, store: data::StoreHandle) {
+    async fn execute(
+        self: Box<Self>,
+        messenger: Messenger,
+        store: data::StoreHandle,
+        _nonce: TracingNonce,
+    ) {
         (self.callback)(messenger, store).await;
     }
 }

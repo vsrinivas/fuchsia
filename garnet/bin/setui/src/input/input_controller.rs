@@ -163,7 +163,8 @@ impl InputControllerInner {
     // after a migration from a previous InputInfoSources version
     // or on pave.
     async fn get_stored_info(&self) -> InputInfo {
-        let mut input_info = self.client.read_setting::<InputInfo>().await;
+        let mut input_info =
+            self.client.read_setting::<InputInfo>(fuchsia_trace::generate_nonce()).await;
         if input_info.input_device_state.is_empty() {
             input_info.input_device_state = self.input_device_config.clone().into();
         }
@@ -194,7 +195,8 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        self.client.write_setting(input_info.into(), true).await.into_handler_result()
+        let nonce = fuchsia_trace::generate_nonce();
+        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
     /// Sets the hardware mic state to `muted`.
@@ -226,7 +228,8 @@ impl InputControllerInner {
             DeviceStateSource::SOFTWARE,
             if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
         );
-        self.client.write_setting(input_info.into(), true).await.into_handler_result()
+        let nonce = fuchsia_trace::generate_nonce();
+        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
     // A helper for setting the hw state for a |device_type| given the
@@ -276,7 +279,8 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        self.client.write_setting(input_info.into(), true).await.into_handler_result()
+        let nonce = fuchsia_trace::generate_nonce();
+        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
     /// Sets state for the given input devices.
@@ -311,7 +315,8 @@ impl InputControllerInner {
         }
 
         // Store the newly set value.
-        self.client.write_setting(input_info.into(), true).await.into_handler_result()
+        let nonce = fuchsia_trace::generate_nonce();
+        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
     }
 
     /// Pulls the current software state of the camera from the device state.

@@ -26,6 +26,8 @@ use crate::job::Job;
 use crate::job::Signature;
 use crate::message::base::Audience;
 use crate::service::{message, Address};
+use crate::trace;
+use crate::trace::TracingNonce;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_warn;
 use std::collections::HashMap;
@@ -126,7 +128,9 @@ impl<
         self: Box<Self>,
         messenger: message::Messenger,
         store_handle: data::StoreHandle,
+        nonce: TracingNonce,
     ) {
+        trace!(nonce, "Sequential Work execute");
         // Lock store for Job signature group.
         let mut store = store_handle.lock().await;
 
@@ -149,6 +153,7 @@ impl<
 
         // If a value was returned from the get call and considered updated (no existing or
         // different), return new value immediately.
+        trace!(nonce, "Get first response");
         if let Some(response) = self.process_response(
             get_receptor.next_of::<Payload>().await.map(|(payload, _)| payload),
             &mut store,
@@ -159,6 +164,7 @@ impl<
 
         // Otherwise, loop a watch until an updated value is available
         loop {
+            trace!(nonce, "Get looped response");
             if let Some(response) = self.process_response(
                 listen_receptor.next_of::<Payload>().await.map(|(payload, _)| payload),
                 &mut store,
@@ -266,10 +272,7 @@ mod tests {
             .0;
 
         let work_messenger_signature = work_messenger.get_signature();
-        fasync::Task::spawn(async move {
-            work.execute(work_messenger, store_handle).await;
-        })
-        .detach();
+        fasync::Task::spawn(work.execute(work_messenger, store_handle, 0)).detach();
 
         // Ensure the listen request is received from the right sender.
         let (listen_request, listen_client) = handler_receiver
@@ -317,10 +320,8 @@ mod tests {
             .0;
 
         // Execute work on async task.
-        fasync::Task::spawn(async move {
-            work.execute(work_messenger, Arc::new(Mutex::new(HashMap::new()))).await;
-        })
-        .detach();
+        fasync::Task::spawn(work.execute(work_messenger, Arc::new(Mutex::new(HashMap::new())), 0))
+            .detach();
 
         // Ensure an error is returned by the executed work.
         assert_matches!(response_rx.await.expect("should receive successful response"),

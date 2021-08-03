@@ -47,6 +47,7 @@ async fn test_drop_thread() {
     // Scoped to cause the object to be dropped.
     {
         StreamVolumeControl::create(
+            0,
             &audio_proxy,
             create_default_audio_stream(AudioStreamType::Media),
             None,
@@ -88,6 +89,7 @@ async fn test_detect_early_exit() {
     // drop behavior will clean up it before the AudioCoreService's exit can
     // be detected.
     let _stream_volume_control = StreamVolumeControl::create(
+        0,
         &audio_proxy,
         create_default_audio_stream(AudioStreamType::Media),
         Some(Arc::new(move || {

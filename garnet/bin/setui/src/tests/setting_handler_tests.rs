@@ -238,7 +238,7 @@ async fn verify_write_behavior<S: DeviceStorageCompatible + Into<SettingInfo> + 
     value: S,
     notified: bool,
 ) {
-    let result = proxy.write_setting(value.into(), false).await;
+    let result = proxy.write_setting(value.into(), false, 0).await;
 
     assert_eq!(notified, result.notified());
     assert!(result.is_ok() && result.into_handler_result().is_ok());

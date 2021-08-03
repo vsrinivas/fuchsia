@@ -97,6 +97,7 @@ pub mod message;
 pub mod monitor;
 pub mod service_context;
 pub mod storage;
+pub mod trace;
 
 /// This value represents the duration the proxy will wait after the last request
 /// before initiating the teardown of the controller. If a request is received

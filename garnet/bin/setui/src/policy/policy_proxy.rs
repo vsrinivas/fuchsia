@@ -12,8 +12,8 @@ use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTra
 use crate::policy::{
     self as policy_base, PolicyHandlerFactory, PolicyType, Request as PolicyRequest, Role,
 };
-use crate::service;
 use crate::service::TryFromWithClient;
+use crate::{service, trace};
 use futures::lock::Mutex;
 use std::sync::Arc;
 
@@ -101,6 +101,8 @@ impl PolicyProxy {
         let mut proxy = Self { policy_handler };
 
         Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(nonce, "policy proxy");
             let service_policy_fuse = service_policy_receptor.fuse();
             let message_fuse = service_proxy_receptor.fuse();
             futures::pin_mut!(message_fuse, service_policy_fuse);
@@ -108,6 +110,11 @@ impl PolicyProxy {
                 futures::select! {
                     // Handle policy messages.
                     service_policy_event = service_policy_fuse.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "service policy event"
+                        );
                         if let MessageEvent::Message(
                             service::Payload::Policy(policy_base::Payload::Request(request)),
                             message_client,
@@ -119,6 +126,11 @@ impl PolicyProxy {
 
                     // Handle intercepted messages from the service MessageHub
                     message = message_fuse.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "message event"
+                        );
                         proxy.process_settings_event(message).await;
                     }
 

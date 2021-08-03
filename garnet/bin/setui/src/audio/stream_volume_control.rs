@@ -6,10 +6,11 @@ use {
     crate::audio::types::AudioStream,
     crate::audio::utils::round_volume_level,
     crate::base::SettingType,
-    crate::call,
     crate::event::{Event, Publisher},
     crate::handler::setting_handler::ControllerError,
     crate::service_context::ExternalServiceProxy,
+    crate::trace::TracingNonce,
+    crate::{call, trace, trace_guard},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
     fidl_fuchsia_media_audio::VolumeControlProxy,
@@ -61,6 +62,7 @@ impl Drop for StreamVolumeControl {
 // TODO(fxbug.dev/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
     pub(crate) async fn create(
+        nonce: TracingNonce,
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
         stream: AudioStream,
         early_exit_action: Option<ExitAction>,
@@ -70,6 +72,7 @@ impl StreamVolumeControl {
         // and from set request has the validation.
         assert!(stream.has_finite_volume_level());
 
+        trace!(nonce, "StreamVolumeControl ctor");
         let mut control = StreamVolumeControl {
             stored_stream: stream,
             proxy: None,
@@ -79,11 +82,15 @@ impl StreamVolumeControl {
             early_exit_action,
         };
 
-        control.bind_volume_control().await?;
+        control.bind_volume_control(nonce).await?;
         Ok(control)
     }
 
-    pub(crate) async fn set_volume(&mut self, stream: AudioStream) -> Result<(), ControllerError> {
+    pub(crate) async fn set_volume(
+        &mut self,
+        nonce: TracingNonce,
+        stream: AudioStream,
+    ) -> Result<(), ControllerError> {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
         // Stream input should be valid. Input comes from restore should be valid
         // and from set request has the validation.
@@ -91,7 +98,7 @@ impl StreamVolumeControl {
 
         // Try to create and bind a new VolumeControl.
         if self.proxy.is_none() {
-            self.bind_volume_control().await?;
+            self.bind_volume_control(nonce).await?;
         }
 
         // Round volume level from user input.
@@ -127,7 +134,8 @@ impl StreamVolumeControl {
         Ok(())
     }
 
-    async fn bind_volume_control(&mut self) -> Result<(), ControllerError> {
+    async fn bind_volume_control(&mut self, nonce: TracingNonce) -> Result<(), ControllerError> {
+        trace!(nonce, "bind volume control");
         if self.proxy.is_some() {
             return Ok(());
         }
@@ -140,6 +148,7 @@ impl StreamVolumeControl {
         let stream_type = self.stored_stream.stream_type;
         let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
+        let guard = trace_guard!(nonce, "bind usage volume control");
         if call!(self.audio_service => bind_usage_volume_control(&mut usage, server_end)).is_err() {
             return Err(ControllerError::ExternalFailure(
                 SettingType::Audio,
@@ -147,7 +156,9 @@ impl StreamVolumeControl {
                 format!("bind_usage_volume_control for audio_core {:?}", usage).into(),
             ));
         }
+        drop(guard);
 
+        let guard = trace_guard!(nonce, "set values");
         // Once the volume control is bound, apply the persisted audio settings to it.
         if vol_control_proxy.set_volume(self.stored_stream.user_volume_level).is_err() {
             return Err(ControllerError::ExternalFailure(
@@ -164,6 +175,7 @@ impl StreamVolumeControl {
                 "set_mute for vol_control".into(),
             ));
         }
+        drop(guard);
 
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             // exit_rx needs this signal to end leftover spawn.
@@ -173,23 +185,35 @@ impl StreamVolumeControl {
             );
         }
 
-        // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a notification
-        // when we receive an update.
+        trace!(nonce, "setup listener");
+
+        // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a
+        // notification when we receive an update.
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         let publisher_clone = self.publisher.clone();
         let mut volume_events = vol_control_proxy.take_event_stream();
         let early_exit_action = self.early_exit_action.clone();
         fasync::Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(nonce, "bind volume handler");
             loop {
                 futures::select! {
                     _ = exit_rx.next() => {
+                        trace!(nonce, "exit");
                         if let Some(publisher) = publisher_clone {
                             publisher.send_event(Event::Closed(PUBLISHER_EVENT_NAME));
                         }
                         return;
                     }
                     volume_event = volume_events.try_next() => {
-                        if volume_event.is_err() || volume_event.expect("should not be error").is_none(){
+                        trace!(
+                            nonce,
+
+                            "volume_event"
+                        );
+                        if volume_event.is_err() ||
+                            volume_event.expect("should not be error").is_none()
+                        {
                             if let Some(action) = early_exit_action {
                                 (action)();
                             }

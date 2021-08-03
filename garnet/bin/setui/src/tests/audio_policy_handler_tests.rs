@@ -373,12 +373,12 @@ async fn set_and_verify_stream(
 ) {
     let request_transform = env
         .handler
-        .handle_setting_request(SettingRequest::SetVolume(vec![request_stream.into()]))
+        .handle_setting_request(SettingRequest::SetVolume(vec![request_stream.into()], 0))
         .await;
 
     assert_eq!(
         request_transform,
-        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream.into()])))
+        Some(RequestTransform::Request(SettingRequest::SetVolume(vec![expected_stream.into()], 0)))
     );
 }
 
@@ -404,7 +404,7 @@ async fn verify_stream_set(
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {
             client.acknowledge().await;
-            if let TestEnvironmentPayload::Request(SettingRequest::SetVolume(streams)) =
+            if let TestEnvironmentPayload::Request(SettingRequest::SetVolume(streams, _)) =
                 incoming_payload
             {
                 assert_eq!(vec![stream.into()], streams);

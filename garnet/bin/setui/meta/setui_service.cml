@@ -45,6 +45,7 @@
                 "fuchsia.stash.Store",
                 "fuchsia.sys.Environment",
                 "fuchsia.timezone.Timezone",
+                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],

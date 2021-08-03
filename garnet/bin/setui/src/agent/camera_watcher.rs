@@ -11,8 +11,8 @@ use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::input::common::connect_to_camera;
 use crate::message::base::Audience;
-use crate::service;
 use crate::service_context::ServiceContext;
+use crate::{service, trace, trace_guard};
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use std::collections::HashSet;
@@ -56,7 +56,10 @@ impl CameraWatcherAgent {
 
         let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            let guard = trace_guard!(nonce, "camera watcher agent");
             while let Ok((payload, client)) = receptor.next_of::<Payload>().await {
+                trace!(nonce, "payload");
                 if let Payload::Invocation(invocation) = payload {
                     client
                         .reply(Payload::Complete(agent.handle(invocation).await).into())
@@ -64,6 +67,7 @@ impl CameraWatcherAgent {
                         .ack();
                 }
             }
+            drop(guard);
 
             fx_log_info!("Camera watcher agent done processing requests");
         })
@@ -90,13 +94,16 @@ impl CameraWatcherAgent {
                     sw_muted: false,
                 };
                 fasync::Task::spawn(async move {
+                    let nonce = fuchsia_trace::generate_nonce();
                     // Here we don't care about hw_muted state because the input service would pick
                     // up mute changes directly from the switch. We care about sw changes because
                     // other clients of the camera3 service could change the sw mute state but not
                     // notify the settings service.
+                    trace!(nonce, "camera_watcher_agent_handler");
                     while let Ok((sw_muted, _hw_muted)) =
                         camera_device_client.watch_mute_state().await
                     {
+                        trace!(nonce, "event");
                         event_handler.handle_event(sw_muted);
                     }
                 })

@@ -8,6 +8,7 @@ use {
     crate::message::base::Audience,
     crate::service,
     crate::service::TryFromWithClient,
+    crate::trace,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::UnboundedSender,
@@ -186,9 +187,12 @@ where
         {
             let hanging_get_handler_clone = hanging_get_handler.clone();
             fasync::Task::spawn(async move {
+                let nonce = fuchsia_trace::generate_nonce();
+                trace!(nonce, "hanging_get_handler");
                 while let Some(command) = on_command_receiver.next().await {
                     match command {
                         ListenCommand::Change(setting_info) => {
+                            trace!(nonce, "change");
                             let mut handler_lock = hanging_get_handler_clone.lock().await;
                             handler_lock.on_change(setting_info).await;
                         }
@@ -271,12 +275,19 @@ where
             self.listen_exit_tx = Some(exit_tx);
 
             fasync::Task::spawn(async move {
+                let nonce = fuchsia_trace::generate_nonce();
+                trace!(nonce, "watch change fn");
                 let receptor_fuse = receptor.fuse();
                 futures::pin_mut!(receptor_fuse);
 
                 loop {
                     futures::select! {
                         update = receptor_fuse.select_next_some() => {
+                            trace!(
+                                nonce,
+                                "change",
+                                "payload" => format!("{:?}", update).as_str()
+                            );
                             if let Ok((Payload::Response(Ok(Some(setting_info))), _)) =
                                 Payload::try_from_with_client(update) {
                                     command_tx_clone.unbounded_send(

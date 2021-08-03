@@ -47,7 +47,8 @@ impl controller::Handle for DoNotDisturbController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetDnD(dnd_info) => {
-                let mut stored_value = self.client.read_setting::<DoNotDisturbInfo>().await;
+                let nonce = fuchsia_trace::generate_nonce();
+                let mut stored_value = self.client.read_setting::<DoNotDisturbInfo>(nonce).await;
                 if dnd_info.user_dnd.is_some() {
                     stored_value.user_dnd = dnd_info.user_dnd;
                 }
@@ -56,13 +57,16 @@ impl controller::Handle for DoNotDisturbController {
                 }
                 Some(
                     self.client
-                        .write_setting(stored_value.into(), false)
+                        .write_setting(stored_value.into(), false, nonce)
                         .await
                         .into_handler_result(),
                 )
             }
             Request::Get => Some(
-                self.client.read_setting_info::<DoNotDisturbInfo>().await.into_handler_result(),
+                self.client
+                    .read_setting_info::<DoNotDisturbInfo>(fuchsia_trace::generate_nonce())
+                    .await
+                    .into_handler_result(),
             ),
             _ => None,
         }

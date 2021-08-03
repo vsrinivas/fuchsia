@@ -14,6 +14,7 @@ use crate::policy::{
 };
 use crate::service;
 use crate::storage::{self, StorageInfo};
+use crate::trace::TracingNonce;
 use anyhow::Error;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
@@ -151,12 +152,18 @@ impl ClientProxy {
 
     /// The type `T` is any type that has a [`PolicyType`] associated with it and that can be
     /// converted into a [`PolicyInfo`]. This is usually a variant of the `PolicyInfo` enum.
-    pub(crate) async fn read_policy<T: HasPolicyType + TryFrom<PolicyInfo>>(&self) -> T {
+    pub(crate) async fn read_policy<T: HasPolicyType + TryFrom<PolicyInfo>>(
+        &self,
+        nonce: TracingNonce,
+    ) -> T {
         let mut receptor = self
             .service_messenger
             .message(
-                storage::Payload::Request(storage::StorageRequest::Read(T::POLICY_TYPE.into()))
-                    .into(),
+                storage::Payload::Request(storage::StorageRequest::Read(
+                    T::POLICY_TYPE.into(),
+                    nonce,
+                ))
+                .into(),
                 Audience::Address(service::Address::Storage),
             )
             .send();
@@ -193,6 +200,7 @@ impl ClientProxy {
         &self,
         policy_info: PolicyInfo,
         write_through: bool,
+        nonce: TracingNonce,
     ) -> Result<UpdateState, PolicyError> {
         let policy_type = (&policy_info).into();
         let mut receptor = self
@@ -201,6 +209,7 @@ impl ClientProxy {
                 storage::Payload::Request(storage::StorageRequest::Write(
                     policy_info.into(),
                     write_through,
+                    nonce,
                 ))
                 .into(),
                 Audience::Address(service::Address::Storage),

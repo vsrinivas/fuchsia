@@ -11,6 +11,8 @@ use {
     crate::fidl_processor::settings::RequestContext,
     crate::handler::base::Request,
     crate::request_respond,
+    crate::trace::TracingNonce,
+    crate::{trace, trace_guard},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
@@ -115,7 +117,8 @@ enum Error {
     NoSource(usize),
 }
 
-fn to_request(settings: AudioSettings) -> Option<Result<Request, Error>> {
+fn to_request(settings: AudioSettings, nonce: TracingNonce) -> Option<Result<Request, Error>> {
+    trace!(nonce, "to_request");
     settings.streams.map(|streams| {
         streams
             .into_iter()
@@ -135,7 +138,7 @@ fn to_request(settings: AudioSettings) -> Option<Result<Request, Error>> {
                 }
             })
             .collect::<Result<Vec<_>, _>>()
-            .map(Request::SetVolume)
+            .map(|streams| Request::SetVolume(streams, nonce))
     })
 }
 
@@ -149,7 +152,9 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         AudioRequest::Set { settings, responder } => {
-            if let Some(request) = to_request(settings) {
+            let nonce = fuchsia_trace::generate_nonce();
+            let guard = trace_guard!(nonce, "fidl handler set");
+            if let Some(request) = to_request(settings, nonce) {
                 match request {
                     Ok(request) => fasync::Task::spawn(async move {
                         request_respond!(
@@ -159,7 +164,10 @@ async fn process_request(
                             request,
                             Ok(()),
                             Err(fidl_fuchsia_settings::Error::Failed),
-                            AudioMarker
+                            AudioMarker,
+                            {
+                                drop(guard);
+                            }
                         );
                     })
                     .detach(),
@@ -172,12 +180,14 @@ async fn process_request(
                         responder
                             .send(&mut Err(fidl_fuchsia_settings::Error::Failed))
                             .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+                        drop(guard);
                     }
                 }
             } else {
                 responder
                     .send(&mut Err(fidl_fuchsia_settings::Error::Unsupported))
                     .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+                drop(guard);
             }
         }
         AudioRequest::Watch { responder } => {

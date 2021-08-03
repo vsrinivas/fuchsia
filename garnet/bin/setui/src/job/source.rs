@@ -18,6 +18,8 @@ use crate::clock::now;
 use crate::job::{self, execution, Job, Payload, StoreHandleMapping};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::message::{Delegate, Messenger, Signature};
+use crate::trace::TracingNonce;
+use crate::trace_guard;
 
 use core::pin::Pin;
 use fuchsia_async as fasync;
@@ -216,18 +218,17 @@ impl Handler {
         &mut self,
         delegate: &mut Delegate,
         callback: F,
+        nonce: TracingNonce,
     ) -> bool {
         for execution_group in self.jobs.values_mut() {
             // If there are no jobs ready to become active, move to next group.
             if let Some(job_info) = execution_group.promote_next_to_active() {
+                let guard = trace_guard!(nonce, "prepare_execution");
                 let execution =
                     job_info.prepare_execution(delegate, &mut self.stores, callback).await;
+                drop(guard);
 
-                fasync::Task::spawn(async move {
-                    execution.await;
-                })
-                .detach();
-
+                fasync::Task::spawn(execution).detach();
                 return true;
             }
         }
@@ -328,7 +329,7 @@ mod tests {
 
         let mut handler = Handler::new();
 
-        assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}).await);
+        assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}, 0).await);
 
         for result in &results {
             handler.add_pending_job(Job::new(job::work::Load::Independent(Workload::new(
@@ -343,9 +344,13 @@ mod tests {
             // Execute job.
             assert!(
                 handler
-                    .execute_next(&mut message_hub_delegate, move |job, _| {
-                        execution_tx.unbounded_send(job).expect("send should succeed");
-                    })
+                    .execute_next(
+                        &mut message_hub_delegate,
+                        move |job, _| {
+                            execution_tx.unbounded_send(job).expect("send should succeed");
+                        },
+                        0
+                    )
                     .await
             );
 
@@ -379,7 +384,7 @@ mod tests {
         // Create 2 jobs of the same sequential type.
         let results: Vec<i64> = (0..=1).collect();
 
-        assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}).await);
+        assert!(!handler.execute_next(&mut message_hub_delegate, |_, _| {}, 0).await);
 
         for result in &results {
             handler.add_pending_job(Job::new(job::work::Load::Sequential(
@@ -393,9 +398,13 @@ mod tests {
             let execution_tx = execution_tx.clone();
             assert!(
                 handler
-                    .execute_next(&mut message_hub_delegate, move |job, _| {
-                        execution_tx.unbounded_send(job).expect("send should succeed");
-                    })
+                    .execute_next(
+                        &mut message_hub_delegate,
+                        move |job, _| {
+                            execution_tx.unbounded_send(job).expect("send should succeed");
+                        },
+                        0
+                    )
                     .await
             );
         }
@@ -410,7 +419,7 @@ mod tests {
         let first_job_info = execution_rx.next().await.expect("should have gotten job");
 
         // Ensure no job is ready to execute.
-        assert!(!handler.execute_next(&mut message_hub_delegate, move |_, _| {}).await);
+        assert!(!handler.execute_next(&mut message_hub_delegate, move |_, _| {}, 0).await);
 
         // Add an independent job.
         handler.add_pending_job(Job::new(job::work::Load::Independent(StubWorkload::new())));
@@ -421,9 +430,13 @@ mod tests {
             // Execute next job and ensure that the response max
             assert!(
                 handler
-                    .execute_next(&mut message_hub_delegate, move |job, _| {
-                        execution_tx.unbounded_send(job).expect("send should succeed");
-                    })
+                    .execute_next(
+                        &mut message_hub_delegate,
+                        move |job, _| {
+                            execution_tx.unbounded_send(job).expect("send should succeed");
+                        },
+                        0
+                    )
                     .await
             );
         }
@@ -442,9 +455,13 @@ mod tests {
             // Execute next job. Assert job is ready to execute
             assert!(
                 handler
-                    .execute_next(&mut message_hub_delegate, move |job, _| {
-                        execution_tx.unbounded_send(job).expect("send should succeed");
-                    })
+                    .execute_next(
+                        &mut message_hub_delegate,
+                        move |job, _| {
+                            execution_tx.unbounded_send(job).expect("send should succeed");
+                        },
+                        0
+                    )
                     .await
             );
         }
@@ -523,9 +540,13 @@ mod tests {
             // Execute next job.
             assert!(
                 handler
-                    .execute_next(&mut message_hub_delegate, move |job, _| {
-                        completion_tx.unbounded_send(job).expect("should send job");
-                    })
+                    .execute_next(
+                        &mut message_hub_delegate,
+                        move |job, _| {
+                            completion_tx.unbounded_send(job).expect("should send job");
+                        },
+                        0
+                    )
                     .await
             );
 

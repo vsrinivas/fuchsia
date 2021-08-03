@@ -6,20 +6,19 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
-use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, Property};
-use fuchsia_syslog::fx_log_err;
-use futures::StreamExt;
-
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
-use crate::service;
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};
+use crate::{service, trace};
+use anyhow::{format_err, Error};
+use fuchsia_async as fasync;
+use fuchsia_inspect::{self as inspect, component, Property};
+use fuchsia_syslog::fx_log_err;
+use futures::StreamExt;
 
 const INSPECT_NODE_NAME: &str = "policy_values";
 
@@ -91,6 +90,8 @@ impl InspectPolicyAgent {
         let mut agent = Self { messenger_client, inspect_node, policy_values: HashMap::new() };
 
         fasync::Task::spawn(async move {
+            let nonce = fuchsia_trace::generate_nonce();
+            trace!(nonce, "inspect_policy_agent");
             // Request initial values from all policy handlers.
             let initial_get_receptor = agent
                 .messenger_client
@@ -110,17 +111,32 @@ impl InspectPolicyAgent {
             loop {
                 futures::select! {
                     initial_get_message = initial_get_fuse.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "initial get"
+                        );
                         // Received a reply to our initial broadcast to all policy handlers asking
                         // for their value.
                         agent.handle_initial_get(initial_get_message).await;
                     }
 
                     intercepted_message = broker_fuse.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "intercepted"
+                        );
                         // Intercepted a policy request.
                         agent.handle_intercepted_message(intercepted_message).await;
                     }
 
                     agent_message = agent_event.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "invocation"
+                        );
                         if let MessageEvent::Message(
                                 service::Payload::Agent(Payload::Invocation(_invocation)), client)
                                 = agent_message {

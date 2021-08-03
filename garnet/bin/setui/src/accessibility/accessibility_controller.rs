@@ -54,10 +54,14 @@ impl controller::Handle for AccessibilityController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Get => Some(
-                self.client.read_setting_info::<AccessibilityInfo>().await.into_handler_result(),
+                self.client
+                    .read_setting_info::<AccessibilityInfo>(fuchsia_trace::generate_nonce())
+                    .await
+                    .into_handler_result(),
             ),
             Request::SetAccessibilityInfo(info) => {
-                let original_info = self.client.read_setting::<AccessibilityInfo>().await;
+                let nonce = fuchsia_trace::generate_nonce();
+                let original_info = self.client.read_setting::<AccessibilityInfo>(nonce).await;
                 assert!(original_info.is_finite());
                 // Validate accessibility info contains valid float numbers.
                 if !info.is_finite() {
@@ -68,7 +72,7 @@ impl controller::Handle for AccessibilityController {
                     )));
                 }
                 let result =
-                    self.client.write_setting(original_info.merge(info).into(), false).await;
+                    self.client.write_setting(original_info.merge(info).into(), false, nonce).await;
                 Some(result.into_handler_result())
             }
             _ => None,

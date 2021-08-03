@@ -12,6 +12,8 @@ use crate::message::base::{
 use crate::message::beacon::{Beacon, BeaconBuilder};
 use crate::message::delegate::Delegate;
 use crate::message::messenger::{Messenger, MessengerClient};
+use crate::trace::TracingNonce;
+use crate::{trace, trace_guard};
 use anyhow::format_err;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
@@ -122,7 +124,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         fasync::Task::spawn(async move {
             // Released when exiting scope to signal completion.
             let _scope_fuse = fuse;
+            let nonce = fuchsia_trace::generate_nonce();
 
+            trace!(nonce, "message hub");
             loop {
                 // We must prioritize the action futures. Exit actions
                 // take absolute priority. Message actions are ordered before
@@ -132,13 +136,23 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                         break;
                     }
                     message_action = action_rx.select_next_some() => {
+                        trace!(
+                            nonce,
+
+                            "message action"
+                        );
                         let (fingerprint, action, beacon) = message_action;
-                        hub.process_request(fingerprint, action, beacon).await;
+                        hub.process_request(nonce, fingerprint, action, beacon).await;
                     }
                     messenger_action = messenger_rx.next() => {
+                        trace!(
+                            nonce,
+
+                            "messenger action"
+                        );
                         match messenger_action {
                             Some(action) => {
-                                hub.process_messenger_request(action).await;
+                                hub.process_messenger_request(nonce, action).await;
                             }
                             None => {
                                 hub.messenger_channel_closed = true;
@@ -147,7 +161,12 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                         }
                     }
                     role_action = role_rx.select_next_some() => {
-                        if hub.process_role_request(role_action).is_err() {
+                        trace!(
+                            nonce,
+
+                            "role action"
+                        );
+                        if hub.process_role_request(nonce, role_action).is_err() {
                             fx_log_err!("failed to process role action");
                         }
                      }
@@ -188,7 +207,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     /// return path of the source message. The provided sender id represents the
     /// id of the current messenger possessing the message and not necessarily
     /// the original author.
-    async fn send_to_next(&mut self, sender_id: MessengerId, message: Message<P, A, R>) {
+    async fn send_to_next(
+        &mut self,
+        nonce: TracingNonce,
+        sender_id: MessengerId,
+        message: Message<P, A, R>,
+    ) {
+        trace!(nonce, "send_to_next");
         let mut recipients = vec![];
 
         let message_type = message.get_type();
@@ -281,7 +306,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             }
 
             if let Some(index) = target_index {
-                recipients.push(return_path[index].clone());
+                recipients.push(return_path.swap_remove(index));
 
                 if index == last_index {
                     // Ack current message if being sent to intended recipient.
@@ -438,9 +463,20 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
         Ok((return_set, delivery_required))
     }
 
-    async fn process_messenger_request(&mut self, action: MessengerAction<P, A, R>) {
+    async fn process_messenger_request(
+        &mut self,
+        nonce: TracingNonce,
+        action: MessengerAction<P, A, R>,
+    ) {
         match action {
             MessengerAction::Create(messenger_descriptor, responder, messenger_tx) => {
+                trace!(
+                    nonce,
+
+                    "process messenger request create",
+                    "messenger_type" => format!("{:?}", messenger_descriptor.messenger_type).as_str()
+                );
+
                 let mut optional_address = None;
                 if let MessengerType::Addressable(address) = messenger_descriptor.messenger_type {
                     if self.addresses.contains_key(&address) {
@@ -509,9 +545,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             }
             #[cfg(test)]
             MessengerAction::CheckPresence(signature, responder) => {
+                trace!(nonce, "process messenger request check presence");
                 responder.send(Ok(self.resolve_messenger_id(&signature).is_ok())).ok();
             }
-            MessengerAction::DeleteBySignature(signature) => self.delete_by_signature(signature),
+            MessengerAction::DeleteBySignature(signature) => {
+                trace!(nonce, "process messenger request delete");
+                self.delete_by_signature(signature)
+            }
         }
     }
 
@@ -546,15 +586,23 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     // Translates messenger requests into actions upon the MessageHub.
     async fn process_request(
         &mut self,
+        nonce: TracingNonce,
         fingerprint: Fingerprint<A>,
         action: MessageAction<P, A, R>,
         beacon: Option<Beacon<P, A, R>>,
     ) {
-        let mut outgoing_message = match action {
+        let (mut outgoing_message, _guard) = match action {
             MessageAction::Send(payload, message_type, timestamp) => {
-                Message::new(fingerprint, timestamp, payload, message_type)
+                let guard = trace_guard!(
+                    nonce,
+
+                    "process request send",
+                    "payload" => format!("{:?}", payload).as_str()
+                );
+                (Message::new(fingerprint, timestamp, payload, message_type), guard)
             }
             MessageAction::Forward(forwarded_message) => {
+                let guard = trace_guard!(nonce, "process request forward");
                 if let Some(beacon) = self.beacons.get(&fingerprint.id) {
                     match forwarded_message.get_type() {
                         MessageType::Origin(audience) => {
@@ -584,7 +632,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                     forwarded_message.report_status(Status::Undeliverable).await;
                     return;
                 }
-                forwarded_message
+                (forwarded_message, guard)
             }
         };
 
@@ -592,10 +640,15 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             outgoing_message.add_participant(handle);
         }
 
-        self.send_to_next(fingerprint.id, outgoing_message).await;
+        self.send_to_next(nonce, fingerprint.id, outgoing_message).await;
     }
 
-    fn process_role_request(&mut self, action: role::Action<R>) -> Result<(), Error> {
+    fn process_role_request(
+        &mut self,
+        nonce: TracingNonce,
+        action: role::Action<R>,
+    ) -> Result<(), Error> {
+        trace!(nonce, "process role request");
         match action {
             // Handle creating a new role. Currently there is no way this call
             // can fail. A signature for the generated role is handed back

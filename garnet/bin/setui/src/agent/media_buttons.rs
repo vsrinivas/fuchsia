@@ -14,6 +14,8 @@ use crate::input::{monitor_media_buttons, VolumeGain};
 use crate::message::base::Audience;
 use crate::service;
 use crate::service_context::ServiceContext;
+use crate::trace::TracingNonce;
+use crate::trace_guard;
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -90,7 +92,8 @@ impl MediaButtonsAgent {
         };
         fasync::Task::spawn(async move {
             while let Some(event) = input_rx.next().await {
-                event_handler.handle_event(event);
+                let nonce = fuchsia_trace::generate_nonce();
+                event_handler.handle_event(event, nonce);
             }
         })
         .detach();
@@ -106,21 +109,21 @@ struct EventHandler {
 }
 
 impl EventHandler {
-    fn handle_event(&self, event: MediaButtonsEvent) {
+    fn handle_event(&self, event: MediaButtonsEvent, nonce: TracingNonce) {
         if let Some(volume_gain) = event.volume {
-            self.handle_volume(volume_gain);
+            self.handle_volume(volume_gain, nonce);
         }
 
         if let Some(mic_mute) = event.mic_mute {
-            self.send_event(ButtonType::MicrophoneMute(mic_mute));
+            self.send_event(ButtonType::MicrophoneMute(mic_mute), nonce);
         }
 
         if let Some(camera_disable) = event.camera_disable {
-            self.send_event(ButtonType::CameraDisable(camera_disable));
+            self.send_event(ButtonType::CameraDisable(camera_disable), nonce);
         }
     }
 
-    fn handle_volume(&self, volume_gain: i8) {
+    fn handle_volume(&self, volume_gain: i8, nonce: TracingNonce) {
         let volume_gain = match volume_gain {
             -1 => VolumeGain::Down,
             0 => VolumeGain::Neutral,
@@ -130,10 +133,10 @@ impl EventHandler {
                 return;
             }
         };
-        self.send_event(volume_gain);
+        self.send_event(volume_gain, nonce);
     }
 
-    fn send_event<E>(&self, event: E)
+    fn send_event<E>(&self, event: E, nonce: TracingNonce)
     where
         E: Copy + Into<media_buttons::Event> + Into<Request> + std::fmt::Debug,
     {
@@ -142,12 +145,26 @@ impl EventHandler {
 
         // Send the event to all the interested setting types that are also available.
         for setting_type in self.recipient_settings.iter() {
-            self.messenger
+            let guard = trace_guard!(
+                nonce,
+
+                "media buttons send event",
+                "setting_type" => format!("{:?}", setting_type).as_str()
+            );
+            let mut receptor = self
+                .messenger
                 .message(
                     HandlerPayload::Request(setting_request.clone()).into(),
                     Audience::Address(service::Address::Handler(*setting_type)),
                 )
                 .send();
+            fasync::Task::spawn(async move {
+                while let Ok((_response, _)) = receptor.next_payload().await {
+                    drop(guard);
+                    break;
+                }
+            })
+            .detach();
         }
     }
 }
@@ -263,6 +280,7 @@ mod tests {
                 .set_mic_mute(true)
                 .set_camera_disable(true)
                 .build(),
+            0,
         );
 
         // Delete the messengers for the receptors we're selecting below. This
@@ -366,6 +384,7 @@ mod tests {
                 .set_mic_mute(true)
                 .set_camera_disable(true)
                 .build(),
+            0,
         );
 
         let mut received_events: usize = 0;

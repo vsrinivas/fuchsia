@@ -8,6 +8,7 @@
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::policy::{PolicyInfo, PolicyType};
+use crate::trace::TracingNonce;
 
 /// `Payload` wraps the request and response payloads.
 #[derive(Clone, PartialEq, Debug)]
@@ -20,10 +21,10 @@ pub enum Payload {
 #[derive(Clone, PartialEq, Debug)]
 pub enum StorageRequest {
     /// A read requests for the corresponding [`StorageInfo`] of this `StorageType`.
-    Read(StorageType),
+    Read(StorageType, TracingNonce),
     /// A write requests for this [`StorageInfo`]. The `bool` is for specifying whether
     /// the data needs to be immediately flushed to disk or not.
-    Write(StorageInfo, bool),
+    Write(StorageInfo, bool, TracingNonce),
 }
 
 #[derive(Clone, PartialEq, Debug)]

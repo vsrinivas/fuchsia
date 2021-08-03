@@ -83,7 +83,7 @@ async fn test_write() {
         FakePolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
-            client_proxy.write_policy(expected_value.into(), false).await.expect("write failed");
+            client_proxy.write_policy(expected_value.into(), false, 0).await.expect("write failed");
             Ok(Payload::PolicyInfo(UnknownInfo(true).into()))
         })
     }));
@@ -96,5 +96,5 @@ async fn test_write() {
     assert_eq!(store.get::<UnknownInfo>().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.
-    assert_eq!(client_proxy.read_policy::<UnknownInfo>().await, expected_value);
+    assert_eq!(client_proxy.read_policy::<UnknownInfo>(0).await, expected_value);
 }

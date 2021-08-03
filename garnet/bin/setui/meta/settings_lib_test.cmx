@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+            }
+        }
+    },
     "include": [
         "syslog/client.shard.cmx"
     ],
@@ -8,7 +15,8 @@
     "sandbox": {
         "dev": [
             "class/input-report",
-            "class/light"
+            "class/light",
+            "sys/cpu-trace"
         ],
         "features": [
             "build-info",
@@ -22,7 +30,8 @@
             "fuchsia.media.sessions2.Discovery",
             "fuchsia.media.sounds.Player",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

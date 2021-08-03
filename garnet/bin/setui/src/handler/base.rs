@@ -17,6 +17,7 @@ use crate::payload_convert;
 use crate::service::message::{Delegate, Messenger, Receptor, Signature};
 use crate::service_context::ServiceContext;
 use crate::setup::types::SetConfigurationInterfacesParams;
+use crate::trace::TracingNonce;
 
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -94,7 +95,7 @@ generate_inspect! {
         ScheduleClearAccounts,
 
         // Audio requests.
-        SetVolume(Vec<SetAudioStream>),
+        SetVolume(Vec<SetAudioStream>, TracingNonce),
 
         // Audio in requests.
         SetMicMute(bool),

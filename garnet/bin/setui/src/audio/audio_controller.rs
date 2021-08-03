@@ -18,6 +18,8 @@ use crate::handler::setting_handler::{
     SettingHandlerResult, State,
 };
 use crate::input::ButtonType;
+use crate::trace::TracingNonce;
+use crate::{trace, trace_guard};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
@@ -64,21 +66,26 @@ impl VolumeController {
     }
 
     /// Restores the necessary dependencies' state on boot.
-    async fn restore(&mut self) -> ControllerStateResult {
-        self.restore_volume_state(true).await
+    async fn restore(&mut self, nonce: TracingNonce) -> ControllerStateResult {
+        self.restore_volume_state(true, nonce).await
     }
 
     /// Extracts the audio state from persistent storage and restores it on
     /// the local state. Also pushes the changes to the audio core if
     /// [push_to_audio_core] is true.
-    async fn restore_volume_state(&mut self, push_to_audio_core: bool) -> ControllerStateResult {
-        let audio_info = self.client.read_setting::<AudioInfo>().await;
-        self.update_volume_streams(UpdateFrom::AudioInfo(audio_info), push_to_audio_core).await?;
+    async fn restore_volume_state(
+        &mut self,
+        push_to_audio_core: bool,
+        nonce: TracingNonce,
+    ) -> ControllerStateResult {
+        let audio_info = self.client.read_setting::<AudioInfo>(nonce).await;
+        self.update_volume_streams(UpdateFrom::AudioInfo(audio_info), push_to_audio_core, nonce)
+            .await?;
         Ok(())
     }
 
-    async fn get_info(&self) -> Result<AudioInfo, ControllerError> {
-        let mut audio_info = self.client.read_setting::<AudioInfo>().await;
+    async fn get_info(&self, nonce: TracingNonce) -> Result<AudioInfo, ControllerError> {
+        let mut audio_info = self.client.read_setting::<AudioInfo>(nonce).await;
 
         // Only override the mic mute state if present.
         if let Some(mic_mute_state) = self.mic_mute_state {
@@ -89,7 +96,12 @@ impl VolumeController {
         Ok(audio_info)
     }
 
-    async fn set_volume(&mut self, volume: Vec<SetAudioStream>) -> SettingHandlerResult {
+    async fn set_volume(
+        &mut self,
+        volume: Vec<SetAudioStream>,
+        nonce: TracingNonce,
+    ) -> SettingHandlerResult {
+        let guard = trace_guard!(nonce, "set volume updating counters");
         // Update counters for changed streams.
         for stream in &volume {
             // We don't care what the value of the counter is, just that it is different from the
@@ -101,22 +113,29 @@ impl VolumeController {
                     .map_or(0, |flag| flag.wrapping_add(1)),
             );
         }
+        drop(guard);
 
-        if !(self.update_volume_streams(UpdateFrom::NewStreams(volume), true).await?) {
-            let info = self.get_info().await?.into();
+        if !(self.update_volume_streams(UpdateFrom::NewStreams(volume), true, nonce).await?) {
+            trace!(nonce, "set volume notifying");
+            let info = self.get_info(nonce).await?.into();
             self.client.notify(Event::Changed(info)).await;
         }
 
         Ok(None)
     }
 
-    async fn set_mic_mute_state(&mut self, mic_mute_state: bool) -> SettingHandlerResult {
+    async fn set_mic_mute_state(
+        &mut self,
+        mic_mute_state: bool,
+        nonce: TracingNonce,
+    ) -> SettingHandlerResult {
+        trace!(nonce, "set mic mute state");
         self.mic_mute_state = Some(mic_mute_state);
 
-        let mut audio_info = self.client.read_setting::<AudioInfo>().await;
+        let mut audio_info = self.client.read_setting::<AudioInfo>(nonce).await;
         audio_info.input.mic_mute = mic_mute_state;
 
-        self.client.write_setting(audio_info.into(), false).await.into_handler_result()
+        self.client.write_setting(audio_info.into(), false, nonce).await.into_handler_result()
     }
 
     /// Updates the state with the given streams' volume levels.
@@ -129,12 +148,16 @@ impl VolumeController {
         &mut self,
         update_from: UpdateFrom,
         push_to_audio_core: bool,
+        nonce: TracingNonce,
     ) -> Result<bool, ControllerError> {
         let mut new_vec = vec![];
+        trace!(nonce, "update volume streams");
+        let calculating_guard = trace_guard!(nonce, "check and bind");
         let (stored_value, new_streams) = match &update_from {
             UpdateFrom::AudioInfo(audio_info) => (None, audio_info.streams.iter()),
             UpdateFrom::NewStreams(streams) => {
-                let stored_value = self.client.read_setting::<AudioInfo>().await;
+                trace!(nonce, "reading setting");
+                let stored_value = self.client.read_setting::<AudioInfo>(nonce).await;
                 for set_stream in streams.iter() {
                     let stored_stream = stored_value
                         .streams
@@ -163,23 +186,34 @@ impl VolumeController {
         };
 
         if push_to_audio_core {
-            self.check_and_bind_volume_controls(default_audio_info().streams.iter()).await?;
+            let guard = trace_guard!(nonce, "push to core");
+            self.check_and_bind_volume_controls(nonce, default_audio_info().streams.iter()).await?;
+            drop(guard);
+
+            trace!(nonce, "setting core");
             for stream in new_streams {
                 if let Some(volume_control) =
                     self.stream_volume_controls.get_mut(&stream.stream_type)
                 {
-                    volume_control.set_volume(*stream).await?;
+                    volume_control.set_volume(nonce, *stream).await?;
                 }
             }
         } else {
-            self.check_and_bind_volume_controls(new_streams).await?;
+            trace!(nonce, "without push to core");
+            self.check_and_bind_volume_controls(nonce, new_streams).await?;
         }
+        drop(calculating_guard);
 
         if let Some(mut stored_value) = stored_value {
+            let guard = trace_guard!(nonce, "updating streams and counters");
             stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
             stored_value.modified_counters = Some(self.modified_counters.clone());
+            drop(guard);
 
-            Ok(self.client.write_setting(stored_value.into(), false).await.notified())
+            let guard = trace_guard!(nonce, "writing setting");
+            let write_result = self.client.write_setting(stored_value.into(), false, nonce).await;
+            drop(guard);
+            Ok(write_result.notified())
         } else {
             Ok(false)
         }
@@ -188,12 +222,15 @@ impl VolumeController {
     /// Populates the local state with the given [streams] and binds it to the audio core service.
     async fn check_and_bind_volume_controls(
         &mut self,
+        nonce: TracingNonce,
         streams: impl Iterator<Item = &AudioStream>,
     ) -> ControllerStateResult {
+        trace!(nonce, "check and bind fn");
         if self.audio_service_connected {
             return Ok(());
         }
 
+        let guard = trace_guard!(nonce, "connecting to service");
         let service_result = self
             .client
             .get_service_context()
@@ -211,14 +248,17 @@ impl VolumeController {
         // The stream_volume_controls are generated in two steps instead of
         // one so that if one of the bindings fails during the first loop,
         // none of the streams are modified.
+        drop(guard);
         let mut stream_tuples = Vec::new();
         for stream in streams {
+            trace!(nonce, "create stream volume control");
             let client = self.client.clone();
 
             // Generate a tuple with stream type and StreamVolumeControl.
             stream_tuples.push((
                 stream.stream_type,
                 StreamVolumeControl::create(
+                    nonce,
                     &audio_service,
                     *stream,
                     Some(Arc::new(move || {
@@ -227,6 +267,7 @@ impl VolumeController {
                         // AudioController.
                         let client = client.clone();
                         fasync::Task::spawn(async move {
+                            trace!(nonce, "stream exit");
                             client
                                 .notify(Event::Exited(Err(ControllerError::UnexpectedError(
                                     "stream_volume_control exit".into(),
@@ -270,8 +311,13 @@ impl data_controller::Create for AudioController {
 impl controller::Handle for AudioController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            Request::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
-            Request::SetVolume(volume) => {
+            Request::Restore => Some({
+                let nonce = fuchsia_trace::generate_nonce();
+                trace!(nonce, "controller restore");
+                self.volume.lock().await.restore(nonce).await.map(|_| None)
+            }),
+            Request::SetVolume(volume, nonce) => {
+                trace!(nonce, "controller set");
                 // Validate volume contains valid volume level numbers.
                 for audio_stream in &volume {
                     if !audio_stream.has_finite_volume_level() {
@@ -282,13 +328,15 @@ impl controller::Handle for AudioController {
                         )));
                     }
                 }
-                Some(self.volume.lock().await.set_volume(volume).await)
+                Some(self.volume.lock().await.set_volume(volume, nonce).await)
             }
             Request::Get => {
-                Some(self.volume.lock().await.get_info().await.map(|info| Some(info.into())))
+                let nonce = fuchsia_trace::generate_nonce();
+                Some(self.volume.lock().await.get_info(nonce).await.map(|info| Some(info.into())))
             }
             Request::OnButton(ButtonType::MicrophoneMute(state)) => {
-                Some(self.volume.lock().await.set_mic_mute_state(state).await)
+                let nonce = fuchsia_trace::generate_nonce();
+                Some(self.volume.lock().await.set_mic_mute_state(state, nonce).await)
             }
             _ => None,
         }
@@ -298,7 +346,11 @@ impl controller::Handle for AudioController {
         match state {
             State::Startup => {
                 // Restore the volume state locally but do not push to the audio core.
-                Some(self.volume.lock().await.restore_volume_state(false).await)
+                Some({
+                    let nonce = fuchsia_trace::generate_nonce();
+                    trace!(nonce, "controller startup");
+                    self.volume.lock().await.restore_volume_state(false, nonce).await
+                })
             }
             _ => None,
         }
