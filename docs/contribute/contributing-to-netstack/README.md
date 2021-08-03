@@ -119,6 +119,7 @@ from first principles rather than making external references (including past
 revisions).
 
 When writing TODOs:
+
 1. Include an issue reference using the format `TODO(https://fxbug.dev/1245):`
 1. Phrase the text as an action that is to be taken; it should be possible for
    another contributor to pick up the TODO without consulting any external
@@ -247,6 +248,7 @@ Avoid superfluous details or narrative.
 
 Commit messages should consist of a brief subject line and a separate
 explanatory paragraph in accordance with the following:
+
 1. [Separate subject from body with a blank line](https://chris.beams.io/posts/git-commit/#separate)
 1. [Limit the subject line to 50 characters](https://chris.beams.io/posts/git-commit/#limit-50)
 1. [Capitalize the subject line](https://chris.beams.io/posts/git-commit/#capitalize)
@@ -272,6 +274,7 @@ given issue tracker is not guaranteed to be usable at the time that the commit
 history is read.
 
 Commit messages should never contain references to any of:
+
 1. Relative moments in time
 1. Non-public URLs
 1. Individuals
@@ -283,6 +286,7 @@ Commit messages should never contain references to any of:
 
 Adding a `Test:` line to the commit message is encouraged. A `Test:` line
 should:
+
 1. Justify that any behavior changes or additions are thoroughly tested.
 1. Describe how to run new/affected test cases.
 
