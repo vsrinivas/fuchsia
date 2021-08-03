@@ -29,4 +29,7 @@ pub struct BuildCommand {
 
     #[argh(option, description = "write the package hash to this file instead of stdout")]
     pub hash_out: Option<String>,
+
+    #[argh(option, description = "name of the package to put in the output package manifest")]
+    pub published_name: String,
 }

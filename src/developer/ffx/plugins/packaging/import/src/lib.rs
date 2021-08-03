@@ -62,6 +62,7 @@ mod test {
                 format!("@{}", tmp.join("entries.rsp").to_string_lossy()),
             ],
             source_dir: Some(tmp.to_str().unwrap().into()),
+            published_name: "published-name".to_string(),
             ..Default::default()
         })
     }

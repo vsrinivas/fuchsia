@@ -17,8 +17,9 @@ use tempfile::NamedTempFile;
 pub fn build(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
+    published_name: impl AsRef<str>,
 ) -> Result<PackageManifest, BuildError> {
-    build_with_file_system(creation_manifest, meta_far_path, &ActualFileSystem {})
+    build_with_file_system(creation_manifest, meta_far_path, published_name, &ActualFileSystem {})
 }
 
 // Used to mock out native filesystem for testing
@@ -47,6 +48,7 @@ impl FileSystem<'_> for ActualFileSystem {
 pub fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
     meta_far_path: impl AsRef<Path>,
+    published_name: impl AsRef<str>,
     file_system: &'a impl FileSystem<'a>,
 ) -> Result<PackageManifest, BuildError> {
     let meta_package = match creation_manifest.far_contents().get("meta/package") {
@@ -56,7 +58,7 @@ pub fn build_with_file_system<'a>(
         }
         None => return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing)),
     };
-    let mut package_builder = Package::builder(meta_package.name(), meta_package.variant())?;
+    let mut package_builder = Package::builder(published_name.as_ref(), meta_package.variant())?;
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
     for (path, info) in external_content_infos.iter() {
@@ -243,7 +245,8 @@ mod test_build_with_file_system {
                 "host/meta/package".to_string() => v.clone()
             },
         };
-        build_with_file_system(&creation_manifest, &meta_far_path, &file_system).unwrap();
+        build_with_file_system(&creation_manifest, &meta_far_path, "published-name", &file_system)
+            .unwrap();
         let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
         let expected_meta_package_bytes = v.as_slice();
@@ -279,7 +282,12 @@ mod test_build_with_file_system {
                 "host/meta/package".to_string() => v
             },
         };
-        let result = build_with_file_system(&creation_manifest, &meta_far_path, &file_system);
+        let result = build_with_file_system(
+            &creation_manifest,
+            &meta_far_path,
+            "published-name",
+            &file_system,
+        );
         assert_matches!(
             result,
             Err(BuildError::ConflictingResource {
@@ -304,6 +312,7 @@ mod test_build_with_file_system {
             build_with_file_system(
                 &creation_manifest,
                 &meta_far_path,
+                "published-name",
                 &file_system,
             )
                 .unwrap();
@@ -338,6 +347,7 @@ mod test_build_with_file_system {
             build_with_file_system(
                 &creation_manifest,
                 &meta_far_path,
+                "published-name",
                 &file_system,
             )
                 .unwrap();
@@ -365,6 +375,7 @@ mod test_build_with_file_system {
             build_with_file_system(
                 &creation_manifest,
                 &meta_far_path,
+                "published-name",
                 &file_system,
             )
                 .unwrap();
@@ -476,6 +487,7 @@ mod test_build {
             build(
                 &creation_manifest,
                 &meta_far_path,
+                "published-name",
             )
                 .unwrap();
             let mut reader = fuchsia_archive::Reader::new(fs::File::open(&meta_far_path).unwrap()).unwrap();

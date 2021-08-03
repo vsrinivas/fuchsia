@@ -57,7 +57,7 @@ pub fn cmd_package_build(
     let pm_fini = entries.join("\n");
     let creation_manifest = CreationManifest::from_pm_fini(pm_fini.as_bytes())?;
     let meta_far_path = out_dir.join("meta.far");
-    let package_manifest = build(&creation_manifest, &meta_far_path)?;
+    let package_manifest = build(&creation_manifest, &meta_far_path, cmd.published_name)?;
     let package_manifest_path = out_dir.join("package_manifest.json");
     let mut file = File::create(package_manifest_path)?;
     file.write_all(serde_json::to_string(&package_manifest)?.as_bytes())?;

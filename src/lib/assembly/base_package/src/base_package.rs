@@ -89,7 +89,7 @@ impl BasePackageBuilder {
             far_contents,
         )?;
 
-        let package_manifest = fuchsia_pkg::build(&creation_manifest, out)?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, "system_image")?;
 
         // Write the package manifest to a file.
         let package_manifest_path = outdir.as_ref().join("base_package_manifest.json");

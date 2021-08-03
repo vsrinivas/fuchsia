@@ -77,7 +77,7 @@ impl UpdatePackageBuilder {
         let update_contents = self.contents.clone();
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(self.contents, far_contents)?;
-        let package_manifest = fuchsia_pkg::build(&creation_manifest, out)?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, "update")?;
 
         // Write the package manifest to a file.
         let package_manifest_path = outdir.as_ref().join("update_package_manifest.json");

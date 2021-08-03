@@ -211,7 +211,8 @@ mod test_package {
             },
         };
 
-        build_with_file_system(&creation_manifest, &meta_far_path, &file_system).unwrap();
+        build_with_file_system(&creation_manifest, &meta_far_path, "my-package-name", &file_system)
+            .unwrap();
 
         let blob_entry = BlobEntry {
             source_path: PathBuf::from("src/bin/my_prog"),
