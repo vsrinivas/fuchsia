@@ -1,10 +1,16 @@
 {
     "metrics": [
         {
-            "event_codes": [],
+            "selector": "bootstrap/driver_manager:root/display:vsync_stalls",
             "metric_id": 1,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/driver_manager:root/display-controller/display:vsync_stalls"
+            "event_codes": []
+        },
+        {
+            "selector": "bootstrap/driver_manager:root/amlogic-display/osd:rdma_stalls",
+            "metric_id": 2,
+            "metric_type": "Occurrence",
+            "event_codes": []
         }
     ],
     "poll_rate_sec": 30,
