@@ -175,12 +175,21 @@ impl TarResolver {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
-        let mut archive = Archive::new(GzDecoder::new(file));
         let time = Utc::now();
         write!(writer, "Extracting {} to {}... ", path.display(), temp_dir.path().display())?;
         writer.flush()?;
         // Tarballs can't do per file extraction well like Zip, so just unpack it all.
-        archive.unpack(temp_dir.path())?;
+        match path.extension() {
+            Some(ext) if ext == "tar.gz" || ext == "tgz" => {
+                let mut archive = Archive::new(GzDecoder::new(file));
+                archive.unpack(temp_dir.path())?;
+            }
+            Some(ext) if ext == "tar" => {
+                let mut archive = Archive::new(file);
+                archive.unpack(temp_dir.path())?;
+            }
+            _ => ffx_bail!("Invalid tar archive"),
+        }
         let duration = Utc::now().signed_duration_since(time);
         done_time(writer, duration)?;
 
