@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_driver_lspci") {
+  version = "0.1.0"
+  edition = "2021"
+
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/devices/pci/bin/lspci:lib",
+    "//third_party/rust_crates:zstd",
+  ]
+
+  args_deps = [ "//src/devices/pci/bin/lspci:lib" ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+
+  inputs = [ "//third_party/pciids/pci.ids.zst" ]
+}

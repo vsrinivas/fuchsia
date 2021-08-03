@@ -4,15 +4,13 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("lspci") {
+rustc_library("lib") {
+  name = "lspci"
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
@@ -29,9 +27,24 @@ rustc_binary("lspci") {
     "src/db.rs",
     "src/device.rs",
     "src/filter.rs",
-    "src/main.rs",
+    "src/lib.rs",
     "src/util.rs",
   ]
+}
+
+rustc_binary("lspci") {
+  with_unit_tests = true
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+  sources = [ "src/main.rs" ]
 }
 
 resource("database") {
@@ -40,7 +53,7 @@ resource("database") {
 }
 
 fuchsia_unittest_package("lspci-tests") {
-  deps = [ ":lspci_test" ]
+  deps = [ ":lib_test" ]
 }
 
 group("tests") {

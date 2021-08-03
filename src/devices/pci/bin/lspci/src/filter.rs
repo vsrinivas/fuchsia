@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use std::str;
 
 /// Provides a way to filter Devices to those specified by the user's preference.
+#[derive(Debug, PartialEq)]
 pub struct Filter {
     bus: Option<u8>,
     dev: Option<u8>,
