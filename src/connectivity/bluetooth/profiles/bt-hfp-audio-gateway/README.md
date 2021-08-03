@@ -8,7 +8,7 @@ This means that you can use your Fuchsia device to connect with Bluetooth to a h
 and microphone that supports the Hands-Free role. Audio data is streamed between the two devices
 in real-time to support interactive voice calls.
 
-HFP includes support for user-initated actions on the Hands-Free device, such as answering calls,
+HFP includes support for user-initiated actions on the Hands-Free device, such as answering calls,
 hanging up calls, and volume control. See the specification for a complete list of functionality.
 
 ## Build Configuration
@@ -17,26 +17,34 @@ Add the following to your Fuchsia set configuration to include the profile compo
 
 `--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway`
 
-To run the component:
+To run the CFv1 component:
 
 1. `fx shell`
 1. `run bt-hfp-audio-gateway.cmx`
 
 ### Profile Startup
 
-There are two ways that the HFP AG profile can be started on a fuchsia system: automatically started
-on boot, or through service discovery.
+Component startup differs based on the component framework version.
 
-When started through service discovery, the profile will not be started until the service is needed via
-`fuchsia.bluetooth.hfp.Hfp` FIDL service. To start the profile through service discovery, include the
-`service_config` target in your fuchsia build set, for example by using
-`--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:service_config` on an `fx set` line,
-or by depending on it alongside the bt-hfp-audio-gateway component in your product config target.
+For CFv1, there are two ways that the HFP AG profile can be started on a fuchsia system:
+automatically started on boot, or through protocol discovery.
 
-To start the HFP AG profile automatically on startup include the `startup_config` target in your fuchsia
-build set by using `--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:startup_config` on
-an `fx set` line, or by depending on it alongside the bt-hfp-audio-gateway component in your product
-config target.
+When started through protocol discovery, the profile will not be started until the
+`fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested. Include the `service_config` target in
+your fuchsia build set, for example by using
+`--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:service_config` on an `fx set`
+line, or by depending on it alongside the bt-hfp-audio-gateway component in your product config
+target.
+
+To start the HFP AG profile automatically on startup include the `startup_config` target in your
+fuchsia build set by using `--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:startup_config`
+on an `fx set` line, or by depending on it alongside the bt-hfp-audio-gateway component in your
+product config target.
+
+For CFv2, the only way to start the component is via protocol discovery. Include the `core_shard` in
+your product config target (e.g add `//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:bt-hfp-audio-gateway-core-shard`).
+When the `fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested, the CFv2 HFP AG component will be
+started.
 
 ## Running tests
 

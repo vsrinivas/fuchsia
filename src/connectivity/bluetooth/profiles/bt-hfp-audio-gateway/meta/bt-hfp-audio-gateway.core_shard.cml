@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-hfp-audio-gateway",
+            url: "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cm",
+            environment: "#universe-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-hfp-audio-gateway" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+            to: [ "#appmgr" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-dai",
+            to: [ "#bt-hfp-audio-gateway" ],
+            subdir: "class/dai",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.media.AudioDeviceEnumerator",
+            ],
+            from: "#appmgr",
+            to: [ "#bt-hfp-audio-gateway" ],
+            dependency: "weak_for_migration",
+        },
+    ],
+}
