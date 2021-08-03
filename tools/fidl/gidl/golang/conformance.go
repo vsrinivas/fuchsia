@@ -221,7 +221,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		}
 		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupportedForEncode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -250,7 +250,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		equalityCheckKoidArrayVar := "koidArray"
 		equalityCheck := BuildEqualityCheck(equalityCheckInputVar, decodeSuccess.Value, decl, equalityCheckKoidArrayVar)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -282,7 +282,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
 		value := visit(encodeFailure.Value, decl)
-		for _, wireFormat := range supportedEncodeWireFormats {
+		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:       testCaseName(encodeFailure.Name, wireFormat),
 				Context:    marshalerContext(wireFormat),
@@ -308,7 +308,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		}
 		valueType := declName(decl)
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -325,24 +325,13 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 	return decodeFailureCases, nil
 }
 
-var supportedEncodeWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
-}
-var supportedDecodeWireFormats = []gidlir.WireFormat{
+var supportedWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 
-func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedEncodeWireFormats {
-		if wireFormat == wf {
-			return true
-		}
-	}
-	return false
-}
-func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedDecodeWireFormats {
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedWireFormats {
 		if wireFormat == wf {
 			return true
 		}
