@@ -123,5 +123,4 @@ core_shard("wlanstack-core-shard") {
 
 fuchsia_unittest_package("wlanstack-tests") {
   deps = [ ":bin_test" ]
-  manifest = "meta/wlanstack_bin_test.cmx"
 }
