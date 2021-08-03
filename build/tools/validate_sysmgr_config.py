@@ -62,13 +62,29 @@ def main():
         required=True)
     args = parser.parse_args()
 
-    # Build a list of all the source paths that contribute to sysmgr's config-data
+    # Build a list of all the source paths that contribute to sysmgr's config data, and a map from
+    # destination paths to the source paths which map to them (to detect collisions).
     config_entries = json.load(args.config_entries)
-    sysmgr_config_files = [
-        e['source']
-        for e in config_entries
-        if e['destination'].startswith('meta/data/sysmgr/')
-    ]
+    sysmgr_config_files = []
+    destination_source_files = defaultdict(set)
+    sysmgr_config_files = []
+    for e in config_entries:
+        src = e['source']
+        dst = e['destination']
+        if dst.startswith('meta/data/sysmgr/'):
+            sysmgr_config_files.append(src)
+            destination_source_files[dst].add(src)
+
+    # Detect whenever > 1 different source paths map to the same destination.
+    destination_conflicts = False
+    for dest_file, source_files in destination_source_files.items():
+        if len(source_files) > 1:
+            print('Different sysmgr config files map to the same destination {}.  Source files: {}'.
+                  format(dest_file, ', '.join(source_files)))
+            destination_conflicts = True
+
+    # De-dup the list.
+    sysmgr_config_files = list(dict.fromkeys(sysmgr_config_files))
 
     # Parse all config files.
     #
@@ -98,7 +114,7 @@ def main():
                 format(service, ', '.join(config_files)))
             service_conflicts = True
 
-    if service_conflicts:
+    if service_conflicts or destination_conflicts:
         return 1
 
     # Create a single merged configuration analogous to sysmgr's init itself.
