@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, HandleBased};
+use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
+use std::sync::Arc;
 
 use crate::logging::*;
 use crate::mm::*;
@@ -157,13 +158,14 @@ pub fn load_executable(
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
     let stack_size: usize = 0x5000;
-    let stack_vmo = zx::Vmo::create(stack_size as u64).map_err(|_| ENOMEM)?;
+    let stack_vmo = Arc::new(zx::Vmo::create(stack_size as u64).map_err(|_| ENOMEM)?);
     stack_vmo
+        .as_ref()
         .set_name(CStr::from_bytes_with_nul(b"[stack]\0").unwrap())
         .map_err(impossible_error)?;
     let stack_base = task.mm.map(
         UserAddress::default(),
-        stack_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?,
+        Arc::clone(&stack_vmo),
         0,
         stack_size,
         zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,

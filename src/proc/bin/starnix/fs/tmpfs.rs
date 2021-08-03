@@ -262,6 +262,7 @@ impl FsNodeOps for FifoNode {
 mod test {
     use super::*;
     use fuchsia_async as fasync;
+    use std::sync::Arc;
     use zerocopy::AsBytes;
 
     use crate::mm::*;
@@ -285,7 +286,7 @@ mod test {
         let task = &task_owner.task;
 
         let test_mem_size = 0x10000;
-        let test_vmo = zx::Vmo::create(test_mem_size).unwrap();
+        let test_vmo = Arc::new(zx::Vmo::create(test_mem_size).unwrap());
 
         let path = b"test.bin";
         let _file = task.fs.root.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL, 0).unwrap();

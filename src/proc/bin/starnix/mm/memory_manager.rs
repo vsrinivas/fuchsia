@@ -406,7 +406,7 @@ impl MemoryManager {
     pub fn map(
         &self,
         addr: UserAddress,
-        vmo: zx::Vmo,
+        vmo: Arc<zx::Vmo>,
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
@@ -415,7 +415,7 @@ impl MemoryManager {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
         let mut state = self.state.write();
         state
-            .map(vmar_offset, Arc::new(vmo), vmo_offset, length, flags, options)
+            .map(vmar_offset, vmo, vmo_offset, length, flags, options)
             .map_err(Self::get_errno_for_map_err)
     }
 

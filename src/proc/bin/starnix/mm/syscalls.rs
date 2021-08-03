@@ -4,6 +4,7 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use std::ffi::CStr;
+use std::sync::Arc;
 
 use crate::fs::*;
 use crate::logging::*;
@@ -71,7 +72,6 @@ pub fn sys_mmap(
 
     let mut zx_flags = mmap_prot_to_vm_opt(prot) | zx::VmarFlags::ALLOW_FAULTS;
     if addr.ptr() != 0 {
-        // TODO(tbodt): if no MAP_FIXED, retry on EINVAL
         zx_flags |= zx::VmarFlags::SPECIFIC;
     }
     if flags & MAP_FIXED != 0 {
@@ -106,6 +106,8 @@ pub fn sys_mmap(
             file.get_vmo(&ctx.task, zx_prot)?
         }
     };
+
+    let vmo = Arc::new(vmo);
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
 
     let mut options = MappingOptions::empty();
@@ -113,7 +115,15 @@ pub fn sys_mmap(
         options |= MappingOptions::SHARED;
     }
 
-    let addr = ctx.task.mm.map(addr, vmo, vmo_offset as u64, length, zx_flags, options)?;
+    let try_map = |addr, flags| {
+        ctx.task.mm.map(addr, Arc::clone(&vmo), vmo_offset as u64, length, flags, options)
+    };
+    let addr = match try_map(addr, zx_flags) {
+        Err(EINVAL) if zx_flags.contains(zx::VmarFlags::SPECIFIC) && (flags & MAP_FIXED == 0) => {
+            try_map(UserAddress::default(), zx_flags - zx::VmarFlags::SPECIFIC)
+        }
+        result => result,
+    }?;
     Ok(addr.into())
 }
 
