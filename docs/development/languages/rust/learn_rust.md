@@ -33,9 +33,9 @@ Many of the following resources are also available offline in
 - [Learn Rust With Entirely Too Many Linked
   Lists](https://rust-unofficial.github.io/too-many-lists/) - a deep dive into
   pointer types, lifetimes, and unsafe code
-- [Learn Rust the Dangerous Way](http://cliffle.com/p/dangerust/)
-  > LRtDW is a series of articles putting Rust features in context for low-level
-  C programmers who maybe don’t have a formal CS background — the sort of people
+- [Learn Rust the Dangerous Way](http://cliffle.com/p/dangerust/) - "LRtDW is a
+  series of articles putting Rust features in context for low-level C
+  programmers who maybe don’t have a formal CS background — the sort of people
   who work on firmware, game engines, OS kernels, and the like."
 - [Rust for Embedded C
   Programmers](https://docs.opentitan.org/doc/ug/rust_for_c/index.html)
