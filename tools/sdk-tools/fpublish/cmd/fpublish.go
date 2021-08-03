@@ -95,6 +95,6 @@ func publish(sdk sdkProvider, packageRepo string, deviceName string, packages []
 }
 
 func usage() {
-	fmt.Printf("Usage: %s <far-file>", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s <far-file>\n", filepath.Base(os.Args[0]))
 	flag.PrintDefaults()
 }

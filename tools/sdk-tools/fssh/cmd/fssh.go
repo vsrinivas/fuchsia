@@ -99,7 +99,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Printf("Usage: %s [options] [args]", filepath.Base(os.Args[0]))
+	fmt.Printf("Usage: %s [options] [args]\n", filepath.Base(os.Args[0]))
 	flag.PrintDefaults()
 }
 
