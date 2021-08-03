@@ -30,7 +30,7 @@ The easiest way to run recovery on hardware is to netboot a device into a newly
 built recovery image:
 
 ```sh
-$ out/default/host-tools/bootserver --board-name device-name --boot out/default/obj/build/images/recovery/recovery-eng.zbi
+$ out/default/host-tools/bootserver --board-name device-name --boot out/default/obj/build/images/recovery/recovery-eng/recovery-eng.zbi
 ```
 where `device-name` can be found with `fx list-devices`.
 
