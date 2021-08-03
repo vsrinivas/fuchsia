@@ -9,12 +9,10 @@ import 'dart:ui';
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/view_state.dart';
-import 'package:ermine/src/utils/mobx_extensions.dart';
-import 'package:ermine/src/utils/themes.dart';
-import 'package:ermine/src/utils/widget_factory.dart';
 import 'package:ermine/src/widgets/app.dart';
 import 'package:ermine/src/widgets/app_view.dart';
 import 'package:ermine/src/widgets/overlays.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';

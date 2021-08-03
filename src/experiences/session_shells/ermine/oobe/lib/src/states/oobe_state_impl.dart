@@ -5,14 +5,13 @@
 import 'dart:isolate';
 import 'dart:ui';
 
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
 import 'package:oobe/src/services/channel_service.dart';
 import 'package:oobe/src/services/privacy_consent_service.dart';
 import 'package:oobe/src/services/ssh_keys_service.dart';
 import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/utils/mobx_disposable.dart';
-import 'package:oobe/src/utils/mobx_extensions.dart';
 
 /// Defines an implementation of [ViewState].
 class OobeStateImpl with Disposable implements OobeState {

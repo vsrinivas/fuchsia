@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/states/app_state.dart';
-import 'package:ermine/src/utils/crash.dart';
 import 'package:ermine/src/widgets/app.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 

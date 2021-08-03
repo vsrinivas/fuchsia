@@ -63,16 +63,6 @@ dart_library("lib") {
     "src/states/view_state_impl.dart",
   ]
 
-  utils = [
-    "src/utils/crash.dart",
-    "src/utils/fuchsia_keyboard.dart",
-    "src/utils/mobx_disposable.dart",
-    "src/utils/mobx_extensions.dart",
-    "src/utils/themes.dart",
-    "src/utils/view_handle.dart",
-    "src/utils/widget_factory.dart",
-  ]
-
   widgets = [
     "src/widgets/alert_dialogs.dart",
     "src/widgets/app.dart",
@@ -93,7 +83,7 @@ dart_library("lib") {
     "src/widgets/status.dart",
   ]
 
-  sources = entrypoints + services + states + utils + widgets
+  sources = entrypoints + services + states + widgets
 
   deps = [
     "//sdk/dart/fidl",
@@ -106,9 +96,7 @@ dart_library("lib") {
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.device.manager",
-    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.power",
@@ -125,6 +113,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/experiences/session_shells/ermine/ermine_utils",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
@@ -135,7 +124,6 @@ dart_library("lib") {
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/flutter_mobx",
     "//third_party/dart-pkg/pub/intl",
-    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mobx",
     "//third_party/dart-pkg/pub/uuid",
     "//third_party/dart-pkg/pub/vector_math",
@@ -236,6 +224,7 @@ flutter_test("ermine_unittests") {
   deps = [
     ":lib",
     "//sdk/dart/fuchsia_logger",
+    "//src/experiences/session_shells/ermine/ermine_utils",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//third_party/dart-pkg/git/flutter/packages/flutter",

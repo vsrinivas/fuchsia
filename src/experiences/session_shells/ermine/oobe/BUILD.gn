@@ -25,14 +25,6 @@ dart_library("lib") {
     "src/states/oobe_state_impl.dart",
   ]
 
-  utils = [
-    "src/utils/fuchsia_keyboard.dart",
-    "src/utils/mobx_disposable.dart",
-    "src/utils/mobx_extensions.dart",
-    "src/utils/themes.dart",
-    "src/utils/widget_factory.dart",
-  ]
-
   widgets = [
     "src/widgets/oobe.dart",
     "src/widgets/channels.dart",
@@ -40,7 +32,7 @@ dart_library("lib") {
     "src/widgets/ssh_keys.dart",
   ]
 
-  sources = entrypoints + services + states + utils + widgets
+  sources = entrypoints + services + states + widgets
 
   deps = [
     "//sdk/dart/fidl",
@@ -51,6 +43,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
     "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/experiences/session_shells/ermine/ermine_utils",
     "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
@@ -58,7 +51,6 @@ dart_library("lib") {
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/flutter_mobx",
     "//third_party/dart-pkg/pub/intl",
-    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mobx",
   ]
 }

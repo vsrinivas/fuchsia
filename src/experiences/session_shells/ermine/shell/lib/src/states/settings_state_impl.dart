@@ -14,8 +14,7 @@ import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state.dart';
-import 'package:ermine/src/utils/mobx_disposable.dart';
-import 'package:ermine/src/utils/mobx_extensions.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
@@ -131,8 +130,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-            ..sort((addr1, addr2) =>
-                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+                ..sort((addr1, addr2) =>
+                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()

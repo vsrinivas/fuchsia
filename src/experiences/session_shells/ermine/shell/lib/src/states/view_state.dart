@@ -4,7 +4,7 @@
 
 import 'dart:ui';
 
-import 'package:ermine/src/utils/view_handle.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:mobx/mobx.dart';
 

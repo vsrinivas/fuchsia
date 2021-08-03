@@ -4,7 +4,7 @@
 
 import 'dart:async';
 
-import 'package:ermine/src/utils/view_handle.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/foundation.dart';

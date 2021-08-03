@@ -7,8 +7,7 @@ import 'dart:convert' show json;
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:ermine/src/utils/fuchsia_keyboard.dart';
-import 'package:ermine/src/utils/view_handle.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';

@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -14,9 +15,6 @@ import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
 import 'package:oobe/src/states/oobe_state.dart';
-import 'package:oobe/src/utils/fuchsia_keyboard.dart';
-import 'package:oobe/src/utils/themes.dart';
-import 'package:oobe/src/utils/widget_factory.dart';
 import 'package:oobe/src/widgets/oobe.dart';
 
 Future<void> main() async {

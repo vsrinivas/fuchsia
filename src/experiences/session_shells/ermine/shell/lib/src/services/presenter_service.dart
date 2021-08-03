@@ -8,7 +8,7 @@ import 'dart:ui';
 // ignore: directives_ordering
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
-import 'package:ermine/src/utils/view_handle.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';

@@ -5,8 +5,7 @@
 import 'dart:convert' show json;
 import 'dart:io';
 
-import 'package:ermine/src/utils/mobx_disposable.dart';
-import 'package:ermine/src/utils/mobx_extensions.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:mobx/mobx.dart';
 
 /// Defines a service that allows reading and storing application data.
