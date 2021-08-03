@@ -32,20 +32,12 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "arch.h"
 #include "constants.h"
 #include "hypervisor_tests.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 namespace {
-
-#if __x86_64__
-enum {
-  X86_PTE_P = 0x01,   // P    Valid
-  X86_PTE_RW = 0x02,  // R/W  Read/Write
-  X86_PTE_U = 0x04,   // U    Page is user accessible
-  X86_PTE_PS = 0x80,  // PS   Page size
-};
-#endif
 
 zx_status_t GetVmexResource(zx::resource* resource) {
   fuchsia::kernel::VmexResourceSyncPtr vmex_resource;
@@ -110,6 +102,7 @@ void SetupGuest(TestCase* test, const char* start, const char* end) {
   ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
   ASSERT_EQ(zx::vmar::root_self()->map(kHostMapFlags, 0, test->vmo, 0, VMO_SIZE, &test->host_addr),
             ZX_OK);
+  fbl::Span<uint8_t> guest_memory(reinterpret_cast<uint8_t*>(test->host_addr), VMO_SIZE);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
   zx::resource vmex_resource;
@@ -126,23 +119,15 @@ void SetupGuest(TestCase* test, const char* start, const char* end) {
   ASSERT_EQ(test->guest.set_trap(ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE, zx::port(), 0),
             ZX_OK);
 
-  // Setup the guest.
-  uintptr_t entry = 0;
-#if __x86_64__
-  // PML4 entry pointing to (addr + 0x1000)
-  uint64_t* pte_off = reinterpret_cast<uint64_t*>(test->host_addr);
-  *pte_off = PAGE_SIZE | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
-  // PDP entry with 1GB page.
-  pte_off = reinterpret_cast<uint64_t*>(test->host_addr + PAGE_SIZE);
-  *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
-  entry = GUEST_ENTRY;
-#endif  // __x86_64__
+  // Set up a simple page table structure for the guest.
+  SetUpGuestPageTable(guest_memory);
 
+  // Copy guest code into guest memory at address `kGuestEntryPoint`.
   if (start != nullptr && end != nullptr) {
-    memcpy(reinterpret_cast<void*>(test->host_addr + entry), start, end - start);
+    memcpy(guest_memory.data() + kGuestEntryPoint, start, end - start);
   }
 
-  status = zx::vcpu::create(test->guest, 0, entry, &test->vcpu);
+  status = zx::vcpu::create(test->guest, 0, kGuestEntryPoint, &test->vcpu);
   ASSERT_EQ(status, ZX_OK);
 }
 

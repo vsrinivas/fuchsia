@@ -26,6 +26,7 @@ executable("hypervisor_tests") {
     "main.cc",
 
     # Arch-specific code.
+    "arch/${target_cpu}/arch.cc",
     "arch/${target_cpu}/arch_tests.cc",
     "arch/${target_cpu}/guest_code.S",
   ]

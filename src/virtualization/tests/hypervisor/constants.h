@@ -7,20 +7,17 @@
 
 #include <limits.h>
 
-// clang-format off
-
-#define VMO_SIZE        0x1000000
-#define TRAP_PORT       0x11
-#define TRAP_ADDR       (VMO_SIZE - PAGE_SIZE * 2)
-#define EXIT_TEST_ADDR  (VMO_SIZE - PAGE_SIZE)
-
 #if __x86_64__
-#define GUEST_ENTRY     0x2000
-#define X86_CR0_ET      0x00000010 /* extension type */
-#define X86_CR0_NE      0x00000020 /* enable x87 exception */
-#define X86_CR0_NW      0x20000000 /* not write-through */
-#define X86_CR0_CD      0x40000000 /* cache disable */
-#define X86_CR4_OSFXSR  0x00000200 /* os supports fxsave */
+#include "arch/x64/constants.h"
+#elif __aarch64__
+#include "arch/arm64/constants.h"
+#else
+#error Unknown architecture.
 #endif
+
+#define VMO_SIZE 0x1000000
+#define TRAP_PORT 0x11
+#define TRAP_ADDR (VMO_SIZE - PAGE_SIZE * 2)
+#define EXIT_TEST_ADDR (VMO_SIZE - PAGE_SIZE)
 
 #endif  // SRC_VIRTUALIZATION_TESTS_HYPERVISOR_CONSTANTS_H_
