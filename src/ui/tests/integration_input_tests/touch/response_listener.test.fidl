@@ -18,6 +18,9 @@ type PointerData = table {
 
     /// The number of physical pixels, per logical pixel, as reported by the client.
     4: device_pixel_ratio float64;
+
+    // Name of the component to help distinguish responses from multiple components.
+    5: component_name string:1024;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.

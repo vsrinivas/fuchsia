@@ -150,6 +150,7 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     pointer_data.set_local_x(tap_resp["x"].GetInt());
     pointer_data.set_local_y(tap_resp["y"].GetInt());
     pointer_data.set_device_pixel_ratio(tap_resp["device_pixel_ratio"].GetDouble());
+    pointer_data.set_component_name("one-chromium");
     response_listener_proxy->Respond(std::move(pointer_data));
   }
 

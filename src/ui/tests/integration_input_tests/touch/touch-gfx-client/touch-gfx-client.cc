@@ -142,7 +142,8 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
                 // with the scale factor provided in the metrics event.
                 data.set_local_x(event.input().pointer().x * metrics_.scale_x)
                     .set_local_y(event.input().pointer().y * metrics_.scale_y)
-                    .set_time_received(zx_clock_get_monotonic());
+                    .set_time_received(zx_clock_get_monotonic())
+                    .set_component_name("touch-gfx-client");
                 response_listener_->Respond(std::move(data));
               }
             }

@@ -67,7 +67,8 @@ class _MyHomePageState extends State<MyHomePage> {
               // Notify test that input was seen.
               localX: data.physicalX,
               localY: data.physicalY,
-              timeReceived: nowNanos));
+              timeReceived: nowNanos,
+              componentName: 'one-flutter'));
         }
       }
     };
