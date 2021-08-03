@@ -33,6 +33,12 @@ uint64_t GetCurrentMinute() {
   return async::Now(async_get_default_dispatcher()).get() / zx::min(1).get();
 }
 
+bool IsValidViewport(const input::Injector::Viewport& viewport) {
+  return std::isfinite(viewport.width) && std::isfinite(viewport.height) &&
+         std::isfinite(viewport.scale) && std::isfinite(viewport.x_offset) &&
+         std::isfinite(viewport.y_offset) && viewport.width >= 0.f && viewport.height >= 0.f;
+}
+
 }  // namespace
 
 using fuchsia::ui::pointerinjector::EventPhase;
@@ -125,9 +131,13 @@ Injector::Injector(sys::ComponentContext* component_context, fuchsia::ui::views:
 Injector::Injector() : component_context_(nullptr), injector_inspector_(inspect::Node()) {}
 
 void Injector::SetViewport(Viewport viewport) {
-  FX_VLOGS(2) << "SetViewport: width=" << viewport.width << " height=" << viewport.height
-              << " scale=" << viewport.scale << " x_offset=" << viewport.x_offset
-              << " y_offset=" << viewport.y_offset;
+  FX_LOGS(INFO) << "SetViewport: width=" << viewport.width << " height=" << viewport.height
+                << " scale=" << viewport.scale << " x_offset=" << viewport.x_offset
+                << " y_offset=" << viewport.y_offset;
+  if (!IsValidViewport(viewport)) {
+    FX_LOGS(ERROR) << "Invalid viewport";
+    return;
+  }
   viewport_ = viewport;
 
   // Update the viewport of all current injectors.
