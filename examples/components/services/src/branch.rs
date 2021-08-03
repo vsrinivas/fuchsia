@@ -78,9 +78,9 @@ async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio
     let (exposed_dir, exposed_dir_server_end) =
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("failed to create endpoints");
-    info!("binding to BankAccount provider \"{}\" with url={}", name, url);
+    info!("open exposed dir of BankAccount provider \"{}\" with url={}", name, url);
     realm
-        .bind_child(
+        .open_exposed_dir(
             &mut fsys2::ChildRef {
                 name: name.to_string(),
                 collection: Some(COLLECTION_NAME.to_string()),
@@ -88,7 +88,7 @@ async fn start_provider(realm: &fsys2::RealmProxy, name: &str, url: &str) -> fio
             exposed_dir_server_end,
         )
         .await
-        .expect("failed to make bind_child FIDL call")
-        .expect("failed to bind_child");
+        .expect("failed to make open_exposed_dir FIDL call")
+        .expect("failed to open_exposed_dir");
     exposed_dir
 }
