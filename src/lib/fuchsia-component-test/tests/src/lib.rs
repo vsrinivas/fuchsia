@@ -405,6 +405,61 @@ async fn echo_clients() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
+    // This test is identical to the one preceding it, but component are launched in a nested
+    // component manager.
+
+    let (send_echo_client_results, receive_echo_client_results) = oneshot::channel();
+    let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
+    let client_sources = vec![
+        ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
+        ComponentSource::url(V2_ECHO_CLIENT_RELATIVE_URL),
+        ComponentSource::legacy_url(V1_ECHO_CLIENT_URL),
+        ComponentSource::mock(move |h| Box::pin(echo_client_mock(sender.clone(), h))),
+    ];
+
+    for client_source in client_sources {
+        let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
+        let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+
+        let mut builder = RealmBuilder::new().await?;
+        builder
+            .add_eager_component(
+                "echo-server",
+                ComponentSource::mock(move |h| {
+                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+                }),
+            )
+            .await?
+            .add_eager_component("echo-client", client_source)
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::component("echo-server"),
+                targets: vec![RouteEndpoint::component("echo-client")],
+            })?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::above_root(),
+                targets: vec![
+                    RouteEndpoint::component("echo-server"),
+                    RouteEndpoint::component("echo-client"),
+                ],
+            })?;
+
+        let _child_instance = builder
+            .build()
+            .create_in_nested_component_manager("#meta/component_manager.cm")
+            .await?;
+
+        receive_echo_server_called.await?;
+    }
+
+    receive_echo_client_results.await?;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn echo_servers() -> Result<(), Error> {
     // This test runs a series of echo servers from different sources against a mock echo client,
     // confirming that the client can successfully connect to and use each server.

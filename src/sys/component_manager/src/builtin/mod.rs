@@ -15,6 +15,7 @@ pub mod kernel_stats;
 pub mod log;
 pub mod mmio_resource;
 pub mod process_launcher;
+pub mod realm_builder;
 pub mod relative_resolver;
 pub mod root_job;
 pub mod root_resource;

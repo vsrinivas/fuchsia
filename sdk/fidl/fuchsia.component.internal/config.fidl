@@ -81,6 +81,11 @@ type Config = table {
     /// This lets a parent copmonent designate that the system should reboot if a child terminates
     /// (except when it's shut down).
    15: reboot_on_terminate_enabled bool;
+
+    /// If and how the realm builder resolver and runner will be used. Typically
+    /// these capabilities from realm builder are available to a nested
+    /// component manager that is undergoing an integration test.
+   16: realm_builder_resolver_and_runner RealmBuilderResolverAndRunner;
 };
 
 /// The builtin resolver to use for the fuchsia-pkg scheme, if any.
@@ -115,6 +120,16 @@ type LogDestination = strict enum : uint8 {
 
     /// Log to klog.
     KLOG = 2;
+};
+
+/// If and how the realm builder resolver and runner will be used.
+type RealmBuilderResolverAndRunner = strict enum : uint8 {
+    /// The realm builder resolver and runner are not used.
+    NONE = 1;
+
+    /// The realm builder resolver and runner will be accessed through component
+    /// manager's namespace, and made available to the root realm.
+    NAMESPACE = 2;
 };
 
 /// Runtime security policy.

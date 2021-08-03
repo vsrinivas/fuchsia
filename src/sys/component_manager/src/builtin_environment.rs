@@ -19,6 +19,10 @@ use {
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
             process_launcher::ProcessLauncher,
+            realm_builder::{
+                RealmBuilderResolver, RealmBuilderRunner, RUNNER_NAME as REALM_BUILDER_RUNNER_NAME,
+                SCHEME as REALM_BUILDER_SCHEME,
+            },
             relative_resolver::{RelativeResolver, SCHEME as RELATIVE_SCHEME},
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
@@ -213,6 +217,23 @@ impl BuiltinEnvironmentBuilder {
             }
         };
 
+        let boot_resolver = if self.add_environment_resolvers {
+            let boot_resolver = register_boot_resolver(&mut self.resolvers, &runtime_config)?;
+            register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
+            boot_resolver
+        } else {
+            None
+        };
+
+        let realm_builder_resolver = match runtime_config.realm_builder_resolver_and_runner {
+            fidl_fuchsia_component_internal::RealmBuilderResolverAndRunner::Namespace => {
+                self.runners
+                    .push((REALM_BUILDER_RUNNER_NAME.into(), Arc::new(RealmBuilderRunner::new()?)));
+                Some(register_realm_builder_resolver(&mut self.resolvers)?)
+            }
+            fidl_fuchsia_component_internal::RealmBuilderResolverAndRunner::None => None,
+        };
+
         let runner_map = self
             .runners
             .iter()
@@ -227,14 +248,6 @@ impl BuiltinEnvironmentBuilder {
                 )
             })
             .collect();
-
-        let boot_resolver = if self.add_environment_resolvers {
-            let boot_resolver = register_boot_resolver(&mut self.resolvers, &runtime_config)?;
-            register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
-            boot_resolver
-        } else {
-            None
-        };
 
         if self.add_environment_resolvers {
             let relative_resolver = RelativeResolver::new();
@@ -272,6 +285,7 @@ impl BuiltinEnvironmentBuilder {
             runtime_config,
             builtin_runners,
             boot_resolver,
+            realm_builder_resolver,
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
             self.enable_hub,
@@ -332,6 +346,7 @@ pub struct BuiltinEnvironment {
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
     pub inspector: Inspector,
+    pub realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
     _service_fs_task: Option<fasync::Task<()>>,
 }
 
@@ -342,6 +357,7 @@ impl BuiltinEnvironment {
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         boot_resolver: Option<Arc<FuchsiaBootResolver>>,
+        realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
         enable_hub: bool,
@@ -718,6 +734,7 @@ impl BuiltinEnvironment {
             num_threads,
             out_dir_contents,
             inspector,
+            realm_builder_resolver,
             _service_fs_task: None,
         })
     }
@@ -952,6 +969,17 @@ fn register_boot_resolver(
             Ok(Some(resolver))
         }
     }
+}
+
+fn register_realm_builder_resolver(
+    resolvers: &mut ResolverRegistry,
+) -> Result<Arc<RealmBuilderResolver>, Error> {
+    let realm_builder_resolver =
+        RealmBuilderResolver::new().context("Failed to create realm builder resolver")?;
+    let resolver = Arc::new(realm_builder_resolver);
+    resolvers
+        .register(REALM_BUILDER_SCHEME.to_string(), Box::new(BuiltinResolver(resolver.clone())));
+    Ok(resolver)
 }
 
 /// Adds the namespace resolvers according to the policy in the RuntimeConfig.

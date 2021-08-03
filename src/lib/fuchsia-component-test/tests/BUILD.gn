@@ -125,6 +125,7 @@ fuchsia_test_package("fuchsia-component-test-tests") {
     "//examples/components/routing:echo_realm",
     "//examples/components/routing/echo_client:echo_client_component",
     "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
   test_components = [
     ":fuchsia_component_test_tests_component",

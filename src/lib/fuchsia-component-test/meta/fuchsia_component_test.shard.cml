@@ -48,6 +48,21 @@
             from: "parent",
             to: [ "#fuchsia_component_test_framework_intermediary" ],
         },
+
+        // These protocols are used by any nested component managers to
+        // proxy resolve and runner requests to realm builder
+        {
+            protocol: "fuchsia.component.runner.ComponentRunner",
+            from: "#fuchsia_component_test_framework_intermediary",
+            as: "fuchsia.component.runner.RealmBuilder",
+            to: [ "#fuchsia_component_test_collection" ],
+        },
+        {
+            protocol: "fuchsia.sys2.ComponentResolver",
+            from: "#fuchsia_component_test_framework_intermediary",
+            as: "fuchsia.component.resolver.RealmBuilder",
+            to: [ "#fuchsia_component_test_collection" ],
+        },
     ],
     environments: [
         {

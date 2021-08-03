@@ -37,6 +37,7 @@ struct Config {
     log_all_events: Option<bool>,
     builtin_boot_resolver: Option<BuiltinBootResolver>,
     reboot_on_terminate_enabled: Option<bool>,
+    realm_builder_resolver_and_runner: Option<RealmBuilderResolverAndRunner>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -66,6 +67,20 @@ enum BuiltinBootResolver {
 }
 
 symmetrical_enums!(BuiltinBootResolver, component_internal::BuiltinBootResolver, None, Boot, Pkg);
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum RealmBuilderResolverAndRunner {
+    None,
+    Namespace,
+}
+
+symmetrical_enums!(
+    RealmBuilderResolverAndRunner,
+    component_internal::RealmBuilderResolverAndRunner,
+    None,
+    Namespace
+);
 
 impl std::default::Default for BuiltinPkgResolver {
     fn default() -> Self {
@@ -250,11 +265,11 @@ impl TryFrom<Config> for component_internal::Config {
             component_id_index_path: config.component_id_index_path,
             log_destination: config.log_destination.map(|d| d.into()),
             log_all_events: config.log_all_events,
-            builtin_boot_resolver: match config.builtin_boot_resolver {
-                Some(builtin_boot_resolver) => Some(builtin_boot_resolver.into()),
-                None => None,
-            },
+            builtin_boot_resolver: config.builtin_boot_resolver.map(Into::into),
             reboot_on_terminate_enabled: config.reboot_on_terminate_enabled,
+            realm_builder_resolver_and_runner: config
+                .realm_builder_resolver_and_runner
+                .map(Into::into),
             ..Self::EMPTY
         })
     }
@@ -382,6 +397,7 @@ impl Config {
         extend_if_unset!(self, another, log_all_events);
         extend_if_unset!(self, another, builtin_boot_resolver);
         extend_if_unset!(self, another, reboot_on_terminate_enabled);
+        extend_if_unset!(self, another, realm_builder_resolver_and_runner);
         Ok(self)
     }
 
@@ -533,6 +549,7 @@ mod tests {
             log_all_events: true,
             builtin_boot_resolver: "boot",
             reboot_on_terminate_enabled: true,
+            realm_builder_resolver_and_runner: "namespace",
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -630,6 +647,9 @@ mod tests {
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::Boot),
                 reboot_on_terminate_enabled: Some(true),
+                realm_builder_resolver_and_runner: Some(
+                    component_internal::RealmBuilderResolverAndRunner::Namespace
+                ),
                 ..component_internal::Config::EMPTY
             }
         );

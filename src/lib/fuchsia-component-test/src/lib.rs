@@ -7,8 +7,8 @@ use {
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ffrb,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -388,6 +388,83 @@ impl Realm {
     pub async fn create_with_name(self, child_name: String) -> Result<RealmInstance, Error> {
         let (root_url, collection_name, mocks_runner) = self.initialize().await?;
         let root = ScopedInstance::new_with_name(child_name, collection_name, root_url)
+            .await
+            .map_err(RealmError::FailedToCreateChild)?;
+        Ok(RealmInstance { root, _mocks_runner: mocks_runner })
+    }
+
+    /// Launches a nested component manager which will run the created realm (along with any mocks
+    /// in the realm). This component manager _must_ be referenced by a relative URL.
+    ///
+    /// Note that any routes with a source of `above_root` will need to also be used in component
+    /// manager's manifest and listed as a namespace capability in its config.
+    ///
+    /// Note that any routes with a target of `above_root` will result in exposing the capability
+    /// to component manager, which is rather useless by itself. Component manager does expose the
+    /// hub though, which could be traversed to find an exposed capability.
+    pub async fn create_in_nested_component_manager(
+        self,
+        component_manager_relative_url: &str,
+    ) -> Result<RealmInstance, Error> {
+        let (root_url, collection_name, mocks_runner) = self.initialize().await?;
+
+        // We now have a root URL we could create in a collection, but instead we want to launch a
+        // component manager and give that component manager this root URL. That flag is set with
+        // command line arguments, so we can't just launch an unmodified component manager.
+        //
+        // Open a new connection to the framework intermediary to begin creating a new realm. This
+        // new realm will hold a single component: component manager. We will modify its manifest
+        // such that the root component URL is set to the root_url we just obtained, and the nested
+        // component manager will then fetch the manifest from realm builder itself.
+        //
+        // Note this presumes that component manager is pointed to a config with following line:
+        //
+        //     realm_builder_resolver_and_runner: "namespace",
+
+        let mut component_manager_realm = Self::new().await?;
+        component_manager_realm
+            .set_component_url(&Moniker::root(), component_manager_relative_url.to_string())
+            .await?;
+        let mut component_manager_decl = component_manager_realm.get_decl(&Moniker::root()).await?;
+        match **component_manager_decl
+            .program
+            .as_mut()
+            .expect("component manager's manifest is lacking a program section")
+            .info
+            .entries
+            .get_or_insert(vec![])
+            .iter_mut()
+            .find(|e| e.key == "args")
+            .expect("component manager's manifest doesn't specify a config")
+            .value
+            .as_mut()
+            .expect("component manager's manifest has a malformed 'args' section") {
+                fdata::DictionaryValue::StrVec(ref mut v) => v.push(root_url),
+                _ => panic!("component manager's manifest has a single value for 'args', but we were expecting a vector"),
+        }
+        component_manager_realm.set_component(&Moniker::root(), component_manager_decl).await?;
+
+        for protocol_name in
+            vec!["fuchsia.sys2.ComponentResolver", "fuchsia.component.runner.ComponentRunner"]
+        {
+            component_manager_realm
+                .add_route(builder::CapabilityRoute {
+                    capability: builder::Capability::protocol(protocol_name),
+                    source: builder::RouteEndpoint::above_root(),
+                    targets: vec![builder::RouteEndpoint::component("")],
+                })
+                .await?;
+        }
+        component_manager_realm
+            .add_route(builder::CapabilityRoute {
+                capability: builder::Capability::directory("hub", "/hub", fio2::RW_STAR_DIR),
+                source: builder::RouteEndpoint::component(""),
+                targets: vec![builder::RouteEndpoint::above_root()],
+            })
+            .await?;
+
+        let (component_manager_url, _, _) = component_manager_realm.initialize().await?;
+        let root = ScopedInstance::new(collection_name, component_manager_url)
             .await
             .map_err(RealmError::FailedToCreateChild)?;
         Ok(RealmInstance { root, _mocks_runner: mocks_runner })

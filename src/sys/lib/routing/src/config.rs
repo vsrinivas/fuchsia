@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
         CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
-        OutDirContents,
+        OutDirContents, RealmBuilderResolverAndRunner,
     },
     fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
@@ -98,6 +98,9 @@ pub struct RuntimeConfig {
     /// This lets a parent component designate that the system should reboot if a child terminates
     /// (except when it's shut down).
     pub reboot_on_terminate_enabled: bool,
+
+    /// If and how the realm builder resolver and runner are enabled.
+    pub realm_builder_resolver_and_runner: RealmBuilderResolverAndRunner,
 }
 
 /// A single security policy allowlist entry.
@@ -213,6 +216,7 @@ impl Default for RuntimeConfig {
             log_all_events: false,
             builtin_boot_resolver: BuiltinBootResolver::None,
             reboot_on_terminate_enabled: false,
+            realm_builder_resolver_and_runner: RealmBuilderResolverAndRunner::None,
         }
     }
 }
@@ -373,6 +377,9 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             reboot_on_terminate_enabled: config
                 .reboot_on_terminate_enabled
                 .unwrap_or(default.reboot_on_terminate_enabled),
+            realm_builder_resolver_and_runner: config
+                .realm_builder_resolver_and_runner
+                .unwrap_or(default.realm_builder_resolver_and_runner),
         })
     }
 }
@@ -737,6 +744,7 @@ mod tests {
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::None),
                 reboot_on_terminate_enabled: Some(true),
+                realm_builder_resolver_and_runner: Some(component_internal::RealmBuilderResolverAndRunner::None),
                 ..component_internal::Config::EMPTY
             },
             RuntimeConfig {
@@ -832,6 +840,7 @@ mod tests {
                 log_all_events: true,
                 builtin_boot_resolver: BuiltinBootResolver::None,
                 reboot_on_terminate_enabled: true,
+                realm_builder_resolver_and_runner: RealmBuilderResolverAndRunner::None,
             }
         ),
     }

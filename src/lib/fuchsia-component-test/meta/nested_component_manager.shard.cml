@@ -1,0 +1,16 @@
+// This is a CML shard, which is necessary when a nested component manager is
+// used with the fuchsia_component_test library
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fuchsia_component_test_collection" ],
+        },
+    ],
+}

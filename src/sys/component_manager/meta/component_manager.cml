@@ -1,0 +1,38 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/component_manager",
+        args: [
+            "--config",
+            "/pkg/data/component_manager_realm_builder_config",
+        ],
+    },
+    capabilities: [
+        {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.component.resolver.RealmBuilder",
+                "fuchsia.component.runner.RealmBuilder",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: "hub",
+            from: "self",
+        },
+    ],
+}

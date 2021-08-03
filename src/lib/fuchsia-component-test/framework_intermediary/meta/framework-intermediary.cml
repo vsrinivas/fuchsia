@@ -13,7 +13,13 @@
             runner: "realm_builder",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
-        { protocol: "fuchsia.realm.builder.FrameworkIntermediary" },
+        {
+            protocol: [
+                "fuchsia.component.runner.ComponentRunner",
+                "fuchsia.realm.builder.FrameworkIntermediary",
+                "fuchsia.sys2.ComponentResolver",
+            ],
+        },
     ],
     use: [
         {
@@ -33,7 +39,11 @@
             from: "self",
         },
         {
-            protocol: "fuchsia.realm.builder.FrameworkIntermediary",
+            protocol: [
+                "fuchsia.component.runner.ComponentRunner",
+                "fuchsia.realm.builder.FrameworkIntermediary",
+                "fuchsia.sys2.ComponentResolver",
+            ],
             from: "self",
         },
     ],
