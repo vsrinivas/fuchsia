@@ -473,9 +473,9 @@ executable("hypervisor_tests") {
   testonly = true
 
   sources = [
-    "hypervisor_tests.cc",
     "hypervisor_tests_${target_cpu}.S",
     "hypervisor_tests_constants.h",
+    "hypervisor_tests_old.cc",
   ]
 
   deps = [
