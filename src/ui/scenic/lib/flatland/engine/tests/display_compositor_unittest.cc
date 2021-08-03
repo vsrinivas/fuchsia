@@ -617,8 +617,14 @@ TEST_F(DisplayCompositorTest, RendererOnly_ImportAndReleaseBufferCollectionTest)
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportBufferCollection(kGlobalBufferCollectionId, _, _))
       .Times(0);
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
   EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
-      .WillOnce(Return(true));
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
   display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
                                               CreateToken());
 
