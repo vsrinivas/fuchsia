@@ -32,8 +32,8 @@ transferred with *handles* being an array of `zx_handle_disposition_t`:
 typedef struct zx_handle_disposition {
     zx_handle_op_t operation;
     zx_handle_t handle;
-    zx_rights_t rights;
     zx_obj_type_t type;
+    zx_rights_t rights;
     zx_status_t result;
 } zx_handle_disposition_t;
 ```
