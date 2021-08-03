@@ -123,6 +123,12 @@ class MsdArmDevice : public msd_device_t,
   void DumpToString(std::vector<std::string>* dump_string, bool from_device_thread);
   void FormatDump(DumpState& dump_state, std::vector<std::string>* dump_string);
   void DumpStatusToLog();
+  magma::Status ProcessTimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer);
+
+  void RefCycleCounter();
+  void DerefCycleCounter();
+
+  magma::Status QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer);
 
   // MsdArmConnection::Owner implementation.
   void ScheduleAtom(std::shared_ptr<MsdArmAtom> atom) override;
@@ -166,6 +172,7 @@ class MsdArmDevice : public msd_device_t,
   class ScheduleAtomRequest;
   class CancelAtomsRequest;
   class TaskRequest;
+  class TimestampRequest;
 
   struct InspectEvent {
     InspectEvent(inspect::Node* parent, std::string type);

@@ -90,15 +90,38 @@ class GpuStatus : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<GpuStatus>(0x34); }
 };
 
-// May return incorrect value on rollover.
-class CycleCount : public magma::RegisterPairBase {
+class TimestampRegisterPair : public magma::RegisterPairBase {
+ protected:
+  void ReadConsistentTimestampFrom(magma::RegisterIo* reg_io) {
+    uint32_t high1 = reg_io->Read32(reg_addr() + 4);
+    uint32_t low = reg_io->Read32(reg_addr());
+    uint32_t high2 = reg_io->Read32(reg_addr() + 4);
+    if (high1 != high2) {
+      // high1 rolled over. The existing value of low could be from before or after the rollover, so
+      // get a new value. The new value should be unlikely to hav rolled over again.
+      low = reg_io->Read32(reg_addr());
+    }
+    set_reg_value((static_cast<uint64_t>(high2) << 32) | low);
+  }
+};
+
+// May return incorrect value on rollover unless ReadConsistentFrom is used.
+class CycleCount : public TimestampRegisterPair {
  public:
+  CycleCount& ReadConsistentFrom(magma::RegisterIo* reg_io) {
+    ReadConsistentTimestampFrom(reg_io);
+    return *this;
+  }
   static auto Get() { return magma::RegisterAddr<CycleCount>(0x90); }
 };
 
-// May return incorrect value on rollover.
-class Timestamp : public magma::RegisterPairBase {
+// May return incorrect value on rollover unless ReadConsistentFrom is used.
+class Timestamp : public TimestampRegisterPair {
  public:
+  Timestamp& ReadConsistentFrom(magma::RegisterIo* reg_io) {
+    ReadConsistentTimestampFrom(reg_io);
+    return *this;
+  }
   static auto Get() { return magma::RegisterAddr<Timestamp>(0x98); }
 };
 

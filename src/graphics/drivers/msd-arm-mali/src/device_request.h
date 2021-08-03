@@ -29,8 +29,10 @@ class DeviceRequest {
       event_->Signal();
     }
 
-    magma::Status Wait() {
-      event_->Wait();
+    magma::Status Wait(uint64_t timeout_ms = UINT64_MAX) {
+      magma::Status wait_status = event_->Wait(timeout_ms);
+      if (!wait_status.ok())
+        return wait_status;
       return status_;
     }
 

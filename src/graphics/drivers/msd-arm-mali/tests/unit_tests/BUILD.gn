@@ -33,6 +33,7 @@ source_set("tests_not_requiring_hardware") {
     "test_performance_counters.cc",
     "test_power_manager.cc",
     "test_region.cc",
+    "test_timestamp.cc",
   ]
 
   deps = [
@@ -64,6 +65,7 @@ group("test_deps") {
     "//src/graphics/drivers/msd-arm-mali/src",
     "//src/graphics/lib/magma/include:msd_abi",
     "//src/graphics/lib/magma/src/magma_util:macros",
+    "//src/graphics/lib/magma/src/magma_util:registers",
     "//src/graphics/lib/magma/src/magma_util/platform:port",
     "//src/graphics/lib/magma/src/sys_driver:sys_driver",
     "//src/graphics/lib/magma/tests/helper:command_buffer_helper",

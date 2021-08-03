@@ -152,6 +152,33 @@ class TestMsdArmDevice {
     EXPECT_TRUE(device->PowerDownL2());
     EXPECT_EQ(0u, device->power_manager_->l2_ready_status());
   }
+
+  static void QueryTimestamp() {
+    std::unique_ptr<MsdArmDevice> device =
+        MsdArmDevice::Create(GetTestDeviceHandle(), /*enable_device_thread*/ false);
+    ASSERT_NE(nullptr, device);
+    EXPECT_NE(device, nullptr);
+
+    uint64_t last_timestamp = 0;
+
+    for (uint32_t i = 0; i < 10; i++) {
+      auto buffer = std::shared_ptr<magma::PlatformBuffer>(
+          magma::PlatformBuffer::Create(magma::page_size(), "timestamp test"));
+      ASSERT_TRUE(buffer);
+
+      ASSERT_EQ(MAGMA_STATUS_OK, device->ProcessTimestampRequest(buffer).get());
+
+      void* ptr;
+      ASSERT_TRUE(buffer->MapCpu(&ptr));
+
+      auto query = reinterpret_cast<magma_arm_mali_device_timestamp_return*>(ptr);
+
+      EXPECT_GT(query->device_timestamp, last_timestamp);
+      last_timestamp = query->device_timestamp;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
 };
 
 TEST(MsdArmDevice, CreateAndDestroy) {
@@ -177,4 +204,9 @@ TEST(MsdArmDevice, ProtectMode) {
 TEST(MsdArmDevice, PowerDownL2) {
   TestMsdArmDevice test;
   test.PowerDownL2();
+}
+
+TEST(MsdArmDevice, QueryTimestamp) {
+  TestMsdArmDevice test;
+  test.QueryTimestamp();
 }

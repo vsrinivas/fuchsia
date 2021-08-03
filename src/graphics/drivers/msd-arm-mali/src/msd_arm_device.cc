@@ -112,6 +112,18 @@ class MsdArmDevice::TaskRequest : public DeviceRequest {
   FitCallbackTask task_;
 };
 
+class MsdArmDevice::TimestampRequest : public DeviceRequest {
+ public:
+  TimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer) : buffer_(std::move(buffer)) {}
+
+ protected:
+  magma::Status Process(MsdArmDevice* device) override {
+    return device->ProcessTimestampRequest(std::move(buffer_));
+  }
+
+  std::shared_ptr<magma::PlatformBuffer> buffer_;
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdArmDevice> MsdArmDevice::Create(void* device_handle, bool start_device_thread,
@@ -300,6 +312,51 @@ void MsdArmDevice::DeregisterConnection() {
 }
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
+
+magma::Status MsdArmDevice::QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer) {
+  auto request = std::make_unique<TimestampRequest>(std::move(buffer));
+  auto reply = request->GetReply();
+
+  EnqueueDeviceRequest(std::move(request));
+
+  constexpr uint32_t kWaitTimeoutMs = 1000;
+  magma::Status status = reply->Wait(kWaitTimeoutMs);
+  if (!status.ok())
+    return DRET_MSG(status.get(), "reply wait failed");
+
+  return MAGMA_STATUS_OK;
+}
+
+static uint64_t get_ns_monotonic(bool raw) {
+  struct timespec time;
+  int ret = clock_gettime(raw ? CLOCK_MONOTONIC_RAW : CLOCK_MONOTONIC, &time);
+  if (ret < 0)
+    return 0;
+  return static_cast<uint64_t>(time.tv_sec) * 1000000000ULL + time.tv_nsec;
+}
+
+magma::Status MsdArmDevice::ProcessTimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer) {
+  magma_arm_mali_device_timestamp_return* return_struct;
+  {
+    void* ptr;
+    if (!buffer->MapCpu(&ptr))
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to map query buffer");
+    return_struct = reinterpret_cast<magma_arm_mali_device_timestamp_return*>(ptr);
+  }
+  RefCycleCounter();
+  return_struct->monotonic_raw_timestamp_before = get_ns_monotonic(true);
+  return_struct->monotonic_timestamp = get_ns_monotonic(false);
+  return_struct->device_timestamp =
+      registers::Timestamp::Get().FromValue(0).ReadConsistentFrom(register_io_.get()).reg_value();
+  return_struct->device_cycle_count =
+      registers::CycleCount::Get().FromValue(0).ReadConsistentFrom(register_io_.get()).reg_value();
+  return_struct->monotonic_raw_timestamp_after = get_ns_monotonic(true);
+  DerefCycleCounter();
+
+  buffer->UnmapCpu();
+
+  return MAGMA_STATUS_OK;
+}
 
 void MsdArmDevice::OutputHangMessage() {
   hang_timeout_count_.Add(1);
@@ -1116,10 +1173,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     DASSERT(!atom->using_cycle_counter());
     atom->set_using_cycle_counter(true);
 
-    if (++cycle_counter_refcount_ == 1) {
-      register_io_->Write32(registers::GpuCommand::kOffset,
-                            registers::GpuCommand::kCmdCycleCountStart);
-    }
+    RefCycleCounter();
   }
 
   if (atom->is_protected()) {
@@ -1181,10 +1235,7 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) {
   if (atom->using_cycle_counter()) {
     DASSERT(atom->require_cycle_counter());
 
-    if (--cycle_counter_refcount_ == 0) {
-      register_io_->Write32(registers::GpuCommand::kOffset,
-                            registers::GpuCommand::kCmdCycleCountStop);
-    }
+    DerefCycleCounter();
     atom->set_using_cycle_counter(false);
   }
   // Soft stopped atoms will be retried, so this result shouldn't be reported.
@@ -1217,6 +1268,21 @@ void MsdArmDevice::ReleaseMappingsForAtom(MsdArmAtom* atom) {
   // The atom should be hung on a fault, so it won't reference memory
   // afterwards.
   address_manager_->AtomFinished(atom);
+}
+
+void MsdArmDevice::RefCycleCounter() {
+  if (++cycle_counter_refcount_ == 1) {
+    register_io_->Write32(registers::GpuCommand::kOffset,
+                          registers::GpuCommand::kCmdCycleCountStart);
+  }
+}
+
+void MsdArmDevice::DerefCycleCounter() {
+  DASSERT(cycle_counter_refcount_ != 0);
+  if (--cycle_counter_refcount_ == 0) {
+    register_io_->Write32(registers::GpuCommand::kOffset,
+                          registers::GpuCommand::kCmdCycleCountStop);
+  }
 }
 
 magma_status_t MsdArmDevice::QueryInfo(uint64_t id, uint64_t* value_out) {
@@ -1295,6 +1361,16 @@ magma_status_t MsdArmDevice::QueryReturnsBuffer(uint64_t id, uint32_t* buffer_ou
     case MAGMA_QUERY_TOTAL_TIME:
       return power_manager_->GetTotalTime(buffer_out) ? MAGMA_STATUS_OK
                                                       : MAGMA_STATUS_INTERNAL_ERROR;
+    case kMsdArmVendorQueryDeviceTimestamp: {
+      auto buffer = magma::PlatformBuffer::Create(magma::page_size(), "timestamps");
+      if (!buffer)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to create timestamp buffer");
+
+      if (!buffer->duplicate_handle(buffer_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to dupe timestamp buffer");
+
+      return QueryTimestamp(std::move(buffer)).get();
+    }
     default:
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }

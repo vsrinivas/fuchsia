@@ -221,4 +221,13 @@ struct magma_arm_jit_atom_trailer {
 static_assert(sizeof(magma_arm_jit_atom_trailer) % 8 == 0,
               "jit trailer must be a multiple of 8 bytes");
 
+// Returned by kMsdArmVendorQueryDeviceTimestamp.
+struct magma_arm_mali_device_timestamp_return {
+  uint64_t monotonic_raw_timestamp_before;
+  uint64_t monotonic_timestamp;
+  uint64_t device_timestamp;
+  uint64_t device_cycle_count;
+  uint64_t monotonic_raw_timestamp_after;
+} __attribute__((packed));
+
 #endif
