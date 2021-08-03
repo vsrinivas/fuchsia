@@ -47,7 +47,7 @@ pub fn construct_base_package(
 
     let base_package_path = outdir.as_ref().join("base.far");
     let build_results = base_pkg_builder
-        .build(outdir, gendir, &base_package_path)
+        .build(outdir, gendir, &product.base_package_name, &base_package_path)
         .context("Failed to build the base package")?;
 
     let base_package = File::open(&base_package_path).context("Failed to open the base package")?;
@@ -86,6 +86,7 @@ mod tests {
         product_config.base_packages.push(manifest);
         let manifest = generate_test_manifest_file(&dir.path(), "test_cache");
         product_config.cache_packages.push(manifest);
+        product_config.base_package_name = "system_image".to_string();
 
         // Construct the base package.
         let base_package = construct_base_package(dir.path(), dir.path(), &product_config).unwrap();
@@ -102,6 +103,35 @@ mod tests {
             extra_base_data.txt=6ef2ad21fe7a1f22e224da891fba56b8cc53f39b977867a839584d4cc3919c4c\n\
         "
         .to_string();
+        assert_eq!(contents, expected_contents);
+    }
+
+    #[test]
+    fn construct_prime() {
+        let dir = tempdir().unwrap();
+
+        // Prepare package manifests to add to the base package.
+        let mut product_config = ProductConfig::default();
+        let manifest = generate_test_manifest_file(&dir.path(), "extra_base");
+        product_config.extra_packages_for_base_package.push(manifest);
+        let manifest = generate_test_manifest_file(&dir.path(), "test_static");
+        product_config.base_packages.push(manifest);
+        let manifest = generate_test_manifest_file(&dir.path(), "test_cache");
+        product_config.cache_packages.push(manifest);
+        product_config.base_package_name = "system_image".to_string();
+
+        // Construct the base package.
+        let base_package = construct_base_package(dir.path(), dir.path(), &product_config).unwrap();
+        assert_eq!(base_package.path, dir.path().join("base.far"));
+
+        // Read the base package, and assert the contents are correct.
+        let base_package_file = File::open(base_package.path).unwrap();
+        let mut far_reader = Reader::new(&base_package_file).unwrap();
+        let contents = far_reader.read_file("meta/package").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+
+        // The name should still be "system_image" even for prime.
+        let expected_contents = r#"{"name":"system_image","version":"0"}"#.to_string();
         assert_eq!(contents, expected_contents);
     }
 

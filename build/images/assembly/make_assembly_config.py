@@ -26,6 +26,8 @@ def main():
     parser.add_argument('--boot-args', type=argparse.FileType('r'))
     parser.add_argument(
         '--bootfs-entries', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--update-package-name', type=str, required=True)
+    parser.add_argument('--base-package-name', type=str, required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
@@ -75,6 +77,8 @@ def main():
         config["boot_args"] = json.load(args.boot_args)
 
     config["bootfs_files"] = json.load(args.bootfs_entries)
+    config["update_package_name"] = args.update_package_name
+    config["base_package_name"] = args.base_package_name
 
     json.dump(config, args.output, indent=2)
 

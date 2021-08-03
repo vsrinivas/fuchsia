@@ -85,7 +85,7 @@ pub fn construct_update(
         // Add the base package merkle.
         // TODO(fxbug.dev/76986): Do not hardcode the base package path.
         update_pkg_builder.add_package(
-            PackagePath::from_name_and_variant("system_image", "0")?,
+            PackagePath::from_name_and_variant(&product.base_package_name, "0")?,
             base_package.merkle,
         )?;
     }
@@ -93,7 +93,7 @@ pub fn construct_update(
     // Build the update package and return its path.
     let update_package_path = outdir.as_ref().join("update.far");
     let update_contents = update_pkg_builder
-        .build(outdir, gendir, &update_package_path)
+        .build(outdir, gendir, &product.update_package_name, &update_package_path)
         .context("Failed to build the update package")?;
     Ok(UpdatePackage { contents: update_contents, path: update_package_path })
 }
@@ -119,6 +119,8 @@ mod tests {
         // Create fake product/board definitions.
         let mut product_config = ProductConfig::default();
         product_config.kernel_image = dir.path().join("kernel");
+        product_config.update_package_name = "update".to_string();
+        product_config.base_package_name = "system_image".to_string();
         let board_config = BoardConfig {
             board_name: "board".to_string(),
             vbmeta: None,
@@ -182,6 +184,77 @@ mod tests {
             zbi=2162b78584bc362ffae4dddca33b9ccb55c38b725279f2f191b852f3c5558348\n\
         "
         .to_string();
+        assert_eq!(contents, expected_contents);
+    }
+
+    #[test]
+    fn construct_prime() {
+        let dir = tempdir().unwrap();
+
+        // Create fake product/board definitions.
+        let mut product_config = ProductConfig::default();
+        product_config.kernel_image = dir.path().join("kernel");
+        product_config.update_package_name = "update".to_string();
+        product_config.base_package_name = "system_image".to_string();
+        let board_config = BoardConfig {
+            board_name: "board".to_string(),
+            vbmeta: None,
+            bootloaders: Vec::new(),
+            zbi: ZbiConfig {
+                partition: "zbi".to_string(),
+                name: "fuchsia".to_string(),
+                max_size: 0,
+                embed_fvm_in_zbi: false,
+                compression: "zstd".to_string(),
+                signing_script: None,
+                backstop_file: PathBuf::from("backstop.txt"),
+            },
+            blobfs: BlobFSConfig::default(),
+            fvm: None,
+            recovery: None,
+        };
+
+        // Create a fake zbi.
+        let zbi_path = dir.path().join("fuchsia.zbi");
+        std::fs::write(&zbi_path, "fake zbi").unwrap();
+
+        // Create a fake vbmeta.
+        let vbmeta_path = dir.path().join("fuchsia.vbmeta");
+        std::fs::write(&vbmeta_path, "fake vbmeta").unwrap();
+
+        // Create a fake base package.
+        let base_path = dir.path().join("base.far");
+        std::fs::write(&base_path, "fake base").unwrap();
+        let base = BasePackage {
+            merkle: Hash::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            contents: BTreeMap::default(),
+            path: base_path,
+        };
+
+        // Construct the update package.
+        let update_package = construct_update(
+            dir.path(),
+            dir.path(),
+            &product_config,
+            &board_config,
+            &zbi_path,
+            Some(vbmeta_path),
+            Some(&base),
+        )
+        .unwrap();
+        assert_eq!(update_package.path, dir.path().join("update.far"));
+
+        // Read the update package, and assert the contents are correct.
+        let update_package_file = File::open(update_package.path).unwrap();
+        let mut far_reader = Reader::new(&update_package_file).unwrap();
+        let contents = far_reader.read_file("meta/package").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+
+        // The name remains "update" even for prime.
+        let expected_contents = r#"{"name":"update","version":"0"}"#.to_string();
         assert_eq!(contents, expected_contents);
     }
 }

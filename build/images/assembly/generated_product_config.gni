@@ -44,6 +44,16 @@ import("//build/zbi/kernel_cmdline.gni")
 #     [list of labels] Dependencies with metadata including additional kernel
 #     command arguments to add to the ZBI.
 #
+#   update_package_name (optional; default: "update")
+#     [string] The name to give the update package. For prime builds this
+#     should be "update_prime", so that the package does not override the
+#     non-prime package during publishing.
+#
+#   base_package_name (optional; default: "system_image")
+#     [string] The name to give the base package. For prime builds this
+#     should be "system_image_prime", so that the package does not override the
+#     non-prime package during publishing.
+#
 template("generated_product_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
   assert(defined(invoker.kernel_image), "Need to define kernel_image")
@@ -77,6 +87,16 @@ template("generated_product_config") {
   include_version_and_epoch = false
   if (defined(invoker.include_version_and_epoch)) {
     include_version_and_epoch = invoker.include_version_and_epoch
+  }
+
+  update_package_name = "update"
+  if (defined(invoker.update_package_name)) {
+    update_package_name = invoker.update_package_name
+  }
+
+  base_package_name = "system_image"
+  if (defined(invoker.base_package_name)) {
+    base_package_name = invoker.base_package_name
   }
 
   # Labels used in this file.
@@ -264,6 +284,10 @@ template("generated_product_config") {
       rebase_path(files.boot_args, root_build_dir),
       "--bootfs-entries",
       rebase_path(files.bootfs_entries_metadata, root_build_dir),
+      "--update-package-name",
+      update_package_name,
+      "--base-package-name",
+      base_package_name,
       "--output",
       rebase_path(invoker.output_path, root_build_dir),
     ]

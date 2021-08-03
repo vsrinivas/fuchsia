@@ -60,6 +60,7 @@ impl UpdatePackageBuilder {
         mut self,
         outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
+        name: impl AsRef<str>,
         out: impl AsRef<Path>,
     ) -> Result<BTreeMap<String, String>> {
         // Add the package list.
@@ -77,7 +78,7 @@ impl UpdatePackageBuilder {
         let update_contents = self.contents.clone();
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(self.contents, far_contents)?;
-        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, "update")?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, name.as_ref())?;
 
         // Write the package manifest to a file.
         let package_manifest_path = outdir.as_ref().join("update_package_manifest.json");
@@ -167,7 +168,7 @@ mod tests {
                     .unwrap(),
             )
             .unwrap();
-        builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
+        builder.build(&outdir.path(), &gendir.path(), "myupdate", &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
         let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
@@ -197,7 +198,7 @@ mod tests {
         builder
             .add_package_by_manifest(generate_test_manifest("package", "0", Some(test_file.path())))
             .unwrap();
-        builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
+        builder.build(&outdir.path(), &gendir.path(), "myupdate", &far_path).unwrap();
 
         // Read the output and ensure it contains the right files (and their hashes).
         let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();

@@ -50,6 +50,22 @@ pub struct ProductConfig {
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
     pub bootfs_files: Vec<FileEntry>,
+
+    /// The name of the update package.
+    #[serde(default = "default_update_package_name")]
+    pub update_package_name: String,
+
+    /// The name of the base package.
+    #[serde(default = "default_base_package_name")]
+    pub base_package_name: String,
+}
+
+fn default_update_package_name() -> String {
+    "update".to_string()
+}
+
+fn default_base_package_name() -> String {
+    "system_image".to_string()
 }
 
 /// The set of information that defines a fuchsia board.
@@ -348,7 +364,9 @@ mod tests {
                     "source": "path/to/source",
                     "destination": "path/to/destination"
                 }
-              ]
+              ],
+              "update_package_name": "update",
+              "base_package_name": "system_image"
             }
         "#;
 

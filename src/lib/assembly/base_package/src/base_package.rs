@@ -55,6 +55,7 @@ impl BasePackageBuilder {
         self,
         outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
+        name: impl AsRef<str>,
         out: impl AsRef<Path>,
     ) -> Result<BasePackageBuildResults> {
         let Self { contents, base_packages, cache_packages } = self;
@@ -89,7 +90,7 @@ impl BasePackageBuilder {
             far_contents,
         )?;
 
-        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, "system_image")?;
+        let package_manifest = fuchsia_pkg::build(&creation_manifest, out, name.as_ref())?;
 
         // Write the package manifest to a file.
         let package_manifest_path = outdir.as_ref().join("base_package_manifest.json");
@@ -259,7 +260,8 @@ mod tests {
         builder.add_cache_package(generate_test_manifest("cache_package", "0", None)).unwrap();
 
         let gendir = TempDir::new().unwrap();
-        let build_results = builder.build(&outdir.path(), &gendir.path(), &far_path).unwrap();
+        let build_results =
+            builder.build(&outdir.path(), &gendir.path(), "system_image", &far_path).unwrap();
 
         // The following asserts lead up to the final one, catching earlier failure points where it
         // can be more obvious as to why the test is failing, as the hashes themselves are opaque.
