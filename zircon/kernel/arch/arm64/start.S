@@ -141,6 +141,10 @@ FUNCTION(_start)
     adr_global x1, kernel_base_phys
     str     x0, [x1]
 
+    /* Save a copy of the physical address of the kernel page table */
+    adr_global tmp, arm64_kernel_translation_table_phys
+    str     page_table1, [tmp]
+
     /* set up the mmu according to mmu_initial_mappings */
 
     /* clear out the kernel translation table */

@@ -77,6 +77,8 @@ uint64_t kernel_relocated_base = 0xffffffff10000000;
 // from assembly.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(
     MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
+// Physical address of the above table, saved in start.S.
+paddr_t arm64_kernel_translation_table_phys;
 
 // Global accessor for the kernel page table
 pte_t* arm64_get_kernel_ptable() { return arm64_kernel_translation_table; }
@@ -1592,7 +1594,7 @@ zx_status_t ArmArchVmAspace::Init() {
     DEBUG_ASSERT(size_ == 1UL << MMU_KERNEL_SIZE_SHIFT);
 
     tt_virt_ = arm64_kernel_translation_table;
-    tt_phys_ = vaddr_to_paddr(const_cast<pte_t*>(tt_virt_));
+    tt_phys_ = arm64_kernel_translation_table_phys;
     asid_ = (uint16_t)MMU_ARM64_GLOBAL_ASID;
   } else {
     uint page_size_shift;
