@@ -140,7 +140,7 @@ protocol Peripheral {
         2: scan_response AdvertisingData;
         3: mode_hint AdvertisingModeHint;
         4: connectable bool;
-        5: handle server_end:AdvertisingHandle
+        5: handle server_end:AdvertisingHandle;
     }) -> () error PeripheralError;
 };
 ```
@@ -506,7 +506,7 @@ protocol Peripheral {
         2: scan_response AdvertisingData;
         3: mode_hint AdvertisingModeHint;
         4: connectable bool;
-        5: handle server_end:AdvertisingHandle
+        5: handle server_end:AdvertisingHandle;
     }) -> () error PeripheralError;
 };
 ```
