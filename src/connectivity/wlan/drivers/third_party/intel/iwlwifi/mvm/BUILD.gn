@@ -1,0 +1,54 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
+
+source_set("mvm") {
+  sources = [
+    "binding.c",
+    "coex.c",
+    "fw.c",
+    "mac-ctxt.c",
+    "mac80211.c",
+    "nvm.c",
+    "ops.c",
+    "phy-ctxt.c",
+    "power.c",
+    "rx.c",
+    "rxmq.c",
+    "scan.c",
+    "sta.c",
+    "time-event.c",
+    "tof.c",
+    "tt.c",
+    "tx.c",
+    "utils.c",
+  ]
+  public = [
+    "API_rates.h",
+    "_rateScaleMng.h",
+    "apiGroupDatapath.h",
+    "apiVersion.h",
+    "constants.h",
+    "fw-api.h",
+    "mvm.h",
+    "rs-ng.h",
+    "rs.h",
+    "sta.h",
+    "time-event.h",
+    "tof.h",
+  ]
+  deps = [ "//zircon/public/lib/zircon-internal" ]
+  public_deps = [
+    "//garnet/lib/wlan/protocol:protocol",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/lib/ddk",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async",
+  ]
+}

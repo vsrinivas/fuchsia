@@ -82,7 +82,7 @@ struct iwl_notification_wait {
   void* fn_data;
 
   uint16_t cmds[MAX_NOTIF_CMDS];
-  uint8_t n_cmds;
+  size_t n_cmds;
   bool triggered, aborted;
 };
 
@@ -132,7 +132,7 @@ static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* noti
 //
 void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
                                 struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
-                                int n_cmds,
+                                size_t n_cmds,
                                 bool (*fn)(struct iwl_notif_wait_data* notif_data,
                                            struct iwl_rx_packet* pkt, void* data),
                                 void* fn_data);

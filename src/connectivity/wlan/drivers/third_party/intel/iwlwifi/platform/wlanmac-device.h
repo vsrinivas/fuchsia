@@ -8,24 +8,24 @@
 
 #include <ddktl/device.h>
 
-extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
-}  // extern "C"
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANMAC_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANMAC_DEVICE_H_
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MAC_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MAC_DEVICE_H_
+struct iwl_mvm_vif;
+struct iwl_trans;
 
 namespace wlan::iwlwifi {
 
-class MacDevice;
-using MacDeviceType = ddk::Device<MacDevice, ddk::Initializable, ddk::Unbindable>;
+class WlanmacDevice;
+using WlanmacDeviceType = ddk::Device<WlanmacDevice, ddk::Initializable, ddk::Unbindable>;
 
-class MacDevice : public MacDeviceType,
-                  public ::ddk::WlanmacProtocol<MacDevice, ::ddk::base_protocol> {
+class WlanmacDevice : public WlanmacDeviceType,
+                      public ::ddk::WlanmacProtocol<WlanmacDevice, ::ddk::base_protocol> {
  public:
-  MacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id, struct iwl_mvm_vif* mvmvif)
-      : MacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id){};
-  ~MacDevice() = default;
+  WlanmacDevice(zx_device* parent, iwl_trans* drvdata, uint16_t iface_id,
+                struct iwl_mvm_vif* mvmvif)
+      : WlanmacDeviceType(parent), mvmvif_(mvmvif), drvdata_(drvdata), iface_id_(iface_id){};
+  ~WlanmacDevice() = default;
 
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
@@ -57,4 +57,4 @@ class MacDevice : public MacDeviceType,
 
 }  // namespace wlan::iwlwifi
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MAC_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANMAC_DEVICE_H_

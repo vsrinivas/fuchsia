@@ -42,10 +42,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
-
 enum iwl_device_family {
   IWL_DEVICE_FAMILY_UNDEFINED,
   IWL_DEVICE_FAMILY_1000,
@@ -539,9 +535,5 @@ extern const struct iwl_cfg iwl22000_2ax_cfg_qnj_jf_b0;
 extern const struct iwl_cfg iwl22000_2ax_cfg_qnj_hr_a0;
 extern const struct iwl_cfg iwl22560_2ax_cfg_su_cdb;
 #endif /* CPTCFG_IWLMVM || CPTCFG_IWLFMAC */
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_

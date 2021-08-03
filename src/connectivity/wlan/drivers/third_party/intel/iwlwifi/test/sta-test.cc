@@ -5,7 +5,6 @@
 // Used to test mvm/sta.c
 
 #include <lib/mock-function/mock-function.h>
-#include <stdio.h>
 
 #include <zxtest/zxtest.h>
 
@@ -14,7 +13,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 
 namespace wlan::testing {

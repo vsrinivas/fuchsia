@@ -110,7 +110,7 @@ static void iwl_phy_db_free_section(struct iwl_phy_db* phy_db, enum iwl_phy_db_s
 }
 
 void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
-  int i;
+  uint16_t i;
 
   if (!phy_db) {
     return;
@@ -208,15 +208,15 @@ static uint8_t ch_id_to_ch_index(uint16_t ch_id) {
   }
 
   if (ch_id <= 14) {
-    return ch_id - 1;
+    return (uint8_t)(ch_id - 1);
   }
   if (ch_id <= 64) {
-    return (ch_id + 20) / 4;
+    return (uint8_t)((ch_id + 20) / 4);
   }
   if (ch_id <= 140) {
-    return (ch_id - 12) / 4;
+    return (uint8_t)((ch_id - 12) / 4);
   }
-  return (ch_id - 13) / 4;
+  return (uint8_t)((ch_id - 13) / 4);
 }
 
 static uint16_t channel_id_to_papd(uint16_t ch_id) {
@@ -238,7 +238,7 @@ static uint16_t channel_id_to_papd(uint16_t ch_id) {
 
 static uint16_t channel_id_to_txp(struct iwl_phy_db* phy_db, uint16_t ch_id) {
   struct iwl_phy_db_chg_txp* txp_chg;
-  int i;
+  uint16_t i;
   uint8_t ch_index = ch_id_to_ch_index(ch_id);
   if (ch_index == 0xff) {
     return 0xff;
@@ -321,7 +321,7 @@ zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
 
   /* Send all the  channel specific groups to operational fw */
   for (int i = 0; i < max_ch_groups; i++) {
-    entry = iwl_phy_db_get_section(phy_db, type, i);
+    entry = iwl_phy_db_get_section(phy_db, type, (uint16_t)i);
     if (!entry) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -331,7 +331,7 @@ zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
     }
 
     /* Send the requested PHY DB section */
-    err = iwl_send_phy_db_cmd(phy_db, type, entry->size, entry->data);
+    err = iwl_send_phy_db_cmd(phy_db, (uint16_t)type, entry->size, entry->data);
     if (err != ZX_OK) {
       IWL_ERR(phy_db->trans, "Can't SEND phy_db section %d (%d), err %d\n", type, i, err);
       return err;

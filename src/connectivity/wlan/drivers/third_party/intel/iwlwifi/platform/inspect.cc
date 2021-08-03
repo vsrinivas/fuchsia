@@ -4,7 +4,7 @@
 
 // Util functions to dump info/data for debug.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/inspect.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/inspect.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include <sstream>
 #include <string>
 
-#include "zircon/system/ulib/fbl/include/fbl/string_printf.h"
+#include <fbl/string_printf.h>
 
 #ifdef IWL_INSPECT
 

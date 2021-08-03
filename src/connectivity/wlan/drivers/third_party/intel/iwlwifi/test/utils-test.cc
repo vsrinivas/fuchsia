@@ -15,9 +15,6 @@
  */
 // Unittest code for the functions in mvm/utils.c
 
-#include <lib/mock-function/mock-function.h>
-#include <stdio.h>
-
 #include <zxtest/zxtest.h>
 
 extern "C" {

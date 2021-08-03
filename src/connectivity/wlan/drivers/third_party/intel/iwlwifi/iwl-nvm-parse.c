@@ -121,18 +121,18 @@ static const uint8_t iwl_ext_nvm_channels[] = {
 
 /* rate data (static) */
 uint16_t iwl_cfg80211_rates[] = {
-    1 * 10,    // 1 Mbps
-    2 * 10,    // 2 Mbps
-    5.5 * 10,  // 5.5 Mbps
-    11 * 10,   // 11 Mbps
-    6 * 10,    // 6 Mbps
-    9 * 10,    // 9 Mbps
-    12 * 10,   // 12 Mbps
-    18 * 10,   // 18 Mbps
-    24 * 10,   // 24 Mbps
-    36 * 10,   // 36 Mbps
-    48 * 10,   // 48 Mbps
-    54 * 10,   // 54 Mbps
+    1 * 10,                // 1 Mbps
+    2 * 10,                // 2 Mbps
+    (uint16_t)(5.5 * 10),  // 5.5 Mbps
+    11 * 10,               // 11 Mbps
+    6 * 10,                // 6 Mbps
+    9 * 10,                // 9 Mbps
+    12 * 10,               // 12 Mbps
+    18 * 10,               // 18 Mbps
+    24 * 10,               // 24 Mbps
+    36 * 10,               // 36 Mbps
+    48 * 10,               // 48 Mbps
+    54 * 10,               // 54 Mbps
 };
 #define RATES_24_OFFS 0
 #define N_RATES_24 ARRAY_SIZE(iwl_cfg80211_rates)
@@ -965,7 +965,7 @@ static bool iwl_nvm_no_wide_in_5ghz(struct device* dev, const struct iwl_cfg* cf
      * Unlike the other sections in the NVM, the hw
      * section uses big-endian.
      */
-    uint16_t subsystem_id = be16_to_cpup(nvm_hw + SUBSYSTEM_ID);
+    uint16_t subsystem_id = (uint16_t)be16_to_cpup(nvm_hw + SUBSYSTEM_ID);
     uint8_t sku = (subsystem_id & 0x1e) >> 1;
 
     if (sku == 5 || sku == 9) {

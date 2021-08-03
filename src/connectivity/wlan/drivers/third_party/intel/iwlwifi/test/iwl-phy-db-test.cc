@@ -11,9 +11,6 @@
 //
 //      https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
 //
-#include <lib/mock-function/mock-function.h>
-#include <stdio.h>
-
 #include <zxtest/zxtest.h>
 
 extern "C" {
@@ -29,15 +26,13 @@ class IwlPhyDbTest : public ::zxtest::Test {
   IwlPhyDbTest() {}
   ~IwlPhyDbTest() {}
 
-  struct iwl_phy_db* phy_db() { return phy_db_; }
-
-  void SetUp() override {
-    phy_db_ = iwl_phy_db_init(nullptr);
+  struct iwl_phy_db* phy_db() {
+    return phy_db_;
   }
 
-  void TearDown() override {
-    iwl_phy_db_free(phy_db_);
-  }
+  void SetUp() override { phy_db_ = iwl_phy_db_init(nullptr); }
+
+  void TearDown() override { iwl_phy_db_free(phy_db_); }
 
  private:
   struct iwl_phy_db* phy_db_;
@@ -178,8 +173,8 @@ TEST_F(IwlPhyDbTest, SetSectionTxp) {
   EXPECT_EQ(ZX_OK, iwl_phy_db_set_section(phy_db(), pkt_p));
   EXPECT_NE(nullptr, phy_db()->calib_ch_group_txp);
   EXPECT_EQ(0x0205, phy_db()->n_group_txp);
-  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(
-      phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
+  struct iwl_phy_db_entry* entry =
+      iwl_phy_db_get_section(phy_db(), IWL_PHY_DB_CALIB_CHG_TXP, 0x0204);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ(chg_id_size, entry->size);
   EXPECT_EQ(0x04, entry->data[0]);

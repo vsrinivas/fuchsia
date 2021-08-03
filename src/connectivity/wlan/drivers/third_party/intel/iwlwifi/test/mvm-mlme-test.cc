@@ -4,10 +4,9 @@
 
 // To test PHY and MAC device callback functions.
 
-#include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/internal/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/banjo.h>
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
-#include <stdio.h>
 #include <zircon/syscalls.h>
 
 #include <list>
@@ -18,11 +17,11 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
 namespace wlan::testing {
 namespace {
@@ -61,7 +60,7 @@ class WlanDeviceTest : public SingleApTest {
   static constexpr uint8_t kInvalidBandIdFillByte = 0xa5;
   static constexpr wlan_info_band_t kInvalidBandId = 0xa5a5a5a5;
   struct iwl_mvm_vif mvmvif_sta_;  // The mvm_vif settings for station role.
-  wlan::iwlwifi::Device* device_;
+  wlan::iwlwifi::WlanphyImplDevice* device_;
 };
 
 //////////////////////////////////// Helper Functions  /////////////////////////////////////////////

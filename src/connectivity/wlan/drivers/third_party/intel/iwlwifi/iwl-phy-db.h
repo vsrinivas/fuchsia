@@ -37,10 +37,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
-
 // This should be static, but is exported for unittest.
 enum iwl_phy_db_section_type {
   IWL_PHY_DB_CFG = 1,
@@ -98,9 +94,5 @@ zx_status_t iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
                                                int max_ch_groups);
 
 zx_status_t iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_

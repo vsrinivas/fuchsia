@@ -9,11 +9,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_MOCK_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_MOCK_TRANS_H_
 
-#include <lib/mock-function/mock-function.h>
-#include <stdio.h>
+#include <zircon/assert.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 
 namespace wlan::testing {
 
@@ -30,7 +29,7 @@ typedef decltype(((struct iwl_trans_ops*)(nullptr))->tx) tx_t;
   do {                                       \
     ZX_ASSERT(trans);                        \
     trans_ = trans;                          \
-    priv_ = IWL_TRANS_GET_TRANS_SIM(trans_); \
+    priv_ = IWL_TRANS_GET_SIM_TRANS(trans_); \
     priv_->test = this;                      \
   } while (0)
 
@@ -38,7 +37,7 @@ typedef decltype(((struct iwl_trans_ops*)(nullptr))->tx) tx_t;
 // iwl_trans.ops callback function.  Thus, this function must be in macro form.
 //
 #define GET_TEST(TestClass, trans) \
-  reinterpret_cast<TestClass*>(IWL_TRANS_GET_TRANS_SIM(trans)->test)
+  reinterpret_cast<TestClass*>(IWL_TRANS_GET_SIM_TRANS(trans)->test)
 
 class MockTrans {
  public:
@@ -65,7 +64,7 @@ class MockTrans {
 
  protected:
   struct iwl_trans* trans_;
-  struct trans_sim_priv* priv_;
+  struct sim_trans_priv* priv_;
 
  private:
   send_cmd_t org_send_cmd;

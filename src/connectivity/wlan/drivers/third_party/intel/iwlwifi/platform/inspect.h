@@ -15,10 +15,14 @@
 //                        directly. Use IWL_INSPECT_XXX instead.
 //
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_INSPECT_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_INSPECT_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_INSPECT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_INSPECT_H_
 
 #include <stdio.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
@@ -41,4 +45,8 @@ void iwl_inspect_host_cmd(const char* func_name, int line_no, struct iwl_host_cm
   } while (0)
 #endif  // IWL_INSPECT
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_INSPECT_H_
+#if defined(__cplusplus)
+}  // extern "C"
+#endif  // defined(__cplusplus)
+
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_INSPECT_H_

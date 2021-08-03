@@ -390,7 +390,7 @@ static zx_status_t iwl_alloc_fw_desc(struct iwl_drv* drv, struct fw_desc* desc,
     return ZX_ERR_NO_MEMORY;
   }
 
-  desc->len = sec->size;
+  desc->len = (uint32_t)sec->size;
   desc->offset = sec->offset;
   memcpy(data, sec->data, desc->len);
   desc->data = data;
@@ -1061,7 +1061,7 @@ fw_dbg_conf:
 
         major = le32_to_cpup(ptr++);
         minor = le32_to_cpup(ptr++);
-        local_comp = le32_to_cpup(ptr);
+        local_comp = (uint8_t)le32_to_cpup(ptr);
 
         if (strncmp((const char*)drv->fw.human_readable, "stream:", 7))
           snprintf(drv->fw.fw_version, sizeof(drv->fw.fw_version), "%u.%08x.%hhu", major, minor,
@@ -1112,9 +1112,9 @@ fw_dbg_conf:
 
         IWL_INFO(drv, "Found debug destination: %s\n", get_fw_dbg_mode_string(mon_mode));
 
-        drv->fw.dbg.n_dest_reg = (dest_v1)
-                                     ? tlv_len - offsetof(struct iwl_fw_dbg_dest_tlv_v1, reg_ops)
-                                     : tlv_len - offsetof(struct iwl_fw_dbg_dest_tlv, reg_ops);
+        drv->fw.dbg.n_dest_reg =
+            (uint8_t)((dest_v1) ? tlv_len - offsetof(struct iwl_fw_dbg_dest_tlv_v1, reg_ops)
+                                : tlv_len - offsetof(struct iwl_fw_dbg_dest_tlv, reg_ops));
 
         drv->fw.dbg.n_dest_reg /= sizeof(drv->fw.dbg.dest_tlv->reg_ops[0]);
 
@@ -1512,7 +1512,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, void* context) {
    * 2) backup cache for save/restore during power-downs
    */
   for (i = 0; i < IWL_UCODE_TYPE_MAX; i++)
-    if (iwl_alloc_ucode(drv, pieces, i)) {
+    if (iwl_alloc_ucode(drv, pieces, (enum iwl_ucode_type)i)) {
       goto out_free_fw;
     }
 

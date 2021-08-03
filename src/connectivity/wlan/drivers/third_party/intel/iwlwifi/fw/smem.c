@@ -46,7 +46,7 @@ static void iwl_parse_shared_mem_22000(struct iwl_fw_runtime* fwrt, struct iwl_r
     return;
   }
 
-  fwrt->smem_cfg.num_lmacs = lmac_num;
+  fwrt->smem_cfg.num_lmacs = (int)lmac_num;
   fwrt->smem_cfg.num_txfifo_entries = ARRAY_SIZE(mem_cfg->lmac_smem[0].txfifo_size);
   fwrt->smem_cfg.rxfifo2_size = le32_to_cpu(mem_cfg->rxfifo2_size);
 

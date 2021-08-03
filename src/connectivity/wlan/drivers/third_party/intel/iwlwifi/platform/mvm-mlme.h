@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The place holder for the code to interact with the MLME.
+// This file contains the interface between the iwlwifi MVM opmode and the Fuchsia MLME.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
 
-#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/wlan/internal/c/banjo.h>
+#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
+#include <fuchsia/wlan/common/cpp/banjo.h>
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include <ddk/hw/wlan/wlaninfo/cpp/banjo.h>
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 extern "C" {
-#endif  // __cplusplus
+#endif  // defined(__cplusplus)
 
 extern wlanmac_protocol_ops_t wlanmac_ops;
 extern zx_protocol_device_t device_mac_ops;  // for testing only
@@ -56,8 +57,8 @@ zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, u
 void mac_unbind(void* ctx);
 void mac_release(void* ctx);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }  // extern "C"
-#endif  // __cplusplus
+#endif  // defined(__cplusplus)
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_

@@ -1050,10 +1050,4 @@ void iwl_pcie_gen2_tx_free(struct iwl_trans* trans);
 void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
 
-/* PCIe device lifecycle entry points */
-zx_status_t iwl_pci_find_device_id(uint16_t device_id, uint16_t subsystem_device_id,
-                                   const struct iwl_pci_device_id** out_id);
-zx_status_t iwl_pci_probe(struct iwl_pci_dev* pdev, const struct iwl_pci_device_id* ent);
-void iwl_pci_remove(struct iwl_pci_dev* pdev);
-
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_

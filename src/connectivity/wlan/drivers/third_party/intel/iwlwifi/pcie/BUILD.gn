@@ -1,0 +1,35 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
+
+source_set("pcie") {
+  sources = [
+    "drv.c",
+    "internal.h",
+    "rx.c",
+    "trans-gen2.c",
+    "trans.c",
+    "tx.c",
+  ]
+  public = [ "entry.h" ]
+  deps = [
+    "//garnet/lib/wlan/protocol:protocol",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
+    "//src/devices/pci/lib/device-protocol-pci",
+    "//src/lib/ddk",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/sync",
+  ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//zircon/system/public",
+  ]
+  friend =
+      [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:*" ]
+}

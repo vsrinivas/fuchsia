@@ -7,11 +7,13 @@
 
 #include <zircon/status.h>
 
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan::testing {
@@ -26,7 +28,6 @@ class SingleApTest : public ::zxtest::Test {
  public:
   SingleApTest();
   ~SingleApTest() override;
-  ;
 
  protected:
   static constexpr std::array<uint8_t, common::kMacAddrLen> kApAddr = {0x12, 0x34, 0x56,
@@ -39,7 +40,7 @@ class SingleApTest : public ::zxtest::Test {
   std::shared_ptr<MockDevice> fake_parent_;
   ::wlan::simulation::Environment env_;
   ::wlan::simulation::FakeAp ap_;
-  TransportSim sim_trans_;
+  SimTransport sim_trans_;
 };
 
 }  // namespace wlan::testing

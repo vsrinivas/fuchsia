@@ -4,9 +4,7 @@
 
 // Used to test mvm/mac-ctxt.c
 
-#include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <stdio.h>
 
 #include <zxtest/zxtest.h>
 

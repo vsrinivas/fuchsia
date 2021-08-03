@@ -11,7 +11,7 @@
 //            |
 //            v
 //  +-------------------+
-//  |   wlan-device.c   |
+//  |    mvm-mlme.cc    |
 //  +-------------------+
 //  | PHY ops | MAC ops |
 //  +-------------------+
@@ -46,7 +46,7 @@
 //   + Now, both sides of channel (SME and MLME) can talk now.
 //
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
@@ -56,10 +56,14 @@
 #include <zircon/status.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
+
+extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
+}  // extern "C"
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
 ////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
 
@@ -136,13 +140,13 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
 }
 
 static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
-  struct iwl_mvm_sta* mvm_sta = calloc(1, sizeof(struct iwl_mvm_sta));
+  auto mvm_sta = reinterpret_cast<struct iwl_mvm_sta*>(calloc(1, sizeof(struct iwl_mvm_sta)));
   if (!mvm_sta) {
     return NULL;
   }
 
   for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
-    mvm_sta->txq[i] = calloc(1, sizeof(struct iwl_mvm_txq));
+    mvm_sta->txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
   }
   memcpy(mvm_sta->addr, bssid, ETH_ALEN);
   mtx_init(&mvm_sta->lock, mtx_plain);
@@ -164,7 +168,7 @@ static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
 zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!ctx || !info) {
     return ZX_ERR_INVALID_ARGS;
@@ -195,7 +199,7 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
 }
 
 zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!ctx || !ifc || !out_mlme_channel) {
     return ZX_ERR_INVALID_ARGS;
@@ -227,17 +231,19 @@ zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t*
 }
 
 void mac_stop(void* ctx) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret;
 
   // Change the sta state linking to the AP.
-  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
-  if (!mvm_sta) {
-    IWL_ERR(mvmvif, "sta info is not set before stop.\n");
-  } else {
-    ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
-    if (ret != ZX_OK) {
-      IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
+  if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+    struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+    if (!mvm_sta) {
+      IWL_ERR(mvmvif, "sta info is not set before stop.\n");
+    } else {
+      ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_NOTEXIST);
+      if (ret != ZX_OK) {
+        IWL_ERR(mvmvif, "Cannot set station state to NOT EXIST: %s\n", zx_status_get_string(ret));
+      }
     }
   }
 
@@ -266,7 +272,7 @@ void mac_stop(void* ctx) {
 }
 
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   mtx_lock(&mvmvif->mvm->mutex);
   zx_status_t ret = iwl_mvm_mac_tx(mvmvif, pkt);
@@ -294,7 +300,7 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
 }
 
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret;
 
   // Before we do anything, ensure the PHY context had been assigned to the mvmvif.
@@ -322,7 +328,7 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
 }
 
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
@@ -364,7 +370,7 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
     IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
     goto unlock;
   }
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, nullptr);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot clear BSSID: %s\n", zx_status_get_string(ret));
     goto unlock;
@@ -388,8 +394,10 @@ exit:
   // If it is successful, the ownership has been transferred. If not, free the resource.
   if (ret != ZX_OK) {
     free_ap_mvm_sta(mvm_sta);
-    mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
-    mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
+    if (mvmvif->ap_sta_id != IWL_MVM_INVALID_STA) {
+      mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
+      mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
+    }
   }
   return ret;
 }
@@ -416,7 +424,7 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
 //   TODO(fxbug.dev/36684): supports VHT (802.11ac)
 //
 zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
 
   IWL_INFO(ctx, "Associating ...\n");
@@ -472,7 +480,7 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_add
                             size_t peer_addr_size) {
   IWL_INFO(ctx, "Disassociating ...\n");
 
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   zx_status_t ret = ZX_OK;
 
   // iwl_mvm_rm_sta() will reset the ap_sta_id value so that we have to keep it.
@@ -546,7 +554,7 @@ out:
 }
 
 zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
     IWL_ERR(ctx, "Unsupported scan type: %d\n", scan_config->scan_type);
@@ -582,18 +590,18 @@ wlanmac_protocol_ops_t wlanmac_ops = {
 };
 
 void mac_unbind(void* ctx) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!mvmvif->zxdev) {
-    IWL_ERR(NULL, "mac_unbind(): no zxdev\n");
+    IWL_ERR(nullptr, "mac_unbind(): no zxdev\n");
     return;
   }
 
-  mvmvif->zxdev = NULL;
+  mvmvif->zxdev = nullptr;
 }
 
 void mac_release(void* ctx) {
-  struct iwl_mvm_vif* mvmvif = ctx;
+  const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   // Close the SME channel if it is NOT transferred to MLME yet.
   if (mvmvif->mlme_channel != ZX_HANDLE_INVALID) {
@@ -614,7 +622,7 @@ zx_protocol_device_t device_mac_ops = {
 /////////////////////////////////////       PHY       //////////////////////////////////////////////
 
 zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
-  struct iwl_trans* iwl_trans = ctx;
+  const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   if (!mvm || !info) {
     return ZX_ERR_INVALID_ARGS;
@@ -634,8 +642,9 @@ zx_status_t phy_query(void* ctx, wlanphy_impl_info_t* info) {
 // This function is working with a PHY context ('ctx') to create a MAC interface.
 zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                              uint16_t* out_iface_id) {
-  struct iwl_trans* iwl_trans = ctx;
+  const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  struct iwl_mvm_vif* mvmvif = nullptr;
   zx_status_t ret = ZX_OK;
 
   if (!req) {
@@ -671,7 +680,7 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   // Allocate a MAC context. This will be initialized once iwl_mvm_mac_add_interface() is called.
   // Note that once the 'mvmvif' is saved in the device ctx by device_add() below, it will live
   // as long as the device instance, and will be freed in mac_release().
-  struct iwl_mvm_vif* mvmvif = calloc(1, sizeof(struct iwl_mvm_vif));
+  mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
   if (!mvmvif) {
     ret = ZX_ERR_NO_MEMORY;
     goto unlock;
@@ -712,7 +721,7 @@ void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx) {
 }
 
 zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
-  struct iwl_trans* iwl_trans = ctx;
+  const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   zx_status_t ret = ZX_OK;
 
@@ -748,8 +757,9 @@ unlock:
 // This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
 // The 'id' is the value assigned by phy_create_iface().
 zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
-  struct iwl_trans* iwl_trans = ctx;
+  const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+  struct iwl_mvm_vif* mvmvif = nullptr;
   zx_status_t ret = ZX_OK;
 
   if (!mvm) {
@@ -765,7 +775,7 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
     goto unlock;
   }
 
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[id];
+  mvmvif = mvm->mvmvif[id];
   if (!mvmvif) {
     IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
     ret = ZX_ERR_NOT_FOUND;
@@ -795,7 +805,7 @@ zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {
 }
 
 zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
-  if (out_country == NULL) {
+  if (out_country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 

@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
+
+visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 
 # Common configuration for builds on Fuchsia.
 config("fuchsia_config") {
@@ -15,138 +16,63 @@ config("fuchsia_config") {
   ]
 }
 
-driver_bind_rules("iwlwifi_bind") {
-  rules = "iwlwifi.bind"
-  header_output = "iwlwifi-bind.h"
-  tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":iwlwifi_bind_test" ]
-}
-
-# Contains the driver minus any PCIE specific code so that the simulation tests
-# can easily provide a fake PCIE layer.
+# The iwlwifi core sources.
 source_set("core") {
-  visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
-
   sources = [
-    "cfg/7000.c",
-    "cfg/8000.c",
-    "device.cc",
-    "device.h",
-    "fw/init.c",
-    "fw/notif-wait.c",
-    "fw/paging.c",
-    "fw/smem.c",
-    "inspect.cc",
-    "iwl-config.h",
-    "iwl-csr.h",
     "iwl-drv.c",
-    "iwl-drv.h",
     "iwl-eeprom-parse.c",
-    "iwl-fh.h",
     "iwl-io.c",
-    "iwl-io.h",
     "iwl-nvm-parse.c",
     "iwl-phy-db.c",
-    "iwl-prph.h",
     "iwl-trans.c",
+  ]
+  public = [
+    "iwl-agn-hw.h",
+    "iwl-config.h",
+    "iwl-constants.h",
+    "iwl-csr.h",
+    "iwl-dbg-tlv.h",
+    "iwl-debug.h",
+    "iwl-drv.h",
+    "iwl-eeprom-parse.h",
+    "iwl-eeprom-read.h",
+    "iwl-fh.h",
+    "iwl-io.h",
+    "iwl-modparams.h",
+    "iwl-nvm-parse.h",
+    "iwl-op-mode.h",
+    "iwl-phy-db.h",
+    "iwl-prph.h",
+    "iwl-scd.h",
     "iwl-trans.h",
-    "mac-device.cc",
-    "mvm/binding.c",
-    "mvm/coex.c",
-    "mvm/fw.c",
-    "mvm/mac-ctxt.c",
-    "mvm/mac80211.c",
-    "mvm/nvm.c",
-    "mvm/ops.c",
-    "mvm/phy-ctxt.c",
-    "mvm/power.c",
-    "mvm/rx.c",
-    "mvm/rxmq.c",
-    "mvm/scan.c",
-    "mvm/sta.c",
-    "mvm/time-event.c",
-    "mvm/tof.c",
-    "mvm/tt.c",
-    "mvm/tx.c",
-    "mvm/utils.c",
-    "wlan-device.c",
-  ]
-
-  deps = [
-    "//garnet/lib/wlan/protocol:protocol",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices/lib/driver",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/zircon-internal",
-  ]
-
-  public_deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c",
-    "//zircon/public/lib/sync",
-    "//zircon/system/ulib/backtrace-request",
-  ]
-
-  public_configs = [ ":fuchsia_config" ]
-}
-
-# Contains the entire driver, separate from the driver_module for the unit
-# tests.
-source_set("pcie") {
-  visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config:Wno-unused-but-set-variable",
-  ]
-  sources = [
-    "pcie/bind.cc",
-    "pcie/drv.c",
-    "pcie/internal.h",
-    "pcie/pcie_device.cc",
-    "pcie/pcie_device.h",
-    "pcie/rx.c",
-    "pcie/trans-gen2.c",
-    "pcie/trans.c",
-    "pcie/tx.c",
+    "iwl-vendor-cmd.h",
   ]
   deps = [
-    ":core",
-    ":iwlwifi_bind",
-    "//garnet/lib/wlan/protocol",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
-    "//src/devices/lib/driver",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
+    "//src/lib/ddk",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
+    "//zircon/system/public",
+    "//zircon/system/ulib/sync",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
-    "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/public/lib/sync",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_c",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async",
   ]
-  public_configs = [ ":fuchsia_config" ]
 }
 
 driver_module("iwlwifi_driver-driver") {
   output_name = "iwlwifi"
-
-  deps = [ ":pcie" ]
+  deps = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device" ]
 }
 
 fuchsia_driver_component("iwlwifi_driver") {
   component_name = "iwlwifi"
   deps = [ ":iwlwifi_driver-driver" ]
+  visibility = []
+  visibility = [ "*" ]
 }
 
 all_fw_files = [
@@ -164,10 +90,20 @@ foreach(fw_file, all_fw_files) {
 
 fuchsia_system_package("iwlwifi") {
   deps = [ ":iwlwifi_driver" ]
-
   foreach(fw_file, all_fw_files) {
     deps += [ ":iwlwifi-firmware-" + fw_file ]
   }
-
   allowed_in_extra_deps = true
+  visibility = []
+  visibility = [ "*" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_bind_test",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
+  ]
+  visibility = []
+  visibility = [ "*" ]
 }

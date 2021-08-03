@@ -4,25 +4,30 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm.h"
 
-#include <stdint.h>
+#include <string.h>
+#include <zircon/assert.h>
 
 #include <vector>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nvm-reg.h"
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nvm-reg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-nvm-data.inc"
+
 namespace wlan::testing {
 
-ByteArray SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint16_t offset, uint16_t length) {
-  for (auto iter = default_sections.begin(); iter != default_sections.end(); iter++) {
-    if (iter->target != target || iter->type != type) {
+std::vector<uint8_t> SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint16_t offset,
+                                             uint16_t length) {
+  auto sections = GetDefaultNvmSections();
+  for (auto iter : sections) {
+    if (iter.target != target || iter.type != type) {
       continue;
     }
 
     // Handle the boundry cases.
-    size_t size = iter->data.size();
+    size_t size = iter.data.size();
     if (offset > size) {
       offset = size;
     }
@@ -30,12 +35,12 @@ ByteArray SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint16_t offset
       length = size - offset;
     }
 
-    ByteArray ret(length);
-    memcpy(ret.data(), &iter->data[offset], ret.size());
+    std::vector<uint8_t> ret(length);
+    memcpy(ret.data(), &iter.data[offset], ret.size());
     return ret;
   }
 
-  return ByteArray(0);  // No segment found.
+  return {};  // No segment found.
 }
 
 zx_status_t SimNvm::HandleCommand(struct iwl_host_cmd* cmd, SimMvmResponse* resp) {
@@ -51,7 +56,7 @@ zx_status_t SimNvm::HandleCommand(struct iwl_host_cmd* cmd, SimMvmResponse* resp
 
   switch (nvm_access_cmd->op_code) {
     case NVM_READ_OPCODE: {
-      ByteArray payload = HandleChunkRead(target, type, offset, length);
+      std::vector<uint8_t> payload = HandleChunkRead(target, type, offset, length);
       resp->resize(sizeof(struct iwl_nvm_access_resp) + payload.size());
       struct iwl_nvm_access_resp* nvm_resp =
           reinterpret_cast<struct iwl_nvm_access_resp*>(resp->data());

@@ -5,26 +5,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_NVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_NVM_H_
 
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
+#include <vector>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim.h"
 
-using std::vector;
-
 namespace wlan::testing {
-
-typedef vector<uint8_t> ByteArray;
-
-// This structure is used to simulate the data stored in firmware, which is accessed by
-// NVM_ACCESS_CMD. See 'iwl_nvm_access_cmd' for command structure.
-//
-struct NvmSection {
-  uint8_t target;  // enum iwl_nvm_access_target
-  uint16_t type;   // enum iwl_nvm_section_type
-  std::vector<uint8_t> data;
-};
 
 // A sub-module of simulated MVM firmware that simulates NVM behavior.
 //
@@ -50,10 +39,9 @@ class SimNvm {
   //   offset: starting offset to read
   //   length: num of bytes to read
   //
-  ByteArray HandleChunkRead(uint8_t target, uint16_t type, uint16_t offset, uint16_t length);
+  std::vector<uint8_t> HandleChunkRead(uint8_t target, uint16_t type, uint16_t offset,
+                                       uint16_t length);
 };
-
-extern std::vector<NvmSection> default_sections;
 
 }  // namespace wlan::testing
 

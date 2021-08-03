@@ -49,7 +49,7 @@ bool iwl_notification_wait(struct iwl_notif_wait_data* notif_wait, struct iwl_rx
 
     mtx_lock(&notif_wait->notif_wait_lock);
     list_for_every_entry (&notif_wait->notif_waits, w, struct iwl_notification_wait, list) {
-      int i;
+      size_t i;
       bool found = false;
 
       /*
@@ -100,7 +100,7 @@ void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_wait) {
 
 void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_wait,
                                 struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
-                                int n_cmds,
+                                size_t n_cmds,
                                 bool (*fn)(struct iwl_notif_wait_data* notif_wait,
                                            struct iwl_rx_packet* pkt, void* data),
                                 void* fn_data) {

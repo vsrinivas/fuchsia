@@ -5,7 +5,6 @@
 // Used to test mvm/mac80211.c
 
 #include <lib/mock-function/mock-function.h>
-#include <stdio.h>
 
 #include <zxtest/zxtest.h>
 
@@ -13,7 +12,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
 #include "zircon/system/ulib/fbl/include/fbl/auto_lock.h"
 

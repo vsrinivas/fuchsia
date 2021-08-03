@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_
 
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <lib/ddk/device.h>
@@ -14,12 +14,13 @@ struct iwl_trans;
 
 namespace wlan::iwlwifi {
 
-class Device : public ::ddk::Device<Device, ::ddk::Initializable, ::ddk::Unbindable>,
-               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
+class WlanphyImplDevice
+    : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable>,
+      public ::ddk::WlanphyImplProtocol<WlanphyImplDevice, ::ddk::base_protocol> {
  public:
-  Device(const Device& device) = delete;
-  Device& operator=(const Device& other) = delete;
-  virtual ~Device();
+  WlanphyImplDevice(const WlanphyImplDevice& device) = delete;
+  WlanphyImplDevice& operator=(const WlanphyImplDevice& other) = delete;
+  virtual ~WlanphyImplDevice();
 
   // ::ddk::Device functions implemented by this class.
   void DdkRelease();
@@ -43,9 +44,9 @@ class Device : public ::ddk::Device<Device, ::ddk::Initializable, ::ddk::Unbinda
 
  protected:
   // Only derived classes are allowed to create this object.
-  explicit Device(zx_device_t* parent);
+  explicit WlanphyImplDevice(zx_device_t* parent);
 };
 
 }  // namespace wlan::iwlwifi
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_WLANPHY_IMPL_DEVICE_H_

@@ -5,11 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_FAKE_UCODE_CAPA_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_FAKE_UCODE_CAPA_TEST_H_
 
-#include <zircon/status.h>
+#include <memory>
 
 #include <zxtest/zxtest.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan::testing {
@@ -36,7 +37,7 @@ class FakeUcodeCapaTest : public ::zxtest::Test {
  protected:
   ::wlan::simulation::Environment dummy_env_;
   std::shared_ptr<MockDevice> fake_parent_;
-  TransportSim sim_trans_;
+  SimTransport sim_trans_;
 };
 
 }  // namespace wlan::testing

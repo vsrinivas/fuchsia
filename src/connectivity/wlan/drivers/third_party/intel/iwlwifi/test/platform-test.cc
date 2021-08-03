@@ -1,10 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 //
-// Unittest code for the functions in the iwlwifi platform/ directory.
-
-#include <lib/mock-function/mock-function.h>
-#include <stdio.h>
+// Unittest code for the platform-support code in platform/.
 
 #include <zxtest/zxtest.h>
 
@@ -14,13 +11,13 @@
 
 namespace {
 
-class FuchsiaPortingTest : public zxtest::Test {
+class PlatformTest : public zxtest::Test {
  public:
-  FuchsiaPortingTest() {}
-  ~FuchsiaPortingTest() {}
+  PlatformTest() {}
+  ~PlatformTest() {}
 };
 
-TEST_F(FuchsiaPortingTest, __set_bit) {
+TEST_F(PlatformTest, __set_bit) {
   unsigned long masks[] = {0, 0};
 
   // Test LSB at first addr.
@@ -39,7 +36,7 @@ TEST_F(FuchsiaPortingTest, __set_bit) {
   EXPECT_EQ(masks[1], 0x0000000000000001);
 }
 
-TEST_F(FuchsiaPortingTest, set_bit) {
+TEST_F(PlatformTest, set_bit) {
   unsigned long masks[] = {0, 0};
 
   // Test LSB at first addr.
@@ -58,7 +55,7 @@ TEST_F(FuchsiaPortingTest, set_bit) {
   EXPECT_EQ(masks[1], 0x0000000000000001);
 }
 
-TEST_F(FuchsiaPortingTest, clear_bit) {
+TEST_F(PlatformTest, clear_bit) {
   unsigned long masks[] = {0xffffffffffffffff, 0xffffffffffffffff};
 
   // Test LSB at first addr.
@@ -77,7 +74,7 @@ TEST_F(FuchsiaPortingTest, clear_bit) {
   EXPECT_EQ(masks[1], 0xfffffffffffffffe);
 }
 
-TEST_F(FuchsiaPortingTest, bits_to_ints) {
+TEST_F(PlatformTest, bits_to_ints) {
   EXPECT_EQ(0, BITS_TO_INTS(0));
   EXPECT_EQ(1, BITS_TO_INTS(1));
   EXPECT_EQ(1, BITS_TO_INTS(BITS_PER_INT - 1));
@@ -85,7 +82,7 @@ TEST_F(FuchsiaPortingTest, bits_to_ints) {
   EXPECT_EQ(2, BITS_TO_INTS(BITS_PER_INT + 1));
 }
 
-TEST_F(FuchsiaPortingTest, bits_to_longs) {
+TEST_F(PlatformTest, bits_to_longs) {
   EXPECT_EQ(0, BITS_TO_LONGS(0));
   EXPECT_EQ(1, BITS_TO_LONGS(1));
   EXPECT_EQ(1, BITS_TO_LONGS(BITS_PER_LONG - 1));
@@ -93,7 +90,7 @@ TEST_F(FuchsiaPortingTest, bits_to_longs) {
   EXPECT_EQ(2, BITS_TO_LONGS(BITS_PER_LONG + 1));
 }
 
-TEST_F(FuchsiaPortingTest, eth_broadcast_addr) {
+TEST_F(PlatformTest, eth_broadcast_addr) {
   uint8_t mac[] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde};
   eth_broadcast_addr(mac);
 
@@ -101,7 +98,7 @@ TEST_F(FuchsiaPortingTest, eth_broadcast_addr) {
   EXPECT_BYTES_EQ(expected, mac, sizeof(expected));
 }
 
-TEST_F(FuchsiaPortingTest, find_first_bit) {
+TEST_F(PlatformTest, find_first_bit) {
   unsigned test0[] = {
       0x00000000,
       0x00000000,
@@ -132,7 +129,7 @@ TEST_F(FuchsiaPortingTest, find_first_bit) {
   EXPECT_EQ(32, find_first_bit(test2, 64));
 }
 
-TEST_F(FuchsiaPortingTest, HexDumpErrorHandling) {
+TEST_F(PlatformTest, HexDumpErrorHandling) {
   char buf[HEX_DUMP_BUF_SIZE - 1];
   uint8_t data[] = {};
 
@@ -143,7 +140,7 @@ TEST_F(FuchsiaPortingTest, HexDumpErrorHandling) {
   ASSERT_EQ(nullptr, hex_dump_str(buf, sizeof(buf), data, 17));
 }
 
-TEST_F(FuchsiaPortingTest, HexDumpExactly16Bytes) {
+TEST_F(PlatformTest, HexDumpExactly16Bytes) {
   char buf[HEX_DUMP_BUF_SIZE];
   uint8_t data[] = {
       0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
@@ -168,7 +165,7 @@ TEST_F(FuchsiaPortingTest, HexDumpExactly16Bytes) {
   EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
 }
 
-TEST_F(FuchsiaPortingTest, HexDumpLessThan16Bytes) {
+TEST_F(PlatformTest, HexDumpLessThan16Bytes) {
   char buf[HEX_DUMP_BUF_SIZE];
   uint8_t data[] = {
       0x61,
@@ -190,7 +187,7 @@ TEST_F(FuchsiaPortingTest, HexDumpLessThan16Bytes) {
   EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
 }
 
-TEST_F(FuchsiaPortingTest, HexDumpZeroByte) {
+TEST_F(PlatformTest, HexDumpZeroByte) {
   char buf[HEX_DUMP_BUF_SIZE];
   uint8_t data[] = {};
 

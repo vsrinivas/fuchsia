@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pcie-device.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -14,15 +14,19 @@
 #include <fbl/alloc_checker.h>
 
 extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/entry.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#if !CPTCFG_IWLMVM
+#error "PcieDevice requires support for MVM firmwares."
+#endif  // CPTCFG_IWLMVM
 
 namespace wlan {
 namespace iwlwifi {
 
-PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) { pci_dev_ = {}; }
+PcieDevice::PcieDevice(zx_device_t* parent) : WlanphyImplDevice(parent) { pci_dev_ = {}; }
 
 PcieDevice::~PcieDevice() { ZX_DEBUG_ASSERT(pci_dev_.drvdata == nullptr); }
 
@@ -36,7 +40,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = device->DdkAdd("iwlwifi-wlanphy")) != ZX_OK) {
+  if ((status = device->DdkAdd("iwlwifi-wlanphyimpl")) != ZX_OK) {
     IWL_ERR(device->drvdata(), "%s() failed device add: %s", __func__,
             zx_status_get_string(status));
     return status;
@@ -117,6 +121,7 @@ void PcieDevice::DdkUnbind(::ddk::UnbindTxn txn) {
   iwl_pci_remove(&pci_dev_);
   task_loop_->Shutdown();
   zx_handle_close(pci_dev_.dev.bti);
+  pci_dev_.dev.bti = ZX_HANDLE_INVALID;
   txn.Reply();
 }
 

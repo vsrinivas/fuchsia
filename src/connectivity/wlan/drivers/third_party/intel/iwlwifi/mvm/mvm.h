@@ -37,18 +37,15 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <lib/async/dispatcher.h>
 #include <lib/async/task.h>
-#include <lib/async/time.h>
-#include <lib/ddk/driver.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+#include <wlan/protocol/mac.h>
 
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
@@ -481,7 +478,7 @@ struct iwl_mvm_vif {
   struct ieee80211_key_conf* ap_wep_key;
 
   /* Zircon objects */
-  zx_device_t* zxdev;
+  struct zx_device* zxdev;
   wlan_info_mac_role_t mac_role;
   zx_handle_t mlme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
   wlanmac_ifc_protocol_t ifc;

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
+
 visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 
 # This BUILD.gn defines the Fuchsia-specific platform support library for the iwlwifi driver.
@@ -39,4 +41,50 @@ source_set("platform") {
   public_configs = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:fuchsia_config",
   ]
+}
+
+driver_bind_rules("fuchsia_bind") {
+  rules = "iwlwifi.bind"
+  header_output = "iwlwifi-bind.h"
+  tests = "iwlwifi-bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+# Fuchsia DDK device bindings for the iwlwifi driver.
+source_set("fuchsia_device") {
+  sources = [
+    "bind.cc",
+    "inspect.cc",
+    "inspect.h",
+    "mvm-mlme.cc",
+    "mvm-mlme.h",
+    "pcie-device.cc",
+    "pcie-device.h",
+    "wlanmac-device.cc",
+    "wlanmac-device.h",
+    "wlanphy-impl-device.cc",
+    "wlanphy-impl-device.h",
+  ]
+  deps = [
+    ":fuchsia_bind",
+    ":platform",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/cfg",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+  friend =
+      [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:*" ]
 }

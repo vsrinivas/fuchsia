@@ -4,249 +4,272 @@
 
 import("//build/components.gni")
 
-# Compile flags
-testing_defines = [
-  "CONFIG_TEST_SIM=1",
-  "CPTCFG_IWLMVM=1",
-]
+# Common configuration for tests.
+config("test_config") {
+  defines = [ "CONFIG_TEST_SIM=1" ]
+}
 
 # Simulated transportation layer -- for unittest code.
-source_set("iwlwifi_sim_trans_ss") {
-  defines = testing_defines
+source_set("sim_library") {
   testonly = true
-
   sources = [
     "fake-ucode-capa-test.cc",
-    "sim-default-nvm.cc",
     "sim-mvm.cc",
+    "sim-nvm-data.inc",
     "sim-nvm.cc",
+    "sim-trans.cc",
     "single-ap-test.cc",
     "tlv-fw-builder.cc",
-    "trans-sim.cc",
+    "tlv-fw-builder.h",
+    "wlan-pkt-builder.cc",
   ]
-
+  public = [
+    "fake-ucode-capa-test.h",
+    "mock-trans.h",
+    "sim-mvm.h",
+    "sim-nvm.h",
+    "sim-trans.h",
+    "sim.h",
+    "single-ap-test.h",
+    "wlan-pkt-builder.h",
+  ]
   deps = [
-    "//garnet/lib/wlan/protocol",
-    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
-    "//src/devices/lib/driver",
-    "//src/devices/pci/testing:pci-protocol-fake",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/mock-ddk",
-    "//src/lib/ddk",
   ]
-
   public_deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/public",
+  ]
+  public_configs = [ ":test_config" ]
+}
+
+# Stub entrypoints for MVM.
+source_set("stub_mvm") {
+  testonly = true
+  sources = [ "stub-mvm.cc" ]
+  deps = [ "//zircon/system/public" ]
+  public_configs = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:fuchsia_config",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":iwlwifi_test" ]
-}
-
-# Definition for simulated transportation layer + gtest
-testing_deps = [
-  ":iwlwifi_sim_trans_ss",
-  "//src/connectivity/wlan/drivers/testing/lib/sim-device",
-  "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
-  "//src/devices/testing/fake-bti",
-  "//src/devices/testing/mock-ddk",
-  "//zircon/public/lib/mock-function",
-  "//zircon/public/lib/zircon-internal",
-  "//zircon/public/lib/zxtest",
-]
 
 # The dummy code for developer to start a new test.
 executable("dummy_test") {
   output_name = "dummy_test"
   testonly = true
-
-  sources = [ "dummy_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "dummy-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("fw_test") {
   output_name = "fw_test"
   testonly = true
-
-  sources = [ "fw_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "fw-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
-executable("iwl-phy-db_test") {
-  output_name = "iwl-phy-db_test"
+executable("iwl_phy_db_test") {
+  output_name = "iwl_phy_db_test"
   testonly = true
-
-  sources = [ "iwl-phy-db_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "iwl-phy-db-test.cc" ]
+  deps = [
+    ":stub_mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("mac80211_test") {
   output_name = "mac80211_test"
   testonly = true
-
-  sources = [ "mac80211_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "mac80211-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/fbl",
+  ]
 }
 
-executable("mac-ctxt_test") {
-  output_name = "mac-ctxt_test"
+executable("mac_ctxt_test") {
+  output_name = "mac_ctxt_test"
   testonly = true
+  sources = [ "mac-ctxt-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+  ]
+}
 
-  sources = [ "mac-ctxt_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+executable("mvm_mlme_test") {
+  output_name = "mvm_mlme_test"
+  testonly = true
+  sources = [ "mvm-mlme-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/public",
+  ]
 }
 
 # Test code for MVM features.
 executable("mvm_test") {
   output_name = "mvm_test"
   testonly = true
-
-  sources = [
-    "mvm_test.cc",
-    "wlan-pkt-builder.h",
-  ]
-
-  defines = testing_defines
+  sources = [ "mvm-test.cc" ]
   deps = [
-           "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-           "//zircon/system/ulib/async-loop:async-loop-cpp",
-           "//zircon/system/ulib/async-loop:async-loop-default",
-         ] + testing_deps
-}
-
-executable("notif-wait_test") {
-  output_name = "notif-wait_test"
-  testonly = true
-
-  sources = [ "notif-wait_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
-}
-
-executable("nvm_test") {
-  output_name = "nvm_test"
-  testonly = true
-
-  sources = [ "nvm_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
-}
-
-executable("pcie_test") {
-  output_name = "pcie_test"
-  testonly = true
-
-  sources = [
-    "pcie_test.cc",
-    "wlan-pkt-builder.h",
-  ]
-
-  defines = testing_defines
-  deps = testing_deps
-  deps += [
-    "//garnet/lib/wlan/protocol:protocol",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
-    "//src/devices/pci/testing:pci-protocol-fake",
-    "//src/devices/testing/mock-ddk",
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/fake-bti",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
-executable("phy-ctxt_test") {
-  output_name = "phy-ctxt_test"
+executable("notif_wait_test") {
+  output_name = "notif_wait_test"
   testonly = true
+  sources = [ "notif-wait-test.cc" ]
+  deps = [
+    ":stub_mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
 
-  sources = [ "phy-ctxt_test.cc" ]
+executable("nvm_test") {
+  output_name = "nvm_test"
+  testonly = true
+  sources = [ "nvm-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/zxtest",
+  ]
+}
 
-  defines = testing_defines
-  deps = testing_deps
+executable("pcie_test") {
+  output_name = "pcie_test"
+  testonly = true
+  sources = [ "pcie-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/public",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+executable("phy_ctxt_test") {
+  output_name = "phy_ctxt_test"
+  testonly = true
+  sources = [ "phy-ctxt-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("platform_test") {
   output_name = "platform_test"
   testonly = true
-
-  sources = [ "platform_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "platform-test.cc" ]
+  deps = [
+    ":stub_mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("sta_test") {
   output_name = "sta_test"
   testonly = true
-
-  sources = [ "sta_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
+  sources = [ "sta-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
 executable("utils_test") {
   output_name = "utils_test"
   testonly = true
-
-  sources = [ "utils_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
-}
-
-executable("wlan-device_test") {
-  output_name = "wlan-device_test"
-  testonly = true
-
-  sources = [
-    "wlan-device_test.cc",
-    "wlan-pkt-builder.h",
-  ]
-
-  defines = testing_defines
-  deps = testing_deps
-  deps += [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+  sources = [ "utils-test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/devices/testing/no_ddk",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
 _tests = [
   "dummy_test",
   "fw_test",
-  "iwl-phy-db_test",
-  "mac-ctxt_test",
+  "iwl_phy_db_test",
   "mac80211_test",
+  "mac_ctxt_test",
+  "mvm_mlme_test",
   "mvm_test",
-  "notif-wait_test",
+  "notif_wait_test",
   "nvm_test",
   "pcie_test",
-  "phy-ctxt_test",
+  "phy_ctxt_test",
   "platform_test",
   "sta_test",
   "utils_test",
-  "wlan-device_test",
 ]
 
 foreach(test_name, _tests) {

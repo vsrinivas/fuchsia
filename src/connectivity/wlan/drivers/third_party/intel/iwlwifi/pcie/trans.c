@@ -33,7 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <fuchsia/hardware/pci/c/banjo.h>
+#define _ALL_SOURCE  // for threads.h
 #include <lib/async/time.h>
 #include <lib/device-protocol/pci.h>
 #include <stdint.h>

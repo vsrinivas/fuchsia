@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_PCIE_DEVICE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_PCIE_DEVICE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_PCIE_DEVICE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_PCIE_DEVICE_H_
 
 #include <lib/ddk/device.h>
 
 #include <memory>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
-
-extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
-}
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
 
 namespace async {
 class Loop;
@@ -23,7 +20,7 @@ namespace wlan::iwlwifi {
 
 // This class contains the Fuchsia-specific PCIE bus initialization logic, using the DDKTL classes
 // to manage the lifetime of a iwlwifi driver instance.
-class PcieDevice : public Device {
+class PcieDevice : public WlanphyImplDevice {
  public:
   PcieDevice(const PcieDevice& device) = delete;
   PcieDevice& operator=(const PcieDevice& other) = delete;
@@ -48,4 +45,4 @@ class PcieDevice : public Device {
 
 }  // namespace wlan::iwlwifi
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_PCIE_DEVICE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_PCIE_DEVICE_H_

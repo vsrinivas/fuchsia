@@ -72,8 +72,8 @@ static zx_status_t iwl_alloc_fw_paging_mem(struct iwl_fw_runtime* fwrt,
       num_of_pages - NUM_OF_PAGE_PER_GROUP * (fwrt->num_of_paging_blk - 1);
 
   IWL_DEBUG_FW(fwrt,
-               "Paging: allocating mem for %d paging blocks, each block holds 8 pages, last "
-               "block holds %d pages\n",
+               "Paging: allocating mem for %zu paging blocks, each block holds 8 pages, last "
+               "block holds %zu pages\n",
                fwrt->num_of_paging_blk, fwrt->num_of_pages_in_last_blk);
 
   /*
@@ -215,11 +215,11 @@ static zx_status_t iwl_save_fw_paging(struct iwl_fw_runtime* fwrt, const struct 
 /* send paging cmd to FW in case CPU2 has paging image */
 static zx_status_t iwl_send_paging_cmd(struct iwl_fw_runtime* fwrt, const struct fw_img* fw) {
   struct iwl_fw_paging_cmd paging_cmd = {
-      .flags =
-          cpu_to_le32(PAGING_CMD_IS_SECURED | PAGING_CMD_IS_ENABLED |
-                      (fwrt->num_of_pages_in_last_blk << PAGING_CMD_NUM_OF_PAGES_IN_LAST_GRP_POS)),
+      .flags = cpu_to_le32(
+          (uint32_t)(PAGING_CMD_IS_SECURED | PAGING_CMD_IS_ENABLED |
+                     (fwrt->num_of_pages_in_last_blk << PAGING_CMD_NUM_OF_PAGES_IN_LAST_GRP_POS))),
       .block_size = cpu_to_le32(BLOCK_2_EXP_SIZE),
-      .block_num = cpu_to_le32(fwrt->num_of_paging_blk),
+      .block_num = cpu_to_le32((uint32_t)fwrt->num_of_paging_blk),
   };
   struct iwl_host_cmd hcmd = {
       .id = iwl_cmd_id(FW_PAGING_BLOCK_CMD, IWL_ALWAYS_LONG_GROUP, 0),
@@ -232,7 +232,7 @@ static zx_status_t iwl_send_paging_cmd(struct iwl_fw_runtime* fwrt, const struct
               &paging_cmd,
           },
   };
-  int blk_idx;
+  size_t blk_idx;
 
   /* loop for for all paging blocks + CSS block */
   for (blk_idx = 0; blk_idx < fwrt->num_of_paging_blk + 1; blk_idx++) {
@@ -240,7 +240,7 @@ static zx_status_t iwl_send_paging_cmd(struct iwl_fw_runtime* fwrt, const struct
     __le32 phy_addr;
 
     addr = addr >> PAGE_2_EXP_SIZE;
-    phy_addr = cpu_to_le32(addr);
+    phy_addr = cpu_to_le32((uint32_t)addr);
     paging_cmd.device_phy_addr[blk_idx] = phy_addr;
   }
 

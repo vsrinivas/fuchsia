@@ -38,10 +38,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif  // __cplusplus
-
 /* for all modules */
 #define DRV_NAME "iwlwifi"
 #define DRV_COPYRIGHT "Copyright(c) 2003- 2015 Intel Corporation"
@@ -147,9 +143,5 @@ int iwl_drv_switch_op_mode(struct iwl_drv* drv, const char* new_op_name);
 #else
 #define IWL_EXPORT_SYMBOL(sym)
 #endif
-
-#ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
