@@ -1479,7 +1479,7 @@
   area: ['FIDL']
   issue: []
   gerrit_change_id: [545282]
-  status: ''
+  status: 'Accepted'
   reviewers: ['pascallouis@google.com', 'mkember@google.com', 'yifeit@google.com']
   submitted: '2021-06-24'
   reviewed: '2021-07-21'
