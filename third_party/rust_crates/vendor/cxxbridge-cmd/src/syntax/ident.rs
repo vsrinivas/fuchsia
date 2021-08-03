@@ -1,49 +1,56 @@
 use crate::syntax::check::Check;
-use crate::syntax::namespace::Namespace;
-use crate::syntax::{error, Api};
-use proc_macro2::Ident;
+use crate::syntax::{error, Api, Pair};
 
-fn check(cx: &mut Check, ident: &Ident) {
-    let s = ident.to_string();
-    if s.starts_with("cxxbridge") {
-        cx.error(ident, error::CXXBRIDGE_RESERVED.msg);
+fn check(cx: &mut Check, name: &Pair) {
+    for segment in &name.namespace {
+        check_cxx_ident(cx, &segment.to_string());
     }
-    if s.contains("__") {
-        cx.error(ident, error::DOUBLE_UNDERSCORE.msg);
+    check_cxx_ident(cx, &name.cxx.to_string());
+    check_rust_ident(cx, &name.rust.to_string());
+
+    fn check_cxx_ident(cx: &mut Check, ident: &str) {
+        if ident.starts_with("cxxbridge") {
+            cx.error(ident, error::CXXBRIDGE_RESERVED.msg);
+        }
+        if ident.contains("__") {
+            cx.error(ident, error::DOUBLE_UNDERSCORE.msg);
+        }
+    }
+
+    fn check_rust_ident(cx: &mut Check, ident: &str) {
+        if ident.starts_with("cxxbridge") {
+            cx.error(ident, error::CXXBRIDGE_RESERVED.msg);
+        }
     }
 }
 
-pub(crate) fn check_all(cx: &mut Check, namespace: &Namespace, apis: &[Api]) {
-    for segment in namespace {
-        check(cx, segment);
-    }
-
+pub(crate) fn check_all(cx: &mut Check, apis: &[Api]) {
     for api in apis {
         match api {
-            Api::Include(_) => {}
+            Api::Include(_) | Api::Impl(_) => {}
             Api::Struct(strct) => {
-                check(cx, &strct.ident);
+                check(cx, &strct.name);
                 for field in &strct.fields {
-                    check(cx, &field.ident);
+                    check(cx, &field.name);
                 }
             }
             Api::Enum(enm) => {
-                check(cx, &enm.ident);
+                check(cx, &enm.name);
                 for variant in &enm.variants {
-                    check(cx, &variant.ident);
+                    check(cx, &variant.name);
                 }
             }
             Api::CxxType(ety) | Api::RustType(ety) => {
-                check(cx, &ety.ident);
+                check(cx, &ety.name);
             }
             Api::CxxFunction(efn) | Api::RustFunction(efn) => {
-                check(cx, &efn.ident);
+                check(cx, &efn.name);
                 for arg in &efn.args {
-                    check(cx, &arg.ident);
+                    check(cx, &arg.name);
                 }
             }
             Api::TypeAlias(alias) => {
-                check(cx, &alias.ident);
+                check(cx, &alias.name);
             }
         }
     }

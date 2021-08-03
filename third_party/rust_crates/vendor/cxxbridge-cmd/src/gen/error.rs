@@ -1,23 +1,25 @@
+use crate::gen::fs;
 use crate::syntax;
-use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::files::SimpleFiles;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use codespan_reporting::term::{self, Config};
+use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt::{self, Display};
 use std::io::{self, Write};
 use std::ops::Range;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
+use std::str::Utf8Error;
 
-pub(super) type Result<T, E = Error> = std::result::Result<T, E>;
+pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug)]
-pub(super) enum Error {
+pub(crate) enum Error {
     NoBridgeMod,
-    OutOfLineMod,
-    Io(io::Error),
+    Fs(fs::Error),
+    Utf8(PathBuf, Utf8Error),
     Syn(syn::Error),
 }
 
@@ -25,8 +27,8 @@ impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::NoBridgeMod => write!(f, "no #[cxx::bridge] module found"),
-            Error::OutOfLineMod => write!(f, "#[cxx::bridge] module must have inline contents"),
-            Error::Io(err) => err.fmt(f),
+            Error::Fs(err) => err.fmt(f),
+            Error::Utf8(path, _) => write!(f, "Failed to read file `{}`", path.display()),
             Error::Syn(err) => err.fmt(f),
         }
     }
@@ -35,16 +37,17 @@ impl Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Error::Io(err) => Some(err),
-            Error::Syn(err) => Some(err),
+            Error::Fs(err) => err.source(),
+            Error::Utf8(_, err) => Some(err),
+            Error::Syn(err) => err.source(),
             _ => None,
         }
     }
 }
 
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::Io(err)
+impl From<fs::Error> for Error {
+    fn from(err: fs::Error) -> Self {
+        Error::Fs(err)
     }
 }
 
@@ -65,9 +68,39 @@ pub(super) fn format_err(path: &Path, source: &str, error: Error) -> ! {
                 display_syn_error(stderr, path, source, error);
             }
         }
-        _ => eprintln!("cxxbridge: {:?}", anyhow!(error)),
+        Error::NoBridgeMod => {
+            let _ = writeln!(
+                io::stderr(),
+                "cxxbridge: no #[cxx::bridge] module found in {}",
+                path.display(),
+            );
+        }
+        _ => {
+            let _ = writeln!(io::stderr(), "cxxbridge: {}", report(error));
+        }
     }
     process::exit(1);
+}
+
+pub(crate) fn report(error: impl StdError) -> impl Display {
+    struct Report<E>(E);
+
+    impl<E: StdError> Display for Report<E> {
+        fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            Display::fmt(&self.0, formatter)?;
+            let mut error: &dyn StdError = &self.0;
+
+            while let Some(cause) = error.source() {
+                formatter.write_str("\n\nCaused by:\n    ")?;
+                Display::fmt(cause, formatter)?;
+                error = cause;
+            }
+
+            Ok(())
+        }
+    }
+
+    Report(error)
 }
 
 fn sort_syn_errors(error: syn::Error) -> Vec<syn::Error> {
@@ -109,8 +142,13 @@ fn display_syn_error(stderr: &mut dyn WriteColor, path: &Path, source: &str, err
         .map(char::len_utf8)
         .sum::<usize>();
 
+    let mut path = path.to_string_lossy();
+    if path == "-" {
+        path = Cow::Borrowed(if cfg!(unix) { "/dev/stdin" } else { "stdin" });
+    }
+
     let mut files = SimpleFiles::new();
-    let file = files.add(path.to_string_lossy(), source);
+    let file = files.add(path, source);
 
     let diagnostic = diagnose(file, start_offset..end_offset, error);
 

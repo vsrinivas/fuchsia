@@ -46,8 +46,8 @@ crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
 crossbeam = "0.8.0"
 csv = "1.0.7"
-cxx = "0.3.5"
-cxxbridge-cmd = "0.3.5"
+cxx = "1.0.50"
+cxxbridge-cmd = "1.0.49"
 darling = "0.12.0"
 dashmap = "4.0.2"
 data-encoding = "2.1.2"
@@ -546,7 +546,7 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.crossbeam-utils."0.7.2"]
 # cxx's build.rs is only used to build it's src/cxx.cc file, for crates that use cxx and build with
 # cargo. It is replaced with //src/lib/rust_cxx:cxx_lib.
-[gn.package.cxx."0.3.5"]
+[gn.package.cxx."1.0.50"]
 [gn.package.getrandom."0.1.13"]
 # cxx uses this to link against libc++ or libstdc++, for crates that use cxx and build with cargo.
 # It is replaced by our own build machinery.
@@ -557,6 +557,8 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 [gn.package.parking_lot_core."0.6.2"]
 [gn.package.pulldown-cmark."0.6.0"]
 [gn.package.rayon-core."1.7.0"]
+[gn.package.serde_json."1.0.59"]
+rustflags = ["--cfg=limb_width_64"]
 [gn.package.syn."1.0.74"]
 [gn.package.test-case."1.1.0"]
 [gn.package.wasm-bindgen."0.2.60"]
@@ -581,8 +583,5 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 #
 # Keep this sorted alphabetically, please.
 
-[gn.package.cxxbridge-cmd."0.3.5".binary.cxxbridge]
+[gn.package.cxxbridge-cmd."1.0.50".binary.cxxbridge]
 output_name = "cxxbridge"
-
-[gn.package.serde_json."1.0.59"]
-rustflags = ["--cfg=limb_width_64"]

@@ -1,52 +1,63 @@
+use crate::gen::block::Block;
+use crate::gen::builtin::Builtins;
 use crate::gen::include::Includes;
+use crate::gen::Opt;
 use crate::syntax::namespace::Namespace;
+use crate::syntax::Types;
 use std::cell::RefCell;
 use std::fmt::{self, Arguments, Write};
 
-pub(crate) struct OutFile {
-    pub namespace: Namespace,
+pub(crate) struct OutFile<'a> {
     pub header: bool,
-    pub include: Includes,
-    pub front: Content,
-    content: RefCell<Content>,
+    pub opt: &'a Opt,
+    pub types: &'a Types<'a>,
+    pub include: Includes<'a>,
+    pub builtin: Builtins<'a>,
+    content: RefCell<Content<'a>>,
 }
 
-pub struct Content {
-    bytes: Vec<u8>,
+#[derive(Default)]
+pub struct Content<'a> {
+    bytes: String,
+    namespace: &'a Namespace,
+    blocks: Vec<BlockBoundary<'a>>,
     section_pending: bool,
-    blocks_pending: Vec<&'static str>,
+    blocks_pending: usize,
 }
 
-impl OutFile {
-    pub fn new(namespace: Namespace, header: bool) -> Self {
+#[derive(Copy, Clone, PartialEq, Debug)]
+enum BlockBoundary<'a> {
+    Begin(Block<'a>),
+    End(Block<'a>),
+}
+
+impl<'a> OutFile<'a> {
+    pub fn new(header: bool, opt: &'a Opt, types: &'a Types) -> Self {
         OutFile {
-            namespace,
             header,
+            opt,
+            types,
             include: Includes::new(),
-            front: Content::new(),
+            builtin: Builtins::new(),
             content: RefCell::new(Content::new()),
         }
     }
 
     // Write a blank line if the preceding section had any contents.
     pub fn next_section(&mut self) {
-        let content = self.content.get_mut();
-        content.section_pending = true;
+        self.content.get_mut().next_section();
     }
 
-    pub fn begin_block(&mut self, block: &'static str) {
-        let content = self.content.get_mut();
-        content.blocks_pending.push(block);
+    pub fn begin_block(&mut self, block: Block<'a>) {
+        self.content.get_mut().begin_block(block);
     }
 
-    pub fn end_block(&mut self, block: &'static str) {
-        let content = self.content.get_mut();
-        if content.blocks_pending.pop().is_none() {
-            content.bytes.extend_from_slice(b"} // ");
-            content.bytes.extend_from_slice(block.as_bytes());
-            content.bytes.push(b'\n');
-            content.section_pending = true;
-        }
+    pub fn end_block(&mut self, block: Block<'a>) {
+        self.content.get_mut().end_block(block);
+    }
+
+    pub fn set_namespace(&mut self, namespace: &'a Namespace) {
+        self.content.get_mut().set_namespace(namespace);
     }
 
     pub fn write_fmt(&self, args: Arguments) {
@@ -54,58 +65,146 @@ impl OutFile {
         Write::write_fmt(content, args).unwrap();
     }
 
-    pub fn content(&self) -> Vec<u8> {
-        let front = &self.front.bytes;
-        let content = &self.content.borrow().bytes;
-        let len = front.len() + !front.is_empty() as usize + content.len();
-        let mut out = Vec::with_capacity(len);
-        out.extend_from_slice(front);
-        if !front.is_empty() {
-            out.push(b'\n');
+    pub fn content(&mut self) -> Vec<u8> {
+        self.flush();
+        let include = &self.include.content.bytes;
+        let builtin = &self.builtin.content.bytes;
+        let content = &self.content.get_mut().bytes;
+        let len = include.len() + builtin.len() + content.len() + 2;
+        let mut out = String::with_capacity(len);
+        out.push_str(include);
+        if !out.is_empty() && !builtin.is_empty() {
+            out.push('\n');
         }
-        out.extend_from_slice(content);
-        out
+        out.push_str(builtin);
+        if !out.is_empty() && !content.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(content);
+        if out.is_empty() {
+            out.push_str("// empty\n");
+        }
+        out.into_bytes()
+    }
+
+    fn flush(&mut self) {
+        self.include.content.flush();
+        self.builtin.content.flush();
+        self.content.get_mut().flush();
     }
 }
 
-impl Write for Content {
+impl<'a> Write for Content<'a> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.write_bytes(s.as_bytes());
+        self.write(s);
         Ok(())
     }
 }
 
-impl Content {
+impl<'a> PartialEq for Content<'a> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<'a> Content<'a> {
+    fn new() -> Self {
+        Content::default()
+    }
+
+    pub fn next_section(&mut self) {
+        self.section_pending = true;
+    }
+
+    pub fn begin_block(&mut self, block: Block<'a>) {
+        self.push_block_boundary(BlockBoundary::Begin(block));
+    }
+
+    pub fn end_block(&mut self, block: Block<'a>) {
+        self.push_block_boundary(BlockBoundary::End(block));
+    }
+
+    pub fn set_namespace(&mut self, namespace: &'a Namespace) {
+        for name in self.namespace.iter().rev() {
+            self.end_block(Block::UserDefinedNamespace(name));
+        }
+        for name in namespace {
+            self.begin_block(Block::UserDefinedNamespace(name));
+        }
+        self.namespace = namespace;
+    }
+
     pub fn write_fmt(&mut self, args: Arguments) {
         Write::write_fmt(self, args).unwrap();
     }
 
-    fn new() -> Self {
-        Content {
-            bytes: Vec::new(),
-            section_pending: false,
-            blocks_pending: Vec::new(),
+    fn write(&mut self, b: &str) {
+        if !b.is_empty() {
+            if self.blocks_pending > 0 {
+                self.flush_blocks();
+            }
+            if self.section_pending && !self.bytes.is_empty() {
+                self.bytes.push('\n');
+            }
+            self.bytes.push_str(b);
+            self.section_pending = false;
+            self.blocks_pending = 0;
         }
     }
 
-    fn write_bytes(&mut self, b: &[u8]) {
-        if !b.is_empty() {
-            if !self.blocks_pending.is_empty() {
-                if !self.bytes.is_empty() {
-                    self.bytes.push(b'\n');
+    fn push_block_boundary(&mut self, boundary: BlockBoundary<'a>) {
+        if self.blocks_pending > 0 && boundary == self.blocks.last().unwrap().rev() {
+            self.blocks.pop();
+            self.blocks_pending -= 1;
+        } else {
+            self.blocks.push(boundary);
+            self.blocks_pending += 1;
+        }
+    }
+
+    fn flush(&mut self) {
+        self.set_namespace(Default::default());
+        if self.blocks_pending > 0 {
+            self.flush_blocks();
+        }
+    }
+
+    fn flush_blocks(&mut self) {
+        self.section_pending = !self.bytes.is_empty();
+        let mut read = self.blocks.len() - self.blocks_pending;
+        let mut write = read;
+
+        while read < self.blocks.len() {
+            match self.blocks[read] {
+                BlockBoundary::Begin(begin_block) => {
+                    if self.section_pending {
+                        self.bytes.push('\n');
+                        self.section_pending = false;
+                    }
+                    Block::write_begin(begin_block, &mut self.bytes);
+                    self.blocks[write] = BlockBoundary::Begin(begin_block);
+                    write += 1;
                 }
-                for block in self.blocks_pending.drain(..) {
-                    self.bytes.extend_from_slice(block.as_bytes());
-                    self.bytes.extend_from_slice(b" {\n");
+                BlockBoundary::End(end_block) => {
+                    write = write.checked_sub(1).unwrap();
+                    let begin_block = self.blocks[write];
+                    assert_eq!(begin_block, BlockBoundary::Begin(end_block));
+                    Block::write_end(end_block, &mut self.bytes);
+                    self.section_pending = true;
                 }
-                self.section_pending = false;
-            } else if self.section_pending {
-                if !self.bytes.is_empty() {
-                    self.bytes.push(b'\n');
-                }
-                self.section_pending = false;
             }
-            self.bytes.extend_from_slice(b);
+            read += 1;
+        }
+
+        self.blocks.truncate(write);
+    }
+}
+
+impl<'a> BlockBoundary<'a> {
+    fn rev(self) -> BlockBoundary<'a> {
+        match self {
+            BlockBoundary::Begin(block) => BlockBoundary::End(block),
+            BlockBoundary::End(block) => BlockBoundary::Begin(block),
         }
     }
 }

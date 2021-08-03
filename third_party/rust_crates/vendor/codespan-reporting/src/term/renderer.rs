@@ -1,9 +1,9 @@
 use std::io::{self, Write};
-use std::ops::{Range, RangeTo};
+use std::ops::Range;
 use termcolor::{ColorSpec, WriteColor};
 
 use crate::diagnostic::{LabelStyle, Severity};
-use crate::files::Location;
+use crate::files::{Error, Location};
 use crate::term::{Chars, Config, Styles};
 
 /// The 'location focus' of a source code snippet.
@@ -23,20 +23,22 @@ pub type SingleLabel<'diagnostic> = (LabelStyle, Range<usize>, &'diagnostic str)
 
 /// A multi-line label to render.
 ///
-/// Locations are relative to the start of where the source cord is rendered.
+/// Locations are relative to the start of where the source code is rendered.
 pub enum MultiLabel<'diagnostic> {
-    /// Left top corner for multi-line labels.
-    ///
-    /// ```text
-    /// ╭
-    /// ```
-    TopLeft,
     /// Multi-line label top.
+    /// The contained value indicates where the label starts.
     ///
     /// ```text
     /// ╭────────────^
     /// ```
-    Top(RangeTo<usize>),
+    ///
+    /// Can also be rendered at the beginning of the line
+    /// if there is only whitespace before the label starts.
+    ///
+    /// /// ```text
+    /// ╭
+    /// ```
+    Top(usize),
     /// Left vertical labels for multi-line labels.
     ///
     /// ```text
@@ -44,11 +46,12 @@ pub enum MultiLabel<'diagnostic> {
     /// ```
     Left,
     /// Multi-line label bottom, with an optional message.
+    /// The first value indicates where the label ends.
     ///
     /// ```text
     /// ╰────────────^ blah blah
     /// ```
-    Bottom(RangeTo<usize>, &'diagnostic str),
+    Bottom(usize, &'diagnostic str),
 }
 
 #[derive(Copy, Clone)]
@@ -138,7 +141,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         code: Option<&str>,
         message: &str,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         // Write locus
         //
         // ```text
@@ -168,7 +171,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         // ```text
         // [E0001]
         // ```
-        if let Some(code) = &code {
+        if let Some(code) = &code.filter(|code| !code.is_empty()) {
             write!(self, "[{}]", code)?;
         }
 
@@ -181,15 +184,14 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         write!(self, ": {}", message)?;
         self.reset()?;
 
-        write!(self, "\n")?;
+        writeln!(self)?;
 
         Ok(())
     }
 
     /// Empty line.
-    pub fn render_empty(&mut self) -> io::Result<()> {
-        write!(self, "\n")?;
-
+    pub fn render_empty(&mut self) -> Result<(), Error> {
+        writeln!(self)?;
         Ok(())
     }
 
@@ -198,18 +200,21 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     /// ```text
     /// ┌─ test:2:9
     /// ```
-    pub fn render_snippet_start(&mut self, outer_padding: usize, locus: &Locus) -> io::Result<()> {
+    pub fn render_snippet_start(
+        &mut self,
+        outer_padding: usize,
+        locus: &Locus,
+    ) -> Result<(), Error> {
         self.outer_gutter(outer_padding)?;
 
         self.set_color(&self.styles().source_border)?;
-        write!(self, "{}", self.chars().source_border_top_left)?;
-        write!(self, "{0}", self.chars().source_border_top)?;
+        write!(self, "{}", self.chars().snippet_start)?;
         self.reset()?;
 
         write!(self, " ")?;
         self.snippet_locus(&locus)?;
 
-        write!(self, "\n")?;
+        writeln!(self)?;
 
         Ok(())
     }
@@ -229,7 +234,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         single_labels: &[SingleLabel<'_>],
         num_multi_labels: usize,
         multi_labels: &[(usize, LabelStyle, MultiLabel<'_>)],
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         // Trim trailing newlines, linefeeds, and null chars from source, if they exist.
         // FIXME: Use the number of trimmed placeholders when rendering single line carets
         let source = source.trim_end_matches(['\n', '\r', '\0'].as_ref());
@@ -250,7 +255,9 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                 match multi_labels_iter.peek() {
                     Some((label_index, label_style, label)) if *label_index == label_column => {
                         match label {
-                            MultiLabel::TopLeft => {
+                            MultiLabel::Top(start)
+                                if *start <= source.len() - source.trim_start().len() =>
+                            {
                                 self.label_multi_top_left(severity, *label_style)?;
                             }
                             MultiLabel::Top(..) => self.inner_gutter_space()?,
@@ -276,9 +283,9 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                 }) || multi_labels.iter().any(|(_, ls, label)| {
                     *ls == LabelStyle::Primary
                         && match label {
-                            MultiLabel::Top(range) => column_range.start >= range.end,
-                            MultiLabel::TopLeft | MultiLabel::Left => true,
-                            MultiLabel::Bottom(range, _) => column_range.end <= range.end,
+                            MultiLabel::Top(start) => column_range.start >= *start,
+                            MultiLabel::Left => true,
+                            MultiLabel::Bottom(start, _) => column_range.end <= *start,
                         }
                 });
 
@@ -299,7 +306,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
             if in_primary {
                 self.reset()?;
             }
-            write!(self, "\n")?;
+            writeln!(self)?;
         }
 
         // Write single labels underneath source
@@ -456,7 +463,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                 write!(self, "{}", message)?;
                 self.reset()?;
             }
-            write!(self, "\n")?;
+            writeln!(self)?;
 
             // Write hanging labels pointing to carets
             //
@@ -483,7 +490,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                     trailing_label,
                     source.char_indices(),
                 )?;
-                write!(self, "\n")?;
+                writeln!(self)?;
 
                 // Write hanging labels pointing to carets
                 //
@@ -511,7 +518,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                     self.set_color(self.styles().label(severity, *label_style))?;
                     write!(self, "{}", message)?;
                     self.reset()?;
-                    write!(self, "\n")?;
+                    writeln!(self)?;
                 }
             }
         }
@@ -524,7 +531,11 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         // ```
         for (multi_label_index, (_, label_style, label)) in multi_labels.iter().enumerate() {
             let (label_style, range, bottom_message) = match label {
-                MultiLabel::TopLeft | MultiLabel::Left => continue, // no label caret needed
+                MultiLabel::Left => continue, // no label caret needed
+                // no label caret needed if this can be started in front of the line
+                MultiLabel::Top(start) if *start <= source.len() - source.trim_start().len() => {
+                    continue
+                }
                 MultiLabel::Top(range) => (*label_style, range, None),
                 MultiLabel::Bottom(range, message) => (*label_style, range, Some(message)),
             };
@@ -543,7 +554,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                 match multi_labels_iter.peek() {
                     Some((i, (label_index, ls, label))) if *label_index == label_column => {
                         match label {
-                            MultiLabel::TopLeft | MultiLabel::Left => {
+                            MultiLabel::Left => {
                                 self.label_multi_left(severity, *ls, underline.map(|(s, _)| s))?;
                             }
                             MultiLabel::Top(..) if multi_label_index > *i => {
@@ -571,11 +582,10 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
             }
 
             // Finish the top or bottom caret
-            let range = range.clone();
             match bottom_message {
-                None => self.label_multi_top_caret(severity, label_style, source, range)?,
+                None => self.label_multi_top_caret(severity, label_style, source, *range)?,
                 Some(message) => {
-                    self.label_multi_bottom_caret(severity, label_style, source, range, message)?
+                    self.label_multi_bottom_caret(severity, label_style, source, *range, message)?
                 }
             }
         }
@@ -594,11 +604,11 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         num_multi_labels: usize,
         multi_labels: &[(usize, LabelStyle, MultiLabel<'_>)],
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         self.outer_gutter(outer_padding)?;
         self.border_left()?;
         self.inner_gutter(severity, num_multi_labels, multi_labels)?;
-        write!(self, "\n")?;
+        writeln!(self)?;
         Ok(())
     }
 
@@ -613,11 +623,11 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         num_multi_labels: usize,
         multi_labels: &[(usize, LabelStyle, MultiLabel<'_>)],
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         self.outer_gutter(outer_padding)?;
         self.border_left_break()?;
         self.inner_gutter(severity, num_multi_labels, multi_labels)?;
-        write!(self, "\n")?;
+        writeln!(self)?;
         Ok(())
     }
 
@@ -627,7 +637,11 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     /// = expected type `Int`
     ///      found type `String`
     /// ```
-    pub fn render_snippet_note(&mut self, outer_padding: usize, message: &str) -> io::Result<()> {
+    pub fn render_snippet_note(
+        &mut self,
+        outer_padding: usize,
+        message: &str,
+    ) -> Result<(), Error> {
         for (note_line_index, line) in message.lines().enumerate() {
             self.outer_gutter(outer_padding)?;
             match note_line_index {
@@ -639,8 +653,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
                 _ => write!(self, " ")?,
             }
             // Write line of message
-            write!(self, " {}", line)?;
-            write!(self, "\n")?;
+            writeln!(self, " {}", line)?;
         }
 
         Ok(())
@@ -674,25 +687,29 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     }
 
     /// Location focus.
-    fn snippet_locus(&mut self, locus: &Locus) -> io::Result<()> {
+    fn snippet_locus(&mut self, locus: &Locus) -> Result<(), Error> {
         write!(
             self,
             "{name}:{line_number}:{column_number}",
             name = locus.name,
             line_number = locus.location.line_number,
             column_number = locus.location.column_number,
-        )
+        )?;
+        Ok(())
     }
 
     /// The outer gutter of a source line.
-    fn outer_gutter(&mut self, outer_padding: usize) -> io::Result<()> {
-        write!(self, "{space: >width$}", space = "", width = outer_padding)?;
-        write!(self, " ")?;
+    fn outer_gutter(&mut self, outer_padding: usize) -> Result<(), Error> {
+        write!(self, "{space: >width$} ", space = "", width = outer_padding)?;
         Ok(())
     }
 
     /// The outer gutter of a source line, with line number.
-    fn outer_gutter_number(&mut self, line_number: usize, outer_padding: usize) -> io::Result<()> {
+    fn outer_gutter_number(
+        &mut self,
+        line_number: usize,
+        outer_padding: usize,
+    ) -> Result<(), Error> {
         self.set_color(&self.styles().line_number)?;
         write!(
             self,
@@ -706,7 +723,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     }
 
     /// The left-hand border of a source line.
-    fn border_left(&mut self) -> io::Result<()> {
+    fn border_left(&mut self) -> Result<(), Error> {
         self.set_color(&self.styles().source_border)?;
         write!(self, "{}", self.chars().source_border_left)?;
         self.reset()?;
@@ -714,7 +731,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     }
 
     /// The broken left-hand border of a source line.
-    fn border_left_break(&mut self) -> io::Result<()> {
+    fn border_left_break(&mut self) -> Result<(), Error> {
         self.set_color(&self.styles().source_border)?;
         write!(self, "{}", self.chars().source_border_left_break)?;
         self.reset()?;
@@ -729,7 +746,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         single_labels: &[SingleLabel<'_>],
         trailing_label: Option<(usize, &SingleLabel<'_>)>,
         char_indices: impl Iterator<Item = (usize, char)>,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         for (metrics, ch) in self.char_metrics(char_indices) {
             let column_range = metrics.byte_index..(metrics.byte_index + ch.len_utf8());
             let label_style = hanging_labels(single_labels, trailing_label)
@@ -765,7 +782,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         label_style: LabelStyle,
         underline: Option<LabelStyle>,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         match underline {
             None => write!(self, " ")?,
             // Continue an underline horizontally
@@ -790,7 +807,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         &mut self,
         severity: Severity,
         label_style: LabelStyle,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         write!(self, " ")?;
         self.set_color(self.styles().label(severity, label_style))?;
         write!(self, "{}", self.chars().multi_top_left)?;
@@ -807,7 +824,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         &mut self,
         severity: Severity,
         label_style: LabelStyle,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         write!(self, " ")?;
         self.set_color(self.styles().label(severity, label_style))?;
         write!(self, "{}", self.chars().multi_bottom_left)?;
@@ -825,13 +842,13 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         label_style: LabelStyle,
         source: &str,
-        range: RangeTo<usize>,
-    ) -> io::Result<()> {
+        start: usize,
+    ) -> Result<(), Error> {
         self.set_color(self.styles().label(severity, label_style))?;
 
         for (metrics, _) in self
             .char_metrics(source.char_indices())
-            .take_while(|(metrics, _)| metrics.byte_index < range.end + 1)
+            .take_while(|(metrics, _)| metrics.byte_index < start + 1)
         {
             // FIXME: improve rendering of carets between character boundaries
             (0..metrics.unicode_width)
@@ -844,7 +861,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         };
         write!(self, "{}", caret_start)?;
         self.reset()?;
-        write!(self, "\n")?;
+        writeln!(self)?;
         Ok(())
     }
 
@@ -858,14 +875,14 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         label_style: LabelStyle,
         source: &str,
-        range: RangeTo<usize>,
+        start: usize,
         message: &str,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         self.set_color(self.styles().label(severity, label_style))?;
 
         for (metrics, _) in self
             .char_metrics(source.char_indices())
-            .take_while(|(metrics, _)| metrics.byte_index < range.end)
+            .take_while(|(metrics, _)| metrics.byte_index < start)
         {
             // FIXME: improve rendering of carets between character boundaries
             (0..metrics.unicode_width)
@@ -881,7 +898,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
             write!(self, " {}", message)?;
         }
         self.reset()?;
-        write!(self, "\n")?;
+        writeln!(self)?;
         Ok(())
     }
 
@@ -890,7 +907,7 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         &mut self,
         severity: Severity,
         underline: Option<Underline>,
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         match underline {
             None => self.inner_gutter_space(),
             Some((label_style, vertical_bound)) => {
@@ -907,8 +924,9 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
     }
 
     /// Writes an empty gutter space.
-    fn inner_gutter_space(&mut self) -> io::Result<()> {
-        write!(self, "  ")
+    fn inner_gutter_space(&mut self) -> Result<(), Error> {
+        write!(self, "  ")?;
+        Ok(())
     }
 
     /// Writes an inner gutter, with the left lines if necessary.
@@ -917,12 +935,12 @@ impl<'writer, 'config> Renderer<'writer, 'config> {
         severity: Severity,
         num_multi_labels: usize,
         multi_labels: &[(usize, LabelStyle, MultiLabel<'_>)],
-    ) -> io::Result<()> {
+    ) -> Result<(), Error> {
         let mut multi_labels_iter = multi_labels.iter().peekable();
         for label_column in 0..num_multi_labels {
             match multi_labels_iter.peek() {
                 Some((label_index, ls, label)) if *label_index == label_column => match label {
-                    MultiLabel::TopLeft | MultiLabel::Left | MultiLabel::Bottom(..) => {
+                    MultiLabel::Left | MultiLabel::Bottom(..) => {
                         self.label_multi_left(severity, *ls, None)?;
                         multi_labels_iter.next();
                     }

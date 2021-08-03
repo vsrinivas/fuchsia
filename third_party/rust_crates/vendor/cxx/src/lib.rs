@@ -18,8 +18,15 @@
 //!
 //! <br>
 //!
-//! *Compiler support: requires rustc 1.42+ and c++11 or newer*<br>
+//! *Compiler support: requires rustc 1.48+ and c++11 or newer*<br>
 //! *[Release notes](https://github.com/dtolnay/cxx/releases)*
+//!
+//! <br>
+//!
+//! # Guide
+//!
+//! Please see **<https://cxx.rs>** for a tutorial, reference material, and
+//! example code.
 //!
 //! <br>
 //!
@@ -57,66 +64,72 @@
 //!
 //! # Example
 //!
-//! A runnable version of this example is provided under the *demo-rs* directory
-//! of [https://github.com/dtolnay/cxx] (with the C++ side of the implementation
-//! in the *demo-cxx* directory). To try it out, jump into demo-rs and run
-//! `cargo run`.
+//! In this example we are writing a Rust application that wishes to take
+//! advantage of an existing C++ client for a large-file blobstore service. The
+//! blobstore supports a `put` operation for a discontiguous buffer upload. For
+//! example we might be uploading snapshots of a circular buffer which would
+//! tend to consist of 2 chunks, or fragments of a file spread across memory for
+//! some other reason.
+//!
+//! A runnable version of this example is provided under the *demo* directory of
+//! <https://github.com/dtolnay/cxx>. To try it out, run `cargo run` from that
+//! directory.
 //!
 //! ```no_run
 //! #[cxx::bridge]
 //! mod ffi {
 //!     // Any shared structs, whose fields will be visible to both languages.
-//!     struct SharedThing {
-//!         z: i32,
-//!         y: Box<ThingR>,
-//!         x: UniquePtr<ThingC>,
-//!     }
-//!
-//!     extern "C" {
-//!         // One or more headers with the matching C++ declarations. Our code
-//!         // generators don't read it but it gets #include'd and used in static
-//!         // assertions to ensure our picture of the FFI boundary is accurate.
-//!         include!("demo-cxx/demo.h");
-//!
-//!         // Zero or more opaque types which both languages can pass around but
-//!         // only C++ can see the fields.
-//!         type ThingC;
-//!
-//!         // Functions implemented in C++.
-//!         fn make_demo(appname: &str) -> UniquePtr<ThingC>;
-//!         fn get_name(thing: &ThingC) -> &CxxString;
-//!         fn do_thing(state: SharedThing);
+//!     struct BlobMetadata {
+//!         size: usize,
+//!         tags: Vec<String>,
 //!     }
 //!
 //!     extern "Rust" {
 //!         // Zero or more opaque types which both languages can pass around but
 //!         // only Rust can see the fields.
-//!         type ThingR;
+//!         type MultiBuf;
 //!
 //!         // Functions implemented in Rust.
-//!         fn print_r(r: &ThingR);
+//!         fn next_chunk(buf: &mut MultiBuf) -> &[u8];
+//!     }
+//!
+//!     unsafe extern "C++" {
+//!         // One or more headers with the matching C++ declarations. Our code
+//!         // generators don't read it but it gets #include'd and used in static
+//!         // assertions to ensure our picture of the FFI boundary is accurate.
+//!         include!("demo/include/blobstore.h");
+//!
+//!         // Zero or more opaque types which both languages can pass around but
+//!         // only C++ can see the fields.
+//!         type BlobstoreClient;
+//!
+//!         // Functions implemented in C++.
+//!         fn new_blobstore_client() -> UniquePtr<BlobstoreClient>;
+//!         fn put(&self, parts: &mut MultiBuf) -> u64;
+//!         fn tag(&self, blobid: u64, tag: &str);
+//!         fn metadata(&self, blobid: u64) -> BlobMetadata;
 //!     }
 //! }
 //! #
-//! # pub struct ThingR(usize);
+//! # pub struct MultiBuf;
 //! #
-//! # fn print_r(r: &ThingR) {
-//! #     println!("called back with r={}", r.0);
+//! # fn next_chunk(_buf: &mut MultiBuf) -> &[u8] {
+//! #     unimplemented!()
 //! # }
 //! #
 //! # fn main() {}
 //! ```
 //!
-//! Now we simply provide C++ definitions of all the things in the `extern "C"`
-//! block and Rust definitions of all the things in the `extern "Rust"` block,
-//! and get to call back and forth safely.
+//! Now we simply provide Rust definitions of all the things in the `extern
+//! "Rust"` block and C++ definitions of all the things in the `extern "C++"`
+//! block, and get to call back and forth safely.
 //!
 //! Here are links to the complete set of source files involved in the demo:
 //!
-//! - [demo-rs/src/main.rs](https://github.com/dtolnay/cxx/blob/master/demo-rs/src/main.rs)
-//! - [demo-rs/build.rs](https://github.com/dtolnay/cxx/blob/master/demo-rs/build.rs)
-//! - [demo-cxx/demo.h](https://github.com/dtolnay/cxx/blob/master/demo-cxx/demo.h)
-//! - [demo-cxx/demo.cc](https://github.com/dtolnay/cxx/blob/master/demo-cxx/demo.cc)
+//! - [demo/src/main.rs](https://github.com/dtolnay/cxx/blob/master/demo/src/main.rs)
+//! - [demo/build.rs](https://github.com/dtolnay/cxx/blob/master/demo/build.rs)
+//! - [demo/include/blobstore.h](https://github.com/dtolnay/cxx/blob/master/demo/include/blobstore.h)
+//! - [demo/src/blobstore.cc](https://github.com/dtolnay/cxx/blob/master/demo/src/blobstore.cc)
 //!
 //! To look at the code generated in both languages for the example by the CXX
 //! code generators:
@@ -124,10 +137,10 @@
 //! ```console
 //!    # run Rust code generator and print to stdout
 //!    # (requires https://github.com/dtolnay/cargo-expand)
-//! $ cargo expand --manifest-path demo-rs/Cargo.toml
+//! $ cargo expand --manifest-path demo/Cargo.toml
 //!
 //!    # run C++ code generator and print to stdout
-//! $ cargo run --manifest-path gen/cmd/Cargo.toml -- demo-rs/src/main.rs
+//! $ cargo run --manifest-path gen/cmd/Cargo.toml -- demo/src/main.rs
 //! ```
 //!
 //! <br>
@@ -150,20 +163,20 @@
 //! - **Functions** &mdash; implemented in either language, callable from the
 //!   other language.
 //!
-//! Within the `extern "C"` part of the CXX bridge we list the types and
-//! functions for which C++ is the source of truth, as well as the header(s)
-//! that declare those APIs. In the future it's possible that this section could
-//! be generated bindgen-style from the headers but for now we need the
-//! signatures written out; static assertions will verify that they are
-//! accurate.
+//! Within the `extern "Rust"` part of the CXX bridge we list the types and
+//! functions for which Rust is the source of truth. These all implicitly refer
+//! to the `super` module, the parent module of the CXX bridge. You can think of
+//! the two items listed in the example above as being like `use
+//! super::MultiBuf` and `use super::next_chunk` except re-exported to C++. The
+//! parent module will either contain the definitions directly for simple
+//! things, or contain the relevant `use` statements to bring them into scope
+//! from elsewhere.
 //!
-//! Within the `extern "Rust"` part, we list types and functions for which Rust
-//! is the source of truth. These all implicitly refer to the `super` module,
-//! the parent module of the CXX bridge. You can think of the two items listed
-//! in the example above as being like `use super::ThingR` and `use
-//! super::print_r` except re-exported to C++. The parent module will either
-//! contain the definitions directly for simple things, or contain the relevant
-//! `use` statements to bring them into scope from elsewhere.
+//! Within the `extern "C++"` part, we list types and functions for which C++ is
+//! the source of truth, as well as the header(s) that declare those APIs. In
+//! the future it's possible that this section could be generated bindgen-style
+//! from the headers but for now we need the signatures written out; static
+//! assertions will verify that they are accurate.
 //!
 //! Your function implementations themselves, whether in C++ or Rust, *do not*
 //! need to be defined as `extern "C"` ABI or no\_mangle. CXX will put in the
@@ -229,7 +242,7 @@
 //! # Cargo.toml
 //!
 //! [build-dependencies]
-//! cxx-build = "0.3"
+//! cxx-build = "1.0"
 //! ```
 //!
 //! ```no_run
@@ -237,13 +250,13 @@
 //!
 //! fn main() {
 //!     cxx_build::bridge("src/main.rs")  // returns a cc::Build
-//!         .file("../demo-cxx/demo.cc")
+//!         .file("src/demo.cc")
 //!         .flag_if_supported("-std=c++11")
 //!         .compile("cxxbridge-demo");
 //!
 //!     println!("cargo:rerun-if-changed=src/main.rs");
-//!     println!("cargo:rerun-if-changed=../demo-cxx/demo.h");
-//!     println!("cargo:rerun-if-changed=../demo-cxx/demo.cc");
+//!     println!("cargo:rerun-if-changed=src/demo.cc");
+//!     println!("cargo:rerun-if-changed=include/demo.h");
 //! }
 //! ```
 //!
@@ -254,7 +267,7 @@
 //! For use in non-Cargo builds like Bazel or Buck, CXX provides an alternate
 //! way of invoking the C++ code generator as a standalone command line tool.
 //! The tool is packaged as the `cxxbridge-cmd` crate on crates.io or can be
-//! built from the *cmd* directory of [https://github.com/dtolnay/cxx].
+//! built from the *gen/cmd* directory of <https://github.com/dtolnay/cxx>.
 //!
 //! ```bash
 //! $ cargo install cxxbridge-cmd
@@ -318,18 +331,22 @@
 //! <tr><th>name in Rust</th><th>name in C++</th><th>restrictions</th></tr>
 //! <tr><td>String</td><td>rust::String</td><td></td></tr>
 //! <tr><td>&amp;str</td><td>rust::Str</td><td></td></tr>
-//! <tr><td>&amp;[u8]</td><td>rust::Slice&lt;uint8_t&gt;</td><td><sup><i>arbitrary &amp;[T] not implemented yet</i></sup></td></tr>
+//! <tr><td>&amp;[T]</td><td>rust::Slice&lt;const T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
+//! <tr><td>&amp;mut [T]</td><td>rust::Slice&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
 //! <tr><td><a href="struct.CxxString.html">CxxString</a></td><td>std::string</td><td><sup><i>cannot be passed by value</i></sup></td></tr>
 //! <tr><td>Box&lt;T&gt;</td><td>rust::Box&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
 //! <tr><td><a href="struct.UniquePtr.html">UniquePtr&lt;T&gt;</a></td><td>std::unique_ptr&lt;T&gt;</td><td><sup><i>cannot hold opaque Rust type</i></sup></td></tr>
+//! <tr><td><a href="struct.SharedPtr.html">SharedPtr&lt;T&gt;</a></td><td>std::shared_ptr&lt;T&gt;</td><td><sup><i>cannot hold opaque Rust type</i></sup></td></tr>
+//! <tr><td>[T; N]</td><td>std::array&lt;T, N&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
 //! <tr><td>Vec&lt;T&gt;</td><td>rust::Vec&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
 //! <tr><td><a href="struct.CxxVector.html">CxxVector&lt;T&gt;</a></td><td>std::vector&lt;T&gt;</td><td><sup><i>cannot be passed by value, cannot hold opaque Rust type</i></sup></td></tr>
+//! <tr><td>*mut T, *const T</td><td>T*, const T*</td><td><sup><i>fn with a raw pointer argument must be declared unsafe to call</i></sup></td></tr>
 //! <tr><td>fn(T, U) -&gt; V</td><td>rust::Fn&lt;V(T, U)&gt;</td><td><sup><i>only passing from Rust to C++ is implemented so far</i></sup></td></tr>
 //! <tr><td>Result&lt;T&gt;</td><td>throw/catch</td><td><sup><i>allowed as return type only</i></sup></td></tr>
 //! </table>
 //!
 //! The C++ API of the `rust` namespace is defined by the *include/cxx.h* file
-//! in [https://github.com/dtolnay/cxx]. You will need to include this header in
+//! in <https://github.com/dtolnay/cxx>. You will need to include this header in
 //! your C++ code when working with those types.
 //!
 //! The following types are intended to be supported "soon" but are just not
@@ -344,76 +361,114 @@
 //! <tr><td>Option&lt;T&gt;</td><td><sup><i>tbd</i></sup></td></tr>
 //! <tr><td><sup><i>tbd</i></sup></td><td>std::map&lt;K, V&gt;</td></tr>
 //! <tr><td><sup><i>tbd</i></sup></td><td>std::unordered_map&lt;K, V&gt;</td></tr>
-//! <tr><td><sup><i>tbd</i></sup></td><td>std::shared_ptr&lt;T&gt;</td></tr>
 //! </table>
-//!
-//! [https://github.com/dtolnay/cxx]: https://github.com/dtolnay/cxx
 
-#![doc(html_root_url = "https://docs.rs/cxx/0.3.5")]
-#![deny(improper_ctypes)]
+#![no_std]
+#![doc(html_root_url = "https://docs.rs/cxx/1.0.50")]
+#![deny(improper_ctypes, improper_ctypes_definitions, missing_docs)]
 #![allow(non_camel_case_types)]
 #![allow(
     clippy::cognitive_complexity,
     clippy::declare_interior_mutable_const,
+    clippy::doc_markdown,
+    clippy::empty_enum,
     clippy::inherent_to_string,
+    clippy::items_after_statements,
     clippy::large_enum_variant,
     clippy::len_without_is_empty,
+    clippy::missing_errors_doc,
     clippy::missing_safety_doc,
     clippy::module_inception,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate,
     clippy::needless_doctest_main,
     clippy::new_without_default,
     clippy::or_fun_call,
     clippy::ptr_arg,
     clippy::toplevel_ref_arg,
-    clippy::useless_let_if_seq
+    clippy::useless_let_if_seq,
+    clippy::wrong_self_convention
 )]
 
+#[cfg(built_with_cargo)]
 extern crate link_cplusplus;
+
+extern crate alloc;
+extern crate self as cxx;
+extern crate std;
 
 #[macro_use]
 mod macros;
 
-mod cxx_string;
 mod cxx_vector;
 mod exception;
 mod extern_type;
+mod fmt;
 mod function;
+pub mod memory;
 mod opaque;
 mod result;
-mod rust_sliceu8;
+mod rust_slice;
 mod rust_str;
 mod rust_string;
+mod rust_type;
 mod rust_vec;
+mod shared_ptr;
+#[path = "cxx_string.rs"]
+mod string;
+mod symbols;
+mod type_id;
 mod unique_ptr;
 mod unwind;
+pub mod vector;
+mod weak_ptr;
 
-#[cfg(not(no_export_symbols))]
-mod symbols;
-
-pub use crate::cxx_string::CxxString;
 pub use crate::cxx_vector::CxxVector;
 pub use crate::exception::Exception;
-pub use crate::extern_type::ExternType;
+pub use crate::extern_type::{kind, ExternType};
+pub use crate::shared_ptr::SharedPtr;
+pub use crate::string::CxxString;
 pub use crate::unique_ptr::UniquePtr;
+pub use crate::weak_ptr::WeakPtr;
 pub use cxxbridge_macro::bridge;
 
-/// For use in impls of the `ExternType` trait. See [`ExternType`].
-pub use cxxbridge_macro::type_id;
+/// Synonym for `CxxString`.
+///
+/// To avoid confusion with Rust's standard library string you probably
+/// shouldn't import this type with `use`. Instead, write `cxx::String`, or
+/// import and use `CxxString`.
+pub type String = CxxString;
+
+/// Synonym for `CxxVector`.
+///
+/// To avoid confusion with Rust's standard library vector you probably
+/// shouldn't import this type with `use`. Instead, write `cxx::Vector<T>`, or
+/// import and use `CxxVector`.
+pub type Vector<T> = CxxVector<T>;
 
 // Not public API.
 #[doc(hidden)]
 pub mod private {
     pub use crate::cxx_vector::VectorElement;
-    pub use crate::extern_type::verify_extern_type;
+    pub use crate::extern_type::{verify_extern_kind, verify_extern_type};
     pub use crate::function::FatFunction;
     pub use crate::opaque::Opaque;
     pub use crate::result::{r#try, Result};
-    pub use crate::rust_sliceu8::RustSliceU8;
+    pub use crate::rust_slice::RustSlice;
     pub use crate::rust_str::RustStr;
     pub use crate::rust_string::RustString;
+    pub use crate::rust_type::{ImplBox, ImplVec, RustType};
     pub use crate::rust_vec::RustVec;
+    pub use crate::shared_ptr::SharedPtrTarget;
+    pub use crate::string::StackString;
     pub use crate::unique_ptr::UniquePtrTarget;
     pub use crate::unwind::catch_unwind;
+    pub use crate::weak_ptr::WeakPtrTarget;
+    pub use cxxbridge_macro::type_id;
+}
+
+mod actually_private {
+    pub trait Private {}
 }
 
 macro_rules! chars {
@@ -431,3 +486,6 @@ chars! {
     a b c d e f g h i j k l m n o p q r s t u v w x y z
     __ // underscore
 }
+
+#[repr(transparent)]
+struct void(core::ffi::c_void);

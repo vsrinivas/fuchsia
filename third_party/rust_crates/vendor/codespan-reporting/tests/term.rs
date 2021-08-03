@@ -1,6 +1,6 @@
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use codespan_reporting::files::{SimpleFile, SimpleFiles};
-use codespan_reporting::term::{termcolor::Color, Config, DisplayStyle, Styles};
+use codespan_reporting::term::{termcolor::Color, Chars, Config, DisplayStyle, Styles};
 
 mod support;
 
@@ -20,6 +20,17 @@ macro_rules! test_emit {
         fn rich_color() {
             let config = Config {
                 display_style: DisplayStyle::Rich,
+                ..TEST_CONFIG.clone()
+            };
+
+            insta::assert_snapshot!(TEST_DATA.emit_color(&config));
+        }
+    };
+    (medium_color) => {
+        #[test]
+        fn medium_color() {
+            let config = Config {
+                display_style: DisplayStyle::Medium,
                 ..TEST_CONFIG.clone()
             };
 
@@ -48,11 +59,34 @@ macro_rules! test_emit {
             insta::assert_snapshot!(TEST_DATA.emit_no_color(&config));
         }
     };
+    (medium_no_color) => {
+        #[test]
+        fn medium_no_color() {
+            let config = Config {
+                display_style: DisplayStyle::Medium,
+                ..TEST_CONFIG.clone()
+            };
+
+            insta::assert_snapshot!(TEST_DATA.emit_no_color(&config));
+        }
+    };
     (short_no_color) => {
         #[test]
         fn short_no_color() {
             let config = Config {
                 display_style: DisplayStyle::Short,
+                ..TEST_CONFIG.clone()
+            };
+
+            insta::assert_snapshot!(TEST_DATA.emit_no_color(&config));
+        }
+    };
+    (rich_ascii_no_color) => {
+        #[test]
+        fn rich_ascii_no_color() {
+            let config = Config {
+                display_style: DisplayStyle::Rich,
+                chars: Chars::ascii(),
                 ..TEST_CONFIG.clone()
             };
 
@@ -82,9 +116,12 @@ mod empty {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 /// Based on:
@@ -130,9 +167,12 @@ mod same_line {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 /// Based on:
@@ -272,9 +312,12 @@ mod overlapping {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod message {
@@ -296,9 +339,12 @@ mod message {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod message_and_notes {
@@ -320,9 +366,39 @@ mod message_and_notes {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
+}
+
+mod message_errorcode {
+    use super::*;
+
+    lazy_static::lazy_static! {
+        static ref TEST_DATA: TestData<'static, SimpleFiles<&'static str, &'static str>> = {
+            let files = SimpleFiles::new();
+
+            let diagnostics = vec![
+                Diagnostic::error().with_message("a message").with_code("E0001"),
+                Diagnostic::warning().with_message("a message").with_code("W001"),
+                Diagnostic::note().with_message("a message").with_code("N0815"),
+                Diagnostic::help().with_message("a message").with_code("H4711"),
+                Diagnostic::error().with_message("where did my errorcode go?").with_code(""),
+                Diagnostic::warning().with_message("where did my errorcode go?").with_code(""),
+                Diagnostic::note().with_message("where did my errorcode go?").with_code(""),
+                Diagnostic::help().with_message("where did my errorcode go?").with_code(""),
+            ];
+
+            TestData { files, diagnostics }
+        };
+    }
+
+    test_emit!(rich_no_color);
+    test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod empty_ranges {
@@ -353,9 +429,12 @@ mod empty_ranges {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod same_ranges {
@@ -379,9 +458,12 @@ mod same_ranges {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod multifile {
@@ -463,9 +545,12 @@ mod multifile {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod fizz_buzz {
@@ -540,9 +625,12 @@ mod fizz_buzz {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod multiline_overlapping {
@@ -569,9 +657,10 @@ mod multiline_overlapping {
                     .with_message("match arms have incompatible types")
                     .with_code("E0308")
                     .with_labels(vec![
+                        // this secondary label is before the primary label to test the locus calculation (see issue #259)
+                        Label::secondary((), 89..134).with_message("this is found to be of type `Result<ByteIndex, LineIndexOutOfBoundsError>`"),
                         Label::primary((), 230..351).with_message("expected enum `Result`, found struct `LineIndexOutOfBoundsError`"),
                         Label::secondary((), 8..362).with_message("`match` arms have incompatible types"),
-                        Label::secondary((), 89..134).with_message("this is found to be of type `Result<ByteIndex, LineIndexOutOfBoundsError>`"),
                         Label::secondary((), 167..195).with_message("this is found to be of type `Result<ByteIndex, LineIndexOutOfBoundsError>`"),
                     ])
                     .with_notes(vec![unindent::unindent(
@@ -587,9 +676,12 @@ mod multiline_overlapping {
     }
 
     test_emit!(rich_color);
+    test_emit!(medium_color);
     test_emit!(short_color);
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
 }
 
 mod tabbed {
@@ -792,6 +884,7 @@ mod unicode {
     }
 
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
 }
 
@@ -842,5 +935,119 @@ mod unicode_spans {
     }
 
     test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
     test_emit!(short_no_color);
+}
+
+mod position_indicator {
+    use super::*;
+
+    lazy_static::lazy_static! {
+        static ref TEST_DATA: TestData<'static, SimpleFile<&'static str, String>> = {
+            let file = SimpleFile::new(
+                "tests/main.js",
+                [
+                    "\"use strict\";",
+                    "let zero=0;",
+                    "function foo() {",
+                    "  \"use strict\";",
+                    "  one=1;",
+                    "}",
+                ].join("\n"),
+            );
+            let diagnostics = vec![
+                Diagnostic::warning()
+                    .with_code("ParserWarning")
+                    .with_message("The strict mode declaration in the body of function `foo` is redundant, as the outer scope is already in strict mode")
+                    .with_labels(vec![
+                        Label::primary((), 45..57)
+                            .with_message("This strict mode declaration is redundant"),
+                        Label::secondary((), 0..12)
+                            .with_message("Strict mode is first declared here"),
+                    ]),
+            ];
+            TestData{files: file, diagnostics }
+        };
+    }
+
+    test_emit!(rich_no_color);
+    test_emit!(medium_no_color);
+    test_emit!(short_no_color);
+    test_emit!(rich_ascii_no_color);
+}
+
+mod multiline_omit {
+    use super::*;
+
+    lazy_static::lazy_static! {
+        static ref TEST_CONFIG: Config = Config {
+            styles: Styles::with_blue(Color::Blue),
+            start_context_lines: 2,
+            end_context_lines: 1,
+            ..Config::default()
+        };
+
+        static ref TEST_DATA: TestData<'static, SimpleFiles<&'static str, String>> = {
+            let mut files = SimpleFiles::new();
+
+            let file_id1 = files.add(
+                "empty_if_comments.lua",
+                [
+                    "elseif 3 then", // primary label starts here
+                    "",              // context line
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",     // context line
+                    "else", // primary label ends here
+                ]
+                .join("\n"),
+            );
+
+            let file_id2 = files.add(
+                "src/lib.rs",
+                [
+                    "fn main() {",
+                    "    1",   // primary label starts here
+                    "    + 1", // context line
+                    "    + 1", // skip
+                    "    + 1", // skip
+                    "    + 1", // skip
+                    "    +1",  // secondary label here
+                    "    + 1", // this single line will not be skipped; the previously filtered out label must be retrieved
+                    "    + 1", // context line
+                    "    + 1", // primary label ends here
+                    "}",
+                ]
+                .join("\n"),
+            );
+
+            let diagnostics = vec![
+                Diagnostic::error()
+                    .with_message("empty elseif block")
+                    .with_code("empty_if")
+                    .with_labels(vec![
+                        Label::primary(file_id1, 0..23),
+                        Label::secondary(file_id1, 15..21).with_message("content should be in here"),
+                    ]),
+                Diagnostic::error()
+                    .with_message("mismatched types")
+                    .with_code("E0308")
+                    .with_labels(vec![
+                        Label::primary(file_id2, 17..80).with_message("expected (), found integer"),
+                        Label::secondary(file_id2, 55..55).with_message("missing whitespace"),
+                    ])
+                    .with_notes(vec![
+                        "note:\texpected type `()`\n\tfound type `{integer}`".to_owned()
+                    ]),
+            ];
+
+            TestData { files, diagnostics }
+        };
+    }
+
+    test_emit!(rich_no_color);
 }

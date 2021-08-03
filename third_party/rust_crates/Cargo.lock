@@ -510,9 +510,9 @@ dependencies = [
 
 [[package]]
 name = "codespan-reporting"
-version = "0.9.5"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e0762455306b1ed42bc651ef6a2197aabda5e1d4a43c34d5eab5c1a3634e81d"
+checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
@@ -750,22 +750,22 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "0.3.5"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10f97ae9fb35a67da1df86dee508eccbacf62b1ee284d6e82be41495d23eaa74"
+checksum = "12592dd641edafd27da61d9d16944dfff35c2622c7c93207a1817ebdbc7fb52d"
 dependencies = [
  "cc",
+ "cxxbridge-flags",
  "cxxbridge-macro",
  "link-cplusplus",
 ]
 
 [[package]]
 name = "cxxbridge-cmd"
-version = "0.3.5"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85c8ef52d04b21972678170c95028961c21141570417c873c85a1edf7167dd1a"
+checksum = "d883747773acca0adc2735a7ba906455a9bf9e921374480e1fcd0c2100d1ae26"
 dependencies = [
- "anyhow",
  "clap",
  "codespan-reporting",
  "proc-macro2 1.0.28",
@@ -774,10 +774,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "cxxbridge-macro"
-version = "0.3.5"
+name = "cxxbridge-flags"
+version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78c14b3ae0d7570ece1495f1fe2773d7bc97811755f800ccce1e0391ec8ad360"
+checksum = "b7146a007a8adea5a48656097e5323de55ffde80205264ea3649a0eb671acf48"
+
+[[package]]
+name = "cxxbridge-macro"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c8246052ff54d19278c48994b88594231151baecd84a7404d242fc822d07e77"
 dependencies = [
  "proc-macro2 1.0.28",
  "quote 1.0.7",

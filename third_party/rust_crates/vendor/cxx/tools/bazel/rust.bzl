@@ -1,9 +1,15 @@
+"""A module wrapping the core rules of `rules_rust`"""
+
 load(
-    "@io_bazel_rules_rust//rust:rust.bzl",
+    "@rules_rust//rust:rust.bzl",
     _rust_binary = "rust_binary",
     _rust_library = "rust_library",
     _rust_test = "rust_test",
 )
+load("@third-party//:vendor.bzl", "vendored")
+
+def third_party_glob(include):
+    return vendored and native.glob(include)
 
 def rust_binary(edition = "2018", **kwargs):
     _rust_binary(edition = edition, **kwargs)

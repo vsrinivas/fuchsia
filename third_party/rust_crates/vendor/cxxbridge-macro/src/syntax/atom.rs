@@ -5,6 +5,7 @@ use std::fmt::{self, Display};
 #[derive(Copy, Clone, PartialEq)]
 pub enum Atom {
     Bool,
+    Char, // C char, not Rust char
     U8,
     U16,
     U32,
@@ -30,6 +31,7 @@ impl Atom {
         use self::Atom::*;
         match s {
             "bool" => Some(Bool),
+            "c_char" => Some(Char),
             "u8" => Some(U8),
             "u16" => Some(U16),
             "u32" => Some(U32),
@@ -60,6 +62,7 @@ impl AsRef<str> for Atom {
         use self::Atom::*;
         match self {
             Bool => "bool",
+            Char => "c_char",
             U8 => "u8",
             U16 => "u16",
             U32 => "u32",
@@ -81,7 +84,7 @@ impl AsRef<str> for Atom {
 impl PartialEq<Atom> for Type {
     fn eq(&self, atom: &Atom) -> bool {
         match self {
-            Type::Ident(ident) => ident == atom,
+            Type::Ident(ident) => ident.rust == atom,
             _ => false,
         }
     }

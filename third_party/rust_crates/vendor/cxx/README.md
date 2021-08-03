@@ -18,11 +18,21 @@ can be 100% safe.
 
 ```toml
 [dependencies]
-cxx = "0.3"
+cxx = "1.0"
+
+[build-dependencies]
+cxx-build = "1.0"
 ```
 
-*Compiler support: requires rustc 1.42+ and c++11 or newer*<br>
+*Compiler support: requires rustc 1.48+ and c++11 or newer*<br>
 *[Release notes](https://github.com/dtolnay/cxx/releases)*
+
+<br>
+
+## Guide
+
+Please see **<https://cxx.rs>** for a tutorial, reference material, and example
+code.
 
 <br>
 
@@ -60,57 +70,62 @@ function calls Rust's `len()`.
 
 ## Example
 
-A runnable version of this example is provided under the *demo-rs* directory of
-this repo (with the C++ side of the implementation in the *demo-cxx* directory).
-To try it out, jump into demo-rs and run `cargo run`.
+In this example we are writing a Rust application that wishes to take advantage
+of an existing C++ client for a large-file blobstore service. The blobstore
+supports a `put` operation for a discontiguous buffer upload. For example we
+might be uploading snapshots of a circular buffer which would tend to consist of
+2 chunks, or fragments of a file spread across memory for some other reason.
+
+A runnable version of this example is provided under the *demo* directory of
+this repo. To try it out, run `cargo run` from that directory.
 
 ```rust
 #[cxx::bridge]
 mod ffi {
     // Any shared structs, whose fields will be visible to both languages.
-    struct SharedThing {
-        z: i32,
-        y: Box<ThingR>,
-        x: UniquePtr<ThingC>,
-    }
-
-    extern "C" {
-        // One or more headers with the matching C++ declarations. Our code
-        // generators don't read it but it gets #include'd and used in static
-        // assertions to ensure our picture of the FFI boundary is accurate.
-        include!("demo-cxx/demo.h");
-
-        // Zero or more opaque types which both languages can pass around but
-        // only C++ can see the fields.
-        type ThingC;
-
-        // Functions implemented in C++.
-        fn make_demo(appname: &str) -> UniquePtr<ThingC>;
-        fn get_name(thing: &ThingC) -> &CxxString;
-        fn do_thing(state: SharedThing);
+    struct BlobMetadata {
+        size: usize,
+        tags: Vec<String>,
     }
 
     extern "Rust" {
         // Zero or more opaque types which both languages can pass around but
         // only Rust can see the fields.
-        type ThingR;
+        type MultiBuf;
 
         // Functions implemented in Rust.
-        fn print_r(r: &ThingR);
+        fn next_chunk(buf: &mut MultiBuf) -> &[u8];
+    }
+
+    unsafe extern "C++" {
+        // One or more headers with the matching C++ declarations. Our code
+        // generators don't read it but it gets #include'd and used in static
+        // assertions to ensure our picture of the FFI boundary is accurate.
+        include!("demo/include/blobstore.h");
+
+        // Zero or more opaque types which both languages can pass around but
+        // only C++ can see the fields.
+        type BlobstoreClient;
+
+        // Functions implemented in C++.
+        fn new_blobstore_client() -> UniquePtr<BlobstoreClient>;
+        fn put(&self, parts: &mut MultiBuf) -> u64;
+        fn tag(&self, blobid: u64, tag: &str);
+        fn metadata(&self, blobid: u64) -> BlobMetadata;
     }
 }
 ```
 
-Now we simply provide C++ definitions of all the things in the `extern "C"`
-block and Rust definitions of all the things in the `extern "Rust"` block, and
-get to call back and forth safely.
+Now we simply provide Rust definitions of all the things in the `extern "Rust"`
+block and C++ definitions of all the things in the `extern "C++"` block, and get
+to call back and forth safely.
 
 Here are links to the complete set of source files involved in the demo:
 
-- [demo-rs/src/main.rs](demo-rs/src/main.rs)
-- [demo-rs/build.rs](demo-rs/build.rs)
-- [demo-cxx/demo.h](demo-cxx/demo.h)
-- [demo-cxx/demo.cc](demo-cxx/demo.cc)
+- [demo/src/main.rs](demo/src/main.rs)
+- [demo/build.rs](demo/build.rs)
+- [demo/include/blobstore.h](demo/include/blobstore.h)
+- [demo/src/blobstore.cc](demo/src/blobstore.cc)
 
 To look at the code generated in both languages for the example by the CXX code
 generators:
@@ -118,10 +133,10 @@ generators:
 ```console
    # run Rust code generator and print to stdout
    # (requires https://github.com/dtolnay/cargo-expand)
-$ cargo expand --manifest-path demo-rs/Cargo.toml
+$ cargo expand --manifest-path demo/Cargo.toml
 
    # run C++ code generator and print to stdout
-$ cargo run --manifest-path gen/cmd/Cargo.toml -- demo-rs/src/main.rs
+$ cargo run --manifest-path gen/cmd/Cargo.toml -- demo/src/main.rs
 ```
 
 <br>
@@ -143,19 +158,19 @@ items:
 - **Functions** &mdash; implemented in either language, callable from the other
   language.
 
-Within the `extern "C"` part of the CXX bridge we list the types and functions
-for which C++ is the source of truth, as well as the header(s) that declare
-those APIs. In the future it's possible that this section could be generated
-bindgen-style from the headers but for now we need the signatures written out;
-static assertions will verify that they are accurate.
+Within the `extern "Rust"` part of the CXX bridge we list the types and
+functions for which Rust is the source of truth. These all implicitly refer to
+the `super` module, the parent module of the CXX bridge. You can think of the
+two items listed in the example above as being like `use super::MultiBuf` and
+`use super::next_chunk` except re-exported to C++. The parent module will either
+contain the definitions directly for simple things, or contain the relevant
+`use` statements to bring them into scope from elsewhere.
 
-Within the `extern "Rust"` part, we list types and functions for which Rust is
-the source of truth. These all implicitly refer to the `super` module, the
-parent module of the CXX bridge. You can think of the two items listed in the
-example above as being like `use super::ThingR` and `use super::print_r` except
-re-exported to C++. The parent module will either contain the definitions
-directly for simple things, or contain the relevant `use` statements to bring
-them into scope from elsewhere.
+Within the `extern "C++"` part, we list types and functions for which C++ is the
+source of truth, as well as the header(s) that declare those APIs. In the future
+it's possible that this section could be generated bindgen-style from the
+headers but for now we need the signatures written out; static assertions will
+verify that they are accurate.
 
 Your function implementations themselves, whether in C++ or Rust, *do not* need
 to be defined as `extern "C"` ABI or no\_mangle. CXX will put in the right shims
@@ -220,7 +235,7 @@ set up any additional source files and compiler flags as normal.
 # Cargo.toml
 
 [build-dependencies]
-cxx-build = "0.3"
+cxx-build = "1.0"
 ```
 
 ```rust
@@ -228,13 +243,13 @@ cxx-build = "0.3"
 
 fn main() {
     cxx_build::bridge("src/main.rs")  // returns a cc::Build
-        .file("../demo-cxx/demo.cc")
+        .file("src/demo.cc")
         .flag_if_supported("-std=c++11")
         .compile("cxxbridge-demo");
 
     println!("cargo:rerun-if-changed=src/main.rs");
-    println!("cargo:rerun-if-changed=../demo-cxx/demo.h");
-    println!("cargo:rerun-if-changed=../demo-cxx/demo.cc");
+    println!("cargo:rerun-if-changed=src/demo.cc");
+    println!("cargo:rerun-if-changed=include/demo.h");
 }
 ```
 
@@ -245,7 +260,7 @@ fn main() {
 For use in non-Cargo builds like Bazel or Buck, CXX provides an alternate way of
 invoking the C++ code generator as a standalone command line tool. The tool is
 packaged as the `cxxbridge-cmd` crate on crates.io or can be built from the
-*cmd* directory of this repo.
+*gen/cmd* directory of this repo.
 
 ```bash
 $ cargo install cxxbridge-cmd
@@ -307,12 +322,16 @@ returns of functions.
 <tr><th>name in Rust</th><th>name in C++</th><th>restrictions</th></tr>
 <tr><td>String</td><td>rust::String</td><td></td></tr>
 <tr><td>&amp;str</td><td>rust::Str</td><td></td></tr>
-<tr><td>&amp;[u8]</td><td>rust::Slice&lt;uint8_t&gt;</td><td><sup><i>arbitrary &amp;[T] not implemented yet</i></sup></td></tr>
-<tr><td><a href="https://docs.rs/cxx/0.3/cxx/struct.CxxString.html">CxxString</a></td><td>std::string</td><td><sup><i>cannot be passed by value</i></sup></td></tr>
+<tr><td>&amp;[T]</td><td>rust::Slice&lt;const T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
+<tr><td>&amp;mut [T]</td><td>rust::Slice&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
+<tr><td><a href="https://docs.rs/cxx/1.0/cxx/struct.CxxString.html">CxxString</a></td><td>std::string</td><td><sup><i>cannot be passed by value</i></sup></td></tr>
 <tr><td>Box&lt;T&gt;</td><td>rust::Box&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
-<tr><td><a href="https://docs.rs/cxx/0.3/cxx/struct.UniquePtr.html">UniquePtr&lt;T&gt;</a></td><td>std::unique_ptr&lt;T&gt;</td><td><sup><i>cannot hold opaque Rust type</i></sup></td></tr>
+<tr><td><a href="https://docs.rs/cxx/1.0/cxx/struct.UniquePtr.html">UniquePtr&lt;T&gt;</a></td><td>std::unique_ptr&lt;T&gt;</td><td><sup><i>cannot hold opaque Rust type</i></sup></td></tr>
+<tr><td><a href="https://docs.rs/cxx/1.0/cxx/struct.SharedPtr.html">SharedPtr&lt;T&gt;</a></td><td>std::shared_ptr&lt;T&gt;</td><td><sup><i>cannot hold opaque Rust type</i></sup></td></tr>
+<tr><td>[T; N]</td><td>std::array&lt;T, N&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
 <tr><td>Vec&lt;T&gt;</td><td>rust::Vec&lt;T&gt;</td><td><sup><i>cannot hold opaque C++ type</i></sup></td></tr>
-<tr><td><a href="https://docs.rs/cxx/0.3/cxx/struct.CxxVector.html">CxxVector&lt;T&gt;</a></td><td>std::vector&lt;T&gt;</td><td><sup><i>cannot be passed by value, cannot hold opaque Rust type</i></sup></td></tr>
+<tr><td><a href="https://docs.rs/cxx/1.0/cxx/struct.CxxVector.html">CxxVector&lt;T&gt;</a></td><td>std::vector&lt;T&gt;</td><td><sup><i>cannot be passed by value, cannot hold opaque Rust type</i></sup></td></tr>
+<tr><td>*mut T, *const T</td><td>T*, const T*</td><td><sup><i>fn with a raw pointer argument must be declared unsafe to call</i></sup></td></tr>
 <tr><td>fn(T, U) -&gt; V</td><td>rust::Fn&lt;V(T, U)&gt;</td><td><sup><i>only passing from Rust to C++ is implemented so far</i></sup></td></tr>
 <tr><td>Result&lt;T&gt;</td><td>throw/catch</td><td><sup><i>allowed as return type only</i></sup></td></tr>
 </table>
@@ -333,7 +352,6 @@ matter of designing a nice API for each in its non-native language.
 <tr><td>Option&lt;T&gt;</td><td><sup><i>tbd</i></sup></td></tr>
 <tr><td><sup><i>tbd</i></sup></td><td>std::map&lt;K, V&gt;</td></tr>
 <tr><td><sup><i>tbd</i></sup></td><td>std::unordered_map&lt;K, V&gt;</td></tr>
-<tr><td><sup><i>tbd</i></sup></td><td>std::shared_ptr&lt;T&gt;</td></tr>
 </table>
 
 <br>
@@ -344,10 +362,9 @@ This is still early days for CXX; I am releasing it as a minimum viable product
 to collect feedback on the direction and invite collaborators. Please check the
 open issues.
 
-On the build side, I don't have much experience with the `cc` crate so I expect
-there may be someone who can suggest ways to make that aspect of this crate
-friendlier or more robust. Please report issues if you run into trouble building
-or linking any of this stuff.
+Especially please report issues if you run into trouble building or linking any
+of this stuff. I'm sure there are ways to make the build aspects friendlier or
+more robust.
 
 Finally, I know more about Rust library design than C++ library design so I
 would appreciate help making the C++ APIs in this project more idiomatic where

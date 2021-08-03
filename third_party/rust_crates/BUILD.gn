@@ -145,11 +145,11 @@ group("csv") {
 }
 
 group("cxx") {
-  deps = [ ":cxx-v0_3_5" ]
+  deps = [ ":cxx-v1_0_50" ]
 }
 
 group("cxxbridge-cmd") {
-  deps = [ ":cxxbridge-cmd-v0_3_5" ]
+  deps = [ ":cxxbridge-cmd-v1_0_50" ]
 }
 
 group("darling") {
@@ -951,7 +951,7 @@ group("zstd-safe") {
 }
 
 group("cxxbridge") {
-  deps = [ ":cxxbridge-cmd-cxxbridge-v0_3_5" ]
+  deps = [ ":cxxbridge-cmd-cxxbridge-v1_0_50" ]
 }
 
 rust_library("adler32-v1_0_4") {
@@ -2216,10 +2216,10 @@ rust_library("cloudabi-v0_0_3") {
   ]
 }
 
-rust_library("codespan-reporting-v0_9_5") {
+rust_library("codespan-reporting-v0_11_1") {
   crate_name = "codespan_reporting"
   crate_root = "//third_party/rust_crates/vendor/codespan-reporting/src/lib.rs"
-  output_name = "codespan_reporting-32ae5083927f74fe"
+  output_name = "codespan_reporting-7b67adc51c2d979a"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2234,8 +2234,8 @@ rust_library("codespan-reporting-v0_9_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=32ae5083927f74fe",
-    "-Cextra-filename=-32ae5083927f74fe",
+    "-Cmetadata=7b67adc51c2d979a",
+    "-Cextra-filename=-7b67adc51c2d979a",
   ]
 }
 
@@ -2804,17 +2804,17 @@ rust_library("csv-core-v0_1_10") {
   ]
 }
 
-rust_library("cxx-v0_3_5") {
+rust_library("cxx-v1_0_50") {
   crate_name = "cxx"
   crate_root = "//third_party/rust_crates/vendor/cxx/src/lib.rs"
-  output_name = "cxx-a0e30dc94fbcc11c"
+  output_name = "cxx-618927fcf37aaeb7"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":cxxbridge-macro-v0_3_5($host_toolchain)" ]
+  deps += [ ":cxxbridge-macro-v1_0_50($host_toolchain)" ]
   deps += [ ":link-cplusplus-v1_0_2" ]
 
   rustenv = []
@@ -2822,13 +2822,13 @@ rust_library("cxx-v0_3_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=a0e30dc94fbcc11c",
-    "-Cextra-filename=-a0e30dc94fbcc11c",
+    "-Cmetadata=618927fcf37aaeb7",
+    "-Cextra-filename=-618927fcf37aaeb7",
     "--cfg=feature=\"default\"",
   ]
 }
 
-executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
+executable("cxxbridge-cmd-cxxbridge-v1_0_50") {
   crate_name = "cxxbridge"
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/main.rs"
   output_name = "cxxbridge"
@@ -2838,9 +2838,8 @@ executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
   ]
 
   deps = []
-  deps += [ ":anyhow-v1_0_38" ]
   deps += [ ":clap-v2_33_0" ]
-  deps += [ ":codespan-reporting-v0_9_5" ]
+  deps += [ ":codespan-reporting-v0_11_1" ]
   deps += [ ":proc-macro2-v1_0_28" ]
   deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_74" ]
@@ -2850,24 +2849,23 @@ executable("cxxbridge-cmd-cxxbridge-v0_3_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=d39229e7a5f9e4f1",
-    "-Cextra-filename=-d39229e7a5f9e4f1",
+    "-Cmetadata=eecf4c060bb1e4c2",
+    "-Cextra-filename=-eecf4c060bb1e4c2",
   ]
 }
 
-rust_library("cxxbridge-cmd-v0_3_5") {
+rust_library("cxxbridge-cmd-v1_0_50") {
   crate_name = "cxxbridge_cmd"
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-cmd/src/lib.rs"
-  output_name = "cxxbridge_cmd-39c6ea6fb5b67294"
+  output_name = "cxxbridge_cmd-76895b4879778319"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":anyhow-v1_0_38" ]
   deps += [ ":clap-v2_33_0" ]
-  deps += [ ":codespan-reporting-v0_9_5" ]
+  deps += [ ":codespan-reporting-v0_11_1" ]
   deps += [ ":proc-macro2-v1_0_28" ]
   deps += [ ":quote-v1_0_7" ]
   deps += [ ":syn-v1_0_74" ]
@@ -2877,15 +2875,15 @@ rust_library("cxxbridge-cmd-v0_3_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=39c6ea6fb5b67294",
-    "-Cextra-filename=-39c6ea6fb5b67294",
+    "-Cmetadata=76895b4879778319",
+    "-Cextra-filename=-76895b4879778319",
   ]
 }
 
-rust_proc_macro("cxxbridge-macro-v0_3_5") {
+rust_proc_macro("cxxbridge-macro-v1_0_50") {
   crate_name = "cxxbridge_macro"
   crate_root = "//third_party/rust_crates/vendor/cxxbridge-macro/src/lib.rs"
-  output_name = "cxxbridge_macro-89f33f149f6ab750"
+  output_name = "cxxbridge_macro-ad21b247159ca7e7"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2901,8 +2899,8 @@ rust_proc_macro("cxxbridge-macro-v0_3_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=89f33f149f6ab750",
-    "-Cextra-filename=-89f33f149f6ab750",
+    "-Cmetadata=ad21b247159ca7e7",
+    "-Cextra-filename=-ad21b247159ca7e7",
   ]
 }
 
