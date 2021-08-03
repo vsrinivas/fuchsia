@@ -7747,7 +7747,7 @@ rust_library("regex-v1_3_5") {
 
 rust_library("regex-automata-v0_1_9") {
   crate_name = "regex_automata"
-  crate_root = "//third_party/rust_crates/forks/regex-automata/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/regex-automata/src/lib.rs"
   output_name = "regex_automata-cdaa0041c57f3413"
   configs -= [
     "//build/config/rust:edition_2018",

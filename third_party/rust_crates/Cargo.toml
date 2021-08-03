@@ -263,6 +263,7 @@ byteorder = { path = "ask2patch/byteorder" }
 csv = { path = "ask2patch/csv" }
 csv-core = { path = "ask2patch/csv-core" }
 memchr = { path = "ask2patch/memchr" }
+regex-automata = { path = "ask2patch/regex-automata" }
 same-file = { path = "ask2patch/same-file" }
 walkdir = { path = "ask2patch/walkdir" }
 
@@ -292,7 +293,6 @@ combine = { path = "forks/combine" }
 fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
 libm = { path = "forks/libm" }
 nom_locate = { path = "forks/nom_locate" }
-regex-automata = { path = "forks/regex-automata" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 streaming-stats = { path = "forks/streaming-stats" }
