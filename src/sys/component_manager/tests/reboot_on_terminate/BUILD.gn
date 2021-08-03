@@ -107,6 +107,18 @@ fuchsia_component("component_manager") {
 }
 
 fuchsia_unittest_package("reboot_on_terminate_test") {
+  # It's possible for nested component_manager to panic after the test
+  # passes.
+  #
+  # This may happen when the process for shutdown_shim is killed, and
+  # component_manager panics because its connection to the reboot protocol
+  # is closed. This is benign because the test has already finished this
+  # point, but there's no lightweight way to prevent it.
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
   manifest = "meta/integration_test.cml"
   deps = [
     ":component_manager",
