@@ -945,6 +945,7 @@ struct Thread {
   unsigned int signals() const { return signals_.load(ktl::memory_order_relaxed); }
 
   bool has_migrate_fn() const { return migrate_fn_ != nullptr; }
+  bool migrate_pending() const { return migrate_pending_; }
 
   TaskState& task_state() { return task_state_; }
   const TaskState& task_state() const { return task_state_; }

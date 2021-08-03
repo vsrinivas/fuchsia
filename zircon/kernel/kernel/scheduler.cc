@@ -740,10 +740,11 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
     // to that CPU and call the migration function.
     if (next_state->next_cpu_ != INVALID_CPU) {
       DEBUG_ASSERT_MSG(next_state->last_cpu_ == this_cpu(),
-                       "name=\"%s\" last_cpu=%d next_cpu=%d hard_affinity=%" PRIx64
-                       " soft_affinity=%" PRIx64,
-                       next_thread->name(), next_state->last_cpu_, next_state->next_cpu_,
-                       next_state->hard_affinity(), next_state->soft_affinity());
+                       "name=\"%s\" this_cpu=%d last_cpu=%d next_cpu=%d hard_affinity=%" PRIx64
+                       " soft_affinity=%" PRIx64 " migrate_pending=%d",
+                       next_thread->name(), this_cpu(), next_state->last_cpu_,
+                       next_state->next_cpu_, next_state->hard_affinity(),
+                       next_state->soft_affinity(), next_thread->migrate_pending());
       target_cpu = next_state->next_cpu_;
       next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
       next_state->next_cpu_ = INVALID_CPU;
