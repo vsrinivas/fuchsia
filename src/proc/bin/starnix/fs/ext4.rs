@@ -83,6 +83,7 @@ impl FsNodeOps for ExtDirectory {
         match entry_type {
             ext_structs::EntryType::RegularFile => child.set_ops(ExtFile::new(node)),
             ext_structs::EntryType::Directory => child.set_ops(ExtDirectory { inner: node }),
+            ext_structs::EntryType::SymLink => child.set_ops(ExtSymlink { inner: node }),
             _ => {
                 log::warn!("unhandled ext entry type {:?}", entry_type);
                 child.set_ops(ExtFile::new(node))
@@ -116,6 +117,21 @@ impl FsNodeOps for ExtFile {
         // TODO(tbodt): this file will be writable (though changes don't persist once you close the
         // file)
         Ok(Box::new(VmoFileObject::new(vmo.clone())))
+    }
+}
+
+struct ExtSymlink {
+    inner: ExtNode,
+}
+
+impl FsNodeOps for ExtSymlink {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Err(ENOSYS)
+    }
+
+    fn readlink(&self, _node: &FsNode) -> Result<FsString, Errno> {
+        let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
+        Ok(data)
     }
 }
 
