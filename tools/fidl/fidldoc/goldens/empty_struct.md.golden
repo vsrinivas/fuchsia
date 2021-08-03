@@ -5,13 +5,16 @@
 # fidl.test.emptystruct
 
 
+
 ## **PROTOCOLS**
 
 ## EmptyProtocol {#EmptyProtocol}
 *Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=5)*
 
 
+
 ### Receive {#EmptyProtocol.Receive}
+
 
 
 
@@ -29,6 +32,7 @@
 ### Send {#EmptyProtocol.Send}
 
 
+
 #### Request {#EmptyProtocol.Send_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -42,6 +46,7 @@
 
 
 ### SendAndReceive {#EmptyProtocol.SendAndReceive}
+
 
 
 #### Request {#EmptyProtocol.SendAndReceive_Request}
@@ -71,6 +76,7 @@
 
 ### Empty  {#Empty data-text="Empty"}
 *Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
+
 
 
 

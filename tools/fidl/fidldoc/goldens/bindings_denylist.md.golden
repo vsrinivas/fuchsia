@@ -5,17 +5,21 @@
 # fidl.test.bindingsdenylist
 
 
+
 ## **PROTOCOLS**
 
 ## OnlyCppAndDeps {#OnlyCppAndDeps}
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=42)*
 
 
+
 ## OnlyLibfuzzerAndDeps {#OnlyLibfuzzerAndDeps}
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=35)*
 
 
+
 ### LibfuzzerNeedsNonemptyProtocol {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol}
+
 
 
 #### Request {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol_Request}
@@ -38,6 +42,7 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
 </table>
@@ -53,11 +58,13 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="OnlyDart.A">
             <td><code>A</code></td>
             <td><code>1</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -68,6 +75,7 @@ Type: <code>uint32</code>
 
 
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=25)*
+
 
 
 
@@ -83,13 +91,15 @@ Type: <code>uint32</code>
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=28)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="OnlyLlcpp.x">
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -103,11 +113,13 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="OnlySyzkaller.A">
             <td>A</td>
             <td>1</td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -121,7 +133,8 @@ Type: <code>uint32</code>
                     <code>0</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     
 </table>

@@ -5,13 +5,16 @@
 # fidl.test.transitivedependenciescompose
 
 
+
 ## **PROTOCOLS**
 
 ## Top {#Top}
 *Defined in [fidl.test.transitivedependenciescompose/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl;l=5)*
 
 
+
 ### GetFoo {#Top.GetFoo}
+
 
 
 #### Request {#Top.GetFoo_Request}

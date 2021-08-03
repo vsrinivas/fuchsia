@@ -5,13 +5,16 @@
 # fidl.test.union
 
 
+
 ## **PROTOCOLS**
 
 ## TestProtocol {#TestProtocol}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=125)*
 
 
+
 ### FlexibleXUnionHenceResponseMustBeHeapAllocated {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated}
+
 
 
 #### Request {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Request}
@@ -31,6 +34,7 @@
         </tr></table>
 
 ### StrictXUnionHenceResponseMayBeStackAllocated {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated}
+
 
 
 #### Request {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Request}
@@ -58,6 +62,7 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
 </table>
@@ -67,13 +72,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="NullableUnionStruct.the_union">
             <td><code>the_union</code></td>
             <td>
                 <code><a class='link' href='#Union'>Union</a>?</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -83,13 +90,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Pasta.sauce">
             <td><code>sauce</code></td>
             <td>
                 <code>string[16]</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -99,13 +108,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Pizza.toppings">
             <td><code>toppings</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -115,13 +126,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructWithNullableXUnion.x1">
             <td><code>x1</code></td>
             <td>
                 <code><a class='link' href='#OlderSimpleUnion'>OlderSimpleUnion</a>?</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -131,27 +144,31 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="UnionSandwich.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="UnionSandwich.u">
             <td><code>u</code></td>
             <td>
                 <code><a class='link' href='#ExplicitXUnion'>ExplicitXUnion</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="UnionSandwich.b">
             <td><code>b</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -168,29 +185,34 @@
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=80)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExplicitFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitFoo.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ExplicitPizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExplicitPizzaOrPasta data-text="ExplicitPizzaOrPasta"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=16)*
+
 
 
 <table>
@@ -199,29 +221,34 @@
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitPizzaOrPasta.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitPizzaOrPasta.pizza">
             <td><code>pizza</code></td>
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitPizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ExplicitStrictFoo [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExplicitStrictFoo data-text="ExplicitStrictFoo"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=86)*
+
 
 
 <table>
@@ -230,23 +257,27 @@
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitStrictFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitStrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ExplicitUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExplicitUnion data-text="ExplicitUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=55)*
+
 
 
 <table>
@@ -255,23 +286,27 @@
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitUnion.Primitive">
             <td><code>Primitive</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ExplicitXUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExplicitXUnion data-text="ExplicitXUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=138)*
+
 
 
 <table>
@@ -280,29 +315,34 @@
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitXUnion.">
             <td><code></code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitXUnion.i">
             <td><code>i</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ExplicitXUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### FieldCollision [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FieldCollision data-text="FieldCollision"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=51)*
+
 
 
 <table>
@@ -311,11 +351,13 @@
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### FlexibleFoo [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FlexibleFoo data-text="FlexibleFoo"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=70)*
+
 
 
 <table>
@@ -324,17 +366,20 @@
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="FlexibleFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### FlexiblePizzaOrPasta [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FlexiblePizzaOrPasta data-text="FlexiblePizzaOrPasta"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=23)*
+
 
 
 <table>
@@ -343,17 +388,20 @@
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="FlexiblePizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### FlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FlexibleUnion data-text="FlexibleUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=39)*
+
 
 
 <table>
@@ -362,23 +410,27 @@
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="FlexibleUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="FlexibleUnion.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### NewerSimpleUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#NewerSimpleUnion data-text="NewerSimpleUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=97)*
+
 
 
 <table>
@@ -387,23 +439,27 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleUnion.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleUnion.v">
             <td><code>v</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### OlderSimpleUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#OlderSimpleUnion data-text="OlderSimpleUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=92)*
+
 
 
 <table>
@@ -412,17 +468,20 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="OlderSimpleUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### PizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#PizzaOrPasta data-text="PizzaOrPasta"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=11)*
+
 
 
 <table>
@@ -431,17 +490,20 @@
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="PizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ReverseOrdinalUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ReverseOrdinalUnion data-text="ReverseOrdinalUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=61)*
+
 
 
 <table>
@@ -450,17 +512,20 @@
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ReverseOrdinalUnion.first">
             <td><code>first</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictBoundedXUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictBoundedXUnion data-text="StrictBoundedXUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=121)*
+
 
 
 <table>
@@ -469,11 +534,13 @@
             <td>
                 <code>vector&lt;uint8&gt;[10]</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictFoo [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictFoo data-text="StrictFoo"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=75)*
+
 
 
 <table>
@@ -482,17 +549,20 @@
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictPizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictPizzaOrPasta data-text="StrictPizzaOrPasta"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=28)*
+
 
 
 <table>
@@ -501,17 +571,20 @@
             <td>
                 <code><a class='link' href='#Pizza'>Pizza</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictPizzaOrPasta.pasta">
             <td><code>pasta</code></td>
             <td>
                 <code><a class='link' href='#Pasta'>Pasta</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictSimpleXUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictSimpleXUnion data-text="StrictSimpleXUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=107)*
+
 
 
 <table>
@@ -520,23 +593,27 @@
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictSimpleXUnion.f">
             <td><code>f</code></td>
             <td>
                 <code>float32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictSimpleXUnion.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictUnion data-text="StrictUnion"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=45)*
+
 
 
 <table>
@@ -545,23 +622,27 @@
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictUnion.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictUnion.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### Union [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=33)*
+
 
 
 <table>
@@ -570,23 +651,27 @@
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="Union.StringNeedsConstructor">
             <td><code>StringNeedsConstructor</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="Union.VectorStringAlsoNeedsConstructor">
             <td><code>VectorStringAlsoNeedsConstructor</code></td>
             <td>
                 <code>vector&lt;string&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### XUnionContainingEmptyStruct [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#XUnionContainingEmptyStruct data-text="XUnionContainingEmptyStruct"}
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=115)*
+
 
 
 <table>
@@ -595,7 +680,8 @@
             <td>
                 <code><a class='link' href='#Empty'>Empty</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 

@@ -7,10 +7,12 @@
 
 
 
+
 ## **STRUCTS**
 
 ### StructLargeArray  {#StructLargeArray data-text="StructLargeArray"}
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=7)*
+
 
 
 
@@ -20,7 +22,8 @@
             <td>
                 <code>uint32[100]</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -30,13 +33,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructSmallArray.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32[2]</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -54,6 +59,7 @@
 
 
 
+
 <table>
     <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
     <tr id="TableLargeArray.a">
@@ -62,13 +68,15 @@
             <td>
                 <code>uint32[100]</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### TableSmallArray  {#TableSmallArray data-text="TableSmallArray"}
 
 
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=11)*
+
 
 
 
@@ -80,7 +88,8 @@
             <td>
                 <code>uint32[2]</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -91,17 +100,20 @@
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=23)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionLargeArray.a">
             <td><code>a</code></td>
             <td>
                 <code>uint32[100]</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### UnionSmallArray [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionSmallArray data-text="UnionSmallArray"}
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=19)*
+
 
 
 <table>
@@ -110,7 +122,8 @@
             <td>
                 <code>uint32[2]</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 

@@ -7,12 +7,14 @@
 
 
 
+
 ## **STRUCTS**
 
 ### DocCommentWithQuotes  {#DocCommentWithQuotes data-text="DocCommentWithQuotes"}
 *Defined in [fidl.test.escaping/escaping.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/escaping.test.fidl;l=4)*
 
 <p>&quot;pleaseescapethisdocommentproperly&quot;</p>
+
 
 
 <table>

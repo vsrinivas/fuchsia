@@ -7,10 +7,12 @@
 
 
 
+
 ## **STRUCTS**
 
 ### ByteAndBytes  {#ByteAndBytes data-text="ByteAndBytes"}
 *Defined in [fidl.test.byteandbytes/byte_and_bytes.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl;l=3)*
+
 
 
 
@@ -20,28 +22,32 @@
             <td>
                 <code>uint8</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ByteAndBytes.many_bytes">
             <td><code>many_bytes</code></td>
             <td>
                 <code>vector&lt;uint8&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ByteAndBytes.only_one_k_bytes">
             <td><code>only_one_k_bytes</code></td>
             <td>
                 <code>vector&lt;uint8&gt;[1024]</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ByteAndBytes.opt_only_one_k_bytes">
             <td><code>opt_only_one_k_bytes</code></td>
             <td>
                 <code>vector&lt;uint8&gt;[1024]?</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>

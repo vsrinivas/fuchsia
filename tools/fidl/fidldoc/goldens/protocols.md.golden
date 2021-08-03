@@ -5,13 +5,16 @@
 # fidl.test.protocols
 
 
+
 ## **PROTOCOLS**
 
 ## ChannelProtocol {#ChannelProtocol}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=65)*
 
 
+
 ### EventA {#ChannelProtocol.EventA}
+
 
 
 
@@ -34,6 +37,7 @@
 ### MethodA {#ChannelProtocol.MethodA}
 
 
+
 #### Request {#ChannelProtocol.MethodA_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -52,6 +56,7 @@
 
 
 ### MethodB {#ChannelProtocol.MethodB}
+
 
 
 #### Request {#ChannelProtocol.MethodB_Request}
@@ -83,6 +88,7 @@
 ### MutateSocket {#ChannelProtocol.MutateSocket}
 
 
+
 #### Request {#ChannelProtocol.MutateSocket_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -107,6 +113,7 @@
 ### TakeHandle {#ChannelProtocol.TakeHandle}
 
 
+
 #### Request {#ChannelProtocol.TakeHandle_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -127,7 +134,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=118)*
 
 
+
 ### Method {#DiscoverableProtocol.Method}
+
 
 
 #### Request {#DiscoverableProtocol.Method_Request}
@@ -141,7 +150,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=122)*
 
 
+
 ### AnEvent {#HandleRightsProtocol.AnEvent}
+
 
 
 
@@ -159,6 +170,7 @@
 ### NoResponseMethod {#HandleRightsProtocol.NoResponseMethod}
 
 
+
 #### Request {#HandleRightsProtocol.NoResponseMethod_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -172,6 +184,7 @@
 
 
 ### ResponseMethod {#HandleRightsProtocol.ResponseMethod}
+
 
 
 #### Request {#HandleRightsProtocol.ResponseMethod_Request}
@@ -199,7 +212,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=161)*
 
 
+
 ### Fifteen {#ManyParameters.Fifteen}
+
 
 
 #### Request {#ManyParameters.Fifteen_Request}
@@ -288,7 +303,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=187)*
 
 
+
 ### UnionMethod {#MethodWithUnion.UnionMethod}
+
 
 
 #### Request {#MethodWithUnion.UnionMethod_Request}
@@ -307,7 +324,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=91)*
 
 
+
 ### MethodC {#SyscallProtocol.MethodC}
+
 
 
 #### Request {#SyscallProtocol.MethodC_Request}
@@ -331,7 +350,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=98)*
 
 
+
 ### Event {#Transitional.Event}
+
 
 
 
@@ -349,6 +370,7 @@
 ### OneWay {#Transitional.OneWay}
 
 
+
 #### Request {#Transitional.OneWay_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -362,6 +384,7 @@
 
 
 ### Request {#Transitional.Request}
+
 
 
 #### Request {#Transitional.Request_Request}
@@ -389,7 +412,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=23)*
 
 
+
 ### NoRequestEmptyResponse {#WithAndWithoutRequestResponse.NoRequestEmptyResponse}
+
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Request}
@@ -406,6 +431,7 @@
 ### NoRequestNoResponse {#WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
+
 #### Request {#WithAndWithoutRequestResponse.NoRequestNoResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -414,6 +440,7 @@
 
 
 ### NoRequestWithResponse {#WithAndWithoutRequestResponse.NoRequestWithResponse}
+
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestWithResponse_Request}
@@ -437,12 +464,14 @@
 
 
 
+
 #### Response {#WithAndWithoutRequestResponse.OnEmptyResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 ### OnWithResponse {#WithAndWithoutRequestResponse.OnWithResponse}
+
 
 
 
@@ -458,6 +487,7 @@
         </tr></table>
 
 ### WithRequestEmptyResponse {#WithAndWithoutRequestResponse.WithRequestEmptyResponse}
+
 
 
 #### Request {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Request}
@@ -479,6 +509,7 @@
 ### WithRequestNoResponse {#WithAndWithoutRequestResponse.WithRequestNoResponse}
 
 
+
 #### Request {#WithAndWithoutRequestResponse.WithRequestNoResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -492,6 +523,7 @@
 
 
 ### WithRequestWithResponse {#WithAndWithoutRequestResponse.WithRequestWithResponse}
+
 
 
 #### Request {#WithAndWithoutRequestResponse.WithRequestWithResponse_Request}
@@ -519,7 +551,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=51)*
 
 
+
 ### ErrorAsEnum {#WithErrorSyntax.ErrorAsEnum}
+
 
 
 #### Request {#WithErrorSyntax.ErrorAsEnum_Request}
@@ -541,6 +575,7 @@
 ### ErrorAsPrimitive {#WithErrorSyntax.ErrorAsPrimitive}
 
 
+
 #### Request {#WithErrorSyntax.ErrorAsPrimitive_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -560,6 +595,7 @@
 ### HandleInResult {#WithErrorSyntax.HandleInResult}
 
 
+
 #### Request {#WithErrorSyntax.HandleInResult_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -577,6 +613,7 @@
         </tr></table>
 
 ### ResponseAsStruct {#WithErrorSyntax.ResponseAsStruct}
+
 
 
 #### Request {#WithErrorSyntax.ResponseAsStruct_Request}
@@ -599,7 +636,9 @@
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=143)*
 
 
+
 ### ClientEnds {#WithProtocolEnds.ClientEnds}
+
 
 
 #### Request {#WithProtocolEnds.ClientEnds_Request}
@@ -626,6 +665,7 @@
 ### ServerEnds {#WithProtocolEnds.ServerEnds}
 
 
+
 #### Request {#WithProtocolEnds.ServerEnds_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
@@ -648,6 +688,7 @@
         </tr></table>
 
 ### StructContainingEnds {#WithProtocolEnds.StructContainingEnds}
+
 
 
 #### Request {#WithProtocolEnds.StructContainingEnds_Request}
@@ -680,40 +721,46 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ProtocolEnds.client">
             <td><code>client</code></td>
             <td>
                 <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ProtocolEnds.server">
             <td><code>server</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ProtocolEnds.client_opt">
             <td><code>client_opt</code></td>
             <td>
                 <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>?</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ProtocolEnds.server_opt">
             <td><code>server_opt</code></td>
             <td>
                 <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
 
 ### WithErrorSyntax_ErrorAsEnum_Response  {#WithErrorSyntax_ErrorAsEnum_Response data-text="WithErrorSyntax_ErrorAsEnum_Response"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=58)*
+
 
 
 
@@ -726,6 +773,7 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr>
 </table>
@@ -735,13 +783,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_HandleInResult_Response.h">
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -751,27 +801,31 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.a">
             <td><code>a</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.b">
             <td><code>b</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.c">
             <td><code>c</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -787,15 +841,18 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ErrorEnum.ERR_FOO">
             <td><code>ERR_FOO</code></td>
             <td><code>1</code></td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ErrorEnum.ERR_BAR">
             <td><code>ERR_BAR</code></td>
             <td><code>2</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### obj_type [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#obj_type}
@@ -805,15 +862,18 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="obj_type.NONE">
             <td><code>NONE</code></td>
             <td><code>0</code></td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="obj_type.SOCKET">
             <td><code>SOCKET</code></td>
             <td><code>14</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -826,17 +886,20 @@ Type: <code>uint32</code>
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=183)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
             <td><code>v</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### WithErrorSyntax_ErrorAsEnum_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ErrorAsEnum_Result data-text="WithErrorSyntax_ErrorAsEnum_Result"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=58)*
+
 
 
 <table>
@@ -845,17 +908,20 @@ Type: <code>uint32</code>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsEnum_Response'>WithErrorSyntax_ErrorAsEnum_Response</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.err">
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#ErrorEnum'>ErrorEnum</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### WithErrorSyntax_ErrorAsPrimitive_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ErrorAsPrimitive_Result data-text="WithErrorSyntax_ErrorAsPrimitive_Result"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=57)*
+
 
 
 <table>
@@ -864,17 +930,20 @@ Type: <code>uint32</code>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsPrimitive_Response'>WithErrorSyntax_ErrorAsPrimitive_Response</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### WithErrorSyntax_HandleInResult_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#WithErrorSyntax_HandleInResult_Result data-text="WithErrorSyntax_HandleInResult_Result"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=59)*
+
 
 
 <table>
@@ -883,17 +952,20 @@ Type: <code>uint32</code>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_HandleInResult_Response'>WithErrorSyntax_HandleInResult_Response</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="WithErrorSyntax_HandleInResult_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### WithErrorSyntax_ResponseAsStruct_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#WithErrorSyntax_ResponseAsStruct_Result data-text="WithErrorSyntax_ResponseAsStruct_Result"}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=52)*
+
 
 
 <table>
@@ -902,13 +974,15 @@ Type: <code>uint32</code>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ResponseAsStruct_Response'>WithErrorSyntax_ResponseAsStruct_Response</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -922,15 +996,18 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="rights.TRANSFER">
             <td>TRANSFER</td>
             <td>1</td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="rights.DUPLICATE">
             <td>DUPLICATE</td>
             <td>2</td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 

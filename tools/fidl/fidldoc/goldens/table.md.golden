@@ -11,12 +11,14 @@
 
 
 
+
 ## **TABLES**
 
 ### EmptyTable  {#EmptyTable data-text="EmptyTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
+
 
 
 
@@ -31,6 +33,7 @@
 
 
 
+
 <table>
     <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
     <tr id="GreaterThan64OrdinalTable.v1">
@@ -39,468 +42,535 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v2">
             <td>2</td>
             <td><code>v2</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v3">
             <td>3</td>
             <td><code>v3</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v4">
             <td>4</td>
             <td><code>v4</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v5">
             <td>5</td>
             <td><code>v5</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v6">
             <td>6</td>
             <td><code>v6</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v7">
             <td>7</td>
             <td><code>v7</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v8">
             <td>8</td>
             <td><code>v8</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v9">
             <td>9</td>
             <td><code>v9</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v10">
             <td>10</td>
             <td><code>v10</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v11">
             <td>11</td>
             <td><code>v11</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v12">
             <td>12</td>
             <td><code>v12</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v13">
             <td>13</td>
             <td><code>v13</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v14">
             <td>14</td>
             <td><code>v14</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v15">
             <td>15</td>
             <td><code>v15</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v16">
             <td>16</td>
             <td><code>v16</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v17">
             <td>17</td>
             <td><code>v17</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v18">
             <td>18</td>
             <td><code>v18</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v19">
             <td>19</td>
             <td><code>v19</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v20">
             <td>20</td>
             <td><code>v20</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v21">
             <td>21</td>
             <td><code>v21</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v22">
             <td>22</td>
             <td><code>v22</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v23">
             <td>23</td>
             <td><code>v23</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v24">
             <td>24</td>
             <td><code>v24</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v25">
             <td>25</td>
             <td><code>v25</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v26">
             <td>26</td>
             <td><code>v26</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v27">
             <td>27</td>
             <td><code>v27</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v28">
             <td>28</td>
             <td><code>v28</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v29">
             <td>29</td>
             <td><code>v29</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v30">
             <td>30</td>
             <td><code>v30</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v31">
             <td>31</td>
             <td><code>v31</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v32">
             <td>32</td>
             <td><code>v32</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v33">
             <td>33</td>
             <td><code>v33</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v34">
             <td>34</td>
             <td><code>v34</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v35">
             <td>35</td>
             <td><code>v35</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v36">
             <td>36</td>
             <td><code>v36</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v37">
             <td>37</td>
             <td><code>v37</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v38">
             <td>38</td>
             <td><code>v38</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v39">
             <td>39</td>
             <td><code>v39</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v40">
             <td>40</td>
             <td><code>v40</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v41">
             <td>41</td>
             <td><code>v41</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v42">
             <td>42</td>
             <td><code>v42</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v43">
             <td>43</td>
             <td><code>v43</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v44">
             <td>44</td>
             <td><code>v44</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v45">
             <td>45</td>
             <td><code>v45</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v46">
             <td>46</td>
             <td><code>v46</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v47">
             <td>47</td>
             <td><code>v47</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v48">
             <td>48</td>
             <td><code>v48</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v49">
             <td>49</td>
             <td><code>v49</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v50">
             <td>50</td>
             <td><code>v50</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v51">
             <td>51</td>
             <td><code>v51</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v52">
             <td>52</td>
             <td><code>v52</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v53">
             <td>53</td>
             <td><code>v53</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v54">
             <td>54</td>
             <td><code>v54</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v55">
             <td>55</td>
             <td><code>v55</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v56">
             <td>56</td>
             <td><code>v56</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v57">
             <td>57</td>
             <td><code>v57</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v58">
             <td>58</td>
             <td><code>v58</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v59">
             <td>59</td>
             <td><code>v59</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v60">
             <td>60</td>
             <td><code>v60</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v61">
             <td>61</td>
             <td><code>v61</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v62">
             <td>62</td>
             <td><code>v62</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v63">
             <td>63</td>
             <td><code>v63</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v64">
             <td>64</td>
             <td><code>v64</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v65">
             <td>65</td>
             <td><code>v65</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="GreaterThan64OrdinalTable.v66">
             <td>66</td>
             <td><code>v66</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### NewerSimpleTable  {#NewerSimpleTable data-text="NewerSimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
+
 
 
 
@@ -512,55 +582,63 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.">
             <td>2</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.">
             <td>3</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.">
             <td>4</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.y">
             <td>5</td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.z">
             <td>6</td>
             <td><code>z</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="NewerSimpleTable.">
             <td>7</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### OlderSimpleTable  {#OlderSimpleTable data-text="OlderSimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
+
 
 
 
@@ -572,20 +650,23 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="OlderSimpleTable.">
             <td>2</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ReverseOrdinalTable  {#ReverseOrdinalTable data-text="ReverseOrdinalTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
+
 
 
 
@@ -597,27 +678,31 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ReverseOrdinalTable.y">
             <td>2</td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="ReverseOrdinalTable.z">
             <td>1</td>
             <td><code>z</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### SimpleTable  {#SimpleTable data-text="SimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*
+
 
 
 
@@ -629,35 +714,40 @@
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="SimpleTable.">
             <td>2</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="SimpleTable.">
             <td>3</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="SimpleTable.">
             <td>4</td>
             <td><code>RESERVED</code></td>
             <td>
                 <code></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="SimpleTable.y">
             <td>5</td>
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 

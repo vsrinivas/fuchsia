@@ -15,6 +15,7 @@
 
 
 
+
 ## **BITS**
 
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#BitsType}
@@ -24,19 +25,23 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.A">
             <td>A</td>
             <td>1</td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="BitsType.B">
             <td>B</td>
             <td>128</td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="BitsType.C">
             <td>C</td>
             <td>2</td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -47,17 +52,20 @@ Type: <code>uint32</code>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="Const1">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=9">Const1</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="Const2">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=10">Const2</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="Const3">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=11">Const3</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     
 </table>

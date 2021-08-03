@@ -5,13 +5,16 @@
 # fidl.test.error
 
 
+
 ## **PROTOCOLS**
 
 ## Example {#Example}
 *Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
 
 
+
 ### foo {#Example.foo}
+
 
 
 #### Request {#Example.foo_Request}
@@ -44,13 +47,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Example_foo_Response.y">
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -67,19 +72,22 @@
 *Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Response'>Example_foo_Response</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="Example_foo_Result.err">
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 

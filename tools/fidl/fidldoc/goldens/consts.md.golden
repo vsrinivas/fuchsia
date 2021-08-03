@@ -9,6 +9,7 @@
 
 
 
+
 ## **ENUMS**
 
 ### EnumType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#EnumType}
@@ -18,15 +19,18 @@ Type: <code>int32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="EnumType.VALUE">
             <td><code>VALUE</code></td>
             <td><code>1</code></td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="EnumType.true">
             <td><code>true</code></td>
             <td><code>2</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -44,15 +48,18 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsType.VALUE">
             <td>VALUE</td>
             <td>1</td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="BitsType.true">
             <td>true</td>
             <td>2</td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -66,7 +73,8 @@ Type: <code>uint32</code>
                     <code>42</code>
                 </td>
                 <td><code>uint16</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="ANSWER_IN_BINARY">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=6">ANSWER_IN_BINARY</a></td>
@@ -74,7 +82,8 @@ Type: <code>uint32</code>
                     <code>42</code>
                 </td>
                 <td><code>uint16</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="CONVERSION_FACTOR">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=12">CONVERSION_FACTOR</a></td>
@@ -82,7 +91,8 @@ Type: <code>uint32</code>
                     <code>1.41421</code>
                 </td>
                 <td><code>float64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="DIAMOND">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=8">DIAMOND</a></td>
@@ -90,7 +100,8 @@ Type: <code>uint32</code>
                     <code>1746410393481133080</code>
                 </td>
                 <td><code>uint64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="ENABLED_FLAG">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=3">ENABLED_FLAG</a></td>
@@ -98,7 +109,8 @@ Type: <code>uint32</code>
                     <code>true</code>
                 </td>
                 <td><code>bool</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="FUCHSIA">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=9">FUCHSIA</a></td>
@@ -106,7 +118,8 @@ Type: <code>uint32</code>
                     <code>4054509061583223046</code>
                 </td>
                 <td><code>uint64</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="MIN_TEMP">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=11">MIN_TEMP</a></td>
@@ -114,7 +127,8 @@ Type: <code>uint32</code>
                     <code>-273.15</code>
                 </td>
                 <td><code>float32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="OFFSET">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=4">OFFSET</a></td>
@@ -122,7 +136,8 @@ Type: <code>uint32</code>
                     <code>-33</code>
                 </td>
                 <td><code>int8</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="POPULATION_USA_2018">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=7">POPULATION_USA_2018</a></td>
@@ -130,13 +145,15 @@ Type: <code>uint32</code>
                     <code>330000000</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="USERNAME">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=10">USERNAME</a></td>
             <td><code>&quot;squeenze&quot;</code></td>
                     <td><code>String</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="bitsPrimitiveTrue">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=30">bitsPrimitiveTrue</a></td>
@@ -144,7 +161,8 @@ Type: <code>uint32</code>
                     <code><a class='link' href='#BitsType.true'>BitsType.true</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="bitsPrimitiveVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=28">bitsPrimitiveVal</a></td>
@@ -152,17 +170,20 @@ Type: <code>uint32</code>
                     <code><a class='link' href='#BitsType.VALUE'>BitsType.VALUE</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="bitsTrue">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=29">bitsTrue</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="bitsVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=27">bitsVal</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="enumPrimitiveTrue">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=21">enumPrimitiveTrue</a></td>
@@ -170,7 +191,8 @@ Type: <code>uint32</code>
                     <code><a class='link' href='#EnumType.true'>EnumType.true</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="enumPrimitiveVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=19">enumPrimitiveVal</a></td>
@@ -178,17 +200,20 @@ Type: <code>uint32</code>
                     <code><a class='link' href='#EnumType.VALUE'>EnumType.VALUE</a></code>
                 </td>
                 <td><code>int32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="enumTrue">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=20">enumTrue</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     <tr id="enumVal">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=18">enumVal</a></td>
             
-            <td></td>
+            <td>
+</td>
         </tr>
     
 </table>

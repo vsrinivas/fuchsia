@@ -5,13 +5,16 @@
 # fidl.test.placementofattributes
 
 
+
 ## **PROTOCOLS**
 
 ## ExampleProtocol {#ExampleProtocol}
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=22)*
 
 
+
 ### Method {#ExampleProtocol.Method}
+
 
 
 #### Request {#ExampleProtocol.Method_Request}
@@ -35,13 +38,15 @@
 
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleStruct.member">
             <td><code>member</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -57,11 +62,13 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleEnum.MEMBER">
             <td><code>MEMBER</code></td>
             <td><code>1</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -75,6 +82,7 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
     <tr id="ExampleTable.member">
@@ -83,7 +91,8 @@ Type: <code>uint32</code>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -94,17 +103,20 @@ Type: <code>uint32</code>
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=45)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="ExampleUnion.variant">
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### ExampleXUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExampleXUnion data-text="ExampleXUnion"}
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=51)*
+
 
 
 <table>
@@ -113,7 +125,8 @@ Type: <code>uint32</code>
             <td>
                 <code>uint32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -127,11 +140,13 @@ Type: <code>uint32</code>
 
 
 
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="ExampleBits.MEMBER">
             <td>MEMBER</td>
             <td>1</td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
@@ -145,7 +160,8 @@ Type: <code>uint32</code>
                     <code>0</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr>
     
 </table>
@@ -159,6 +175,7 @@ Type: <code>uint32</code>
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=42">TypeAlias</a></td>
             <td>
                 <code>uint32</code></td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 

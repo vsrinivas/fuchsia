@@ -7,10 +7,12 @@
 
 
 
+
 ## **STRUCTS**
 
 ### Foo  {#Foo data-text="Foo"}
 *Defined in [fidl.test.structdefaultvalueenumlibraryreference/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl;l=5)*
+
 
 
 
@@ -20,7 +22,8 @@
             <td>
                 <code><a class='link' href='../dependent/'>dependent</a>/<a class='link' href='../dependent/#MyEnum'>MyEnum</a></code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td><a class='link' href='../dependent/'>dependent</a>/<a class='link' href='../dependent/#MyEnum.A'>MyEnum.A</a></td>
         </tr>
 </table>

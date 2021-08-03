@@ -5,13 +5,16 @@
 # fidl.test.inheritance
 
 
+
 ## **PROTOCOLS**
 
 ## sub {#sub}
 *Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=11)*
 
 
+
 ### foo {#sub.foo}
+
 
 
 #### Request {#sub.foo_Request}
@@ -39,7 +42,9 @@
 *Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
 
 
+
 ### foo {#super.foo}
+
 
 
 #### Request {#super.foo_Request}

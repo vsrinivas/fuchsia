@@ -1,5 +1,14 @@
 {{#if maybe_attributes ~}}
     {{~ #each maybe_attributes ~}}
+        {{~ #if (eq (lower_snake_case name) "deprecated") ~}}
+            <p><b>DEPRECATED </b>
+                {{~ #each arguments ~}}
+                    {{~ #if (eq (lower_snake_case name) "value") ~}}
+                        - {{value.value}}
+                    {{~ /if ~}}
+                {{~ /each ~}}
+            </p>
+        {{~ /if ~}}
         {{~ #if (eq (lower_snake_case name) "doc") ~}}
             {{~ pulldown (docLink value @root.name) ~}}
         {{~ /if ~}}

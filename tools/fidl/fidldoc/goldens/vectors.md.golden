@@ -7,10 +7,12 @@
 
 
 
+
 ## **STRUCTS**
 
 ### ExampleUseOfVectors  {#ExampleUseOfVectors data-text="ExampleUseOfVectors"}
 *Defined in [fidl.test.vectors/vectors.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/vectors.test.fidl;l=6)*
+
 
 
 
@@ -20,14 +22,16 @@
             <td>
                 <code>vector&lt;uint8&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr><tr id="ExampleUseOfVectors.vector_of_vector_of_bool">
             <td><code>vector_of_vector_of_bool</code></td>
             <td>
                 <code>vector&lt;vector&lt;bool&gt;&gt;</code>
             </td>
-            <td></td>
+            <td>
+</td>
             <td>No default</td>
         </tr>
 </table>

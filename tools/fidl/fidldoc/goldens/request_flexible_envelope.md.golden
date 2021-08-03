@@ -5,13 +5,16 @@
 # fidl.test.requestflexibleenvelope
 
 
+
 ## **PROTOCOLS**
 
 ## Protocol {#Protocol}
 *Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=13)*
 
 
+
 ### RequestFlexibleResponseStrict {#Protocol.RequestFlexibleResponseStrict}
+
 
 
 #### Request {#Protocol.RequestFlexibleResponseStrict_Request}
@@ -36,6 +39,7 @@
         </tr></table>
 
 ### RequestStrictResponseFlexible {#Protocol.RequestStrictResponseFlexible}
+
 
 
 #### Request {#Protocol.RequestStrictResponseFlexible_Request}
@@ -75,23 +79,27 @@
 *Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=3)*
 
 
+
 <table>
     <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
             <td><code>s</code></td>
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="FlexibleFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 ### StrictFoo [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictFoo data-text="StrictFoo"}
 *Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=8)*
+
 
 
 <table>
@@ -100,13 +108,15 @@
             <td>
                 <code>string</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr><tr id="StrictFoo.i">
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
             </td>
-            <td></td>
+            <td>
+</td>
         </tr></table>
 
 
