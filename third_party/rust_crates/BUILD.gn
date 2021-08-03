@@ -9188,7 +9188,7 @@ rust_library("static_assertions-v1_1_0") {
 
 rust_library("streaming-stats-v0_2_3") {
   crate_name = "stats"
-  crate_root = "//third_party/rust_crates/forks/streaming-stats/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/streaming-stats/src/lib.rs"
   output_name = "stats-2c02c5c2e153793"
   configs -= [
     "//build/config/rust:edition_2018",
