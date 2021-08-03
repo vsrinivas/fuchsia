@@ -222,8 +222,8 @@ type OnNextFrameBeginValues = table {
     2: future_presentation_infos FuturePresentationInfos;
 };
 
-/// The protocol endpoints bound to a Flatland GraphLink. These protocols operate on the view
-/// (GraphLink) created in the Flatland session.
+/// The protocol endpoints bound to a Flatland ViewCreationToken. These protocols operate on the
+/// view that ViewCreationToken created in the Flatland session.
 type ViewBoundProtocols = resource table {
     /// Learn when a view gains focus.
     ///
