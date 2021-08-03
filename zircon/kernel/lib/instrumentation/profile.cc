@@ -123,6 +123,7 @@ uint64_t __llvm_write_binary_ids(void* ignored) { return sizeof(uint64_t) + ElfB
 #define PaddingBytesAfterCounters 0
 #define NamesSize (&NamesEnd - &NamesStart)
 #define CountersBegin (reinterpret_cast<uint64_t>(&CountersStart))
+#define DataBegin (reinterpret_cast<uint64_t>(&DataStart))
 #define NamesBegin (reinterpret_cast<uint64_t>(&NamesStart))
 
 // The linker script places this at the start of a page-aligned region
