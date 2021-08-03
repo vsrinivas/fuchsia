@@ -44,7 +44,9 @@ pub fn sys_mmap(
         not_implemented!("mmap flag MAP_32BIT not implemented.");
         return Err(ENOSYS);
     }
-    if flags & !(MAP_PRIVATE | MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE) != 0 {
+    if flags & !(MAP_PRIVATE | MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE | MAP_STACK)
+        != 0
+    {
         not_implemented!("mmap: flags: 0x{:x}", flags);
         return Err(EINVAL);
     }
