@@ -1,0 +1,12 @@
+{
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+
+        // TODO(fxb/81849): Remove once the dependency path to inspect runtime has been removed.
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/setui_config_test",
+    },
+}

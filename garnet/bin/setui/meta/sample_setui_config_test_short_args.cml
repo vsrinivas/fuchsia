@@ -1,0 +1,30 @@
+{
+    include: [
+        "//src/sys/test_runners/elf/default.shard.cml",
+
+        // TODO(fxb/81849): Remove once the dependency path to inspect runtime has been removed.
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/setui_config_test",
+        args: [
+            "-s",
+            "/pkg/data/service_configuration.json",
+            "-d",
+            "/pkg/data/display_configuration.json",
+            "-p",
+            "/pkg/data/policy_configuration.json",
+            "-f",
+            "/pkg/data/service_flags.json",
+            "-i",
+            "/pkg/data/input_device_configuration.json",
+            "-l",
+            "/pkg/data/light_sensor_configuration.json",
+            "-h",
+            "/pkg/data/light_hardware_configuration.json",
+            "-a",
+            "/pkg/data/agent_configuration.json",
+        ],
+    },
+}
