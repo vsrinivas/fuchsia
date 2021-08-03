@@ -164,7 +164,7 @@ impl Realm {
         let (exposed_dir_proxy, exposed_dir_server_end) =
             endpoints::create_proxy::<fio::DirectoryMarker>().map_err(RealmError::CreateProxy)?;
         realm_proxy
-            .bind_child(
+            .open_exposed_dir(
                 &mut fsys::ChildRef {
                     name: FRAMEWORK_INTERMEDIARY_CHILD_NAME.to_string(),
                     collection: None,
