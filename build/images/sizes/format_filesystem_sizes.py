@@ -19,6 +19,7 @@ class Capacity(object):
         self.limit = capacity
         self.debug = debug
 
+
 class CmdSize(object):
 
     def __init__(self, name, cmd, limit, debug=None):
@@ -91,8 +92,7 @@ def main():
         blob_tool_prefix = [args.blobfs_tool, args.blob_blk]
         data_points.extend(
             [
-                Capacity(
-                    'blob/capacity', args.blobfs_capacity),
+                Capacity('blob/capacity', args.blobfs_capacity),
                 CmdSize(
                     'blob/contents_size',
                     blob_tool_prefix + ['used-data-size'],

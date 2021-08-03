@@ -12,8 +12,6 @@ import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
-import("//build/images/filesystem_limits.gni")
-import("//build/images/fvm.gni")
 import("//build/images/manifest.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
@@ -28,7 +26,6 @@ import("//build/security.gni")
 import("//build/security/verify_build.gni")
 import("//build/security/verify_routes.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/unification/zx_host_tool.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -47,14 +44,7 @@ supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 files = {
   outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
   gendir = "${outdir}/gen"
-
-  zbi = "${outdir}/fuchsia.zbi"
   blobfs = "${outdir}/blob.blk"
-  fvm_sparse = "${outdir}/fvm.sparse.blk"
-  blobs_json = "${gendir}/blobs.json"
-
-  extracted_zbi_json = "$target_out_dir/fuchsia.zbi.json"
-  extracted_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
 
   if (supports_fastboot_fvm) {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
@@ -367,151 +357,6 @@ group("signed") {
   public_deps = [ "${labels.images}" ]
 }
 
-# We only calculate filesystem sizes for non-bootfs-only builds.
-if (!bootfs_only) {
-  # ZBI tool JSON output doesn't record paths of input files so there's no easy
-  # way to find out where each of the binaries in bootfs entry came from. Rather,
-  # we extract the ZBI and then pass this directory as an input to the elfinfo.py
-  # script which computes the ELF sizes.
-  #
-  # TODO(phosek): Try to come up with a more efficient solution that does not
-  # require extract the ZBI.
-  zx_host_tool_action("extract_bootfs") {
-    hermetic_deps = false
-
-    visibility = [ ":elf_sizes.json" ]
-    testonly = true
-    tool = "//zircon/tools/zbi"
-    inputs = [ files.zbi ]
-    outputs = [ files.extracted_zbi_json ]
-    deps = [ labels.images ]
-    args = [
-      "--extract",
-      "--output-dir=" +
-          rebase_path(files.extracted_zbi_bootfs_dir, root_build_dir),
-      "--json-output=" + rebase_path(files.extracted_zbi_json, root_build_dir),
-      rebase_path(files.zbi, root_out_dir),
-    ]
-  }
-
-  action("elf_sizes.json") {
-    testonly = true
-    hermetic_deps = false
-    script = "elfinfo.py"
-    deps = [
-      ":extract_bootfs",
-      labels.images,
-    ]
-    sources = [
-      files.blobs_json,
-      files.extracted_zbi_json,
-    ]
-    outputs = [ "$root_build_dir/$target_name" ]
-    args = [
-      "--sizes",
-      rebase_path(outputs[0], root_build_dir),
-      "--blobs",
-      rebase_path(files.blobs_json, root_build_dir),
-      "--zbi",
-      rebase_path(files.extracted_zbi_json, root_build_dir),
-      "--bootfs-dir",
-      rebase_path(files.extracted_zbi_bootfs_dir, root_build_dir),
-    ]
-  }
-
-  # deps, inputs and args for the filesystem_sizes.json action.
-  filesystem_sizes_deps = []
-  filesystem_sizes_inputs = []
-  filesystem_sizes_args = []
-
-  # Create a default value of zero for calculating filesystem sizes.
-  fvm_max_disk_size_default_zero = 0
-  if (fvm_max_disk_size != false) {
-    fvm_max_disk_size_default_zero = fvm_max_disk_size
-  }
-
-  fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
-  fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
-
-  filesystem_sizes_deps += [
-    ":data.blk",
-    blobfs_tool_target,
-    fvm_tool_target,
-    labels.images,
-    minfs_tool_target,
-  ]
-  filesystem_sizes_inputs += [
-    files.blobfs,
-    files.fvm_sparse,
-    data_image_path,
-    fvm_tool_path,
-    blobfs_tool_path,
-    minfs_tool_path,
-  ]
-  filesystem_sizes_args += [
-    "--fvm-blk",
-    rebase_path(files.fvm_sparse),
-    "--blob-blk",
-    rebase_path(files.blobfs),
-    "--data-blk",
-    rebase_path(data_image_path),
-    "--fvm-tool",
-    rebase_path(fvm_tool_path, root_build_dir),
-    "--blobfs-tool",
-    rebase_path(blobfs_tool_path, root_build_dir),
-    "--minfs-tool",
-    rebase_path(minfs_tool_path, root_build_dir),
-    "--max-fvm-contents-size",
-    "$fvm_max_disk_size_default_zero",
-    "--blobfs-capacity",
-    blobfs_capacity,
-    "--max-blob-contents-size",
-    max_blob_contents_size,
-    "--max-blob-image-size",
-    max_blob_image_size,
-    "--max-data-contents-size",
-    max_data_contents_size,
-    "--max-data-image-size",
-    max_data_image_size,
-  ]
-
-  action("filesystem_sizes.json") {
-    testonly = true
-    hermetic_deps = false
-    script = "format_filesystem_sizes.py"
-    deps = filesystem_sizes_deps
-    if (recovery_is_zedboot) {
-      deps += [ "zedboot:zbi" ]
-    }
-    output_name = "$root_build_dir/filesystem_sizes.json"
-    outputs = [ output_name ]
-
-    inputs = filesystem_sizes_inputs
-    inputs += [ files.zbi ]
-    if (recovery_is_zedboot) {
-      # Can't use get_target_outputs() because this defined in another file.
-      inputs += [ "$root_out_dir/zedboot.zbi" ]
-    }
-
-    args = filesystem_sizes_args + [
-             "--fuchsia-zbi",
-             rebase_path(files.zbi, root_build_dir),
-             "--max-fuchsia-zbi-size",
-             "$max_fuchsia_zbi_size",
-             "--output",
-             rebase_path(output_name),
-           ]
-    if (recovery_is_zedboot) {
-      args += [
-        "--zedboot-zbi",
-        rebase_path("$root_out_dir/zedboot.zbi"),
-        "--max-zedboot-zbi-size",
-        "$max_zedboot_zbi_size",
-      ]
-    }
-  }
-}
-
 # Pseudo-target to record information about the sizes of filesystems assembled
 # during the build for later analysis.
 # TODO(fxbug.dev/81871): Only include this for builds theaat generated blobfs,
@@ -520,8 +365,8 @@ group("record_filesystem_sizes") {
   testonly = true
   if (!bootfs_only) {
     deps = [
-      ":elf_sizes.json",
-      ":filesystem_sizes.json",
+      "//build/images/sizes:elf_sizes.json",
+      "//build/images/sizes:filesystem_sizes.json",
     ]
   }
 }
@@ -1556,6 +1401,11 @@ uefi_disk_path = "$target_out_dir/disk.raw"
 mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
 mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
 mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
+
+if (!bootfs_only) {
+  fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
+  fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir") + "/fvm"
+}
 
 compiled_action("uefi-disk") {
   deps = uefi_disk_deps + [
