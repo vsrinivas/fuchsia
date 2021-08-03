@@ -7,7 +7,7 @@
                     "fuchsia-pkg://fuchsia.com/isolated_dev_mgr_wlandevicemonitor#meta/isolated_dev_mgr_wlandevicemonitor.cmx"
                 ],
                 "fuchsia.wlan.device.service.DeviceService": [
-                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
+                    "fuchsia-pkg://fuchsia.com/wlanstack-v1#meta/wlanstack.cmx"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"

@@ -6,12 +6,17 @@ use {fidl_fuchsia_diagnostics::Selector, lazy_static::lazy_static};
 
 lazy_static! {
     #[derive(Clone)]
-    static ref MONIKERS_TO_REWRITE: Vec<MonikerRewritePair> = vec![MonikerRewritePair {
+    static ref MONIKERS_TO_REWRITE: Vec<MonikerRewritePair> = vec![
         // Note: These are unparsed strings, not separated into moniker segments.
         // legacy_str cannot contain slashes but modern_str can.
-        legacy_str: "memory_monitor.cmx",
-        modern_str: "core/memory_monitor",
-    }];
+        MonikerRewritePair {
+            legacy_str: "memory_monitor.cmx",
+            modern_str: "core/memory_monitor",
+        }, MonikerRewritePair {
+            legacy_str: "wlanstack.cmx",
+            modern_str: "core/wlanstack",
+        },
+    ];
 }
 
 pub struct MonikerRewriter {

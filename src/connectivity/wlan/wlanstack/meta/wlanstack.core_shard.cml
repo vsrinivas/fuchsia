@@ -1,2 +1,50 @@
-// This file intentionally empty as part of soft-migration
-{}
+{
+    children: [
+        {
+            name: "wlanstack",
+            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+            to: "#wlanstack",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#wlanstack",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+            to: "#wlanstack",
+            dependency: "weak",
+        },
+        {
+            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            from: "#diagnostics-persistence",
+            to: "#wlanstack",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
+            from: "#appmgr",
+            to: "#wlanstack",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "#wlanstack",
+            to: [
+                "#appmgr",
+                "#wlandevicemonitor",
+            ],
+        },
+    ],
+}

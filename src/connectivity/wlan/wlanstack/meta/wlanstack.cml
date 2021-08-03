@@ -1,0 +1,7 @@
+{
+    include: [ "//src/connectivity/wlan/wlanstack/meta/wlanstack.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/wlanstack",
+    },
+}

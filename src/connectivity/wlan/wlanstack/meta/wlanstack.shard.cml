@@ -1,0 +1,27 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.diagnostics.persist.DataPersistence-wlan",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.wlan.device.service.DeviceMonitor",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "self",
+        },
+    ],
+}

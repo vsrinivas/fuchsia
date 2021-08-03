@@ -24,10 +24,6 @@ group("drivers") {
   ]
 }
 
-# This target just includes the wlan-related packages, but not any sysmgr
-# config that will cause them to actually be used. Product configs (and only
-# product configs, rather than other group targets, to avoid conflicts) should
-# also include an appropriate target under config/.
 common_packages = [
   "wlancfg",
   "wlandevicemonitor:wlandevicemonitor",
@@ -91,6 +87,7 @@ group("tests") {
     "wlandevicemonitor:isolated_dev_mgr_wlandevicemonitor",
     "wlandevicemonitor:tests",
     "wlanstack:wlanstack-tests",
+    "wlanstack:wlanstack-v1",
   ]
 }
 

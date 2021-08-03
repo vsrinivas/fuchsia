@@ -105,6 +105,17 @@ fuchsia_package_with_single_component("wlanstack") {
     ":bin",
     ":wlan_metrics_registry",
   ]
+  manifest = "meta/wlanstack.cml"
+}
+
+# Keep around a V1 version of the manifest until all tests are migrated
+fuchsia_package_with_single_component("wlanstack-v1") {
+  testonly = true
+  component_name = "wlanstack"
+  deps = [
+    ":bin",
+    ":wlan_metrics_registry",
+  ]
   manifest = "meta/wlanstack.cmx"
 }
 
@@ -114,7 +125,7 @@ fuchsia_package_with_single_component("wlanstack-legacy-privacy") {
     ":bin",
     ":wlan_metrics_registry",
   ]
-  manifest = "meta/wlanstack.cmx"
+  manifest = "meta/wlanstack_legacy_privacy.cml"
 }
 
 core_shard("wlanstack-core-shard") {
