@@ -76,6 +76,9 @@ class ErmineDriver {
 
     // Wait for shell to draw first frame.
     await driver.waitUntilFirstFrameRasterized();
+
+    // Wait until rendering stabilizes and animations settle.
+    await driver.waitUntilNoTransientCallbacks();
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.
