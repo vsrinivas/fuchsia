@@ -85,6 +85,7 @@ pub fn sys_mmap(
     let vmo = if flags & MAP_ANONYMOUS != 0 {
         let mut vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
             zx::Status::NO_MEMORY => ENOMEM,
+            zx::Status::OUT_OF_RANGE => ENOMEM,
             _ => impossible_error(s),
         })?;
         vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
