@@ -118,9 +118,11 @@ mod tests {
     fn test_model() -> Arc<DataModel> {
         let store_dir = tempdir().unwrap();
         let build_dir = tempdir().unwrap();
+        let repository_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let build_path = build_dir.into_path();
-        Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap())
+        let repository_path = repository_dir.into_path();
+        Arc::new(DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap())
     }
 
     #[test]

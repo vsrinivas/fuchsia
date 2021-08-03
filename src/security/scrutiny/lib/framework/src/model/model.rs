@@ -28,12 +28,17 @@ use {
 pub struct ModelEnvironment {
     pub uri: String,
     pub build_path: PathBuf,
+    pub repository_path: PathBuf,
 }
 
 impl ModelEnvironment {
     /// Helper function to return a clone of the build path.
     pub fn build_path(&self) -> PathBuf {
         self.build_path.clone()
+    }
+    /// Helper function to return a clone of the repository path.
+    pub fn repository_path(&self) -> PathBuf {
+        self.repository_path.clone()
     }
 }
 

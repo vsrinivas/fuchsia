@@ -39,6 +39,7 @@ struct AnalysisError {
 
 /// Paths required for depfile generation. Both these locations are touched
 /// by the core DataCollector.
+const AMBER_PATH: &str = "amber-files/repository";
 const AMBER_BLOB_PATH: &str = "amber-files/repository/blobs";
 const AMBER_TARGETS_PATH: &str = "amber-files/repository/targets.json";
 
@@ -68,6 +69,7 @@ impl VerifyRoutes {
                 .build(),
         );
         config.runtime.model.build_path = env::current_dir()?;
+        config.runtime.model.repository_path = env::current_dir()?.join(AMBER_PATH);
         config.runtime.logging.silent_mode = true;
         let route_analysis: Vec<AnalysisEntry> =
             serde_json5::from_str(&launcher::launch_from_config(config)?)?;

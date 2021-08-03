@@ -172,6 +172,8 @@ pub struct ModelConfig {
     pub path: String,
     /// Path to the Fuchsia build directory.
     pub build_path: PathBuf,
+    /// Path to the local Fuchsia package repository.
+    pub repository_path: PathBuf,
 }
 
 impl ModelConfig {
@@ -179,10 +181,9 @@ impl ModelConfig {
     /// from the environment. If this fails it simply sets the environment
     /// to an empty environment.
     pub fn default() -> ModelConfig {
-        ModelConfig {
-            path: "{memory}".to_string(),
-            build_path: fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf()),
-        }
+        let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
+        let repository_path = build_path.join("amber-files/repository");
+        ModelConfig { path: "{memory}".to_string(), build_path, repository_path }
     }
     pub fn minimal() -> ModelConfig {
         ModelConfig::default()

@@ -15,6 +15,7 @@ pub fn fake_data_model() -> Arc<DataModel> {
         DataModel::connect(ModelEnvironment {
             uri: "{memory}".to_string(),
             build_path: tempdir().unwrap().into_path(),
+            repository_path: tempdir().unwrap().into_path(),
         })
         .unwrap(),
     )

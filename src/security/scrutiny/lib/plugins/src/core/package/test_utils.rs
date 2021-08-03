@@ -204,8 +204,15 @@ pub fn create_svc_pkg_def_with_array(
 pub fn create_model() -> (String, Arc<DataModel>) {
     let store_dir = tempdir().unwrap();
     let build_dir = tempdir().unwrap();
+    let repository_dir = tempdir().unwrap();
     let uri = store_dir.into_path().into_os_string().into_string().unwrap();
     let build_path = build_dir.into_path();
+    let repository_path = repository_dir.into_path();
     let uri_clone = uri.clone();
-    (uri_clone, Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap()))
+    (
+        uri_clone,
+        Arc::new(
+            DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap(),
+        ),
+    )
 }
