@@ -53,8 +53,8 @@ class Factoryfs {
 
   // Returns an unique identifier for this instance. Each invocation returns a new
   // handle that references the same kernel object, which is used as the identifier.
-  zx_status_t GetFsId(zx::event* out_fs_id) const;
-  uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
+  zx::event GetFsId() const;
+  uint64_t GetFsIdLegacy() const;
 
   // Returns a vnode for a given path.
   zx::status<fbl::RefPtr<fs::Vnode>> Lookup(std::string_view path);
@@ -94,8 +94,9 @@ class Factoryfs {
   std::unique_ptr<BlockDevice> block_device_;
   Superblock superblock_;
   fuchsia_hardware_block_BlockInfo block_info_ = {};
-  uint64_t fs_id_legacy_ = 0;
-  // A unique identifier for this filesystem instance.
+
+  // This event's koid is used as a unique identifier for this filesystem instance. This must be
+  // an event because it's returned by the fs.Query interface.
   zx::event fs_id_;
 
   // VMO used for the directory entries.

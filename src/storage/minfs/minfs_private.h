@@ -294,7 +294,7 @@ class Minfs :
   void Shutdown(fs::Vfs::ShutdownCallback cb) final;
 
   // Returns a unique identifier for this instance.
-  uint64_t GetFsId() const { return fs_id_; }
+  uint64_t GetFsId() const;
 
   // Signals the completion object as soon as the journal has finished synchronizing.
   void Sync(SyncCallback closure = {});
@@ -428,7 +428,7 @@ class Minfs :
 #ifdef __Fuchsia__
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-        uint64_t fs_id, const MountOptions& mount_options);
+        const MountOptions& mount_options);
 #else
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
@@ -450,10 +450,6 @@ class Minfs :
 
   // Find an unallocated and unreserved block in the block bitmap starting from block |start|
   [[nodiscard]] zx_status_t FindBlock(size_t start, size_t* blkno_out);
-
-  // Creates an unique identifier for this instance. This is to be called only during
-  // "construction".
-  [[nodiscard]] static zx_status_t CreateFsId(uint64_t* out);
 
   // Reads blocks from disk. Only to be called during "construction".
   static zx::status<std::pair<std::unique_ptr<Allocator>, std::unique_ptr<InodeManager>>>
@@ -489,7 +485,11 @@ class Minfs :
   fbl::Closure on_unmount_{};
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
-  uint64_t fs_id_ = 0;
+
+  // This event's koid is used as a unique identifier for this filesystem instance. This must be
+  // an event because it's returned by the fs.Query interface.
+  zx::event fs_id_;
+
   // TODO(fxbug.dev/51057): Git rid of MountState.
   MountState mount_state_ = {};
   async::TaskClosure journal_sync_task_;

@@ -66,7 +66,9 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 }
 
 Factoryfs::Factoryfs(std::unique_ptr<BlockDevice> device, const Superblock* superblock)
-    : block_device_(std::move(device)), superblock_(*superblock) {}
+    : block_device_(std::move(device)), superblock_(*superblock) {
+  zx::event::create(0, &fs_id_);
+}
 
 std::unique_ptr<BlockDevice> Factoryfs::Reset() {
   if (!block_device_) {
@@ -122,9 +124,20 @@ zx_status_t Factoryfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Bl
 
 Factoryfs::~Factoryfs() { Reset(); }
 
-zx_status_t Factoryfs::GetFsId(zx::event* out_fs_id) const {
-  ZX_DEBUG_ASSERT(fs_id_.is_valid());
-  return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
+zx::event Factoryfs::GetFsId() const {
+  zx::event result;
+  fs_id_.duplicate(ZX_RIGHTS_BASIC, &result);
+  return result;
+}
+
+uint64_t Factoryfs::GetFsIdLegacy() const {
+  zx_info_handle_basic_t handle_info;
+  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
+                                           nullptr, nullptr);
+      status == ZX_OK) {
+    return handle_info.koid;
+  }
+  return ZX_KOID_INVALID;
 }
 
 zx_status_t Factoryfs::InitDirectoryVmo() {

@@ -154,10 +154,10 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   BlockDevice* Device() const { return block_device_.get(); }
 
-  // Returns an unique identifier for this instance. Each invocation returns a new
-  // handle that references the same kernel object, which is used as the identifier.
-  zx_status_t GetFsId(zx::event* out_fs_id) const;
-  uint64_t GetFsIdLegacy() const { return fs_id_legacy_; }
+  // Returns an unique identifier for this instance. Each invocation returns a new handle that
+  // references the same kernel object which is used as the identifier. The returned event should
+  // be valid unless the kernel runs out of memory.
+  zx::event GetFsId() const;
 
   // Synchronizes the journal and then executes the callback from the journal thread.
   //
@@ -274,10 +274,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Adds a trim operation to |transaction|.
   void DeleteExtent(uint64_t start_block, uint64_t num_blocks, BlobTransaction& transaction) const;
 
-  // Creates an unique identifier for this instance. This is to be called only during
-  // "construction".
-  [[nodiscard]] zx_status_t CreateFsId();
-
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.
   void FsckAtEndOfTransaction();
@@ -326,13 +322,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   fzl::ResizeableVmoMapper info_mapping_;
   storage::Vmoid info_vmoid_;
 
-  // A unique identifier for this filesystem instance.
+  // This event's koid is used as a unique identifier for this filesystem instance. This must be
+  // an event because it's returned by the fs.Query interface.
   zx::event fs_id_;
-
-  // The numerical version of fs_id is used by the old |fuchsia.io/DirectoryAdmin| protocol,
-  // which is being deprecated in favor of |fuchsia.fs/Query|. It is derived from |fs_id|
-  // by inspecting its koid.
-  uint64_t fs_id_legacy_ = 0;
 
   std::shared_ptr<BlobfsMetrics> metrics_;  // Guaranteed non-null.
 

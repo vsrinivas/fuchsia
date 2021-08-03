@@ -31,22 +31,9 @@
 namespace memfs {
 namespace {
 
-const size_t kPageSize = static_cast<size_t>(zx_system_get_page_size());
-
-zx_status_t CreateID(uint64_t* out_id) {
-  zx::event id;
-  zx_status_t status = zx::event::create(0, &id);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx_info_handle_basic_t info;
-  status = id.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out_id = info.koid;
-  return ZX_OK;
+size_t GetPageSize() {
+  static const size_t kPageSize = static_cast<size_t>(zx_system_get_page_size());
+  return kPageSize;
 }
 
 }  // namespace
@@ -57,15 +44,18 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
     *actual_size = current_size;
     return ZX_OK;
   }
-  size_t aligned_len = fbl::round_up(request_size, kPageSize);
-  ZX_DEBUG_ASSERT(current_size % kPageSize == 0);
-  zx_status_t status;
+
+  size_t page_size = GetPageSize();
+  size_t aligned_len = fbl::round_up(request_size, page_size);
+  ZX_DEBUG_ASSERT(current_size % page_size == 0);
+
   if (!vmo.is_valid()) {
-    if ((status = zx::vmo::create(aligned_len, ZX_VMO_RESIZABLE, &vmo)) != ZX_OK) {
+    if (zx_status_t status = zx::vmo::create(aligned_len, ZX_VMO_RESIZABLE, &vmo);
+        status != ZX_OK) {
       return status;
     }
   } else {
-    if ((status = vmo.set_size(aligned_len)) != ZX_OK) {
+    if (zx_status_t status = vmo.set_size(aligned_len); status != ZX_OK) {
       return status;
     }
   }
@@ -76,24 +66,21 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
 
 zx_status_t Vfs::Create(const char* name, std::unique_ptr<memfs::Vfs>* out_vfs,
                         fbl::RefPtr<VnodeDir>* out_root) {
-  uint64_t id;
-  zx_status_t status = CreateID(&id);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(id, name));
-  fbl::RefPtr<VnodeDir> root = fbl::AdoptRef(new VnodeDir(fs.get()));
+  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(name));
+  fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get());
   std::unique_ptr<Dnode> dn = Dnode::Create(name, root);
   root->dnode_ = dn.get();
   fs->root_ = std::move(dn);
+
+  if (zx_status_t status = zx::event::create(0, &fs->fs_id_); status != ZX_OK)
+    return status;
 
   *out_root = std::move(root);
   *out_vfs = std::move(fs);
   return ZX_OK;
 }
 
-Vfs::Vfs(uint64_t id, const char* name) : fs::ManagedVfs(), fs_id_(id) {}
+Vfs::Vfs(const char* name) : fs::ManagedVfs() {}
 
 Vfs::~Vfs() = default;
 
@@ -101,6 +88,17 @@ zx_status_t Vfs::CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handl
                                zx_off_t off, zx_off_t len) {
   std::lock_guard<std::mutex> lock(vfs_lock_);
   return parent->CreateFromVmo(name, vmo, off, len);
+}
+
+uint64_t Vfs::GetFsId() const {
+  // The globally-unique filesystem ID is the koid of the fs_id_ event.
+  zx_info_handle_basic_t handle_info;
+  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
+                                           nullptr, nullptr);
+      status == ZX_OK) {
+    return handle_info.koid;
+  }
+  return ZX_KOID_INVALID;
 }
 
 std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;

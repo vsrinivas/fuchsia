@@ -289,10 +289,6 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(ERROR) << "Failed to attach info vmo: " << status;
     return zx::error(status);
   }
-  if ((status = fs->CreateFsId()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create fs_id: " << status;
-    return zx::error(status);
-  }
   if ((status = fs->InitializeVnodes()) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize Vnodes";
     return zx::error(status);
@@ -559,28 +555,13 @@ void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
   }
 }
 
-zx_status_t Blobfs::CreateFsId() {
-  ZX_DEBUG_ASSERT(!fs_id_legacy_);
-  ZX_DEBUG_ASSERT(!fs_id_.is_valid());
-  zx::event event;
-  zx_status_t status = zx::event::create(0, &event);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx_info_handle_basic_t info;
-  status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fs_id_ = std::move(event);
-  fs_id_legacy_ = info.koid;
-  return ZX_OK;
-}
-
-zx_status_t Blobfs::GetFsId(zx::event* out_fs_id) const {
+zx::event Blobfs::GetFsId() const {
   ZX_DEBUG_ASSERT(fs_id_.is_valid());
-  return fs_id_.duplicate(ZX_RIGHTS_BASIC, out_fs_id);
+
+  zx::event result;
+  // We can ignore the return value because we just return the empty event on failure.
+  fs_id_.duplicate(ZX_RIGHTS_BASIC, &result);
+  return result;
 }
 
 static_assert(sizeof(DirectoryCookie) <= sizeof(fs::VdirCookie),
@@ -757,18 +738,27 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
-constexpr std::string_view kFsName = "blobfs";
 void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
   *info = {};
   info->block_size = kBlobfsBlockSize;
   info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
-  info->fs_id = GetFsIdLegacy();
   info->total_bytes = Info().data_block_count * Info().block_size;
   info->used_bytes = Info().alloc_block_count * Info().block_size;
   info->total_nodes = Info().inode_count;
   info->used_nodes = Info().alloc_inode_count;
 
+  // The globally-unique filesystem ID is the koid of the fs_id_ event.
+  zx_info_handle_basic_t handle_info;
+  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
+                                           nullptr, nullptr);
+      status == ZX_OK) {
+    info->fs_id = handle_info.koid;
+  } else {
+    info->fs_id = ZX_KOID_INVALID;
+  }
+
+  static constexpr std::string_view kFsName = "blobfs";
   static_assert(kFsName.size() + 1 < fuchsia_io::wire::kMaxFsNameBuffer, "Blobfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
                           fuchsia_io::wire::kMaxFsNameBuffer - 1)] = '\0';
@@ -834,6 +824,8 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
   // It's easy to forget to initialize the PagedVfs in tests which will cause mysterious failures
   // later.
   ZX_ASSERT(vfs_->is_initialized());
+
+  zx::event::create(0, &fs_id_);
 }
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {

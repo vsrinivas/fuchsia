@@ -653,15 +653,16 @@ void Minfs::Sync(SyncCallback closure) {
 #ifdef __Fuchsia__
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
              std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-             uint64_t fs_id, const MountOptions& mount_options)
+             const MountOptions& mount_options)
     : bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
-      fs_id_(fs_id),
       journal_sync_task_([this]() { Sync(); }),
       limits_(sb_->Info()),
-      mount_options_(mount_options) {}
+      mount_options_(mount_options) {
+  zx::event::create(0, &fs_id_);
+}
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
              std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
@@ -822,22 +823,6 @@ zx_status_t Minfs::PurgeUnlinked() {
 }
 
 #ifdef __Fuchsia__
-zx_status_t Minfs::CreateFsId(uint64_t* out) {
-  zx::event event;
-  zx_status_t status = zx::event::create(0, &event);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx_info_handle_basic_t info;
-  status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out = info.koid;
-  return ZX_OK;
-}
-
 zx_status_t Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
   std::unique_ptr<Transaction> transaction;
   zx_status_t status = BeginTransaction(0, 0, &transaction);
@@ -1167,15 +1152,8 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   auto [block_allocator, inodes] = std::move(result).value();
 
 #ifdef __Fuchsia__
-  uint64_t id;
-  status = Minfs::CreateFsId(&id);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create fs_id: " << status;
-    return status;
-  }
-
   auto fs = std::unique_ptr<Minfs>(new Minfs(
-      std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), id, options));
+      std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), options));
   if (!options.readonly) {
     status = fs->InitializeJournal(std::move(journal_superblock));
     if (status != ZX_OK) {
@@ -1428,6 +1406,18 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     });
   });
 }
+
+uint64_t Minfs::GetFsId() const {
+  // The globally-unique filesystem ID is the koid of the fs_id_ event.
+  zx_info_handle_basic_t handle_info;
+  if (zx_status_t status = fs_id_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
+                                           nullptr, nullptr);
+      status == ZX_OK) {
+    return handle_info.koid;
+  }
+  return ZX_KOID_INVALID;
+}
+
 #endif
 
 uint32_t BlocksRequiredForInode(uint64_t inode_count) {

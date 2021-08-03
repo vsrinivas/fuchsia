@@ -49,13 +49,7 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   }
 
   if (request->query & FilesystemInfoQuery::kFsId) {
-    zx::event fs_id;
-    zx_status_t status = blobfs_->GetFsId(&fs_id);
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-      return;
-    }
-    filesystem_info.set_fs_id(allocator, std::move(fs_id));
+    filesystem_info.set_fs_id(allocator, blobfs_->GetFsId());
   }
 
   if (request->query & FilesystemInfoQuery::kBlockSize) {

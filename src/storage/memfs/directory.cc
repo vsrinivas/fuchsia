@@ -51,6 +51,7 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
   info->fs_id = vfs()->GetFsId();
+
   // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
   // which means you can have a memfs that stores more total bytes than the device has physical
   // memory. You can actually commit more total_bytes than the device has physical memory because

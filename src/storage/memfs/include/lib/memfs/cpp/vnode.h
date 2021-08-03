@@ -203,7 +203,7 @@ class Vfs : public fs::ManagedVfs {
   zx_status_t CreateFromVmo(VnodeDir* parent, std::string_view name, zx_handle_t vmo, zx_off_t off,
                             zx_off_t len);
 
-  uint64_t GetFsId() const { return fs_id_; }
+  uint64_t GetFsId() const;
 
   // Increases the size of the |vmo| to at least |request_size| bytes.
   // If the VMO is invalid, it will try to create it.
@@ -214,9 +214,11 @@ class Vfs : public fs::ManagedVfs {
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
 
  private:
-  explicit Vfs(uint64_t id, const char* name);
+  explicit Vfs(const char* name);
 
-  uint64_t fs_id_ = 0;
+  // This event's koid is used as a unique identifier for this filesystem instance. This must be
+  // an event because it's returned by the fs.Query interface.
+  zx::event fs_id_;
 
   // Since no directory contains the root, it is owned by the VFS object.
   std::unique_ptr<Dnode> root_;
