@@ -538,8 +538,8 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   const std::string cache_root = files::JoinPath(cache_dir_.path(), "delayed/path");
   store_ = std::make_unique<Store>(
       &tags_, info_context_,
-      /*temp_root=*/Store::Root{tmp_dir_.path(), StorageSize::Gigabytes(1u)},
-      /*persistent_root=*/Store::Root{cache_root, StorageSize::Gigabytes(1u)});
+      /*temp_root=*/Store::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
+      /*persistent_root=*/Store::Root{cache_root, StorageSize::Bytes(expected_report_size)});
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, std::string> attachments;
