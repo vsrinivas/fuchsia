@@ -18,4 +18,9 @@ pub trait DataCollection {
     fn uuid() -> Uuid
     where
         Self: Sized;
+    /// A human readable name for the collection which can be used in error
+    /// messages.
+    fn collection_name() -> String;
+    /// A  human readable description of what this collection contains.
+    fn collection_description() -> String;
 }

@@ -28,4 +28,11 @@ impl DataCollection for V2ComponentTree {
     fn uuid() -> Uuid {
         Uuid::parse_str("42a56c22-8e21-592c-2601-35a1e0ad970c").unwrap()
     }
+    fn collection_name() -> String {
+        "Component V2 Tree Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains a V2 topology map based on the root.cm and all v2 manifests found in the build."
+            .to_string()
+    }
 }

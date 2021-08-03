@@ -42,17 +42,25 @@ impl V2ComponentTreeDataCollector {
         let mut decls = HashMap::<String, ComponentDecl>::new();
         let mut urls = HashMap::<i32, String>::new();
 
-        let components = model.get::<Components>()?;
+        let components =
+            model.get::<Components>().context("Unable to retrieve components from the model")?;
         for component in components.entries.iter().filter(|x| x.version == 2) {
             urls.insert(component.id, component.url.clone());
         }
 
-        for manifest in model.get::<Manifests>()?.entries.iter() {
+        for manifest in model
+            .get::<Manifests>()
+            .context("Unable to retrieve manifests from the model")?
+            .entries
+            .iter()
+        {
             if let ManifestData::Version2(decl_base64) = &manifest.manifest {
                 match urls.remove(&manifest.component_id) {
                     Some(url) => {
-                        let result: Result<fsys2::ComponentDecl, fidl::Error> =
-                            decode_persistent(&base64::decode(&decl_base64)?);
+                        let result: Result<fsys2::ComponentDecl, fidl::Error> = decode_persistent(
+                            &base64::decode(&decl_base64)
+                                .context("Unable to decode base64 v2 manifest")?,
+                        );
                         match result {
                             Ok(decl) => {
                                 decls.insert(url, decl.fidl_into_native());
@@ -84,9 +92,11 @@ impl V2ComponentTreeDataCollector {
     ) -> Result<RuntimeConfig> {
         let zbi = &model.get::<Zbi>().context("Unable to find the zbi model.")?;
         match zbi.bootfs.get(config_path) {
-            Some(config_data) => Ok(RuntimeConfig::try_from(decode_persistent::<
-                component_internal::Config,
-            >(&config_data)?)?),
+            Some(config_data) => Ok(RuntimeConfig::try_from(
+                decode_persistent::<component_internal::Config>(&config_data)
+                    .context("Unable to decode runtime config")?,
+            )
+            .context("Unable to parse runtime config")?),
             None => Err(anyhow!("file {} not found in bootfs", config_path.to_string())),
         }
     }

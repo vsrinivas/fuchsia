@@ -51,6 +51,12 @@ impl DataCollection for Components {
     fn uuid() -> Uuid {
         Uuid::parse_str("559f0e26-5ff2-45ce-a5e8-ce0281da8681").unwrap()
     }
+    fn collection_name() -> String {
+        "Components Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the components found in all packages".to_string()
+    }
 }
 
 /// Defines a fuchsia package. Each package has a unique url. This provides an
@@ -91,6 +97,12 @@ impl DataCollection for Packages {
     fn uuid() -> Uuid {
         Uuid::parse_str("80d8b6ab-6ba5-45bc-9461-ba9cc9e0c55b").unwrap()
     }
+    fn collection_name() -> String {
+        "Packages Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the packages found in the build".to_string()
+    }
 }
 
 /// A component instance is a specific instantiation of a component. These
@@ -128,6 +140,12 @@ impl ComponentInstances {
 impl DataCollection for ComponentInstances {
     fn uuid() -> Uuid {
         Uuid::parse_str("d621f0a5-79e2-432d-8954-f5c9923c0544").unwrap()
+    }
+    fn collection_name() -> String {
+        "Component Instance Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the v1 instances of components found in the build".to_string()
     }
 }
 
@@ -276,6 +294,12 @@ impl DataCollection for Manifests {
     fn uuid() -> Uuid {
         Uuid::parse_str("324da08b-5ab8-43f1-8ff1-4687f32c7712").unwrap()
     }
+    fn collection_name() -> String {
+        "Manifest Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the v1 & v2 manifests found in the build".to_string()
+    }
 }
 
 // TODO(benwright) - Add support for "first class" capabilities such as runners,
@@ -319,6 +343,12 @@ impl DataCollection for Routes {
     fn uuid() -> Uuid {
         Uuid::parse_str("6def84c2-afea-458d-bd36-7dc550e84e90").unwrap()
     }
+    fn collection_name() -> String {
+        "Routes v1 Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the v1 component routes found in the build".to_string()
+    }
 }
 
 /// Defines either a FIDL or Directory protocol with some interface name such
@@ -357,6 +387,12 @@ impl DataCollection for Protocols {
     fn uuid() -> Uuid {
         Uuid::parse_str("8a14a6ce-3357-43d7-b4fb-7e005062dfda").unwrap()
     }
+    fn collection_name() -> String {
+        "Protocols v1 Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the v1 protocols found in the build".to_string()
+    }
 }
 
 /// Defines all of the parsed information in the ZBI.
@@ -376,6 +412,13 @@ pub struct Zbi {
 impl DataCollection for Zbi {
     fn uuid() -> Uuid {
         Uuid::parse_str("df9ec25f-63b7-4d88-8e79-5ff9deb0afa8").unwrap()
+    }
+    fn collection_name() -> String {
+        "ZBI  Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the items found in the zircon boot image (ZBI) in the update package"
+            .to_string()
     }
 }
 
@@ -401,5 +444,11 @@ impl Sysmgr {
 impl DataCollection for Sysmgr {
     fn uuid() -> Uuid {
         Uuid::parse_str("422bcffa-395d-4ed6-a9ad-960bb11f79c2").unwrap()
+    }
+    fn collection_name() -> String {
+        "Sysmgr Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "Contains all the service and app mappings found in the sysmgr config".to_string()
     }
 }

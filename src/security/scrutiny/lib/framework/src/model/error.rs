@@ -10,8 +10,8 @@ pub enum ModelError {
     ModelVersionIncompatible { expected: usize, found: usize },
     #[error("expected magic: {} found magic {}", expected, found)]
     ModelMagicIncompatible { expected: String, found: String },
-    #[error("expected collection not found: {}", expected)]
-    ModelCollectionNotFound { expected: String },
+    #[error("data collection not found in model: {}. description: {}", name, description)]
+    ModelCollectionNotFound { name: String, description: String },
 }
 
 impl ModelError {
@@ -26,7 +26,10 @@ impl ModelError {
         ModelError::ModelMagicIncompatible { expected: expected.into(), found: found.into() }
     }
 
-    pub fn model_collection_not_found(expected: impl Into<String>) -> ModelError {
-        ModelError::ModelCollectionNotFound { expected: expected.into() }
+    pub fn model_collection_not_found(
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> ModelError {
+        ModelError::ModelCollectionNotFound { name: name.into(), description: description.into() }
     }
 }

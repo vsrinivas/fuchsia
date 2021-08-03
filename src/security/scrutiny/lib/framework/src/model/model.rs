@@ -111,7 +111,8 @@ impl DataModel {
                 Ok(result)
             } else {
                 Err(Error::new(ModelError::model_collection_not_found(
-                    T::uuid().to_hyphenated().to_string(),
+                    T::collection_name(),
+                    T::collection_description(),
                 )))
             }
         } else {
@@ -123,12 +124,14 @@ impl DataModel {
                     Ok(result)
                 } else {
                     Err(Error::new(ModelError::model_collection_not_found(
-                        T::uuid().to_hyphenated().to_string(),
+                        T::collection_name(),
+                        T::collection_description(),
                     )))
                 }
             } else {
                 Err(Error::new(ModelError::model_collection_not_found(
-                    T::uuid().to_hyphenated().to_string(),
+                    T::collection_name(),
+                    T::collection_description(),
                 )))
             }
         }
@@ -189,5 +192,11 @@ impl Scrutiny {
 impl DataCollection for Scrutiny {
     fn uuid() -> Uuid {
         Uuid::parse_str(STORE_UUID).unwrap()
+    }
+    fn collection_name() -> String {
+        "Scrutiny Collection".to_string()
+    }
+    fn collection_description() -> String {
+        "A trivial collection which contains the scrutiny data model version.".to_string()
     }
 }
