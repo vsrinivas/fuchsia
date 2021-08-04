@@ -8,8 +8,7 @@ use {
     fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{builder::*, mock, Moniker},
-    futures::{channel::oneshot, lock::Mutex, StreamExt, TryStreamExt},
-    std::sync::Arc,
+    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
 };
 
 const V1_ECHO_CLIENT_URL: &'static str =
@@ -28,15 +27,18 @@ const DEFAULT_ECHO_STR: &'static str = "Hippos rule!";
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_uncle_test() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
         .add_component(
             "echo-server",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+                Box::pin(echo_server_mock(
+                    DEFAULT_ECHO_STR,
+                    send_echo_server_called.clone(),
+                    mock_handles,
+                ))
             }),
         )
         .await?
@@ -60,27 +62,22 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_siblings_test() -> Result<(), Error> {
     // [START mock_component_example]
-    // Create a new oneshot for passing a message from the echo server function
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-
-    // Wrap the sender in an Arc, Mutex, and Option so that it can safely be sent
-    // across threads, only interacted with by one thread at a time, and removed
-    // from the mutex to be consumed.
-    let send_echo_server_called = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    // Create a new mpsc channel for passing a message from the echo server function
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     // Build a new realm
     let mut builder = RealmBuilder::new().await?;
     builder
-        // Add the echo server, which is implemented by the echo_server_mock
-        // function (defined below). Give this function access to the oneshot
-        // created above, along with the mock component's handles
+        // Add the echo server, which is implemented by the echo_server_mock function (defined
+        // below). Give this function access to the channel created above, along with the mock
+        // component's handles
         .add_component(
             "a",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
@@ -116,8 +113,8 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
     // Create the realm
     let _child_instance = builder.build().create().await?;
 
-    // Wait for the oneshot we created above to receive a message
-    receive_echo_server_called.await?;
+    // Wait for the channel we created above to receive a message
+    assert!(receive_echo_server_called.next().await.is_some());
     // [END mock_component_example]
     Ok(())
 }
@@ -213,8 +210,7 @@ async fn examples() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_cousins_test() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
@@ -226,7 +222,11 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
         .add_component(
             "parent-2/echo-server",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+                Box::pin(echo_server_mock(
+                    DEFAULT_ECHO_STR,
+                    send_echo_server_called.clone(),
+                    mock_handles,
+                ))
             }),
         )
         .await?
@@ -245,21 +245,24 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn mock_component_with_a_child() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
         .add_component(
             "echo-server",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+                Box::pin(echo_server_mock(
+                    DEFAULT_ECHO_STR,
+                    send_echo_server_called.clone(),
+                    mock_handles,
+                ))
             }),
         )
         .await?
@@ -283,7 +286,7 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
 }
 
@@ -311,8 +314,7 @@ async fn relative_echo_realm() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn altered_echo_client_args() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
@@ -321,7 +323,11 @@ async fn altered_echo_client_args() -> Result<(), Error> {
         .override_component(
             "echo_server",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock("Whales rule!", sender.clone(), mock_handles))
+                Box::pin(echo_server_mock(
+                    "Whales rule!",
+                    send_echo_server_called.clone(),
+                    mock_handles,
+                ))
             }),
         )
         .await?
@@ -347,7 +353,7 @@ async fn altered_echo_client_args() -> Result<(), Error> {
     realm.set_component(&"echo_client".into(), echo_client_decl).await?;
     let _realm_instance = realm.create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
 
     Ok(())
 }
@@ -357,25 +363,26 @@ async fn echo_clients() -> Result<(), Error> {
     // This test runs a series of echo clients from different sources against a mock echo server,
     // confirming that each client successfully connects to the server.
 
-    let (send_echo_client_results, receive_echo_client_results) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
+    let (send_echo_client_results, mut receive_echo_client_results) = mpsc::channel(1);
     let client_sources = vec![
         ComponentSource::legacy_url(V1_ECHO_CLIENT_URL),
         ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
         ComponentSource::url(V2_ECHO_CLIENT_RELATIVE_URL),
-        ComponentSource::mock(move |h| Box::pin(echo_client_mock(sender.clone(), h))),
+        ComponentSource::mock(move |h| {
+            Box::pin(echo_client_mock(send_echo_client_results.clone(), h))
+        }),
     ];
 
+    let mut client_counter = 0;
     for client_source in client_sources {
-        let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-        let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+        let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
         let mut builder = RealmBuilder::new().await?;
         builder
             .add_component(
                 "echo-server",
                 ComponentSource::mock(move |h| {
-                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, send_echo_server_called.clone(), h))
                 }),
             )
             .await?
@@ -397,10 +404,18 @@ async fn echo_clients() -> Result<(), Error> {
 
         let _child_instance = builder.build().create().await?;
 
-        receive_echo_server_called.await?;
+        assert!(
+            receive_echo_server_called.next().await.is_some(),
+            "failed to observe the mock server report a successful connection from client #{}",
+            client_counter
+        );
+        client_counter += 1;
     }
 
-    receive_echo_client_results.await?;
+    assert!(
+        receive_echo_client_results.next().await.is_some(),
+        "failed to observe the mock client report success"
+    );
     Ok(())
 }
 
@@ -409,25 +424,26 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
     // This test is identical to the one preceding it, but component are launched in a nested
     // component manager.
 
-    let (send_echo_client_results, receive_echo_client_results) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
+    let (send_echo_client_results, mut receive_echo_client_results) = mpsc::channel(1);
     let client_sources = vec![
         ComponentSource::url(V2_ECHO_CLIENT_ABSOLUTE_URL),
         ComponentSource::url(V2_ECHO_CLIENT_RELATIVE_URL),
         ComponentSource::legacy_url(V1_ECHO_CLIENT_URL),
-        ComponentSource::mock(move |h| Box::pin(echo_client_mock(sender.clone(), h))),
+        ComponentSource::mock(move |h| {
+            Box::pin(echo_client_mock(send_echo_client_results.clone(), h))
+        }),
     ];
 
+    let mut client_counter = 0;
     for client_source in client_sources {
-        let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-        let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+        let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
         let mut builder = RealmBuilder::new().await?;
         builder
             .add_eager_component(
                 "echo-server",
                 ComponentSource::mock(move |h| {
-                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+                    Box::pin(echo_server_mock(DEFAULT_ECHO_STR, send_echo_server_called.clone(), h))
                 }),
             )
             .await?
@@ -452,10 +468,17 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
             .create_in_nested_component_manager("#meta/component_manager.cm")
             .await?;
 
-        receive_echo_server_called.await?;
+        assert!(
+            receive_echo_server_called.next().await.is_some(),
+            "failed to observe the mock server report a successful connection from client #{}",
+            client_counter
+        );
+        client_counter += 1;
     }
-
-    receive_echo_client_results.await?;
+    assert!(
+        receive_echo_client_results.next().await.is_some(),
+        "failed to observe the mock client report success"
+    );
     Ok(())
 }
 
@@ -464,21 +487,20 @@ async fn echo_servers() -> Result<(), Error> {
     // This test runs a series of echo servers from different sources against a mock echo client,
     // confirming that the client can successfully connect to and use each server.
 
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let server_sources = vec![
         ComponentSource::legacy_url(V1_ECHO_SERVER_URL),
         ComponentSource::url(V2_ECHO_SERVER_ABSOLUTE_URL),
         ComponentSource::url(V2_ECHO_SERVER_RELATIVE_URL),
         ComponentSource::mock(move |h| {
-            Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), h))
+            Box::pin(echo_server_mock(DEFAULT_ECHO_STR, send_echo_server_called.clone(), h))
         }),
     ];
 
+    let mut server_counter = 0;
     for server_source in server_sources {
-        let (send_echo_client_results, receive_echo_client_results) = oneshot::channel();
-        let sender = Arc::new(Mutex::new(Some(send_echo_client_results)));
+        let (send_echo_client_results, mut receive_echo_client_results) = mpsc::channel(1);
 
         let mut builder = RealmBuilder::new().await?;
         builder
@@ -486,7 +508,9 @@ async fn echo_servers() -> Result<(), Error> {
             .await?
             .add_eager_component(
                 "echo-client",
-                ComponentSource::mock(move |h| Box::pin(echo_client_mock(sender.clone(), h))),
+                ComponentSource::mock(move |h| {
+                    Box::pin(echo_client_mock(send_echo_client_results.clone(), h))
+                }),
             )
             .await?
             .add_route(CapabilityRoute {
@@ -505,31 +529,38 @@ async fn echo_servers() -> Result<(), Error> {
 
         let _child_instance = builder.build().create().await?;
 
-        receive_echo_client_results.await?;
+        assert!(
+            receive_echo_client_results.next().await.is_some(),
+            "failed to observe the mock client report success for server #{}",
+            server_counter
+        );
+        server_counter += 1;
     }
 
-    receive_echo_server_called.await?;
+    assert!(
+        receive_echo_server_called.next().await.is_some(),
+        "failed to observe the mock server report a successful connection from a client"
+    );
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_use_from_url_child_test() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
         .add_eager_component(
             "echo-client",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                let sender = sender.clone();
+                let mut send_echo_server_called = send_echo_server_called.clone();
                 Box::pin(async move {
                     let echo_proxy = mock_handles.connect_to_service::<fecho::EchoMarker>()?;
                     assert_eq!(
                         Some("hello".to_string()),
                         echo_proxy.echo_string(Some("hello")).await?
                     );
-                    sender.lock().await.take().unwrap().send(()).expect("failed to send results");
+                    send_echo_server_called.send(()).await.expect("failed to send results");
                     Ok(())
                 })
             }),
@@ -552,14 +583,13 @@ async fn protocol_with_use_from_url_child_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
-    let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
-    let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let mut builder = RealmBuilder::new().await?;
     builder
@@ -577,7 +607,11 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
         .add_component(
             "echo-client/echo-server",
             ComponentSource::mock(move |mock_handles: mock::MockHandles| {
-                Box::pin(echo_server_mock(DEFAULT_ECHO_STR, sender.clone(), mock_handles))
+                Box::pin(echo_server_mock(
+                    DEFAULT_ECHO_STR,
+                    send_echo_server_called.clone(),
+                    mock_handles,
+                ))
             }),
         )
         .await?
@@ -596,7 +630,7 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
         })?;
     let _child_instance = builder.build().create().await?;
 
-    receive_echo_server_called.await?;
+    assert!(receive_echo_server_called.next().await.is_some());
     Ok(())
 }
 
@@ -606,7 +640,7 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
 // once it receives one echo request.
 async fn echo_server_mock(
     expected_echo_string: &'static str,
-    send_echo_server_called: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    send_echo_server_called: mpsc::Sender<()>,
     mock_handles: mock::MockHandles,
 ) -> Result<(), Error> {
     // Create a new ServiceFs to host FIDL protocols from
@@ -615,7 +649,7 @@ async fn echo_server_mock(
 
     // Add the echo protocol to the ServiceFs
     fs.dir("svc").add_fidl_service(move |mut stream: fecho::EchoRequestStream| {
-        let send_echo_server_called = send_echo_server_called.clone();
+        let mut send_echo_server_called = send_echo_server_called.clone();
         tasks.push(fasync::Task::local(async move {
             while let Some(fecho::EchoRequest::EchoString { value, responder }) =
                 stream.try_next().await.expect("failed to serve echo service")
@@ -624,15 +658,9 @@ async fn echo_server_mock(
                 // Send the received string back to the client
                 responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
 
-                // Take the sender from send_echo_server_called and pass a
-                // message through it
-                send_echo_server_called
-                    .lock()
-                    .await
-                    .take()
-                    .unwrap()
-                    .send(())
-                    .expect("failed to send results");
+                // Use send_echo_server_called to report back that we successfully received a
+                // message and it aligned with our expectations
+                send_echo_server_called.send(()).await.expect("failed to send results");
             }
         }));
     });
@@ -645,12 +673,12 @@ async fn echo_server_mock(
 // [END echo_server_mock]
 
 async fn echo_client_mock(
-    send_echo_client_results: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    mut send_echo_client_results: mpsc::Sender<()>,
     mock_handles: mock::MockHandles,
 ) -> Result<(), Error> {
     let echo = mock_handles.connect_to_service::<fecho::EchoMarker>()?;
     let out = echo.echo_string(Some(DEFAULT_ECHO_STR)).await?;
-    send_echo_client_results.lock().await.take().unwrap().send(()).expect("failed to send results");
+    send_echo_client_results.send(()).await.expect("failed to send results");
     if Some(DEFAULT_ECHO_STR.to_string()) != out {
         return Err(format_err!("unexpected echo result: {:?}", out));
     }
