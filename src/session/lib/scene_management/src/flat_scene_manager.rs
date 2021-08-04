@@ -51,14 +51,21 @@ pub struct FlatSceneManager {
     /// See comment for a11y_proxy_view_holder.
     a11y_proxy_view: scenic::View,
 
+    /// Proxy session. The proxy view must exist in a separate session from the root view since
+    /// its parent is in a different session.
+    a11y_proxy_session: scenic::SessionPtr,
+
     /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_node: Option<scenic::EntityNode>,
 
     /// The shapenode for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_shape: Option<scenic::ShapeNode>,
 
-    /// Presentation sender used to request presents.
+    /// Presentation sender used to request presents for the root session.
     presentation_sender: PresentationSender,
+
+    /// Presentation sender used to request presents for the a11y proxy session.
+    a11y_proxy_presentation_sender: PresentationSender,
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
@@ -85,6 +92,7 @@ impl SceneManager for FlatSceneManager {
         viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
         let (session, focuser) = FlatSceneManager::create_session(&scenic)?;
+        let (a11y_proxy_session, _a11y_proxy_focuser) = FlatSceneManager::create_session(&scenic)?;
 
         let ambient_light = FlatSceneManager::create_ambient_light(&session);
         let scene = FlatSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
@@ -123,7 +131,7 @@ impl SceneManager for FlatSceneManager {
             Some(String::from("a11y proxy view holder")),
         );
         let a11y_proxy_view = scenic::View::new3(
-            session.clone(),
+            a11y_proxy_session.clone(),
             proxy_token_pair.view_token,
             a11y_proxy_viewref_pair.control_ref,
             a11y_proxy_viewref_pair.view_ref,
@@ -145,9 +153,15 @@ impl SceneManager for FlatSceneManager {
 
         let (sender, receiver) = unbounded();
         scene_manager::start_presentation_loop(sender.clone(), receiver, Arc::downgrade(&session));
-        sender
-            .unbounded_send(PresentationMessage::RequestPresent)
-            .expect("failed to send RequestPresent message");
+        FlatSceneManager::request_present(&sender);
+
+        let (a11y_proxy_sender, a11y_proxy_receiver) = unbounded();
+        scene_manager::start_presentation_loop(
+            a11y_proxy_sender.clone(),
+            a11y_proxy_receiver,
+            Arc::downgrade(&a11y_proxy_session),
+        );
+        FlatSceneManager::request_present(&a11y_proxy_sender);
 
         Ok(FlatSceneManager {
             session,
@@ -159,10 +173,12 @@ impl SceneManager for FlatSceneManager {
             views: vec![],
             a11y_proxy_view_holder,
             a11y_proxy_view,
+            a11y_proxy_session,
             display_metrics,
             cursor_node: None,
             cursor_shape: None,
             presentation_sender: sender,
+            a11y_proxy_presentation_sender: a11y_proxy_sender,
         })
     }
 
@@ -180,7 +196,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, name);
-        self.request_present();
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
     }
@@ -198,7 +214,7 @@ impl SceneManager for FlatSceneManager {
             &mut viewref_pair.view_ref,
         )?;
         self.add_view(token_pair.view_holder_token, Some("root".to_string()));
-        self.request_present();
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
     }
@@ -234,7 +250,7 @@ impl SceneManager for FlatSceneManager {
         let proxy_token_pair = scenic::ViewTokenPair::new()?;
         let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
         self.a11y_proxy_view = scenic::View::new3(
-            self.session.clone(),
+            self.a11y_proxy_session.clone(),
             proxy_token_pair.view_token,
             a11y_proxy_viewref_pair.control_ref,
             a11y_proxy_viewref_pair.view_ref,
@@ -246,7 +262,8 @@ impl SceneManager for FlatSceneManager {
             self.a11y_proxy_view.add_child(&*view_holder_node);
         }
 
-        self.request_present();
+        FlatSceneManager::request_present(&self.presentation_sender);
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(proxy_token_pair.view_holder_token)
     }
@@ -267,7 +284,7 @@ impl SceneManager for FlatSceneManager {
 
         let (x, y) = location.pips();
         self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
-        self.request_present();
+        FlatSceneManager::request_present(&self.presentation_sender);
     }
 
     fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
@@ -279,7 +296,7 @@ impl SceneManager for FlatSceneManager {
 
         self.cursor_node().add_child(&shape);
         self.cursor_shape = Some(shape);
-        self.request_present();
+        FlatSceneManager::request_present(&self.presentation_sender);
     }
 }
 
@@ -434,13 +451,13 @@ impl FlatSceneManager {
     /// - `name`: The debugging name for the created view.
     fn add_view(&mut self, view_holder_token: ui_views::ViewHolderToken, name: Option<String>) {
         let view_holder = FlatSceneManager::create_view_holder(
-            &self.session,
+            &self.a11y_proxy_session,
             view_holder_token,
             self.display_metrics,
             name,
         );
 
-        let view_holder_node = scenic::EntityNode::new(self.session.clone());
+        let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
         view_holder_node.attach(&view_holder);
         view_holder_node.set_translation(0.0, 0.0, 0.0);
 
@@ -462,8 +479,8 @@ impl FlatSceneManager {
     }
 
     /// Requests that all previously enqueued operations are presented.
-    fn request_present(&mut self) {
-        self.presentation_sender
+    fn request_present(presentation_sender: &PresentationSender) {
+        presentation_sender
             .unbounded_send(PresentationMessage::RequestPresent)
             .expect("failed to send RequestPresent message");
     }
