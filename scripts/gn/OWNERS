@@ -1,4 +1,4 @@
-include build/OWNERS
+include /build/OWNERS
 yifeit@google.com
 brunodalbo@google.com
 
