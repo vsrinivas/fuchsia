@@ -1049,7 +1049,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:114
+From //zircon/kernel/params.gni:119
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1086,6 +1086,15 @@ From //out/not-default/args.gn:5
 **Overridden from the default:** `false`
 
 From //build/toolchain/rbe.gni:28
+
+### enable_virtual_heap
+Enables the use of a virtually managed kernel heap instead of one managed
+directly out of the physmap. The virtual heap may have some performance and
+memory usage overheads, but will not exhaust due to fragmentation.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/params.gni:91
 
 ### ermine_app_entries
 Build arg that allows overriding the default set of application entries
@@ -1782,25 +1791,25 @@ value regardless of whether persistent tracing is enabled or not.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:103
+From //zircon/kernel/params.gni:108
 
 ### jtrace_last_entry_storage
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:104
+From //zircon/kernel/params.gni:109
 
 ### jtrace_target_buffer_size
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:105
+From //zircon/kernel/params.gni:110
 
 ### jtrace_use_large_entries
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:106
+From //zircon/kernel/params.gni:111
 
 ### kernel_base
 
@@ -2937,7 +2946,7 @@ cacheline size of the target architecture.
 
 **Current value (from the default):** `128`
 
-From //zircon/kernel/params.gni:93
+From //zircon/kernel/params.gni:98
 
 ### platform_enable_user_pci
 
@@ -3988,6 +3997,15 @@ Enable verbose logging in virtmagma-related code
 **Current value (from the default):** `false`
 
 From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
+
+### virtual_alloc_host_size_shift
+Set the page size shift of the host. This is used when running the allocator
+in a host environment where page size constants may not exist. If this does
+not much the actual host page size then a run time error will occur.
+
+**Current value (from the default):** `12`
+
+From //zircon/kernel/lib/virtual_alloc/BUILD.gn:13
 
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
