@@ -436,6 +436,9 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
 ///
 /// If no remote node has any interest in an address the netstack is attempting to assign to
 /// an interface, DAD should succeed.
+// TODO(https://fxbug.dev/82046): Rewrite this test using fuchsia.net.interfaces.admin. Add
+// addresses using Control.AddAddress and watch for DAD_FAILED using
+// AddressStateProvider.OnAddressRemoved instead of the timeouts below.
 #[variants_test]
 async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     /// Makes sure that `ipv6_consts::LINK_LOCAL_ADDR` is not assigned to the interface after the
@@ -449,10 +452,9 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         let duration = EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
             + ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT;
         let iterations =
-            (duration + STEP - zx::Duration::from_nanos(1)).into_micros() / STEP.into_micros();
-        for _ in 0..iterations {
-            let () = fasync::Timer::new(fasync::Time::after(STEP)).await;
-        }
+            (duration + STEP - zx::Duration::from_nanos(1)).into_nanos() / STEP.into_nanos();
+        let iterations = usize::try_from(iterations).expect("integer conversion");
+        let () = fasync::Interval::new(STEP).take(iterations).collect().await;
 
         let addr = net::Subnet {
             addr: net::IpAddress::Ipv6(net::Ipv6Address {
@@ -460,12 +462,8 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             }),
             prefix_len: 64,
         };
-        assert!(!iface
-            .get_addrs()
-            .await
-            .expect("error getting interfacea addresses")
-            .iter()
-            .any(|a| a == &addr));
+        let addrs = iface.get_addrs().await.expect("error getting interface addresses");
+        assert!(!addrs.contains(&addr), "DAD did not fail, found {:?} in {:?}", addr, addrs);
     }
 
     /// Transmits a Neighbor Solicitation message and expects `ipv6_consts::LINK_LOCAL_ADDR`
@@ -869,7 +867,8 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state).expect("error getting interfaces state event stream"),
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("error getting interfaces state event stream"),
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
         |fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
             // We have to make sure 2 things:
@@ -878,13 +877,17 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
             // 2. The last tried address should be among the addresses for the interface.
             let (slaac_addrs, has_target_addr) = addresses.iter().fold(
                 (0, false),
-                |(mut slaac_addrs, mut has_target_addr), &fidl_fuchsia_net_interfaces_ext::Address { addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ }, valid_until: _ }| {
+                |(mut slaac_addrs, mut has_target_addr),
+                 &fidl_fuchsia_net_interfaces_ext::Address {
+                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
+                 }| {
                     match addr {
                         net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
                             let configured_addr = net_types_ip::Ipv6Addr::new(addr);
-                            assert!(configured_addr != tried_address,
-                                "unexpected address ({}) assigned to the interface which previously failed DAD",
-                                configured_addr
+                            assert_ne!(
+                                configured_addr, tried_address,
+                                "address which previously failed DAD was assigned"
                             );
                             if ipv6_consts::PREFIX.contains(&configured_addr) {
                                 slaac_addrs += 1;
@@ -1001,7 +1004,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
                 };
 
                 let group_addr = report.body().group_addr;
-                assert!(group_addr.is_multicast(),  "MLD reports must only be sent for multicast addresses; group_addr = {}", group_addr);
+                assert!(group_addr.is_multicast(), "MLD reports must only be sent for multicast addresses; group_addr = {}", group_addr);
 
                 if group_addr != *snmc {
                     // We are only interested in the report for the solicited node
