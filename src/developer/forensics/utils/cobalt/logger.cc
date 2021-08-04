@@ -65,18 +65,6 @@ Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
   ConnectToLogger(std::move(logger_request));
 }
 
-void Logger::Shutdown() {
-  shut_down_ = true;
-
-  pending_events_.clear();
-  timer_starts_usecs_.clear();
-
-  reconnect_task_.Cancel();
-
-  logger_factory_.Unbind();
-  logger_.Unbind();
-}
-
 void Logger::ConnectToLogger(
     ::fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> logger_request) {
   // Connect to the LoggerFactory.
@@ -129,7 +117,6 @@ void Logger::RetryConnectingToLogger() {
 }
 
 void Logger::LogEvent(Event event) {
-  FX_CHECK(!shut_down_);
   if (pending_events_.size() >= kMaxPendingEvents) {
     FX_LOGS(INFO) << StringPrintf("Dropping Cobalt event %s - too many pending events (%lu)",
                                   event.ToString().c_str(), pending_events_.size());
@@ -142,8 +129,6 @@ void Logger::LogEvent(Event event) {
 }
 
 uint64_t Logger::StartTimer() {
-  FX_CHECK(!shut_down_);
-
   const uint64_t timer_id = next_event_id_++;
   timer_starts_usecs_.insert(std::make_pair(timer_id, CurrentTimeUSecs(clock_)));
   return timer_id;

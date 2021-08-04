@@ -71,9 +71,6 @@ class Logger {
     LogEvent(Event(dimension, duration.to_usecs()));
   }
 
-  // Immediately shutdown |Logger| so it can no longer be used to log events.
-  void Shutdown();
-
  private:
   void ConnectToLogger(
       ::fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> logger_request);
@@ -100,7 +97,6 @@ class Logger {
   fxl::CancelableClosure reconnect_task_;
 
   uint64_t next_event_id_ = 0;
-  bool shut_down_ = false;
 };
 
 }  // namespace cobalt
