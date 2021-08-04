@@ -233,6 +233,14 @@ config_data("feedback_data_limit_inspect_data") {
   outputs = [ "feedback_data/limit_inspect_data" ]
 }
 
+config_data("feedback_remote_device_id_provider") {
+  for_pkg = "forensics"
+
+  sources = [ "feedback/configs/remote_device_id_provider" ]
+
+  outputs = [ "feedback/remote_device_id_provider" ]
+}
+
 config_data("exceptions_enable_jitd_on_startup") {
   for_pkg = "forensics"
 
