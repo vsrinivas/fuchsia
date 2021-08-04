@@ -239,11 +239,11 @@ impl MutableConnection {
         };
 
         if path.is_empty() {
-            return responder(Status::BAD_PATH);
+            return responder(Status::INVALID_ARGS);
         }
 
         if !path.is_single_component() {
-            return responder(Status::BAD_PATH);
+            return responder(Status::INVALID_ARGS);
         }
 
         let must_be_directory = match options {

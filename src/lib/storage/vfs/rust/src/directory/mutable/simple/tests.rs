@@ -103,7 +103,7 @@ fn unlink_does_not_traverse() {
 
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
-        assert_unlink_err!(&proxy, "etc/fstab", Status::BAD_PATH);
+        assert_unlink_err!(&proxy, "etc/fstab", Status::INVALID_ARGS);
 
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 

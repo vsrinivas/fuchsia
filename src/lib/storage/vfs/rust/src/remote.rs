@@ -8,7 +8,6 @@
 mod tests;
 
 use crate::{
-    common::send_on_open_with_error,
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
     path::Path,
@@ -22,7 +21,6 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_FLAG_POSIX_WRITABLE,
     },
-    fuchsia_zircon::Status,
     std::sync::Arc,
 };
 
@@ -62,11 +60,7 @@ where
 pub fn remote_dir(dir: DirectoryProxy) -> Arc<Remote> {
     remote_boxed_with_type(
         Box::new(move |_scope, flags, mode, path, server_end| {
-            if path.is_empty() {
-                let _ = dir.open(flags, mode, ".", server_end);
-            } else {
-                let _ = dir.open(flags, mode, &path.into_string(), server_end);
-            }
+            let _ = dir.open(flags, mode, path.remainder(), server_end);
         }),
         DIRENT_TYPE_DIRECTORY,
     )
@@ -76,8 +70,8 @@ pub fn remote_dir(dir: DirectoryProxy) -> Arc<Remote> {
 /// done by calling a routing function of type [`RoutingFn`] provided at the time of construction.
 /// The remote node itself doesn't do any flag validation when forwarding the open call.
 ///
-/// When a remote node is opened with OPEN_FLAG_NODE_REFERENCE or OPEN_FLAG_NO_REMOTE, a connection
-/// to this local node is created instead.
+/// When a remote node is opened with OPEN_FLAG_NO_REMOTE, a connection to this local node is
+/// created instead.
 pub struct Remote {
     open: RoutingFn,
     dirent_type: u8,
@@ -89,10 +83,19 @@ impl Remote {
     fn open_as_node(
         self: Arc<Self>,
         scope: ExecutionScope,
-        flags: u32,
+        mut flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        // We are reusing the service connection implementation, but to get it to work, we must
+        // strip the OPEN_FLAG_NO_REMOTE flag (since that isn't permitted for services).  Our
+        // implementation also only allows access if both OPEN_RIGHT_READABLE and
+        // OPEN_WRITE_WRITABLE is set, or it's OPEN_FLAG_NODE_REFERENCE, so, for now, we hack the
+        // flags to be OPEN_FLAG_NODE_REFERENCE which will cause the rights to be ignored.
+        if flags & OPEN_FLAG_NO_REMOTE != 0 {
+            flags &= !OPEN_FLAG_NO_REMOTE;
+            flags |= OPEN_FLAG_NODE_REFERENCE;
+        }
         Connection::create_connection(scope, flags, mode, server_end);
     }
 
@@ -119,17 +122,7 @@ impl DirectoryEntry for Remote {
         path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        if flags & OPEN_FLAG_NODE_REFERENCE != 0 || flags & OPEN_FLAG_NO_REMOTE != 0 {
-            if !path.is_empty() {
-                send_on_open_with_error(flags, server_end, Status::BAD_PATH);
-                return;
-            }
-            // for the purposes of the rust vfs, NO_REMOTE is essentially the same as
-            // NODE_REFERENCE.
-            if flags & OPEN_FLAG_NO_REMOTE != 0 {
-                flags &= !OPEN_FLAG_NO_REMOTE;
-                flags |= OPEN_FLAG_NODE_REFERENCE;
-            }
+        if flags & OPEN_FLAG_NO_REMOTE != 0 && path.is_empty() {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
             // Temporarily pass old POSIX flag as the remote may not support the new flags yet.

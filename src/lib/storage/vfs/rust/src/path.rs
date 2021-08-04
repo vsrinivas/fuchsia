@@ -150,12 +150,23 @@ impl Path {
     }
 
     /// Converts this `Path` into a `String` holding the rest of the path.  If [`Self::next()`] was
-    /// called, this would cause reallocation.
+    /// called, this would cause reallocation.  Note that if there are no more components, this will
+    /// return an empty string, which is *not* a valid path for fuchsia.io.
     pub fn into_string(self) -> String {
         if self.next == 0 {
             self.inner
         } else {
             self.inner.split_at(self.next).1.to_string()
+        }
+    }
+
+    /// Like `into_string` but returns a reference and the path returned is valid for fuchsia.io
+    /// i.e. if there are no remaining components, "." is returned.
+    pub fn remainder(&self) -> &str {
+        if self.is_empty() {
+            "."
+        } else {
+            &self.inner[self.next..]
         }
     }
 }
@@ -223,6 +234,7 @@ mod tests {
                 assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -241,6 +253,7 @@ mod tests {
                 assert_eq!(path.next(), Some("a"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -259,6 +272,7 @@ mod tests {
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -277,6 +291,7 @@ mod tests {
                 assert_eq!(path.next(), Some("some"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -298,6 +313,7 @@ mod tests {
                 assert_eq!(path.next(), Some("b"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -319,6 +335,7 @@ mod tests {
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -340,6 +357,7 @@ mod tests {
                 assert_eq!(path.next(), Some("path"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), String::new());
             }
         };
@@ -361,6 +379,7 @@ mod tests {
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.peek(), Some("half"));
+                assert_eq!(path.remainder(), "half/way");
                 assert_eq!(path.into_string(), "half/way".to_string());
             }
         };
@@ -382,6 +401,7 @@ mod tests {
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), Some("half"));
                 assert_eq!(path.peek(), Some("half"));
+                assert_eq!(path.remainder(), "half/way/");
                 assert_eq!(path.into_string(), "half/way/".to_string());
             }
         };
@@ -402,6 +422,7 @@ mod tests {
                 assert_eq!(path.peek(), Some("string"));
                 assert_eq!(path.next(), Some("string"));
                 assert_eq!(path.peek(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), "".to_string());
             }
         };
@@ -425,6 +446,7 @@ mod tests {
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
                 assert_eq!(path.as_ref(), "a/b/c");
+                assert_eq!(path.remainder(), "a/b/c");
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.next(), Some("a"));
@@ -432,6 +454,7 @@ mod tests {
                 assert_eq!(path.next(), Some("c"));
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
+                assert_eq!(path.remainder(), ".");
                 assert_eq!(path.into_string(), "".to_string());
             }
         }
@@ -522,6 +545,7 @@ mod tests {
             assert_eq!(path.next(), None);
             assert_eq!(path.peek(), None);
             assert_eq!(path.as_ref(), ".");
+            assert_eq!(path.remainder(), ".");
             assert_eq!(path.into_string(), "");
         }
     }

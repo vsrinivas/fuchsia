@@ -4,14 +4,14 @@
 
 //! Tests for the remote node.
 
-use super::{remote, remote_dir};
+use super::remote_dir;
 
 use crate::{assert_close, assert_read, assert_read_dirents, pseudo_directory};
 
 use crate::{
     directory::{
         entry::DirectoryEntry,
-        test_utils::{run_client, run_server_client, DirentsSameInodeBuilder},
+        test_utils::{run_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
     file::vmo::read_only_static,
@@ -31,6 +31,9 @@ use {
 fn set_up_remote(scope: ExecutionScope) -> DirectoryProxy {
     let r = pseudo_directory! {
         "a" => read_only_static("a content"),
+        "dir" => pseudo_directory! {
+            "b" => read_only_static("b content"),
+        }
     };
 
     let (remote_proxy, remote_server_end) =
@@ -55,13 +58,6 @@ async fn test_set_up_remote() {
 
 // Tests for opening a remote node with the NODE_REFERENCE flag. The remote node uses the existing
 // Service connection type after construction, which is tested in service/tests/node_reference.rs.
-
-#[test]
-fn remote_construction_open_node_ref() {
-    run_server_client(OPEN_FLAG_NODE_REFERENCE, remote(|_, _, _, _, _| ()), |proxy| async move {
-        assert_close!(proxy);
-    })
-}
 
 #[test]
 fn remote_dir_construction_open_node_ref() {
@@ -91,6 +87,28 @@ fn remote_dir_construction_open_no_remote() {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let flags = OPEN_FLAG_NO_REMOTE;
         server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
+        assert_close!(proxy);
+    })
+}
+
+#[test]
+fn remote_dir_node_ref_with_path() {
+    let exec = fasync::TestExecutor::new().expect("Executor creation failed");
+    let scope = ExecutionScope::new();
+
+    let remote_proxy = set_up_remote(scope.clone());
+    let server = remote_dir(remote_proxy);
+
+    run_client(exec, || async move {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let flags = OPEN_FLAG_NODE_REFERENCE;
+        server.open(
+            scope,
+            flags,
+            0,
+            Path::validate_and_split("dir/b").unwrap(),
+            server_end.into_channel().into(),
+        );
         assert_close!(proxy);
     })
 }
