@@ -1,0 +1,23 @@
+# What is this crate used for?
+
+At the time of writing, TLS certificate retrieval on macOS.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+It only works on macOS.
+
+# What differs from upstream?
+
+Files which do not comply with Fuchsia's license policy were removed. No code changes were made.
+
+# Are there any restrictions to how it should be rolled?
+
+Comment out this crate's line in the `[patch.crates-io]` section of
+`//third_party/rust_crates/Cargo.toml` before running the vendoring script, then move the contents
+of `//third_party/rust_crates/vendor/security-framework` into this directory.
+
+Care must be taken to only include files which comply with our license policy.
+
+# Is there anything else which makes this dependency "special"?
+
+No.

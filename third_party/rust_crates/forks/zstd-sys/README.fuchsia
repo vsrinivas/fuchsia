@@ -1,0 +1,21 @@
+# What is this crate used for?
+
+The `zstd` crate uses it for bindings to the native zstd library.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+We don't include a vendored copy of ztsd and we generate the bindings using our prebuilt copy of
+bindgen.
+
+# Are there any restrictions to how it should be rolled?
+
+The version number used can be updated as needed by updates to the zstd crate, and the contents of
+the crate can be updated as needed to match rolls of our native zstd implementation.
+
+# Is there anything else which makes this dependency "special"?
+
+No.

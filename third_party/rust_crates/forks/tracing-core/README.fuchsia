@@ -1,0 +1,23 @@
+# What is this crate used for?
+
+This is a dependency of the `tracing` crate.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+We vendor the exact crate but remove the included copies of spin and lazy_static which are only
+used in no_std environments. If upstream stops shipping vendored code with different licenses
+which won't be used in our build from the main crate, we can un-fork. This should happen when both
+https://github.com/matklad/once_cell/issues/61 and https://github.com/tokio-rs/tracing/issues/1165
+are resolved.
+
+# Are there any restrictions to how it should be rolled?
+
+No.
+
+# Is there anything else which makes this dependency "special"?
+
+No.

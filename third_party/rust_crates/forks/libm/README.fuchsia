@@ -1,0 +1,23 @@
+# What is this crate used for?
+
+At time of writing it is used for a few utility calculations in graphics code.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+This is a very thin stub compared to libm on crates.io, and we link directly against our own libc
+functions rather than having pure Rust implementations.
+
+# Are there any restrictions to how it should be rolled?
+
+This should not be rolled from the upstream crate source until
+https://github.com/rust-lang/libm/issues/215 is resolved, assuming the resolution leaves the
+upstream source compatible with our license policy. File a bug in the `OSRB` component once the
+issue is closed.
+
+# Is there anything else which makes this dependency "special"?
+
+No.
