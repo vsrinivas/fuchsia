@@ -13,6 +13,9 @@
 #include <ktl/string_view.h>
 #include <phys/main.h>
 
+class FramePointer;
+class ShadowCallStackBacktrace;
+
 class Symbolize {
  public:
   // Each program contains `const char Symbolize::kProgramName_[] = "myname";`.
@@ -55,6 +58,10 @@ class Symbolize {
       BackTraceFrame(n++, pc);
     }
   }
+
+  // Print both flavors of backtrace together.
+  PHYS_SINGLETHREAD void PrintBacktraces(const FramePointer& frame_pointers,
+                                         const ShadowCallStackBacktrace& shadow_call_stack);
 
   // Print the trigger markup element for a dumpfile.
   // TODO(mcgrathr): corresponds to a ZBI item

@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 
 #include <ktl/string_view.h>
+#include <phys/frame-pointer.h>
 #include <phys/stack.h>
 
 namespace {
@@ -132,4 +133,23 @@ void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc) {
 void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name) {
   Context();
   Printf("%s: {{{dumpfile:%V:%V}}}\n", kProgramName_, type, name);
+}
+
+void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
+                                const ShadowCallStackBacktrace& shadow_call_stack) {
+  Context();
+  if (frame_pointers.empty()) {
+    Printf("%s: Frame pointer backtrace is empty!\n", kProgramName_);
+  } else {
+    Printf("%s: Backtrace (via frame pointers):\n", kProgramName_);
+    BackTrace(frame_pointers);
+  }
+  if (BootShadowCallStack::kEnabled) {
+    if (shadow_call_stack.empty()) {
+      Printf("%s: Shadow call stack backtrace is empty!\n", kProgramName_);
+    } else {
+      Printf("%s: Backtrace (via shadow call stack):\n", kProgramName_);
+    }
+    BackTrace(shadow_call_stack);
+  }
 }

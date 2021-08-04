@@ -23,7 +23,10 @@ class FramePointer {
 
   // Container interface.
 
+  bool empty() const { return begin() == end(); }
+
   iterator begin() const { return *this; }
+
   iterator end() const { return {}; }
 
   // Iterator interface.

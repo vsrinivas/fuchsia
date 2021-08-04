@@ -30,6 +30,7 @@ if (toolchain_environment == "kernel.phys") {
   source_set("phys") {
     sources = [
       "setup.cc",
+      "shadow-call-stack.S",
       "start.S",
     ]
     include_dirs = [ "//zircon/.." ]

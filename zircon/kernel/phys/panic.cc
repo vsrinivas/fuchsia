@@ -9,6 +9,7 @@
 
 #include <phys/frame-pointer.h>
 #include <phys/main.h>
+#include <phys/stack.h>
 #include <phys/symbolize.h>
 
 // This is what ZX_ASSERT calls.
@@ -20,8 +21,13 @@ PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {
   va_end(args);
 
   // Now print the backtrace.
-  printf("\nBacktrace:\n");
-  Symbolize::GetInstance()->BackTrace(FramePointer::BackTrace());
+
+  FramePointer frame_pointer_backtrace = FramePointer::BackTrace();
+
+  uintptr_t scsp = GetShadowCallStackPointer();
+  ShadowCallStackBacktrace shadow_call_stack_backtrace = boot_shadow_call_stack.BackTrace(scsp);
+
+  Symbolize::GetInstance()->PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
 
   // Now crash.
   __builtin_trap();
