@@ -47,6 +47,8 @@ class ChannelService extends TaskService {
 
   List<String> get channels => _availableChannels;
 
+  String get targetChannel => _shortNames[_targetChannel] ?? _targetChannel;
+
   set targetChannel(String channel) {
     // If channel name was converted to a short name, convert back.
     var longNames = _shortNames.map((k, v) => MapEntry(v, k));

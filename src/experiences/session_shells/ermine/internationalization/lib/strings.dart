@@ -767,4 +767,9 @@ class Strings {
         name: 'current channel',
         desc: 'The label for "Current Channel" text field.',
       );
+  static String get downloadAndApplyUpdatesOf => Intl.message(
+        'Download and apply updates of',
+        name: 'download and apply updates of',
+        desc: 'The label for "Download and apply updates of" text field.',
+      );
 }

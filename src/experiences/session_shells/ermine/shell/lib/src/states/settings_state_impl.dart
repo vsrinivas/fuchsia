@@ -95,6 +95,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final Observable<List<String>> availableChannels =
       Observable<List<String>>(['']);
 
+  @override
+  final Observable<String> targetChannel = Observable<String>('');
+
   final List<String> _timezones;
 
   @override
@@ -186,6 +189,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           channels = [currentChannel.value]..addAll(availableChannels.value);
         }
         availableChannels.value = channels;
+        targetChannel.value = channelService.targetChannel;
       });
     };
   }
