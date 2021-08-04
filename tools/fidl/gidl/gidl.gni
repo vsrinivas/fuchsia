@@ -48,7 +48,7 @@ template("gidl") {
   if (defined(invoker.output)) {
     output_args += [
       "-out",
-      rebase_path(invoker.output),
+      rebase_path(invoker.output, root_build_dir),
     ]
   }
 
@@ -66,8 +66,8 @@ template("gidl") {
              "--language",
              invoker.language,
              "--json",
-             rebase_path(json_file),
-           ] + extra_args + rebase_path(invoker.inputs)
+             rebase_path(json_file, root_build_dir),
+           ] + extra_args + rebase_path(invoker.inputs, root_build_dir)
     inputs = invoker.inputs
     outputs = [ invoker.output ]
     deps = [ fidl_target ]

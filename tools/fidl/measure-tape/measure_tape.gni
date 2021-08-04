@@ -42,11 +42,11 @@ template("measure_tape") {
     "--target-type",
     invoker.target_type,
     "--out-cc",
-    rebase_path(out_cc),
+    rebase_path(out_cc, root_build_dir),
     "--out-h",
-    rebase_path(out_h),
+    rebase_path(out_h, root_build_dir),
     "--out-rs",
-    rebase_path(out_rs),
+    rebase_path(out_rs, root_build_dir),
     "--h-include-path",
     "measure_tape/hlcpp/${target_name}.h",
   ]
@@ -108,8 +108,8 @@ template("measure_tape") {
         deps += [ "${label}-rustc" ]
       }
       non_rust_deps = [ ":$gen_target_name" ]
-      source_root = rebase_path(out_rs)
-      sources = [ rebase_path(out_rs) ]
+      source_root = out_rs
+      sources = [ out_rs ]
     }
 
     generated_outputs = [ out_rs ]

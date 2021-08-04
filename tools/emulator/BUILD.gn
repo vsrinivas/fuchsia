@@ -32,7 +32,8 @@ if (is_linux) {
 
     args = [
       "--src",
-      rebase_path("//prebuilt/third_party/qemu/${host_platform}"),
+      rebase_path("//prebuilt/third_party/qemu/${host_platform}",
+                  root_build_dir),
       "--dst",
       rebase_path(archive_path, root_build_dir),
       "--depfile",
@@ -53,7 +54,8 @@ if (is_linux) {
 
     args = [
       "--src",
-      rebase_path("//prebuilt/third_party/aemu/${host_platform}"),
+      rebase_path("//prebuilt/third_party/aemu/${host_platform}",
+                  root_build_dir),
       "--dst",
       rebase_path(archive_path, root_build_dir),
       "--depfile",

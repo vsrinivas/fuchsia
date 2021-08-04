@@ -41,12 +41,10 @@ def expected_file_changes(filename: str) -> FileChanges:
     return expected_changes
 
 
-def expected_library_changes(library: Library,
-                             source_base_dir: str) -> LibraryChanges:
+def expected_library_changes(library: Library) -> LibraryChanges:
     '''Extract the list of expected changes from the source files for the library based on //! lines'''
     return {
-        filename: expected_file_changes(
-            os.path.join(source_base_dir, filename))
+        filename: expected_file_changes(filename)
         for filename in library.filenames
     }
 
@@ -63,29 +61,33 @@ def after_selector(change: Change) -> Optional[Declaration]:
     return change.after
 
 
-def actual_file_changes(changes: List[Change], filename: str,
-                        decl_selector: DeclSelector) -> FileChanges:
+def actual_file_changes(
+        changes: List[Change], filename: str,
+        decl_selector: DeclSelector) -> FileChanges:
     line_changes_dict: DefaultDict[int, Set[str]] = defaultdict(set)
     for change in changes:
         decl = decl_selector(change)
-        if decl is None: continue
-        if decl.filename != filename: continue
+        if decl is None:
+            continue
+        if decl.filename != filename:
+            continue
         line_changes_dict[decl.line].add(change.name)
     line_changes: List[Tuple[int, Set[str]]] = list(line_changes_dict.items())
     line_changes.sort(key=lambda t: t[0])
     return line_changes
 
 
-def actual_library_changes(library: Library, changes: List[Change],
-                           decl_selector: DeclSelector) -> LibraryChanges:
+def actual_library_changes(
+        library: Library, changes: List[Change],
+        decl_selector: DeclSelector) -> LibraryChanges:
     return {
         filename: actual_file_changes(changes, filename, decl_selector)
         for filename in library.filenames
     }
 
 
-def describe_file_differences(filename: str, expected: FileChanges,
-                              actual: FileChanges):
+def describe_file_differences(
+        filename: str, expected: FileChanges, actual: FileChanges):
     # dictionaries mapping line numbers to change descriptions
     expected_lines = {line: changes for line, changes in expected}
     actual_lines = {line: changes for line, changes in actual}
@@ -95,7 +97,8 @@ def describe_file_differences(filename: str, expected: FileChanges,
     for num in sorted(line_numbers):
         expected_changes = expected_lines.get(num, set())
         actual_changes = actual_lines.get(num, set())
-        if expected_changes == actual_changes: continue
+        if expected_changes == actual_changes:
+            continue
         print('%s:%d' % (filename, num))
         for c in actual_changes - expected_changes:
             print('  unexpected %s' % c)
@@ -104,19 +107,17 @@ def describe_file_differences(filename: str, expected: FileChanges,
         print()
 
 
-def describe_library_differences(expected: LibraryChanges,
-                                 actual: LibraryChanges):
+def describe_library_differences(
+        expected: LibraryChanges, actual: LibraryChanges):
     # the union of the filenames in expected and actual
     filenames = set(list(expected.keys()) + list(actual.keys()))
     for filename in sorted(filenames):
-        describe_file_differences(filename, expected.get(filename, []),
-                                  actual.get(filename, []))
+        describe_file_differences(
+            filename, expected.get(filename, []), actual.get(filename, []))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--build-dir', help='Fuchsia build directory', required=True)
     parser.add_argument(
         '--before',
         help="Path to JSON IR for before version of the library",
@@ -128,26 +129,24 @@ if __name__ == '__main__':
     parser.add_argument(
         '--stamp', help="Path to stamp file to write after completion")
     args = parser.parse_args()
-    fidl_json_dir = os.path.join(
-        args.build_dir, 'gen/garnet/public/lib/fidl/tools/difl_test_fidl')
+    fidl_json_dir = 'gen/garnet/public/lib/fidl/tools/difl_test_fidl'
 
     before = Libraries().load(args.before)
     after = Libraries().load(args.after)
 
-    before_expected_changes = expected_library_changes(before, args.build_dir)
-    after_expected_changes = expected_library_changes(after, args.build_dir)
+    before_expected_changes = expected_library_changes(before)
+    after_expected_changes = expected_library_changes(after)
 
     comparator = Comparator()
 
     changes: List[Change] = library_changes(before, after, comparator)
 
-    before_actual_changes = actual_library_changes(before, changes,
-                                                   before_selector)
-    after_actual_changes = actual_library_changes(after, changes,
-                                                  after_selector)
+    before_actual_changes = actual_library_changes(
+        before, changes, before_selector)
+    after_actual_changes = actual_library_changes(
+        after, changes, after_selector)
 
-    describe_library_differences(before_expected_changes,
-                                 before_actual_changes)
+    describe_library_differences(before_expected_changes, before_actual_changes)
     describe_library_differences(after_expected_changes, after_actual_changes)
 
     if before_expected_changes == before_actual_changes and after_expected_changes == after_actual_changes:

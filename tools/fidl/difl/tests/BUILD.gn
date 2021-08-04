@@ -24,7 +24,7 @@ template("fidl_ir") {
              "--name",
              invoker.name,
              "--files",
-             rebase_path("//zircon/vdso/zx_common.fidl"),
+             rebase_path("//zircon/vdso/zx_common.fidl", root_build_dir),
              "--files",
            ] + rebase_path(invoker.sources, root_build_dir)
   }
@@ -44,9 +44,9 @@ action("run_difl_test") {
     ":after",
     ":before",
   ]
-  before_ir = target_gen_dir + "/before.fidl.json"
-  after_ir = target_gen_dir + "/after.fidl.json"
-  stamp = target_gen_dir + "/run_difl_test.stamp"
+  before_ir = "$target_gen_dir/before.fidl.json"
+  after_ir = "$target_gen_dir/after.fidl.json"
+  stamp = "$target_gen_dir/run_difl_test.stamp"
   sources = [
     after_ir,
     before_ir,
@@ -70,14 +70,12 @@ action("run_difl_test") {
   ]
   outputs = [ stamp ]
   args = [
-    "--build-dir",
-    rebase_path(root_build_dir),
     "--before",
-    rebase_path(before_ir),
+    rebase_path(before_ir, root_build_dir),
     "--after",
-    rebase_path(after_ir),
+    rebase_path(after_ir, root_build_dir),
     "--stamp",
-    rebase_path(stamp),
+    rebase_path(stamp, root_build_dir),
   ]
 }
 
