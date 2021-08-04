@@ -6,7 +6,12 @@
         "binary": "bin/input-pipeline"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
+            "fuchisa.recovery.policy",
+            "fuchisa.recovery.ui",
             "fuchsia.input.injection.InputDeviceRegistry",
             "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.pointerinjector.configuration.Setup",

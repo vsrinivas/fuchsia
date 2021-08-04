@@ -16,6 +16,11 @@ rustc_library("input_pipeline") {
     "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
+    "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui-rustc",
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
@@ -29,6 +34,7 @@ rustc_library("input_pipeline") {
     "//src/lib/async-utils",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/fuchsia-vfs-watcher",
@@ -42,14 +48,19 @@ rustc_library("input_pipeline") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [ "//third_party/rust_crates:test-case" ]
 
   sources = [
     "src/consumer_controls.rs",
+    "src/factory_reset_handler.rs",
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
     "src/focus_listening.rs",
