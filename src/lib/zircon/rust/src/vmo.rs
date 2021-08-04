@@ -214,6 +214,10 @@ bitflags! {
         const RESIZABLE = sys::ZX_VMO_CHILD_RESIZABLE;
         const SLICE = sys::ZX_VMO_CHILD_SLICE;
         const NO_WRITE = sys::ZX_VMO_CHILD_NO_WRITE;
+
+        // Old clone flags that are on the path to deprecation.
+        const COPY_ON_WRITE = sys::ZX_VMO_CHILD_COPY_ON_WRITE;
+        const PRIVATE_PAGER_COPY = sys::ZX_VMO_CHILD_PRIVATE_PAGER_COPY;
     }
 }
 
@@ -255,6 +259,15 @@ mod tests {
     use crate::{Handle, Rights};
     use fidl_fuchsia_kernel as fkernel;
     use fuchsia_component::client::connect_channel_to_protocol;
+
+    #[test]
+    fn vmo_deprecated_flags() {
+        assert_eq!(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, VmoChildOptions::COPY_ON_WRITE);
+        assert_eq!(
+            VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE,
+            VmoChildOptions::PRIVATE_PAGER_COPY
+        );
+    }
 
     #[test]
     fn vmo_get_size() {
