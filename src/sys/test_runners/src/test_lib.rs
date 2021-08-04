@@ -330,6 +330,7 @@ pub async fn test_component(
         name: name.to_string(),
         binary: binary.to_string(),
         args,
+        environ: None,
         ns,
         job: job_default().duplicate(zx::Rights::SAME_RIGHTS)?,
     })

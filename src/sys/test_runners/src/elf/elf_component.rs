@@ -131,6 +131,9 @@ pub struct Component {
     /// Arguments for this test.
     pub args: Vec<String>,
 
+    /// Environment variables for this test.
+    pub environ: Option<Vec<String>>,
+
     /// Namespace to pass to test process.
     pub ns: ComponentNamespace,
 
@@ -156,6 +159,9 @@ pub struct BuilderArgs {
 
     /// Arguments for this test.
     pub args: Vec<String>,
+
+    /// Environment variables for this test.
+    pub environ: Option<Vec<String>>,
 
     /// Namespace to pass to test process.
     pub ns: ComponentNamespace,
@@ -190,6 +196,11 @@ impl Component {
         let binary = runner::get_program_binary(&start_info)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
 
+        // It's safe to unwrap `start_info.program` below because if the field
+        // were empty, this func would have a returned an error by now.
+        let environ = runner::get_environ(&start_info.program.as_ref().unwrap())
+            .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
+
         let ns = start_info.ns.ok_or_else(|| ComponentError::MissingNamespace(url.clone()))?;
         let ns = ComponentNamespace::try_from(ns)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
@@ -209,6 +220,7 @@ impl Component {
                 name: name,
                 binary: binary,
                 args: args,
+                environ,
                 ns: ns,
                 job: job_default().create_child_job().map_err(ComponentError::CreateJob)?,
                 lib_loader_cache: Arc::new(LibraryLoaderCache {
@@ -241,6 +253,7 @@ impl Component {
             name: args.name,
             binary: args.binary,
             args: args.args,
+            environ: args.environ,
             ns: args.ns,
             job: args.job,
             lib_loader_cache: Arc::new(LibraryLoaderCache {
@@ -642,6 +655,7 @@ mod tests {
                 name: "test.cm".to_owned(),
                 binary: "bin/test_runners_lib_lib_test".to_owned(), //reference self binary
                 args: vec![],
+                environ: None,
                 ns: ns,
                 job: child_job!(),
             })

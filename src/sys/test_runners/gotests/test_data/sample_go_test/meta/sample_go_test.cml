@@ -1,10 +1,14 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/gotests/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "test/sample_go_test",
         args: [ "-my_custom_flag" ],
+        environ: [
+            "FOO=BAR",
+            "HELLO=WORLD",
+        ],
     },
 }

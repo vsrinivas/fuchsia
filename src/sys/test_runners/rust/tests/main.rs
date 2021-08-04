@@ -15,7 +15,9 @@ use {
 async fn launch_and_test_echo_test() {
     let test_url =
         "fuchsia-pkg://fuchsia.com/rust-test-runner-example#meta/echo_integration_test.cm";
-    let (events, _logs) = run_test(test_url, false, Some(10), vec![]).await.unwrap();
+    let (events, _logs) = run_test(test_url, false, Some(10), vec![])
+        .await
+        .expect(&format!("failed to run test {}", test_url));
 
     let expected_events = vec![
         RunEvent::suite_started(),
@@ -77,6 +79,10 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
         RunEvent::case_started("my_tests::test_custom_arguments"),
         RunEvent::case_stopped("my_tests::test_custom_arguments", CaseStatus::Passed),
         RunEvent::case_finished("my_tests::test_custom_arguments"),
+        RunEvent::case_found("my_tests::test_environ"),
+        RunEvent::case_started("my_tests::test_environ"),
+        RunEvent::case_stopped("my_tests::test_environ", CaseStatus::Passed),
+        RunEvent::case_finished("my_tests::test_environ"),
         RunEvent::suite_stopped(SuiteStatus::Failed),
     ]
     .into_iter()

@@ -74,6 +74,23 @@ fuchsia_component("gtest_runner_test_with_custom_args_component") {
   deps = [ ":gtest_runner_test_with_custom_args" ]
 }
 
+executable("gtest_runner_test_with_environ") {
+  testonly = true
+  sources = [ "test_with_environ.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("gtest_runner_test_with_environ_component") {
+  testonly = true
+  manifest = "meta/test_with_environ.cml"
+  component_name = "test_with_environ"
+  deps = [ ":gtest_runner_test_with_environ" ]
+}
+
 executable("huge_gtest_runner_example") {
   output_name = "huge_gtest_runner_example"
   testonly = true
@@ -119,6 +136,7 @@ group("all_bins") {
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
     ":gtest_runner_test_with_custom_args",
+    ":gtest_runner_test_with_environ",
     ":huge_gtest_runner_example",
   ]
 }
@@ -144,6 +162,7 @@ fuchsia_package("gtest-runner-example-tests") {
     ":empty_test_component",
     ":gtest_runner_sample_tests_component",
     ":gtest_runner_test_with_custom_args_component",
+    ":gtest_runner_test_with_environ_component",
     ":huge_gtest_component",
     "//examples/components/routing/echo_server:echo_server_component",
     "//src/sys/test_runners:echo_server_for_concurrency_test",

@@ -477,6 +477,16 @@ where
         fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
     component.loader_service(loader);
     let executable_vmo = Some(component.executable_vmo()?);
+
+    let environ = match test_invoke {
+        Some(var) => {
+            let mut environ = component.environ.clone().unwrap_or_default();
+            environ.push(var);
+            Some(environ)
+        }
+        None => component.environ.clone(),
+    };
+
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -484,7 +494,7 @@ where
         ns: component.ns.clone().map_err(NamespaceError::Clone)?,
         args: Some(args),
         name_infos: None,
-        environs: test_invoke.map(|test_invoke| vec![test_invoke]),
+        environs: environ,
         handle_infos: None,
         loader_proxy_chan: Some(client.into_channel()),
         executable_vmo,
@@ -555,6 +565,7 @@ mod tests {
             TestCaseInfo { name: "my_tests::failing_test".to_string(), enabled: true },
             TestCaseInfo { name: "my_tests::sample_test_two".to_string(), enabled: true },
             TestCaseInfo { name: "my_tests::test_custom_arguments".to_string(), enabled: true },
+            TestCaseInfo { name: "my_tests::test_environ".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()
@@ -703,6 +714,7 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
                 "my_tests::test_custom_arguments",
+                "my_tests::test_environ",
             ]),
             RunOptions {
                 include_disabled_tests: Some(false),
@@ -749,6 +761,15 @@ mod tests {
             ListenerEvent::finish_test(
                 "my_tests::test_custom_arguments",
                 TestResult { status: Some(Status::Passed), ..TestResult::EMPTY },
+            ),
+            ListenerEvent::start_test("my_tests::test_environ"),
+            ListenerEvent::finish_test(
+                "my_tests::test_environ",
+                // We expect this test to fail here because we can't pass environment
+                // variables to the test case. However, the integration tests
+                // assert that environment variables declared in the test's
+                // manifest are properly ingested.
+                TestResult { status: Some(Status::Failed), ..TestResult::EMPTY },
             ),
             ListenerEvent::finish_all_test(),
         ];

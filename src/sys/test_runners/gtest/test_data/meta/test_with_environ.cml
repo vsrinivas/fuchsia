@@ -1,11 +1,10 @@
 {
     include: [
-        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/sample_rust_tests",
-        args: [ "--my_custom_arg" ],
+        binary: "bin/gtest_runner_test_with_environ",
         environ: [
             "FOO=BAR",
             "HELLO=WORLD",

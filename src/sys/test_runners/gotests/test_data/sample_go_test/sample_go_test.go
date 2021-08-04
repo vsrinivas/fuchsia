@@ -66,3 +66,13 @@ func TestCustomArg2(t *testing.T) {
 		t.Errorf("test should be passed -my_custom_flag_2, cmdline: %v", os.Args)
 	}
 }
+
+func TestEnviron(t *testing.T) {
+	if os.Getenv("HELLO") != "WORLD" {
+		t.Errorf("test should be passed environment variable HELLO=WORLD")
+	}
+
+	if os.Getenv("FOO") != "BAR" {
+		t.Errorf("test should be passed environment variable FOO=BAR")
+	}
+}

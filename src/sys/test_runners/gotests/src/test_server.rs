@@ -424,7 +424,7 @@ where
         ns: component.ns.clone().map_err(NamespaceError::Clone)?,
         args: Some(args),
         name_infos: None,
-        environs: None,
+        environs: component.environ.clone(),
         handle_infos: Some(handle_infos),
         loader_proxy_chan: Some(client_end.into_channel()),
         executable_vmo,
@@ -499,6 +499,7 @@ mod tests {
             TestCaseInfo { name: "TestSubtests".to_string(), enabled: true },
             TestCaseInfo { name: "TestCustomArg".to_string(), enabled: true },
             TestCaseInfo { name: "TestCustomArg2".to_string(), enabled: true },
+            TestCaseInfo { name: "TestEnviron".to_string(), enabled: true },
         ]
         .into_iter()
         .sorted()

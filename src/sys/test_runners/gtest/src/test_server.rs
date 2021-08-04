@@ -648,7 +648,7 @@ where
         ns: component.ns.clone().map_err(NamespaceError::Clone)?,
         args: Some(args),
         name_infos: Some(names),
-        environs: None,
+        environs: component.environ.clone(),
         handle_infos: None,
         loader_proxy_chan: Some(client.into_channel()),
         executable_vmo,

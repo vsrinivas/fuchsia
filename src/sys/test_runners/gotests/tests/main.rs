@@ -186,6 +186,15 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
             ],
         ),
         (
+            "TestEnviron",
+            vec![
+                RunEventMatch::Found,
+                RunEventMatch::Started,
+                RunEventMatch::Stopped(CaseStatus::Passed),
+                RunEventMatch::Finished,
+            ],
+        ),
+        (
             "TestCrashing",
             vec![
                 RunEventMatch::Found,

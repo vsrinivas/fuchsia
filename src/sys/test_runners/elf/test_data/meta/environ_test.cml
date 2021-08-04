@@ -1,11 +1,10 @@
 {
     include: [
-        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/sample_rust_tests",
-        args: [ "--my_custom_arg" ],
+        binary: "bin/environ_test",
         environ: [
             "FOO=BAR",
             "HELLO=WORLD",

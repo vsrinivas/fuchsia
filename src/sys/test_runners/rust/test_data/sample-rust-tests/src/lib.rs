@@ -43,4 +43,11 @@ mod my_tests {
         assert!(args.contains(&"--my_custom_arg".to_owned()), "args: {:#?}", args);
         assert!(args.contains(&"--my_custom_arg2".to_owned()), "args: {:#?}", args);
     }
+
+    #[test]
+    fn test_environ() {
+        let environ = std::env::vars().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>();
+        assert!(environ.contains(&"HELLO=WORLD".to_owned()));
+        assert!(environ.contains(&"FOO=BAR".to_owned()));
+    }
 }
