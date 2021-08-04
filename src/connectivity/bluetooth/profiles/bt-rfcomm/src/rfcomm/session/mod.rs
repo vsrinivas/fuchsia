@@ -315,7 +315,7 @@ impl SessionInner {
         // The result is irrelevant because the DLCI was just created and can't be established
         // already. Setting the initial credits should always succeed.
         if let Err(e) = self.multiplexer().set_flow_control(params.dlci, flow_control) {
-            error!("Setting flow control failed: {:?}", e);
+            warn!("Setting flow control failed: {:?}", e);
         }
     }
 
@@ -655,8 +655,10 @@ impl SessionInner {
     /// If routing fails, sends a DM response over the provided `dlci`.
     async fn handle_user_data(&mut self, dlci: DLCI, user_data: UserData, credits: Option<u8>) {
         // In general, UserData frames do not need to be acknowledged.
-        if let Err(e) =
-            self.multiplexer().receive_user_data(dlci, FlowControlledData { user_data, credits })
+        if let Err(e) = self
+            .multiplexer()
+            .receive_user_data(dlci, FlowControlledData { user_data, credits })
+            .await
         {
             // If there was an error sending the user data for any reason, we reply with
             // a DM to indicate failure.
@@ -774,7 +776,7 @@ impl SessionInner {
     /// Handles the error case when parsing a frame and sends an optional response frame if
     /// needed.
     async fn handle_frame_parse_error(&mut self, e: FrameParseError) {
-        error!("Error parsing frame: {:?}", e);
+        warn!("Error parsing frame: {:?}", e);
         // Currently, the only frame parsing error that requires a response is the MuxCommand
         // parsing error.
         match e {
@@ -881,6 +883,13 @@ impl SessionInner {
     }
 }
 
+/// The maximum number of concurrent frames that can be accepted by this Session.
+/// This value is chosen arbitrarily, and is not defined in the GSM or RFCOMM specifications.
+/// This value is chosen as a number significantly more than the expected number of RFCOMM frames in
+/// a single transaction (typically, we expect to receive 1-2 RFCOMM frames from a remote device
+/// before responding).
+const MAX_CONCURRENT_FRAMES: usize = 100;
+
 /// An RFCOMM Session that multiplexes multiple channels over a single L2CAP channel.
 ///
 /// A `Session` is represented by a processing task which processes incoming bytes
@@ -905,7 +914,7 @@ impl Session {
     ) -> Self {
         // The `session_inner` relays outgoing packets (to be sent to the remote peer) to the
         // `Session` using this mpsc::channel.
-        let (frames_to_peer_sender, frame_receiver) = mpsc::channel(0);
+        let (frames_to_peer_sender, frame_receiver) = mpsc::channel(MAX_CONCURRENT_FRAMES);
         let session_inner = Arc::new(Mutex::new(SessionInner::create(
             frames_to_peer_sender,
             channel_opened_callback,
@@ -943,7 +952,7 @@ impl Session {
     ) {
         // `Session::peer_processing_task()` uses this mpsc::channel to relay data received from the
         // peer to the `session_inner`.
-        let (data_sender, data_from_peer_receiver) = mpsc::channel(0);
+        let (data_sender, data_from_peer_receiver) = mpsc::channel(MAX_CONCURRENT_FRAMES);
 
         // Business logic of the RFCOMM session - parsing and handling frames, modifying the state
         // of the session, and multiplexing RFCOMM channels.
@@ -984,7 +993,7 @@ impl Session {
                         Some(Ok(bytes)) => {
                             trace!("Received packet from peer: {:?}", bytes);
                             if let Err(_) = data_sender.send(bytes).await {
-                                error!("Couldn't send bytes to main run task");
+                                warn!("Couldn't send bytes to main run task");
                             }
                         },
                         Some(Err(e)) => {
@@ -1000,7 +1009,7 @@ impl Session {
                     trace!("Sending frame to remote: {:?}", frame_to_be_written);
                     let mut buf = vec![0; frame_to_be_written.encoded_len()];
                     if let Err(e) = frame_to_be_written.encode(&mut buf[..]) {
-                        error!("Couldn't encode frame: {:?}", e);
+                        warn!("Couldn't encode frame: {:?}", e);
                         continue;
                     }
                     // The result of this send is irrelevant, as failure would

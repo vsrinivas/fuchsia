@@ -455,7 +455,7 @@ impl SessionChannel {
     /// new channel. If the flow control has not been negotiated, the channel will default
     /// to using credit-based flow control.
     pub fn establish(&mut self, channel: Channel, frame_sender: mpsc::Sender<Frame>) {
-        let (user_data_queue, pending_writes) = mpsc::channel(0);
+        let (user_data_queue, pending_writes) = mpsc::channel(HIGH_CREDIT_WATER_MARK);
         let flow_controller: Box<dyn FlowController> =
             match self.flow_control.get_or_insert(FlowControlMode::CreditBased(Credits::default()))
             {
@@ -493,7 +493,7 @@ impl SessionChannel {
 
     /// Receive a user data payload from the remote peer, which will be queued to be sent
     /// to the local profile client.
-    pub fn receive_user_data(&mut self, data: FlowControlledData) -> Result<(), Error> {
+    pub async fn receive_user_data(&mut self, data: FlowControlledData) -> Result<(), Error> {
         if !self.is_established() {
             return Err(Error::ChannelNotEstablished(self.dlci));
         }
@@ -501,7 +501,7 @@ impl SessionChannel {
         // This unwrap is safe because the task is guaranteed to be set if the channel
         // has been established.
         let queue = &mut self.processing_task.as_mut().unwrap().user_data_queue;
-        queue.try_send(data).map_err(|e| anyhow::format_err!("{:?}", e).into())
+        queue.send(data).await.map_err(|e| anyhow::format_err!("{:?}", e).into())
     }
 }
 
@@ -606,9 +606,13 @@ mod tests {
 
         // Receive user data to be relayed to the profile-client - no credits.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
-        assert!(session_channel
-            .receive_user_data(FlowControlledData { user_data: user_data.clone(), credits: None })
-            .is_ok());
+        {
+            let mut receive_fut = Box::pin(session_channel.receive_user_data(FlowControlledData {
+                user_data: user_data.clone(),
+                credits: None,
+            }));
+            assert_matches!(exec.run_until_stalled(&mut receive_fut), Poll::Ready(Ok(_)));
+        }
 
         // Data should be relayed to the client.
         match exec.run_until_stalled(&mut data_received_by_client) {
@@ -660,12 +664,13 @@ mod tests {
 
         // Receive user data from remote peer be relayed to the profile-client - 0 credits issued.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
-        assert!(session_channel
-            .receive_user_data(FlowControlledData {
+        {
+            let mut receive_fut = Box::pin(session_channel.receive_user_data(FlowControlledData {
                 user_data: user_data.clone(),
-                credits: Some(0)
-            })
-            .is_ok());
+                credits: Some(0),
+            }));
+            assert_matches!(exec.run_until_stalled(&mut receive_fut), Poll::Ready(Ok(_)));
+        }
 
         // Even though the remote's credit count is 0 (the default), the data should be relayed
         // to the client. However, we expect to immediately send an outgoing empty data frame
@@ -689,12 +694,13 @@ mod tests {
 
         // Remote peer sends more user data with a refreshed credit amount.
         let user_data = UserData { information: vec![0x00, 0x00, 0x00, 0x00, 0x00] };
-        assert!(session_channel
-            .receive_user_data(FlowControlledData {
+        {
+            let mut receive_fut = Box::pin(session_channel.receive_user_data(FlowControlledData {
                 user_data: user_data.clone(),
-                credits: Some(50)
-            })
-            .is_ok());
+                credits: Some(50),
+            }));
+            assert_matches!(exec.run_until_stalled(&mut receive_fut), Poll::Ready(Ok(_)));
+        }
 
         // The previously queued outgoing frame should be finally sent due to the credit refresh.
         // The received user data frame should be relayed to the client.
@@ -731,12 +737,13 @@ mod tests {
 
         // Receive user data to be relayed to the profile-client - random amount of credits.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
-        assert!(session_channel
-            .receive_user_data(FlowControlledData {
+        {
+            let mut receive_fut = Box::pin(session_channel.receive_user_data(FlowControlledData {
                 user_data: user_data.clone(),
-                credits: Some(6)
-            })
-            .is_ok());
+                credits: Some(6),
+            }));
+            assert_matches!(exec.run_until_stalled(&mut receive_fut), Poll::Ready(Ok(_)));
+        }
 
         // Data should be relayed to the client.
         assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());

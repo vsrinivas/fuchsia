@@ -275,13 +275,13 @@ impl SessionMultiplexer {
     }
 
     /// Sends `user_data` received from the peer to the SessionChannel associated with the `dlci`.
-    pub fn receive_user_data(
+    pub async fn receive_user_data(
         &mut self,
         dlci: DLCI,
         user_data: FlowControlledData,
     ) -> Result<(), Error> {
         if let Some(session_channel) = self.channels.get_mut(&dlci) {
-            return session_channel.receive_user_data(user_data);
+            return session_channel.receive_user_data(user_data).await;
         }
         Err(RfcommError::InvalidDLCI(dlci).into())
     }

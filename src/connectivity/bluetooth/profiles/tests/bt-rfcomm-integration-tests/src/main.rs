@@ -3,29 +3,41 @@
 // found in the LICENSE file.
 
 use {
+    bt_rfcomm::{profile::server_channel_from_protocol, ServerChannel},
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::types::{PeerId, Uuid},
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     fuchsia_component_test::{builder::Capability, RealmInstance},
-    futures::stream::StreamExt,
+    fuchsia_zircon::Duration,
+    futures::{pin_mut, stream::StreamExt},
     mock_piconet_client::v2::{BtProfileComponent, PiconetHarness, PiconetMember},
-    profile_client::ProfileClient,
+    profile_client::{ProfileClient, ProfileEvent},
+    std::convert::TryInto,
 };
 
 /// RFCOMM component V2 URL.
 /// The RFCOMM component is a unique component in that it functions as a proxy for the
-/// `f.b.bredr.Profile` protocol. Consequently, it both connects to and provides the
-/// `f.b.bredr.Profile` protocol.
+/// `fuchsia.bluetooth.bredr.Profile` protocol. Consequently, it both connects to and provides the
+/// `fuchsia.bluetooth.bredr.Profile` protocol.
 /// It only manages Profile requests that require RFCOMM - any non-RFCOMM requests
-/// are relayed to the upstream `f.b.bredr.Profile` provider.
+/// are relayed to the upstream `fuchsia.bluetooth.bredr.Profile` provider.
 const RFCOMM_URL_V2: &str =
     "fuchsia-pkg://fuchsia.com/bt-rfcomm-integration-tests#meta/bt-rfcomm.cm";
 
 /// The moniker for the RFCOMM component under test.
 const RFCOMM_MONIKER: &str = "bt-rfcomm";
-
 /// The moniker for a mock piconet member.
 const MOCK_PICONET_MEMBER_MONIKER: &str = "mock-peer";
+
+/// Timeout for data received over an RFCOMM channel.
+///
+/// This time is expected to be:
+///   a) sufficient to avoid flakes due to infra or resource contention
+///   b) short enough to still provide useful feedback in those cases where asynchronous operations
+///      fail
+///   c) short enough to fail before the overall infra-imposed test timeout (currently 5 minutes)
+const RFCOMM_CHANNEL_TIMEOUT: Duration = Duration::from_seconds(2 * 60);
 
 /// The SppClient in these integration tests is just an alias for the `ProfileClient`.
 type SppClient = ProfileClient;
@@ -57,6 +69,17 @@ pub fn spp_service_definition() -> bredr::ServiceDefinition {
     }
 }
 
+async fn add_rfcomm_component(
+    test_harness: &mut PiconetHarness,
+    name: String,
+) -> BtProfileComponent {
+    let expose = vec![Capability::protocol(bredr::ProfileMarker::PROTOCOL_NAME)];
+    test_harness
+        .add_profile_with_capabilities(name, RFCOMM_URL_V2.to_string(), None, vec![], expose)
+        .await
+        .expect("failed to add RFCOMM profile")
+}
+
 /// Builds the test topology for the RFCOMM integration tests. Returns the test realm, an observer
 /// for bt-rfcomm, and a piconet member which can be driven by the test.
 #[track_caller]
@@ -69,17 +92,8 @@ async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMem
         .await
         .expect("failed to add mock piconet member");
     // Add bt-rfcomm which is under test.
-    let expose = vec![Capability::protocol(bredr::ProfileMarker::PROTOCOL_NAME)];
-    let rfcomm = test_harness
-        .add_profile_with_capabilities(
-            RFCOMM_MONIKER.to_string(),
-            RFCOMM_URL_V2.to_string(),
-            None,
-            vec![],
-            expose,
-        )
-        .await
-        .expect("failed to add RFCOMM profile");
+    let rfcomm = add_rfcomm_component(&mut test_harness, RFCOMM_MONIKER.to_string()).await;
+
     let test_topology = test_harness.build().await.unwrap();
 
     // Once the test realm has been built, we can grab the piconet member to be driven
@@ -109,12 +123,14 @@ async fn setup_spp_client(
 async fn expect_peer_advertising(
     search_results: &mut bredr::SearchResultsRequestStream,
     expected_id: PeerId,
-) {
+) -> ServerChannel {
     let request = search_results.select_next_some().await.unwrap();
     let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, responder, .. } = request;
     assert_eq!(expected_id, peer_id.into());
     log::info!("Discovered service with protocol: {:?}", protocol);
     responder.send().unwrap();
+    let protocol = protocol.unwrap().iter().map(Into::into).collect();
+    server_channel_from_protocol(&protocol).expect("is rfcomm")
 }
 
 /// Tests that an RFCOMM-requesting client can register a service advertisement
@@ -168,4 +184,83 @@ async fn multiple_rfcomm_clients_can_register_advertisements() {
 
     // There should be no more search result events.
     assert!(futures::poll!(&mut search_results.next()).is_pending());
+}
+
+#[track_caller]
+async fn send_and_expect_data(send: &Channel, receive: &Channel, data: Vec<u8>) {
+    let n = data.len();
+    assert_eq!(send.as_ref().write(&data[..]), Ok(n));
+
+    let mut actual_bytes = Vec::new();
+    let read_result = receive
+        .read_datagram(&mut actual_bytes)
+        .on_timeout(RFCOMM_CHANNEL_TIMEOUT.after_now(), move || Err(fidl::Status::TIMED_OUT))
+        .await;
+    assert_eq!(read_result, Ok(n));
+    assert_eq!(actual_bytes, data);
+}
+
+/// Tests the connection flow between two Fuchsia RFCOMM components. Each RFCOMM component is driven
+/// by an example SPP client. Validates that data can be exchanged between the two clients after
+/// establishment.
+#[fuchsia::test]
+async fn rfcomm_component_connecting_to_another_rfcomm_component() {
+    let mut test_harness = PiconetHarness::new().await;
+
+    // Define two RFCOMM components to be tested against each other.
+    let rfcomm_name1 = "this-bt-rfcomm";
+    let rfcomm_name2 = "other-bt-rfcomm";
+    let mut this_rfcomm = add_rfcomm_component(&mut test_harness, rfcomm_name1.to_string()).await;
+    let mut other_rfcomm = add_rfcomm_component(&mut test_harness, rfcomm_name2.to_string()).await;
+
+    let test_topology = test_harness.build().await.expect("topology should build");
+
+    // Client for RFCOMM #1 is SPP (both advertisement and search).
+    let mut client1 = setup_spp_client(&test_topology, &this_rfcomm).await;
+
+    // Client for RFCOMM #2 searches for SPP peers - it should discover client #1.
+    let other_rfcomm_proxy = other_rfcomm
+        .connect_to_protocol::<bredr::ProfileMarker>(&test_topology)
+        .expect("can connect to Profile");
+    let (search_client, mut search_results) = fidl::endpoints::create_request_stream().unwrap();
+    other_rfcomm_proxy
+        .search(bredr::ServiceClassProfileIdentifier::SerialPort, &[], search_client)
+        .expect("can register search");
+
+    // Client #1's advertisement should be discovered - should also be echoed on observer.
+    let rfcomm_channel_number =
+        expect_peer_advertising(&mut search_results, this_rfcomm.peer_id()).await;
+    other_rfcomm
+        .expect_observer_service_found_request(this_rfcomm.peer_id())
+        .await
+        .expect("observer event");
+
+    // Client #2 can now connect via RFCOMM to Client #1.
+    let mut params = bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
+        channel: Some(rfcomm_channel_number.into()),
+        ..bredr::RfcommParameters::EMPTY
+    });
+    let connect_fut = other_rfcomm_proxy.connect(&mut this_rfcomm.peer_id().into(), &mut params);
+    pin_mut!(connect_fut);
+
+    // Each client should be delivered one end of the RFCOMM channel.
+    let (channel1, channel2): (Channel, Channel) =
+        match futures::future::join(client1.next(), connect_fut).await {
+            (Some(Ok(ProfileEvent::PeerConnected { id, channel, .. })), Ok(Ok(channel2))) => {
+                assert_eq!(id, other_rfcomm.peer_id());
+                (channel.try_into().unwrap(), channel2.try_into().unwrap())
+            }
+            x => panic!("Expected two channels, but got: {:?}", x),
+        };
+    // The connection request should be echoed on RFCOMM #1's observer since RFCOMM #2 initiated.
+    this_rfcomm
+        .expect_observer_connection_request(other_rfcomm.peer_id())
+        .await
+        .expect("should observe connection request");
+
+    // Data can be exchanged in both directions.
+    let data1 = vec![0x05, 0x06, 0x07, 0x08, 0x09];
+    send_and_expect_data(&channel1, &channel2, data1).await;
+    let data2 = vec![0x98, 0x97, 0x96, 0x95];
+    send_and_expect_data(&channel2, &channel1, data2).await;
 }
