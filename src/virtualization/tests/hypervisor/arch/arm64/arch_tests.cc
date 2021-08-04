@@ -25,6 +25,8 @@ DECLARE_TEST_FUNCTION(vcpu_fp)
 DECLARE_TEST_FUNCTION(vcpu_fp_aarch32)
 DECLARE_TEST_FUNCTION(vcpu_psci_system_off)
 DECLARE_TEST_FUNCTION(vcpu_dc_set_way_ops)
+DECLARE_TEST_FUNCTION(vcpu_enable_mmu)
+DECLARE_TEST_FUNCTION(vcpu_enable_disable_mmu)
 
 namespace {
 
@@ -189,6 +191,21 @@ TEST(Guest, VcpuWriteStateIoAarch32) {
 TEST(Guest, DataCacheSetWayOperations) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_dc_set_way_ops_start, vcpu_dc_set_way_ops_end));
+
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+}
+
+TEST(Guest, EnableMmu) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enable_mmu_start, vcpu_enable_mmu_end));
+
+  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+}
+
+TEST(Guest, DisableMmu) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(
+      SetupGuest(&test, vcpu_enable_disable_mmu_start, vcpu_enable_disable_mmu_end));
 
   ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
 }

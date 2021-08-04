@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/arch/cache.h>
+
 #include "src/virtualization/tests/hypervisor/constants.h"
 
 .set ICC_IAR1_EL1,              S3_0_C12_C12_0
@@ -25,6 +27,32 @@
 .set GICC_IAR_OFFSET,           0xc
 
 .set PSCI64_SYSTEM_OFF,         0x84000008
+
+// TCR_EL1 for configuring the MMU.
+//
+// [arm/v8]: D13.2.120 TCR_EL1, Translation Control Register (EL1)
+.set TCR_EL1_TG0_4KIB,            (0 << 14)                // TTBR0 Granule size.
+.set TCR_EL1_T0SZ,                ((64 - REGION_SIZE_BITS) << 0)  // TTBR0 region size
+.set TCR_EL1_SH0_INNER_SHAREABLE, (3 << 12)                // TTBR0 Inner shareable.
+.set TCR_EL1_ORGN0_WB_WA,         (1 << 10)                // TTBR0 Outer write-back/write-allocate
+.set TCR_EL1_IRGN0_WB_WA,         (1 << 8)                 // TTBR0 Inner write-back/write-allocate
+
+.set GUEST_TCR_EL1, ( \
+  (TCR_EL1_TG0_4KIB | TCR_EL1_T0SZ | TCR_EL1_SH0_INNER_SHAREABLE | TCR_EL1_ORGN0_WB_WA | \
+   TCR_EL1_IRGN0_WB_WA))
+
+// Memory Attribute Indirection Register (MAIR)
+//
+// [arm/v8]: D13.2.95  MAIR_EL1, Memory Attribute Indirection Register, EL1
+.set MAIR_ATTR_NORMAL_CACHED, 0xff  // Normal Memory (outer WB, inner WB)
+.set GUEST_MAIR_EL1, (MAIR_ATTR_NORMAL_CACHED << 0)
+
+// Bits for the SCTLR registers.
+.set SCTLR_ELX_M,  (1 << 0)   // MMU enabled.
+.set SCTLR_ELX_C,  (1 << 2)   // Data cache enabled.
+.set SCTLR_ELX_I,  (1 << 12)  // Instruction cache enabled.
+
+.set MEMORY_TEST_BYTES,         (2 * 1024 * 1024)  // Region size to read/write for memory tests.
 
 // Move a constant to a register, emitting multiple `mov` operations if required.
 .macro movlit reg, literal
@@ -91,6 +119,13 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
     b   .
 .endm
 
+// Signals test failure by writing 0 to EXIT_TEST_FAILURE_ADDR.
+.macro test_failure
+    movlit x0, EXIT_TEST_FAILURE_ADDR
+    str    xzr, [x0]
+    b      .
+.endm
+
 // Signals test completion by writing 0 to EXIT_TEST_ADDR.
 .macro test_complete_aarch32
     .word 0xE3A01000    // aarch32:     movw r1, 0
@@ -120,6 +155,72 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
     eret                                 // resume at el0 using specified arch.
 .Ldrop_to_el0_end\@:
 .endm
+
+// Set up and enable the MMU.
+//
+// Clobbers x0 and x1.
+.macro setup_and_enable_mmu
+    // Set up Memory Attribute Indirection Register (MAIR).
+    movlit x0, GUEST_MAIR_EL1
+    msr    mair_el1, x0
+
+    // Set up Translation Control Register (TCR).
+    movlit x0, GUEST_TCR_EL1
+    msr    tcr_el1, x0
+
+    // Set up page table root
+    movlit x0, PAGE_TABLE_PADDR
+    msr    ttbr0_el1, x0
+
+    // Enable page table and caches.
+    mrs     x0, sctlr_el1
+    movlit  x1, (SCTLR_ELX_M | SCTLR_ELX_C | SCTLR_ELX_I)
+    orr     x0, x0, x1
+    msr     sctlr_el1, x0
+    dsb sy
+    isb
+.endm
+
+// Turn off the MMU.
+//
+// Clobbers x0.
+.macro disable_mmu
+    mrs     x0, sctlr_el1
+    bic     x0, x0, SCTLR_ELX_M   // Clear MMU enable bit.
+    msr     sctlr_el1, x0
+    dsb sy
+    isb
+.endm
+
+// Write the value in `word_reg` to every word in [start, start + size).
+//
+// Clobbers x0, x1.
+.macro write_region start, size, word_reg
+    movlit  x0, \start            // Start address
+    movlit  x1, (\start + \size)  // End address
+.Lwrite_region\@:
+    str     \word_reg, [x0], 8    // Write the word and increment the pointer.
+    cmp     x0, x1                // Keep looping until we reach the end address.
+    bne     .Lwrite_region\@
+.endm
+
+// Confirm the region of memory [start, start + size) contains the value in `word_reg`.
+//
+// On error, jumps to the label `failure_label`. Otherwise, continues execution
+// below the macro.
+//
+// Clobbers x0, x1, x2.
+.macro check_region start, size, word_reg, failure_label
+    movlit  x0, \start            // Start address
+    movlit  x1, (\start + \size)  // End address
+.Lcheck_region\@:
+    ldr     x2, [x0], 8           // Read the word and increment the pointer.
+    cmp     x2, \word_reg         // Ensure if matches
+    bne     \failure_label
+    cmp     x0, x1                // Otherwise, keep looping until we reach the end address.
+    bne     .Lcheck_region\@
+.endm
+
 
 .text
 
@@ -289,4 +390,64 @@ FUNCTION vcpu_dc_set_way_ops
     dc  cisw, x0   // Clean/Invalidate L1 cache, set/way 0.
     dc  isw, x0    // Invalidate L1 cache, set/way 0.
     test_complete
+END_FUNCTION
+
+// Enable the MMU.
+FUNCTION vcpu_enable_mmu
+    // Write a value to raw memory.
+    movlit  x14, 0x0123456789abcdef
+    write_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14  // clobbers x0, x1
+
+    // Turn on the MMU.
+    setup_and_enable_mmu  // clobbers x0, x1
+
+    // Ensure we can read from memory, and we get our previously written value.
+    //
+    // Clobbers x0 -- x2, L1
+    check_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14, 1f
+
+    test_complete
+
+1:
+    test_failure
+END_FUNCTION
+
+// Enable and disable the MMU.
+FUNCTION vcpu_enable_disable_mmu
+    // Turn on the MMU.
+    setup_and_enable_mmu  // clobbers x0, x1
+
+    // Write a magic word to every word on a page of cached memory.
+    movlit  x14, 0x1122334455667788
+    write_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14  // clobbers x0, x1
+
+    // Turn off the MMU.
+    disable_mmu  // clobbers x0
+
+    // Clean/invalidate caches.
+    data_cache_way_set_op csw  // clobbers x0 -- x13.
+
+    // The value written into cache should now have been cleaned to main
+    // memory, and should be visible even though caches are off.
+    check_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14, .Lfailure  // clobbers x0 -- x2
+
+    // Write out a different value to uncached RAM.
+    movlit  x14, 0x8877665544332211
+    write_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14  // clobbers x0, x1, L1
+
+    // Turn the MMU on again.
+    setup_and_enable_mmu
+
+    // Verify that what we wrote is visible, even with caches on.
+    //
+    // We've already invalidated caches and we are supposed to be the
+    // only thing running on this system, so we shouldn't need to
+    // invalidate any cache lines.
+    check_region GUEST_SCRATCH_ADDR, MEMORY_TEST_BYTES, x14, .Lfailure  // clobbers x0 -- x2
+
+    test_complete
+
+    // Failure
+.Lfailure:
+    test_failure
 END_FUNCTION
