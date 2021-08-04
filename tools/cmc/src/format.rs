@@ -124,9 +124,9 @@ pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
                     "runner",
                     "binary",
                     "args",
-                ])
+                ]),
             },
-            "/*/program/args" => hashset! {
+            "/*/program/*" => hashset! {
                 PathOption::SortArrayItems(false),
             },
             "/*/*/*" => hashset! {
