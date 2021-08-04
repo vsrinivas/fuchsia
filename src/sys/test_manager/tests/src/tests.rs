@@ -22,9 +22,9 @@ async fn connect_test_manager() -> Result<ftest_manager::RunBuilderProxy, Error>
     let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
     let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
-        .context("bind_child fidl call failed for test manager")?
+        .context("open_exposed_dir fidl call failed for test manager")?
         .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
 
     client::connect_to_protocol_at_dir_root::<ftest_manager::RunBuilderMarker>(&dir)
@@ -38,9 +38,9 @@ async fn connect_query_server() -> Result<ftest_manager::QueryProxy, Error> {
     let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };
     let (dir, server_end) = endpoints::create_proxy::<DirectoryMarker>()?;
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
-        .context("bind_child fidl call failed for test manager")?
+        .context("open_exposed_dir fidl call failed for test manager")?
         .map_err(|e| format_err!("failed to create test manager: {:?}", e))?;
 
     client::connect_to_protocol_at_dir_root::<ftest_manager::QueryMarker>(&dir)
