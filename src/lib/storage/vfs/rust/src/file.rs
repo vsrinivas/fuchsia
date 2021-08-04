@@ -99,7 +99,7 @@ pub trait File: Sync + Send + DirectoryEntry {
 }
 
 /// VMO mode for get_buffer.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SharingMode {
     Shared,
     Private,
