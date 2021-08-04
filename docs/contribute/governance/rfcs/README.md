@@ -99,3 +99,14 @@ form](rfc_process.md). It is also summarized below.
 
 {# This div is used to close the filter that is initialized above #}
 </div>
+
+## Subscribing to RFCs
+
+You can subscribe for email notifications when new RFCs are uploaded using
+[Gerrit Notifications][gerrit-notifications]. A search expression for
+`docs/contribute/governance/rfcs` should capture all new RFC changes.
+
+![Gerrit settings screenshot demonstrating the
+above](resources/gerrit_notifications.png)
+
+[gerrit-notifications]: https://fuchsia-review.googlesource.com/settings/#Notifications
