@@ -132,6 +132,9 @@ zx_status_t Lcd::Enable() {
              panel_type_ == PANEL_KD070D82_FT_9365) {
     status = LoadInitTable(lcd_init_sequence_KD070D82_FT_9365,
                            sizeof(lcd_init_sequence_KD070D82_FT_9365));
+  } else if (panel_type_ == PANEL_TV070WSM_ST7703I) {
+    status = LoadInitTable(lcd_init_sequence_TV070WSM_ST7703I,
+                           sizeof(lcd_init_sequence_TV070WSM_ST7703I));
   } else {
     DISP_ERROR("Unsupported panel detected!\n");
     status = ZX_ERR_NOT_SUPPORTED;

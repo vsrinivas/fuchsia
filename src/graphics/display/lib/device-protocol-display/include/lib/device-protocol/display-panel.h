@@ -16,6 +16,8 @@
 #define PANEL_TV070WSM_FT_9365 UINT8_C(0x08)
 #define PANEL_KD070D82_FT UINT8_C(0x09)
 #define PANEL_KD070D82_FT_9365 UINT8_C(0x0a)
+#define PANEL_TV070WSM_ST7703I UINT8_C(0x0b)
+
 #define PANEL_UNKNOWN UINT8_C(0xFF)
 
 // Astro/Sherlock Display Configuration. These configuration comes directly from
@@ -147,6 +149,22 @@ const display_setting_t kDisplaySettingKD070D82_FT = {
     .vsync_width = 6,
     .vsync_bp = 20,
     .vsync_pol = 0,
+};
+const display_setting_t kDisplaySettingTV070WSM_ST7703I = {
+  .lane_num = 4,
+  .bit_rate_max = 400,
+  .clock_factor = 0,
+  .lcd_clock = 44226000,
+  .h_active = 600,
+  .v_active = 1024,
+  .h_period = 700,
+  .v_period = 1053,
+  .hsync_width = 24,
+  .hsync_bp = 36,
+  .hsync_pol = 0,
+  .vsync_width = 2,
+  .vsync_bp = 8,
+  .vsync_pol = 0,
 };
 
 typedef struct {
