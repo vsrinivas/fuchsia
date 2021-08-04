@@ -5,7 +5,6 @@
 #include "aml-canvas.h"
 
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <vector>
 
@@ -13,6 +12,7 @@
 #include <zxtest/zxtest.h>
 
 #include "dmc-regs.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 constexpr uint32_t kMmioRegSize = sizeof(uint32_t);
@@ -51,17 +51,15 @@ class AmlCanvasTest : public zxtest::Test {
     EXPECT_OK(fake_bti_create(bti.reset_and_get_address()));
 
     fbl::AllocChecker ac;
-    canvas_ = fbl::make_unique_checked<AmlCanvas>(&ac, fake_ddk::kFakeParent, std::move(mmio),
+    canvas_ = fbl::make_unique_checked<AmlCanvas>(&ac, fake_parent_.get(), std::move(mmio),
                                                   std::move(bti));
     EXPECT_TRUE(ac.check());
   }
 
   void TestLifecycle() {
-    fake_ddk::Bind ddk;
     EXPECT_OK(canvas_->DdkAdd("aml-canvas"));
-    canvas_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk.Ok());
-    canvas_->DdkRelease();
+    // TODO(fxbug.dev/79639): Removed the obsolete fake_ddk.Ok() check.
+    // To test Unbind and Release behavior, call UnbindOp and ReleaseOp directly.
     __UNUSED auto ptr = canvas_.release();
   }
 
@@ -153,6 +151,7 @@ class AmlCanvasTest : public zxtest::Test {
     return lut_addr.reg_value();
   }
 
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   std::vector<uint8_t> canvas_indices_;
   ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
   ddk_mock::MockMmioRegRegion mock_regs_;

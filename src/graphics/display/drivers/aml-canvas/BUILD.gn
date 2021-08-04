@@ -60,7 +60,7 @@ test("aml-canvas-test") {
   deps = [
     ":common_srcs",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//zircon/public/lib/zxtest",
   ]
