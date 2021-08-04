@@ -13,13 +13,20 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper:fuchsia-hyper",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:home",
+    "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:url",
   ]
 
   sources = [
     "src/client.rs",
     "src/lib.rs",
+    "src/token_store.rs",
   ]
 }
 
