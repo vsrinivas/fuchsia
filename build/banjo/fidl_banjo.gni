@@ -65,7 +65,11 @@ template("_fidl_banjo_c") {
       deps += invoker.deps
     }
 
-    public_deps = []
+    public_deps = [
+      # The generated headers #include <ddk/*.h>
+      # files from the libraries (that aren't generated).
+      "//src/lib/ddk",
+    ]
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         _name = get_label_info(dep, "name")
