@@ -22,49 +22,61 @@ import("//tools/cmc/build/cmc.gni")
 # error.
 #
 # Parameters
+#
+#   manifest (optional)
+#     The component manifest. If this is not present then this target will
+#     generate a component manifest for the driver.
+#     Type: path
 #   deps
 #   testonly
 #   visibility
 template("fuchsia_driver_component") {
-  distribution_manifest_target = "${target_name}_distribution_manifest"
-  distribution_manifest_file =
-      "${target_gen_dir}/${target_name}.distribution_manifest"
-  distribution_manifest(distribution_manifest_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "testonly",
-                           ])
-    outputs = [ "${distribution_manifest_file}" ]
+  generate_manifest = true
+  if (defined(invoker.manifest)) {
+    generate_manifest = false
   }
 
-  manifest_target = "${target_name}_manifest"
-  manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
-  action(manifest_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [ ":${distribution_manifest_target}" ]
-    script = "//build/drivers/create_component_manifest.py"
-    inputs = [ distribution_manifest_file ]
-    outputs = [ manifest_path ]
-    args = [
-      "--distribution_manifest",
-      rebase_path(distribution_manifest_file, root_build_dir),
-      "--output",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-  }
+  if (generate_manifest) {
+    distribution_manifest_target = "${target_name}_distribution_manifest"
+    distribution_manifest_file =
+        "${target_gen_dir}/${target_name}.distribution_manifest"
+    distribution_manifest(distribution_manifest_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      outputs = [ "${distribution_manifest_file}" ]
+    }
 
-  full_manifest_target = "${target_name}_full_manifest"
-  cmc_merge(full_manifest_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    output_name = invoker.target_name + ".cml"
-    deps = [ ":${manifest_target}" ]
-    sources = []
-    foreach(dep, deps) {
-      sources += get_target_outputs(dep)
+    manifest_target = "${target_name}_manifest"
+    manifest_path = "${target_gen_dir}/meta/${target_name}.cml"
+    action(manifest_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":${distribution_manifest_target}" ]
+      script = "//build/drivers/create_component_manifest.py"
+      inputs = [ distribution_manifest_file ]
+      outputs = [ manifest_path ]
+      args = [
+        "--distribution_manifest",
+        rebase_path(distribution_manifest_file, root_build_dir),
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+      ]
+    }
+
+    full_manifest_target = "${target_name}_full_manifest"
+    cmc_merge(full_manifest_target) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker, [ "testonly" ])
+      output_name = invoker.target_name + ".cml"
+      deps = [ ":${manifest_target}" ]
+      sources = []
+      foreach(dep, deps) {
+        sources += get_target_outputs(dep)
+      }
     }
   }
 
@@ -76,10 +88,17 @@ template("fuchsia_driver_component") {
                              "visibility",
                              "component_name",
                              "testonly",
+                             "manifest",
                              "deps",
                            ])
-    deps += [ ":${full_manifest_target}" ]
-    manifest = get_target_outputs(":${full_manifest_target}")
-    manifest = manifest[0]
+    if (generate_manifest) {
+      deps += [ ":${full_manifest_target}" ]
+      manifest = get_target_outputs(":${full_manifest_target}")
+      manifest = manifest[0]
+    }
+    metadata = {
+      # Used by the assert_driver_components template.
+      driver_component_barrier = []
+    }
   }
 }
