@@ -402,7 +402,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 
     // remove the pages from the run out of the free list
     for (size_t i = 0; i < count; i++, p++) {
-      DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, p->state());
+      DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, static_cast<uint32_t>(p->state()));
       DEBUG_ASSERT(list_in_list(&p->queue_node));
 
       list_delete(&p->queue_node);

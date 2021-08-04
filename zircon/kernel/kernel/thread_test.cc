@@ -613,7 +613,7 @@ bool migrate_stress_test() {
                       "Worker thread scheduled between MigrationStage::Before and "
                       "MigrationStage::After being called.\n");
         ZX_ASSERT_MSG(arch_curr_cpu_num() == state->allowed_cpu,
-                      "Worker thread running on unexpected CPU: expected = %d, running on = %d\n",
+                      "Worker thread running on unexpected CPU: expected = %u, running on = %u\n",
                       state->allowed_cpu, arch_curr_cpu_num());
       }
       Thread::Current::Yield();

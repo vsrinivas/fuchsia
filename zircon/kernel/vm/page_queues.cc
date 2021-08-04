@@ -19,7 +19,7 @@ PageQueues::~PageQueues() {
     DEBUG_ASSERT(list_is_empty(&page_queues_[i]));
   }
   for (size_t i = 0; i < page_queue_counts_.size(); i++) {
-    DEBUG_ASSERT_MSG(page_queue_counts_[i] == 0, "i=%zu count=%zd", i,
+    DEBUG_ASSERT_MSG(page_queue_counts_[i] == 0, "i=%zu count=%zu", i,
                      page_queue_counts_[i].load());
   }
 }

@@ -618,8 +618,8 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
 
       DEBUG_ASSERT(page);
       DEBUG_ASSERT_MSG(page->state() == vm_page_state::MMU,
-                       "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state(),
-                       X86_VIRT_TO_PHYS(next_table));
+                       "page %p state %u, paddr %#" PRIxPTR "\n", page,
+                       static_cast<uint32_t>(page->state()), X86_VIRT_TO_PHYS(next_table));
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
 
       cm->queue_free(page);
@@ -1005,8 +1005,8 @@ bool X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, NonTerminalAct
 
       DEBUG_ASSERT(page);
       DEBUG_ASSERT_MSG(page->state() == vm_page_state::MMU,
-                       "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state(),
-                       X86_VIRT_TO_PHYS(next_table));
+                       "page %p state %u, paddr %#" PRIxPTR "\n", page,
+                       static_cast<uint32_t>(page->state()), X86_VIRT_TO_PHYS(next_table));
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
 
       cm->queue_free(page);
