@@ -361,7 +361,8 @@ bool virtual_alloc_zero_pages_test() {
   ASSERT_OK(alloc.Init(vmar->base(), vmar->size(), 1, PAGE_SIZE_SHIFT));
 
   // Allocating zero pages is considered an error.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, alloc.AllocPages(0).error_value());
+  // TODO: understand and remove cast.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, (zx_status_t)alloc.AllocPages(0).error_value());
 
   END_TEST;
 }
@@ -374,8 +375,10 @@ bool virtual_alloc_init_test() {
   VirtualAlloc alloc(vm_page_state::ALLOC);
 
   // Any allocation should fail.
-  EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.AllocPages(1).error_value());
-  EXPECT_EQ(ZX_ERR_BAD_STATE, alloc.AllocPages(0).error_value());
+  // TODO: understand and remove cast.
+  EXPECT_EQ(ZX_ERR_BAD_STATE, (zx_status_t)alloc.AllocPages(1).error_value());
+  // TODO: understand and remove cast.
+  EXPECT_EQ(ZX_ERR_BAD_STATE, (zx_status_t)alloc.AllocPages(0).error_value());
 
   // Bases and sizes need to be aligned
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, alloc.Init(vmar->base() + 1, vmar->size(), 1, PAGE_SIZE_SHIFT));
