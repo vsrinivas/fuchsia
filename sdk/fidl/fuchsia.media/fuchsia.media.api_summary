@@ -333,7 +333,6 @@ struct/member fuchsia.media/PcmFormat.channel_map vector<fuchsia.media/AudioChan
 struct/member fuchsia.media/PcmFormat.frames_per_second uint32
 struct/member fuchsia.media/PcmFormat.pcm_mode fuchsia.media/AudioPcmMode
 struct fuchsia.media/PcmFormat
-protocol/member fuchsia.media/ProfileProvider.RegisterHandler(zx/handle:THREAD thread_handle,string:64 name,int64 period) -> (int64 period,int64 capacity)
 protocol/member fuchsia.media/ProfileProvider.RegisterHandlerWithCapacity(zx/handle:THREAD thread_handle,string:64 name,int64 period,float32 capacity) -> (int64 period,int64 capacity)
 protocol fuchsia.media/ProfileProvider
 struct/member fuchsia.media/Property.label string

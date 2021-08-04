@@ -6,26 +6,7 @@ library fuchsia.media;
 using zx;
 
 @discoverable
-@for_deprecated_c_bindings
 protocol ProfileProvider {
-    /// Register a thread as a media thread. This notifies the media subsystem
-    /// that this thread should have an elevated scheduling profile applied to
-    /// it in order to meet audio or video deadlines.
-    ///
-    /// `name` is the name of the component requesting the profile.
-    /// `period` is the suggested interval to be scheduled at.
-    ///
-    /// Returns the period and capacity that was applied, if a deadline profile
-    /// was selected. Returns 0 if no deadline profile was selected.
-    RegisterHandler(resource struct {
-        thread_handle zx.handle:THREAD;
-        name string:64;
-        period zx.duration;
-    }) -> (struct {
-        period zx.duration;
-        capacity zx.duration;
-    });
-
     /// Register a thread as a media thread. This notifies the media subsystem that this thread
     /// should have an elevated scheduling profile applied to it in order to meet audio or video
     /// deadlines.
@@ -39,7 +20,6 @@ protocol ProfileProvider {
     ///
     /// Returns the period and capacity that was applied, if a deadline profile was selected.
     /// Returns 0 if no deadline profile was selected.
-    @transitional
     RegisterHandlerWithCapacity(resource struct {
         thread_handle zx.handle:THREAD;
         name string:64;
