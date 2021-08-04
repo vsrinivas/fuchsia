@@ -147,21 +147,18 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
   size_t index = 0;
   fidl_props[index++] =
       fdf::wire::NodeProperty(allocator)
-          .set_key(allocator,
-                   fdf::wire::NodePropertyKeyUnion::WithIntValue(allocator, BIND_PROTOCOL))
+          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, BIND_PROTOCOL))
           .set_value(allocator,
                      fdf::wire::NodePropertyValue::WithIntValue(allocator, dev->protocol_id()));
   fidl_props[index++] =
       fdf::wire::NodeProperty(allocator)
-          .set_key(allocator,
-                   fdf::wire::NodePropertyKeyUnion::WithIntValue(allocator, BIND_AUTOBIND))
+          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, BIND_AUTOBIND))
           .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(allocator, autobind));
 
   for (size_t i = 0; i < props.size(); i++) {
     fidl_props[index++] =
         fdf::wire::NodeProperty(allocator)
-            .set_key(allocator,
-                     fdf::wire::NodePropertyKeyUnion::WithIntValue(allocator, props[i].id))
+            .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, props[i].id))
             .set_value(allocator,
                        fdf::wire::NodePropertyValue::WithIntValue(allocator, props[i].value));
   }
@@ -169,7 +166,7 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
   for (size_t i = 0; i < str_props.size(); i++) {
     auto prop = fdf::wire::NodeProperty(allocator).set_key(
         allocator,
-        fdf::wire::NodePropertyKeyUnion::WithStringValue(allocator, allocator, str_props[i].key));
+        fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_props[i].key));
     if (std::holds_alternative<uint32_t>(str_props[i].value)) {
       prop.set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(
                                     allocator, std::get<uint32_t>(str_props[i].value)));

@@ -395,7 +395,7 @@ fn convert_to_fidl_constant(
     if !declaration.extends {
         writeln!(
             &mut result,
-            "const {} fdf.NodePropertyKey = \"{}.{}\";",
+            "const {} fdf.NodePropertyKeyString = \"{}.{}\";",
             &identifier_name, &path, &identifier_name
         )?;
     }
@@ -706,7 +706,7 @@ mod tests {
             "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const A_KEY fdf.NodePropertyKey = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const A_KEY fdf.NodePropertyKeyString = \"fuchsia.platform.A_KEY\";".to_string(),
             "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
@@ -743,7 +743,7 @@ mod tests {
             "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const A_KEY fdf.NodePropertyKey = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const A_KEY fdf.NodePropertyKeyString = \"fuchsia.platform.A_KEY\";".to_string(),
             "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 

@@ -69,8 +69,8 @@ fn node_to_device_property(
             return Err(Status::INVALID_ARGS.into_raw());
         }
         let key = match property.key.as_ref().unwrap() {
-            fdf::NodePropertyKeyUnion::IntValue(i) => PropertyKey::NumberKey(i.clone().into()),
-            fdf::NodePropertyKeyUnion::StringValue(s) => PropertyKey::StringKey(s.clone()),
+            fdf::NodePropertyKey::IntValue(i) => PropertyKey::NumberKey(i.clone().into()),
+            fdf::NodePropertyKey::StringValue(s) => PropertyKey::StringKey(s.clone()),
         };
         let value = match property.value.as_ref().unwrap() {
             fdf::NodePropertyValue::IntValue(i) => {
@@ -559,9 +559,7 @@ mod tests {
         let test_task = async move {
             // Check the value from the 'test-bind' binary. This should match my-driver.cm
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -581,9 +579,7 @@ mod tests {
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -603,9 +599,7 @@ mod tests {
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -665,7 +659,7 @@ mod tests {
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::StringValue("my-key".to_string())),
+                key: Some(fdf::NodePropertyKey::StringValue("my-key".to_string())),
                 value: Some(fdf::NodePropertyValue::StringValue("test-value".to_string())),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -731,9 +725,7 @@ mod tests {
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -779,9 +771,7 @@ mod tests {
         let test_task = async move {
             // Check the value from the 'test-bind' binary. This should match my-driver.cm
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(1)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -799,9 +789,7 @@ mod tests {
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(2)),
                 ..fdf::NodeProperty::EMPTY
             };
@@ -819,9 +807,7 @@ mod tests {
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
-                key: Some(fdf::NodePropertyKeyUnion::IntValue(
-                    bind::ddk_bind_constants::BIND_PROTOCOL,
-                )),
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
                 value: Some(fdf::NodePropertyValue::IntValue(3)),
                 ..fdf::NodeProperty::EMPTY
             };

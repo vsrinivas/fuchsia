@@ -786,7 +786,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     args.set_name("second");
     args.mutable_properties()->emplace_back(
         std::move(fdf::NodeProperty()
-                      .set_key(fdf::NodePropertyKeyUnion::WithIntValue(0x1985))
+                      .set_key(fdf::NodePropertyKey::WithIntValue(0x1985))
                       .set_value(fdf::NodePropertyValue::WithIntValue(0x2301))));
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });

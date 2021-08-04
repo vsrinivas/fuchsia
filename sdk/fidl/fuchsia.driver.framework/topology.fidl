@@ -6,7 +6,9 @@ library fuchsia.driver.framework;
 using fuchsia.component;
 
 using zx;
-alias NodePropertyKey = string:256;
+
+alias NodePropertyKeyString = string:256;
+alias NodePropertyKeyUint = uint32;
 alias NodePropertyValueUint = uint32;
 alias NodePropertyValueString = string:256;
 alias NodePropertyValueBool = bool;
@@ -29,9 +31,9 @@ type NodeSymbol = table {
     2: address zx.vaddr;
 };
 
-type NodePropertyKeyUnion = strict union {
-    1: int_value uint32;
-    2: string_value NodePropertyKey;
+type NodePropertyKey = strict union {
+    1: int_value NodePropertyKeyUint;
+    2: string_value NodePropertyKeyString;
 };
 
 type NodePropertyValue = strict union {
@@ -44,7 +46,7 @@ type NodePropertyValue = strict union {
 /// node to a driver for driver binding.
 type NodeProperty = table {
     /// Key for the property.
-    1: key NodePropertyKeyUnion;
+    1: key NodePropertyKey;
 
     /// Value for the property.
     2: value NodePropertyValue;
