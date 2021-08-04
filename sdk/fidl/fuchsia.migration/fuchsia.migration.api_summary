@@ -15,6 +15,9 @@ enum/member fuchsia.migration/MigrationStatus.ENCOUNTERED_ERROR 4
 enum/member fuchsia.migration/MigrationStatus.IN_PROGRESS 2
 enum/member fuchsia.migration/MigrationStatus.UNKNOWN 1
 strict enum fuchsia.migration/MigrationStatus uint32
+protocol/member fuchsia.migration/ProductPolicyProvider.Get(server_end:fuchsia.io/Directory dir)
+protocol/member fuchsia.migration/ProductPolicyProvider.Processed()
+protocol fuchsia.migration/ProductPolicyProvider
 protocol/member fuchsia.migration/Provider.Get(server_end:fuchsia.io/Directory dir)
 protocol/member fuchsia.migration/Provider.Processed()
 protocol fuchsia.migration/Provider
