@@ -13,7 +13,6 @@
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +29,8 @@
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace dw_i2c {
 
@@ -52,7 +53,7 @@ class DwI2cTester {
     ASSERT_TRUE(ac.check());
 
     /* Create DwI2c instance */
-    dw_i2c_ = fbl::make_unique_checked<DwI2c>(&ac, fake_ddk::kFakeParent, std::move(bus_list));
+    dw_i2c_ = fbl::make_unique_checked<DwI2c>(&ac, fake_parent_.get(), std::move(bus_list));
     ASSERT_TRUE(ac.check());
   }
 
@@ -68,9 +69,8 @@ class DwI2cTester {
 
   void VerifyAll() {}
 
-  fake_ddk::Bind ddk;
-
  private:
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   static constexpr uint32_t kRegSize = sizeof(uint32_t);
   static constexpr uint32_t kRegBytes = 0x100;
   static constexpr uint32_t kRegCount = kRegBytes / kRegSize;
@@ -85,9 +85,12 @@ TEST(DwI2cTest, DdkLifecyle) {
   DwI2cTester tester;
   auto dut = tester.GetDUT();
   ASSERT_OK(dut->DdkAdd("dw-i2c"));
-  ASSERT_OK(dut->Init());
-  dut->DdkAsyncRemove();
-  ASSERT_TRUE(tester.ddk.Ok());
+  // Release the device ptr, now owned by the device host
+  auto dut_ptr = dut.release();
+  ASSERT_OK(dut_ptr->Init());
+
+  dut_ptr->DdkAsyncRemove();
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(dut_ptr->zxdev()));
 }
 
 TEST(DwI2cTest, I2cImplGetBusCount) {
