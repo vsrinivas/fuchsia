@@ -82,20 +82,74 @@ constexpr uint32_t kAfbcColorReorderA = 4;
 constexpr zx::duration kRdmaActiveCondWaitTimeout = zx::sec(1);
 constexpr zx::duration kRdmaRegisterDumpTimeout = zx::sec(2);
 
+struct RdmaRegisterRecord {
+  uint32_t rdma_access_auto;
+  uint32_t rdma_access_auto2;
+  uint32_t rdma_access_auto3;
+  uint32_t rdma_access_man;
+  uint32_t rdma_ctrl;
+  uint32_t rdma_status;
+  uint32_t rdma_status2;
+  uint32_t rdma_status3;
+  uint32_t scratch_reg_high;
+  uint32_t scratch_reg_low;
+
+  explicit RdmaRegisterRecord(ddk::MmioBuffer* mmio) {
+    rdma_access_auto = mmio->Read32(VPU_RDMA_ACCESS_AUTO);
+    rdma_access_auto2 = mmio->Read32(VPU_RDMA_ACCESS_AUTO2);
+    rdma_access_auto3 = mmio->Read32(VPU_RDMA_ACCESS_AUTO3);
+    rdma_access_man = mmio->Read32(VPU_RDMA_ACCESS_MAN);
+    rdma_ctrl = mmio->Read32(VPU_RDMA_CTRL);
+    rdma_status = mmio->Read32(VPU_RDMA_STATUS);
+    rdma_status2 = mmio->Read32(VPU_RDMA_STATUS2);
+    rdma_status3 = mmio->Read32(VPU_RDMA_STATUS3);
+    scratch_reg_high = mmio->Read32(VPP_DUMMY_DATA1);
+    scratch_reg_low = mmio->Read32(VPP_OSD_SC_DUMMY_DATA);
+  }
+
+  void Dump() {
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x", rdma_access_auto);
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x", rdma_access_auto2);
+    DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x", rdma_access_auto3);
+    DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x", rdma_access_man);
+    DISP_INFO("VPU_RDMA_CTRL = 0x%x", rdma_ctrl);
+    DISP_INFO("VPU_RDMA_STATUS = 0x%x", rdma_status);
+    DISP_INFO("VPU_RDMA_STATUS2 = 0x%x", rdma_status2);
+    DISP_INFO("VPU_RDMA_STATUS3 = 0x%x", rdma_status3);
+    DISP_INFO("Scratch Reg High: 0x%x", scratch_reg_high);
+    DISP_INFO("Scratch Reg Low: 0x%x", scratch_reg_low);
+  }
+};
+
 }  // namespace
 
 void Osd::WaitForRdmaIdle() {
+  // Record the state of RDMA registers to log in case of a stall.
+  RdmaRegisterRecord record(&(*vpu_mmio_));
+
   zx::time dump_deadline = zx::deadline_after(kRdmaRegisterDumpTimeout);
   zx::unowned_clock utc_clock(zx_utc_reference_get());
   bool dumped = false;
   auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   while (stat_reg.RequestLatched(kRdmaChannel) || stat_reg.ChannelDone(kRdmaChannel)) {
     if (!dumped && zx::clock::get_monotonic() > dump_deadline) {
+      rdma_stall_count_.Add(1);
+
       DISP_INFO("vsync blocked too long waiting for RDMA; dumping registers");
       dumped = true;
-      Dump();
 
-      rdma_stall_count_.Add(1);
+      DISP_INFO("RDMA registers before wait:\n");
+      record.Dump();
+      DumpLocked();
+
+      if (stat_reg.ChannelDone(kRdmaChannel)) {
+        // Typically we expect this to be handled by RdmaThread(), however there is a subtle bug
+        // that causes the RDMA thread to sometimes not wake up from the IRQ wait. Here we assume
+        // that RdmaThread() did not handle this condition, schedule any pending configs as
+        // RdmaThread() would, and unblock the vsync event delivery.
+        HandleBaseRdmaComplete();
+        return;
+      }
     }
 
     zx::time_utc now;
@@ -119,6 +173,68 @@ uint64_t Osd::GetLastImageApplied() {
     WaitForRdmaIdle();
   }
   return latest_applied_config_;
+}
+
+void Osd::HandleBaseRdmaComplete() {
+  uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
+  regVal &= ~RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // Remove VSYNC interrupt source
+  vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
+  // clear interrupts
+  RdmaCtrlReg::ClearInterrupt(kRdmaChannel, &(*vpu_mmio_));
+
+  // Continue only if rdma is active. If not, it means we are switching clients and this is
+  // a "left" over interrupt.
+  if (!rdma_active_) {
+    return;
+  }
+  // Find out how far did the RDMA write
+  uint64_t val = (static_cast<uint64_t>(vpu_mmio_->Read32(VPP_DUMMY_DATA1)) << 32) |
+                 (vpu_mmio_->Read32(VPP_OSD_SC_DUMMY_DATA));
+  size_t last_table_index = -1;
+  // FIXME: or search until end_index_used_. Either way, end_index_used_ will
+  // always be less than kNumberOfTables. So no penalty
+  for (size_t i = start_index_used_; i < kNumberOfTables && last_table_index == -1ul; i++) {
+    if (val == rdma_usage_table_[i]) {
+      // Found the last table that was written to
+      last_table_index = i;
+      latest_applied_config_ = rdma_usage_table_[i];  // save this for vsync
+    }
+    rdma_usage_table_[i] = kRdmaTableUnavailable;  // mark as unavailable for now
+  }
+  if (last_table_index == -1ul) {
+    DISP_ERROR("RDMA handler could not find last used table index");
+    DumpRdmaState();
+
+    // Pretend that all configs have been completed to recover. The next code block will initialize
+    // the entire table as ready to consume new configs.
+    last_table_index = end_index_used_;
+  }
+
+  rdma_active_ = false;
+  rdma_active_cnd_.Broadcast();
+  // Only mark ready if we actually completed all the configs.
+  if (last_table_index == end_index_used_) {
+    // Clear them up
+    for (size_t i = 0; i <= last_table_index; i++) {
+      rdma_usage_table_[i] = kRdmaTableReady;
+    }
+  } else {
+    // We have pending configs. Let's schedule it. First,
+    // We want to schedule a new RDMA from <last_table_index + 1> to end_index_used
+    // Write the start and end address of the table. End address is the last address that
+    // the RDMA engine reads from.
+    start_index_used_ = static_cast<uint8_t>(last_table_index + 1);
+    vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset),
+                       VPU_RDMA_AHB_START_ADDR(kRdmaChannel));
+    vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset +
+                                             kTableSize - 4),
+                       VPU_RDMA_AHB_END_ADDR(kRdmaChannel));
+    uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
+    regVal |= RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // VSYNC interrupt source
+    regVal |= RDMA_ACCESS_AUTO_WRITE(kRdmaChannel);   // Write
+    vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
+    rdma_active_ = true;
+  }
 }
 
 int Osd::RdmaThread() {
@@ -170,62 +286,7 @@ int Osd::RdmaThread() {
 
     // RDMA completed. Remove source for all finished DMA channels
     fbl::AutoLock lock(&rdma_lock_);
-    uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
-    regVal &= ~RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // Remove VSYNC interrupt source
-    vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
-    // clear interrupts
-    RdmaCtrlReg::ClearInterrupt(kRdmaChannel, &(*vpu_mmio_));
-
-    // Continue only if rdma is active. If not, it means we are switching clients and this is
-    // a "left" over interrupt.
-    if (!rdma_active_) {
-      continue;
-    }
-    // Find out how far did the RDMA write
-    uint64_t val = (static_cast<uint64_t>(vpu_mmio_->Read32(VPP_DUMMY_DATA1)) << 32) |
-                   (vpu_mmio_->Read32(VPP_OSD_SC_DUMMY_DATA));
-    size_t last_table_index = -1;
-    // FIXME: or search until end_index_used_. Either way, end_index_used_ will
-    // always be less than kNumberOfTables. So no penalty
-    for (size_t i = start_index_used_; i < kNumberOfTables && last_table_index == -1ul; i++) {
-      if (val == rdma_usage_table_[i]) {
-        // Found the last table that was written to
-        last_table_index = i;
-        latest_applied_config_ = rdma_usage_table_[i];  // save this for vsync
-      }
-      rdma_usage_table_[i] = kRdmaTableUnavailable;  // mark as unavailable for now
-    }
-    if (last_table_index == -1ul) {
-      DISP_ERROR("Could not find index");
-      DumpRdmaState();
-      ZX_ASSERT(last_table_index != -1ul);
-    }
-
-    rdma_active_ = false;
-    rdma_active_cnd_.Broadcast();
-    // Only mark ready if we actually completed all the configs.
-    if (last_table_index == end_index_used_) {
-      // Clear them up
-      for (size_t i = 0; i <= last_table_index; i++) {
-        rdma_usage_table_[i] = kRdmaTableReady;
-      }
-    } else {
-      // We have pending configs. Let's schedule it. First,
-      // We want to schedule a new RDMA from <last_table_index + 1> to end_index_used
-      // Write the start and end address of the table. End address is the last address that
-      // the RDMA engine reads from.
-      start_index_used_ = static_cast<uint8_t>(last_table_index + 1);
-      vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset),
-                         VPU_RDMA_AHB_START_ADDR(kRdmaChannel));
-      vpu_mmio_->Write32(static_cast<uint32_t>(rdma_chnl_container_[start_index_used_].phys_offset +
-                                               kTableSize - 4),
-                         VPU_RDMA_AHB_END_ADDR(kRdmaChannel));
-      uint32_t regVal = vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO);
-      regVal |= RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // VSYNC interrupt source
-      regVal |= RDMA_ACCESS_AUTO_WRITE(kRdmaChannel);   // Write
-      vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
-      rdma_active_ = true;
-    }
+    HandleBaseRdmaComplete();
   }
   return status;
 }
@@ -1134,6 +1195,46 @@ void Osd::HwInit() {
 #define REG_OFFSET (0x20 << 2)
 void Osd::Dump() {
   ZX_DEBUG_ASSERT(initialized_);
+  DumpNonRdmaRegisters();
+  DumpRdmaRegisters();
+}
+
+void Osd::DumpLocked() {
+  DumpNonRdmaRegisters();
+  DumpRdmaState();
+}
+
+void Osd::DumpRdmaRegisters() {
+  DISP_INFO("Dumping all RDMA related Registers\n");
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_MAN));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_MAN));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_1));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_1));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_2));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_2));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_3));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_3));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_4));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_4));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_5));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_5));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_6));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_6));
+  DISP_INFO("VPU_RDMA_AHB_START_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_7));
+  DISP_INFO("VPU_RDMA_AHB_END_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_7));
+  DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO));
+  DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO2));
+  DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO3));
+  DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_MAN));
+  DISP_INFO("VPU_RDMA_CTRL = 0x%x", vpu_mmio_->Read32(VPU_RDMA_CTRL));
+  DISP_INFO("VPU_RDMA_STATUS = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS));
+  DISP_INFO("VPU_RDMA_STATUS2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS2));
+  DISP_INFO("VPU_RDMA_STATUS3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS3));
+  DISP_INFO("Scratch Reg High: 0x%x", vpu_mmio_->Read32(VPP_DUMMY_DATA1));
+  DISP_INFO("Scratch Reg Low: 0x%x", vpu_mmio_->Read32(VPP_OSD_SC_DUMMY_DATA));
+}
+
+void Osd::DumpNonRdmaRegisters() {
   uint32_t reg = 0;
   uint32_t offset = 0;
   uint32_t index = 0;
@@ -1228,32 +1329,6 @@ void Osd::Dump() {
     DISP_INFO("reg[0x%x]: 0x%08x\n", reg, READ32_REG(VPU, reg));
   }
 
-  DISP_INFO("Dumping all RDMA related Registers\n");
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_MAN));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_MAN));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_1));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_1));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_2));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_2));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_3));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_3));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_4));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_4));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_5));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_5));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_6));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_6));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_7));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_7));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO2));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO3));
-  DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_MAN));
-  DISP_INFO("VPU_RDMA_CTRL = 0x%x", vpu_mmio_->Read32(VPU_RDMA_CTRL));
-  DISP_INFO("VPU_RDMA_STATUS = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS));
-  DISP_INFO("VPU_RDMA_STATUS2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS2));
-  DISP_INFO("VPU_RDMA_STATUS3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS3));
-
   DISP_INFO("Dumping all Color Correction Matrix related Registers\n");
   DISP_INFO("VPU_VPP_POST_MATRIX_COEF00_01 = 0x%x",
             vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_COEF00_01));
@@ -1278,34 +1353,10 @@ void Osd::DumpRdmaState() {
   DISP_INFO("\n\n============ RDMA STATE DUMP ============\n\n");
   DISP_INFO("Dumping all RDMA related States\n");
   DISP_INFO("rdma is %s", rdma_active_ ? "Active" : "Not Active");
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_MAN));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_MAN));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_1));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_1 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_1));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_2));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_2));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_3));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_3));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_4));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_4 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_4));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_5));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_5 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_5));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_6));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_6 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_6));
-  DISP_INFO("VPU_RDMA_AHB_START_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_START_ADDR_7));
-  DISP_INFO("VPU_RDMA_AHB_END_ADDR_7 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_AHB_END_ADDR_7));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO2));
-  DISP_INFO("VPU_RDMA_ACCESS_AUTO3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_AUTO3));
-  DISP_INFO("VPU_RDMA_ACCESS_MAN = 0x%x", vpu_mmio_->Read32(VPU_RDMA_ACCESS_MAN));
-  DISP_INFO("VPU_RDMA_CTRL = 0x%x", vpu_mmio_->Read32(VPU_RDMA_CTRL));
-  DISP_INFO("VPU_RDMA_STATUS = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS));
-  DISP_INFO("VPU_RDMA_STATUS2 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS2));
-  DISP_INFO("VPU_RDMA_STATUS3 = 0x%x", vpu_mmio_->Read32(VPU_RDMA_STATUS3));
-  DISP_INFO("Scratch Reg High: 0x%x", vpu_mmio_->Read32(VPP_DUMMY_DATA1));
-  DISP_INFO("Scratch Reg Low: 0x%x", vpu_mmio_->Read32(VPP_OSD_SC_DUMMY_DATA));
 
-  DISP_INFO("\nRDMA Table Content:\n");
+  DumpRdmaRegisters();
+
+  DISP_INFO("RDMA Table Content:\n");
   for (auto& i : rdma_usage_table_) {
     DISP_INFO("[0x%lx]", i);
   }

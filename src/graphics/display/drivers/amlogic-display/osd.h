@@ -178,8 +178,6 @@ class Osd {
   void Dump();
   void Release();
 
-  void DumpRdmaState() __TA_REQUIRES(rdma_lock_);
-
   // This function converts a float into Signed fixed point 3.10 format
   // [12][11:10][9:0] = [sign][integer][fraction]
   static uint32_t FloatToFixed3_10(float f);
@@ -215,8 +213,14 @@ class Osd {
   zx_status_t WaitForGammaAddressReady();
   zx_status_t WaitForGammaWriteReady();
   void WaitForRdmaIdle() __TA_REQUIRES(rdma_lock_);
+  void HandleBaseRdmaComplete() __TA_REQUIRES(rdma_lock_);
+  int GetNextAvailableRdmaTableIndex() __TA_EXCLUDES(rdma_lock_);
 
-  int GetNextAvailableRdmaTableIndex();
+  // Like Dump() but logs critical sections that require holding |rdma_lock_|.
+  void DumpLocked() __TA_REQUIRES(rdma_lock_);
+  void DumpRdmaRegisters();
+  void DumpNonRdmaRegisters();
+  void DumpRdmaState() __TA_REQUIRES(rdma_lock_);
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   zx::bti bti_;
