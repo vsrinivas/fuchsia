@@ -498,11 +498,6 @@ resource("static_txts") {
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
-resource("virtcon_config") {
-  sources = [ "config/virtcon_config.toml" ]
-  outputs = [ "data/config/carnelian.toml" ]
-}
-
 resource("spinel_config") {
   sources = [ "config/spinel_config.toml" ]
   outputs = [ "data/config/carnelian.toml" ]

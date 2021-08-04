@@ -227,6 +227,12 @@ type HeapType = strict enum : uint64 {
 
     /// Heap used by goldfish vulkan for host-visible memory.
     GOLDFISH_HOST_VISIBLE = 0x1000000000020001;
+
+    /// Heap used for display framebuffer. This is used by display drivers
+    /// limited to a single framebuffer located at a specific physical address.
+    /// The framebuffer heap makes it possible to create buffer collections
+    /// for the framebuffer and enables sysmem support in these drivers.
+    FRAMEBUFFER = 0x1000000000030001;
 };
 
 @for_deprecated_c_bindings

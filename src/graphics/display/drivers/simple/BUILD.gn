@@ -12,12 +12,19 @@ source_set("shared") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
 }

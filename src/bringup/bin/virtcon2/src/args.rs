@@ -16,6 +16,7 @@ pub const MAX_FONT_SIZE: f32 = 150.0;
 const DEFAULT_KEYMAP: &'static str = "US_QWERTY";
 const DEFAULT_FONT_SIZE: f32 = 15.0;
 const DEFAULT_SCROLLBACK_ROWS: u32 = 1024;
+const DEFAULT_BUFFER_COUNT: usize = 1;
 
 #[derive(Debug, Default)]
 pub struct VirtualConsoleArgs {
@@ -30,6 +31,7 @@ pub struct VirtualConsoleArgs {
     pub font_size: f32,
     pub dpi: Vec<u32>,
     pub scrollback_rows: u32,
+    pub buffer_count: usize,
 }
 
 impl VirtualConsoleArgs {
@@ -62,6 +64,7 @@ impl VirtualConsoleArgs {
             "virtcon.font_size",
             "virtcon.dpi",
             "virtcon.scrollback_rows",
+            "virtcon.buffer_count",
         ];
         let mut color_scheme = ColorScheme::default();
         let mut keymap = DEFAULT_KEYMAP.to_string();
@@ -69,6 +72,7 @@ impl VirtualConsoleArgs {
         let mut font_size = DEFAULT_FONT_SIZE;
         let mut dpi = vec![];
         let mut scrollback_rows = DEFAULT_SCROLLBACK_ROWS;
+        let mut buffer_count = DEFAULT_BUFFER_COUNT;
         if let Ok(values) = boot_args.get_strings(&mut string_keys.into_iter()).await {
             if let Some(value) = values[0].as_ref() {
                 color_scheme = ColorScheme::from_str(value)?;
@@ -95,6 +99,9 @@ impl VirtualConsoleArgs {
             if let Some(value) = values[5].as_ref() {
                 scrollback_rows = value.parse::<u32>()?;
             }
+            if let Some(value) = values[6].as_ref() {
+                buffer_count = value.parse::<usize>()?;
+            }
         }
 
         Ok(VirtualConsoleArgs {
@@ -109,6 +116,7 @@ impl VirtualConsoleArgs {
             font_size,
             dpi,
             scrollback_rows,
+            buffer_count,
         })
     }
 }
@@ -375,6 +383,19 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.scrollback_rows, 10_000);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_buffer_count() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.buffer_count", "2")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.buffer_count, 2);
 
         Ok(())
     }

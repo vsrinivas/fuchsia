@@ -104,6 +104,7 @@ table/member fuchsia.sysmem2/HeapProperties.need_flush bool
 table fuchsia.sysmem2/HeapProperties
 enum/member fuchsia.sysmem2/HeapType.AMLOGIC_SECURE 1152921504606912512
 enum/member fuchsia.sysmem2/HeapType.AMLOGIC_SECURE_VDEC 1152921504606912513
+enum/member fuchsia.sysmem2/HeapType.FRAMEBUFFER 1152921504607043585
 enum/member fuchsia.sysmem2/HeapType.GOLDFISH_DEVICE_LOCAL 1152921504606978048
 enum/member fuchsia.sysmem2/HeapType.GOLDFISH_HOST_VISIBLE 1152921504606978049
 enum/member fuchsia.sysmem2/HeapType.SYSTEM_RAM 0

@@ -162,6 +162,8 @@ void random<v1::wire::HeapType>(v1::wire::HeapType* field) {
       /*AMLOGIC_SECURE =*/1152921504606912512u,
       /*AMLOGIC_SECURE_VDEC =*/1152921504606912513u,
       /*GOLDFISH_DEVICE_LOCAL =*/1152921504606978048u,
+      /*GOLDFISH_HOST_VISIBLE =*/1152921504606978049u,
+      /*FRAMEBUFFER =*/1152921504607043585u,
   };
   uint32_t index;
   random(&index);

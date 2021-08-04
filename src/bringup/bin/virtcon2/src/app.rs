@@ -12,6 +12,7 @@ use {
     anyhow::Error,
     carnelian::{app::Config, make_message, AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
     fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::fs::File,
@@ -177,9 +178,11 @@ impl AppAssistant for VirtualConsoleAppAssistant {
     }
 
     fn filter_config(&mut self, config: &mut Config) {
+        config.virtcon_mode = Some(VirtconMode::Forced);
         config.keyboard_autorepeat = self.args.keyrepeat;
         config.display_rotation = self.args.display_rotation;
         config.keymap_name = Some(self.args.keymap.clone());
+        config.buffer_count = Some(self.args.buffer_count);
     }
 }
 
