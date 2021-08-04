@@ -1,0 +1,24 @@
+# What is this crate used for?
+
+At the time of writing, TLS negotiation for ffx.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+This fork includes patches to:
+
+ * Enable RFC8446 C.4: Client Tracking Prevention
+ * Fix a bug in RFC8446 D.4: Middlebox Compatibility Mode, in which concurrent connections may race,
+   resulting in updating the session ticket used, breaking the compatibility mode.
+
+# Are there any restrictions to how it should be rolled?
+
+We should not unfork until [the upstream bug for C.4](https://github.com/ctz/rustls/issues/466) is
+resolved.
+
+# Is there anything else which makes this dependency "special"?
+
+No.
