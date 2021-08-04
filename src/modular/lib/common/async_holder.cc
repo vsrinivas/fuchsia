@@ -33,7 +33,7 @@ void AsyncHolderBase::Teardown(zx::duration timeout, fit::function<void()> done)
     *down = true;
 
     if (from_timeout) {
-      FX_LOGS(ERROR) << "Teardown() timed out for " << name_ << " (" << timeout << " seconds)";
+      FX_LOGS(INFO) << "Teardown() timed out for " << name_ << " (" << timeout << " seconds)";
     }
 
     ImplReset();
