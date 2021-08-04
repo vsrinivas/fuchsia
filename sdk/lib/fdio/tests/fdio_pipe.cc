@@ -2,30 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
-#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <poll.h>
-#include <sys/eventfd.h>
-#include <sys/types.h>
 #include <unistd.h>
+
+#include <thread>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-// This file contains FDIO-specific tests for eventfd behaviors.
+#include "predicates.h"
 
-TEST(EventFDTest, WaitBeginTest) {
-  fbl::unique_fd fd(eventfd(42, EFD_SEMAPHORE | EFD_NONBLOCK));
-  EXPECT_TRUE(fd.is_valid());
+TEST(Pipe, WaitBegin) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
 
-  fdio_t* io = fdio_unsafe_fd_to_io(fd.get());
+  fdio_t* io = fdio_unsafe_fd_to_io(fds[0]);
   ASSERT_NE(io, nullptr);
 
-  constexpr auto kSignalReadable =
-      static_cast<zx_signals_t>(fuchsia_io2::wire::DeviceSignal::kReadable);
-  constexpr auto kSignalWritable =
-      static_cast<zx_signals_t>(fuchsia_io2::wire::DeviceSignal::kWritable);
+  constexpr zx_signals_t kExpectedPollInSignals =
+      ZX_SOCKET_READABLE |            // Data is available to read
+      ZX_SOCKET_PEER_CLOSED |         // Peer is closed, either data is readable or we've hit EOF
+      ZX_SOCKET_PEER_WRITE_DISABLED;  // Peer can't write any more, either data is readable or
+                                      // we've hit EOF
+
+  // TODO(https://fxbug.dev/47132): Understand why this does not include ZX_SOCKET_PEER_CLOSED.
+  constexpr zx_signals_t kExpectedPollOutSignals = ZX_SOCKET_WRITABLE |       // Data can be written
+                                                   ZX_SOCKET_WRITE_DISABLED;  // Write is disabled
 
   {
     uint32_t events = 0;
@@ -42,7 +45,7 @@ TEST(EventFDTest, WaitBeginTest) {
     zx_signals_t signals = 0;
     fdio_unsafe_wait_begin(io, events, &handle, &signals);
 
-    EXPECT_EQ(signals, kSignalReadable, "Actual signals 0x%x", signals);
+    EXPECT_EQ(signals, kExpectedPollInSignals, "Actual signals 0x%x", signals);
   }
 
   {
@@ -51,7 +54,7 @@ TEST(EventFDTest, WaitBeginTest) {
     zx_signals_t signals = 0;
     fdio_unsafe_wait_begin(io, events, &handle, &signals);
 
-    EXPECT_EQ(signals, kSignalWritable, "Actual signals 0x%x", signals);
+    EXPECT_EQ(signals, kExpectedPollOutSignals, "Actual signals 0x%x", signals);
   }
 
   {
@@ -60,7 +63,8 @@ TEST(EventFDTest, WaitBeginTest) {
     zx_signals_t signals = 0;
     fdio_unsafe_wait_begin(io, events, &handle, &signals);
 
-    EXPECT_EQ(signals, kSignalReadable | kSignalWritable, "Actual signals 0x%x", signals);
+    EXPECT_EQ(signals, kExpectedPollInSignals | kExpectedPollOutSignals, "Actual signals 0x%x",
+              signals);
   }
 
   {
@@ -69,6 +73,7 @@ TEST(EventFDTest, WaitBeginTest) {
     zx_signals_t signals = 0;
     fdio_unsafe_wait_begin(io, events, &handle, &signals);
 
+    // POLLPRI is not supported for pipes.
     EXPECT_EQ(signals, 0, "Actual signals 0x%x", signals);
   }
 

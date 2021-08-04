@@ -52,12 +52,13 @@ test("fdio-test") {
 
   # FDIO tests that can run on host as well as target.
   sources = [
-    "fdio_eventfd.cc",
+    "eventfd.cc",
     "fdio_lock.cc",
     "fdio_poll.cc",
     "fdio_select.cc",
     "fdio_timerfd.cc",
     "fdio_unistd.cc",
+    "pipe.cc",
   ]
   deps = [
     "//zircon/public/lib/fbl",
@@ -68,6 +69,7 @@ test("fdio-test") {
       "fdio_atexit.cc",
       "fdio_chroot.cc",
       "fdio_directory.cc",
+      "fdio_eventfd.cc",
       "fdio_fd.cc",
       "fdio_fdio.cc",
       "fdio_get_vmo.cc",
@@ -78,6 +80,7 @@ test("fdio-test") {
       "fdio_null_namespace.cc",
       "fdio_open_max.cc",
       "fdio_path_canonicalize.cc",
+      "fdio_pipe.cc",
       "fdio_pty.cc",
       "fdio_root.cc",
       "fdio_socket.cc",
