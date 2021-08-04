@@ -33,14 +33,7 @@ if (is_host) {
       "set_artifacts.pb.go",
       "static.pb.go",
     ]
-    deps = [
-      # Necessary because protoc-gen-go imports the Struct type from
-      # github.com/golang/protobuf/ptypes/struct.
-      # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or
-      # higher.
-      "//third_party/golibs:github.com/golang/protobuf",
-      "//third_party/golibs:google.golang.org/protobuf",
-    ]
+    deps = [ "//third_party/golibs:google.golang.org/protobuf" ]
     non_go_deps = [
       ":build_artifacts",
       ":context",

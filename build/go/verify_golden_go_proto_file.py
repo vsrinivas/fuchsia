@@ -26,21 +26,13 @@ def filter_line(line):
         if line.startswith(version_prefix):
             return version_prefix + '\n'
 
-    # The Golang protobuf URL is being migrated. See https://fxbug.dev/70570.
-    line = line.replace('structpb', '_struct')
-    # Since imports are sorted, direct replacement may not work.
-    if '_struct "' in line:
-        return None
     return line
 
 
 def read_file(path):
     """Read input .pb.go file into a list of filtered lines."""
     with open(path) as f:
-        return [
-            filtered for line in f.readlines()
-            if (filtered := filter_line(line) is not None)
-        ]
+        return [filter_line(l) for l in f.readlines()]
 
 
 def main():
@@ -68,7 +60,7 @@ def main():
         print(
             f'''Error: Golden file mismatch! To print the differences, run:
 
-  diff -burN <(sed s/structpb/_struct/ {current_path}) {golden_path}
+  diff -burN {current_path} {golden_path}
 
 To acknowledge this change, please run:
 

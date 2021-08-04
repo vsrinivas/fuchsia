@@ -4,10 +4,10 @@ package android_emulator_control_proto
 
 import (
 	context "context"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -22,25 +22,25 @@ type EmulatorControllerClient interface {
 	// set/get/stream the sensor data
 	StreamSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (EmulatorController_StreamSensorClient, error)
 	GetSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (*SensorValue, error)
-	SetSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (*empty.Empty, error)
+	SetSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// set/get/stream the physical model, this is likely the one you are
 	// looking for when you wish to modify the device state.
-	SetPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (*empty.Empty, error)
+	SetPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (*PhysicalModelValue, error)
 	StreamPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (EmulatorController_StreamPhysicalModelClient, error)
 	// Atomically set/get the current primary clipboard data.
-	SetClipboard(ctx context.Context, in *ClipData, opts ...grpc.CallOption) (*empty.Empty, error)
-	GetClipboard(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ClipData, error)
+	SetClipboard(ctx context.Context, in *ClipData, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetClipboard(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ClipData, error)
 	// Streams the current data on the clipboard. This will immediately produce
 	// a result with the current state of the clipboard after which the stream
 	// will block and wait until a new clip event is available from the guest.
 	// Calling the setClipboard method above will not result in generating a clip
 	// event. It is possible to lose clipboard events if the clipboard updates
 	// very rapidly.
-	StreamClipboard(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (EmulatorController_StreamClipboardClient, error)
+	StreamClipboard(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (EmulatorController_StreamClipboardClient, error)
 	// Set/get the battery to the given state.
-	SetBattery(ctx context.Context, in *BatteryState, opts ...grpc.CallOption) (*empty.Empty, error)
-	GetBattery(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BatteryState, error)
+	SetBattery(ctx context.Context, in *BatteryState, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetBattery(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BatteryState, error)
 	// Set the state of the gps, gps support will only work
 	// properly if:
 	//
@@ -51,28 +51,28 @@ type EmulatorControllerClient interface {
 	//   will disable/break the LocationUI.
 	//
 	// Keep in mind that android usually only samples the gps at 1 hz.
-	SetGps(ctx context.Context, in *GpsState, opts ...grpc.CallOption) (*empty.Empty, error)
+	SetGps(ctx context.Context, in *GpsState, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Gets the latest gps state as delivered by the setGps call, or location ui
 	// if active.
 	//
 	// Note: this is not necessarily the actual gps coordinate visible at the
 	// time, due to gps sample frequency (usually 1hz).
-	GetGps(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GpsState, error)
+	GetGps(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GpsState, error)
 	// Simulate a touch event on the finger print sensor.
-	SendFingerprint(ctx context.Context, in *Fingerprint, opts ...grpc.CallOption) (*empty.Empty, error)
+	SendFingerprint(ctx context.Context, in *Fingerprint, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Send a keyboard event. Translating the event.
-	SendKey(ctx context.Context, in *KeyboardEvent, opts ...grpc.CallOption) (*empty.Empty, error)
+	SendKey(ctx context.Context, in *KeyboardEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Send touch/mouse events. Note that mouse events can be simulated
 	// by touch events.
-	SendTouch(ctx context.Context, in *TouchEvent, opts ...grpc.CallOption) (*empty.Empty, error)
-	SendMouse(ctx context.Context, in *MouseEvent, opts ...grpc.CallOption) (*empty.Empty, error)
+	SendTouch(ctx context.Context, in *TouchEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SendMouse(ctx context.Context, in *MouseEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Make a phone call.
 	SendPhone(ctx context.Context, in *PhoneCall, opts ...grpc.CallOption) (*PhoneResponse, error)
 	// Sends an sms message to the emulator.
 	SendSms(ctx context.Context, in *SmsMessage, opts ...grpc.CallOption) (*PhoneResponse, error)
 	// Retrieve the status of the emulator. This will contain general
 	// hardware information, and whether the device has booted or not.
-	GetStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*EmulatorStatus, error)
+	GetStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*EmulatorStatus, error)
 	// Gets an individual screenshot in the desired format.
 	//
 	// The image will be scaled to the desired ImageFormat, while maintaining
@@ -128,9 +128,9 @@ type EmulatorControllerClient interface {
 	// Transition the virtual machine to the desired state. Note that
 	// some states are only observable. For example you cannot transition
 	// to the error state.
-	SetVmState(ctx context.Context, in *VmRunState, opts ...grpc.CallOption) (*empty.Empty, error)
+	SetVmState(ctx context.Context, in *VmRunState, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Gets the state of the virtual machine.
-	GetVmState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VmRunState, error)
+	GetVmState(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VmRunState, error)
 	// Atomically changes the current multi-display configuration.
 	// After this call the given display configurations will be activated. You
 	// can only update secondary displays. Displays with id 0 will be ignored.
@@ -150,7 +150,7 @@ type EmulatorControllerClient interface {
 	// Returns all currently valid logical displays.
 	// The gRPC error code FAILED_PRECONDITION (code 9) is returned if the AVD
 	// does not support a configurable secondary display.
-	GetDisplayConfigurations(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DisplayConfigurations, error)
+	GetDisplayConfigurations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*DisplayConfigurations, error)
 	// Notifies client of the following changes:
 	//
 	// - Virtual scene camera status change.
@@ -159,11 +159,11 @@ type EmulatorControllerClient interface {
 	//   control tab.
 	//
 	// Note that this method will send the initial virtual scene state immediately.
-	StreamNotification(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (EmulatorController_StreamNotificationClient, error)
+	StreamNotification(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (EmulatorController_StreamNotificationClient, error)
 	// RotationRadian is relative to the camera's current orientation.
-	RotateVirtualSceneCamera(ctx context.Context, in *RotationRadian, opts ...grpc.CallOption) (*empty.Empty, error)
+	RotateVirtualSceneCamera(ctx context.Context, in *RotationRadian, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Velocity is absolute
-	SetVirtualSceneCameraVelocity(ctx context.Context, in *Velocity, opts ...grpc.CallOption) (*empty.Empty, error)
+	SetVirtualSceneCameraVelocity(ctx context.Context, in *Velocity, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type emulatorControllerClient struct {
@@ -215,8 +215,8 @@ func (c *emulatorControllerClient) GetSensor(ctx context.Context, in *SensorValu
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SetSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetSensor(ctx context.Context, in *SensorValue, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setSensor", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -224,8 +224,8 @@ func (c *emulatorControllerClient) SetSensor(ctx context.Context, in *SensorValu
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SetPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetPhysicalModel(ctx context.Context, in *PhysicalModelValue, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setPhysicalModel", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -274,8 +274,8 @@ func (x *emulatorControllerStreamPhysicalModelClient) Recv() (*PhysicalModelValu
 	return m, nil
 }
 
-func (c *emulatorControllerClient) SetClipboard(ctx context.Context, in *ClipData, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetClipboard(ctx context.Context, in *ClipData, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setClipboard", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func (c *emulatorControllerClient) SetClipboard(ctx context.Context, in *ClipDat
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetClipboard(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ClipData, error) {
+func (c *emulatorControllerClient) GetClipboard(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ClipData, error) {
 	out := new(ClipData)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getClipboard", in, out, opts...)
 	if err != nil {
@@ -292,7 +292,7 @@ func (c *emulatorControllerClient) GetClipboard(ctx context.Context, in *empty.E
 	return out, nil
 }
 
-func (c *emulatorControllerClient) StreamClipboard(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (EmulatorController_StreamClipboardClient, error) {
+func (c *emulatorControllerClient) StreamClipboard(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (EmulatorController_StreamClipboardClient, error) {
 	stream, err := c.cc.NewStream(ctx, &EmulatorController_ServiceDesc.Streams[2], "/android.emulation.control.EmulatorController/streamClipboard", opts...)
 	if err != nil {
 		return nil, err
@@ -324,8 +324,8 @@ func (x *emulatorControllerStreamClipboardClient) Recv() (*ClipData, error) {
 	return m, nil
 }
 
-func (c *emulatorControllerClient) SetBattery(ctx context.Context, in *BatteryState, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetBattery(ctx context.Context, in *BatteryState, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setBattery", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -333,7 +333,7 @@ func (c *emulatorControllerClient) SetBattery(ctx context.Context, in *BatterySt
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetBattery(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*BatteryState, error) {
+func (c *emulatorControllerClient) GetBattery(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BatteryState, error) {
 	out := new(BatteryState)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getBattery", in, out, opts...)
 	if err != nil {
@@ -342,8 +342,8 @@ func (c *emulatorControllerClient) GetBattery(ctx context.Context, in *empty.Emp
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SetGps(ctx context.Context, in *GpsState, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetGps(ctx context.Context, in *GpsState, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setGps", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -351,7 +351,7 @@ func (c *emulatorControllerClient) SetGps(ctx context.Context, in *GpsState, opt
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetGps(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*GpsState, error) {
+func (c *emulatorControllerClient) GetGps(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GpsState, error) {
 	out := new(GpsState)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getGps", in, out, opts...)
 	if err != nil {
@@ -360,8 +360,8 @@ func (c *emulatorControllerClient) GetGps(ctx context.Context, in *empty.Empty, 
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SendFingerprint(ctx context.Context, in *Fingerprint, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SendFingerprint(ctx context.Context, in *Fingerprint, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/sendFingerprint", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -369,8 +369,8 @@ func (c *emulatorControllerClient) SendFingerprint(ctx context.Context, in *Fing
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SendKey(ctx context.Context, in *KeyboardEvent, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SendKey(ctx context.Context, in *KeyboardEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/sendKey", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -378,8 +378,8 @@ func (c *emulatorControllerClient) SendKey(ctx context.Context, in *KeyboardEven
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SendTouch(ctx context.Context, in *TouchEvent, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SendTouch(ctx context.Context, in *TouchEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/sendTouch", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -387,8 +387,8 @@ func (c *emulatorControllerClient) SendTouch(ctx context.Context, in *TouchEvent
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SendMouse(ctx context.Context, in *MouseEvent, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SendMouse(ctx context.Context, in *MouseEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/sendMouse", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -414,7 +414,7 @@ func (c *emulatorControllerClient) SendSms(ctx context.Context, in *SmsMessage, 
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*EmulatorStatus, error) {
+func (c *emulatorControllerClient) GetStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*EmulatorStatus, error) {
 	out := new(EmulatorStatus)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getStatus", in, out, opts...)
 	if err != nil {
@@ -507,7 +507,7 @@ func (c *emulatorControllerClient) InjectAudio(ctx context.Context, opts ...grpc
 
 type EmulatorController_InjectAudioClient interface {
 	Send(*AudioPacket) error
-	CloseAndRecv() (*empty.Empty, error)
+	CloseAndRecv() (*emptypb.Empty, error)
 	grpc.ClientStream
 }
 
@@ -519,11 +519,11 @@ func (x *emulatorControllerInjectAudioClient) Send(m *AudioPacket) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *emulatorControllerInjectAudioClient) CloseAndRecv() (*empty.Empty, error) {
+func (x *emulatorControllerInjectAudioClient) CloseAndRecv() (*emptypb.Empty, error) {
 	if err := x.ClientStream.CloseSend(); err != nil {
 		return nil, err
 	}
-	m := new(empty.Empty)
+	m := new(emptypb.Empty)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -571,8 +571,8 @@ func (x *emulatorControllerStreamLogcatClient) Recv() (*LogMessage, error) {
 	return m, nil
 }
 
-func (c *emulatorControllerClient) SetVmState(ctx context.Context, in *VmRunState, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetVmState(ctx context.Context, in *VmRunState, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setVmState", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -580,7 +580,7 @@ func (c *emulatorControllerClient) SetVmState(ctx context.Context, in *VmRunStat
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetVmState(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*VmRunState, error) {
+func (c *emulatorControllerClient) GetVmState(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VmRunState, error) {
 	out := new(VmRunState)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getVmState", in, out, opts...)
 	if err != nil {
@@ -598,7 +598,7 @@ func (c *emulatorControllerClient) SetDisplayConfigurations(ctx context.Context,
 	return out, nil
 }
 
-func (c *emulatorControllerClient) GetDisplayConfigurations(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*DisplayConfigurations, error) {
+func (c *emulatorControllerClient) GetDisplayConfigurations(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*DisplayConfigurations, error) {
 	out := new(DisplayConfigurations)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/getDisplayConfigurations", in, out, opts...)
 	if err != nil {
@@ -607,7 +607,7 @@ func (c *emulatorControllerClient) GetDisplayConfigurations(ctx context.Context,
 	return out, nil
 }
 
-func (c *emulatorControllerClient) StreamNotification(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (EmulatorController_StreamNotificationClient, error) {
+func (c *emulatorControllerClient) StreamNotification(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (EmulatorController_StreamNotificationClient, error) {
 	stream, err := c.cc.NewStream(ctx, &EmulatorController_ServiceDesc.Streams[7], "/android.emulation.control.EmulatorController/streamNotification", opts...)
 	if err != nil {
 		return nil, err
@@ -639,8 +639,8 @@ func (x *emulatorControllerStreamNotificationClient) Recv() (*Notification, erro
 	return m, nil
 }
 
-func (c *emulatorControllerClient) RotateVirtualSceneCamera(ctx context.Context, in *RotationRadian, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) RotateVirtualSceneCamera(ctx context.Context, in *RotationRadian, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/rotateVirtualSceneCamera", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -648,8 +648,8 @@ func (c *emulatorControllerClient) RotateVirtualSceneCamera(ctx context.Context,
 	return out, nil
 }
 
-func (c *emulatorControllerClient) SetVirtualSceneCameraVelocity(ctx context.Context, in *Velocity, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *emulatorControllerClient) SetVirtualSceneCameraVelocity(ctx context.Context, in *Velocity, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/android.emulation.control.EmulatorController/setVirtualSceneCameraVelocity", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -664,25 +664,25 @@ type EmulatorControllerServer interface {
 	// set/get/stream the sensor data
 	StreamSensor(*SensorValue, EmulatorController_StreamSensorServer) error
 	GetSensor(context.Context, *SensorValue) (*SensorValue, error)
-	SetSensor(context.Context, *SensorValue) (*empty.Empty, error)
+	SetSensor(context.Context, *SensorValue) (*emptypb.Empty, error)
 	// set/get/stream the physical model, this is likely the one you are
 	// looking for when you wish to modify the device state.
-	SetPhysicalModel(context.Context, *PhysicalModelValue) (*empty.Empty, error)
+	SetPhysicalModel(context.Context, *PhysicalModelValue) (*emptypb.Empty, error)
 	GetPhysicalModel(context.Context, *PhysicalModelValue) (*PhysicalModelValue, error)
 	StreamPhysicalModel(*PhysicalModelValue, EmulatorController_StreamPhysicalModelServer) error
 	// Atomically set/get the current primary clipboard data.
-	SetClipboard(context.Context, *ClipData) (*empty.Empty, error)
-	GetClipboard(context.Context, *empty.Empty) (*ClipData, error)
+	SetClipboard(context.Context, *ClipData) (*emptypb.Empty, error)
+	GetClipboard(context.Context, *emptypb.Empty) (*ClipData, error)
 	// Streams the current data on the clipboard. This will immediately produce
 	// a result with the current state of the clipboard after which the stream
 	// will block and wait until a new clip event is available from the guest.
 	// Calling the setClipboard method above will not result in generating a clip
 	// event. It is possible to lose clipboard events if the clipboard updates
 	// very rapidly.
-	StreamClipboard(*empty.Empty, EmulatorController_StreamClipboardServer) error
+	StreamClipboard(*emptypb.Empty, EmulatorController_StreamClipboardServer) error
 	// Set/get the battery to the given state.
-	SetBattery(context.Context, *BatteryState) (*empty.Empty, error)
-	GetBattery(context.Context, *empty.Empty) (*BatteryState, error)
+	SetBattery(context.Context, *BatteryState) (*emptypb.Empty, error)
+	GetBattery(context.Context, *emptypb.Empty) (*BatteryState, error)
 	// Set the state of the gps, gps support will only work
 	// properly if:
 	//
@@ -693,28 +693,28 @@ type EmulatorControllerServer interface {
 	//   will disable/break the LocationUI.
 	//
 	// Keep in mind that android usually only samples the gps at 1 hz.
-	SetGps(context.Context, *GpsState) (*empty.Empty, error)
+	SetGps(context.Context, *GpsState) (*emptypb.Empty, error)
 	// Gets the latest gps state as delivered by the setGps call, or location ui
 	// if active.
 	//
 	// Note: this is not necessarily the actual gps coordinate visible at the
 	// time, due to gps sample frequency (usually 1hz).
-	GetGps(context.Context, *empty.Empty) (*GpsState, error)
+	GetGps(context.Context, *emptypb.Empty) (*GpsState, error)
 	// Simulate a touch event on the finger print sensor.
-	SendFingerprint(context.Context, *Fingerprint) (*empty.Empty, error)
+	SendFingerprint(context.Context, *Fingerprint) (*emptypb.Empty, error)
 	// Send a keyboard event. Translating the event.
-	SendKey(context.Context, *KeyboardEvent) (*empty.Empty, error)
+	SendKey(context.Context, *KeyboardEvent) (*emptypb.Empty, error)
 	// Send touch/mouse events. Note that mouse events can be simulated
 	// by touch events.
-	SendTouch(context.Context, *TouchEvent) (*empty.Empty, error)
-	SendMouse(context.Context, *MouseEvent) (*empty.Empty, error)
+	SendTouch(context.Context, *TouchEvent) (*emptypb.Empty, error)
+	SendMouse(context.Context, *MouseEvent) (*emptypb.Empty, error)
 	// Make a phone call.
 	SendPhone(context.Context, *PhoneCall) (*PhoneResponse, error)
 	// Sends an sms message to the emulator.
 	SendSms(context.Context, *SmsMessage) (*PhoneResponse, error)
 	// Retrieve the status of the emulator. This will contain general
 	// hardware information, and whether the device has booted or not.
-	GetStatus(context.Context, *empty.Empty) (*EmulatorStatus, error)
+	GetStatus(context.Context, *emptypb.Empty) (*EmulatorStatus, error)
 	// Gets an individual screenshot in the desired format.
 	//
 	// The image will be scaled to the desired ImageFormat, while maintaining
@@ -770,9 +770,9 @@ type EmulatorControllerServer interface {
 	// Transition the virtual machine to the desired state. Note that
 	// some states are only observable. For example you cannot transition
 	// to the error state.
-	SetVmState(context.Context, *VmRunState) (*empty.Empty, error)
+	SetVmState(context.Context, *VmRunState) (*emptypb.Empty, error)
 	// Gets the state of the virtual machine.
-	GetVmState(context.Context, *empty.Empty) (*VmRunState, error)
+	GetVmState(context.Context, *emptypb.Empty) (*VmRunState, error)
 	// Atomically changes the current multi-display configuration.
 	// After this call the given display configurations will be activated. You
 	// can only update secondary displays. Displays with id 0 will be ignored.
@@ -792,7 +792,7 @@ type EmulatorControllerServer interface {
 	// Returns all currently valid logical displays.
 	// The gRPC error code FAILED_PRECONDITION (code 9) is returned if the AVD
 	// does not support a configurable secondary display.
-	GetDisplayConfigurations(context.Context, *empty.Empty) (*DisplayConfigurations, error)
+	GetDisplayConfigurations(context.Context, *emptypb.Empty) (*DisplayConfigurations, error)
 	// Notifies client of the following changes:
 	//
 	// - Virtual scene camera status change.
@@ -801,11 +801,11 @@ type EmulatorControllerServer interface {
 	//   control tab.
 	//
 	// Note that this method will send the initial virtual scene state immediately.
-	StreamNotification(*empty.Empty, EmulatorController_StreamNotificationServer) error
+	StreamNotification(*emptypb.Empty, EmulatorController_StreamNotificationServer) error
 	// RotationRadian is relative to the camera's current orientation.
-	RotateVirtualSceneCamera(context.Context, *RotationRadian) (*empty.Empty, error)
+	RotateVirtualSceneCamera(context.Context, *RotationRadian) (*emptypb.Empty, error)
 	// Velocity is absolute
-	SetVirtualSceneCameraVelocity(context.Context, *Velocity) (*empty.Empty, error)
+	SetVirtualSceneCameraVelocity(context.Context, *Velocity) (*emptypb.Empty, error)
 	mustEmbedUnimplementedEmulatorControllerServer()
 }
 
@@ -819,10 +819,10 @@ func (UnimplementedEmulatorControllerServer) StreamSensor(*SensorValue, Emulator
 func (UnimplementedEmulatorControllerServer) GetSensor(context.Context, *SensorValue) (*SensorValue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSensor not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetSensor(context.Context, *SensorValue) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetSensor(context.Context, *SensorValue) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetSensor not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetPhysicalModel(context.Context, *PhysicalModelValue) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetPhysicalModel(context.Context, *PhysicalModelValue) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPhysicalModel not implemented")
 }
 func (UnimplementedEmulatorControllerServer) GetPhysicalModel(context.Context, *PhysicalModelValue) (*PhysicalModelValue, error) {
@@ -831,37 +831,37 @@ func (UnimplementedEmulatorControllerServer) GetPhysicalModel(context.Context, *
 func (UnimplementedEmulatorControllerServer) StreamPhysicalModel(*PhysicalModelValue, EmulatorController_StreamPhysicalModelServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamPhysicalModel not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetClipboard(context.Context, *ClipData) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetClipboard(context.Context, *ClipData) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetClipboard not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetClipboard(context.Context, *empty.Empty) (*ClipData, error) {
+func (UnimplementedEmulatorControllerServer) GetClipboard(context.Context, *emptypb.Empty) (*ClipData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetClipboard not implemented")
 }
-func (UnimplementedEmulatorControllerServer) StreamClipboard(*empty.Empty, EmulatorController_StreamClipboardServer) error {
+func (UnimplementedEmulatorControllerServer) StreamClipboard(*emptypb.Empty, EmulatorController_StreamClipboardServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamClipboard not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetBattery(context.Context, *BatteryState) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetBattery(context.Context, *BatteryState) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetBattery not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetBattery(context.Context, *empty.Empty) (*BatteryState, error) {
+func (UnimplementedEmulatorControllerServer) GetBattery(context.Context, *emptypb.Empty) (*BatteryState, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBattery not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetGps(context.Context, *GpsState) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetGps(context.Context, *GpsState) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetGps not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetGps(context.Context, *empty.Empty) (*GpsState, error) {
+func (UnimplementedEmulatorControllerServer) GetGps(context.Context, *emptypb.Empty) (*GpsState, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGps not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SendFingerprint(context.Context, *Fingerprint) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SendFingerprint(context.Context, *Fingerprint) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendFingerprint not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SendKey(context.Context, *KeyboardEvent) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SendKey(context.Context, *KeyboardEvent) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendKey not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SendTouch(context.Context, *TouchEvent) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SendTouch(context.Context, *TouchEvent) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendTouch not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SendMouse(context.Context, *MouseEvent) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SendMouse(context.Context, *MouseEvent) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendMouse not implemented")
 }
 func (UnimplementedEmulatorControllerServer) SendPhone(context.Context, *PhoneCall) (*PhoneResponse, error) {
@@ -870,7 +870,7 @@ func (UnimplementedEmulatorControllerServer) SendPhone(context.Context, *PhoneCa
 func (UnimplementedEmulatorControllerServer) SendSms(context.Context, *SmsMessage) (*PhoneResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendSms not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetStatus(context.Context, *empty.Empty) (*EmulatorStatus, error) {
+func (UnimplementedEmulatorControllerServer) GetStatus(context.Context, *emptypb.Empty) (*EmulatorStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
 }
 func (UnimplementedEmulatorControllerServer) GetScreenshot(context.Context, *ImageFormat) (*Image, error) {
@@ -891,25 +891,25 @@ func (UnimplementedEmulatorControllerServer) GetLogcat(context.Context, *LogMess
 func (UnimplementedEmulatorControllerServer) StreamLogcat(*LogMessage, EmulatorController_StreamLogcatServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamLogcat not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetVmState(context.Context, *VmRunState) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetVmState(context.Context, *VmRunState) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetVmState not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetVmState(context.Context, *empty.Empty) (*VmRunState, error) {
+func (UnimplementedEmulatorControllerServer) GetVmState(context.Context, *emptypb.Empty) (*VmRunState, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVmState not implemented")
 }
 func (UnimplementedEmulatorControllerServer) SetDisplayConfigurations(context.Context, *DisplayConfigurations) (*DisplayConfigurations, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDisplayConfigurations not implemented")
 }
-func (UnimplementedEmulatorControllerServer) GetDisplayConfigurations(context.Context, *empty.Empty) (*DisplayConfigurations, error) {
+func (UnimplementedEmulatorControllerServer) GetDisplayConfigurations(context.Context, *emptypb.Empty) (*DisplayConfigurations, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDisplayConfigurations not implemented")
 }
-func (UnimplementedEmulatorControllerServer) StreamNotification(*empty.Empty, EmulatorController_StreamNotificationServer) error {
+func (UnimplementedEmulatorControllerServer) StreamNotification(*emptypb.Empty, EmulatorController_StreamNotificationServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamNotification not implemented")
 }
-func (UnimplementedEmulatorControllerServer) RotateVirtualSceneCamera(context.Context, *RotationRadian) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) RotateVirtualSceneCamera(context.Context, *RotationRadian) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RotateVirtualSceneCamera not implemented")
 }
-func (UnimplementedEmulatorControllerServer) SetVirtualSceneCameraVelocity(context.Context, *Velocity) (*empty.Empty, error) {
+func (UnimplementedEmulatorControllerServer) SetVirtualSceneCameraVelocity(context.Context, *Velocity) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetVirtualSceneCameraVelocity not implemented")
 }
 func (UnimplementedEmulatorControllerServer) mustEmbedUnimplementedEmulatorControllerServer() {}
@@ -1058,7 +1058,7 @@ func _EmulatorController_SetClipboard_Handler(srv interface{}, ctx context.Conte
 }
 
 func _EmulatorController_GetClipboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1070,13 +1070,13 @@ func _EmulatorController_GetClipboard_Handler(srv interface{}, ctx context.Conte
 		FullMethod: "/android.emulation.control.EmulatorController/getClipboard",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetClipboard(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetClipboard(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _EmulatorController_StreamClipboard_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(empty.Empty)
+	m := new(emptypb.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -1115,7 +1115,7 @@ func _EmulatorController_SetBattery_Handler(srv interface{}, ctx context.Context
 }
 
 func _EmulatorController_GetBattery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1127,7 +1127,7 @@ func _EmulatorController_GetBattery_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/android.emulation.control.EmulatorController/getBattery",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetBattery(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetBattery(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1151,7 +1151,7 @@ func _EmulatorController_SetGps_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _EmulatorController_GetGps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1163,7 +1163,7 @@ func _EmulatorController_GetGps_Handler(srv interface{}, ctx context.Context, de
 		FullMethod: "/android.emulation.control.EmulatorController/getGps",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetGps(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetGps(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1277,7 +1277,7 @@ func _EmulatorController_SendSms_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _EmulatorController_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1289,7 +1289,7 @@ func _EmulatorController_GetStatus_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/android.emulation.control.EmulatorController/getStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetStatus(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetStatus(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1359,7 +1359,7 @@ func _EmulatorController_InjectAudio_Handler(srv interface{}, stream grpc.Server
 }
 
 type EmulatorController_InjectAudioServer interface {
-	SendAndClose(*empty.Empty) error
+	SendAndClose(*emptypb.Empty) error
 	Recv() (*AudioPacket, error)
 	grpc.ServerStream
 }
@@ -1368,7 +1368,7 @@ type emulatorControllerInjectAudioServer struct {
 	grpc.ServerStream
 }
 
-func (x *emulatorControllerInjectAudioServer) SendAndClose(m *empty.Empty) error {
+func (x *emulatorControllerInjectAudioServer) SendAndClose(m *emptypb.Empty) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -1438,7 +1438,7 @@ func _EmulatorController_SetVmState_Handler(srv interface{}, ctx context.Context
 }
 
 func _EmulatorController_GetVmState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1450,7 +1450,7 @@ func _EmulatorController_GetVmState_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/android.emulation.control.EmulatorController/getVmState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetVmState(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetVmState(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1474,7 +1474,7 @@ func _EmulatorController_SetDisplayConfigurations_Handler(srv interface{}, ctx c
 }
 
 func _EmulatorController_GetDisplayConfigurations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1486,13 +1486,13 @@ func _EmulatorController_GetDisplayConfigurations_Handler(srv interface{}, ctx c
 		FullMethod: "/android.emulation.control.EmulatorController/getDisplayConfigurations",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EmulatorControllerServer).GetDisplayConfigurations(ctx, req.(*empty.Empty))
+		return srv.(EmulatorControllerServer).GetDisplayConfigurations(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _EmulatorController_StreamNotification_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(empty.Empty)
+	m := new(emptypb.Empty)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

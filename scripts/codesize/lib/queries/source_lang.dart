@@ -100,7 +100,6 @@ SourceLang _fuzzyDetectLang(Report report) {
   const goKeyLibraries = <String>{
     'net/http',
     'crypto/tls',
-    'github.com/golang/protobuf/proto',
     'netstack',
     'gvisor.dev/gvisor/pkg/tcpip/transport/tcp',
     'math/big',

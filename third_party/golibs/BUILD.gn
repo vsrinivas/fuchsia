@@ -235,8 +235,6 @@ go_library("github.com/golang/protobuf") {
     "ptypes/doc.go",
     "ptypes/duration.go",
     "ptypes/duration/duration.pb.go",
-    "ptypes/empty/empty.pb.go",
-    "ptypes/struct/struct.pb.go",
     "ptypes/timestamp.go",
     "ptypes/timestamp/timestamp.pb.go",
   ]
