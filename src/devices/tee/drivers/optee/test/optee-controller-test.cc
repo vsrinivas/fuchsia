@@ -12,7 +12,6 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
@@ -26,6 +25,7 @@
 
 #include "../optee-smc.h"
 #include "../tee-smc.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 struct SharedMemoryInfo {
   zx_paddr_t address = 0;
@@ -89,9 +89,9 @@ namespace {
 
 class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
  public:
-  FakePDev() : proto_({&pdev_protocol_ops_, this}) {}
+  FakePDev() {}
 
-  const pdev_protocol_t* proto() const { return &proto_; }
+  const pdev_protocol_ops_t* proto_ops() const { return &pdev_protocol_ops_; }
 
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     EXPECT_EQ(index, 0);
@@ -136,16 +136,15 @@ class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
-  pdev_protocol_t proto_;
   zx::unowned_bti fake_bti_;
   zx::vmo fake_vmo_;
 };
 
 class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
  public:
-  FakeSysmem() : proto_({&sysmem_protocol_ops_, this}) {}
+  FakeSysmem() {}
 
-  const sysmem_protocol_t* proto() const { return &proto_; }
+  const sysmem_protocol_ops_t* proto_ops() const { return &sysmem_protocol_ops_; }
 
   zx_status_t SysmemConnect(zx::channel allocator2_request) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
@@ -153,16 +152,13 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   }
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
-
- private:
-  sysmem_protocol_t proto_;
 };
 
 class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
  public:
-  FakeRpmb() : proto_({&rpmb_protocol_ops_, this}) {}
+  FakeRpmb() {}
 
-  const rpmb_protocol_t* proto() const { return &proto_; }
+  const rpmb_protocol_ops_t* proto_ops() const { return &rpmb_protocol_ops_; }
   void RpmbConnectServer(zx::channel server) { call_cnt++; }
 
   int get_call_count() const { return call_cnt; }
@@ -170,7 +166,6 @@ class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
   void reset() { call_cnt = 0; }
 
  private:
-  rpmb_protocol_t proto_;
   int call_cnt = 0;
 };
 
@@ -182,71 +177,53 @@ class FakeDdkOptee : public zxtest::Test {
     ASSERT_OK(clients_loop_.StartThread());
   };
   void SetUp() override {
-    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-    fragments[0].name = "pdev";
-    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
-    fragments[1].name = "sysmem";
-    fragments[1].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_SYSMEM, *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())});
-    fragments[2].name = "rpmb";
-    fragments[2].protocols.emplace_back(fake_ddk::ProtocolEntry{
-        ZX_PROTOCOL_RPMB, *reinterpret_cast<const fake_ddk::Protocol*>(rpmb_.proto())});
-    ddk_.SetFragments(std::move(fragments));
-  }
+    parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto_ops(), &pdev_, "pdev");
+    parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
+    parent_->AddProtocol(ZX_PROTOCOL_RPMB, rpmb_.proto_ops(), &rpmb_, "rpmb");
 
-  void TearDown() override {
-    optee_.DdkAsyncRemove();
-    EXPECT_TRUE(ddk_.Ok());
+    EXPECT_OK(OpteeController::Create(nullptr, parent_.get()));
+    optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
   }
 
  protected:
-  OpteeController optee_{fake_ddk::kFakeParent};
-
   FakePDev pdev_;
   FakeSysmem sysmem_;
   FakeRpmb rpmb_;
 
-  // Fake ddk must be destroyed before optee because it may be executing messages against optee on
-  // another thread.
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
+  OpteeController* optee_ = nullptr;
+
   async::Loop clients_loop_;
 };
 
 TEST_F(FakeDdkOptee, PmtUnpinned) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
-
-  zx_handle_t pmt_handle = optee_.pmt().get();
+  zx_handle_t pmt_handle = optee_->pmt().get();
   EXPECT_NE(pmt_handle, ZX_HANDLE_INVALID);
 
   EXPECT_TRUE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
   EXPECT_EQ(fake_object::HandleType::PMT, fake_object::FakeHandleTable().Get(pmt_handle)->type());
 
-  optee_.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_D3COLD, false,
-                                    DEVICE_SUSPEND_REASON_REBOOT});
+  optee_->zxdev()->SuspendNewOp(DEV_POWER_STATE_D3COLD, false, DEVICE_SUSPEND_REASON_REBOOT);
   EXPECT_FALSE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
 }
 
 TEST_F(FakeDdkOptee, RpmbTest) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
-
   rpmb_.reset();
 
   using Rpmb = fuchsia_hardware_rpmb::Rpmb;
 
-  EXPECT_EQ(optee_.RpmbConnectServer(fidl::ServerEnd<Rpmb>()), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(optee_->RpmbConnectServer(fidl::ServerEnd<Rpmb>()), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(rpmb_.get_call_count(), 0);
 
   auto endpoints = fidl::CreateEndpoints<Rpmb>();
   ASSERT_TRUE(endpoints.is_ok());
   auto [client_end, server_end] = std::move(endpoints.value());
 
-  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server_end)), ZX_OK);
+  EXPECT_EQ(optee_->RpmbConnectServer(std::move(server_end)), ZX_OK);
   EXPECT_EQ(rpmb_.get_call_count(), 1);
 }
 
 TEST_F(FakeDdkOptee, MultiThreadTest) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
   zx::channel tee_app_client[2];
   sync_completion_t completion1;
   sync_completion_t completion2;
@@ -263,8 +240,8 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
     zx::channel provider_client;
     ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
 
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
+    optee_->TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
+                                    std::move(provider_client));
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
@@ -307,7 +284,6 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
 }
 
 TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
   zx::channel tee_app_client[2];
   sync_completion_t completion1;
   sync_completion_t completion2;
@@ -323,8 +299,8 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
     zx::channel provider_client;
     ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
 
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
+    optee_->TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
+                                    std::move(provider_client));
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
@@ -354,7 +330,7 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   }
   {
     sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-    EXPECT_EQ(optee_.CommandQueueSize(), 1);
+    EXPECT_EQ(optee_->CommandQueueSize(), 1);
     return_thread_limit = false;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client2->OpenSession2(
@@ -366,12 +342,11 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   }
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
   EXPECT_EQ(call_count, 3);
-  EXPECT_EQ(optee_.CommandQueueSize(), 0);
-  EXPECT_EQ(optee_.CommandQueueWaitSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueWaitSize(), 0);
 }
 
 TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
   zx::channel tee_app_client[3];
   sync_completion_t completion1;
   sync_completion_t completion2;
@@ -389,8 +364,8 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
     zx::channel provider_client;
     ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
 
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
+    optee_->TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
+                                    std::move(provider_client));
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
@@ -442,7 +417,7 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
   EXPECT_EQ(call_count, 2);
-  EXPECT_EQ(optee_.CommandQueueSize(), 2);
+  EXPECT_EQ(optee_->CommandQueueSize(), 2);
 
   {
     return_thread_limit = false;
@@ -460,12 +435,11 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   EXPECT_EQ(call_count, 4);
   sync_completion_signal(&smc_sleep_completion);
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(optee_.CommandQueueSize(), 0);
-  EXPECT_EQ(optee_.CommandQueueWaitSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueWaitSize(), 0);
 }
 
 TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
   zx::channel tee_app_client[3];
   sync_completion_t completion1;
   sync_completion_t completion2;
@@ -482,8 +456,8 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
     zx::channel provider_client;
     ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
 
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
+    optee_->TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
+                                    std::move(provider_client));
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
@@ -533,7 +507,7 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
   EXPECT_EQ(call_count, 2);
-  EXPECT_EQ(optee_.CommandQueueSize(), 2);
+  EXPECT_EQ(optee_->CommandQueueSize(), 2);
 
   {
     call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
@@ -558,8 +532,8 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
   EXPECT_EQ(call_count, 4);
 
-  EXPECT_EQ(optee_.CommandQueueSize(), 0);
-  EXPECT_EQ(optee_.CommandQueueWaitSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueSize(), 0);
+  EXPECT_EQ(optee_->CommandQueueWaitSize(), 0);
 }
 
 }  // namespace

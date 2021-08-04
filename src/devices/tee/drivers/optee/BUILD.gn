@@ -103,7 +103,7 @@ test("optee-controller-test-bin") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -119,7 +119,7 @@ test("optee-client-test-bin") {
     "//sdk/lib/fidl/cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

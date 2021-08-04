@@ -15,14 +15,15 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 #include <zircon/types.h>
+
+#include <memory>
+#include <set>
 
 #include <ddktl/suspend-txn.h>
 #include <tee-client-api/tee-client-types.h>
@@ -33,6 +34,7 @@
 #include "src/devices/tee/drivers/optee/optee-rpmb.h"
 #include "src/devices/tee/drivers/optee/optee-smc.h"
 #include "src/devices/tee/drivers/optee/tee-smc.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace optee {
 namespace {
@@ -86,7 +88,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     return ZX_ERR_UNAVAILABLE;
   };
 
-  zx_device_t *GetDevice() const override { return fake_ddk::kFakeParent; };
+  zx_device_t *GetDevice() const override { return parent_.get(); };
 
   void SetUp() override {}
 
@@ -117,6 +119,8 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
 
     EXPECT_OK(rpc_handler(args, &result));
   }
+
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
 
   std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 
