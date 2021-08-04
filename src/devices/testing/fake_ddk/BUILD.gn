@@ -57,4 +57,125 @@ zx_library("fake_ddk") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of targets that use the fake ddk test framework.
+  # There is a migration in progress to mock-ddk. See:
+  # https://fuchsia.dev/fuchsia-src/development/drivers/testing/fake_ddk_migration.md
+  #
+  # The policy at this time is:
+  # 1. Pre-existing use of fake_ddk is allowlisted.
+  # 2. New usage of fake_ddk is discouraged.
+  #    Please see the self-service migration guide.
+  #
+  # To remove items from the allowlist, please send a change to one of the OWNERS of
+  # this file to remove an element from the visibility list below.
+  # Please allowlist entire directories rather than individual targets as it
+  # requires less allowlist churn over time.
+  #
+  # To regenerate:
+  # scripts/gn/trim_visibility.py --target="//src/devices/testing/fake_ddk"
+  visibility = [
+    "//build/*",
+    "//build/cpp/*",
+    "//src/camera/drivers/controller/test/*",
+    "//src/connectivity/bluetooth/hci/transport/usb/*",
+    "//src/connectivity/bluetooth/hci/vendor/broadcom/*",
+    "//src/connectivity/bluetooth/hci/vendor/mediatek/*",
+    "//src/connectivity/ethernet/drivers/ethernet/*",
+    "//src/connectivity/ethernet/drivers/ethernet/netdevice-migration/*",
+    "//src/connectivity/ethernet/drivers/rndis-function/*",
+    "//src/connectivity/ethernet/drivers/virtio/*",
+    "//src/connectivity/network/drivers/network-device/*",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/*",
+    "//src/devices/block/drivers/aml-sdmmc/*",
+    "//src/devices/block/drivers/gpt/*",
+    "//src/devices/block/drivers/sdhci/*",
+    "//src/devices/block/drivers/sdmmc/*",
+    "//src/devices/block/drivers/usb-mass-storage/*",
+    "//src/devices/block/drivers/virtio/*",
+    "//src/devices/board/drivers/x86/*",
+    "//src/devices/bus/drivers/pci/test/*",
+    "//src/devices/bus/lib/virtio/*",
+    "//src/devices/bus/testing/fake-pdev/*",
+    "//src/devices/cpu/bin/cpuctl/*",
+    "//src/devices/cpu/drivers/aml-cpu-legacy/*",
+    "//src/devices/cpu/drivers/aml-cpu/*",
+    "//src/devices/gpio/drivers/gpio/*",
+    "//src/devices/i2c/drivers/dw-i2c/*",
+    "//src/devices/i2c/drivers/i2c/*",
+    "//src/devices/lib/goldfish/pipe_io/*",
+    "//src/devices/nand/drivers/aml-rawnand/tests/*",
+    "//src/devices/nand/drivers/nand/tests/*",
+    "//src/devices/nand/drivers/ram-nand/*",
+    "//src/devices/nand/drivers/skip-block/*",
+    "//src/devices/power/drivers/nelson-brownout-protection/*",
+    "//src/devices/power/drivers/ti-ina231/*",
+    "//src/devices/ram/drivers/aml-ram/*",
+    "//src/devices/securemem/drivers/aml-securemem/*",
+    "//src/devices/serial/drivers/ftdi/test/*",
+    "//src/devices/serial/drivers/serial-async/tests/*",
+    "//src/devices/spi/drivers/aml-spi/*",
+    "//src/devices/spi/drivers/spi/*",
+    "//src/devices/sysmem/drivers/sysmem/*",
+    "//src/devices/sysmem/tests/sysmem/fuzz/*",
+    "//src/devices/tee/drivers/optee/*",
+    "//src/devices/temperature/drivers/tmp112/*",
+    "//src/devices/testing/*",
+    "//src/devices/testing/fake_ddk/test/*",
+    "//src/devices/thermal/drivers/aml-thermal-s912/*",
+    "//src/devices/thermal/drivers/aml-thermistor/test/*",
+    "//src/devices/usb/drivers/aml-usb-phy-v2/*",
+    "//src/devices/usb/drivers/usb-bus/*",
+    "//src/devices/usb/drivers/usb-hub-rewrite/*",
+    "//src/devices/usb/drivers/usb-peripheral/*",
+    "//src/devices/usb/drivers/usb-virtual-bus/*",
+    "//src/devices/usb/drivers/xhci-rewrite/*",
+    "//src/graphics/display/drivers/aml-canvas/*",
+    "//src/graphics/display/drivers/aml-hdmi/*",
+    "//src/graphics/display/drivers/display/tests/*",
+    "//src/graphics/display/drivers/fake/*",
+    "//src/graphics/display/lib/designware/test/*",
+    "//src/graphics/drivers/misc/goldfish/*",
+    "//src/graphics/drivers/misc/goldfish_address_space/*",
+    "//src/graphics/drivers/misc/goldfish_control/*",
+    "//src/graphics/drivers/misc/goldfish_sync/*",
+    "//src/graphics/lib/magma/tests/unit_tests/*",
+    "//src/media/audio/drivers/aml-g12-pdm/test/*",
+    "//src/media/audio/drivers/aml-g12-tdm/test/*",
+    "//src/media/audio/drivers/codecs/alc5663/tests/*",
+    "//src/media/audio/drivers/codecs/max98373/*",
+    "//src/media/audio/drivers/codecs/tas27xx/*",
+    "//src/media/audio/drivers/codecs/tas5720/*",
+    "//src/media/audio/drivers/codecs/tas5782/*",
+    "//src/media/audio/drivers/codecs/tas58xx/*",
+    "//src/media/audio/drivers/intel-hda/controller/*",
+    "//src/media/audio/drivers/usb-audio/tests/*",
+    "//src/media/audio/lib/simple-audio-stream/tests/*",
+    "//src/media/audio/lib/simple-codec/tests/*",
+    "//src/media/drivers/amlogic_decoder/tests/unit_tests/*",
+    "//src/ui/backlight/drivers/ti-lp8556/*",
+    "//src/ui/input/drivers/focaltech/*",
+    "//src/ui/input/drivers/ft8201/*",
+    "//src/ui/input/drivers/gt6853/*",
+    "//src/ui/input/drivers/hid-buttons/*",
+    "//src/ui/input/drivers/hid-input-report/*",
+    "//src/ui/input/drivers/hid/*",
+    "//src/ui/input/drivers/hidctl/*",
+    "//src/ui/input/drivers/i2c-hid/*",
+    "//tools/create/goldens/my-driver-cpp/*",
+  ]
+
+  # At this time we are not enforcing restrictions on the below.
+  visibility += [
+    "//third_party/*",
+    "//vendor/*",
+  ]
 }
