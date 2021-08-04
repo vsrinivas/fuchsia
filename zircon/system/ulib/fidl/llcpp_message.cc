@@ -7,7 +7,6 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
-#include <lib/fidl/transformer.h>
 #include <zircon/assert.h>
 
 #include <cstring>
@@ -188,29 +187,6 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
     SetResult(fidl::Result::TransportError(status));
     return;
   }
-
-  fidl_message_header_t header;
-  memcpy(&header, result_bytes, sizeof(header));
-
-  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
-    auto transformer_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-
-    status = internal__fidl_transform__may_break(
-        FIDL_TRANSFORMATION_V2_TO_V1, response_type, result_bytes, actual_num_bytes,
-        transformer_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes, error_address());
-    if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
-      return;
-    }
-
-    if (actual_num_bytes > result_capacity) {
-      SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
-                                          "transformed bytes exceeds message buffer capacity"));
-      return;
-    }
-    memcpy(result_bytes, transformer_bytes.get(), actual_num_bytes);
-  }
-
   status = fidl_decode_etc(response_type, result_bytes, actual_num_bytes, result_handles,
                            actual_num_handles, error_address());
   if (status != ZX_OK) {
