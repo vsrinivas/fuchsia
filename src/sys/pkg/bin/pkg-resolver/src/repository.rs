@@ -43,6 +43,8 @@ use updating_tuf_client::UpdateResult;
 mod local_provider;
 use local_provider::LocalMirrorRepositoryProvider;
 
+mod filesystem_repository;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
     merkle: BlobId,
