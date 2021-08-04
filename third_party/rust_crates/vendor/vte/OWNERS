@@ -2,5 +2,5 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include garnet/bin/terminal/OWNERS
-include src/sys/run_test_suite/OWNERS
+include /garnet/bin/terminal/OWNERS
+include /src/sys/run_test_suite/OWNERS

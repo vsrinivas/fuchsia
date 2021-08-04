@@ -2,6 +2,6 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/developer/ffx/OWNERS
-include src/lib/fuchsia-async/OWNERS
-include third_party/rust_crates/vendor/blocking/OWNERS
+include /src/developer/ffx/OWNERS
+include /src/lib/fuchsia-async/OWNERS
+include /third_party/rust_crates/vendor/blocking/OWNERS

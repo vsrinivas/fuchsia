@@ -2,16 +2,16 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/diagnostics/OWNERS
-include src/diagnostics/lib/triage/OWNERS
-include src/diagnostics/triage/OWNERS
-include src/power/OWNERS
-include src/power/power-manager/OWNERS
-include src/security/tee_manager/OWNERS
-include src/sys/pkg/OWNERS
-include third_party/rust_crates/vendor/cargo_metadata/OWNERS
-include third_party/rust_crates/vendor/criterion/OWNERS
-include third_party/rust_crates/vendor/rouille/OWNERS
-include third_party/rust_crates/vendor/serde/OWNERS
-include tools/OWNERS
-include tools/create/OWNERS
+include /src/diagnostics/OWNERS
+include /src/diagnostics/lib/triage/OWNERS
+include /src/diagnostics/triage/OWNERS
+include /src/power/OWNERS
+include /src/power/power-manager/OWNERS
+include /src/security/tee_manager/OWNERS
+include /src/sys/pkg/OWNERS
+include /third_party/rust_crates/vendor/cargo_metadata/OWNERS
+include /third_party/rust_crates/vendor/criterion/OWNERS
+include /third_party/rust_crates/vendor/rouille/OWNERS
+include /third_party/rust_crates/vendor/serde/OWNERS
+include /tools/OWNERS
+include /tools/create/OWNERS

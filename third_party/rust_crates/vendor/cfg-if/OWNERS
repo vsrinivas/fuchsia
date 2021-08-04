@@ -2,19 +2,19 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include third_party/rust_crates/vendor/crossbeam/OWNERS
-include third_party/rust_crates/vendor/crossbeam-channel/OWNERS
-include third_party/rust_crates/vendor/crossbeam-deque/OWNERS
-include third_party/rust_crates/vendor/crossbeam-epoch/OWNERS
-include third_party/rust_crates/vendor/crossbeam-queue/OWNERS
-include third_party/rust_crates/vendor/crossbeam-utils/OWNERS
-include third_party/rust_crates/vendor/dashmap/OWNERS
-include third_party/rust_crates/vendor/filetime/OWNERS
-include third_party/rust_crates/vendor/getrandom/OWNERS
-include third_party/rust_crates/vendor/instant/OWNERS
-include third_party/rust_crates/vendor/mockall/OWNERS
-include third_party/rust_crates/vendor/mockall_derive/OWNERS
-include third_party/rust_crates/vendor/nix/OWNERS
-include third_party/rust_crates/vendor/parking_lot_core/OWNERS
-include third_party/rust_crates/vendor/test-case/OWNERS
-include third_party/rust_crates/vendor/tracing/OWNERS
+include /third_party/rust_crates/vendor/crossbeam/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-channel/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-deque/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-epoch/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-queue/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-utils/OWNERS
+include /third_party/rust_crates/vendor/dashmap/OWNERS
+include /third_party/rust_crates/vendor/filetime/OWNERS
+include /third_party/rust_crates/vendor/getrandom/OWNERS
+include /third_party/rust_crates/vendor/instant/OWNERS
+include /third_party/rust_crates/vendor/mockall/OWNERS
+include /third_party/rust_crates/vendor/mockall_derive/OWNERS
+include /third_party/rust_crates/vendor/nix/OWNERS
+include /third_party/rust_crates/vendor/parking_lot_core/OWNERS
+include /third_party/rust_crates/vendor/test-case/OWNERS
+include /third_party/rust_crates/vendor/tracing/OWNERS

@@ -294,7 +294,7 @@ impl std::fmt::Display for OwnersFile {
 
         writeln!(f, "{}", HEADER)?;
         for to_include in &self.includes {
-            write!(f, "include {}\n", to_include.display())?;
+            write!(f, "include /{}\n", to_include.display())?;
         }
         Ok(())
     }

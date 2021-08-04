@@ -2,8 +2,8 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include third_party/rust_crates/vendor/crossbeam/OWNERS
-include third_party/rust_crates/vendor/crossbeam-channel/OWNERS
-include third_party/rust_crates/vendor/crossbeam-deque/OWNERS
-include third_party/rust_crates/vendor/crossbeam-epoch/OWNERS
-include third_party/rust_crates/vendor/crossbeam-queue/OWNERS
+include /third_party/rust_crates/vendor/crossbeam/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-channel/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-deque/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-epoch/OWNERS
+include /third_party/rust_crates/vendor/crossbeam-queue/OWNERS

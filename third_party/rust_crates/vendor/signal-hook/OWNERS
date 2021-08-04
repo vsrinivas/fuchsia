@@ -2,7 +2,8 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/developer/ffx/OWNERS
-include src/developer/ffx/plugins/debug/OWNERS
-include src/developer/ffx/plugins/emulator/OWNERS
-include src/developer/ffx/plugins/starnix/OWNERS
+include /src/developer/ffx/plugins/component/OWNERS
+include /src/developer/ffx/plugins/debug/OWNERS
+include /src/developer/ffx/plugins/emulator/OWNERS
+include /src/developer/ffx/plugins/flutter/OWNERS
+include /src/developer/ffx/plugins/starnix/OWNERS

@@ -2,8 +2,8 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/developer/fuchsia-criterion/OWNERS
-include src/graphics/display/bin/display-factory-test/OWNERS
-include third_party/rust_crates/vendor/criterion/OWNERS
-include third_party/rust_crates/vendor/prettytable-rs/OWNERS
-include tools/zedmon/OWNERS
+include /src/developer/fuchsia-criterion/OWNERS
+include /src/graphics/display/bin/display-factory-test/OWNERS
+include /third_party/rust_crates/vendor/criterion/OWNERS
+include /third_party/rust_crates/vendor/prettytable-rs/OWNERS
+include /tools/zedmon/OWNERS

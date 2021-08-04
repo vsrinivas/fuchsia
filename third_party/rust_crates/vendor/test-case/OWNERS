@@ -2,16 +2,21 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/connectivity/location/OWNERS
-include src/connectivity/network/OWNERS
-include src/connectivity/wlan/wlancfg/OWNERS
-include src/connectivity/wlan/wlanstack/OWNERS
-include src/lib/fuchsia-component-test/OWNERS
-include src/lib/fuchsia-hyper/OWNERS
-include src/lib/network/OWNERS
-include src/lib/ui/input-synthesis/OWNERS
-include src/sys/component_manager/OWNERS
-include src/sys/lib/cm_fidl_validator/OWNERS
-include src/sys/lib/runner/OWNERS
-include src/sys/test_runners/OWNERS
-include tools/lib/cml/OWNERS
+include /src/connectivity/lib/packet-formats/OWNERS
+include /src/connectivity/location/OWNERS
+include /src/connectivity/network/OWNERS
+include /src/connectivity/wlan/OWNERS
+include /src/connectivity/wlan/wlancfg/OWNERS
+include /src/connectivity/wlan/wlanstack/OWNERS
+include /src/lib/fuchsia-component-test/OWNERS
+include /src/lib/fuchsia-hyper/OWNERS
+include /src/lib/network/OWNERS
+include /src/lib/ui/input-synthesis/OWNERS
+include /src/lib/ui/keymaps/OWNERS
+include /src/sys/component_manager/OWNERS
+include /src/sys/lib/cm_fidl_validator/OWNERS
+include /src/sys/lib/runner/OWNERS
+include /src/sys/test_runners/OWNERS
+include /src/ui/OWNERS
+include /src/ui/lib/input_pipeline/OWNERS
+include /tools/lib/cml/OWNERS

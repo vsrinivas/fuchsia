@@ -2,17 +2,17 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include build/components/OWNERS
-include garnet/bin/odu/OWNERS
-include garnet/examples/intl/OWNERS
-include src/connectivity/lowpan/tools/lowpanctl/OWNERS
-include src/connectivity/overnet/OWNERS
-include src/connectivity/wlan/tools/wlantool/OWNERS
-include src/connectivity/wlan/wlancfg/OWNERS
-include src/diagnostics/OWNERS
-include src/security/scrutiny/OWNERS
-include third_party/rust_crates/vendor/criterion/OWNERS
-include third_party/rust_crates/vendor/cxxbridge-cmd/OWNERS
-include third_party/rust_crates/vendor/structopt/OWNERS
-include tools/cmc/OWNERS
-include tools/zedmon/OWNERS
+include /build/components/OWNERS
+include /garnet/examples/intl/OWNERS
+include /src/connectivity/lowpan/tools/lowpanctl/OWNERS
+include /src/connectivity/overnet/OWNERS
+include /src/connectivity/wlan/tools/wlantool/OWNERS
+include /src/connectivity/wlan/wlancfg/OWNERS
+include /src/diagnostics/OWNERS
+include /src/security/scrutiny/OWNERS
+include /src/storage/OWNERS
+include /third_party/rust_crates/vendor/criterion/OWNERS
+include /third_party/rust_crates/vendor/cxxbridge-cmd/OWNERS
+include /third_party/rust_crates/vendor/structopt/OWNERS
+include /tools/cmc/OWNERS
+include /tools/zedmon/OWNERS

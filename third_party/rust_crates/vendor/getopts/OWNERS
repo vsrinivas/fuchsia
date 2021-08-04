@@ -2,7 +2,7 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/connectivity/bluetooth/OWNERS
-include src/connectivity/network/dhcp/OWNERS
-include src/identity/OWNERS
-include third_party/rust_crates/vendor/pulldown-cmark/OWNERS
+include /src/connectivity/bluetooth/OWNERS
+include /src/connectivity/network/dhcp/OWNERS
+include /src/identity/OWNERS
+include /third_party/rust_crates/vendor/pulldown-cmark/OWNERS

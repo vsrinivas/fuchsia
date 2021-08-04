@@ -2,12 +2,12 @@
 # TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
-include src/connectivity/lowpan/lib/spinel_pack/OWNERS
-include src/connectivity/network/OWNERS
-include src/connectivity/wlan/OWNERS
-include src/developer/ffx/OWNERS
-include src/lib/storage/OWNERS
-include third_party/rust_crates/vendor/futures-macro/OWNERS
-include third_party/rust_crates/vendor/futures-util/OWNERS
-include third_party/rust_crates/vendor/indoc/OWNERS
-include third_party/rust_crates/vendor/indoc-impl/OWNERS
+include /src/connectivity/lowpan/lib/spinel_pack/OWNERS
+include /src/connectivity/network/OWNERS
+include /src/connectivity/wlan/OWNERS
+include /src/developer/ffx/OWNERS
+include /src/lib/storage/OWNERS
+include /third_party/rust_crates/vendor/futures-macro/OWNERS
+include /third_party/rust_crates/vendor/futures-util/OWNERS
+include /third_party/rust_crates/vendor/indoc/OWNERS
+include /third_party/rust_crates/vendor/indoc-impl/OWNERS
