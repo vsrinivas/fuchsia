@@ -402,56 +402,32 @@ resource("sample-setui-config-test-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_unittest_component("sample-setui-config-test-all-args_v1") {
-  manifest = "meta/sample_setui_config_test_all_args.cmx"
-  deps = [ ":setui-config-test" ]
-}
-
-fuchsia_unittest_component("sample-setui-config-test-all-args_v2") {
+fuchsia_unittest_component("sample-setui-config-test-all-args") {
   manifest = "meta/sample_setui_config_test_all_args.cml"
   deps = [ ":setui-config-test" ]
 }
 
-fuchsia_unittest_component("sample-setui-config-test-multiple-args_v1") {
-  manifest = "meta/sample_setui_config_test_multiple_args.cmx"
-  deps = [ ":setui-config-test" ]
-}
-
-fuchsia_unittest_component("sample-setui-config-test-multiple-args_v2") {
+fuchsia_unittest_component("sample-setui-config-test-multiple-args") {
   manifest = "meta/sample_setui_config_test_multiple_args.cml"
   deps = [ ":setui-config-test" ]
 }
 
-fuchsia_unittest_component("sample-setui-config-test-no-args_v1") {
-  manifest = "meta/sample_setui_config_test_no_args.cmx"
-  deps = [ ":setui-config-test" ]
-}
-
-fuchsia_unittest_component("sample-setui-config-test-no-args_v2") {
+fuchsia_unittest_component("sample-setui-config-test-no-args") {
   manifest = "meta/sample_setui_config_test_no_args.cml"
   deps = [ ":setui-config-test" ]
 }
 
-fuchsia_unittest_component("sample-setui-config-test-short-args_v1") {
-  manifest = "meta/sample_setui_config_test_short_args.cmx"
-  deps = [ ":setui-config-test" ]
-}
-
-fuchsia_unittest_component("sample-setui-config-test-short-args_v2") {
+fuchsia_unittest_component("sample-setui-config-test-short-args") {
   manifest = "meta/sample_setui_config_test_short_args.cml"
   deps = [ ":setui-config-test" ]
 }
 
 fuchsia_test_package("sample-setui-config-test") {
   test_components = [
-    ":sample-setui-config-test-all-args_v1",
-    ":sample-setui-config-test-all-args_v2",
-    ":sample-setui-config-test-multiple-args_v1",
-    ":sample-setui-config-test-multiple-args_v2",
-    ":sample-setui-config-test-no-args_v1",
-    ":sample-setui-config-test-no-args_v2",
-    ":sample-setui-config-test-short-args_v1",
-    ":sample-setui-config-test-short-args_v2",
+    ":sample-setui-config-test-all-args",
+    ":sample-setui-config-test-multiple-args",
+    ":sample-setui-config-test-no-args",
+    ":sample-setui-config-test-short-args",
   ]
   deps = [ ":sample-setui-config-test-resources" ]
 }
