@@ -26,6 +26,7 @@ _common_bootfs_deps = [
   "//boards/kernel_cmdline:chromebook-x64",
   "//src/devices/nand/drivers/intel-spi-flash",
   "//src/devices/tpm/drivers/cr50-spi",
+  "//src/storage/flashmap:bootfs",
 ]
 
 board_bootfs_labels += _common_bootfs_deps

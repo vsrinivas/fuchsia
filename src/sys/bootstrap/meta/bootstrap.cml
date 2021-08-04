@@ -18,6 +18,10 @@
             url: "fuchsia-boot:///#meta/driver-index.cm",
         },
         {
+            name: "flashmap",
+            url: "fuchsia-boot:///#meta/flashmap.cm",
+        },
+        {
             name: "fshost",
             url: "fuchsia-boot:///#meta/fshost.cm",
             environment: "#fshost-env",
@@ -664,6 +668,7 @@
                 "#driver-hosts",
                 "#driver_index",
                 "#driver_manager",
+                "#flashmap",
                 "#fshost",
                 "#live_usb",
                 "#netsvc",
@@ -700,6 +705,11 @@
                 "fuchsia.fshost.Registry",
             ],
             from: "#fshost",
+            to: "#miscsvc",
+        },
+        {
+            protocol: "fuchsia.nand.flashmap.Manager",
+            from: "#flashmap",
             to: "#miscsvc",
         },
         {
@@ -893,6 +903,10 @@
         {
             resolver: "base_resolver",
             from: "#base_resolver",
+        },
+        {
+            protocol: "fuchsia.nand.flashmap.Manager",
+            from: "#flashmap",
         },
     ],
     environments: [

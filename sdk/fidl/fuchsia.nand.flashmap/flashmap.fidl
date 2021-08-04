@@ -1,0 +1,111 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.nand.flashmap;
+using fuchsia.mem;
+using fuchsia.nand;
+using zx;
+
+const MAX_NAME_LEN uint32 = 32;
+const MAX_NUM_AREAS uint32 = 255;
+
+/// Flags for an area.
+/// https://doc.coreboot.org/lib/flashmap.html#area-flags
+type AreaFlags = flexible bits : uint16 {
+    /// Not really used.
+    STATIC = 0x1;
+    /// Not really used.
+    COMPRESSED = 0x2;
+    /// Not really used.
+    RO = 0x4;
+    /// Indicates that the contents of this area should be preserved when the
+    /// firmware is being rewritten.
+    PRESERVE = 0x8;
+};
+
+/// A single area of the flash.
+type Area = struct {
+    /// Start address of this area on the flash, in bytes.
+    offset uint32;
+    /// Size of this area, in bytes.
+    size uint32;
+    /// Name of the area, used to identify it.
+    name string:MAX_NAME_LEN;
+    /// Bitfield of flags for this area.
+    flags AreaFlags;
+};
+
+/// A protocol that allows clients to read, write, and erase areas of a NAND
+/// flash device whose layout is defined by a coreboot flashmap.
+/// https://doc.coreboot.org/lib/flashmap.html
+protocol Flashmap {
+    /// Get all the areas in the flashmap.
+    GetAreas() -> (struct {
+        areas vector<Area>:MAX_NUM_AREAS;
+    });
+
+    /// Get the smallest unit of flash that can be erased, in bytes.
+    GetEraseBlockSize() -> (struct {
+        erase_block_size uint32;
+    });
+
+    /// Read |size| bytes from |offset| in area |name| and return it in |range|.
+    /// Returns:
+    /// * ZX_ERR_NOT_FOUND - if the area |name| was not found.
+    /// * ZX_ERR_OUT_OF_RANGE - if the requested range of data lies outside the
+    ///   bounds of the area.
+    /// * ZX_ERR_INTERNAL - if an internal error occurred, e.g. failure to send
+    ///   FIDL requests to the underlying flash device.
+    /// * Any errors that are returned by the underlying NAND implementation.
+    Read(struct {
+        name string:MAX_NAME_LEN;
+        offset uint32;
+        size uint32;
+    }) -> (resource struct {
+        range fuchsia.mem.Range;
+    }) error zx.status;
+
+    /// Write |data| into area |name| at |offset| (within the area).
+    /// This function will read back the written data, and fail if it was not
+    /// written correctly.
+    /// * ZX_ERR_NOT_FOUND - if the area |name| was not found.
+    /// * ZX_ERR_OUT_OF_RANGE - if the requested range of data lies outside the
+    ///   bounds of the area.
+    /// * ZX_ERR_INTERNAL - if an internal error occurred, e.g. failure to send
+    ///   FIDL requests to the underlying flash device.
+    /// * ZX_ERR_IO_DATA_INTEGRITY - if data read back after writing did not
+    ///   match what was written.
+    /// * Any errors that are returned by the underlying NAND implementation.
+    Write(resource struct {
+        name string:MAX_NAME_LEN;
+        offset uint32;
+        data fuchsia.mem.Buffer;
+    }) -> (struct {}) error zx.status;
+
+    /// Erase the given region of flash. If |offset| or |size| are not erase-block-aligned, then
+    /// the erase will fail.
+    /// * ZX_ERR_NOT_FOUND - if the area |name| was not found.
+    /// * ZX_ERR_OUT_OF_RANGE - if the requested range of data lies outside the
+    ///   bounds of the area.
+    /// * ZX_ERR_INTERNAL - if an internal error occurred, e.g. failure to send
+    ///   FIDL requests to the underlying flash device.
+    /// * ZX_ERR_INVALID_ARGS - if |offset| or |range| were not
+    ///   erase-block-aligned.
+    /// * Any errors that are returned by the underlying NAND implementation.
+    Erase(struct {
+        name string:MAX_NAME_LEN;
+        offset uint32;
+        range uint32;
+    }) -> (struct {}) error zx.status;
+};
+
+@discoverable
+protocol Manager {
+    /// Find and parse the flashmap on NAND device |device| and start serving a |Flashmap| on
+    /// |server|.
+    Start(resource struct {
+        device client_end:fuchsia.nand.Broker;
+        server server_end:Flashmap;
+    });
+};
