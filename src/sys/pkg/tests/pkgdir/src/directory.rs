@@ -5,18 +5,19 @@
 use {
     crate::{dirs_to_test, repeat_by_n},
     anyhow::{anyhow, Context as _, Error},
-    fidl::endpoints::create_proxy,
+    fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
-        DirectoryProxy, NodeInfo, NodeMarker, NodeProxy, CLONE_FLAG_SAME_RIGHTS,
-        MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
-        MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryObject, DirectoryProxy, FileObject, NodeEvent, NodeInfo, NodeMarker, NodeProxy,
+        Service, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     files_async::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
-    futures::future::Future,
+    futures::{future::Future, StreamExt},
     io_util::directory::open_directory,
     itertools::Itertools as _,
     std::{
@@ -505,39 +506,106 @@ fn generate_valid_paths(base: &str) -> Vec<String> {
     paths
 }
 
-async fn verify_directory_opened(node: NodeProxy, _flag: u32) -> Result<(), Error> {
+async fn verify_directory_opened(node: NodeProxy, flag: u32) -> Result<(), Error> {
     match node.describe().await {
         Ok(NodeInfo::Directory(directory_object)) => {
             assert_eq!(directory_object, fidl_fuchsia_io::DirectoryObject);
-            Ok(())
+            ()
         }
-        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => Err(e).context("failed to call describe"),
+        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => return Err(e).context("failed to call describe"),
     }
+
+    if flag & OPEN_FLAG_DESCRIBE != 0 {
+        match node.take_event_stream().next().await {
+            Some(Ok(NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                assert_eq!(*boxed, NodeInfo::Directory(DirectoryObject {}));
+                return Ok(());
+            }
+            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Some(Err(e)) => return Err(e).context("failed to call onopen"),
+            None => return Err(anyhow!("no events!")),
+        }
+    };
+    Ok(())
 }
 
 async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Error> {
     if flag & OPEN_FLAG_NODE_REFERENCE != 0 {
         match node.describe().await {
-            Ok(NodeInfo::Service(_)) => Ok(()),
-            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => Err(e).context("failed to call describe"),
+            Ok(NodeInfo::Service(_)) => (),
+            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => return Err(e).context("failed to call describe"),
         }
     } else {
         match node.describe().await {
-            Ok(NodeInfo::File(_)) => Ok(()),
-            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => Err(e).context("failed to call describe"),
+            Ok(NodeInfo::File(_)) => (),
+            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => return Err(e).context("failed to call describe"),
         }
     }
+    if flag & OPEN_FLAG_DESCRIBE != 0 {
+        if flag & OPEN_FLAG_NODE_REFERENCE != 0 {
+            match node.take_event_stream().next().await {
+                Some(Ok(NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                    assert_eq!(*boxed, NodeInfo::Service(Service));
+                    return Ok(());
+                }
+                Some(Ok(other)) => {
+                    return Err(anyhow!("wrong node type returned: {:?}", other))
+                }
+                Some(Err(e)) => return Err(e).context("failed to call onopen"),
+                None => return Err(anyhow!("no events!")),
+            };
+        } else {
+            match node.take_event_stream().next().await {
+                Some(Ok(NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                    match *boxed {
+                        NodeInfo::File(FileObject { event: Some(event), stream: None }) => {
+                            match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+                                Ok(_) => return Ok(()),
+                                Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
+                            }
+                        }
+                        _ => return Err(anyhow!("expected FileObject")),
+                    };
+                }
+                Some(Ok(other)) => {
+                    return Err(anyhow!("wrong node type returned: {:?}", other))
+                }
+                Some(Err(e)) => return Err(e).context("failed to call onopen"),
+                None => return Err(anyhow!("no events!")),
+            }
+        }
+    }
+    Ok(())
 }
 
-async fn verify_meta_as_file_opened(node: NodeProxy, _flag: u32) -> Result<(), Error> {
+async fn verify_meta_as_file_opened(node: NodeProxy, flag: u32) -> Result<(), Error> {
     match node.describe().await {
-        Ok(NodeInfo::File(_)) => Ok(()),
-        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => Err(e).context("failed to call describe"),
+        Ok(NodeInfo::File(_)) => (),
+        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => return Err(e).context("failed to call describe"),
     }
+
+    if flag & OPEN_FLAG_DESCRIBE != 0 {
+        match node.take_event_stream().next().await {
+            Some(Ok(NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
+                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+                match *boxed {
+                    NodeInfo::File(_) => return Ok(()),
+                    _ => return Err(anyhow!("wrong NodeInfo returned")),
+                }
+            }
+            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
+            Some(Err(e)) => return Err(e).context("failed to call onopen"),
+            None => return Err(anyhow!("no events!")),
+        }
+    }
+    Ok(())
 }
 
 async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
