@@ -8,5 +8,7 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/contributing-to-netstack
+- title: "Culture"
+  path: /docs/contribute/contributing-to-netstack/culture.md
 - title: "Netstack3"
   path: /docs/contribute/contributing-to-netstack/netstack3.md
