@@ -36,7 +36,13 @@ class TestOwner : public JobScheduler::Owner {
     in_protected_mode_ = false;
     return true;
   }
-  void OutputHangMessage() override { hang_message_output_count_++; }
+  void OutputHangMessage(bool hardware_hang) override {
+    if (hardware_hang) {
+      hang_message_output_count_++;
+    } else {
+      semaphore_hang_message_output_count_++;
+    }
+  }
 
   std::vector<MsdArmAtom*>& run_list() { return run_list_; }
   std::vector<ResultPair>& completed_list() { return completed_list_; }
@@ -44,6 +50,9 @@ class TestOwner : public JobScheduler::Owner {
   std::vector<MsdArmAtom*>& soft_stopped_atoms() { return soft_stopped_atoms_; }
   bool gpu_active() { return gpu_active_; }
   uint32_t hang_message_output_count() const { return hang_message_output_count_; }
+  uint32_t semaphore_hang_message_output_count() const {
+    return semaphore_hang_message_output_count_;
+  }
 
  private:
   std::vector<MsdArmAtom*> run_list_;
@@ -54,6 +63,7 @@ class TestOwner : public JobScheduler::Owner {
   bool gpu_active_ = false;
   bool in_protected_mode_ = false;
   uint32_t hang_message_output_count_ = 0;
+  uint32_t semaphore_hang_message_output_count_ = 0;
 };
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
@@ -427,6 +437,7 @@ class TestJobScheduler {
     scheduler.TryToSchedule();
     EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(5000));
     EXPECT_EQ(0u, owner.hang_message_output_count());
+    EXPECT_EQ(0u, owner.semaphore_hang_message_output_count());
     while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero()) {
       current_time +=
           std::chrono::duration_cast<JobScheduler::Clock::duration>(std::chrono::milliseconds(1));
@@ -435,10 +446,13 @@ class TestJobScheduler {
     EXPECT_EQ(kArmMaliResultSuccess, atom->result_code());
     EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
     EXPECT_EQ(0u, owner.hang_message_output_count());
+    EXPECT_EQ(1u, owner.semaphore_hang_message_output_count());
     EXPECT_EQ(1u, scheduler.found_signaler_atoms_for_testing_);
 
     EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
     scheduler.HandleTimedOutAtoms();
+    EXPECT_EQ(0u, owner.hang_message_output_count());
+    EXPECT_EQ(1u, owner.semaphore_hang_message_output_count());
   }
 
   void TestCancelNull() {

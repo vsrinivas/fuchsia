@@ -268,6 +268,8 @@ void MsdArmDevice::StartGpuInterruptThread() {
 void MsdArmDevice::InitInspect() {
   hang_timeout_count_ = inspect_.CreateUint("hang_timeout", 0);
   last_hang_timeout_ns_ = inspect_.CreateUint("last_hang_timeout_ns", 0);
+  semaphore_hang_timeout_count_ = inspect_.CreateUint("semaphore_hang_timeout", 0);
+  last_semaphore_hang_timeout_ns_ = inspect_.CreateUint("last_semaphore_hang_timeout_ns", 0);
   events_ = inspect_.CreateChild("events");
   protected_mode_supported_property_ = inspect_.CreateBool("protected_mode_supported", false);
 }
@@ -358,12 +360,17 @@ magma::Status MsdArmDevice::ProcessTimestampRequest(std::shared_ptr<magma::Platf
   return MAGMA_STATUS_OK;
 }
 
-void MsdArmDevice::OutputHangMessage() {
-  hang_timeout_count_.Add(1);
-  last_hang_timeout_ns_.Set(magma::get_monotonic_ns());
-  AppendInspectEvent(InspectEvent(&events_, "gpu_hang"));
+void MsdArmDevice::OutputHangMessage(bool hardware_hang) {
+  if (hardware_hang) {
+    hang_timeout_count_.Add(1);
+    last_hang_timeout_ns_.Set(magma::get_monotonic_ns());
+  } else {
+    semaphore_hang_timeout_count_.Add(1);
+    last_semaphore_hang_timeout_ns_.Set(magma::get_monotonic_ns());
+  }
+  AppendInspectEvent(InspectEvent(&events_, hardware_hang ? "gpu_hang" : "semaphore_hang"));
 
-  MAGMA_LOG(WARNING, "Possible GPU hang");
+  MAGMA_LOG(WARNING, "Possible %s hang", hardware_hang ? "GPU" : "semaphore");
   ProcessDumpStatusToLog();
 }
 

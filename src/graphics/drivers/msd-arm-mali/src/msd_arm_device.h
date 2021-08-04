@@ -233,7 +233,7 @@ class MsdArmDevice : public msd_device_t,
   void EnterProtectedMode() override;
   bool ExitProtectedMode() override;
   bool IsInProtectedMode() override;
-  void OutputHangMessage() override;
+  void OutputHangMessage(bool hardware_hang) override;
 
   static const uint32_t kMagic = 0x64657669;  //"devi"
 
@@ -242,6 +242,8 @@ class MsdArmDevice : public msd_device_t,
 
   inspect::UintProperty hang_timeout_count_;
   inspect::UintProperty last_hang_timeout_ns_;
+  inspect::UintProperty semaphore_hang_timeout_count_;
+  inspect::UintProperty last_semaphore_hang_timeout_ns_;
   inspect::BoolProperty protected_mode_supported_property_;
 
   std::mutex inspect_events_mutex_;

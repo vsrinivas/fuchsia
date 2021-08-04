@@ -404,7 +404,7 @@ void JobScheduler::HandleTimedOutAtoms() {
     if (atom->execution_start_time() + std::chrono::milliseconds(timeout_duration_ms_) <= now) {
       if (!have_output_hang_message) {
         have_output_hang_message = true;
-        owner_->OutputHangMessage();
+        owner_->OutputHangMessage(/*hardware_hang*/ true);
         // Delay should be near 0 if the device thread is running well.
         MAGMA_LOG(WARNING, "Device thread wakeup delay %lld ms",
                   std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -459,6 +459,7 @@ void JobScheduler::HandleTimedOutAtoms() {
         MAGMA_LOG(WARNING, "Signaled by atom on client id %ld", client_id);
         found_signaler_atoms_for_testing_++;
       }
+      owner_->OutputHangMessage(/*hardware_hang*/ false);
       removed_waiting_atoms = true;
       // TODO(fxbug.dev/82005): Revert https://fuchsia-review.googlesource.com/c/fuchsia/+/564008
       // and make semaphore problems fail the atoms.

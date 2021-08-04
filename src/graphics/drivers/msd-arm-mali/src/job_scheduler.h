@@ -28,7 +28,7 @@ class JobScheduler {
     virtual bool IsInProtectedMode() = 0;
     virtual void EnterProtectedMode() = 0;
     virtual bool ExitProtectedMode() = 0;
-    virtual void OutputHangMessage() = 0;
+    virtual void OutputHangMessage(bool hardware_hang) = 0;
   };
   using Clock = std::chrono::steady_clock;
   using ClockCallback = std::function<Clock::time_point()>;
