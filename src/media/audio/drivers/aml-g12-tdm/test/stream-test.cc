@@ -418,7 +418,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -473,7 +473,7 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -520,7 +520,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
 
   {
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       // We start with agc false and muted true.
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_muted(allocator, true)
@@ -550,7 +550,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
 
   {
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       // We switch to agc true and muted false.
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_muted(allocator, false)
@@ -585,7 +585,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
     client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -600,7 +600,7 @@ TEST(AmlG12Tdm, I2sOutSetGainState) {
     codec2->wait_for_set_gain_completion();
 
     {
-      fidl::FidlAllocator allocator;
+      fidl::Arena allocator;
       // Now we set gain again.
       // Change agc from last one, so the Watch below replies.
       audio_fidl::wire::GainState gain_state(allocator);
@@ -766,7 +766,7 @@ TEST(AmlG12Tdm, I2sOutCodecsStop) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 3;
@@ -829,7 +829,7 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 3;
@@ -928,7 +928,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
     client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -944,7 +944,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
@@ -1024,7 +1024,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     format.set_pcm_format(allocator, std::move(pcm_format));
@@ -1037,7 +1037,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
@@ -1051,7 +1051,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 16'000;  // Change it from the default at 48kHz.
@@ -1070,7 +1070,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.frame_rate = 8'000;  // Change it from the default at 48kHz.
@@ -1238,7 +1238,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 4;
@@ -1350,7 +1350,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.number_of_channels = 4;
@@ -1615,7 +1615,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, GetDefaultPcmFormat());
     client.CreateRingBuffer(std::move(format), std::move(remote));
@@ -1641,7 +1641,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    fidl::FidlAllocator allocator;
+    fidl::Arena allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.number_of_channels = number_of_channels;
@@ -1695,7 +1695,7 @@ TEST_F(AmlG12TdmTest, Inspect) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  fidl::FidlAllocator allocator;
+  fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
   client.CreateRingBuffer(std::move(format), std::move(remote));
