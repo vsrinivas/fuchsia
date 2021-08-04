@@ -7,6 +7,7 @@ use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock};
 use process_builder::elf_load;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
@@ -17,6 +18,7 @@ use crate::collections::*;
 use crate::logging::*;
 use crate::mm::FutexTable;
 use crate::types::*;
+use crate::vmex_resource::VMEX_RESOURCE;
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
@@ -337,41 +339,49 @@ impl MemoryManager {
         let state = self.state.read();
         let mut target_state = target.state.write();
 
-        let mut vmos = HashMap::<zx::Koid, Result<Arc<zx::Vmo>, zx::Status>>::new();
+        let mut vmos = HashMap::<zx::Koid, Arc<zx::Vmo>>::new();
 
         for (range, mapping) in state.mappings.iter() {
             let vmo_info = mapping.vmo.info().map_err(impossible_error)?;
-            let entry = vmos.entry(vmo_info.koid).or_insert_with(|| {
-                if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED)
-                    || mapping.options.contains(MappingOptions::SHARED)
-                {
-                    Ok(mapping.vmo.clone())
-                } else {
-                    mapping
-                        .vmo
-                        .create_child(zx::VmoChildOptions::SNAPSHOT, 0, vmo_info.size_bytes)
-                        .map(|vmo| Arc::new(vmo))
+            let handle_info = mapping.vmo.basic_info().map_err(impossible_error)?;
+            let mut entry = vmos.entry(vmo_info.koid);
+            let target_vmo = match entry {
+                Entry::Vacant(v) => {
+                    let vmo = if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED)
+                        || mapping.options.contains(MappingOptions::SHARED)
+                    {
+                        mapping.vmo.clone()
+                    } else {
+                        let mut vmo = mapping
+                            .vmo
+                            .create_child(zx::VmoChildOptions::SNAPSHOT, 0, vmo_info.size_bytes)
+                            .map_err(Self::get_errno_for_map_err)?;
+                        // We can't use mapping.permissions for this check because it's possible
+                        // that the current mapping doesn't need execute rights, but some other
+                        // mapping of the same VMO does.
+                        if handle_info.rights.contains(zx::Rights::EXECUTE) {
+                            vmo = vmo
+                                .replace_as_executable(&VMEX_RESOURCE)
+                                .map_err(impossible_error)?;
+                        }
+                        Arc::new(vmo)
+                    };
+                    v.insert(vmo)
                 }
-            });
-            match entry {
-                Ok(target_vmo) => {
-                    let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
-                    let length = range.end - range.start;
-                    target_state
-                        .map(
-                            range.start - target.base_addr,
-                            target_vmo.clone(),
-                            vmo_offset,
-                            length,
-                            mapping.permissions | zx::VmarFlags::SPECIFIC,
-                            mapping.options,
-                        )
-                        .map_err(Self::get_errno_for_map_err)?;
-                }
-                Err(_) => {
-                    return Err(ENOMEM);
-                }
+                Entry::Occupied(ref mut o) => o.get_mut(),
             };
+            let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
+            let length = range.end - range.start;
+            target_state
+                .map(
+                    range.start - target.base_addr,
+                    target_vmo.clone(),
+                    vmo_offset,
+                    length,
+                    mapping.permissions | zx::VmarFlags::SPECIFIC,
+                    mapping.options,
+                )
+                .map_err(Self::get_errno_for_map_err)?;
         }
 
         target_state.brk = state.brk;
