@@ -4,6 +4,8 @@
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
+@Retry(2)
+
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:flutter_driver/flutter_driver.dart';

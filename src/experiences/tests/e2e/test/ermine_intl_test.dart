@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
+
+@Retry(2)
+
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
