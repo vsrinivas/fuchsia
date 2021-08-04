@@ -102,11 +102,12 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
   }
 
   // Check returned interfaces for Thread support.
+  fuchsia::lowpan::device::DeviceSyncPtr device;
   bool found_device = false;
   for (auto& name : interface_names) {
     std::vector<std::string> net_types;
 
-    protocols.set_device(device_.NewRequest());
+    protocols.set_device(device.NewRequest());
 
     // Look up the device by interface name.
     status = lookup->LookupDevice(name, std::move(protocols), &result);
@@ -121,7 +122,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
     }
 
     // Check if the device supports Thread.
-    status = device_->GetSupportedNetworkTypes(&net_types);
+    status = device->GetSupportedNetworkTypes(&net_types);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to request supported network types from device \"" << name
                      << "\": " << zx_status_get_string(status);
@@ -206,7 +207,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
   }
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK) {
+  if (GetDeviceState(device_state) != ZX_OK) {
     return false;
   }
 
@@ -224,12 +225,21 @@ bool ThreadStackManagerDelegateImpl::IsThreadEnabled() {
 }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadEnabled(bool val) {
+  DeviceSyncPtr device;
+  zx_status_t status;
+
   if (!IsThreadSupported()) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
+  status = GetDevice(device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to acquire LoWPAN device: " << zx_status_get_string(status);
+    return status;
+  }
+
   // Enable or disable the device.
-  zx_status_t status = device_->SetActive(val);
+  status = device->SetActive(val);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to " << (val ? "enable" : "disable")
                    << " Thread: " << zx_status_get_string(status);
@@ -247,7 +257,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
   }
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK) {
+  if (GetDeviceState(device_state) != ZX_OK) {
     return false;
   }
 
@@ -269,7 +279,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadAttached() {
   }
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK) {
+  if (GetDeviceState(device_state) != ZX_OK) {
     return false;
   }
 
@@ -437,27 +447,41 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
   // Add identity and credential to provisioning params.
   ProvisioningParams params{.identity = std::move(identity), .credential = std::move(credential)};
 
-  // Provision the thread device.
-  WEAVE_ERROR err = device_->ProvisionNetwork(std::move(params));
-  if (err == WEAVE_NO_ERROR) {
-    auto& inspector = WeaveInspector::GetWeaveInspector();
-    inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_ThreadNetworkCreatedOrJoined);
+  // Acquire the thread device.
+  zx_status_t status = GetDevice(device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to acquire LoWPAN device: " << zx_status_get_string(status);
+    return status;
   }
-  return err;
+
+  // Provision the thread device.
+  status = device->ProvisionNetwork(std::move(params));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to provision network: " << zx_status_get_string(status);
+    return status;
+  }
+
+  auto& inspector = WeaveInspector::GetWeaveInspector();
+  inspector.NotifyPairingStateChange(WeaveInspector::kPairingState_ThreadNetworkCreatedOrJoined);
+  return WEAVE_NO_ERROR;
 }
 
 void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
-  // TODO(fxbug.dev/59029): When thread stack mgr is initialized, this workaround will be removed.
-  if (!device_.is_bound()) {
-    FX_LOGS(INFO) << "Skipping ClearThreadProvision as device is not bound";
-    return;
-  }
+  DeviceSyncPtr device;
+  zx_status_t status;
 
   if (!IsThreadSupported()) {
     return;
   }
 
-  zx_status_t status = device_->LeaveNetwork();
+  // Acquire the thread device.
+  status = GetDevice(device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to acquire LoWPAN device: " << zx_status_get_string(status);
+    return;
+  }
+
+  status = device->LeaveNetwork();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not clear LoWPAN provision: " << zx_status_get_string(status);
   }
@@ -467,7 +491,7 @@ ThreadDeviceType ThreadStackManagerDelegateImpl::GetThreadDeviceType() {
   DeviceState device_state;
 
   // Get the device state.
-  if (GetDeviceState(&device_state) != ZX_OK || !IsThreadSupported()) {
+  if (GetDeviceState(device_state) != ZX_OK || !IsThreadSupported()) {
     return ThreadDeviceType::kThreadDeviceType_NotSupported;
   }
 
@@ -566,7 +590,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadStatsCounters() {
 
   // Node type.
   DeviceState device_state;
-  status = GetDeviceState(&device_state);
+  status = GetDeviceState(device_state);
   if (status != ZX_OK) {
     return status;
   }
@@ -690,18 +714,21 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool enable) {
   return WEAVE_NO_ERROR;
 }
 
-zx_status_t ThreadStackManagerDelegateImpl::GetDeviceState(DeviceState* device_state) {
+zx_status_t ThreadStackManagerDelegateImpl::GetDevice(DeviceSyncPtr& device) {
+  return GetProtocols(std::move(Protocols().set_device(device.NewRequest())));
+}
+
+zx_status_t ThreadStackManagerDelegateImpl::GetDeviceState(DeviceState& device_state) {
   DeviceSyncPtr device;
   zx_status_t status;
 
-  // Get device pointer.
-  status = GetProtocols(std::move(Protocols().set_device(device.NewRequest())));
+  status = GetDevice(device);
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to acquire LoWPAN device: " << zx_status_get_string(status);
     return status;
   }
 
-  // Grab device state.
-  status = device->WatchDeviceState(device_state);
+  status = device->WatchDeviceState(&device_state);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not get LoWPAN device state: " << zx_status_get_string(status);
     return status;
