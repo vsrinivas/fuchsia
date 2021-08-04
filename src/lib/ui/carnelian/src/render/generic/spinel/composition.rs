@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{collections::BTreeMap, convert::TryFrom, ptr, slice};
+use std::{collections::BTreeMap, ptr, slice};
 
 use euclid::default::{Rect, Size2D};
 use spinel_rs_sys::*;
@@ -284,29 +284,15 @@ impl Composition<Spinel> for SpinelComposition {
         }
     }
 
-    fn with_layers(
-        layers: impl IntoIterator<Item = Layer<Spinel>>,
-        background_color: Color,
-    ) -> Self {
-        Self {
-            layers: layers
-                .into_iter()
-                .enumerate()
-                .map(|(i, layer)| (u16::try_from(i).expect("too many layers"), layer))
-                .collect(),
-            background_color: background_color.to_linear_premult_rgba(),
-        }
-    }
-
     fn clear(&mut self) {
         self.layers.clear();
     }
 
-    fn insert(&mut self, order: u16, layer: Layer<Spinel>) -> Option<Layer<Spinel>> {
-        self.layers.insert(order, layer)
+    fn insert(&mut self, order: u16, layer: Layer<Spinel>) {
+        self.layers.insert(order, layer);
     }
 
-    fn remove(&mut self, order: u16) -> Option<Layer<Spinel>> {
-        self.layers.remove(&order)
+    fn remove(&mut self, order: u16) {
+        self.layers.remove(&order);
     }
 }

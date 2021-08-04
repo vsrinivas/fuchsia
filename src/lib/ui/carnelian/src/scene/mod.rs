@@ -66,13 +66,8 @@ pub trait LayerGroup {
     fn clear(&mut self);
 
     /// Insert a order-layer pair into the group.
-    ///
-    /// If the group did not have a layer at this location present, None is returned.
-    ///
-    /// If the group did have a layer present at this location, the layer is updated,
-    /// and the old layer is returned.
-    fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer>;
+    fn insert(&mut self, order: u16, layer: Layer);
 
-    /// Removes a layer from the group, returning the layer if present.
-    fn remove(&mut self, order: u16) -> Option<Layer>;
+    /// Removes a layer from the group.
+    fn remove(&mut self, order: u16);
 }

@@ -115,7 +115,7 @@ pub trait Context<B: Backend> {
     /// Renders the composition with an optional clip to the image.
     fn render(
         &mut self,
-        composition: &B::Composition,
+        composition: &mut B::Composition,
         clip: Option<Rect<u32>>,
         image: B::Image,
         ext: &RenderExt<B>,
@@ -132,7 +132,7 @@ pub trait Context<B: Backend> {
     /// Renders the composition with a clip to the image.
     fn render_with_clip(
         &mut self,
-        composition: &B::Composition,
+        composition: &mut B::Composition,
         clip: Rect<u32>,
         image: B::Image,
         ext: &RenderExt<B>,
@@ -276,14 +276,12 @@ pub struct Layer<B: Backend> {
 pub trait Composition<B: Backend> {
     /// Creates a composition of ordered layers where the layers with lower index appear on top.
     fn new(background_color: Color) -> Self;
-    /// Creates a composition using an initial set of layers.
-    fn with_layers(layers: impl IntoIterator<Item = Layer<B>>, background_color: Color) -> Self;
     /// Resets composition by removing all layers.
     fn clear(&mut self);
     /// Inserts layer into the composition.
-    fn insert(&mut self, order: u16, layer: Layer<B>) -> Option<Layer<B>>;
+    fn insert(&mut self, order: u16, layer: Layer<B>);
     /// Removes layer from the composition.
-    fn remove(&mut self, order: u16) -> Option<Layer<B>>;
+    fn remove(&mut self, order: u16);
 }
 
 #[cfg(test)]
@@ -318,19 +316,22 @@ pub(crate) mod tests {
             let src_image = context.new_image(size2(100, 100));
             let dst_image = context.get_current_image(view_context);
 
+            let mut composition: B::Composition = Composition::new(Color::new());
+            composition.insert(
+                0,
+                Layer {
+                    raster: raster.clone() + raster,
+                    clip: None,
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(Color::white()),
+                        blend_mode: BlendMode::Over,
+                    },
+                },
+            );
+
             context.render(
-                &Composition::with_layers(
-                    vec![Layer {
-                        raster: raster.clone() + raster,
-                        clip: None,
-                        style: Style {
-                            fill_rule: FillRule::NonZero,
-                            fill: Fill::Solid(Color::white()),
-                            blend_mode: BlendMode::Over,
-                        },
-                    }],
-                    Color::new(),
-                ),
+                &mut composition,
                 None,
                 dst_image,
                 &RenderExt {

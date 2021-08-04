@@ -36,11 +36,11 @@ impl LayerGroup for DirectLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
-        self.0.insert(order, layer)
+    fn insert(&mut self, order: u16, layer: Layer) {
+        self.0.insert(order, layer);
     }
-    fn remove(&mut self, order: u16) -> Option<Layer> {
-        self.0.remove(order)
+    fn remove(&mut self, order: u16) {
+        self.0.remove(order);
     }
 }
 
@@ -50,11 +50,11 @@ impl LayerGroup for SimpleLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
-        self.0.insert(order, layer)
+    fn insert(&mut self, order: u16, layer: Layer) {
+        self.0.insert(order, layer);
     }
-    fn remove(&mut self, order: u16) -> Option<Layer> {
-        self.0.remove(&order)
+    fn remove(&mut self, order: u16) {
+        self.0.remove(&order);
     }
 }
 
@@ -281,12 +281,12 @@ impl Scene {
             composition.insert(order, layer);
         }
 
-        // Mold backend uses some of the namespace for clips so avoid 5k at the top.
-        const TOP_LEVEL_OFFSET: u16 = 5000;
+        // Mold backend currently supports up to u16::MAX / 2 orders.
+        const MAX_ORDER: u16 = u16::MAX / 2;
 
-        const CORNER_KOCKOUTS_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET;
-        const MOUSE_CURSOR_LAYER_0_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET - 1;
-        const MOUSE_CURSOR_LAYER_1_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET - 2;
+        const CORNER_KOCKOUTS_ORDER: u16 = MAX_ORDER;
+        const MOUSE_CURSOR_LAYER_0_ORDER: u16 = MAX_ORDER - 1;
+        const MOUSE_CURSOR_LAYER_1_ORDER: u16 = MAX_ORDER - 2;
 
         if let Some(position) = mouse_position {
             if let Some(raster) = mouse_cursor_raster {
@@ -409,7 +409,7 @@ impl Scene {
             );
         }
 
-        render_context.render(&self.composition, None, image, &ext);
+        render_context.render(&mut self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
         Ok(())

@@ -6,7 +6,8 @@ pub use crate::render::generic::{BlendMode, Fill, FillRule, Gradient, GradientTy
 use crate::{
     color::Color,
     render::generic::{
-        self, mold::*, spinel::*, Context as _, PathBuilder as _, Raster as _, RasterBuilder as _,
+        self, mold::*, spinel::*, Composition as _, Context as _, PathBuilder as _, Raster as _,
+        RasterBuilder as _,
     },
     Point, ViewAssistantContext,
 };
@@ -16,8 +17,7 @@ use euclid::{
     point2, size2,
 };
 use fuchsia_framebuffer::PixelFormat;
-use fuchsia_trace::duration;
-use std::{collections::BTreeMap, convert::TryFrom, io::Read, iter, mem, ops::Add, u32};
+use std::{io::Read, mem, ops::Add, u32};
 /// Rendering context and API start point.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Image {
@@ -163,7 +163,7 @@ impl Context {
     /// Renders the composition with an optional clip to the image.
     pub fn render(
         &mut self,
-        composition: &Composition,
+        composition: &mut Composition,
         clip: Option<Rect<u32>>,
         image: Image,
         ext: &RenderExt,
@@ -180,11 +180,13 @@ impl Context {
     /// Renders the composition with a clip to the image.
     pub fn render_with_clip(
         &mut self,
-        composition: &Composition,
+        composition: &mut Composition,
         clip: Rect<u32>,
         image: Image,
         ext: &RenderExt,
     ) {
+        let background_color = composition.background_color;
+
         match &mut self.inner {
             ContextInner::Mold(ref mut context) => {
                 if let ImageInner::Mold(image) = image.inner {
@@ -218,17 +220,14 @@ impl Context {
                             },
                         }),
                     };
-                    composition.with_inner_layers(|layers| {
-                        let composition = MoldComposition {
-                            layers: match layers {
-                                Layers::Mold(layers) => layers,
-                                Layers::Empty => BTreeMap::new(),
-                                _ => panic!("mismatched backends"),
-                            },
-                            background_color: composition.background_color,
+                    composition.with_inner_composition(|inner| {
+                        let mut composition = match inner {
+                            CompositionInner::Mold(composition) => composition,
+                            CompositionInner::Empty => MoldComposition::new(background_color),
+                            _ => panic!("mismatched backends"),
                         };
-                        context.render_with_clip(&composition, clip, image, &ext);
-                        Layers::Mold(composition.layers)
+                        context.render_with_clip(&mut composition, clip, image, &ext);
+                        CompositionInner::Mold(composition)
                     });
                 } else {
                     panic!("mismatched backends");
@@ -266,21 +265,18 @@ impl Context {
                             },
                         }),
                     };
-                    composition.with_inner_layers(|layers| {
-                        let composition = SpinelComposition {
-                            layers: match layers {
-                                Layers::Spinel(layers) => layers,
-                                Layers::Empty => BTreeMap::new(),
-                                _ => panic!("mismatched backends"),
-                            },
+                    composition.with_inner_composition(|inner| {
+                        let mut composition = match inner {
+                            CompositionInner::Spinel(composition) => composition,
                             // All Spinel rendering is performed in a linear color space, and is
                             // transformed to sRGB as it is written to the output image (possibly
                             // via an additional styling opcode).  Therefore, we provide a linear
                             // background color.
-                            background_color: composition.background_color.to_linear_premult_rgba(),
+                            CompositionInner::Empty => SpinelComposition::new(background_color),
+                            _ => panic!("mismatched backends"),
                         };
-                        context.render_with_clip(&composition, clip, image, &ext);
-                        Layers::Spinel(composition.layers)
+                        context.render_with_clip(&mut composition, clip, image, &ext);
+                        CompositionInner::Spinel(composition)
                     });
                 } else {
                     panic!("mismatched backends");
@@ -500,176 +496,95 @@ pub struct Layer {
     /// Layer style.
     pub style: Style, // Will also contain txty when available.
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 /// A group of ordered layers.
 pub struct Composition {
-    layers: Layers,
+    inner: CompositionInner,
     background_color: Color,
 }
-#[derive(Clone, Debug)]
-enum Layers {
-    Mold(BTreeMap<u16, generic::Layer<Mold>>),
-    Spinel(BTreeMap<u16, generic::Layer<Spinel>>),
+#[derive(Debug)]
+enum CompositionInner {
+    Mold(MoldComposition),
+    Spinel(SpinelComposition),
     Empty,
 }
 impl Composition {
     /// Creates a composition of ordered layers where the layers with lower index appear on top.
     pub fn new(background_color: Color) -> Self {
-        Self::with_layers(iter::empty(), background_color)
+        Self { inner: CompositionInner::Empty, background_color }
     }
-    /// Creates a composition using an initial set of layers.
-    pub fn with_layers(layers: impl IntoIterator<Item = Layer>, background_color: Color) -> Self {
-        duration!("gfx", "render::Composition::with_layers");
-
-        let mut peekable = layers.into_iter().enumerate().peekable();
-        let layers = match peekable.peek() {
-            Some((_, Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. })) => {
-                Layers::Mold(
-                    peekable
-                        .map(|(i, layer)| {
-                            (
-                                u16::try_from(i).expect("too many layers"),
-                                generic::Layer {
-                                    raster: if let RasterInner::Mold(raster) = layer.raster.inner {
-                                        raster
-                                    } else {
-                                        panic!("mismatched backends");
-                                    },
-                                    clip: layer.clip.map(|clip| {
-                                        if let RasterInner::Mold(clip) = clip.inner {
-                                            clip
-                                        } else {
-                                            panic!("mismatched backends");
-                                        }
-                                    }),
-                                    style: layer.style,
-                                },
-                            )
-                        })
-                        .collect(),
-                )
-            }
-            Some((_, Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. })) => {
-                Layers::Spinel(
-                    peekable
-                        .map(|(i, layer)| {
-                            (
-                                u16::try_from(i).expect("too many layers"),
-                                generic::Layer {
-                                    raster: if let RasterInner::Spinel(raster) = layer.raster.inner
-                                    {
-                                        raster
-                                    } else {
-                                        panic!("mismatched backends");
-                                    },
-                                    clip: layer.clip.map(|clip| {
-                                        if let RasterInner::Spinel(clip) = clip.inner {
-                                            clip
-                                        } else {
-                                            panic!("mismatched backends");
-                                        }
-                                    }),
-                                    style: layer.style,
-                                },
-                            )
-                        })
-                        .collect(),
-                )
-            }
-            None => Layers::Empty,
-        };
-        Self { layers, background_color }
-    }
-    fn with_inner_layers(&self, mut f: impl FnMut(Layers) -> Layers) {
-        let layers = unsafe { mem::transmute_copy(&self.layers) };
-        mem::forget(f(layers))
+    fn with_inner_composition(&mut self, mut f: impl FnMut(CompositionInner) -> CompositionInner) {
+        let inner = f(mem::replace(&mut self.inner, CompositionInner::Empty));
+        self.inner = inner;
     }
     /// Resets composition by removing all layers.
     pub fn clear(&mut self) {
-        match &mut self.layers {
-            Layers::Mold(layers) => layers.clear(),
-            Layers::Spinel(layers) => layers.clear(),
-            Layers::Empty => (),
+        match &mut self.inner {
+            CompositionInner::Mold(composition) => composition.clear(),
+            CompositionInner::Spinel(composition) => composition.clear(),
+            CompositionInner::Empty => (),
         }
     }
     /// Insert layer into composition.
-    pub fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
-        if let Layers::Empty = self.layers {
+    pub fn insert(&mut self, order: u16, layer: Layer) {
+        if let CompositionInner::Empty = self.inner {
             match layer {
                 Layer { raster: Raster { inner: RasterInner::Mold(_) }, .. } => {
-                    self.layers = Layers::Mold(BTreeMap::new());
+                    self.inner =
+                        CompositionInner::Mold(MoldComposition::new(self.background_color));
                 }
                 Layer { raster: Raster { inner: RasterInner::Spinel(_) }, .. } => {
-                    self.layers = Layers::Spinel(BTreeMap::new());
+                    self.inner =
+                        CompositionInner::Spinel(SpinelComposition::new(self.background_color));
                 }
             }
         }
-        match &mut self.layers {
-            Layers::Mold(layers) => layers
-                .insert(
-                    order,
-                    generic::Layer {
-                        raster: if let RasterInner::Mold(raster) = layer.raster.inner {
-                            raster
+        match &mut self.inner {
+            CompositionInner::Mold(composition) => composition.insert(
+                order,
+                generic::Layer {
+                    raster: if let RasterInner::Mold(raster) = layer.raster.inner {
+                        raster
+                    } else {
+                        panic!("mismatched backends");
+                    },
+                    clip: layer.clip.map(|clip| {
+                        if let RasterInner::Mold(clip) = clip.inner {
+                            clip
                         } else {
                             panic!("mismatched backends");
-                        },
-                        clip: layer.clip.map(|clip| {
-                            if let RasterInner::Mold(clip) = clip.inner {
-                                clip
-                            } else {
-                                panic!("mismatched backends");
-                            }
-                        }),
-                        style: layer.style,
-                    },
-                )
-                .map(|layer| Layer {
-                    raster: Raster { inner: RasterInner::Mold(layer.raster) },
-                    clip: layer.clip.map(|clip| Raster { inner: RasterInner::Mold(clip) }),
+                        }
+                    }),
                     style: layer.style,
-                }),
-            Layers::Spinel(layers) => layers
-                .insert(
-                    order,
-                    generic::Layer {
-                        raster: if let RasterInner::Spinel(raster) = layer.raster.inner {
-                            raster
+                },
+            ),
+            CompositionInner::Spinel(composition) => composition.insert(
+                order,
+                generic::Layer {
+                    raster: if let RasterInner::Spinel(raster) = layer.raster.inner {
+                        raster
+                    } else {
+                        panic!("mismatched backends");
+                    },
+                    clip: layer.clip.map(|clip| {
+                        if let RasterInner::Spinel(clip) = clip.inner {
+                            clip
                         } else {
                             panic!("mismatched backends");
-                        },
-                        clip: layer.clip.map(|clip| {
-                            if let RasterInner::Spinel(clip) = clip.inner {
-                                clip
-                            } else {
-                                panic!("mismatched backends");
-                            }
-                        }),
-                        style: layer.style,
-                    },
-                )
-                .map(|layer| Layer {
-                    raster: Raster { inner: RasterInner::Spinel(layer.raster) },
-                    clip: layer.clip.map(|clip| Raster { inner: RasterInner::Spinel(clip) }),
+                        }
+                    }),
                     style: layer.style,
-                }),
+                },
+            ),
             _ => unreachable!(),
         }
     }
     /// Remove layer from composition.
-    pub fn remove(&mut self, order: u16) -> Option<Layer> {
-        match &mut self.layers {
-            Layers::Mold(layers) => layers.remove(&order).map(|layer| Layer {
-                raster: Raster { inner: RasterInner::Mold(layer.raster) },
-                clip: layer.clip.map(|clip| Raster { inner: RasterInner::Mold(clip) }),
-                style: layer.style,
-            }),
-            Layers::Spinel(layers) => layers.remove(&order).map(|layer| Layer {
-                raster: Raster { inner: RasterInner::Spinel(layer.raster) },
-                clip: layer.clip.map(|clip| Raster { inner: RasterInner::Spinel(clip) }),
-                style: layer.style,
-            }),
-            _ => None,
+    pub fn remove(&mut self, order: u16) {
+        match &mut self.inner {
+            CompositionInner::Mold(composition) => composition.remove(order),
+            CompositionInner::Spinel(composition) => composition.remove(order),
+            _ => (),
         }
     }
 }

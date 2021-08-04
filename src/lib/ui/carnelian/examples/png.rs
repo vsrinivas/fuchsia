@@ -194,7 +194,7 @@ impl ViewAssistant for PngViewAssistant {
             );
         }
         let image = render_context.get_current_image(context);
-        render_context.render(&rendering.composition, None, image, &ext);
+        render_context.render(&mut rendering.composition, None, image, &ext);
 
         // Save clear raster for next frame.
         let translation = position.to_vector().to_i32();
@@ -216,7 +216,7 @@ impl ViewAssistant for PngViewAssistant {
             ..Default::default()
         };
         // Empty clip to skip rendering and only copy image.
-        render_context.render(&self.composition, Some(Rect::zero()), png_image, &ext);
+        render_context.render(&mut self.composition, Some(Rect::zero()), png_image, &ext);
 
         self.png.replace((png_size, png_image, png_raster));
         self.position.replace(position);

@@ -81,6 +81,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rustc-hash",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:smallvec",
     "//third_party/rust_crates:toml",

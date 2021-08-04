@@ -834,7 +834,7 @@ impl Contents {
             }
         }
 
-        context.render(&self.composition, Some(clip), self.image, &ext);
+        context.render(&mut self.composition, Some(clip), self.image, &ext);
     }
 
     fn add_tool_damage(&mut self, range: &Range<usize>) {

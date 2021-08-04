@@ -291,7 +291,7 @@ impl ViewAssistant for DisplayPngViewAssistant {
                 ..Default::default()
             };
             let image = render_context.get_current_image(context);
-            render_context.render(&self.composition, Some(Rect::zero()), image, &ext);
+            render_context.render(&mut self.composition, Some(Rect::zero()), image, &ext);
 
             self.png.replace(png_image);
             self.position.replace(position);
@@ -315,7 +315,7 @@ impl ViewAssistant for DisplayPngViewAssistant {
             ..Default::default()
         };
         let image = render_context.get_current_image(context);
-        render_context.render(&self.composition, Some(Rect::zero()), image, &ext);
+        render_context.render(&mut self.composition, Some(Rect::zero()), image, &ext);
 
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())

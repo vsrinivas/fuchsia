@@ -71,7 +71,7 @@ impl TerminalScene {
             self.composition.insert(u16::try_from(i).expect("too many layers"), layer);
         }
 
-        render_context.render(&self.composition, None, image, &ext);
+        render_context.render(&mut self.composition, None, image, &ext);
     }
 
     pub fn update_size(&mut self, new_size: Size, cell_size: Size) {

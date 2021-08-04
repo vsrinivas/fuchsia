@@ -826,7 +826,7 @@ impl Context<Spinel> for SpinelContext {
 
     fn render_with_clip(
         &mut self,
-        composition: &SpinelComposition,
+        composition: &mut SpinelComposition,
         clip: Rect<u32>,
         image: SpinelImage,
         ext: &RenderExt<Spinel>,
