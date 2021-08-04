@@ -39,4 +39,4 @@ case $1 in
   ;;
 esac
 
-fx-command-run run --no-build --no-kill --no-restart-session fuchsia-pkg://fuchsia.com/mem#meta/mem.cmx "$@"
+fx-command-run ffx component run-legacy fuchsia-pkg://fuchsia.com/mem#meta/mem.cmx -- "$@"

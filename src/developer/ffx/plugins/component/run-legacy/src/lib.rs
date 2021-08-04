@@ -3,18 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error, Result},
+    anyhow::{anyhow, Context, Result},
     blocking::Unblock,
-    cs::{io::Directory, v2::V2Component, Subcommand},
     ffx_component_run_legacy_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, FileDescriptor, LaunchInfo,
         LauncherProxy, TerminationReason::*,
     },
-    fuchsia_zircon_status::Status,
     futures::StreamExt,
     signal_hook::{consts::signal::SIGINT, iterator::Signals},
 };
@@ -23,38 +20,18 @@ use {
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 
-async fn get_process_id(url: &str, rcs_proxy: rc::RemoteControlProxy) -> Result<Vec<u32>, Error> {
-    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("creating hub root proxy")?;
-    rcs_proxy
-        .open_hub(dir_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening hub")?;
-    let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, Subcommand::Show).await;
-    let process_ids = component.get_process_id_recursive(url, &mut vec![]);
-    Ok(process_ids)
-}
-
 #[ffx_plugin(LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
-pub async fn run_component(
-    rcs_proxy: rc::RemoteControlProxy,
-    launcher_proxy: LauncherProxy,
-    run: RunComponentCommand,
-) -> Result<()> {
+pub async fn run_component(launcher_proxy: LauncherProxy, run: RunComponentCommand) -> Result<()> {
     if !run.url.ends_with("cmx") {
         return Err(anyhow!(
-            "Invalid component URL! For CML components, use `fx component lab run` instead."
+            "Invalid component URL! For CML components, use `ffx component run` instead."
         ));
     }
-    let process_ids = get_process_id(&run.url, rcs_proxy).await.expect("failed to get process_ids");
-    run_component_cmd(launcher_proxy, process_ids, run, &mut std::io::stdout()).await
+    run_component_cmd(launcher_proxy, run, &mut std::io::stdout()).await
 }
 
 async fn run_component_cmd<W: std::io::Write>(
     launcher_proxy: LauncherProxy,
-    process_ids: Vec<u32>,
     run: RunComponentCommand,
     writer: &mut W,
 ) -> Result<()> {
@@ -147,22 +124,11 @@ async fn run_component_cmd<W: std::io::Write>(
     })?;
 
     if run.background {
-        if process_ids.len() > 0 {
-            writeln!(writer, "Started component: {}\nProcess IDs: {:?}", run.url, process_ids)?;
-        } else {
-            writeln!(writer, "Started component: {}", run.url)?;
-        }
-        std::process::exit(0);
-    } else {
-        if process_ids.len() > 0 {
-            writeln!(writer,
-                "Started component: {}\nProcess IDs: {:?}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.",
-                run.url, process_ids
-            )?;
-        } else {
-            writeln!(writer, "Started component: {}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.", run.url)?;
-        }
+        writeln!(writer, "Started component: {}", run.url)?;
+        return Ok(());
     }
+
+    writeln!(writer, "Started component: {}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.", run.url)?;
 
     let (copy_res, term_event) = futures::join!(copy_futures, term_event_future);
     copy_res?;
@@ -231,13 +197,12 @@ mod test {
         let background = true;
         let run_cmd = RunComponentCommand { url, args, background };
         let launcher_proxy = setup_fake_launcher_service();
-        let process_ids = vec![12345];
         let mut writer = Vec::new();
-        let _response = run_component_cmd(launcher_proxy, process_ids, run_cmd, &mut writer)
+        let _response = run_component_cmd(launcher_proxy, run_cmd, &mut writer)
             .await
             .expect("getting tests should not fail");
         let output = String::from_utf8(writer).unwrap();
-        assert!(output.is_empty());
+        assert_eq!(output, "Started component: fuchsia-pkg://fuchsia.com/test#meta/test.cmx\n");
         Ok(())
     }
 }
