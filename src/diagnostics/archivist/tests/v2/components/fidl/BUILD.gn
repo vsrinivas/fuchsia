@@ -7,5 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   testonly = true
   name = "fuchsia.archivist.tests"
-  sources = [ "socket_puppet.test.fidl" ]
+  sources = [
+    "socket_puppet.test.fidl",
+    "stdio_puppet.test.fidl",
+  ]
 }

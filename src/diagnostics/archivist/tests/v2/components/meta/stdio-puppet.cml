@@ -1,0 +1,22 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/stdio_puppet",
+    },
+    capabilities: [
+        { protocol: "fuchsia.archivist.tests.StdioPuppet" },
+    ],
+    use: [
+        { protocol: "fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.archivist.tests.StdioPuppet",
+            from: "self",
+        },
+    ],
+}

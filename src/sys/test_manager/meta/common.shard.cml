@@ -94,7 +94,6 @@
     offer: [
         {
             protocol: [
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys2.EventSource",
@@ -116,6 +115,8 @@
         // These capabilities are offered for use by certain non-hermetic tests.
         {
             protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.hardware.display.Provider",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",

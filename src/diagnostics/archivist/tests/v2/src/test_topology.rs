@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::constants;
 use cm_rust;
 use cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget};
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component_test::{builder::*, error::Error, Moniker, Realm};
-
-const INTEGRATION_ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm";
 
 /// Options for creating a test topology.
 pub struct Options {
@@ -18,7 +16,7 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Self { archivist_url: INTEGRATION_ARCHIVIST_URL }
+        Self { archivist_url: constants::INTEGRATION_ARCHIVIST_URL }
     }
 }
 
@@ -40,6 +38,16 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
         })?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.sys2.EventSource"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component("test/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.boot.ReadOnlyLog"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component("test/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.boot.WriteOnlyLog"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
         })?

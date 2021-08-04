@@ -9,7 +9,6 @@ group("tests") {
   testonly = true
   deps = [
     ":archivist-integration-tests",
-    "logs-basic-integration",
     "logs/cpp:test-spec",
     "logs/cpp:test-spec-structured",
     "v2:tests",

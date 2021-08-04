@@ -15,6 +15,7 @@
         // Needed by test_manager and/or some test runners
         {
             protocol: [
+                "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",

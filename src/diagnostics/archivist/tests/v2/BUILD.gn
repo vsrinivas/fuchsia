@@ -53,6 +53,7 @@ rustc_test("integration_tests_bin") {
     "src/inspect/truncation.rs",
     "src/lib.rs",
     "src/logs/attribution.rs",
+    "src/logs/basic.rs",
     "src/logs/budget.rs",
     "src/logs/crash.rs",
     "src/logs/lifecycle.rs",
@@ -81,6 +82,13 @@ fuchsia_component("archivist_for_integration_with_log_connector") {
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
   manifest = "meta/archivist_for_integration_with_log_connector.cml"
+}
+
+fuchsia_component("archivist_with_klog") {
+  component_name = "archivist_with_klog"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+  manifest = "meta/archivist_with_klog.cml"
 }
 
 fuchsia_component("archivist_for_integration") {
@@ -134,6 +142,7 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":archivist-with-small-caches",
     ":archivist_for_integration",
     ":archivist_for_integration_with_log_connector",
+    ":archivist_with_klog",
     ":small-caches-config",
     ":test_archivist_config",
     "components",

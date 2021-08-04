@@ -15,13 +15,23 @@
             rights: [ "r*" ],
             path: "/hub",
         },
-        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.sys2.EventSource",
+            ],
+        },
         {
             event: "stopped",
             from: "framework",
         },
     ],
     offer: [
+        {
+            protocol: [ "fuchsia.boot.ReadOnlyLog" ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
         {
             directory: "config-data",
             from: "parent",

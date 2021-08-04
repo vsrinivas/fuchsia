@@ -1,0 +1,24 @@
+{
+    include: [
+        "//src/diagnostics/archivist/meta/common.shard.cml",
+        "//src/diagnostics/archivist/tests/v2/meta/test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-log-connector",
+            "--disable-component-event-provider",
+            "--config-path",
+            "/pkg/data/config/archivist_config.json",
+        ],
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+            ],
+        },
+    ],
+}
