@@ -432,7 +432,7 @@ class TestJobScheduler {
           std::chrono::duration_cast<JobScheduler::Clock::duration>(std::chrono::milliseconds(1));
     }
     scheduler.HandleTimedOutAtoms();
-    EXPECT_EQ(kArmMaliResultTimedOut, atom->result_code());
+    EXPECT_EQ(kArmMaliResultSuccess, atom->result_code());
     EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
     EXPECT_EQ(0u, owner.hang_message_output_count());
     EXPECT_EQ(1u, scheduler.found_signaler_atoms_for_testing_);

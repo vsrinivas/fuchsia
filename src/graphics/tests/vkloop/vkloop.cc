@@ -25,10 +25,17 @@ namespace {
 
 class VkLoopTest {
  public:
+  enum class AllowSuccess {
+    // Test must get a VK_ERROR_DEVICE_LOST.
+    kDisallow,
+    // Test must get either VK_ERROR_DEVICE_LOST or VK_SUCCESS.
+    kAllow
+  };
   explicit VkLoopTest(bool hang_on_event) : hang_on_event_(hang_on_event) {}
 
   bool Initialize();
-  bool Exec(bool kill_driver, zx_handle_t magma_device_channel = ZX_HANDLE_INVALID);
+  bool Exec(bool kill_driver, AllowSuccess allow_success,
+            zx_handle_t magma_device_channel = ZX_HANDLE_INVALID);
 
   uint32_t get_vendor_id() { return ctx_->physical_device().getProperties().vendorID; }
 
@@ -315,7 +322,8 @@ bool VkLoopTest::InitCommandBuffer() {
   return true;
 }
 
-bool VkLoopTest::Exec(bool kill_driver, zx_handle_t magma_device_channel) {
+bool VkLoopTest::Exec(bool kill_driver, AllowSuccess allow_success,
+                      zx_handle_t magma_device_channel) {
   auto rv_wait = ctx_->queue().waitIdle();
   if (vk::Result::eSuccess != rv_wait) {
     RTN_MSG(false, "VK Error: 0x%x - Queue wait idle.\n", rv_wait);
@@ -347,7 +355,10 @@ bool VkLoopTest::Exec(bool kill_driver, zx_handle_t magma_device_channel) {
       break;
     }
   }
-  if (vk::Result::eErrorDeviceLost != rv_wait) {
+  if (allow_success == AllowSuccess::kAllow) {
+    EXPECT_TRUE(vk::Result::eErrorDeviceLost == rv_wait || vk::Result::eSuccess == rv_wait)
+        << static_cast<int>(rv_wait);
+  } else if (vk::Result::eErrorDeviceLost != rv_wait) {
     RTN_MSG(false, "VK Error: Result was 0x%x instead of vk::Result::eErrorDeviceLost\n", rv_wait);
   }
 
@@ -358,14 +369,15 @@ TEST(VkLoop, InfiniteLoop) {
   for (int i = 0; i < 2; i++) {
     VkLoopTest test(false);
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec(false));
+    ASSERT_TRUE(test.Exec(false, VkLoopTest::AllowSuccess::kDisallow));
   }
 }
 
 TEST(VkLoop, EventHang) {
   VkLoopTest test(true);
   ASSERT_TRUE(test.Initialize());
-  ASSERT_TRUE(test.Exec(false));
+  // TODO(fxbug.dev/82005): Re-enable when the Mali MSD returns an error.
+  ASSERT_TRUE(test.Exec(false, VkLoopTest::AllowSuccess::kAllow));
 }
 
 TEST(VkLoop, DriverDeath) {
@@ -381,7 +393,7 @@ TEST(VkLoop, DriverDeath) {
             is_supported);
     GTEST_SKIP();
   }
-  ASSERT_TRUE(test.Exec(true, test_device.channel()->get()));
+  ASSERT_TRUE(test.Exec(true, VkLoopTest::AllowSuccess::kDisallow, test_device.channel()->get()));
 }
 
 }  // namespace
