@@ -29,7 +29,7 @@ template("sdk_molecule") {
     foreach(dep, invoker.deps) {
       gen_dir = get_label_info(dep, "target_gen_dir")
       name = get_label_info(dep, "name")
-      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+      dep_manifests += [ "$gen_dir/$name.sdk" ]
     }
   }
 
@@ -59,7 +59,7 @@ template("sdk_molecule") {
              "--out",
              rebase_path(manifest, root_build_dir),
              "--deps",
-           ] + dep_manifests
+           ] + rebase_path(dep_manifests, root_build_dir)
 
     if (defined(invoker.category)) {
       args += [

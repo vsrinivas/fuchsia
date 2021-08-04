@@ -143,7 +143,7 @@ template("sdk_atom") {
     foreach(dep, invoker.deps) {
       gen_dir = get_label_info(dep, "target_gen_dir")
       name = get_label_info(dep, "name")
-      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+      dep_manifests += [ "$gen_dir/$name.sdk" ]
     }
   }
 
@@ -301,7 +301,7 @@ template("sdk_atom") {
            ] + rebase_path(dep_manifests, root_build_dir) + file_args
 
     if (defined(invoker.file_list)) {
-      inputs += [ rebase_path(invoker.file_list) ]
+      inputs += [ invoker.file_list ]
       args += [
         "--file-list",
         rebase_path(invoker.file_list, root_build_dir),

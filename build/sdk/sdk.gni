@@ -246,9 +246,9 @@ template("sdk") {
 
     args = [
       "--manifest",
-      rebase_path(final_manifest_file),
+      rebase_path(final_manifest_file, root_build_dir),
       "--output",
-      rebase_path(archive_manifest_file),
+      rebase_path(archive_manifest_file, root_build_dir),
     ]
 
     foreach(file, additional_archive_files) {
@@ -256,7 +256,7 @@ template("sdk") {
       args += [
         "--mapping",
         file.dest,
-        rebase_path(file.source),
+        rebase_path(file.source, root_build_dir),
       ]
     }
 

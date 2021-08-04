@@ -37,7 +37,7 @@ template("_bind_library_sdk") {
   sdk_sources += [ destination ]
   all_files += [
     {
-      source = rebase_path(source)
+      source = source
       dest = destination
     },
   ]
@@ -55,7 +55,7 @@ template("_bind_library_sdk") {
     sdk_deps += [ sdk_dep ]
     gen_dir = get_label_info(sdk_dep, "target_gen_dir")
     name = get_label_info(sdk_dep, "name")
-    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    sdk_metas += [ "$gen_dir/$name.meta.json" ]
   }
 
   # Generate the library metadata.
@@ -75,13 +75,14 @@ template("_bind_library_sdk") {
 
     args = [
              "--out",
-             rebase_path(meta_file),
+             rebase_path(meta_file, root_build_dir),
              "--name",
              library_name,
              "--root",
              file_base,
              "--specs",
-           ] + sdk_metas + [ "--sources" ] + sdk_sources
+           ] + rebase_path(sdk_metas, root_build_dir) + [ "--sources" ] +
+           sdk_sources
 
     deps = sdk_deps
   }
