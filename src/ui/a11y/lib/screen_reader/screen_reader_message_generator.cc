@@ -128,7 +128,9 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
         description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
       }
       description.emplace_back(DescribeToggleSwitch(node));
-    } else if (node->has_states() && node->states().has_range_value()) {
+    } else if ((node->has_states() && node->states().has_range_value()) ||
+               (node->has_role() &&
+                node->role() == fuchsia::accessibility::semantics::Role::SLIDER)) {
       Utterance utterance;
       utterance.set_message(GetSliderLabelAndRangeMessage(node));
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
