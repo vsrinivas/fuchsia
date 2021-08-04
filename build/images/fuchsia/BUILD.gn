@@ -333,13 +333,16 @@ assemble_system("fuchsia") {
 ##################################################
 
 # Generate a fuchsia_prime system, which is the same as a fuchsia system, but
-# with the addition of a dummy package. This can be used for OTA tests.
+# with the addition of a dummy file in the system_image package. This can be
+# used for OTA tests.
 resource("dummy_resources") {
   sources = [ "dummy.txt" ]
   outputs = [ "dummy.txt" ]
+  visibility = [ ":*" ]
 }
 fuchsia_package("dummy") {
   deps = [ ":dummy_resources" ]
+  visibility = [ ":*" ]
 }
 
 assemble_system("fuchsia_prime") {
@@ -357,7 +360,7 @@ assemble_system("fuchsia_prime") {
   }
 
   # We generated a couple of PackageManifests. We need to declare them, so
-  # that these packages are published into amber.
+  # that these packages are published into the package repository.
   metadata = {
     package_output_manifests = [ files.update_package_manifest ]
     if (!bootfs_only) {
