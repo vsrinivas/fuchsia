@@ -9,44 +9,127 @@ group("archives") {
   deps = [ ":package_archive" ]
 }
 
+# Name and location of the TUF repository in our build.
+# The content should be laid out according to the specification at
+# https://theupdateframework.github.io/specification/latest/#the-repository
+tuf_repo_name = "amber-files"
+tuf_repo_dir = root_build_dir + "/" + tuf_repo_name
+
 # Generates an archive of package metadata.
-amber_files = rebase_path("$root_build_dir/amber-files")
-pm_tool = rebase_path("$host_out_dir/pm")
-pkg_archive_contents = [
-  "amber-files/repository=$amber_files/repository",
-
-  # TODO(fxbug.dev/24959): this should never contain the root key. In the future, this
-  # should contain no keys, once infra is managing key material itself.
-  # These keys are consumed by the infra train promote scripts.
-  "amber-files/keys=$amber_files/keys",
-  "pm=$pm_tool",
-]
-pkg_archive_manifest = "$target_gen_dir/package_archive_manifest"
-write_file(pkg_archive_manifest, pkg_archive_contents)
-
+#
+# The archive will contain the following:
+#
+#   /pm: A copy of the host 'pm' tool.
+#
+#   /${tuf_repo_name}/keys/*.json
+#     A set of signing private and public keys for TUF metadata.
+#
+#   /${tuf_repo_name}/repository/*.json
+#     A set of TUF metadata files signed with the keys from
+#     the previous directory.
+#
+#   /${tuf_repo_name}/repository/blobs/<merkleroot>
+#     A set of files, named simply by their merkleroot value.
+#     This will contain all the blobs referenced by the
+#     package_manifest.json files that are listed in
+#     ${all_package_manifests_list} (see below).
+#
+#   /${tuf_repo_name}/repository/targets/<package>/<hash>.<version>
+#     These are copies of the archive's package meta.far, named
+#     according to their content. These correspond to entries
+#     in ${tuf_repo_name}/repository/targets.json which describe
+#     the <package>, <version>, <merkle> and <hash> for each one
+#     of these files.
+#
+#     Note that each of these files will also be in the archive as
+#     ${tuf_repo_name}/repository/blobs/<merkle>.
+#
 # NOTE: This is consumed by the system OTA tests. Please check in with the
 # software delivery team if you need to change this.
 pkg_archive = "$root_build_dir/packages.tar.gz"
-compiled_action("package_archive") {
-  testonly = true
-  tool = "//build/tools/tarmaker"
-  inputs = [ pkg_archive_manifest ]
-  outputs = [ pkg_archive ]
-  args = [
-    "-manifest",
-    rebase_path(pkg_archive_manifest),
-    "-output",
-    rebase_path(pkg_archive),
-  ]
-  deps = [ "//build/images:updates" ]
 
-  metadata = {
-    archives = [
-      {
-        name = "packages"
-        path = rebase_path(outputs[0], root_build_dir)
-        type = "tgz"
-      },
-    ]
+tuf_repo_files = [
+  # TUF Signing keys. IMPORTANT: DO NOT INCLUDE root.json here!
+  "keys/snapshot.json",
+  "keys/targets.json",
+  "keys/timestamp.json",
+
+  # Extra metadata files for TUF-1.0 compliance (https://fxbug.dev/38262)
+  "repository/1.root.json",
+  "repository/2.root.json",
+  "repository/3.root.json",
+  "repository/4.root.json",
+  "repository/5.root.json",
+  "repository/6.root.json",
+  "repository/7.root.json",
+]
+
+# The top-level directory for tuf_repo_files entries
+rebased_tuf_repo_dir = rebase_path(tuf_repo_dir, root_build_dir)
+
+# How to build and locate the host 'tarmaker' tool used to create
+# the final compressed archive.
+tarmaker_tool = host_out_dir + "/tarmaker"
+tarmaker_tool_target = "//build/tools/tarmaker($host_toolchain)"
+
+# How to build and locate the host 'pm' tool.
+pm_tool = host_out_dir + "/pm"
+pm_tool_target = "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)"
+
+# How to build and locate the all_package_manifests.list file.
+# This contains one package_manifest.json path per line and is parsed
+# to populate ${tuf_repo_name}/repository/blobs/ in the archive.
+all_package_manifests_list = root_build_dir + "/all_package_manifests.list"
+all_package_manifests_target = "//build/images:all_package_manifests.list"
+
+# The top-level timestamp.json file which will be parsed to extract the
+# properly versioned snapshot.json file, which will itself will be parsed
+# to get the properly versioned root.json and targets.json.
+# Note that these files are created by //build/images:publish, though it is
+# not properly listed as an output for its action.
+timestamp_json_file =
+    "$root_build_dir/${tuf_repo_name}/repository/timestamp.json"
+
+action("package_archive") {
+  testonly = true
+  script = "//build/gn/create_packages_archive.py"
+  tarmaker_manifest = "$target_gen_dir/$target_name.tarmaker.manifest"
+  outputs = [
+    pkg_archive,
+    tarmaker_manifest,
+  ]
+  inputs = [
+    all_package_manifests_list,
+    pm_tool,
+    tarmaker_tool,
+  ]
+  depfile = "$target_gen_dir/$target_name.d"
+  args = [
+    "--tuf-repo-name",
+    tuf_repo_name,
+    "--tarmaker",
+    rebase_path(tarmaker_tool, root_build_dir),
+    "--tarmaker-manifest",
+    rebase_path(tarmaker_manifest, root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+    "--package-manifests-list",
+    rebase_path(all_package_manifests_list, root_build_dir),
+    "--tuf-timestamp-json",
+    rebase_path(timestamp_json_file, root_build_dir),
+    "--files",
+    "pm=" + rebase_path(pm_tool, root_build_dir),
+  ]
+  foreach(entry, tuf_repo_files) {
+    args += [ "${tuf_repo_name}/${entry}=${rebased_tuf_repo_dir}/${entry}" ]
   }
+
+  deps = [
+    "//build/images:publish",
+    all_package_manifests_target,
+    pm_tool_target,
+    tarmaker_tool_target,
+  ]
 }
