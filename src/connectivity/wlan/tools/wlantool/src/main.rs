@@ -248,6 +248,7 @@ async fn do_client_connect(
 ) -> Result<(), Error> {
     async fn try_get_bss_desc(
         mut events: ScanTransactionEventStream,
+        ssid: &[u8],
     ) -> Result<fidl_internal::BssDescription, Error> {
         let mut bss_description = None;
         while let Some(event) = events
@@ -258,13 +259,13 @@ async fn do_client_connect(
             match event {
                 ScanTransactionEvent::OnResult { mut aps } => {
                     if bss_description.is_none() {
-                        // Write the first encountered `BssDescription`. Any additional information
-                        // is ignored.
-                        bss_description =
-                            Some(aps.drain(0..).next().expect("empty scan result").bss_description);
-                        // TODO(seanolson): Can the loop break here, or is it important to read the
-                        //                  stream until `OnFinished` (or `OnError`) is
-                        //                  encountered?
+                        // Write the first matching `BssDescription`. Any additional information is
+                        // ignored.
+                        if let Some(bss_info) =
+                            aps.drain(0..).find(|bss_info| bss_info.ssid == ssid)
+                        {
+                            bss_description = Some(bss_info.bss_description);
+                        }
                     }
                 }
                 ScanTransactionEvent::OnFinished {} => break,
@@ -299,12 +300,15 @@ async fn do_client_connect(
     };
     let sme = get_client_sme(dev_svc_proxy, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
-    let mut req = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-        ssids: vec![ssid.clone()],
-        channels: vec![],
-    });
+    let mut req = match scan_type {
+        ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![ssid.clone()],
+            channels: vec![],
+        }),
+        ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
+    };
     sme.scan(&mut req, remote).context("error sending scan request")?;
-    let bss_description = try_get_bss_desc(local.take_event_stream()).await?;
+    let bss_description = try_get_bss_desc(local.take_event_stream(), &ssid).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
         ssid,

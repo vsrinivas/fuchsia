@@ -244,11 +244,14 @@ pub struct ClientConnectCmd {
         default_value = "passive",
         raw(possible_values = "&ScanTypeArg::variants()"),
         raw(case_insensitive = "true"),
-        help = "Deprecated. Setting this field will not affect scan behavior during \
-                connect for FullMAC"
+        help = "Determines the type of scan performed on non-DFS channels when connecting."
     )]
     pub scan_type: ScanTypeArg,
-    #[structopt(raw(required = "true"))]
+    #[structopt(
+        raw(required = "true"),
+        help = "SSID of the target network. Connecting via only an SSID is deprecated and will be \
+                removed; use the `donut` tool instead."
+    )]
     pub ssid: String,
 }
 
