@@ -3,6 +3,7 @@
 // found in the LICENSE file
 
 use futures::prelude::*;
+use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use regex::{Captures, Error, Regex, RegexSet};
 use serde::Serialize;
@@ -29,17 +30,33 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     SSID: <ssid-666F6F>, \
     HTTP: http://fuchsia.dev/fuchsia/testing?q=Test, \
     HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test, \
-    HEX: 1234567890abcdefABCDEF0123456789,";
+    HEX: 1234567890abcdefABCDEF0123456789, \
+    v4Current: 0.1.2.3, \
+    v4Loopback: 127.1.2.3, \
+    v4LocalAddr: 169.254.12.34, \
+    v4LocalMulti: 224.0.0.123, \
+    v4Multi: 224.0.1.123, \
+    broadcast: 255.255.255.255, \
+    v6zeroes: :: ::1, \
+    v6LeadingZeroes: ::abcd:dcba:bcde:f, \
+    v6TrailingZeroes: f:e:d:c:abcd:dcba:bcde::, \
+    v6LinkLocal: feB2:111:222:333:444:555:666:777, \
+    v6LocalMulticast: ff72:111:222:333:444:555:666:777, \
+    v6Multicast: ff77:111:222:333:444:555:666:777";
 
 // NOTE: The integers in this string are brittle but deterministic. See the comment in the impl
 // of Redactor for explanation.
 pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     Email: <REDACTED-EMAIL>, IPv4: <REDACTED-IPV4: 1>, IPv4_New: <REDACTED-IPV4: 2>, \
     IPv4_Dup: <REDACTED-IPV4: 1>, IPv4_WithPort: <REDACTED-IPV4: 1>:8080, IPv461: ::ffff:<REDACTED-IPV4: 3>, \
-    IPv462: ::ffff:<REDACTED-IPV4: 7>, \
-    IPv6: <REDACTED-IPV6: 5>, IPv6_WithPort: [<REDACTED-IPV6: 5>]:8080, IPv6C: <REDACTED-IPV6: 6>, IPv6LL: fe80::<REDACTED-IPV6-LL: 4>, \
-    UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 8>, SSID: <REDACTED-SSID: 9>, \
-    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>, HEX: <REDACTED-HEX: 10>,";
+    IPv462: ::ffff:<REDACTED-IPV4: 5>, \
+    IPv6: <REDACTED-IPV6: 6>, IPv6_WithPort: [<REDACTED-IPV6: 6>]:8080, IPv6C: <REDACTED-IPV6: 7>, IPv6LL: fe80:<REDACTED-IPV6-LL: 8>, \
+    UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 13>, SSID: <REDACTED-SSID: 14>, \
+    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>, HEX: <REDACTED-HEX: 15>, v4Current: 0.1.2.3, \
+    v4Loopback: 127.1.2.3, v4LocalAddr: 169.254.12.34, v4LocalMulti: 224.0.0.123, v4Multi: <REDACTED-IPV4: 4>, \
+    broadcast: 255.255.255.255, v6zeroes: :: ::1, v6LeadingZeroes: <REDACTED-IPV6: 9>, v6TrailingZeroes: <REDACTED-IPV6: 10>, \
+    v6LinkLocal: feB2:<REDACTED-IPV6-LL: 11>, v6LocalMulticast: ff72:111:222:333:444:555:666:777, \
+    v6Multicast: ff77:<REDACTED-IPV6-MULTI: 12>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -69,6 +86,12 @@ enum MapType {
     ReplaceAll,
     // Use the whole match to get the id, then replace just the second half.
     Mac,
+    // Call a function to handle special-casing the match.
+    //   matched: String that was matched by the redaction pattern.
+    //   mapper: Maps from redacted strings to anonymous integers.
+    //   replacement: Default replacement string-pattern to output.
+    //   Returns: String to substitute for the matched string.
+    Function(fn(matched: &str, mapper: &Mutex<RedactionIdCache>, replacement: &str) -> String),
 }
 
 // Just like a RedactionPattern, but holds the compiled version of the regex.
@@ -122,31 +145,19 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     RedactionPattern {
         matcher: r"\b(((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\b",
         replacement: "<REDACTED-IPV4: {}>",
-        use_map: MapType::ReplaceAll,
+        use_map: MapType::Function(redact_ipv4),
     },
-    // Link local IPv6
+    // First line of matcher: IPv6 without ::
+    // Second line: IPv6 with embedded ::
+    // Third line: IPv6 starting with :: and 3-7 non-zero fields
+    // Fourth line: IPv6 with 3-7 non-zero fields ending with ::
     RedactionPattern {
-        matcher: r"\bfe80::((?:[a-fA-F0-9]{1,4}:){0,4}[a-fA-F0-9]{1,4})\b",
-        replacement: "fe80::<REDACTED-IPV6-LL: {}>",
-        use_map: MapType::ReplaceAll,
-    },
-    // IPv6 without ::
-    RedactionPattern {
-        matcher: r"\b((?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4})\b",
+        matcher: "\\b((?:[[:xdigit:]]{1,4}:){7}[[:xdigit:]]{1,4})\\b|\
+        \\b((?:[[:xdigit:]]{1,4}:)+:(?:[[:xdigit:]]{1,4}:)*[[:xdigit:]]{1,4})\\b|\
+        ::[[:xdigit:]]{1,4}(:[[:xdigit:]]{1,4}){2,6}\\b|\
+        \\b[[:xdigit:]]{1,4}(:[[:xdigit:]]{1,4}){2,6}::",
         replacement: "<REDACTED-IPV6: {}>",
-        use_map: MapType::ReplaceAll,
-    },
-    // IPv6 with ::
-    RedactionPattern {
-        matcher: r"\b((?:[a-fA-F0-9]{1,4}:)+:(?:[a-fA-F0-9]{1,4}:)*[a-fA-F0-9]{1,4})\b",
-        replacement: "<REDACTED-IPV6: {}>",
-        use_map: MapType::ReplaceAll,
-    },
-    // IPv6 starting with :: for ipv4
-    RedactionPattern {
-        matcher: r"::ffff:[a-fA-F0-9]{1,4}:[a-fA-F0-9]{1,4}\b",
-        replacement: "::ffff:<REDACTED-IPV4: {}>",
-        use_map: MapType::ReplaceAll,
+        use_map: MapType::Function(redact_ipv6),
     },
     // uuid
     RedactionPattern {
@@ -182,6 +193,58 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
         use_map: MapType::ReplaceAll,
     },
 ];
+
+// Matchers for use inside special-case IPv4 and IPv6 redaction functions.
+// These matchers are used on text that's already known to be IPv4 or IPv6 so they are correct
+// without matching trailing wildcards.
+lazy_static! {
+    // 0.*.*.* = current network (as source)
+    // 127.*.*.* = loopback
+    // 169.254.*.* = link-local addresses
+    // 224.0.0.* = link-local multicast
+    static ref CLEARTEXT_IPV4: Regex =
+        Regex::new(r#"^0\.|^127\.|^169\.254\.|^224\.0\.0\.|255.255.255.255"#).unwrap();
+    // ff.1:** and ff.2:** = local multicast - don't redact
+    static ref CLEARTEXT_IPV6: Regex = Regex::new(r#"(?i)^ff[[:xdigit:]][12]:"#).unwrap();
+    // ff..:** = multicast - display first 2 bytes and redact
+    static ref MULTICAST_IPV6: Regex = Regex::new(r#"(?i)^(ff[[:xdigit:]][[:xdigit:]]):"#).unwrap();
+    // fe80/10 = link-local - display first 2 bytes and redact
+    static ref LINK_LOCAL_IPV6: Regex = Regex::new(r#"(?i)^(fe[89ab][[:xdigit:]]):"#).unwrap();
+    // ::ffff:*:* = IPv4 - redact everything
+    static ref IPV4_IN_IPV6: Regex = Regex::new(r#"(?i)^::f{4}(:[[:xdigit:]]{1,4}){2}$"#).unwrap();
+}
+
+fn redact_ipv4(ip: &str, redaction_cache: &Mutex<RedactionIdCache>, replacement: &str) -> String {
+    if CLEARTEXT_IPV4.is_match(ip) {
+        ip.to_string()
+    } else {
+        let mut cache = redaction_cache.lock();
+        let id = cache.get_id(ip.to_string());
+        replacement.replace("{}", id)
+    }
+}
+
+fn redact_ipv6(ip: &str, redaction_cache: &Mutex<RedactionIdCache>, replacement: &str) -> String {
+    if CLEARTEXT_IPV6.is_match(ip) {
+        return ip.to_string();
+    }
+    let special_redact = if let Some(captures) = MULTICAST_IPV6.captures(ip) {
+        Some((captures.get(1).unwrap().as_str(), "REDACTED-IPV6-MULTI"))
+    } else if let Some(captures) = LINK_LOCAL_IPV6.captures(ip) {
+        Some((captures.get(1).unwrap().as_str(), "REDACTED-IPV6-LL"))
+    } else if IPV4_IN_IPV6.is_match(ip) {
+        Some(("::ffff", "REDACTED-IPV4"))
+    } else {
+        None
+    };
+    let mut cache = redaction_cache.lock();
+    let id = cache.get_id(ip.to_string());
+    if let Some((prefix, label)) = special_redact {
+        format!("{}:<{}: {}>", prefix, label, id)
+    } else {
+        replacement.replace("{}", id)
+    }
+}
 
 impl Redactor {
     pub fn noop() -> Self {
@@ -232,6 +295,11 @@ impl Redactor {
                                 replacer.replacement,
                                 id
                             )
+                        })
+                    }
+                    MapType::Function(function) => {
+                        replacer.matcher.replace_all(&redacted, |captures: &'_ Captures<'_>| {
+                            function(&captures[0], &self.redaction_cache, replacer.replacement)
                         })
                     }
                 }
@@ -323,10 +391,11 @@ mod test {
         ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED-IPV4: 1>",
         ipv4_in_6: "IPv46: ::ffff:12.34.56.78" => "IPv46: ::ffff:<REDACTED-IPV4: 1>",
         ipv4_in_6_hex: "IPv46h: ::ffff:ab12:34cd" => "IPv46h: ::ffff:<REDACTED-IPV4: 1>",
+        not_ipv4_in_6_hex: "not_IPv46h: ::ffff:ab12:34cd:5" => "not_IPv46h: <REDACTED-IPV6: 1>",
         ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED-IPV6: 1>",
-        ipv6_colon: "IPv6C: [::/0 via fe82::7d84:c1dc:ab34:656a nic 4]" =>
+        ipv6_colon: "IPv6C: [::/0 via 2082::7d84:c1dc:ab34:656a nic 4]" =>
             "IPv6C: [::/0 via <REDACTED-IPV6: 1> nic 4]",
-        ipv6_ll: "IPv6LL: fe80::7d84:c1dc:ab34:656a" => "IPv6LL: fe80::<REDACTED-IPV6-LL: 1>",
+        ipv6_ll: "IPv6LL: fe80::7d84:c1dc:ab34:656a" => "IPv6LL: fe80:<REDACTED-IPV6-LL: 1>",
         uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED-UUID>",
         mac_address: "MAC address: 00:0a:95:9F:68:16 12:34:95:9F:68:16" =>
             "MAC address: 00:0a:95:<REDACTED-MAC: 1> 12:34:95:<REDACTED-MAC: 2>",
@@ -341,6 +410,28 @@ mod test {
         preserve: "service::fidl service:fidl" => "service::fidl service:fidl",
         long_hex: "456 1234567890abcdefABCDEF0123456789 1.2.3.4" =>
                   "456 <REDACTED-HEX: 2> <REDACTED-IPV4: 1>",
+        ipv4_0: "current: 0.8.8.8" => "current: 0.8.8.8",
+        ipv4_127: "loopback: 127.8.8.8" => "loopback: 127.8.8.8",
+        ipv4_196254: "link_local: 169.254.8.8" => "link_local: 169.254.8.8",
+        ipv4_224: "link_local_multicast: 224.0.0.8" => "link_local_multicast: 224.0.0.8",
+        ipv4_broadcast: "broadcast: 255.255.255.255" => "broadcast: 255.255.255.255",
+        ipv4_not_broadcast: "not_broadcast: 255.255.255.254" => "not_broadcast: <REDACTED-IPV4: 1>",
+        ipv4_not_link_local_multicast: "not_link_local_multicast: 224.0.1.8" => "not_link_local_multicast: <REDACTED-IPV4: 1>",
+        ipv6_local_multicast_1: "local_multicast_1: fF41::1234:5678:9aBc" => "local_multicast_1: fF41::1234:5678:9aBc",
+        ipv6_local_multicast_2: "local_multicast_2: Ffe2:1:2:33:abcd:ef0:6789:456" => "local_multicast_2: Ffe2:1:2:33:abcd:ef0:6789:456",
+        ipv6_multicast_3: "multicast: fF43:abcd::ef0:6789:456" => "multicast: fF43:<REDACTED-IPV6-MULTI: 1>",
+        ipv6_fe89: "link_local_8: fe89:123::4567:8:90" => "link_local_8: fe89:<REDACTED-IPV6-LL: 1>",
+        ipv6_feb2: "link_local_b: FEB2:123::4567:8:90" => "link_local_b: FEB2:<REDACTED-IPV6-LL: 1>",
+        ipv6_fec1: "not_link_local: fec1:123::4567:8:90" => "not_link_local: <REDACTED-IPV6: 1>",
+        ipv6_fe71: "not_link_local_2: fe71:123::4567:8:90" => "not_link_local_2: <REDACTED-IPV6: 1>",
+        short_colons: "not_address_1: 12:34::" => "not_address_1: 12:34::",
+        colons_short: "not_address_2: ::12:34" => "not_address_2: ::12:34",
+        colons_3_fields: "v6_colons_3_fields: ::12:34:5" => "v6_colons_3_fields: <REDACTED-IPV6: 1>",
+        v6_3_fields_colons: "v6_3_fields_colons: 12:34:5::" => "v6_3_fields_colons: <REDACTED-IPV6: 1>",
+        colons_7_fields: "v6_colons_7_fields: ::12:234:35:46:5:6:7" => "v6_colons_7_fields: <REDACTED-IPV6: 1>",
+        v6_7_fields_colons: "v6_7_fields_colons: 12:234:35:46:5:6:7::" => "v6_7_fields_colons: <REDACTED-IPV6: 1>",
+        colons_8_fields: "v6_colons_8_fields: ::12:234:35:46:5:6:7:8" => "v6_colons_8_fields: <REDACTED-IPV6: 1>:8",
+        v6_8_fields_colons: "v6_8_fields_colons: 12:234:35:46:5:6:7:8::" => "v6_8_fields_colons: <REDACTED-IPV6: 1>::",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
     }
 
