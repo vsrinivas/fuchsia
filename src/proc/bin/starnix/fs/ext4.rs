@@ -13,7 +13,9 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
+use crate::fd_impl_directory;
 use crate::logging::impossible_error;
+use crate::task::Task;
 use crate::types::*;
 
 pub struct ExtFilesystem {
@@ -56,8 +58,7 @@ struct ExtDirectory {
 
 impl FsNodeOps for ExtDirectory {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        // TODO(tbodt): Implement opening directories.
-        Err(ENOSYS)
+        Ok(Box::new(ExtDirFileObject))
     }
 
     fn lookup(&self, _node: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
@@ -128,6 +129,24 @@ impl FsNodeOps for ExtSymlink {
     fn readlink(&self, _node: &FsNode) -> Result<FsString, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
         Ok(data)
+    }
+}
+
+struct ExtDirFileObject;
+
+impl FileOps for ExtDirFileObject {
+    fd_impl_directory!();
+
+    // TODO(tbodt): Implement ext directory reading.
+
+    fn seek(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: off_t,
+        _whence: SeekOrigin,
+    ) -> Result<off_t, Errno> {
+        Err(ENOSYS)
     }
 }
 
