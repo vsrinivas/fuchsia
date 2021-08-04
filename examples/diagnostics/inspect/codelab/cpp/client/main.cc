@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
   }
 
   fuchsia::io::DirectorySyncPtr exposed_dir;
-  fuchsia::sys2::Realm_BindChild_Result result;
-  status = zx::make_status(realm->BindChild(fuchsia::sys2::ChildRef{.name = "reverser"},
-                                            exposed_dir.NewRequest(), &result));
+  fuchsia::sys2::Realm_OpenExposedDir_Result result;
+  status = zx::make_status(realm->OpenExposedDir(fuchsia::sys2::ChildRef{.name = "reverser"},
+                                                 exposed_dir.NewRequest(), &result));
   zx::channel handle, request;
   status = zx::make_status(zx::channel::create(0, &handle, &request));
   if (status.is_error()) {
