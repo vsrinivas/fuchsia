@@ -983,6 +983,16 @@ pub struct zx_info_handle_basic_t {
     pub reserved: u32,
 }
 
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_handle_count_t> {
+        pub handle_count: u32,
+    }
+}
+
+zx_info_handle_count_t!(zx_info_handle_count_t);
+
 // Don't need struct_decl_macro for this, the wrapper is different.
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]

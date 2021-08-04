@@ -257,6 +257,18 @@ pub trait AsHandleRef {
         .map(|_| HandleBasicInfo::from(info))
     }
 
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_HANDLE_COUNT topic.
+    fn count_info(&self) -> Result<HandleCountInfo, Status> {
+        let mut count = sys::zx_info_handle_count_t::default();
+        object_get_info::<HandleCountInfoQuery>(
+            self.as_handle_ref(),
+            std::slice::from_mut(&mut count),
+        )
+        .map(|_| HandleCountInfo::from(count))
+    }
+
     /// Returns the koid (kernel object ID) for this handle.
     fn get_koid(&self) -> Result<Koid, Status> {
         self.basic_info().map(|info| info.koid)
@@ -430,6 +442,22 @@ unsafe impl ObjectQuery for HandleBasicInfoQuery {
     type InfoTy = sys::zx_info_handle_basic_t;
 }
 
+sys::zx_info_handle_count_t!(HandleCountInfo);
+
+impl From<sys::zx_info_handle_count_t> for HandleCountInfo {
+    fn from(sys::zx_info_handle_count_t { handle_count }: sys::zx_info_handle_count_t) -> Self {
+        HandleCountInfo { handle_count }
+    }
+}
+
+// zx_info_handle_count_t is able to be safely replaced with a byte representation and is a PoD
+// type.
+struct HandleCountInfoQuery;
+unsafe impl ObjectQuery for HandleCountInfoQuery {
+    const TOPIC: Topic = Topic::HANDLE_COUNT;
+    type InfoTy = sys::zx_info_handle_count_t;
+}
+
 /// Handle operation.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum HandleOp<'a> {
@@ -601,6 +629,17 @@ mod tests {
         let info = root_vmar.basic_info().expect("vmar basic_info failed");
         assert_eq!(info.object_type, ObjectType::VMAR);
         assert!(!info.rights.contains(Rights::WAIT));
+    }
+
+    #[test]
+    fn count_info() {
+        let vmo0 = Vmo::create(1).unwrap();
+        let count_info = vmo0.count_info().expect("vmo0 count_info failed");
+        assert_eq!(count_info.handle_count, 1);
+
+        let vmo1 = vmo0.duplicate_handle(Rights::SAME_RIGHTS).expect("vmo duplicate_handle failed");
+        let count_info = vmo1.count_info().expect("vmo1 count_info failed");
+        assert_eq!(count_info.handle_count, 2);
     }
 
     #[test]
