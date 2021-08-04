@@ -9,7 +9,9 @@ pub mod util;
 
 use {
     crate::core::{
-        controller::{blob::*, component::*, package::*, route::*, sysmgr::*, zbi::*},
+        controller::{
+            blob::*, component::*, package::*, package_extract::*, route::*, sysmgr::*, zbi::*,
+        },
         package::collector::*,
     },
     scrutiny::prelude::*,
@@ -29,6 +31,7 @@ plugin!(
             "/component/uses" => ComponentUsesGraphController::default(),
             "/component/used" => ComponentUsedGraphController::default(),
             "/component/manifest" => ComponentManifestGraphController::default(),
+            "/package/extract" => PackageExtractController::default(),
             "/packages" => PackagesGraphController::default(),
             "/packages/urls" => PackageUrlListController::default(),
             "/routes" => RoutesGraphController::default(),

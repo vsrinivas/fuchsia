@@ -6,8 +6,7 @@ mod controller;
 
 use {
     crate::toolkit::controller::{
-        blobfs::BlobFsExtractController, fvm::FvmExtractController,
-        package::PackageExtractController, zbi::ZbiExtractController,
+        blobfs::BlobFsExtractController, fvm::FvmExtractController, zbi::ZbiExtractController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -20,20 +19,19 @@ plugin!(
         controllers! {
             "/tool/blobfs/extract" => BlobFsExtractController::default(),
             "/tool/fvm/extract" => FvmExtractController::default(),
-            "/tool/package/extract" => PackageExtractController::default(),
             "/tool/zbi/extract" => ZbiExtractController::default(),
         }
     ),
-    vec![PluginDescriptor::new("CorePlugin")]
+    // The toolkit plugin takes no dependencies on the model. It is just a set
+    // of utility controllers for auditing.
+    vec![]
 );
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::toolkit::controller::{
-            fvm::FvmExtractRequest, package::PackageExtractRequest, zbi::ZbiExtractRequest,
-        },
+        crate::toolkit::controller::{fvm::FvmExtractRequest, zbi::ZbiExtractRequest},
         scrutiny_testing::fake::*,
         tempfile::tempdir,
     };
@@ -52,21 +50,6 @@ mod tests {
         };
         let query = serde_json::to_value(request).unwrap();
         let response = zbi_controller.query(model, query);
-        assert_eq!(response.is_ok(), false);
-    }
-
-    #[test]
-    fn test_package_extractor_invalid_url() {
-        let model = fake_data_model();
-        let package_controller = PackageExtractController::default();
-        let output_dir = tempdir().unwrap();
-        let output_path = output_dir.path();
-        let request = PackageExtractRequest {
-            url: "fake_path".to_string(),
-            output: output_path.to_str().unwrap().to_string(),
-        };
-        let query = serde_json::to_value(request).unwrap();
-        let response = package_controller.query(model, query);
         assert_eq!(response.is_ok(), false);
     }
 

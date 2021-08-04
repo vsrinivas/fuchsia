@@ -4,5 +4,4 @@
 
 pub mod blobfs;
 pub mod fvm;
-pub mod package;
 pub mod zbi;

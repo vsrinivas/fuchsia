@@ -18,7 +18,7 @@ pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> 
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                CommandBuilder::new("tool.package.extract")
+                CommandBuilder::new("package.extract")
                     .param("url", cmd.url)
                     .param("output", cmd.output)
                     .build(),

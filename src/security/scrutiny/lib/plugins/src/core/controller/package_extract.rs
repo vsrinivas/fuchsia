@@ -93,8 +93,8 @@ impl DataController for PackageExtractController {
 
     fn usage(&self) -> String {
         UsageBuilder::new()
-            .name("tool.package.extract - Extracts Fuchsia package to a directory.")
-            .summary("tool.package.extract --url fuchsia-pkg://fuchsia.com/foo --output /tmp/foo")
+            .name("package.extract - Extracts Fuchsia package to a directory.")
+            .summary("package.extract --url fuchsia-pkg://fuchsia.com/foo --output /tmp/foo")
             .description(
                 "Extracts package from a given url to some provided file path. \
                 Internally this is resolving the URL and extracting the internal
