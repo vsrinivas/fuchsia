@@ -141,10 +141,10 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
     .await
     {
         run_test_suite_lib::Outcome::Passed => Ok(()),
-        run_test_suite_lib::Outcome::Timedout => Err(anyhow!("Tests timed out")),
-        run_test_suite_lib::Outcome::Failed
-        | run_test_suite_lib::Outcome::Inconclusive
-        | run_test_suite_lib::Outcome::Error => Err(anyhow!("There was an error running tests")),
+        run_test_suite_lib::Outcome::Timedout => ffx_bail!("Tests timed out."),
+        run_test_suite_lib::Outcome::Failed => ffx_bail!("Tests failed."),
+        run_test_suite_lib::Outcome::Inconclusive => ffx_bail!("Inconclusive test result."),
+        run_test_suite_lib::Outcome::Error => Err(anyhow!("There was an error running tests.")),
     }
 }
 
