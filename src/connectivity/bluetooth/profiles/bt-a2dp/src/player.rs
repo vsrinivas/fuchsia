@@ -961,7 +961,7 @@ pub(crate) mod tests {
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
 
-        assert_eq!(1, write_fut_wake_count.get());
+        assert!(write_fut_wake_count.get() > 0, "write future should be woken");
 
         // Polling the write future should finish now, since a buffer is ready.
         assert!(write_fut.poll_unpin(&mut counting_ctx).is_ready());
