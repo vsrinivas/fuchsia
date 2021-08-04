@@ -4,6 +4,7 @@
 
 #include "netdevice_migration.h"
 
+#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <zircon/system/public/zircon/assert.h>
 
@@ -11,6 +12,19 @@
 #include <fbl/auto_lock.h>
 
 #include "src/connectivity/ethernet/drivers/ethernet/netdevice-migration/netdevice_migration_bind.h"
+
+namespace {
+
+fuchsia_hardware_network::wire::StatusFlags ToStatusFlags(uint32_t ethernet_status) {
+  if (ethernet_status ==
+      static_cast<uint32_t>(fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline)) {
+    return fuchsia_hardware_network::wire::StatusFlags::kOnline;
+  } else {
+    return fuchsia_hardware_network::wire::StatusFlags();
+  }
+}
+
+}  // namespace
 
 namespace netdevice_migration {
 
@@ -56,7 +70,17 @@ zx_status_t NetdeviceMigration::Init() {
 
 void NetdeviceMigration::DdkRelease() { delete this; }
 
-void NetdeviceMigration::EthernetIfcStatus(uint32_t status) {}
+void NetdeviceMigration::EthernetIfcStatus(uint32_t status) {
+  port_status_t port_status = {
+      .mtu = ETH_MTU_SIZE,
+  };
+  {
+    fbl::AutoLock lock(&lock_);
+    port_status_flags_ = ToStatusFlags(status);
+    port_status.flags = status;
+  }
+  netdevice_.PortStatusChanged(kPortId, &port_status);
+}
 
 void NetdeviceMigration::EthernetIfcRecv(const uint8_t* data_buffer, size_t data_size,
                                          uint32_t flags) {}
@@ -66,6 +90,7 @@ zx_status_t NetdeviceMigration::NetworkDeviceImplInit(const network_device_ifc_p
     return ZX_ERR_ALREADY_BOUND;
   }
   netdevice_ = ddk::NetworkDeviceIfcProtocolClient(iface);
+  netdevice_.AddPort(kPortId, this, &network_port_protocol_ops_);
   return ZX_OK;
 }
 
@@ -113,6 +138,24 @@ void NetdeviceMigration::NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo) {}
 void NetdeviceMigration::NetworkDeviceImplReleaseVmo(uint8_t id) {}
 
 void NetdeviceMigration::NetworkDeviceImplSetSnoop(bool snoop) {}
+
+void NetdeviceMigration::NetworkPortGetInfo(port_info_t* out_info) { *out_info = {}; }
+
+void NetdeviceMigration::NetworkPortGetStatus(port_status_t* out_status) {
+  {
+    fbl::AutoLock lock(&lock_);
+    *out_status = {
+        .mtu = ETH_MTU_SIZE,
+        .flags = static_cast<uint32_t>(port_status_flags_),
+    };
+  }
+}
+
+void NetdeviceMigration::NetworkPortSetActive(bool active) {}
+
+void NetdeviceMigration::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) { *out_mac_ifc = {}; }
+
+void NetdeviceMigration::NetworkPortRemoved() {}
 
 bool NetdeviceMigration::IsStarted() {
   fbl::AutoLock lock(&lock_);

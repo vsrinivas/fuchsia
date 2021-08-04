@@ -29,6 +29,8 @@ source_set("src") {
     ":netdevice-migration-bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/ddktl",
     "//zircon/system/public",
     "//zircon/system/ulib/fbl",
@@ -63,9 +65,11 @@ test("unit-tests") {
   deps = [
     ":netdevice-migration-bind",
     ":src",
-    "//src/connectivity/ethernet/drivers/ethernet:test_util",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
+    "//src/lib/testing/predicates",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

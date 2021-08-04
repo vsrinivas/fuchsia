@@ -36,11 +36,10 @@ class FakeEthernetImplProtocol
     return ZX_OK;
   }
 
-  void EthernetImplStop() { stop_called_++; }
+  void EthernetImplStop() {}
 
   zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
     client_ = std::make_unique<ddk::EthernetIfcProtocolClient>(ifc);
-    start_called_++;
     return ZX_OK;
   }
 
@@ -98,9 +97,6 @@ class FakeEthernetImplProtocol
     return true;
   }
 
-  inline uint32_t StartCalled() const { return start_called_; }
-  inline uint32_t StopCalled() const { return stop_called_; }
-
  private:
   ethernet_impl_protocol_t proto_;
   const uint8_t mac_[ETH_MAC_SIZE] = {0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
@@ -109,8 +105,6 @@ class FakeEthernetImplProtocol
   bool dump_called_ = false;
   int32_t promiscuous_ = -1;
   bool queue_tx_called_ = false;
-  uint32_t start_called_ = 0;
-  uint32_t stop_called_ = 0;
 };
 
 class EthernetTester : public fake_ddk::Bind {
