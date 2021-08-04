@@ -16,7 +16,7 @@ async fn base_resolver_test() {
         connect_to_protocol::<RealmMarker>().expect("failed to connect to fuchsia.sys2.Realm");
     let (exposed_dir, server_end) = create_proxy().expect("failed to create proxy");
     realm
-        .bind_child(&mut ChildRef { name: "component".into(), collection: None }, server_end)
+        .open_exposed_dir(&mut ChildRef { name: "component".into(), collection: None }, server_end)
         .await
         .expect("failed to call bind child FIDL")
         .expect("failed to bind child");
