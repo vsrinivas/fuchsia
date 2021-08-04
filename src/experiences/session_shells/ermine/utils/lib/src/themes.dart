@@ -11,11 +11,11 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
         colorScheme: ColorScheme.light(
           // Used by controls.
-          primary: Colors.pink[800]!,
+          primary: Color(0xff283238),
           // Used by [ListTile]'s trailing text.
           secondary: Colors.grey[800]!,
           // Used by control backgrounds.
-          background: Colors.pink[800]!.withOpacity(0.3),
+          background: Color(0xff283238).withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
@@ -30,7 +30,7 @@ class AppTheme {
         // Used for error signals and messages.
         errorColor: Colors.red[600],
         // Used by Switch
-        toggleableActiveColor: Colors.pink[800],
+        toggleableActiveColor: Color(0xff283238),
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -96,11 +96,11 @@ class AppTheme {
   static ThemeData get darkTheme => ThemeData(
         colorScheme: ColorScheme.dark(
           // Used by control backgrounds.
-          primary: Colors.pink[400]!,
+          primary: Color(0xfff1f3f4),
           // Used by [ListTile]'s trailing text.
           secondary: Colors.grey[400]!,
           // Used by control backgrounds.
-          background: Colors.pink[200]!.withOpacity(0.3),
+          background: Color(0xfff1f3f4).withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
@@ -115,7 +115,7 @@ class AppTheme {
         // Used for error signals and messages.
         errorColor: Colors.red[500],
         // Used by Switch.
-        toggleableActiveColor: Colors.pink[400],
+        toggleableActiveColor: Color(0xfff1f3f4),
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
