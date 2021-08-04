@@ -76,7 +76,7 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     let mut child_ref = fsys::ChildRef { name: "fs_test".to_string(), collection: None };
     let (client, server) = zx::Channel::create().expect("Cannot create channel");
     realm
-        .bind_child(
+        .open_exposed_dir(
             &mut child_ref,
             fidl::endpoints::ServerEnd::<io::DirectoryMarker>::new(server),
             zx::Time::INFINITE,
