@@ -389,10 +389,8 @@ source_set("trace_header") {
   sources = [ "platform_trace.h" ]
 
   if (is_fuchsia) {
-    public_deps = [ "//sdk/lib/fit" ]
-
     if (magma_enable_tracing) {
-      public_deps += [
+      public_deps = [
         "//zircon/system/ulib/trace:trace-with-static-engine",
         "//zircon/system/ulib/trace-vthread:trace-vthread-with-static-engine",
       ]

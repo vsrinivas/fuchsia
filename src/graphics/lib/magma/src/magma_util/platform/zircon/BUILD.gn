@@ -379,21 +379,9 @@ source_set("trace") {
     "..:tracing",
   ]
 
-  sources = [
-    "zircon_platform_trace.cc",
-    "zircon_platform_trace.h",
-  ]
+  sources = [ "zircon_platform_trace.cc" ]
 
-  deps = [
-    "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/public/lib/async-cpp",
-    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
-    "$zircon_build_root/system/ulib/trace:trace-with-static-engine",
-    "..:trace_header",
-    "//zircon/system/ulib/trace-vthread:trace-vthread-with-static-engine",
-  ]
-
-  public_deps = [ "//sdk/lib/fit" ]
+  deps = [ "..:trace_header" ]
 }
 
 source_set("trace_provider") {

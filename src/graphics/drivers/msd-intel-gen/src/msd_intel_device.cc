@@ -125,17 +125,9 @@ void MsdIntelDevice::Destroy() {
   if (device_request_semaphore_)
     device_request_semaphore_->Signal();
 
-  if (freq_monitor_context_)
-    freq_monitor_context_->semaphore->Signal();
-
   if (device_thread_.joinable()) {
     DLOG("joining device thread");
     device_thread_.join();
-    DLOG("joined");
-  }
-  if (freq_monitor_device_thread_.joinable()) {
-    DLOG("joining freq monitor thread");
-    freq_monitor_device_thread_.join();
     DLOG("joined");
   }
 
@@ -329,22 +321,6 @@ void MsdIntelDevice::StartDeviceThread() {
   DASSERT(!device_thread_.joinable());
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
-#if MAGMA_ENABLE_TRACING
-  freq_monitor_context_ = std::make_shared<FreqMonitorContext>();
-  freq_monitor_device_thread_ = std::thread([this] { this->FrequencyMonitorDeviceThreadLoop(); });
-  trace_observer_ = magma::PlatformTraceObserver::Create();
-
-  trace_observer_->SetObserver(
-      [weak_context = std::weak_ptr<FreqMonitorContext>(freq_monitor_context_)](bool is_enabled) {
-        auto context = weak_context.lock();
-        if (context && context->tracing_enabled != is_enabled) {
-          context->tracing_enabled = is_enabled;
-          if (context->tracing_enabled)
-            context->semaphore->Signal();
-        }
-      });
-#endif
-
   // Don't start interrupt processing until the device thread is running.
   interrupt_manager_->RegisterCallback(
       InterruptCallback, this,
@@ -436,6 +412,8 @@ constexpr uint32_t kHangcheckTimeoutMs = HANGCHECK_TIMEOUT_MS;
 constexpr uint32_t kHangcheckTimeoutMs = 1000;
 #endif
 
+constexpr uint32_t kFreqPollPeriodMs = 16;
+
 std::chrono::milliseconds MsdIntelDevice::GetDeviceRequestTimeoutMs(
     const std::vector<EngineCommandStreamer*>& engines) {
   auto timeout = std::chrono::steady_clock::duration::max();
@@ -445,8 +423,14 @@ std::chrono::milliseconds MsdIntelDevice::GetDeviceRequestTimeoutMs(
                                     kHangcheckTimeoutMs, std::chrono::steady_clock::now()));
   }
 
-  return std::max(std::chrono::milliseconds(0),
-                  std::chrono::ceil<std::chrono::milliseconds>(timeout));
+  std::chrono::milliseconds timeout_ms =
+      std::max(std::chrono::milliseconds(0), std::chrono::ceil<std::chrono::milliseconds>(timeout));
+
+  if (timeout != std::chrono::steady_clock::duration::max()) {
+    timeout_ms = std::min(timeout_ms, std::chrono::milliseconds(kFreqPollPeriodMs));
+  }
+
+  return timeout_ms;
 }
 
 void MsdIntelDevice::DeviceRequestTimedOut(const std::vector<EngineCommandStreamer*>& engines) {
@@ -470,6 +454,23 @@ void MsdIntelDevice::DeviceRequestTimedOut(const std::vector<EngineCommandStream
   }
 }
 
+void MsdIntelDevice::TraceFreq(std::chrono::steady_clock::time_point& last_freq_poll_time) {
+  auto now = std::chrono::steady_clock::now();
+
+  if (std::chrono::ceil<std::chrono::milliseconds>(now - last_freq_poll_time).count() >=
+      kFreqPollPeriodMs) {
+    last_freq_poll_time = now;
+
+    if (TRACE_ENABLED()) {
+      uint32_t ATTRIBUTE_UNUSED actual_mhz =
+          registers::RenderPerformanceStatus::read_current_frequency_gen9(register_io_.get());
+      uint32_t ATTRIBUTE_UNUSED requested_mhz =
+          registers::RenderPerformanceNormalFrequencyRequest::read(register_io_.get());
+      TRACE_COUNTER("magma", "gpu freq", 0, "request_mhz", requested_mhz, "actual_mhz", actual_mhz);
+    }
+  }
+}
+
 int MsdIntelDevice::DeviceThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
 
@@ -483,6 +484,8 @@ int MsdIntelDevice::DeviceThreadLoop() {
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
   std::vector<EngineCommandStreamer*> engines{render_engine_cs(), video_command_streamer()};
+
+  std::chrono::steady_clock::time_point last_freq_poll_time;
 
   while (true) {
     std::chrono::milliseconds timeout_ms = GetDeviceRequestTimeoutMs(engines);
@@ -521,6 +524,8 @@ int MsdIntelDevice::DeviceThreadLoop() {
 
     if (device_thread_quit_flag_)
       break;
+
+    TraceFreq(last_freq_poll_time);
   }
 
   DLOG("DeviceThreadLoop exit");
@@ -528,28 +533,6 @@ int MsdIntelDevice::DeviceThreadLoop() {
   device_thread_id_.reset();
 
   return 0;
-}
-
-void MsdIntelDevice::FrequencyMonitorDeviceThreadLoop() {
-  magma::PlatformThreadHelper::SetCurrentThreadName("FrequencyMonitorDeviceThread");
-
-  while (!device_thread_quit_flag_ && freq_monitor_context_->semaphore->Wait()) {
-    DLOG("begin frequency monitoring");
-
-    while (!device_thread_quit_flag_ && freq_monitor_context_->tracing_enabled) {
-      auto registers = register_io_.get();  // bypass thread id check
-      uint32_t ATTRIBUTE_UNUSED actual_mhz =
-          registers::RenderPerformanceStatus::read_current_frequency_gen9(registers);
-      uint32_t ATTRIBUTE_UNUSED requested_mhz =
-          registers::RenderPerformanceNormalFrequencyRequest::read(registers);
-      TRACE_COUNTER("magma", "gpu freq", 0, "request_mhz", requested_mhz, "actual_mhz", actual_mhz);
-      std::this_thread::sleep_for(std::chrono::milliseconds(16));
-    }
-
-    DLOG("stop frequency monitoring");
-  }
-
-  DLOG("FrequencyMonitorDeviceThreadLoop exit");
 }
 
 void MsdIntelDevice::ProcessCompletedCommandBuffers(EngineCommandStreamerId id) {

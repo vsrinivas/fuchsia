@@ -161,13 +161,14 @@ class MsdIntelDevice : public msd_device_t,
 
   uint32_t GetCurrentFrequency();
   void RequestMaxFreq();
+  // May update the last_freq_poll_time
+  void TraceFreq(std::chrono::steady_clock::time_point& last_freq_poll_time);
 
   static void DumpFault(DumpState* dump_out, uint32_t fault);
   static void DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io);
   void FormatDump(DumpState& dump_state, std::vector<std::string>& dump_out);
 
   int DeviceThreadLoop();
-  void FrequencyMonitorDeviceThreadLoop();
   static void InterruptCallback(void* data, uint32_t master_interrupt_control, uint64_t timestamp);
 
   void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
@@ -190,7 +191,6 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t eu_total_{};
 
   std::thread device_thread_;
-  std::thread freq_monitor_device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
   std::atomic_bool device_thread_quit_flag_{false};
   std::unique_ptr<GpuProgress> progress_;
@@ -220,13 +220,6 @@ class MsdIntelDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
   std::mutex device_request_mutex_;
   std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
-
-  struct FreqMonitorContext {
-    std::unique_ptr<magma::PlatformSemaphore> semaphore{magma::PlatformSemaphore::Create()};
-    std::atomic_bool tracing_enabled{false};
-  };
-  std::shared_ptr<FreqMonitorContext> freq_monitor_context_;
-  std::unique_ptr<magma::PlatformTraceObserver> trace_observer_;
 
   friend class TestMsdIntelDevice;
   friend class TestHwCommandBuffer;
