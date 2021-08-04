@@ -9,7 +9,6 @@ use std::sync::{Arc, Weak};
 use fuchsia_zircon::Time;
 
 use super::{FileOps, ObserverList};
-use crate::devices::DeviceHandle;
 use crate::fs::*;
 use crate::types::*;
 
@@ -24,11 +23,11 @@ pub struct FsNode {
     /// this OnceCell is populated with the FsNodeOps returned by the parent.
     ops: Option<Box<dyn FsNodeOps>>,
 
+    /// The FileSystem that owns this FsNode's tree.
+    fs: Weak<FileSystem>,
+
     /// The tasks waiting on signals (e.g., POLLIN, POLLOUT) from this FsNode.
     pub observers: ObserverList,
-
-    // TODO: replace with superblock handle
-    device: DeviceHandle,
 
     /// The parent FsNode.
     ///
@@ -173,30 +172,35 @@ pub trait FsNodeOps: Send + Sync {
 }
 
 impl FsNode {
-    pub fn new_root<T: FsNodeOps + 'static>(ops: T, device: DeviceHandle) -> FsNodeHandle {
+    pub fn new_root<T: FsNodeOps + 'static>(ops: T, fs: &FileSystemHandle) -> FsNodeHandle {
         // TODO: apply_umask
-        Self::new_orphan(ops, FileMode::IFDIR | FileMode::ALLOW_ALL, device)
+        Arc::new(FsNode::new(
+            Some(Box::new(ops)),
+            FileMode::IFDIR | FileMode::ALLOW_ALL,
+            fs,
+            None,
+            FsString::new(),
+        ))
     }
     pub fn new_orphan<T: FsNodeOps + 'static>(
         ops: T,
         mode: FileMode,
-        device: DeviceHandle,
+        fs: &FileSystemHandle,
     ) -> FsNodeHandle {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
-        Arc::new(FsNode::new(Some(ops), mode, device, None, FsString::new()))
+        Arc::new(FsNode::new(Some(ops), mode, fs, None, FsString::new()))
     }
 
     fn new(
         ops: Option<Box<dyn FsNodeOps>>,
         mode: FileMode,
-        device: DeviceHandle,
+        fs: &FileSystemHandle,
         parent: Option<FsNodeHandle>,
         local_name: FsString,
     ) -> FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
-            inode_num: device.allocate_inode_number(),
-            dev: device.get_device_id(),
+            inode_num: fs.next_inode_num(),
             mode,
             time_create: now,
             time_access: now,
@@ -206,7 +210,7 @@ impl FsNode {
         Self {
             ops,
             observers: ObserverList::default(),
-            device,
+            fs: Arc::downgrade(&fs),
             parent,
             local_name,
             info: RwLock::new(info),
@@ -225,6 +229,10 @@ impl FsNode {
     }
     pub fn parent<'a>(self: &'a FsNodeHandle) -> Option<&'a FsNodeHandle> {
         self.parent.as_ref()
+    }
+
+    pub fn file_system(&self) -> FileSystemHandle {
+        self.fs.upgrade().expect("FileSystem did not live long enough")
     }
 
     fn ops(&self) -> &dyn FsNodeOps {
@@ -402,7 +410,7 @@ impl FsNode {
             let child = FsNode::new(
                 None,
                 FileMode::EMPTY,
-                Arc::clone(&self.device),
+                &self.file_system(),
                 Some(Arc::clone(self)),
                 name.to_vec(),
             );

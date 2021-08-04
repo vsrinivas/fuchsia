@@ -6,33 +6,57 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
+use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
-use super::{FileHandle, FileObject, FsContext, FsNodeHandle, FsStr, FsString, UnlinkKind};
+use super::{
+    FileHandle, FileObject, FsContext, FsNode, FsNodeHandle, FsNodeOps, FsStr, FsString, UnlinkKind,
+};
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
 pub struct FileSystem {
-    root: FsNodeHandle,
-    _ops: Box<dyn FileSystemOps + Send + Sync>,
+    root: OnceCell<FsNodeHandle>,
+    next_inode: AtomicU64,
+    _ops: Box<dyn FileSystemOps>,
 }
 
 impl FileSystem {
     pub fn new(
-        ops: impl FileSystemOps + Send + Sync + 'static,
-        root: FsNodeHandle,
+        ops: impl FileSystemOps + 'static,
+        root_ops: impl FsNodeOps + 'static,
     ) -> FileSystemHandle {
-        Arc::new(FileSystem { root, _ops: Box::new(ops) })
+        // TODO(tbodt): I would like to use Arc::new_cyclic
+        let fs = Self::new_no_root(ops);
+        let root = FsNode::new_root(root_ops, &fs);
+        if fs.root.set(root).is_err() {
+            panic!("there's no way fs.root could have been set");
+        }
+        fs
     }
+
+    pub fn new_no_root(ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+        Arc::new(FileSystem {
+            root: OnceCell::new(),
+            next_inode: AtomicU64::new(0),
+            _ops: Box::new(ops),
+        })
+    }
+
     pub fn root(&self) -> &FsNodeHandle {
-        &self.root
+        self.root.get().unwrap()
+    }
+
+    pub fn next_inode_num(&self) -> ino_t {
+        self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
-pub trait FileSystemOps {}
+pub trait FileSystemOps: Send + Sync {}
 
 pub type FileSystemHandle = Arc<FileSystem>;
 
@@ -40,24 +64,35 @@ pub type FileSystemHandle = Arc<FileSystem>;
 ///
 /// The namespace records at which entries filesystems are mounted.
 pub struct Namespace {
-    root_mount: RwLock<Option<MountHandle>>,
+    root_mount: OnceCell<MountHandle>,
     mount_points: RwLock<HashMap<NamespaceNode, MountHandle>>,
 }
 
 impl Namespace {
     pub fn new(fs: FileSystemHandle) -> Arc<Namespace> {
-        // TODO(tbodt): We can avoid this RwLock<Option thing by using Arc::new_cyclic, but that's
+        // TODO(tbodt): We can avoid this OnceCell thing by using Arc::new_cyclic, but that's
         // unstable.
         let namespace = Arc::new(Self {
-            root_mount: RwLock::new(None),
+            root_mount: OnceCell::new(),
             mount_points: RwLock::new(HashMap::new()),
         });
-        *namespace.root_mount.write() =
-            Some(Arc::new(Mount { namespace: Arc::downgrade(&namespace), mountpoint: None, fs }));
+        let root = fs.root().clone();
+        if namespace
+            .root_mount
+            .set(Arc::new(Mount {
+                namespace: Arc::downgrade(&namespace),
+                mountpoint: None,
+                _fs: fs,
+                root,
+            }))
+            .is_err()
+        {
+            panic!("there's no way namespace.root_mount could have been set");
+        }
         namespace
     }
     pub fn root(&self) -> NamespaceNode {
-        self.root_mount.read().as_ref().unwrap().root()
+        self.root_mount.get().unwrap().root()
     }
 }
 
@@ -69,13 +104,14 @@ impl Namespace {
 struct Mount {
     namespace: Weak<Namespace>,
     mountpoint: Option<(Weak<Mount>, FsNodeHandle)>,
-    fs: FileSystemHandle,
+    root: FsNodeHandle,
+    _fs: FileSystemHandle,
 }
 type MountHandle = Arc<Mount>;
 
 impl Mount {
     pub fn root(self: &MountHandle) -> NamespaceNode {
-        NamespaceNode { mount: Some(Arc::clone(self)), node: Arc::clone(self.fs.root()) }
+        NamespaceNode { mount: Some(Arc::clone(self)), node: Arc::clone(&self.root) }
     }
 
     fn mountpoint(&self) -> Option<NamespaceNode> {
@@ -220,7 +256,7 @@ impl NamespaceNode {
     /// at which this node is mounted. Otherwise, returns None.
     fn mountpoint(&self) -> Option<NamespaceNode> {
         if let Some(mount) = &self.mount {
-            if Arc::ptr_eq(&self.node, mount.fs.root()) {
+            if Arc::ptr_eq(&self.node, &mount.root) {
                 return mount.mountpoint();
             }
         }
@@ -246,7 +282,7 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    pub fn mount(&self, fs: FileSystemHandle) -> Result<(), Errno> {
+    pub fn mount(&self, root: FsNodeHandle) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
             match namespace.mount_points.write().entry(self.clone()) {
                 Entry::Occupied(_) => {
@@ -255,10 +291,12 @@ impl NamespaceNode {
                 }
                 Entry::Vacant(v) => {
                     let mount = self.mount.as_ref().unwrap();
+                    let fs = root.file_system();
                     v.insert(Arc::new(Mount {
                         namespace: mount.namespace.clone(),
                         mountpoint: Some((Arc::downgrade(&mount), self.node.clone())),
-                        fs,
+                        root,
+                        _fs: fs,
                     }));
                     Ok(())
                 }
@@ -320,7 +358,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkFollowing::Enabled)
             .expect("failed to lookup dev");
-        dev.mount(dev_fs).expect("failed to mount dev root node");
+        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
@@ -351,7 +389,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkFollowing::Enabled)
             .expect("failed to lookup dev");
-        dev.mount(dev_fs).expect("failed to mount dev root node");
+        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
         let new_dev = ns
             .root()
             .lookup(&context, b"dev", SymlinkFollowing::Enabled)
@@ -382,7 +420,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkFollowing::Enabled)
             .expect("failed to lookup dev");
-        dev.mount(dev_fs).expect("failed to mount dev root node");
+        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
 
         let dev = ns
             .root()

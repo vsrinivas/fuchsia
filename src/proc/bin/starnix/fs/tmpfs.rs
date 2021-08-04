@@ -8,10 +8,9 @@ use std::collections::HashMap;
 use std::ops::Bound;
 use std::sync::{Arc, Weak};
 
-use crate::devices::*;
+use super::*;
 use crate::fd_impl_directory;
 use crate::fs::pipe::Pipe;
-use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
@@ -23,12 +22,8 @@ impl FileSystemOps for Arc<TmpFs> {}
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
-        let tmpfs_dev = AnonNodeDevice::new(0);
         let fs = Arc::new(TmpFs { nodes: Mutex::new(HashMap::new()) });
-        FileSystem::new(
-            fs.clone(),
-            FsNode::new_root(TmpfsDirectory { fs: Arc::downgrade(&fs) }, tmpfs_dev),
-        )
+        FileSystem::new(fs.clone(), TmpfsDirectory { fs: Arc::downgrade(&fs) })
     }
 
     pub fn register(&self, node: &FsNodeHandle) {

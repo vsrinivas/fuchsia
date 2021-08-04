@@ -8,7 +8,6 @@ use parking_lot::{RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{zxio::zxio_get_posix_mode, zxio_node_attributes_t, Zxio};
 
-use crate::devices::*;
 use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::logging::impossible_error;
@@ -21,9 +20,8 @@ impl FileSystemOps for RemoteFs {}
 
 impl RemoteFs {
     pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
-        let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
         let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
-        FileSystem::new(RemoteFs, FsNode::new_root(RemoteNode { zxio, rights }, remotefs))
+        FileSystem::new(RemoteFs, RemoteNode { zxio, rights })
     }
 }
 

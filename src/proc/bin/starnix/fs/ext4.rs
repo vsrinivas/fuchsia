@@ -13,7 +13,6 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
-use crate::devices::AnonNodeDevice;
 use crate::logging::impossible_error;
 use crate::types::*;
 
@@ -35,10 +34,7 @@ impl ExtFilesystem {
         let vmo_reader = ExtVmoReader::new(Arc::new(fidl_fuchsia_mem::Buffer { vmo, size }));
         let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| EIO)?);
         let fs = Arc::new(Self { parser });
-        let root = FsNode::new_root(
-            ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? },
-            AnonNodeDevice::new(0),
-        );
+        let root = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
         Ok(FileSystem::new(fs, root))
     }
 }

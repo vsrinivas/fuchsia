@@ -42,6 +42,7 @@ use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
 use crate::syscalls::*;
 use crate::task::*;
+use crate::types::FileMode;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -205,30 +206,42 @@ fn files_from_numbered_handles(
     Ok(files)
 }
 
+enum WhatToMount {
+    Fs(FileSystemHandle),
+    Node(FsNodeHandle),
+}
+
 fn create_filesystem_from_spec<'a>(
     pkg: &fio::DirectorySynchronousProxy,
+    fs_ctx: Option<&FsContext>,
     spec: &'a str,
-) -> Result<(&'a [u8], FileSystemHandle), Error> {
+) -> Result<(&'a [u8], WhatToMount), Error> {
+    use WhatToMount::*;
     let mut iter = spec.splitn(3, ':');
     let mount_point =
         iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", spec))?;
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
-    let fs_path = iter.next();
+    let fs_src = iter.next();
     let fs = match fs_type {
-        "tmpfs" => TmpFs::new(),
-        "devfs" => DevFs::new(),
+        "tmpfs" => Fs(TmpFs::new()),
+        "devfs" => Fs(DevFs::new()),
         "remotefs" => {
-            let fs_path = fs_path.ok_or_else(|| anyhow!("remotefs requires specifying a path"))?;
+            let fs_src = fs_src.ok_or_else(|| anyhow!("remotefs requires specifying a path"))?;
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
-            let root = syncio::directory_open_directory_async(&pkg, &fs_path, rights)
+            let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
                 .map_err(|e| anyhow!("Failed to open root: {}", e))?;
-            RemoteFs::new(root.into_channel(), rights)
+            Fs(RemoteFs::new(root.into_channel(), rights))
         }
         "ext4" => {
-            let fs_path = fs_path.ok_or_else(|| anyhow!("ext4 requires specifying a path"))?;
+            let fs_src = fs_src.ok_or_else(|| anyhow!("ext4 requires specifying a path"))?;
             let vmo =
-                syncio::directory_open_vmo(&pkg, &fs_path, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
-            ExtFilesystem::new(vmo)?
+                syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
+            Fs(ExtFilesystem::new(vmo)?)
+        }
+        "bind" => {
+            let fs_src = fs_src.ok_or_else(|| anyhow!("bind mount requires specifying a path"))?;
+            let fs_ctx = fs_ctx.ok_or_else(|| anyhow!("bind mount cannot be the root"))?;
+            Node(fs_ctx.lookup_node(fs_ctx.root.clone(), fs_src.as_bytes())?.node)
         }
         _ => anyhow::bail!("invalid fs type {:?}", fs_type),
     };
@@ -241,9 +254,10 @@ fn start_component(
     controller: ServerEnd<ComponentControllerMarker>,
 ) -> Result<(), Error> {
     info!(
-        "start_component: {}\narguments: {:?}",
+        "start_component: {}\narguments: {:?}\nmanifest: {:?}",
         start_info.resolved_url.clone().unwrap_or("<unknown>".to_string()),
         start_info.numbered_handles,
+        start_info.program,
     );
 
     let mounts =
@@ -264,6 +278,7 @@ fn start_component(
         .unwrap_or(Ok(vec![]))?;
     let user_passwd = runner::get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
+    let apex_hack = runner::get_program_strvec(&start_info, "apex_hack").map(|v| v.clone());
 
     info!("start_component environment: {:?}", environ);
 
@@ -284,15 +299,42 @@ fn start_component(
     let mut mounts_iter = mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
         &pkg,
+        None,
         mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
     )?;
     if root_point != b"/" {
         anyhow::bail!("First mount in mounts list is not the root");
     }
+    let root_fs = if let WhatToMount::Fs(fs) = root_fs {
+        fs
+    } else {
+        anyhow::bail!("how did a bind mount manage to get created as the root?")
+    };
     let fs = FsContext::new(root_fs);
     for mount_spec in mounts_iter {
-        let (mount_point, child_fs) = create_filesystem_from_spec(&pkg, mount_spec)?;
-        fs.lookup_node(fs.root.clone(), mount_point)?.mount(child_fs)?;
+        let (mount_point, child_fs) = create_filesystem_from_spec(&pkg, Some(&fs), mount_spec)?;
+        let mount_point = fs.lookup_node(fs.root.clone(), mount_point)?;
+        match child_fs {
+            WhatToMount::Fs(fs) => mount_point.mount(fs.root().clone())?,
+            WhatToMount::Node(node) => mount_point.mount(node)?,
+        };
+    }
+
+    // Hack to allow mounting apexes before apexd is working.
+    // TODO(tbodt): Remove once apexd works.
+    if let Some(apexes) = apex_hack {
+        fs.root
+            .lookup(&fs, b"apex", SymlinkFollowing::Enabled)?
+            .mount(TmpFs::new().root().clone())?;
+        let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkFollowing::Enabled)?;
+        for apex in apexes {
+            let apex = apex.as_bytes();
+            let apex_subdir =
+                apex_dir.mknod(apex, FileMode::IFDIR | FileMode::from_bits(0o700), 0)?;
+            let apex_source =
+                fs.lookup_node(fs.root.clone(), &[b"/system/apex/", apex].concat())?;
+            apex_subdir.mount(apex_source.node)?;
+        }
     }
 
     let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
@@ -331,7 +373,7 @@ pub async fn start_runner(
                 let kernel = kernel.clone();
                 fasync::Task::local(async move {
                     if let Err(e) = start_component(kernel, start_info, controller) {
-                        error!("failed to start component: {}", e);
+                        error!("failed to start component: {:?}", e);
                     }
                 })
                 .detach();

@@ -269,6 +269,7 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
 pub struct FileObject {
     ops: Box<dyn FileOps>,
     name: NamespaceNode,
+    _fs: FileSystemHandle,
     pub offset: Mutex<off_t>,
     flags: Mutex<OpenFlags>,
     async_owner: Mutex<pid_t>,
@@ -293,8 +294,10 @@ impl FileObject {
     /// This function is not typically called directly. Instead, consider
     /// calling NamespaceNode::open.
     pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode, flags: OpenFlags) -> FileHandle {
+        let fs = name.node.file_system();
         Arc::new(Self {
             name,
+            _fs: fs,
             ops,
             offset: Mutex::new(0),
             flags: Mutex::new(flags),

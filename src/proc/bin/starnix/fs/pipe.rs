@@ -254,7 +254,7 @@ impl Pipe {
 /// sys_pipe2().
 pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
     let pipe = Pipe::new();
-    let node = Anon::new_node(kernel, AnonNodeType::Pipe);
+    let node = FsNode::new_orphan(Anon, FileMode::from_bits(0o600), pipe_fs(kernel));
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
@@ -263,6 +263,12 @@ pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
     };
 
     (open(OpenFlags::RDONLY), open(OpenFlags::WRONLY))
+}
+
+struct PipeFs;
+impl FileSystemOps for PipeFs {}
+fn pipe_fs(kernel: &Kernel) -> &FileSystemHandle {
+    kernel.pipe_fs.get_or_init(|| FileSystem::new_no_root(PipeFs))
 }
 
 struct PipeFileObject {

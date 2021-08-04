@@ -11,7 +11,6 @@ use std::ffi::CString;
 
 mod auth;
 mod collections;
-mod devices;
 mod fs;
 mod loader;
 mod logging;
