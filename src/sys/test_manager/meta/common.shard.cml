@@ -90,6 +90,8 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
+        { protocol: "fuchsia.sys.Environment" },
+        { protocol: "fuchsia.sys.Loader" },
     ],
     offer: [
         {
@@ -122,8 +124,6 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",

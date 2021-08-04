@@ -471,6 +471,45 @@ async fn collect_isolated_logs_using_archive_iterator() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_v1_v2_bridge_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/v2_test_runs_v1_component.cm";
+
+    let (events, logs) = run_single_test(test_url, default_run_option()).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("launch_and_test_v1_component"),
+        RunEvent::case_started("launch_and_test_v1_component"),
+        RunEvent::case_stopped("launch_and_test_v1_component", CaseStatus::Passed),
+        RunEvent::case_finished("launch_and_test_v1_component"),
+        RunEvent::case_found("launch_v1_logging_component"),
+        RunEvent::case_started("launch_v1_logging_component"),
+        RunEvent::case_stopped("launch_v1_logging_component", CaseStatus::Passed),
+        RunEvent::case_finished("launch_v1_logging_component"),
+        RunEvent::case_found("enclosing_env_services"),
+        RunEvent::case_started("enclosing_env_services"),
+        RunEvent::case_stopped("enclosing_env_services", CaseStatus::Passed),
+        RunEvent::case_finished("enclosing_env_services"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    assert_eq!(&expected_events, &events);
+
+    // logged by child v1 component.
+    assert_eq!(
+        logs,
+        vec![
+            "my debug message.".to_string(),
+            "my info message.".to_string(),
+            "my warn message.".to_string()
+        ]
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn enumerate_invalid_test() {
     let proxy = connect_query_server().await.unwrap();
     let (_iterator, server_end) = endpoints::create_proxy().unwrap();

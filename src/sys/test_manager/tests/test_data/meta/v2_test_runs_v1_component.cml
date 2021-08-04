@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/v2_test_runs_v1_component",
+    },
+
+    // Capabilities used by this component.
+    use: [
+        { protocol: "fuchsia.sys.Environment" },
+        { protocol: "fuchsia.sys.Launcher" },
+    ],
+}

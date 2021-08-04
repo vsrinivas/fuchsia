@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/test_manager_test",
@@ -21,6 +21,16 @@
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.sys.Environment",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.sys.Loader",
             from: "parent",
             to: "#test_manager",
         },
