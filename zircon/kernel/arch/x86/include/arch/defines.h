@@ -13,6 +13,9 @@
 #define PAGE_SIZE_SHIFT 12
 #define PAGE_MASK (PAGE_SIZE - 1)
 
+// Align the heap to 2MiB to optionally support large page mappings in it.
+#define ARCH_HEAP_ALIGN_BITS 21
+
 #define MAX_CACHE_LINE 64
 
 #define ARCH_DEFAULT_STACK_SIZE 8192

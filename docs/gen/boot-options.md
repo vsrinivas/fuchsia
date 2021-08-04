@@ -324,6 +324,12 @@ fatal page fault exception. For a software page fault triggered by a syscall,
 the syscall will fail with `ZX_ERR_TIMED_OUT`. A value of 0 indicates a page
 fault is never aborted due to a time out.
 
+### kernel.heap-max-size-mb=\<uint64_t>
+**Default:** `0x800`
+
+This option configures the maximum size of the heap. Only has effect if kernel
+has been compiled to use a virtual heap.
+
 ### kernel.bufferchain.reserve-pages=\<uint64_t>
 **Default:** `0x20`
 

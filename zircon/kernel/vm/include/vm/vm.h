@@ -28,18 +28,17 @@
 // Evaluates to true if tracing is enabled for the given level.
 #define VM_KTRACE_LEVEL_ENABLED(level) ((VM_TRACING_LEVEL) >= (level))
 
-#define VM_KTRACE_DURATION(level, string, args...)                             \
-  TraceDuration<TraceEnabled<VM_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_VM, \
-                TraceContext::Thread>                                          \
+#define VM_KTRACE_DURATION(level, string, args...)                                                 \
+  TraceDuration<TraceEnabled<VM_KTRACE_LEVEL_ENABLED(level)>, KTRACE_GRP_VM, TraceContext::Thread> \
       duration{KTRACE_STRING_REF(string), ##args};
 
 #define VM_KTRACE_FLOW_BEGIN(level, string, flow_id, args...)                         \
   ktrace_flow_begin(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
                     KTRACE_GRP_VM, KTRACE_STRING_REF(string), flow_id, ##args);
 
-#define VM_KTRACE_FLOW_END(level, string, flow_id, args...)                         \
-  ktrace_flow_end(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, \
-                  KTRACE_GRP_VM, KTRACE_STRING_REF(string), flow_id, ##args);
+#define VM_KTRACE_FLOW_END(level, string, flow_id, args...)                                        \
+  ktrace_flow_end(LocalTrace<VM_KTRACE_LEVEL_ENABLED(level)>, TraceContext::Thread, KTRACE_GRP_VM, \
+                  KTRACE_STRING_REF(string), flow_id, ##args);
 
 class VmAspace;
 
@@ -93,6 +92,10 @@ static inline paddr_t vm_get_zero_page_paddr(void) {
 
   return zero_page_paddr;
 }
+
+// Request the heap dimensions.
+vaddr_t vm_get_kernel_heap_base();
+size_t vm_get_kernel_heap_size();
 
 // List of the kernel program's various segments.
 struct kernel_region {

@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/instrumentation/asan.h>
@@ -83,6 +84,7 @@ lazy_init::LazyInit<VmAddressRegion> kernel_image_vmar;
 #if !DISABLE_KASLR
 lazy_init::LazyInit<VmAddressRegion> kernel_random_padding_vmar;
 #endif
+lazy_init::LazyInit<VmAddressRegion> kernel_heap_vmar;
 
 // mark a range of physical pages as WIRED
 void MarkPagesInUsePhys(paddr_t pa, size_t len) {
@@ -106,6 +108,17 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 }
 
 }  // namespace
+
+// Request the heap dimensions.
+vaddr_t vm_get_kernel_heap_base() {
+  ASSERT(VIRTUAL_HEAP);
+  return kernel_heap_vmar->base();
+}
+
+size_t vm_get_kernel_heap_size() {
+  ASSERT(VIRTUAL_HEAP);
+  return kernel_heap_vmar->size();
+}
 
 // Initializes the statically known initial kernel region vmars. It needs to be global so that
 // VmAddressRegion can friend it.
@@ -165,6 +178,33 @@ void vm_init_preheap_vmars() {
   }
   LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 #endif
+
+  if constexpr (VIRTUAL_HEAP) {
+    // Reserve the range for the heap.
+    const size_t heap_bytes =
+        ROUNDUP(gBootOptions->heap_max_size_mb * MB, size_t(1) << ARCH_HEAP_ALIGN_BITS);
+    vaddr_t kernel_heap_base = 0;
+    {
+      Guard<Mutex> guard(root_vmar->lock());
+      zx_status_t status = root_vmar->AllocSpotLocked(
+          heap_bytes, ARCH_HEAP_ALIGN_BITS, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+          &kernel_heap_base);
+      ASSERT_MSG(status == ZX_OK, "Failed to allocate VMAR for heap");
+    }
+
+    // The heap has nothing to initialize later and we can create this from the beginning with only
+    // read and write and no execute.
+    vmar = fbl::AdoptRef<VmAddressRegion>(&kernel_heap_vmar.Initialize(
+        *root_vmar, kernel_heap_base, heap_bytes,
+        VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE,
+        "kernel heap"));
+    {
+      Guard<Mutex> guard(kernel_heap_vmar->lock());
+      kernel_heap_vmar->Activate();
+    }
+    dprintf(INFO, "VM: kernel heap placed in range [%#" PRIxPTR ", %#" PRIxPTR ")\n",
+            kernel_heap_vmar->base(), kernel_heap_vmar->base() + kernel_heap_vmar->size());
+  }
 }
 
 void vm_init_preheap() {

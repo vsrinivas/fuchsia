@@ -168,6 +168,7 @@ if (is_kernel) {
       ":jtrace_config",
       ":lock_dep",
       ":scheduler",
+      ":virtual_heap",
       ":standalone",
       ":warnings",
       "arch/$zircon_cpu:abi",
@@ -356,6 +357,16 @@ if (is_kernel) {
       "SCHEDULER_QUEUE_TRACING_ENABLED=$scheduler_queue_tracing_enabled",
       "WAIT_QUEUE_DEPTH_TRACING_ENABLED=$wait_queue_depth_tracing_enabled",
     ]
+  }
+
+  config("virtual_heap") {
+    visibility = [ ":*" ]
+    defines = []
+    if (enable_virtual_heap) {
+      defines += [ "VIRTUAL_HEAP=1" ]
+    } else {
+      defines += [ "VIRTUAL_HEAP=0" ]
+    }
   }
 
   config("persistent_ram_config") {

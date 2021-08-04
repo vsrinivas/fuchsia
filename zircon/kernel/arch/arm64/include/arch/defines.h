@@ -28,6 +28,9 @@
 #define USER_PAGE_SIZE (1L << USER_PAGE_SIZE_SHIFT)
 #define USER_PAGE_MASK (USER_PAGE_SIZE - 1)
 
+// Align the heap to 2MiB to optionally support large page mappings in it.
+#define ARCH_HEAP_ALIGN_BITS 21
+
 /* the maximum cache line seen on any known ARM hardware */
 #define MAX_CACHE_LINE 128
 

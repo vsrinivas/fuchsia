@@ -85,6 +85,11 @@ declare_args() {
   #   2 - SPEW
   kernel_debug_print_level = 2
 
+  # Enables the use of a virtually managed kernel heap instead of one managed
+  # directly out of the physmap. The virtual heap may have some performance and
+  # memory usage overheads, but will not exhaust due to fragmentation.
+  enable_virtual_heap = false
+
   # Controls the granularity of allocation of the global pool of persistent RAM.
   # All features which wish to use persistent RAM to preserve data across reboot
   # must operate in allocations which are a multiple of this value.  The value

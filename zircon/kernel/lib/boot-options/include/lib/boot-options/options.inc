@@ -316,6 +316,11 @@ the syscall will fail with `ZX_ERR_TIMED_OUT`. A value of 0 indicates a page
 fault is never aborted due to a time out.
 )""")
 
+DEFINE_OPTION("kernel.heap-max-size-mb", uint64_t, heap_max_size_mb, {2048}, R"""(
+This option configures the maximum size of the heap. Only has effect if kernel
+has been compiled to use a virtual heap.
+)""")
+
 DEFINE_OPTION("kernel.bufferchain.reserve-pages", uint64_t, bufferchain_reserve_pages, {32}, R"""(
 Specifies the number of pages per CPU to reserve for buffer chain allocations
 (channel messages). Higher values reduce contention on the PMM when the
