@@ -102,7 +102,7 @@ func (*noopController) SetPromiscuousMode(_ bool) error {
 }
 
 func (*noopController) DeviceClass() network.DeviceClass {
-	return network.DeviceClassUnknown
+	return network.DeviceClassVirtual
 }
 
 var _ link.Observer = (*noopObserver)(nil)

@@ -141,8 +141,9 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
     properties_ = fuchsia::net::interfaces::Properties();
     properties_.set_id(kID);
     properties_.set_name(kName);
-    properties_.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
-        fuchsia::hardware::network::DeviceClass::WLAN));
+    fuchsia::net::interfaces::DeviceClass device_class;
+    device_class.set_device(fuchsia::hardware::network::DeviceClass::WLAN);
+    properties_.set_device_class(std::move(device_class));
     properties_.set_online(true);
     properties_.set_has_default_ipv4_route(false);
     properties_.set_has_default_ipv6_route(false);

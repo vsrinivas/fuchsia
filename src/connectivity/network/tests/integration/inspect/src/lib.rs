@@ -335,7 +335,7 @@ async fn inspect_nic() -> Result {
             },
             "Network Device Info": {
                 TxDrops: AnyProperty,
-                Class: "Unknown",
+                Class: "Virtual",
                 RxReads: contains {},
                 RxWrites: contains {},
                 TxReads: contains {},

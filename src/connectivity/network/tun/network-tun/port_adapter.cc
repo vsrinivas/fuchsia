@@ -44,7 +44,7 @@ PortAdapter::PortAdapter(PortAdapterParent* parent, const BasePortConfig& config
       mtu_(config.mtu),
       mac_(std::move(mac)),
       port_info_(port_info_t{
-          .port_class = static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
+          .port_class = static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kVirtual),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = config.rx_types.size(),
           .tx_types_list = tx_types_.data(),
