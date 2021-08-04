@@ -165,5 +165,38 @@ TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
                           MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
+TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNodeNoRangeValue) {
+  // Overwrite the test node with a node that does NOT have a range value, but
+  // DOES have role SLIDER.
+  fuchsia::accessibility::semantics::Node node = CreateTestNode(0u, "Label A");
+  node.set_role(fuchsia::accessibility::semantics::Role::SLIDER);
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node));
+  a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
+                                         action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+  action.Run(gesture_context);
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kAdjustValue);
+  /* TODO(fxb/63293): Uncomment when word and character navigation exist.
+  action.Run(action_data);
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kCharacter);
+  action.Run(action_data);
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+  ScreenReaderContext::SemanticLevel::kWord);
+  */
+  action.Run(gesture_context);
+  RunLoopUntilIdle();
+  EXPECT_EQ(mock_screen_reader_context()->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  EXPECT_THAT(mock_speaker()->message_ids(),
+              ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
+}
+
 }  // namespace
 }  // namespace accessibility_test

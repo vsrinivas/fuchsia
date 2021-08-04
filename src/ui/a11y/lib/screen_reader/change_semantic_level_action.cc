@@ -69,7 +69,9 @@ void ChangeSemanticLevelAction::Run(GestureContext gesture_context) {
     FX_DCHECK(action_context_->semantics_source);
     auto* node = action_context_->semantics_source->GetSemanticNode(a11y_focus->view_ref_koid,
                                                                     a11y_focus->node_id);
-    if (node && node->has_node_id() && node->has_states() && node->states().has_range_value()) {
+    if (node && node->has_node_id() &&
+        ((node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::SLIDER) ||
+         (node->has_states() && node->states().has_range_value()))) {
       is_slider_focused = true;
     }
   }
