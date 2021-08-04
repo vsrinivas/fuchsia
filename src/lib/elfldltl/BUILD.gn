@@ -7,6 +7,8 @@ import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
+is_elf = current_os != "mac" && current_os != "win"
+
 zx_library("elfldltl") {
   host = true
   kernel = true
@@ -18,9 +20,13 @@ zx_library("elfldltl") {
     "lib/elfldltl/field.h",
     "lib/elfldltl/layout.h",
     "lib/elfldltl/note.h",
+    "lib/elfldltl/self.h",
   ]
 
   sources = []
+  if (is_elf) {
+    sources += [ "self.cc" ]
+  }
 
   public_deps = [ "//sdk/lib/stdcompat" ]
 
@@ -48,6 +54,9 @@ source_set("unittests") {
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/zxtest",
   ]
+  if (is_elf) {
+    sources += [ "self-tests.cc" ]
+  }
 }
 
 fuchsia_unittest_package("elfldltl-tests") {

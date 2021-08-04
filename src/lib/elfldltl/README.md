@@ -64,3 +64,12 @@ format is the same across 32-bit and 64-bit ELF files, so the note parser's
 template classes are actually parameterized only by the byte order.  But the
 canonical access to the API is via the `elfldltl::Elf` template class for the
 specific format variant, which has the `Note` and `NoteSegment` types.
+
+## Introspection
+
+[`<lib/elfldltl/self.h>`](include/lib/elfldltl/self.h) provides accessors for a
+program or shared library to refer to its own ELF data structures at runtime
+using link-time references.  Both 32-bit and 64-bit formats are supported
+independent of the native pointer size, as is dynamic selection between the two
+in case the 32-bit format is used to size-optimize 64-bit binaries.  These APIs
+are useful for implementing static PIE self-relocation and similar cases.
