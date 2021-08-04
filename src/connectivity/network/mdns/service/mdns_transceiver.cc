@@ -97,13 +97,12 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
   Media media;
   switch (properties.device_class().device()) {
     case fuchsia::hardware::network::DeviceClass::WLAN:
-    case fuchsia::hardware::network::DeviceClass::WLAN_AP:
       media = Media::kWireless;
       break;
     case fuchsia::hardware::network::DeviceClass::ETHERNET:
     case fuchsia::hardware::network::DeviceClass::PPP:
     case fuchsia::hardware::network::DeviceClass::BRIDGE:
-    case fuchsia::hardware::network::DeviceClass::VIRTUAL:
+    case fuchsia::hardware::network::DeviceClass::UNKNOWN:
       media = Media::kWired;
       break;
   }

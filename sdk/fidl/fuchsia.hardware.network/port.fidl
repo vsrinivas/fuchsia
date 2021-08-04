@@ -13,18 +13,16 @@ const MAX_PORTS uint8 = 32;
 alias port_id = uint8;
 
 /// Network device class.
-///
-/// *Note*: Device implementers are encouraged to propose additions to this enumeration to avoid
-/// using ill-fitting classes if there's not a good match available.
 // TODO(https://fxbug.dev/76232): Rename to PortClass once we can easily soft transition through
 // aliasing to prevent source breakages.
-type DeviceClass = flexible enum : uint16 {
-    VIRTUAL = 0;
-    ETHERNET = 1;
-    WLAN = 2;
-    PPP = 3;
-    BRIDGE = 4;
-    WLAN_AP = 5;
+type DeviceClass = strict enum : uint16 {
+    UNKNOWN = 0x00;
+    ETHERNET = 0x01;
+    WLAN = 0x02;
+    PPP = 0x03;
+    BRIDGE = 0x04;
+// TODO(https://fxbug.dev/77697): Add WLAN_AP here and make this enum flexible so we don't break
+// chromium.
 };
 
 /// Network port class.

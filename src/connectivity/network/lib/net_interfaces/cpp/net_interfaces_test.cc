@@ -43,9 +43,9 @@ fuchsia::net::interfaces::Properties EthernetProperties(
   fuchsia::net::interfaces::Properties properties;
   properties.set_id(kEthernetID);
   properties.set_name(kName);
-  fuchsia::net::interfaces::DeviceClass device_class;
-  device_class.set_device(fuchsia::hardware::network::DeviceClass::ETHERNET);
-  properties.set_device_class(std::move(device_class));
+  properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
+      fuchsia::hardware::network::DeviceClass::ETHERNET));
+
   SetMutableProperties(properties, online, has_default_ipv4_route, has_default_ipv6_route,
                        std::move(addresses));
   return properties;

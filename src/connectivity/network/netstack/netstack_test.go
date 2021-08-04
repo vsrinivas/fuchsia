@@ -547,7 +547,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	ifs, err := ns.addEndpoint(
 		func(tcpip.NICID) string { return t.Name() },
 		linkEP,
-		&noopController{},
+		nil,
 		nil,
 		0, /* metric */
 	)

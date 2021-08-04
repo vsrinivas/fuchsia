@@ -62,9 +62,8 @@ fuchsia::net::interfaces::Event NetworkReachabilityProvider::FakeWatcherImpl::Ex
   auto& properties = event.existing();
   properties.set_id(kID);
   properties.set_name(kName);
-  fuchsia::net::interfaces::DeviceClass device_class;
-  device_class.set_device(fuchsia::hardware::network::DeviceClass::WLAN);
-  properties.set_device_class(std::move(device_class));
+  properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
+      fuchsia::hardware::network::DeviceClass::WLAN));
   properties.set_has_default_ipv4_route(true);
   properties.set_has_default_ipv6_route(true);
   properties.set_online(reachable);

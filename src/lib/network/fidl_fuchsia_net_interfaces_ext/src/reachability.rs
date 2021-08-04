@@ -30,11 +30,13 @@ pub fn is_globally_routable(
         fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => {
             return false;
         }
-        fnet_interfaces::DeviceClass::Device(device) => {
-            // NB: fuchsia.hardware.network/DeviceClass is an extensible enum, we can't exhaustively
-            // match on it. At this moment all classes can be potentially routable.
-            let _: &fidl_fuchsia_hardware_network::DeviceClass = device;
-        }
+        fnet_interfaces::DeviceClass::Device(device) => match device {
+            fidl_fuchsia_hardware_network::DeviceClass::Unknown
+            | fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+            | fidl_fuchsia_hardware_network::DeviceClass::Wlan
+            | fidl_fuchsia_hardware_network::DeviceClass::Ppp
+            | fidl_fuchsia_hardware_network::DeviceClass::Bridge => {}
+        },
     }
     if !online {
         return false;

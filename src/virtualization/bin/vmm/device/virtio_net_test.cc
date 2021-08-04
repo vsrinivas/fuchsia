@@ -135,9 +135,8 @@ class VirtioNetTest : public TestWithDevice,
       });
       addresses.emplace_back(std::move(addr));
       properties.set_addresses(std::move(addresses));
-      fuchsia::net::interfaces::DeviceClass device_class;
-      device_class.set_device(fuchsia::hardware::network::DeviceClass::ETHERNET);
-      properties.set_device_class(std::move(device_class));
+      properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
+          fuchsia::hardware::network::DeviceClass::ETHERNET));
       properties.set_has_default_ipv4_route(true);
       properties.set_has_default_ipv6_route(false);
       callback(fuchsia::net::interfaces::Event::WithExisting(std::move(properties)));
