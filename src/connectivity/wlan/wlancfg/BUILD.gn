@@ -202,7 +202,7 @@ fuchsia_component("test_driver") {
 
 fuchsia_component("wlancfg_lib_test") {
   testonly = true
-  manifest = "meta/wlancfg_lib_lib_test.cml"
+  manifest = "meta/wlancfg_lib_test.cml"
 }
 
 fuchsia_test_package("wlancfg-tests") {
