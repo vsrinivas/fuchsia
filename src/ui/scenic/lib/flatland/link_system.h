@@ -194,7 +194,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Flatland session thread.
   ChildLink CreateChildLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::composition::ViewportCreationToken token,
+      fuchsia::ui::views::ViewportCreationToken token,
       fuchsia::ui::composition::ViewportProperties initial_properties,
       fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher,
       TransformHandle parent_viewport_watcher_handle, LinkProtocolErrorCallback error_callback);
@@ -206,7 +206,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Flatland session thread.
   ParentLink CreateParentLink(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-      fuchsia::ui::composition::ViewCreationToken token,
+      fuchsia::ui::views::ViewCreationToken token,
       fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
           parent_viewport_watcher,
       TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback);

@@ -65,9 +65,9 @@ using fuchsia::ui::composition::Orientation;
 using fuchsia::ui::composition::ParentViewportStatus;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::TransformId;
-using fuchsia::ui::composition::ViewCreationToken;
-using fuchsia::ui::composition::ViewportCreationToken;
 using fuchsia::ui::composition::ViewportProperties;
+using fuchsia::ui::views::ViewCreationToken;
+using fuchsia::ui::views::ViewportCreationToken;
 
 namespace {
 

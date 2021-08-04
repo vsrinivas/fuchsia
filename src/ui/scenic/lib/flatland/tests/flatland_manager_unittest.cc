@@ -228,8 +228,8 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
 }
 
 TEST_F(FlatlandManagerTest, CreateViewportedFlatlands) {
-  fuchsia::ui::composition::ViewportCreationToken parent_token;
-  fuchsia::ui::composition::ViewCreationToken child_token;
+  fuchsia::ui::views::ViewportCreationToken parent_token;
+  fuchsia::ui::views::ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> parent = CreateFlatland();

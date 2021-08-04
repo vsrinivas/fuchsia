@@ -47,7 +47,7 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
   FlatlandDisplay& operator=(FlatlandDisplay&&) = delete;
 
   // |fuchsia::ui::composition::FlatlandDisplay|
-  void SetContent(fuchsia::ui::composition::ViewportCreationToken token,
+  void SetContent(fuchsia::ui::views::ViewportCreationToken token,
                   fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher>
                       child_view_watcher) override;
 

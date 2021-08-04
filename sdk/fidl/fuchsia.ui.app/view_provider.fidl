@@ -4,7 +4,6 @@
 library fuchsia.ui.app;
 
 using fuchsia.sys;
-using fuchsia.ui.composition;
 using fuchsia.ui.views;
 using zx;
 
@@ -72,7 +71,7 @@ protocol ViewProvider {
 @discoverable
 protocol TemporaryFlatlandViewProvider {
     CreateView(resource struct {
-        view_creation_token fuchsia.ui.composition.ViewCreationToken;
+        view_creation_token fuchsia.ui.views.ViewCreationToken;
         view_ref_control fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
     });

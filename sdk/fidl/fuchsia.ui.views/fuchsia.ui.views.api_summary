@@ -12,6 +12,8 @@ union/member fuchsia.ui.views/Focuser_RequestFocus_Result.response fuchsia.ui.vi
 strict union fuchsia.ui.views/Focuser_RequestFocus_Result
 protocol/member fuchsia.ui.views/View.Present(fuchsia.ui.views/ViewToken view_token)
 protocol fuchsia.ui.views/View
+struct/member fuchsia.ui.views/ViewCreationToken.value zx/handle:CHANNEL
+resource struct fuchsia.ui.views/ViewCreationToken
 struct/member fuchsia.ui.views/ViewHolderToken.value zx/handle:EVENTPAIR
 resource struct fuchsia.ui.views/ViewHolderToken
 struct/member fuchsia.ui.views/ViewIdentityOnCreation.view_ref fuchsia.ui.views/ViewRef
@@ -33,4 +35,6 @@ union/member fuchsia.ui.views/ViewRefInstalled_Watch_Result.response fuchsia.ui.
 strict union fuchsia.ui.views/ViewRefInstalled_Watch_Result
 struct/member fuchsia.ui.views/ViewToken.value zx/handle:EVENTPAIR
 resource struct fuchsia.ui.views/ViewToken
+struct/member fuchsia.ui.views/ViewportCreationToken.value zx/handle:CHANNEL
+resource struct fuchsia.ui.views/ViewportCreationToken
 library fuchsia.ui.views

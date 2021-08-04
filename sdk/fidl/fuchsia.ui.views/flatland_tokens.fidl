@@ -1,0 +1,26 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.views;
+
+using zx;
+
+/// Two Flatland instances may be connected in a parent-child relationship. The child endpoint is
+/// held in a View. This view is strongly associated with a ViewRef and other related protocols.
+///
+/// ViewCreationToken is a typed wrapper for a channel, representing the child endpoint of the
+/// connection between two Flatland instances. No messages will be sent over this channel, because
+/// it is only used as an unclonable object with peer.
+type ViewCreationToken = resource struct {
+    value zx.handle:CHANNEL;
+};
+
+/// Two Flatland instances may be connected in a parent-child relationship. The parent endpoint is
+/// held in a Viewport.
+///
+/// ViewportCreationToken is a typed wrapper for a channel, representing the parent endpoint of the
+/// connection between two Flatlands. No messages will be sent over this channel, because it is only
+/// used as an unclonable object with peer.
+type ViewportCreationToken = resource struct {
+    value zx.handle:CHANNEL;
+};

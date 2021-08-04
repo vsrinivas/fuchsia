@@ -31,9 +31,9 @@ using fuchsia::ui::composition::ImageProperties;
 using fuchsia::ui::composition::OnNextFrameBeginValues;
 using fuchsia::ui::composition::Orientation;
 using fuchsia::ui::composition::ParentViewportWatcher;
-using fuchsia::ui::composition::ViewCreationToken;
-using fuchsia::ui::composition::ViewportCreationToken;
 using fuchsia::ui::composition::ViewportProperties;
+using fuchsia::ui::views::ViewCreationToken;
+using fuchsia::ui::views::ViewportCreationToken;
 
 namespace flatland {
 
@@ -302,8 +302,7 @@ void Flatland::CreateView2(ViewCreationToken token,
   CreateView(std::move(token), std::move(parent_viewport_watcher));
 }
 
-void Flatland::ReleaseView(
-    std::function<void(fuchsia::ui::composition::ViewCreationToken)> callback) {
+void Flatland::ReleaseView(std::function<void(fuchsia::ui::views::ViewCreationToken)> callback) {
   if (!parent_link_) {
     error_reporter_->ERROR() << "ReleaseView failed, no existing parent Link";
     ReportBadOperationError();

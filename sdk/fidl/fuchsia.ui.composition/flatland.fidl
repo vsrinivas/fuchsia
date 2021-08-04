@@ -113,20 +113,6 @@ protocol ChildViewWatcher {
     });
 };
 
-/// A typed wrapper for a channel, representing the child endpoint of the connection between two
-/// Flatland instances. No messages will be sent over this channel, because it is only used as an
-/// unclonable object with peer.
-type ViewCreationToken = resource struct {
-    value zx.handle:CHANNEL;
-};
-
-/// A typed wrapper for a channel, representing the parent endpoint of the connection between two
-/// Flatlands. No messages will be sent over this channel, because it is only used as an unclonable
-/// object with peer.
-type ViewportCreationToken = resource struct {
-    value zx.handle:CHANNEL;
-};
-
 /// The properties of a Viewport as defined by the parent. This data, along with the set of attached
 /// Transforms, will be used to compute the LayoutInfo for the View of the Viewport.
 type ViewportProperties = table {
@@ -361,7 +347,7 @@ protocol Flatland {
     /// ViewportCreationToken. When the ViewportCreationToken dies, this ParentViewportWatcher
     /// channel is destroyed.
     CreateView(resource struct {
-        token ViewCreationToken;
+        token fuchsia.ui.views.ViewCreationToken;
         parent_viewport_watcher server_end:ParentViewportWatcher;
     });
 
@@ -369,7 +355,9 @@ protocol Flatland {
     /// view-bound protocols.
     @transitional
     CreateView2(resource struct {
-        token ViewCreationToken;
+        /// A typed wrapper for a channel, representing the child endpoint of the connection
+        /// between two Flatland instances.
+        token fuchsia.ui.views.ViewCreationToken;
         /// The ViewRef to strongly associate with [`token`].
         view_identity fuchsia.ui.views.ViewIdentityOnCreation;
         /// The protocol endpoints that are strongly bound to the ViewRef in [`view_identity`].
@@ -521,7 +509,9 @@ protocol Flatland {
     /// destroyed.
     CreateViewport(resource struct {
         viewport_id ContentId;
-        token ViewportCreationToken;
+        /// A typed wrapper for a channel, representing the parent endpoint of the connection
+        /// between two Flatland instances.
+        token fuchsia.ui.views.ViewportCreationToken;
         properties ViewportProperties;
         child_view_watcher server_end:ChildViewWatcher;
     });
@@ -623,7 +613,7 @@ protocol Flatland {
     ReleaseViewport(struct {
         viewport_id ContentId;
     }) -> (resource struct {
-        token ViewportCreationToken;
+        token fuchsia.ui.views.ViewportCreationToken;
     });
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
@@ -663,7 +653,7 @@ protocol FlatlandDisplay {
     // should be kept as simple as possible, and if one wanted to do this sort of thing they should
     // create their own Flatland instance and do the content management there.
     SetContent(resource struct {
-        token ViewportCreationToken;
+        token fuchsia.ui.views.ViewportCreationToken;
         child_view_watcher server_end:ChildViewWatcher;
     });
 };

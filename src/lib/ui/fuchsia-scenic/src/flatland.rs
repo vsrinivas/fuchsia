@@ -10,8 +10,9 @@ pub use {
         ChildViewWatcherMarker, ContentId, FlatlandDisplayMarker, FlatlandDisplayProxy,
         FlatlandError, FlatlandEvent, FlatlandEventStream, FlatlandMarker, FlatlandProxy,
         LayoutInfo, ParentViewportWatcherMarker, ParentViewportWatcherProxy, PresentArgs,
-        TransformId, ViewCreationToken, ViewportCreationToken, ViewportProperties,
+        TransformId, ViewportProperties,
     },
+    fidl_fuchsia_ui_views::{ViewCreationToken, ViewportCreationToken},
 };
 
 // Pair of tokens used to link two Flatland sessions together.

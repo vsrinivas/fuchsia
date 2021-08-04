@@ -62,7 +62,7 @@ fn hsv_to_rgba(h: f32, s: f32, v: f32) -> [u8; 4] {
 }
 
 enum MessageInternal {
-    CreateView(fland::ViewCreationToken, fviews::ViewRefControl, fviews::ViewRef),
+    CreateView(fviews::ViewCreationToken, fviews::ViewRefControl, fviews::ViewRef),
     OnPresentError {
         error: fland::FlatlandError,
     },
@@ -178,7 +178,7 @@ impl AppModel {
 
     fn create_parent_viewport_watcher(
         &mut self,
-        mut view_creation_token: fland::ViewCreationToken,
+        mut view_creation_token: fviews::ViewCreationToken,
     ) {
         let (parent_viewport_watcher, server_end) =
             create_proxy::<fland::ParentViewportWatcherMarker>()

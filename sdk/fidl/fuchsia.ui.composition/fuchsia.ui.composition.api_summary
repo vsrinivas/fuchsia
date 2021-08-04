@@ -27,16 +27,16 @@ protocol/member fuchsia.ui.composition/Flatland.AddChild(fuchsia.ui.composition/
 protocol/member fuchsia.ui.composition/Flatland.Clear()
 protocol/member fuchsia.ui.composition/Flatland.CreateImage(fuchsia.ui.composition/ContentId image_id,fuchsia.ui.composition/BufferCollectionImportToken import_token,uint32 vmo_index,fuchsia.ui.composition/ImageProperties properties)
 protocol/member fuchsia.ui.composition/Flatland.CreateTransform(fuchsia.ui.composition/TransformId transform_id)
-protocol/member fuchsia.ui.composition/Flatland.CreateView(fuchsia.ui.composition/ViewCreationToken token,server_end:fuchsia.ui.composition/ParentViewportWatcher parent_viewport_watcher)
-protocol/member fuchsia.ui.composition/Flatland.CreateView2(fuchsia.ui.composition/ViewCreationToken token,fuchsia.ui.views/ViewIdentityOnCreation view_identity,fuchsia.ui.composition/ViewBoundProtocols protocols,server_end:fuchsia.ui.composition/ParentViewportWatcher parent_viewport_watcher)
-protocol/member fuchsia.ui.composition/Flatland.CreateViewport(fuchsia.ui.composition/ContentId viewport_id,fuchsia.ui.composition/ViewportCreationToken token,fuchsia.ui.composition/ViewportProperties properties,server_end:fuchsia.ui.composition/ChildViewWatcher child_view_watcher)
+protocol/member fuchsia.ui.composition/Flatland.CreateView(fuchsia.ui.views/ViewCreationToken token,server_end:fuchsia.ui.composition/ParentViewportWatcher parent_viewport_watcher)
+protocol/member fuchsia.ui.composition/Flatland.CreateView2(fuchsia.ui.views/ViewCreationToken token,fuchsia.ui.views/ViewIdentityOnCreation view_identity,fuchsia.ui.composition/ViewBoundProtocols protocols,server_end:fuchsia.ui.composition/ParentViewportWatcher parent_viewport_watcher)
+protocol/member fuchsia.ui.composition/Flatland.CreateViewport(fuchsia.ui.composition/ContentId viewport_id,fuchsia.ui.views/ViewportCreationToken token,fuchsia.ui.composition/ViewportProperties properties,server_end:fuchsia.ui.composition/ChildViewWatcher child_view_watcher)
 protocol/member fuchsia.ui.composition/Flatland.OnError -> (fuchsia.ui.composition/FlatlandError error)
 protocol/member fuchsia.ui.composition/Flatland.OnFramePresented -> (fuchsia.scenic.scheduling/FramePresentedInfo frame_presented_info)
 protocol/member fuchsia.ui.composition/Flatland.OnNextFrameBegin -> (fuchsia.ui.composition/OnNextFrameBeginValues values)
 protocol/member fuchsia.ui.composition/Flatland.Present(fuchsia.ui.composition/PresentArgs args)
 protocol/member fuchsia.ui.composition/Flatland.ReleaseImage(fuchsia.ui.composition/ContentId image_id)
 protocol/member fuchsia.ui.composition/Flatland.ReleaseTransform(fuchsia.ui.composition/TransformId transform_id)
-protocol/member fuchsia.ui.composition/Flatland.ReleaseViewport(fuchsia.ui.composition/ContentId viewport_id) -> (fuchsia.ui.composition/ViewportCreationToken token)
+protocol/member fuchsia.ui.composition/Flatland.ReleaseViewport(fuchsia.ui.composition/ContentId viewport_id) -> (fuchsia.ui.views/ViewportCreationToken token)
 protocol/member fuchsia.ui.composition/Flatland.RemoveChild(fuchsia.ui.composition/TransformId parent_transform_id,fuchsia.ui.composition/TransformId child_transform_id)
 protocol/member fuchsia.ui.composition/Flatland.SetContent(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/ContentId content_id)
 protocol/member fuchsia.ui.composition/Flatland.SetDebugName(string:64 name)
@@ -48,7 +48,7 @@ protocol/member fuchsia.ui.composition/Flatland.SetRootTransform(fuchsia.ui.comp
 protocol/member fuchsia.ui.composition/Flatland.SetTranslation(fuchsia.ui.composition/TransformId transform_id,fuchsia.math/Vec translation)
 protocol/member fuchsia.ui.composition/Flatland.SetViewportProperties(fuchsia.ui.composition/ContentId viewport_id,fuchsia.ui.composition/ViewportProperties properties)
 protocol fuchsia.ui.composition/Flatland
-protocol/member fuchsia.ui.composition/FlatlandDisplay.SetContent(fuchsia.ui.composition/ViewportCreationToken token,server_end:fuchsia.ui.composition/ChildViewWatcher child_view_watcher)
+protocol/member fuchsia.ui.composition/FlatlandDisplay.SetContent(fuchsia.ui.views/ViewportCreationToken token,server_end:fuchsia.ui.composition/ChildViewWatcher child_view_watcher)
 protocol fuchsia.ui.composition/FlatlandDisplay
 enum/member fuchsia.ui.composition/FlatlandError.BAD_HANGING_GET 3
 enum/member fuchsia.ui.composition/FlatlandError.BAD_OPERATION 1
@@ -101,10 +101,6 @@ table/member fuchsia.ui.composition/ViewBoundProtocols.touch_source server_end:f
 table/member fuchsia.ui.composition/ViewBoundProtocols.view_focuser server_end:fuchsia.ui.views/Focuser
 table/member fuchsia.ui.composition/ViewBoundProtocols.view_ref_focused server_end:fuchsia.ui.views/ViewRefFocused
 resource table fuchsia.ui.composition/ViewBoundProtocols
-struct/member fuchsia.ui.composition/ViewCreationToken.value zx/handle:CHANNEL
-resource struct fuchsia.ui.composition/ViewCreationToken
-struct/member fuchsia.ui.composition/ViewportCreationToken.value zx/handle:CHANNEL
-resource struct fuchsia.ui.composition/ViewportCreationToken
 table/member fuchsia.ui.composition/ViewportProperties.logical_size fuchsia.math/SizeU
 table fuchsia.ui.composition/ViewportProperties
 library fuchsia.ui.composition

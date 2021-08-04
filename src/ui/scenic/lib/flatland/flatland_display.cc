@@ -14,8 +14,8 @@ static void ReportError() {
 }
 
 using fuchsia::ui::composition::ChildViewWatcher;
-using fuchsia::ui::composition::ViewportCreationToken;
 using fuchsia::ui::composition::ViewportProperties;
+using fuchsia::ui::views::ViewportCreationToken;
 
 namespace flatland {
 

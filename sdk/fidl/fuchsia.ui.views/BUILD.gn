@@ -9,6 +9,7 @@ fidl("fuchsia.ui.views") {
 
   sources = [
     "commands.fidl",
+    "flatland_tokens.fidl",
     "focuser.fidl",
     "view.fidl",
     "view_ref.fidl",
