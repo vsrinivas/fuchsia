@@ -172,11 +172,11 @@ pub fn merge(
     if left.key().object_id != right.key().object_id {
         return MergeResult::EmitLeft;
     }
-    match (left.key(), right.key()) {
-        (ObjectKey { data: ObjectKeyData::Tombstone, .. }, _) => {
+    match (left.key(), left.value(), right.key()) {
+        (ObjectKey { data: ObjectKeyData::Object, .. }, ObjectValue::None, _) => {
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
-        (left_key, right_key) if left_key == right_key => {
+        (left_key, _, right_key) if left_key == right_key => {
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
         _ => MergeResult::EmitLeft,
@@ -873,7 +873,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tombstone_discards_all_other_records() {
-        let tombstone = Item::new(ObjectKey::tombstone(1), ObjectValue::None);
+        let tombstone = Item::new(ObjectKey::object(1), ObjectValue::None);
         let other_object = Item::new(
             ObjectKey::object(2),
             ObjectValue::file(

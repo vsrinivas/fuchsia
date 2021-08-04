@@ -21,8 +21,15 @@ use {
         },
         trace_duration,
     },
-    anyhow::{anyhow, bail, Error},
-    std::{fmt, ops::Bound, sync::Arc},
+    anyhow::{anyhow, bail, ensure, Error},
+    std::{
+        fmt,
+        ops::Bound,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    },
 };
 
 // ObjectDescriptor is exposed in Directory::lookup.
@@ -32,11 +39,12 @@ pub use crate::object_store::record::ObjectDescriptor;
 pub struct Directory<S> {
     owner: Arc<S>,
     object_id: u64,
+    is_deleted: AtomicBool,
 }
 
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
     pub fn new(owner: Arc<S>, object_id: u64) -> Self {
-        Directory { owner, object_id }
+        Directory { owner, object_id, is_deleted: AtomicBool::new(false) }
     }
 
     pub fn object_id(&self) -> u64 {
@@ -49,6 +57,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
 
     pub fn store(&self) -> &ObjectStore {
         self.owner.as_ref().as_ref()
+    }
+
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted.load(Ordering::Relaxed)
+    }
+
+    pub fn set_deleted(&self) {
+        self.is_deleted.store(true, Ordering::Relaxed);
     }
 
     pub async fn create(
@@ -79,18 +95,20 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         trace_duration!("Directory::open");
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
-        if let ObjectItem {
-            value: ObjectValue::Object { kind: ObjectKind::Directory { .. }, .. },
-            ..
-        } = store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
-        {
-            Ok(Directory::new(owner.clone(), object_id))
-        } else {
-            bail!(FxfsError::NotDir);
+        match store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)? {
+            ObjectItem {
+                value: ObjectValue::Object { kind: ObjectKind::Directory { .. }, .. },
+                ..
+            } => Ok(Directory::new(owner.clone(), object_id)),
+            ObjectItem { value: ObjectValue::None, .. } => bail!(FxfsError::NotFound),
+            _ => bail!(FxfsError::NotDir),
         }
     }
 
     pub async fn has_children(&self) -> Result<bool, Error> {
+        if self.is_deleted() {
+            return Ok(false);
+        }
         let layer_set = self.store().tree().layer_set();
         let mut merger = layer_set.merger();
         Ok(self.iter(&mut merger).await?.get().is_some())
@@ -99,6 +117,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
     /// Returns the object ID and descriptor for the given child, or None if not found.
     pub async fn lookup(&self, name: &str) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
         trace_duration!("Directory::lookup");
+        if self.is_deleted() {
+            return Ok(None);
+        }
         match self.store().tree().find(&ObjectKey::child(self.object_id, name)).await? {
             None | Some(ObjectItem { value: ObjectValue::None, .. }) => Ok(None),
             Some(ObjectItem {
@@ -114,6 +135,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         transaction: &mut Transaction<'a>,
         name: &str,
     ) -> Result<Directory<S>, Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         let handle = Directory::create(transaction, &self.owner).await?;
         transaction.add(
             self.store().store_object_id(),
@@ -142,6 +164,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         transaction: &mut Transaction<'a>,
         name: &str,
     ) -> Result<StoreObjectHandle<S>, Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         let handle =
             ObjectStore::create_object(&self.owner, transaction, HandleOptions::default(), Some(0))
                 .await?;
@@ -162,6 +185,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         volume_name: &str,
         store_object_id: u64,
     ) -> Result<(), Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(
@@ -182,6 +206,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         object_id: u64,
         descriptor: ObjectDescriptor,
     ) -> Result<(), Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(
@@ -201,6 +226,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         mtime: Option<Timestamp>,
         updater: impl FnOnce(&mut ObjectItem),
     ) -> Result<(), Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         let mut item = if let Some(ObjectStoreMutation { item, .. }) = transaction
             .get_object_mutation(self.store().store_object_id(), ObjectKey::object(self.object_id))
         {
@@ -278,10 +304,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
         from: &str,
     ) -> Result<DirectoryIterator<'a, 'b>, Error> {
+        ensure!(!self.is_deleted(), FxfsError::Deleted);
         let mut iter =
             merger.seek(Bound::Included(&ObjectKey::child(self.object_id, from))).await?;
         // Skip deleted entries.
-        // TODO(csuter): Remove this once we've developed a filtering iterator.
         loop {
             match iter.get() {
                 Some(ItemRef {
@@ -457,19 +483,21 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
 pub fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id: u64) {
     transaction.add(
         store.store_object_id(),
-        Mutation::merge_object(ObjectKey::tombstone(object_id), ObjectValue::None),
+        Mutation::merge_object(ObjectKey::object(object_id), ObjectValue::None),
     );
 }
 
 #[cfg(test)]
 mod tests {
     use {
+        super::remove,
         crate::{
             errors::FxfsError,
             object_store::{
                 crypt::InsecureCrypt,
                 directory::{replace_child, Directory, ReplacedChild},
-                filesystem::{Filesystem, FxFilesystem, SyncOptions},
+                filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
+                record::Timestamp,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
             },
@@ -1060,5 +1088,83 @@ mod tests {
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
         fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_deleted_dir() {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new()))
+            .await
+            .expect("new_empty failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
+        dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
+        dir.create_child_dir(&mut transaction, "bar").await.expect("create_child_dir failed");
+        transaction.commit().await.expect("commit failed");
+
+        // Flush the tree so that we end up with records in different layers.
+        dir.store().flush().await.expect("flush failed");
+
+        // Unlink the child directory.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        replace_child(&mut transaction, None, (&dir, "foo")).await.expect("replace_child failed");
+        transaction.commit().await.expect("commit failed");
+
+        // Finding the child should fail now.
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
+
+        // But finding "bar" should succeed.
+        assert!(dir.lookup("bar").await.expect("lookup failed").is_some());
+
+        // Remove dir now.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        remove(&mut transaction, dir.store(), dir.object_id());
+        transaction.commit().await.expect("commit failed");
+
+        // If we mark dir as deleted, any further operations should fail.
+        dir.set_deleted();
+
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
+        assert_eq!(dir.lookup("bar").await.expect("lookup failed"), None);
+        assert!(!dir.has_children().await.expect("has_children failed"));
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+
+        let assert_access_denied = |result| {
+            if let Err(e) = result {
+                assert!(FxfsError::Deleted.matches(&e));
+            } else {
+                panic!();
+            }
+        };
+        assert_access_denied(dir.create_child_dir(&mut transaction, "baz").await.map(|_| {}));
+        assert_access_denied(dir.create_child_file(&mut transaction, "baz").await.map(|_| {}));
+        assert_access_denied(dir.add_child_volume(&mut transaction, "baz", 1).await);
+        assert_access_denied(
+            dir.insert_child(&mut transaction, "baz", 1, ObjectDescriptor::File).await,
+        );
+        assert_access_denied(
+            dir.update_attributes(&mut transaction, Some(Timestamp::zero()), None, |_| {}).await,
+        );
+        let layer_set = dir.store().tree().layer_set();
+        let mut merger = layer_set.merger();
+        assert_access_denied(dir.iter(&mut merger).await.map(|_| {}));
     }
 }

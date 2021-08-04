@@ -28,10 +28,8 @@ pub enum ObjectDescriptor {
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ObjectKeyData {
-    /// An object tombstone.  This *must* go first because it needs to sort before all the other
-    /// records, so that when it merges it can delete them.
-    Tombstone,
-    /// A generic, untyped object.
+    /// A generic, untyped object.  This must come first and sort before all other keys for a given
+    /// object because it's also used as a tombstone and it needs to merge with all following keys.
     Object,
     /// An attribute associated with an object.  It has a 64-bit ID.
     Attribute(u64),
@@ -174,10 +172,6 @@ impl ObjectKey {
             object_id: graveyard_object_id,
             data: ObjectKeyData::GraveyardEntry { store_object_id, object_id },
         }
-    }
-
-    pub fn tombstone(object_id: u64) -> Self {
-        Self { object_id, data: ObjectKeyData::Tombstone }
     }
 
     /// Returns the merge key for this key; that is, a key which is <= this key and any other
@@ -387,7 +381,9 @@ pub struct ObjectAttributes {
 /// otherwise, a value indicates an insert/replace mutation.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ObjectValue {
-    /// Some keys (e.g. tombstones) have no value.
+    /// Some keys have no value (this often indicates a tombstone of some sort).  Records with this
+    /// value are always filtered when a major compaction is performed, so the meaning must be the
+    /// same as if the item was not present.
     None,
     /// Some keys have no value but need to differentiate between a present value and no value
     /// (None) i.e. their value is really a boolean: None => false, Some => true.

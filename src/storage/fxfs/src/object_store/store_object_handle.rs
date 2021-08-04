@@ -880,7 +880,7 @@ mod tests {
             object_store::{
                 crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
-                record::{ExtentKey, ObjectKey, ObjectKeyData, Timestamp},
+                record::{ExtentKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 round_up,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
@@ -1291,13 +1291,14 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let mut found = false;
-        while let Some(ItemRef { key: ObjectKey { object_id, data }, .. }) = iter.get() {
+        while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
             if *object_id == object.object_id() {
-                if let ObjectKeyData::Tombstone = data {
-                    assert!(!found);
-                    found = true;
-                } else {
-                    assert!(false, "Unexpected item {:?}", iter.get());
+                match (data, value) {
+                    (ObjectKeyData::Object, ObjectValue::None) => {
+                        assert!(!found);
+                        found = true;
+                    }
+                    _ => assert!(false, "Unexpected item {:?}", iter.get()),
                 }
             }
             iter.advance().await.expect("advance failed");

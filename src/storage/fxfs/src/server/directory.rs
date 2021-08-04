@@ -37,10 +37,7 @@ use {
     futures::FutureExt,
     std::{
         any::Any,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc, Mutex,
-        },
+        sync::{Arc, Mutex},
     },
     vfs::{
         common::send_on_open_with_error,
@@ -64,7 +61,6 @@ pub struct FxDirectory {
     // change, hence the Option can go on the outside.
     parent: Option<Mutex<Arc<FxDirectory>>>,
     directory: object_store::Directory<FxVolume>,
-    is_deleted: AtomicBool,
     watchers: Mutex<Watchers>,
 }
 
@@ -76,7 +72,6 @@ impl FxDirectory {
         Self {
             parent: parent.map(|p| Mutex::new(p)),
             directory,
-            is_deleted: AtomicBool::new(false),
             watchers: Mutex::new(Watchers::new()),
         }
     }
@@ -94,11 +89,11 @@ impl FxDirectory {
     }
 
     pub fn is_deleted(&self) -> bool {
-        self.is_deleted.load(Ordering::Relaxed)
+        self.directory.is_deleted()
     }
 
     pub fn set_deleted(&self, name: &str) {
-        self.is_deleted.store(true, Ordering::Relaxed);
+        self.directory.set_deleted();
         self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::deleted(name));
     }
 
@@ -155,13 +150,6 @@ impl FxDirectory {
                 ObjectDescriptor::Volume => bail!(FxfsError::Inconsistent),
             }
         }
-    }
-
-    fn ensure_writable(&self) -> Result<(), Error> {
-        if self.is_deleted.load(Ordering::Relaxed) {
-            bail!(FxfsError::Deleted)
-        }
-        Ok(())
     }
 
     async fn lookup(
@@ -260,7 +248,6 @@ impl FxDirectory {
         name: &str,
         mode: u32,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        self.ensure_writable()?;
         match mode & MODE_TYPE_MASK {
             MODE_TYPE_DIRECTORY => Ok(Arc::new(FxDirectory::new(
                 Some(self.clone()),
@@ -405,7 +392,7 @@ impl MutableDirectory for FxDirectory {
                 transaction
                     .commit_with_callback(|_| {
                         self.did_remove(name);
-                        self.volume().mark_directory_deleted(id, name)
+                        self.volume().mark_directory_deleted(id, name);
                     })
                     .await
                     .map_err(map_to_status)?;
@@ -541,7 +528,7 @@ impl Directory for FxDirectory {
         let fs = store.filesystem();
         let _read_guard =
             fs.read_lock(&[LockKey::object(store.store_object_id(), self.object_id())]).await;
-        if self.is_deleted.load(Ordering::Relaxed) {
+        if self.is_deleted() {
             return Ok((TraversalPosition::End, sink.seal()));
         }
 

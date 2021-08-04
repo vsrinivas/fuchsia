@@ -39,7 +39,7 @@ use {
             journal::checksum_list::ChecksumList,
             record::{
                 Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectItem, ObjectKey,
-                ObjectKeyData, ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+                ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, ObjectStoreMutation,
@@ -251,20 +251,22 @@ impl ObjectStore {
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
-        let keys = if let Item {
-            value: ObjectValue::Object { kind: ObjectKind::File { keys, .. }, .. },
-            ..
-        } =
-            store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
+        let keys = match store
+            .tree
+            .find(&ObjectKey::object(object_id))
+            .await?
+            .ok_or(FxfsError::NotFound)?
         {
-            match keys {
+            Item {
+                value: ObjectValue::Object { kind: ObjectKind::File { keys, .. }, .. }, ..
+            } => match keys {
                 EncryptionKeys::None => None,
                 EncryptionKeys::AES256XTS(keys) => {
                     Some(store.filesystem().crypt().unwrap_keys(&keys, object_id).await?)
                 }
-            }
-        } else {
-            bail!(FxfsError::Inconsistent);
+            },
+            Item { value: ObjectValue::None, .. } => bail!(FxfsError::NotFound),
+            _ => bail!(FxfsError::Inconsistent),
         };
 
         let item = store
@@ -412,7 +414,7 @@ impl ObjectStore {
                 transaction.add(
                     self.store_object_id,
                     Mutation::merge_object(
-                        ObjectKey::tombstone(search_key.object_id),
+                        ObjectKey::object(search_key.object_id),
                         ObjectValue::None,
                     ),
                 );
@@ -838,11 +840,9 @@ impl Mutations for ObjectStore {
             fn major_iter(
                 iter: BoxedLayerIterator<'_, ObjectKey, ObjectValue>,
             ) -> BoxedLayerIterator<'_, ObjectKey, ObjectValue> {
-                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| {
-                    match item.key {
-                        ObjectKey { data: ObjectKeyData::Tombstone, .. } => true,
-                        _ => false,
-                    }
+                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| match item {
+                    ItemRef { value: ObjectValue::None, .. } => true,
+                    _ => false,
                 }))
             }
         }
@@ -966,14 +966,14 @@ mod tests {
     use {
         crate::{
             errors::FxfsError,
-            lsm_tree::types::{ItemRef, LayerIterator},
+            lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 crypt::InsecureCrypt,
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
-                record::{ExtentKey, ExtentValue, ObjectKey},
+                record::{ExtentKey, ExtentValue, ObjectKey, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },
@@ -1283,14 +1283,14 @@ mod tests {
 
         root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
         assert_matches!(
-            root_store.tree.find(&ObjectKey::tombstone(child_id)).await.expect("find failed"),
-            Some(_)
+            root_store.tree.find(&ObjectKey::object(child_id)).await.expect("find failed"),
+            Some(Item { value: ObjectValue::None, .. })
         );
         assert!(has_deleted_extent_records(root_store.clone(), child_id).await);
 
         root_store.flush().await.expect("flush failed");
         assert_matches!(
-            root_store.tree.find(&ObjectKey::tombstone(child_id)).await.expect("find failed"),
+            root_store.tree.find(&ObjectKey::object(child_id)).await.expect("find failed"),
             None
         );
         assert!(!has_deleted_extent_records(root_store.clone(), child_id).await);
