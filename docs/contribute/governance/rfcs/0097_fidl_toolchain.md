@@ -65,7 +65,6 @@ a backend even though this is a very small part of what this tool actually does.
 
 ## Motivation
 
-Just like [Riley](https://en.wikipedia.org/wiki/Inside_Out_(2015_film)#Plot),
 FIDL has been growing up. The expressibility of its toolchain has been tested.
 It has not been able to meet new requirements adequately. A new expanded
 toolchain is needed.
