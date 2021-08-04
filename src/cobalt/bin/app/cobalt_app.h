@@ -22,6 +22,7 @@
 #include "src/cobalt/bin/app/activity_listener_impl.h"
 #include "src/cobalt/bin/app/cobalt_controller_impl.h"
 #include "src/cobalt/bin/app/configuration_data.h"
+#include "src/cobalt/bin/app/diagnostics_impl.h"
 #include "src/cobalt/bin/app/logger_factory_impl.h"
 #include "src/cobalt/bin/app/process_lifecycle_impl.h"
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
@@ -93,7 +94,7 @@ class CobaltApp {
       UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
       const std::string& product_name, const std::string& board_name, const std::string& version,
-      std::unique_ptr<ActivityListenerImpl> listener);
+      std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             inspect::Node inspect_node, inspect::Node inspect_config_node,

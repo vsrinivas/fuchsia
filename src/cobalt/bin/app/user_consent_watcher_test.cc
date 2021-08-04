@@ -159,24 +159,6 @@ std::string PrettyPrintConsentStates(const testing::TestParamInfo<std::optional<
   }
 }
 
-inspect::Hierarchy PrintHierarchy(inspect::Hierarchy hierarchy) {
-  hierarchy.Visit([&](const std::vector<std::string>& path, const inspect::Hierarchy* h) {
-    std::string s = "";
-    for (const auto& p : path) {
-      s += "/" + p;
-    }
-
-    FX_LOGS(INFO) << s << ": ";
-    inspect::PrintTo(*h, &FX_LOG_STREAM(INFO, nullptr));
-
-    for (const auto& prop : h->node().properties()) {
-      inspect::PrintTo(prop, &FX_LOG_STREAM(INFO, nullptr));
-    }
-    return true;
-  });
-  return hierarchy;
-}
-
 INSTANTIATE_TEST_SUITE_P(WithVariousConsentStates, UserConsentWatcherTest,
                          ::testing::Values(true, false, std::nullopt), &PrettyPrintConsentStates);
 
@@ -199,7 +181,7 @@ TEST_P(UserConsentWatcherTest, ConsentResetIfServerClosesConnection) {
   EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
   EXPECT_THAT(
-      PrintHierarchy(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value()),
+      inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value(),
       AllOf(NodeMatches(NameMatches("root")),
             ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                 NameMatches("user_consent_watcher"),
@@ -241,7 +223,7 @@ TEST_F(UserConsentWatcherTest, ConsentStateDefaultsToDoNotUpload) {
   EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_UPLOAD);
   EXPECT_TRUE(watcher_.privacy_settings().IsEmpty());
   EXPECT_THAT(
-      PrintHierarchy(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value()),
+      inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value(),
       AllOf(NodeMatches(NameMatches("root")),
             ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                 NameMatches("user_consent_watcher"),
@@ -283,7 +265,7 @@ TEST_P(UserConsentWatcherTest, ContinuesWatching) {
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), false);
   EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::DO_NOT_COLLECT);
   EXPECT_THAT(
-      PrintHierarchy(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value()),
+      inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value(),
       AllOf(
           NodeMatches(NameMatches("root")),
           ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
@@ -298,7 +280,7 @@ TEST_P(UserConsentWatcherTest, ContinuesWatching) {
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), true);
   EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
-  EXPECT_THAT(PrintHierarchy(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value()),
+  EXPECT_THAT(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value(),
               AllOf(NodeMatches(NameMatches("root")),
                     ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                         NameMatches("user_consent_watcher"),
@@ -329,7 +311,7 @@ TEST_P(UserConsentWatcherTest, ContinuesWatching) {
   RunLoopUntilIdle();
   EXPECT_EQ(watcher_.privacy_settings().user_data_sharing_consent(), true);
   EXPECT_EQ(current_policy_, CobaltServiceInterface::DataCollectionPolicy::COLLECT_AND_UPLOAD);
-  EXPECT_THAT(PrintHierarchy(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value()),
+  EXPECT_THAT(inspect::ReadFromVmo(inspector_.DuplicateVmo()).take_value(),
               AllOf(NodeMatches(NameMatches("root")),
                     ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                         NameMatches("user_consent_watcher"),
