@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_STATUS_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_STATUS_H_
 
+#include <iosfwd>
 #include <string>
 
 #if defined(__Fuchsia__)
@@ -104,5 +105,7 @@ class Status {
 };
 
 }  // namespace debug
+
+std::ostream& operator<<(std::ostream& out, const debug::Status& status);
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_STATUS_H_

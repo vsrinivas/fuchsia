@@ -35,8 +35,14 @@ Status::Type MapFuchsiaError(zx_status_t* status) {
 Status ZxStatus(zx_status_t s) {
   if (s == ZX_OK)
     return Status();
+
+  // For cross-platform errors, this use the string provided by the system but only set the
+  // cross-platform error type. It might be nice to have both a cross-platform type and a
+  // platform-specific error code set, but that may require using std::optional for the
+  // platform_error.
+  const char* msg = zx_status_get_string(s);
   Status::Type type = MapFuchsiaError(&s);
-  return Status(Status::InternalValues(), type, static_cast<int64_t>(s), zx_status_get_string(s));
+  return Status(Status::InternalValues(), type, static_cast<int64_t>(s), msg);
 }
 
 Status ZxStatus(zx_status_t s, std::string msg) {
@@ -95,3 +101,17 @@ Status::Status(InternalValues tag, Type t, uint64_t pe, std::string msg)
 }
 
 }  // namespace debug
+
+std::ostream& operator<<(std::ostream& out, const debug::Status& status) {
+  if (status.ok()) {
+    return out << "Status(OK)";
+  }
+  if (status.type() == debug::Status::kPlatformError) {
+    return out << "Status(platform error = " << status.platform_error() << ", \""
+               << status.message() << "\")";
+  }
+  // TODO: it might be nice to have a stringified version of Status::Type. For now just use an
+  // integer.
+  return out << "Status(" << static_cast<uint32_t>(status.type()) << ", \"" << status.message()
+             << "\")";
+}
