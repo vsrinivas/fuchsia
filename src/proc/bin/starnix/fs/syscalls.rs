@@ -5,6 +5,7 @@
 use std::convert::TryInto;
 use std::usize;
 
+use crate::fs::memfd::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::not_implemented;
@@ -579,6 +580,23 @@ pub fn sys_dup3(
 
     ctx.task.files.duplicate(oldfd, Some(newfd), valid_flags)?;
     Ok(newfd.into())
+}
+
+pub fn sys_memfd_create(
+    ctx: &SyscallContext<'_>,
+    _user_name: UserCString,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags & !MFD_CLOEXEC != 0 {
+        not_implemented!("memfd_create: flags: {}", flags);
+    }
+    let file = new_memfd(ctx.kernel(), OpenFlags::RDWR)?;
+    let mut fd_flags = FdFlags::empty();
+    if flags & MFD_CLOEXEC != 0 {
+        fd_flags |= FdFlags::CLOEXEC;
+    }
+    let fd = ctx.task.files.add_with_flags(file, fd_flags)?;
+    Ok(fd.into())
 }
 
 #[cfg(test)]

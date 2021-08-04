@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "/data/tests/pread64_test",
-        args: [ "--gunit_filter=-*.CantReadSocketPair*:*.Pread64WithOpath:*.DirNotReadable:*.Overflow" ],
+        args: [ "--gunit_filter=-*.CantReadSocketPair*:*.Pread64WithOpath:*.DirNotReadable" ],
         mounts: [
             "/:remotefs:root",
             "/data:remotefs:data",

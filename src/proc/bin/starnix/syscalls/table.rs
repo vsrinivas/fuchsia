@@ -161,6 +161,7 @@ pub fn dispatch_syscall(
         ioctl[4],
         kill[2],
         lseek[3],
+        memfd_create[2],
         mkdirat[3],
         mknodat[4],
         mmap[6],

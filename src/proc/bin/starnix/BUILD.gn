@@ -76,6 +76,7 @@ if (target_cpu == "x64") {
       "fs/fuchsia/pipe.rs",
       "fs/fuchsia/remote.rs",
       "fs/fuchsia/syslog.rs",
+      "fs/memfd.rs",
       "fs/mod.rs",
       "fs/namespace.rs",
       "fs/null_file.rs",

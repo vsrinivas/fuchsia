@@ -34,6 +34,7 @@ pub use vmo_file::*;
 pub mod devfs;
 pub mod ext4;
 pub mod fuchsia;
+pub mod memfd;
 pub mod path;
 pub mod pipe;
 pub mod syscalls;

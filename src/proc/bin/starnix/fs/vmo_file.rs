@@ -13,6 +13,42 @@ use crate::task::Task;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
 
+pub struct VmoFileNode {
+    /// The memory that backs this file.
+    vmo: Arc<zx::Vmo>,
+}
+
+impl VmoFileNode {
+    pub fn new() -> Result<VmoFileNode, Errno> {
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0).map_err(|_| ENOMEM)?;
+        Ok(VmoFileNode { vmo: Arc::new(vmo) })
+    }
+}
+
+impl FsNodeOps for VmoFileNode {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
+    }
+
+    fn truncate(&self, node: &FsNode, length: u64) -> Result<(), Errno> {
+        let mut info = node.info_write();
+        if info.size == length as usize {
+            return Ok(());
+        }
+        self.vmo.set_size(length).map_err(|status| match status {
+            zx::Status::NO_MEMORY => ENOMEM,
+            zx::Status::OUT_OF_RANGE => ENOMEM,
+            _ => impossible_error(status),
+        })?;
+        info.size = length as usize;
+        info.storage_size = self.vmo.get_size().map_err(impossible_error)? as usize;
+        let time = fuchsia_runtime::utc_time();
+        info.time_access = time;
+        info.time_modify = time;
+        Ok(())
+    }
+}
+
 pub struct VmoFileObject {
     vmo: Arc<zx::Vmo>,
 }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, VmoOptions};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::ops::Bound;
@@ -11,10 +10,10 @@ use std::sync::{Arc, Weak};
 use super::*;
 use crate::fd_impl_directory;
 use crate::fs::pipe::Pipe;
-use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
 
+#[derive(Default)]
 pub struct TmpFs {
     nodes: Mutex<HashMap<ino_t, FsNodeHandle>>,
 }
@@ -197,42 +196,6 @@ impl FileOps for DirectoryFileObject {
     }
 }
 
-struct VmoFileNode {
-    /// The memory that backs this file.
-    vmo: Arc<zx::Vmo>,
-}
-
-impl VmoFileNode {
-    fn new() -> Result<VmoFileNode, Errno> {
-        let vmo = zx::Vmo::create_with_opts(VmoOptions::RESIZABLE, 0).map_err(|_| ENOMEM)?;
-        Ok(VmoFileNode { vmo: Arc::new(vmo) })
-    }
-}
-
-impl FsNodeOps for VmoFileNode {
-    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
-    }
-
-    fn truncate(&self, node: &FsNode, length: u64) -> Result<(), Errno> {
-        let mut info = node.info_write();
-        if info.size == length as usize {
-            return Ok(());
-        }
-        self.vmo.set_size(length).map_err(|status| match status {
-            zx::Status::NO_MEMORY => ENOMEM,
-            zx::Status::OUT_OF_RANGE => ENOMEM,
-            _ => impossible_error(status),
-        })?;
-        info.size = length as usize;
-        info.storage_size = self.vmo.get_size().map_err(impossible_error)? as usize;
-        let time = fuchsia_runtime::utc_time();
-        info.time_access = time;
-        info.time_modify = time;
-        Ok(())
-    }
-}
-
 struct FifoNode {
     /// The pipe located at this node.
     pipe: Arc<Mutex<Pipe>>,
@@ -253,7 +216,9 @@ impl FsNodeOps for FifoNode {
 #[cfg(test)]
 mod test {
     use super::*;
+
     use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use std::sync::Arc;
     use zerocopy::AsBytes;
 

@@ -23,6 +23,7 @@
 #include <linux/fs.h>
 #include <linux/futex.h>
 #include <linux/limits.h>
+#include <linux/memfd.h>
 #include <linux/mman.h>
 #include <linux/poll.h>
 #include <linux/prctl.h>
