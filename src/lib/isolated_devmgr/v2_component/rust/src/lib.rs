@@ -33,7 +33,7 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
     let mut child_ref = fsys::ChildRef { name: "isolated-devmgr".to_string(), collection: None };
     let (client, server) = zx::Channel::create()?;
     realm
-        .bind_child(
+        .open_exposed_dir(
             &mut child_ref,
             fidl::endpoints::ServerEnd::<fio::DirectoryMarker>::new(server),
             zx::Time::INFINITE,
