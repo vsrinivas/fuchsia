@@ -490,7 +490,6 @@ zx_status_t BaseCapturer::Process() {
   TRACE_DURATION("audio", "BaseCapturer::Process");
   while (true) {
     // Start by figure out what state we are currently in for this cycle.
-    bool async_mode = false;
     switch (state_.load()) {
       // If we are still waiting for a VMO, we should not be operating right now.
       case State::WaitingForVmo:
@@ -509,11 +508,9 @@ zx_status_t BaseCapturer::Process() {
         return ZX_OK;
 
       case State::SyncOperating:
-        async_mode = false;
         break;
 
       case State::AsyncOperating:
-        async_mode = true;
         break;
 
       case State::Shutdown:
