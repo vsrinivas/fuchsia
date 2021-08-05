@@ -44,7 +44,7 @@ supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 files = {
   outdir = get_label_info(labels.images, "target_out_dir") + "/fuchsia"
   gendir = "${outdir}/gen"
-  blobfs = "${outdir}/blob.blk"
+  blobfs = "${root_out_dir}/obj/build/images/blob.blk"
 
   if (supports_fastboot_fvm) {
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
@@ -58,6 +58,10 @@ recovery_is_zedboot =
 # Dependencies for all image targets referenced by paver_targets, i.e., the
 # images needed by the generated pave scripts.
 default_image_deps = [ labels.images ]
+
+if (!bootfs_only) {
+  default_image_deps += [ "fuchsia:copy_blobfs" ]
+}
 
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
@@ -1431,6 +1435,7 @@ compiled_action("uefi-disk") {
       files.blobfs,
     ]
     deps += [
+      "fuchsia:copy_blobfs",
       "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
       labels.images,
       labels.minfs,

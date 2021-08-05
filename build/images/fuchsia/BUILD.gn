@@ -117,6 +117,31 @@ fuchsia_base = {
 # Fuchsia
 ##################################################
 
+# Copy the blob.blk to the old location for assembled images.
+# TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
+if (!bootfs_only) {
+  old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
+  copy("copy_blobfs") {
+    testonly = fuchsia_zbi_testonly
+    sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
+    outputs = [ old_blobfs_path ]
+    deps = [ ":fuchsia" ]
+
+    metadata = {
+      # Declare all the generated images.
+      images = [
+        # BlobFS
+        {
+          label = get_label_info(":fuchsia", "label_with_toolchain")
+          name = "blob"
+          path = rebase_path(old_blobfs_path, root_build_dir)
+          type = "blk"
+        },
+      ]
+    }
+  }
+}
+
 assemble_system("fuchsia") {
   forward_variables_from(fuchsia_base, "*")
   bootfs_labels = [ "//build/input:bootfs" ]
@@ -168,13 +193,14 @@ assemble_system("fuchsia") {
 
     # Declare all the generated images.
     images = [
+      # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
       # BlobFS
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "blob"
-        path = rebased_files.blobfs
-        type = "blk"
-      },
+      #{
+      #  label = get_label_info(":$target_name", "label_with_toolchain")
+      #  name = "blob"
+      #  path = rebased_files.blobfs
+      #  type = "blk"
+      #},
 
       # ZBI
       {
