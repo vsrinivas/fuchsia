@@ -30,7 +30,7 @@ use {
     crate::{
         clone_utils::clone_scan_request,
         responder::Responder,
-        sink::{InfoSink, MlmeSink},
+        sink::{InfoSink, MlmeSink, UnboundedSink},
         timer::{self, TimedEvent},
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
@@ -113,6 +113,46 @@ impl<T: Into<ConnectFailure>> From<T> for ConnectResult {
     fn from(failure: T) -> Self {
         ConnectResult::Failed(failure.into())
     }
+}
+
+#[derive(Debug)]
+pub struct ConnectTransactionSink {
+    sink: UnboundedSink<ConnectTransactionEvent>,
+    is_reconnecting: bool,
+}
+
+impl ConnectTransactionSink {
+    pub fn new_unbounded() -> (Self, ConnectTransactionStream) {
+        let (sender, receiver) = mpsc::unbounded();
+        let sink =
+            ConnectTransactionSink { sink: UnboundedSink::new(sender), is_reconnecting: false };
+        (sink, receiver)
+    }
+
+    pub fn is_reconnecting(&self) -> bool {
+        self.is_reconnecting
+    }
+
+    pub fn send_connect_result(&mut self, result: ConnectResult) {
+        let event =
+            ConnectTransactionEvent::OnConnectResult { result, is_reconnect: self.is_reconnecting };
+        self.send(event);
+    }
+
+    pub fn send(&mut self, event: ConnectTransactionEvent) {
+        if let ConnectTransactionEvent::OnDisconnect { is_reconnecting } = &event {
+            self.is_reconnecting = *is_reconnecting;
+        };
+        self.sink.send(event);
+    }
+}
+
+pub type ConnectTransactionStream = mpsc::UnboundedReceiver<ConnectTransactionEvent>;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ConnectTransactionEvent {
+    OnConnectResult { result: ConnectResult, is_reconnect: bool },
+    OnDisconnect { is_reconnecting: bool },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -346,12 +386,13 @@ impl ClientSme {
     pub fn on_connect_command(
         &mut self,
         req: fidl_sme::ConnectRequest,
-    ) -> oneshot::Receiver<ConnectResult> {
-        let (responder, receiver) = Responder::new();
+    ) -> ConnectTransactionStream {
+        let (mut connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
+
         if req.ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
             // TODO(fxbug.dev/42081): Use a more accurate error (InvalidSsidArg) for this error.
-            responder.respond(SelectNetworkFailure::NoScanResultWithSsid.into());
-            return receiver;
+            connect_txn_sink.send_connect_result(SelectNetworkFailure::NoScanResultWithSsid.into());
+            return connect_txn_stream;
         }
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
@@ -361,8 +402,9 @@ impl ClientSme {
             Ok(bss_description) => bss_description,
             Err(e) => {
                 error!("Failed converting FIDL BssDescription in ConnectRequest: {:?}", e);
-                responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                return receiver;
+                connect_txn_sink
+                    .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                return connect_txn_stream;
             }
         };
 
@@ -373,8 +415,9 @@ impl ClientSme {
 
         if !self.cfg.is_bss_compatible(&bss_description, &self.context.device_info) {
             warn!("BSS is incompatible");
-            responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-            return receiver;
+            connect_txn_sink
+                .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
+            return connect_txn_stream;
         }
         // We can connect directly now.
         let protection = match get_protection(
@@ -387,13 +430,14 @@ impl ClientSme {
             Ok(protection) => protection,
             Err(error) => {
                 warn!("{:?}", error);
-                responder.respond(SelectNetworkFailure::IncompatibleConnectRequest.into());
-                return receiver;
+                connect_txn_sink
+                    .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
+                return connect_txn_stream;
             }
         };
         let cmd = ConnectCommand {
             bss: Box::new(bss_description.clone()),
-            responder: Some(responder),
+            connect_txn_sink,
             protection,
             radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
         };
@@ -404,7 +448,7 @@ impl ClientSme {
             multiple_bss_candidates: req.multiple_bss_candidates,
         });
         self.state = self.state.take().map(|state| state.connect(cmd, &mut self.context));
-        receiver
+        connect_txn_stream
     }
 
     pub fn on_disconnect_command(
@@ -530,14 +574,14 @@ impl super::Station for ClientSme {
 }
 
 fn report_connect_finished(
-    responder: Option<Responder<ConnectResult>>,
+    connect_txn_sink: &mut ConnectTransactionSink,
     context: &mut Context,
     result: ConnectResult,
 ) {
-    if let Some(responder) = responder {
-        responder.respond(result.clone());
-        context.info.report_connect_finished(result);
+    if !connect_txn_sink.is_reconnecting() {
+        context.info.report_connect_finished(result.clone());
     }
+    connect_txn_sink.send_connect_result(result);
 }
 
 enum SelectedAssocType {
@@ -916,15 +960,15 @@ mod tests {
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description = fake_fidl_bss_description!(Open, ssid: b"foo".to_vec());
         let req = connect_req(b"foo".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
         // User should get a message that connection failed
         assert_variant!(
-            connect_fut.try_recv(),
-            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-                SelectNetworkFailure::IncompatibleConnectRequest,
-            ),),),)
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
         );
     }
 
@@ -936,15 +980,15 @@ mod tests {
         let credential = fidl_sme::Credential::Psk(b"somepass".to_vec());
         let bss_description = fake_fidl_bss_description!(Open, ssid: b"foo".to_vec());
         let req = connect_req(b"foo".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
         // User should get a message that connection failed
         assert_variant!(
-            connect_fut.try_recv(),
-            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-                SelectNetworkFailure::IncompatibleConnectRequest,
-            ),),),)
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
         );
     }
 
@@ -956,7 +1000,7 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description = fake_fidl_bss_description!(Wpa2, ssid: b"foo".to_vec());
         let req = connect_req(b"foo".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
         assert_eq!(ClientSmeStatus::Idle, sme.state.as_ref().unwrap().status());
 
         // No join request should be sent to MLME
@@ -964,10 +1008,10 @@ mod tests {
 
         // User should get a message that connection failed
         assert_variant!(
-            connect_fut.try_recv(),
-            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-                SelectNetworkFailure::IncompatibleConnectRequest,
-            ),),),)
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
         );
     }
 
@@ -979,11 +1023,12 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description = fake_fidl_bss_description!(Open, ssid: b"bssname".to_vec());
         let req = connect_req(b"bssname".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(b"bssname".to_vec()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
-        assert_variant!(connect_fut.try_recv(), Ok(None));
+        // There should be no message in the connect_txn_stream
+        assert_variant!(connect_txn_stream.try_next(), Err(_));
     }
 
     #[test]
@@ -994,11 +1039,12 @@ mod tests {
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description = fake_fidl_bss_description!(Wpa2, ssid: b"bssname".to_vec());
         let req = connect_req(b"bssname".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Connecting(b"bssname".to_vec()), sme.status());
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
-        assert_variant!(connect_fut.try_recv(), Ok(None));
+        // There should be no message in the connect_txn_stream
+        assert_variant!(connect_txn_stream.try_next(), Err(_));
     }
 
     #[test]
@@ -1009,17 +1055,17 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description = fake_fidl_bss_description!(Wpa2, ssid: b"bssname".to_vec());
         let req = connect_req(b"bssname".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
         assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
-            connect_fut.try_recv(),
-            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-                SelectNetworkFailure::IncompatibleConnectRequest,
-            ),),),)
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
         );
     }
 
@@ -1031,17 +1077,17 @@ mod tests {
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss_description = fake_fidl_bss_description!(Wpa3Enterprise, ssid: b"bssname".to_vec());
         let req = connect_req(b"bssname".to_vec(), bss_description, credential);
-        let mut connect_fut = sme.on_connect_command(req);
+        let mut connect_txn_stream = sme.on_connect_command(req);
 
         assert_eq!(ClientSmeStatus::Idle, sme.status());
         assert_no_join(&mut mlme_stream);
 
         // User should get a message that connection failed
         assert_variant!(
-            connect_fut.try_recv(),
-            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-                SelectNetworkFailure::IncompatibleConnectRequest,
-            ),),),)
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
         );
     }
 
@@ -1055,12 +1101,15 @@ mod tests {
             ssid: b"foo".to_vec(),
             capability_info: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
         );
-        let mut connect_fut =
+        let mut connect_txn_stream =
             sme.on_connect_command(connect_req(b"foo".to_vec(), bss_description, credential));
 
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::IncompatibleConnectRequest.into());
-        });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
+        );
     }
 
     #[test]
@@ -1069,14 +1118,17 @@ mod tests {
 
         let credential = fidl_sme::Credential::Password(b"pass".to_vec());
         let bss_description = fake_fidl_bss_description!(Wpa2, ssid: b"foo".to_vec());
-        let mut connect_fut =
+        let mut connect_txn_stream =
             sme.on_connect_command(connect_req(b"foo".to_vec(), bss_description, credential));
         let bss_description = fake_fidl_bss_description!(Wpa2, ssid: b"foo".to_vec());
         report_fake_scan_result(&mut sme, bss_description);
 
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::IncompatibleConnectRequest.into());
-        });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::IncompatibleConnectRequest.into());
+            }
+        );
     }
 
     #[test]
@@ -1086,12 +1138,15 @@ mod tests {
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss_description = fake_fidl_bss_description!(Open, ssid: [65; 33].to_vec());
         // SSID is one byte too long
-        let mut connect_fut =
+        let mut connect_txn_stream =
             sme.on_connect_command(connect_req([65; 33].to_vec(), bss_description, credential));
 
-        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::NoScanResultWithSsid.into());
-        });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+                assert_eq!(result, SelectNetworkFailure::NoScanResultWithSsid.into());
+            }
+        );
     }
 
     #[test]
@@ -1104,17 +1159,24 @@ mod tests {
             bss_description.clone(),
             fidl_sme::Credential::None(fidl_sme::Empty),
         );
-        let mut connect_fut1 = sme.on_connect_command(req);
+        let mut connect_txn_stream1 = sme.on_connect_command(req);
 
         let req2 = connect_req(
             b"foo".to_vec(),
             bss_description.clone(),
             fidl_sme::Credential::None(fidl_sme::Empty),
         );
-        let mut connect_fut2 = sme.on_connect_command(req2);
+        let mut connect_txn_stream2 = sme.on_connect_command(req2);
 
         // User should get a message that first connection attempt is canceled
-        assert_connect_result(&mut connect_fut1, ConnectResult::Canceled);
+        assert_variant!(
+            connect_txn_stream1.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult {
+                result: ConnectResult::Canceled,
+                is_reconnect: false
+            }))
+        );
+
         // Report scan result to transition second connection attempt past scan. This is to verify
         // that connection attempt will be canceled even in the middle of joining the network
         report_fake_scan_result(&mut sme, fake_fidl_bss_description!(Open, ssid: b"foo".to_vec()));
@@ -1127,7 +1189,13 @@ mod tests {
         let mut _connect_fut3 = sme.on_connect_command(req3);
 
         // Verify that second connection attempt is canceled as new connect request comes in
-        assert_connect_result(&mut connect_fut2, ConnectResult::Canceled);
+        assert_variant!(
+            connect_txn_stream2.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnConnectResult {
+                result: ConnectResult::Canceled,
+                is_reconnect: false
+            }))
+        );
     }
 
     #[test]
@@ -1152,7 +1220,7 @@ mod tests {
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_none());
             assert!(stats.connect_time().into_nanos() > 0);
-            assert_eq!(stats.result, ConnectResult::Success);
+            assert_variant!(stats.result, ConnectResult::Success);
             assert_variant!(stats.candidate_network, Some(candidate_network) => {
                 assert!(!candidate_network.multiple_bss_candidates);
             });
@@ -1179,14 +1247,15 @@ mod tests {
         let auth_failure = fidl_mlme::AuthenticateResultCode::Refused;
         sme.on_mlme_event(create_auth_conf(bssid, auth_failure));
 
-        let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(auth_failure));
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectStats(stats))) => {
             assert!(stats.auth_time().is_some());
             // no association time since requests already fails at auth step
             assert!(stats.assoc_time().is_none());
             assert!(stats.rsna_time().is_none());
             assert!(stats.connect_time().into_nanos() > 0);
-            assert_eq!(stats.result, result);
+            assert_variant!(stats.result, ConnectResult::Failed(failure) => {
+                assert_eq!(failure, ConnectFailure::AuthenticationFailure(auth_failure));
+            });
             assert!(stats.candidate_network.is_some());
         });
         expect_stream_empty(&mut info_stream, "unexpected event in info stream");
@@ -1284,16 +1353,6 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
         sme.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_ERR_IO));
         assert_eq!(receiver.try_recv(), Ok(Some(Err(zx::sys::ZX_ERR_IO))));
-    }
-
-    fn assert_connect_result(
-        connect_result_receiver: &mut oneshot::Receiver<ConnectResult>,
-        expected: ConnectResult,
-    ) {
-        match connect_result_receiver.try_recv() {
-            Ok(Some(actual)) => assert_eq!(expected, actual),
-            other => panic!("expect {:?}, got {:?}", expected, other),
-        }
     }
 
     fn assert_no_join(mlme_stream: &mut mpsc::UnboundedReceiver<MlmeRequest>) {

@@ -103,9 +103,19 @@ type ConnectResultCode = strict enum {
 };
 
 protocol ConnectTransaction {
-    // Could add more events here to notify the client of the progress
-    -> OnFinished(struct {
+    /// Return the result of the initial connection request or later SME-initiated reconnection.
+    -> OnConnectResult(struct {
         code ConnectResultCode;
+        /// If `is_reconnect` is false, the result comes from the initial connection request.
+        /// If it's true, the result comes from an SME-initiated reconnection.
+        is_reconnect bool;
+    });
+
+    /// Notify that the client has disconnected.
+    -> OnDisconnect(struct {
+        /// Whether SME is attempting to reconnect by itself. If `is_reconnecting` is true,
+        /// there's no need for caller to intervene for now.
+        is_reconnecting bool;
     });
 };
 

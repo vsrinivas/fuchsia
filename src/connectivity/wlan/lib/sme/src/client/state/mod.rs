@@ -15,11 +15,11 @@ use {
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, AssociationFailure, ClientSmeStatus, ConnectFailure,
-            ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason, ServingApInfo,
+            ConnectResult, ConnectTransactionEvent, ConnectTransactionSink, EstablishRsnaFailure,
+            EstablishRsnaFailureReason, ServingApInfo,
         },
         mlme_event_name,
         phy_selection::derive_phy_cbw,
-        responder::Responder,
         sink::MlmeSink,
         timer::EventId,
         MlmeRequest,
@@ -63,7 +63,7 @@ const LINK_UP_STATE: &str = "LinkUpState";
 #[derive(Debug)]
 pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
-    pub responder: Option<Responder<ConnectResult>>,
+    pub connect_txn_sink: ConnectTransactionSink,
     pub protection: Protection,
     pub radio_cfg: RadioConfig,
 }
@@ -103,7 +103,7 @@ pub struct Associating {
 #[derive(Debug)]
 pub struct Associated {
     cfg: ClientConfig,
-    responder: Option<Responder<ConnectResult>>,
+    connect_txn_sink: ConnectTransactionSink,
     bss: Box<BssDescription>,
     auth_method: Option<auth::MethodName>,
     last_rssi: i8,
@@ -156,7 +156,7 @@ impl StateChangeContextExt for Option<StateChangeContext> {
 
 impl Joining {
     fn on_join_conf(
-        self,
+        mut self,
         conf: fidl_mlme::JoinConfirm,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -201,7 +201,7 @@ impl Joining {
                 let msg = format!("Join request failed: {:?}", other);
                 warn!("{}", msg);
                 report_connect_finished(
-                    self.cmd.responder,
+                    &mut self.cmd.connect_txn_sink,
                     context,
                     ConnectResult::Failed(ConnectFailure::JoinFailure(other)),
                 );
@@ -214,7 +214,7 @@ impl Joining {
 
 impl Authenticating {
     fn on_authenticate_conf(
-        self,
+        mut self,
         conf: fidl_mlme::AuthenticateConfirm,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -251,7 +251,7 @@ impl Authenticating {
                 }
 
                 report_connect_finished(
-                    self.cmd.responder,
+                    &mut self.cmd.connect_txn_sink,
                     context,
                     ConnectResult::Failed(ConnectFailure::AuthenticationFailure(other)),
                 );
@@ -262,7 +262,7 @@ impl Authenticating {
     }
 
     fn on_deauthenticate_ind(
-        self,
+        mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -271,7 +271,7 @@ impl Authenticating {
             ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
         report_connect_finished(
-            self.cmd.responder,
+            &mut self.cmd.connect_txn_sink,
             context,
             ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
                 fidl_mlme::AuthenticateResultCode::Refused,
@@ -334,7 +334,7 @@ impl Authenticating {
 
 impl Associating {
     fn on_associate_conf(
-        self,
+        mut self,
         conf: fidl_mlme::AssociateConfirm,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -352,85 +352,89 @@ impl Associating {
                     None
                 }
             });
-        let link_state =
-            match conf.result_code {
-                fidl_mlme::AssociateResultCode::Success => {
-                    context.info.report_assoc_success(context.att_id);
-                    if let Some(capability_info) = self.capability_info.as_ref() {
-                        let negotiated_cap =
-                            intersect_with_ap_as_client(capability_info, &conf.into());
-                        // TODO(eyw): Enable this check once we switch to Rust MLME which populates
-                        // associate confirm with IEs.
-                        if negotiated_cap.rates.is_empty() {
-                            // This is unlikely to happen with any spec-compliant AP. In case the
-                            // user somehow decided to connect to a malicious AP, reject and reset.
-                            // Log at ERROR level to raise visibility of when this event occurs.
-                            let msg = format!(
-                                "Associate terminated because AP's capabilities in association \
+        let link_state = match conf.result_code {
+            fidl_mlme::AssociateResultCode::Success => {
+                context.info.report_assoc_success(context.att_id);
+                if let Some(capability_info) = self.capability_info.as_ref() {
+                    let negotiated_cap = intersect_with_ap_as_client(capability_info, &conf.into());
+                    // TODO(eyw): Enable this check once we switch to Rust MLME which populates
+                    // associate confirm with IEs.
+                    if negotiated_cap.rates.is_empty() {
+                        // This is unlikely to happen with any spec-compliant AP. In case the
+                        // user somehow decided to connect to a malicious AP, reject and reset.
+                        // Log at ERROR level to raise visibility of when this event occurs.
+                        let msg = format!(
+                            "Associate terminated because AP's capabilities in association \
                                  response is different from beacon"
-                            );
-                            error!("{}", msg);
-                            report_connect_finished(
-                            self.cmd.responder,
-                            context,
-                            ConnectResult::Failed(AssociationFailure{
-                                bss_protection: self.cmd.bss.protection(),
-                                code: fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
-                            }.into()),
                         );
-                            state_change_ctx.set_msg(msg);
-                            return Err(Idle { cfg: self.cfg });
-                        }
-                        context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                            negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
-                        ))
+                        error!("{}", msg);
+                        report_connect_finished(
+                            &mut self.cmd.connect_txn_sink,
+                            context,
+                            ConnectResult::Failed(
+                                AssociationFailure {
+                                    bss_protection: self.cmd.bss.protection(),
+                                    code:
+                                        fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch,
+                                }
+                                .into(),
+                            ),
+                        );
+                        state_change_ctx.set_msg(msg);
+                        return Err(Idle { cfg: self.cfg });
                     }
+                    context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
+                        negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
+                    ))
+                }
 
-                    match LinkState::new(self.cmd.protection, context) {
-                        Ok(link_state) => link_state,
-                        Err(failure_reason) => {
-                            let msg =
-                                format!("Associate terminated; failed to initialized LinkState");
-                            error!("{}", msg);
-                            state_change_ctx.set_msg(msg);
-                            send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
-                            report_connect_finished(
-                                self.cmd.responder,
-                                context,
-                                EstablishRsnaFailure { auth_method, reason: failure_reason }.into(),
-                            );
-                            return Err(Idle { cfg: self.cfg });
-                        }
+                match LinkState::new(self.cmd.protection, context) {
+                    Ok(link_state) => link_state,
+                    Err(failure_reason) => {
+                        let msg = format!("Associate terminated; failed to initialized LinkState");
+                        error!("{}", msg);
+                        state_change_ctx.set_msg(msg);
+                        send_deauthenticate_request(&self.cmd.bss, &context.mlme_sink);
+                        report_connect_finished(
+                            &mut self.cmd.connect_txn_sink,
+                            context,
+                            EstablishRsnaFailure { auth_method, reason: failure_reason }.into(),
+                        );
+                        return Err(Idle { cfg: self.cfg });
                     }
                 }
-                other => {
-                    let msg = format!("Associate request failed: {:?}", other);
-                    warn!("{}", msg);
-                    report_connect_finished(
-                        self.cmd.responder,
-                        context,
-                        ConnectResult::Failed(
-                            AssociationFailure {
-                                bss_protection: self.cmd.bss.protection(),
-                                code: other,
-                            }
-                            .into(),
-                        ),
-                    );
-                    state_change_ctx.set_msg(msg);
-                    return Err(Idle { cfg: self.cfg });
-                }
-            };
+            }
+            other => {
+                let msg = format!("Associate request failed: {:?}", other);
+                warn!("{}", msg);
+                report_connect_finished(
+                    &mut self.cmd.connect_txn_sink,
+                    context,
+                    ConnectResult::Failed(
+                        AssociationFailure {
+                            bss_protection: self.cmd.bss.protection(),
+                            code: other,
+                        }
+                        .into(),
+                    ),
+                );
+                state_change_ctx.set_msg(msg);
+                return Err(Idle { cfg: self.cfg });
+            }
+        };
         state_change_ctx.set_msg(format!("Associate succeeded"));
 
-        let mut responder = self.cmd.responder;
         if let LinkState::LinkUp(_) = link_state {
-            report_connect_finished(responder.take(), context, ConnectResult::Success);
+            report_connect_finished(
+                &mut self.cmd.connect_txn_sink,
+                context,
+                ConnectResult::Success,
+            );
         }
 
         Ok(Associated {
             cfg: self.cfg,
-            responder,
+            connect_txn_sink: self.cmd.connect_txn_sink,
             auth_method,
             last_rssi: self.cmd.bss.rssi_dbm,
             last_snr: self.cmd.bss.snr_db,
@@ -447,7 +451,7 @@ impl Associating {
     }
 
     fn on_deauthenticate_ind(
-        self,
+        mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -456,7 +460,7 @@ impl Associating {
                           ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
         report_connect_finished(
-            self.cmd.responder,
+            &mut self.cmd.connect_txn_sink,
             context,
             ConnectResult::Failed(
                 AssociationFailure {
@@ -471,7 +475,7 @@ impl Associating {
     }
 
     fn on_disassociate_ind(
-        self,
+        mut self,
         ind: fidl_mlme::DisassociateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -480,7 +484,7 @@ impl Associating {
                           ind.reason_code, ind.locally_initiated);
         warn!("{}", msg);
         report_connect_finished(
-            self.cmd.responder,
+            &mut self.cmd.connect_txn_sink,
             context,
             ConnectResult::Failed(
                 AssociationFailure {
@@ -526,6 +530,17 @@ impl Associating {
                 // failed handshake. Drop to idle.
                 let msg = format!("failed to handle SAE timeout: {:?}", e);
                 error!("{}", msg);
+                report_connect_finished(
+                    &mut self.cmd.connect_txn_sink,
+                    context,
+                    ConnectResult::Failed(
+                        AssociationFailure {
+                            bss_protection: self.cmd.bss.protection(),
+                            code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+                        }
+                        .into(),
+                    ),
+                );
                 state_change_ctx.set_msg(msg);
                 return Err(Idle { cfg: self.cfg });
             }
@@ -535,7 +550,7 @@ impl Associating {
 
 impl Associated {
     fn on_disassociate_ind(
-        self,
+        mut self,
         ind: fidl_mlme::DisassociateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -566,6 +581,8 @@ impl Associated {
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
             context.info.report_disconnect(disconnect_info);
+            self.connect_txn_sink
+                .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true });
         }
         let msg = format!(
             "received DisassociateInd msg; reason code {:?}",
@@ -585,7 +602,7 @@ impl Associated {
         context.att_id += 1;
         let cmd = ConnectCommand {
             bss: self.bss,
-            responder: self.responder,
+            connect_txn_sink: self.connect_txn_sink,
             protection,
             radio_cfg: self.radio_cfg,
         };
@@ -605,7 +622,7 @@ impl Associated {
     }
 
     fn on_deauthenticate_ind(
-        self,
+        mut self,
         ind: fidl_mlme::DeauthenticateIndication,
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
@@ -637,6 +654,8 @@ impl Associated {
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
+                self.connect_txn_sink
+                    .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false });
             }
             None => {
                 let connect_result = EstablishRsnaFailure {
@@ -644,7 +663,7 @@ impl Associated {
                     reason: EstablishRsnaFailureReason::InternalError,
                 }
                 .into();
-                report_connect_finished(self.responder, context, connect_result);
+                report_connect_finished(&mut self.connect_txn_sink, context, connect_result);
             }
         }
 
@@ -659,7 +678,7 @@ impl Associated {
     }
 
     fn process_link_state_update<U, H>(
-        self,
+        mut self,
         update: U,
         update_handler: H,
         context: &mut Context,
@@ -679,7 +698,7 @@ impl Associated {
                 Ok(link_state) => link_state,
                 Err(failure_reason) => {
                     report_connect_finished(
-                        self.responder,
+                        &mut self.connect_txn_sink,
                         context,
                         EstablishRsnaFailure {
                             auth_method: self.auth_method,
@@ -692,13 +711,12 @@ impl Associated {
                 }
             };
 
-        let mut responder = self.responder;
         if let LinkState::LinkUp(_) = link_state {
             context.info.report_rsna_established(context.att_id);
-            report_connect_finished(responder.take(), context, ConnectResult::Success);
+            report_connect_finished(&mut self.connect_txn_sink, context, ConnectResult::Success);
         }
 
-        Ok(Self { link_state, responder, ..self })
+        Ok(Self { link_state, ..self })
     }
 
     fn on_eapol_ind(
@@ -761,7 +779,7 @@ impl Associated {
     }
 
     fn handle_timeout(
-        self,
+        mut self,
         event_id: EventId,
         event: Event,
         state_change_ctx: &mut Option<StateChangeContext>,
@@ -771,7 +789,7 @@ impl Associated {
             Ok(link_state) => Ok(Associated { link_state, ..self }),
             Err(failure_reason) => {
                 report_connect_finished(
-                    self.responder,
+                    &mut self.connect_txn_sink,
                     context,
                     EstablishRsnaFailure { auth_method: self.auth_method, reason: failure_reason }
                         .into(),
@@ -1043,13 +1061,13 @@ impl ClientState {
     }
 
     pub fn disconnect(
-        self,
+        mut self,
         context: &mut Context,
         user_disconnect_reason: fidl_sme::UserDisconnectReason,
     ) -> Self {
         let mut disconnected_from_link_up = false;
         let disconnect_source = DisconnectSource::User(user_disconnect_reason);
-        if let Self::Associated(state) = &self {
+        if let Self::Associated(state) = &mut self {
             if let LinkState::LinkUp(link_up) = &state.link_state {
                 disconnected_from_link_up = true;
                 let disconnect_info = DisconnectInfo {
@@ -1065,6 +1083,9 @@ impl ClientState {
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
                 context.info.report_disconnect(disconnect_info);
+                state
+                    .connect_txn_sink
+                    .send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false });
             }
         }
         let start_state = self.state_name();
@@ -1085,18 +1106,30 @@ impl ClientState {
         match self {
             Self::Idle(state) => state.cfg,
             Self::Joining(state) => {
-                let (_, state) = state.release_data();
-                report_connect_finished(state.cmd.responder, context, ConnectResult::Canceled);
+                let (_, mut state) = state.release_data();
+                report_connect_finished(
+                    &mut state.cmd.connect_txn_sink,
+                    context,
+                    ConnectResult::Canceled,
+                );
                 state.cfg
             }
             Self::Authenticating(state) => {
-                let (_, state) = state.release_data();
-                report_connect_finished(state.cmd.responder, context, ConnectResult::Canceled);
+                let (_, mut state) = state.release_data();
+                report_connect_finished(
+                    &mut state.cmd.connect_txn_sink,
+                    context,
+                    ConnectResult::Canceled,
+                );
                 state.cfg
             }
             Self::Associating(state) => {
-                let (_, state) = state.release_data();
-                report_connect_finished(state.cmd.responder, context, ConnectResult::Canceled);
+                let (_, mut state) = state.release_data();
+                report_connect_finished(
+                    &mut state.cmd.connect_txn_sink,
+                    context,
+                    ConnectResult::Canceled,
+                );
                 send_deauthenticate_request(&state.cmd.bss, &context.mlme_sink);
                 state.cfg
             }
@@ -1407,7 +1440,7 @@ mod tests {
     use anyhow::format_err;
     use fidl_fuchsia_wlan_common as fidl_common;
     use fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector};
-    use futures::channel::{mpsc, oneshot};
+    use futures::channel::mpsc;
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
     use wlan_common::{
@@ -1436,7 +1469,10 @@ mod tests {
         expect_stream_empty, fake_negotiated_channel_and_capabilities, fake_wmm_param,
         mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
-    use crate::client::{info::InfoReporter, inspect, rsn::Rsna, InfoEvent, InfoSink, TimeStream};
+    use crate::client::{
+        info::InfoReporter, inspect, rsn::Rsna, ConnectTransactionStream, InfoEvent, InfoSink,
+        TimeStream,
+    };
     use crate::test_utils::make_wpa1_ie;
 
     use crate::{test_utils, timer, InfoStream, MlmeStream};
@@ -1446,7 +1482,7 @@ mod tests {
         let mut h = TestHelper::new();
 
         let state = idle_state();
-        let (command, receiver) = connect_command_one();
+        let (command, mut connect_txn_stream) = connect_command_one();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
@@ -1471,7 +1507,9 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are connected
-        expect_result(receiver, ConnectResult::Success);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Success);
+        });
 
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
@@ -1481,7 +1519,7 @@ mod tests {
         let mut h = TestHelper::new();
 
         let state = idle_state();
-        let (command, receiver) = connect_command_wep();
+        let (command, mut connect_txn_stream) = connect_command_wep();
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
@@ -1514,7 +1552,9 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are connected
-        expect_result(receiver, ConnectResult::Success);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Success);
+        });
 
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
@@ -1525,7 +1565,7 @@ mod tests {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
 
         let state = idle_state();
-        let (command, receiver) = connect_command_wpa1(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa1(supplicant);
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
@@ -1577,7 +1617,9 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
-        expect_result(receiver, ConnectResult::Success);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Success);
+        });
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
@@ -1587,7 +1629,7 @@ mod tests {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
 
         let state = idle_state();
-        let (command, receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
 
         // Issue a "connect" command
@@ -1639,7 +1681,9 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
-        expect_result(receiver, ConnectResult::Success);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Success);
+        });
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
@@ -1647,7 +1691,7 @@ mod tests {
     fn join_failure() {
         let mut h = TestHelper::new();
 
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
         // Start in a "Joining" state
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
@@ -1666,18 +1710,17 @@ mod tests {
         let state = state.on_mlme_event(join_conf, &mut h.context);
         assert_idle(state);
 
-        let result = ConnectResult::Failed(ConnectFailure::JoinFailure(
-            fidl_mlme::JoinResultCode::JoinFailureTimeout,
-        ));
         // User should be notified that connection attempt failed
-        expect_result(receiver, result.clone());
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectFailure::JoinFailure(fidl_mlme::JoinResultCode::JoinFailureTimeout).into());
+        });
     }
 
     #[test]
     fn authenticate_failure() {
         let mut h = TestHelper::new();
 
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
 
         // Start in an "Authenticating" state
         let state = ClientState::from(testing::new_state(Authenticating {
@@ -1699,18 +1742,17 @@ mod tests {
         let state = state.on_mlme_event(auth_conf, &mut h.context);
         assert_idle(state);
 
-        let result = ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
-            fidl_mlme::AuthenticateResultCode::Refused,
-        ));
         // User should be notified that connection attempt failed
-        expect_result(receiver, result.clone());
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_mlme::AuthenticateResultCode::Refused).into());
+        });
     }
 
     #[test]
     fn associate_failure() {
         let mut h = TestHelper::new();
 
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
         let bss_protection = cmd.bss.protection();
 
         // Start in an "Associating" state
@@ -1728,25 +1770,26 @@ mod tests {
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
         assert_idle(state);
 
-        let result = ConnectResult::Failed(
-            AssociationFailure {
+        // User should be notified that connection attempt failed
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, AssociationFailure {
                 bss_protection,
                 code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
             }
-            .into(),
-        );
-        // User should be notified that connection attempt failed
-        expect_result(receiver, result.clone());
+            .into());
+        });
     }
 
     #[test]
     fn connect_while_joining() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let state = joining_state(cmd_one);
-        let (cmd_two, _receiver_two) = connect_command_two();
+        let (cmd_two, _connect_txn_stream2) = connect_command_two();
         let state = state.connect(cmd_two, &mut h.context);
-        expect_result(receiver_one, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
@@ -1754,11 +1797,13 @@ mod tests {
     #[test]
     fn connect_while_authenticating() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let state = authenticating_state(cmd_one);
-        let (cmd_two, _receiver_two) = connect_command_two();
+        let (cmd_two, _connect_txn_stream2) = connect_command_two();
         let state = state.connect(cmd_two, &mut h.context);
-        expect_result(receiver_one, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
@@ -1766,12 +1811,14 @@ mod tests {
     #[test]
     fn connect_while_associating() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let state = associating_state(cmd_one);
-        let (cmd_two, _receiver_two) = connect_command_two();
+        let (cmd_two, _connect_txn_stream2) = connect_command_two();
         let state = state.connect(cmd_two, &mut h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_result(receiver_one, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
@@ -1779,7 +1826,7 @@ mod tests {
     #[test]
     fn deauth_while_authing() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let state = authenticating_state(cmd_one);
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -1789,19 +1836,16 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
-        expect_result(
-            receiver_one,
-            ConnectResult::Failed(ConnectFailure::AuthenticationFailure(
-                fidl_mlme::AuthenticateResultCode::Refused,
-            )),
-        );
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectFailure::AuthenticationFailure(fidl_mlme::AuthenticateResultCode::Refused).into());
+        });
         assert_idle(state);
     }
 
     #[test]
     fn deauth_while_associating() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let bss_protection = cmd_one.bss.protection();
         let state = associating_state(cmd_one);
         let deauth_ind = MlmeEvent::DeauthenticateInd {
@@ -1812,23 +1856,20 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
-        expect_result(
-            receiver_one,
-            ConnectResult::Failed(
-                AssociationFailure {
-                    bss_protection,
-                    code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
-                }
-                .into(),
-            ),
-        );
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, AssociationFailure {
+                bss_protection,
+                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+            }
+            .into());
+        });
         assert_idle(state);
     }
 
     #[test]
     fn disassoc_while_associating() {
         let mut h = TestHelper::new();
-        let (cmd_one, receiver_one) = connect_command_one();
+        let (cmd_one, mut connect_txn_stream1) = connect_command_one();
         let bss_protection = cmd_one.bss.protection();
         let state = associating_state(cmd_one);
         let disassoc_ind = MlmeEvent::DisassociateInd {
@@ -1839,16 +1880,13 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassoc_ind, &mut h.context);
-        expect_result(
-            receiver_one,
-            ConnectResult::Failed(
-                AssociationFailure {
-                    bss_protection,
-                    code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
-                }
-                .into(),
-            ),
-        );
+        assert_variant!(connect_txn_stream1.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, AssociationFailure {
+                bss_protection,
+                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+            }
+            .into());
+        });
         assert_idle(state);
     }
 
@@ -1856,7 +1894,7 @@ mod tests {
     fn supplicant_fails_to_start_while_associating() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (command, receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = associating_state(command);
 
@@ -1867,19 +1905,20 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
-        let result: ConnectResult = EstablishRsnaFailure {
-            auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::StartSupplicantFailed,
-        }
-        .into();
-        expect_result(receiver, result.clone());
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::StartSupplicantFailed,
+            }
+            .into());
+        });
     }
 
     #[test]
     fn bad_eapol_frame_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (command, mut receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1891,7 +1930,8 @@ mod tests {
         let eapol_ind = create_eapol_ind(bssid.clone(), vec![1, 2, 3, 4]);
         let s = state.on_mlme_event(eapol_ind, &mut h.context);
 
-        assert_eq!(Ok(None), receiver.try_recv());
+        // There should be no message in the connect_txn_stream
+        assert_variant!(connect_txn_stream.try_next(), Err(_));
         assert_variant!(s, ClientState::Associated(state) => {
             assert_variant!(&state.link_state, LinkState::EstablishingRsna { .. })});
 
@@ -1903,7 +1943,7 @@ mod tests {
     fn supplicant_fails_to_process_eapol_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (command, mut receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1913,7 +1953,8 @@ mod tests {
         let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame().into());
         let s = state.on_mlme_event(eapol_ind, &mut h.context);
 
-        assert_eq!(Ok(None), receiver.try_recv());
+        // There should be no message in the connect_txn_stream
+        assert_variant!(connect_txn_stream.try_next(), Err(_));
         assert_variant!(s, ClientState::Associated(state) => {
             assert_variant!(&state.link_state, LinkState::EstablishingRsna { .. })});
 
@@ -1925,7 +1966,8 @@ mod tests {
     fn reject_foreign_eapol_frames() {
         let mut h = TestHelper::new();
         let (supplicant, mock) = mock_psk_supplicant();
-        let state = link_up_state_protected(supplicant, [7; 6]);
+        let (cmd, _connect_txn_stream) = connect_command_wpa2(supplicant);
+        let state = link_up_state(cmd);
         mock.set_on_eapol_frame_callback(|| {
             panic!("eapol frame should not have been processed");
         });
@@ -1947,7 +1989,7 @@ mod tests {
     fn wrong_password_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (command, receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -1956,19 +1998,20 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
-        let result: ConnectResult = EstablishRsnaFailure {
-            auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::InternalError,
-        }
-        .into();
-        expect_result(receiver, result.clone());
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::InternalError,
+            }
+            .into());
+        });
     }
 
     #[test]
     fn overall_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, _suppl_mock) = mock_psk_supplicant();
-        let (command, receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
 
         // Start in an "Associating" state
@@ -1990,21 +2033,20 @@ mod tests {
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
-        expect_result(
-            receiver,
-            EstablishRsnaFailure {
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
                 reason: EstablishRsnaFailureReason::OverallTimeout,
             }
-            .into(),
-        );
+            .into());
+        });
     }
 
     #[test]
     fn key_frame_exchange_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (command, receiver) = connect_command_wpa2(supplicant);
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -2032,22 +2074,22 @@ mod tests {
         }
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
-        expect_result(
-            receiver,
-            EstablishRsnaFailure {
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
                 reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
             }
-            .into(),
-        );
+            .into());
+        });
     }
 
     #[test]
     fn gtk_rotation_during_link_up() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let bssid = [7; 6];
-        let state = link_up_state_protected(supplicant, bssid);
+        let (cmd, _connect_txn_stream) = connect_command_wpa2(supplicant);
+        let bssid = cmd.bss.bssid;
+        let state = link_up_state(cmd);
 
         // (mlme->sme) Send an EapolInd, mock supplication with key frame and GTK
         let key_frame = SecAssocUpdate::TxEapolKeyFrame {
@@ -2076,9 +2118,17 @@ mod tests {
     #[test]
     fn connect_while_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_one().0.bss);
-        let state = state.connect(connect_command_two().0, &mut h.context);
+        let (cmd1, mut connect_txn_stream1) = connect_command_one();
+        let (cmd2, mut connect_txn_stream2) = connect_command_two();
+        let state = link_up_state(cmd1);
+        let state = state.connect(cmd2, &mut h.context);
         let state = exchange_deauth(state, &mut h);
+
+        // First stream should be dropped already
+        assert_variant!(connect_txn_stream1.try_next(), Ok(None));
+        // Second stream should either have event or is empty, but is not dropped
+        assert_variant!(connect_txn_stream2.try_next(), Ok(Some(_)) | Err(_));
+
         expect_join_request(&mut h.mlme_stream, connect_command_two().0.bss.bssid);
         assert_joining(state, &connect_command_two().0.bss);
     }
@@ -2096,34 +2146,40 @@ mod tests {
     #[test]
     fn disconnect_while_joining() {
         let mut h = TestHelper::new();
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
         let state = joining_state(cmd);
         let state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
-        expect_result(receiver, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_authenticating() {
         let mut h = TestHelper::new();
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
         let state = authenticating_state(cmd);
         let state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
-        expect_result(receiver, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_associating() {
         let mut h = TestHelper::new();
-        let (cmd, receiver) = connect_command_one();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
         let state = associating_state(cmd);
         let state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         let state = exchange_deauth(state, &mut h);
-        expect_result(receiver, ConnectResult::Canceled);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, ConnectResult::Canceled);
+        });
         assert_idle(state);
 
         assert_data_tree!(h._inspector, root: contains {
@@ -2142,7 +2198,7 @@ mod tests {
     #[test]
     fn disconnect_while_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_one().0.bss);
+        let state = link_up_state(connect_command_one().0);
         let state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::FailedToConnect);
         let state = exchange_deauth(state, &mut h);
@@ -2183,9 +2239,9 @@ mod tests {
     #[test]
     fn increment_att_id_on_disassociate_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        ));
+        let (cmd, _connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -2197,19 +2253,16 @@ mod tests {
         };
 
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(
-            state,
-            &fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        );
+        assert_associating(state, &bss);
         assert_eq!(h.context.att_id, 1);
     }
 
     #[test]
     fn log_disconnect_ctx_on_disassoc_from_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        ));
+        let (cmd, _connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -2220,10 +2273,7 @@ mod tests {
             },
         };
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_associating(
-            state,
-            &fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        );
+        assert_associating(state, &bss);
 
         assert_data_tree!(h._inspector, root: contains {
             state_events: {
@@ -2241,7 +2291,7 @@ mod tests {
     fn do_not_log_disconnect_ctx_on_disassoc_from_non_link_up() {
         let mut h = TestHelper::new();
         let (supplicant, _suppl_mock) = mock_psk_supplicant();
-        let (command, _receiver) = connect_command_wpa2(supplicant);
+        let (command, _connect_txn_stream) = connect_command_wpa2(supplicant);
         let state = establishing_rsna_state(command);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -2271,7 +2321,7 @@ mod tests {
     fn connection_ping() {
         let mut h = TestHelper::new();
 
-        let (cmd, _receiver) = connect_command_one();
+        let (cmd, _connect_txn_stream) = connect_command_one();
 
         // Start in an "Associating" state
         let state = ClientState::from(testing::new_state(Associating {
@@ -2314,9 +2364,9 @@ mod tests {
     #[test]
     fn disconnect_reported_on_deauth_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        ));
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
 
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -2330,23 +2380,27 @@ mod tests {
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.ssid, bss.ssid());
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.bssid, bss.bssid);
             assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
                 mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             }));
         });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+        );
     }
 
     #[test]
-    fn disconnect_reported_on_disassoc_ind() {
+    fn disconnect_reported_on_disassoc_ind_then_reconnect_successfully() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        ));
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
 
         let deauth_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {
@@ -2356,50 +2410,113 @@ mod tests {
             },
         };
 
-        let _state = state.on_mlme_event(deauth_ind, &mut h.context);
+        let state = state.on_mlme_event(deauth_ind, &mut h.context);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.ssid, bss.ssid());
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.bssid, bss.bssid);
             assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
                 mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
                 reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
             }));
+        });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }))
+        );
+
+        // Check that association is attempted
+        expect_assoc_req(&mut h.mlme_stream, bss.bssid);
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
+        let _state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        // User should be notified that we are reconnected
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect })) => {
+            assert_eq!(result, ConnectResult::Success);
+            assert!(is_reconnect);
+        });
+    }
+
+    #[test]
+    fn disconnect_reported_on_disassoc_ind_then_reconnect_unsuccessfully() {
+        let mut h = TestHelper::new();
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
+
+        let deauth_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+                locally_initiated: true,
+            },
+        };
+
+        let state = state.on_mlme_event(deauth_ind, &mut h.context);
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }))
+        );
+
+        // Check that association is attempted
+        expect_assoc_req(&mut h.mlme_stream, bss.bssid);
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf =
+            create_assoc_conf(fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
+        let _state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        // User should be notified that reconnection attempt failed
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect })) => {
+            assert_eq!(result, AssociationFailure {
+                bss_protection: BssProtection::Open,
+                code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
+            }.into());
+            assert!(is_reconnect);
         });
     }
 
     #[test]
     fn disconnect_reported_on_manual_disconnect() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]),
-        ));
+        let (cmd, mut connect_txn_stream) = connect_command_one();
+        let bss = cmd.bss.clone();
+        let state = link_up_state(cmd);
 
         let _state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
         assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::DisconnectInfo(info))) => {
             assert_eq!(info.last_rssi, 60);
             assert_eq!(info.last_snr, 30);
-            assert_eq!(info.ssid, b"bar");
+            assert_eq!(info.ssid, bss.ssid());
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
-            assert_eq!(info.bssid, [8; 6]);
+            assert_eq!(info.bssid, bss.bssid);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+        );
     }
 
     #[test]
     fn disconnect_reported_on_manual_disconnect_with_wsc() {
         let mut h = TestHelper::new();
-        let bss = fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
-            get_vendor_ie_bytes_for_wsc_ie(&fake_probe_resp_wsc_ie_bytes()).expect("getting vendor ie bytes")
-        ));
-        println!("{:02x?}", bss);
+        let (mut cmd, mut connect_txn_stream) = connect_command_one();
+        cmd.bss = Box::new(
+            fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8; 6], ies_overrides: IesOverrides::new().set_raw(
+                get_vendor_ie_bytes_for_wsc_ie(&fake_probe_resp_wsc_ie_bytes()).expect("getting vendor ie bytes")
+            )),
+        );
+        println!("{:02x?}", cmd.bss);
 
-        let state = link_up_state(Box::new(bss));
+        let state = link_up_state(cmd);
 
         let _state =
             state.disconnect(&mut h.context, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting);
@@ -2412,20 +2529,26 @@ mod tests {
             assert_eq!(info.bssid, [8; 6]);
             assert_eq!(info.disconnect_source, DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting));
         });
+        assert_variant!(
+            connect_txn_stream.try_next(),
+            Ok(Some(ConnectTransactionEvent::OnDisconnect { is_reconnecting: false }))
+        );
     }
 
     #[test]
     fn bss_channel_switch_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(Box::new(fake_bss_description!(Open,
-                                                     ssid: b"bar".to_vec(),
-                                                     bssid: [8; 6],
-                                                     channel: fidl_common::WlanChannel {
-                                                         primary: 1,
-                                                         secondary80: 0,
-                                                         cbw: fidl_common::ChannelBandwidth::Cbw20
-                                                     }
-        )));
+        let (mut cmd, _connect_txn_stream) = connect_command_one();
+        cmd.bss = Box::new(fake_bss_description!(Open,
+            ssid: b"bar".to_vec(),
+            bssid: [8; 6],
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20
+            }
+        ));
+        let state = link_up_state(cmd);
 
         let switch_ind =
             MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 } };
@@ -2441,7 +2564,7 @@ mod tests {
 
     #[test]
     fn join_failure_capabilities_incompatible_softmac() {
-        let (mut command, _receiver) = connect_command_one();
+        let (mut command, _connect_txn_stream) = connect_command_one();
         command.bss = Box::new(fake_bss_description!(Open,
             ssid: b"foo".to_vec(),
             bssid: [7, 7, 7, 7, 7, 7],
@@ -2460,7 +2583,7 @@ mod tests {
 
     #[test]
     fn join_failure_capabilities_incompatible_fullmac() {
-        let (mut command, _receiver) = connect_command_one();
+        let (mut command, _connect_txn_stream) = connect_command_one();
         command.bss = Box::new(fake_bss_description!(Open,
             ssid: b"foo".to_vec(),
             bssid: [7, 7, 7, 7, 7, 7],
@@ -2482,7 +2605,7 @@ mod tests {
 
     #[test]
     fn join_success_softmac() {
-        let (command, _receiver) = connect_command_one();
+        let (command, _connect_txn_stream) = connect_command_one();
         let mut h = TestHelper::new();
         let state = idle_state().connect(command, &mut h.context);
 
@@ -2494,7 +2617,7 @@ mod tests {
 
     #[test]
     fn join_success_fullmac() {
-        let (command, _receiver) = connect_command_one();
+        let (command, _connect_txn_stream) = connect_command_one();
         let mut h = TestHelper::new();
         // set full mac
         h.context.is_softmac = false;
@@ -2510,7 +2633,7 @@ mod tests {
     fn join_failure_rsne_wrapped_in_legacy_wpa() {
         let (supplicant, _suppl_mock) = mock_psk_supplicant();
 
-        let (mut command, _receiver) = connect_command_wpa2(supplicant);
+        let (mut command, _connect_txn_stream) = connect_command_wpa2(supplicant);
         // Take the RSNA and wrap it in LegacyWpa to make it invalid.
         if let Protection::Rsna(rsna) = command.protection {
             command.protection = Protection::LegacyWpa(rsna);
@@ -2529,7 +2652,7 @@ mod tests {
     fn join_failure_legacy_wpa_wrapped_in_rsna() {
         let (supplicant, _suppl_mock) = mock_psk_supplicant();
 
-        let (mut command, _receiver) = connect_command_wpa1(supplicant);
+        let (mut command, _connect_txn_stream) = connect_command_wpa1(supplicant);
         // Take the LegacyWpa RSNA and wrap it in Rsna to make it invalid.
         if let Protection::LegacyWpa(rsna) = command.protection {
             command.protection = Protection::Rsna(rsna);
@@ -2548,7 +2671,7 @@ mod tests {
     #[test]
     fn fill_wmm_ie_associating() {
         let mut h = TestHelper::new();
-        let (cmd, _receiver) = connect_command_one();
+        let (cmd, _connect_txn_stream) = connect_command_one();
         let resp = fidl_mlme::AssociateConfirm {
             result_code: fidl_mlme::AssociateResultCode::Success,
             association_id: 1,
@@ -2571,9 +2694,7 @@ mod tests {
         let mut h = TestHelper::new();
         let time_a = now();
 
-        let state = link_up_state(Box::new(
-            fake_bss_description!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6]),
-        ));
+        let state = link_up_state(connect_command_one().0);
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
         let serving_ap_info = assert_variant!(state.status(),
                                                      ClientSmeStatus::Connected(serving_ap_info) =>
@@ -2634,7 +2755,7 @@ mod tests {
     #[test]
     fn sae_sends_frame_in_authenticating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = authenticating_state(cmd);
         let end_state = test_sae_frame_rx_tx(suppl_mock, state);
         assert_variant!(end_state, ClientState::Authenticating(_))
@@ -2643,7 +2764,7 @@ mod tests {
     #[test]
     fn sae_sends_frame_in_associating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = associating_state(cmd);
         let end_state = test_sae_frame_rx_tx(suppl_mock, state);
         assert_variant!(end_state, ClientState::Associating(_))
@@ -2671,7 +2792,7 @@ mod tests {
     #[test]
     fn sae_ind_in_authenticating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = authenticating_state(cmd);
         let end_state = test_sae_frame_ind_resp(suppl_mock, state);
         assert_variant!(end_state, ClientState::Authenticating(_))
@@ -2680,7 +2801,7 @@ mod tests {
     #[test]
     fn sae_ind_in_associating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = associating_state(cmd);
         let end_state = test_sae_frame_ind_resp(suppl_mock, state);
         assert_variant!(end_state, ClientState::Associating(_))
@@ -2718,7 +2839,7 @@ mod tests {
     #[test]
     fn sae_timeout_in_authenticating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = authenticating_state(cmd);
         let end_state = test_sae_timeout(suppl_mock, state);
         assert_variant!(end_state, ClientState::Authenticating(_));
@@ -2727,7 +2848,7 @@ mod tests {
     #[test]
     fn sae_timeout_in_associating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = associating_state(cmd);
         let end_state = test_sae_timeout(suppl_mock, state);
         assert_variant!(end_state, ClientState::Associating(_));
@@ -2736,7 +2857,7 @@ mod tests {
     #[test]
     fn sae_timeout_failure_in_authenticating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = authenticating_state(cmd);
         test_sae_timeout_failure(suppl_mock, state);
     }
@@ -2744,7 +2865,7 @@ mod tests {
     #[test]
     fn sae_timeout_failure_in_associating() {
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let (cmd, _connect_txn_stream) = connect_command_wpa3(supplicant);
         let state = associating_state(cmd);
         test_sae_timeout_failure(suppl_mock, state);
     }
@@ -2753,10 +2874,7 @@ mod tests {
     fn update_wmm_ac_params_new() {
         let mut h = TestHelper::new();
         let wmm_param = None;
-        let state = link_up_state_with_wmm(
-            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
-            wmm_param,
-        );
+        let state = link_up_state_with_wmm(connect_command_one().0, wmm_param);
 
         let state = state.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
@@ -2774,10 +2892,7 @@ mod tests {
         let existing_wmm_param =
             *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
         existing_wmm_param.wmm_info.ap_wmm_info().set_uapsd(false);
-        let state = link_up_state_with_wmm(
-            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
-            Some(existing_wmm_param),
-        );
+        let state = link_up_state_with_wmm(connect_command_one().0, Some(existing_wmm_param));
 
         let state = state.on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_OK), &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
@@ -2794,10 +2909,7 @@ mod tests {
 
         let existing_wmm_param =
             *ie::parse_wmm_param(&fake_wmm_param().bytes[..]).expect("parse wmm");
-        let state = link_up_state_with_wmm(
-            Box::new(fake_bss_description!(Open, ssid: b"wmmssid".to_vec(), bssid: [42; 6])),
-            Some(existing_wmm_param),
-        );
+        let state = link_up_state_with_wmm(connect_command_one().0, Some(existing_wmm_param));
 
         let state = state
             .on_mlme_event(create_on_wmm_status_resp(zx::sys::ZX_ERR_UNAVAILABLE), &mut h.context);
@@ -2955,6 +3067,7 @@ mod tests {
         });
     }
 
+    #[track_caller]
     fn expect_eapol_req(mlme_stream: &mut MlmeStream, bssid: [u8; 6]) {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Eapol(req))) => {
             assert_eq!(req.src_addr, fake_device_info().mac_addr);
@@ -3033,58 +3146,51 @@ mod tests {
         });
     }
 
-    fn expect_result<T>(mut receiver: oneshot::Receiver<T>, expected_result: T)
-    where
-        T: PartialEq + ::std::fmt::Debug,
-    {
-        assert_eq!(Ok(Some(expected_result)), receiver.try_recv());
-    }
-
-    fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    fn connect_command_one() -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
             bss: Box::new(
                 fake_bss_description!(Open, ssid: b"foo".to_vec(), bssid: [7, 7, 7, 7, 7, 7]),
             ),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
-    fn connect_command_two() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    fn connect_command_two() -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
             bss: Box::new(
                 fake_bss_description!(Open, ssid: b"bar".to_vec(), bssid: [8, 8, 8, 8, 8, 8]),
             ),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::Open,
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
-    fn connect_command_wep() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    fn connect_command_wep() -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let cmd = ConnectCommand {
             bss: Box::new(fake_bss_description!(Wep, ssid: b"wep".to_vec())),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::Wep(wep_deprecated::Key::Bits40([3; 5])),
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
     fn connect_command_wpa1(
         supplicant: MockSupplicant,
-    ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    ) -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let wpa_ie = make_wpa1_ie();
         let cmd = ConnectCommand {
             bss: Box::new(fake_bss_description!(Wpa1, ssid: b"wpa1".to_vec())),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::LegacyWpa(Rsna {
                 negotiated_protection: NegotiatedProtection::from_legacy_wpa(&wpa_ie)
                     .expect("invalid NegotiatedProtection"),
@@ -3092,18 +3198,18 @@ mod tests {
             }),
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
     fn connect_command_wpa2(
         supplicant: MockSupplicant,
-    ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    ) -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let bss = fake_bss_description!(Wpa2, ssid: b"wpa2".to_vec());
         let rsne = Rsne::wpa2_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::Rsna(Rsna {
                 negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
                     .expect("invalid NegotiatedProtection"),
@@ -3111,18 +3217,18 @@ mod tests {
             }),
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
     fn connect_command_wpa3(
         supplicant: MockSupplicant,
-    ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
-        let (responder, receiver) = Responder::new();
+    ) -> (ConnectCommand, ConnectTransactionStream) {
+        let (connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
         let bss = fake_bss_description!(Wpa3, ssid: b"wpa3".to_vec());
         let rsne = Rsne::wpa3_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
-            responder: Some(responder),
+            connect_txn_sink,
             protection: Protection::Rsna(Rsna {
                 negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
                     .expect("invalid NegotiatedProtection"),
@@ -3130,7 +3236,7 @@ mod tests {
             }),
             radio_cfg: RadioConfig::default(),
         };
-        (cmd, receiver)
+        (cmd, connect_txn_stream)
     }
 
     fn idle_state() -> ClientState {
@@ -3196,7 +3302,7 @@ mod tests {
             cfg: ClientConfig::default(),
             bss: cmd.bss,
             auth_method,
-            responder: cmd.responder,
+            connect_txn_sink: cmd.connect_txn_sink,
             last_rssi: 60,
             last_snr: 0,
             last_signal_report_time: zx::Time::ZERO,
@@ -3211,55 +3317,22 @@ mod tests {
         .into()
     }
 
-    fn link_up_state(bss: Box<BssDescription>) -> ClientState {
-        link_up_state_with_wmm(bss, None)
+    fn link_up_state(cmd: ConnectCommand) -> ClientState {
+        link_up_state_with_wmm(cmd, None)
     }
 
-    fn link_up_state_with_wmm(
-        bss: Box<BssDescription>,
-        wmm_param: Option<ie::WmmParam>,
-    ) -> ClientState {
+    fn link_up_state_with_wmm(cmd: ConnectCommand, wmm_param: Option<ie::WmmParam>) -> ClientState {
+        let auth_method = cmd.protection.get_rsn_auth_method();
         let link_state = testing::new_state(LinkUp {
-            protection: Protection::Open,
+            protection: cmd.protection,
             since: now(),
             ping_event: None,
         })
         .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
-            responder: None,
-            bss,
-            auth_method: None,
-            last_rssi: 60,
-            last_snr: 30,
-            last_signal_report_time: zx::Time::ZERO,
-            link_state,
-            radio_cfg: RadioConfig::default(),
-            channel: fake_channel(),
-            capability_info: None,
-            protection_ie: None,
-            wmm_param,
-            last_channel_switch_time: None,
-        })
-        .into()
-    }
-
-    fn link_up_state_protected(supplicant: MockSupplicant, bssid: [u8; 6]) -> ClientState {
-        let bss = fake_bss_description!(Wpa2, bssid: bssid, ssid: b"foo".to_vec());
-        let rsne = Rsne::wpa2_rsne();
-        let rsna = Rsna {
-            negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
-                .expect("invalid NegotiatedProtection"),
-            supplicant: Box::new(supplicant),
-        };
-        let protection = Protection::Rsna(rsna);
-        let auth_method = protection.get_rsn_auth_method();
-        let link_state =
-            testing::new_state(LinkUp { protection, since: now(), ping_event: None }).into();
-        testing::new_state(Associated {
-            cfg: ClientConfig::default(),
-            bss: Box::new(bss),
-            responder: None,
+            connect_txn_sink: cmd.connect_txn_sink,
+            bss: cmd.bss,
             auth_method,
             last_rssi: 60,
             last_snr: 30,
@@ -3269,7 +3342,7 @@ mod tests {
             channel: fake_channel(),
             capability_info: None,
             protection_ie: None,
-            wmm_param: None,
+            wmm_param,
             last_channel_switch_time: None,
         })
         .into()

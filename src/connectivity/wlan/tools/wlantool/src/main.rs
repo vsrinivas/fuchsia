@@ -714,7 +714,7 @@ async fn handle_connect_transaction(
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
-            ConnectTransactionEvent::OnFinished { code } => {
+            ConnectTransactionEvent::OnConnectResult { code, .. } => {
                 match code {
                     ConnectResultCode::Success => println!("Connected successfully"),
                     ConnectResultCode::Canceled => {
@@ -726,6 +726,9 @@ async fn handle_connect_transaction(
                     }
                 }
                 break;
+            }
+            evt => {
+                eprintln!("Expected ConnectTransactionEvent::OnConnectResult event, got {:?}", evt);
             }
         }
     }

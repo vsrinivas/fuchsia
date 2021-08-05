@@ -1814,6 +1814,7 @@ mod tests {
         );
     }
 
+    #[track_caller]
     fn run_state_machine_futures(
         exec: &mut fuchsia_async::TestExecutor,
         iface_manager: &mut IfaceManagerService,
@@ -1948,17 +1949,19 @@ mod tests {
 
             // Make sure that the connect request has been sent out.
             run_state_machine_futures(&mut exec, &mut iface_manager);
-            assert_variant!(
+            let connect_txn_handle = assert_variant!(
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                     assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
                     assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
-                    ctrl.send_on_finished(fidl_fuchsia_wlan_sme::ConnectResultCode::Success)
-                        .expect("failed to send connection completion");
+                    ctrl
                 }
             );
+            connect_txn_handle
+                .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+                .expect("failed to send connection completion");
 
             // Run the state machine future again so that it acks the oneshot.
             run_state_machine_futures(&mut exec, &mut iface_manager);
@@ -2062,17 +2065,19 @@ mod tests {
 
             // Make sure that the connect request has been sent out.
             run_state_machine_futures(&mut exec, &mut iface_manager);
-            assert_variant!(
+            let connect_txn_handle = assert_variant!(
                 poll_sme_req(&mut exec, &mut _sme_stream),
                 Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                     assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
                     assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                     let (_stream, ctrl) = txn.expect("connect txn unused")
                         .into_stream_and_control_handle().expect("error accessing control handle");
-                    ctrl.send_on_finished(fidl_fuchsia_wlan_sme::ConnectResultCode::Success)
-                        .expect("failed to send connection completion");
+                    ctrl
                 }
             );
+            connect_txn_handle
+                .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+                .expect("failed to send connection completion");
 
             // Run the state machine future again so that it acks the oneshot.
             run_state_machine_futures(&mut exec, &mut iface_manager);
@@ -4700,17 +4705,19 @@ mod tests {
 
         // Make sure that the connect request has been sent out.
         run_state_machine_futures(&mut exec, &mut iface_manager);
-        assert_variant!(
+        let connect_txn_handle = assert_variant!(
             poll_sme_req(&mut exec, &mut sme_stream),
             Poll::Ready(fidl_fuchsia_wlan_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, TEST_SSID.as_bytes().to_vec());
                 assert_eq!(req.credential, fidl_fuchsia_wlan_sme::Credential::Password(TEST_PASSWORD.as_bytes().to_vec()));
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_finished(fidl_fuchsia_wlan_sme::ConnectResultCode::Success)
-                    .expect("failed to send connection completion");
+                ctrl
             }
         );
+        connect_txn_handle
+            .send_on_connect_result(fidl_fuchsia_wlan_sme::ConnectResultCode::Success, false)
+            .expect("failed to send connection completion");
 
         // Verify that the state machine future is still alive.
         run_state_machine_futures(&mut exec, &mut iface_manager);

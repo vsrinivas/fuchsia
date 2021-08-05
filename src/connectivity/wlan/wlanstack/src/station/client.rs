@@ -12,14 +12,17 @@ use fuchsia_zircon::{self as zx, DurationNum};
 use futures::channel::mpsc;
 use futures::{prelude::*, select, stream::FuturesUnordered};
 use itertools::Itertools;
-use log::{error, info, warn};
+use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::hasher::WlanHasher;
 use wlan_inspect;
-use wlan_sme::client::{BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, InfoEvent};
+use wlan_sme::client::{
+    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, ConnectTransactionEvent,
+    ConnectTransactionStream, InfoEvent,
+};
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
 use crate::inspect;
@@ -183,10 +186,34 @@ async fn connect(
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle()),
     };
-    let receiver = sme.lock().unwrap().on_connect_command(req);
-    let result = receiver.await.ok();
-    let send_result = send_connect_result(handle, result);
-    filter_out_peer_closed(send_result)?;
+    let connect_txn_stream = sme.lock().unwrap().on_connect_command(req);
+    serve_connect_txn_stream(handle, connect_txn_stream).await?;
+    Ok(())
+}
+
+async fn serve_connect_txn_stream(
+    handle: Option<fidl_sme::ConnectTransactionControlHandle>,
+    mut connect_txn_stream: ConnectTransactionStream,
+) -> Result<(), anyhow::Error> {
+    if let Some(handle) = handle {
+        loop {
+            match connect_txn_stream.next().fuse().await {
+                Some(event) => match event {
+                    ConnectTransactionEvent::OnConnectResult { result, is_reconnect } => {
+                        let connect_result = convert_connect_result(&result);
+                        let result = handle.send_on_connect_result(connect_result, is_reconnect);
+                        filter_out_peer_closed(result)?;
+                    }
+                    ConnectTransactionEvent::OnDisconnect { is_reconnecting } => {
+                        let result = handle.send_on_disconnect(is_reconnecting);
+                        filter_out_peer_closed(result)?;
+                    }
+                },
+                // SME has dropped the ConnectTransaction endpoint, likely due to a disconnect.
+                None => return Ok(()),
+            }
+        }
+    }
     Ok(())
 }
 
@@ -316,28 +343,6 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
     }
 }
 
-fn send_connect_result(
-    handle: Option<fidl_sme::ConnectTransactionControlHandle>,
-    result: Option<ConnectResult>,
-) -> Result<(), fidl::Error> {
-    if let Some(handle) = handle {
-        let code = match result {
-            Some(connect_result) => {
-                if let ConnectResult::Failed(_) = connect_result {
-                    warn!("Connection failed: {:?}", connect_result);
-                }
-                convert_connect_result(&connect_result)
-            }
-            None => {
-                error!("Connection failed. No result from SME.");
-                fidl_sme::ConnectResultCode::Failed
-            }
-        };
-        handle.send_on_finished(code)?;
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -348,7 +353,7 @@ mod tests {
         fidl_fuchsia_wlan_mlme::ScanResultCode,
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::task::Poll,
+        futures::{stream::StreamFuture, task::Poll},
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
@@ -465,6 +470,65 @@ mod tests {
             let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
             let received_scan_results = results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
             assert_eq!(sent_scan_results, received_scan_results);
+        })
+    }
+
+    #[test]
+    fn test_serve_connect_txn_stream() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let (sme_proxy, sme_connect_txn_stream) = mpsc::unbounded();
+        let (fidl_client_proxy, fidl_connect_txn_stream) =
+            create_proxy_and_stream::<fidl_sme::ConnectTransactionMarker>()
+                .expect("failed to create ConnectTransaction proxy and stream");
+        let fidl_client_fut = fidl_client_proxy.take_event_stream().into_future();
+        pin_mut!(fidl_client_fut);
+        let fidl_connect_txn_handle = fidl_connect_txn_stream.control_handle();
+
+        let test_fut =
+            serve_connect_txn_stream(Some(fidl_connect_txn_handle), sme_connect_txn_stream);
+        pin_mut!(test_fut);
+
+        // Test sending OnConnectResult
+        sme_proxy
+            .unbounded_send(ConnectTransactionEvent::OnConnectResult {
+                result: ConnectResult::Success,
+                is_reconnect: true,
+            })
+            .expect("expect sending ConnectTransactionEvent to succeed");
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
+        assert_variant!(
+            event,
+            fidl_sme::ConnectTransactionEvent::OnConnectResult {
+                code: fidl_sme::ConnectResultCode::Success,
+                is_reconnect: true,
+            }
+        );
+
+        // Test sending OnDisconnect
+        sme_proxy
+            .unbounded_send(ConnectTransactionEvent::OnDisconnect { is_reconnecting: true })
+            .expect("expect sending ConnectTransactionEvent to succeed");
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        let event = assert_variant!(poll_stream_fut(&mut exec, &mut fidl_client_fut), Poll::Ready(Some(Ok(event))) => event);
+        assert_variant!(
+            event,
+            fidl_sme::ConnectTransactionEvent::OnDisconnect { is_reconnecting: true }
+        );
+
+        // When SME proxy is dropped, the fut should terminate
+        std::mem::drop(sme_proxy);
+        assert_variant!(exec.run_until_stalled(&mut test_fut), Poll::Ready(Ok(())));
+    }
+
+    fn poll_stream_fut<S: Stream + std::marker::Unpin>(
+        exec: &mut fasync::TestExecutor,
+        stream_fut: &mut StreamFuture<S>,
+    ) -> Poll<Option<S::Item>> {
+        exec.run_until_stalled(stream_fut).map(|(item, stream)| {
+            *stream_fut = stream.into_future();
+            item
         })
     }
 

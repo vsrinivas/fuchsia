@@ -43,11 +43,17 @@ async fn connect(
     let mut stream = local.take_event_stream();
     while let Some(event) = stream.try_next().await? {
         match event {
-            fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
+            fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => {
                 if code == ConnectResultCode::Success {
                     return Ok(());
                 }
                 return Err(format_err!("connect failed with error code: {:?}", code));
+            }
+            other => {
+                return Err(format_err!(
+                    "Expected ConnectTransactionEvent::OnConnectResult event, got {:?}",
+                    other
+                ))
             }
         }
     }

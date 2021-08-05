@@ -117,9 +117,15 @@ async fn handle_connect_transaction(
         .context("failed to receive connect result before the channel was closed")?
     {
         match evt {
-            fidl_sme::ConnectTransactionEvent::OnFinished { code } => {
+            fidl_sme::ConnectTransactionEvent::OnConnectResult { code, .. } => {
                 result_code = code;
                 break;
+            }
+            other => {
+                return Err(format_err!(
+                    "Expected ConnectTransactionEvent::OnConnectResult event, got {:?}",
+                    other
+                ))
             }
         }
     }
@@ -929,8 +935,8 @@ mod tests {
             .expect("failed to create a connect transaction stream")
             .control_handle();
         connect_transaction
-            .send_on_finished(connect_result)
-            .expect("failed to send OnFinished to ConnectTransaction");
+            .send_on_connect_result(connect_result, false)
+            .expect("failed to send OnConnectResult to ConnectTransaction");
     }
 
     fn poll_client_sme_request(
