@@ -13,11 +13,15 @@ namespace media::audio::testing {
 
 FakeAudioDriver::FakeAudioDriver(zx::channel channel, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher), stream_binding_(this, std::move(channel), dispatcher) {
-  formats_.number_of_channels.push_back(2);
-  formats_.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats_.bytes_per_sample.push_back(2);
-  formats_.valid_bits_per_sample.push_back(16);
-  formats_.frame_rates.push_back(48000);
+  fuchsia::hardware::audio::ChannelSet channel_set = {};
+  constexpr size_t kSupportedNumberOfChannels = 2;
+  std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(kSupportedNumberOfChannels);
+  channel_set.set_attributes(std::move(attributes));
+  formats_.mutable_channel_sets()->push_back(std::move(channel_set));
+  formats_.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats_.mutable_bytes_per_sample()->push_back(2);
+  formats_.mutable_valid_bits_per_sample()->push_back(16);
+  formats_.mutable_frame_rates()->push_back(48000);
   Stop();
 }
 
@@ -70,7 +74,7 @@ void FakeAudioDriver::GetProperties(
 void FakeAudioDriver::GetSupportedFormats(
     fuchsia::hardware::audio::StreamConfig::GetSupportedFormatsCallback callback) {
   fuchsia::hardware::audio::SupportedFormats formats = {};
-  formats.set_pcm_supported_formats(formats_);
+  formats.set_pcm_supported_formats2(std::move(formats_));
 
   std::vector<fuchsia::hardware::audio::SupportedFormats> all_formats = {};
   all_formats.push_back(std::move(formats));

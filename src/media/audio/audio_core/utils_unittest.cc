@@ -18,6 +18,14 @@
 namespace media::audio {
 namespace {
 
+void AddChannelSet(fuchsia::hardware::audio::PcmSupportedFormats2& formats,
+                   size_t number_of_channels) {
+  fuchsia::hardware::audio::ChannelSet channel_set = {};
+  std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(number_of_channels);
+  channel_set.set_attributes(std::move(attributes));
+  formats.mutable_channel_sets()->push_back(std::move(channel_set));
+}
+
 class UtilsTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
@@ -99,20 +107,20 @@ TEST(UtilsFormatTest, SelectBestFormatFound) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatFoundFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
 
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.number_of_channels.push_back(1);
-  formats.number_of_channels.push_back(2);
-  formats.number_of_channels.push_back(4);
-  formats.number_of_channels.push_back(8);
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
-  formats.bytes_per_sample.push_back(4);
-  formats.valid_bits_per_sample.push_back(32);
-  formats.frame_rates.push_back(12'000);
-  formats.frame_rates.push_back(24'000);
-  formats.frame_rates.push_back(48'000);
-  formats.frame_rates.push_back(96'000);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  AddChannelSet(formats, 1);
+  AddChannelSet(formats, 2);
+  AddChannelSet(formats, 4);
+  AddChannelSet(formats, 8);
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
+  formats.mutable_bytes_per_sample()->push_back(4);
+  formats.mutable_valid_bits_per_sample()->push_back(32);
+  formats.mutable_frame_rates()->push_back(12'000);
+  formats.mutable_frame_rates()->push_back(24'000);
+  formats.mutable_frame_rates()->push_back(48'000);
+  formats.mutable_frame_rates()->push_back(96'000);
   fmts.push_back(std::move(formats));
 
   fuchsia::media::AudioSampleFormat sample_format_inout = fuchsia::media::AudioSampleFormat::FLOAT;
@@ -126,19 +134,19 @@ TEST(UtilsFormatTest, SelectBestFormatFoundFidl) {
   ASSERT_EQ(channels_inout, static_cast<uint32_t>(1));
 
   // Add a second format range.
-  fuchsia::hardware::audio::PcmSupportedFormats formats2 = {};
-  formats2.number_of_channels.push_back(4);
-  formats2.number_of_channels.push_back(5);
-  formats2.number_of_channels.push_back(6);
-  formats2.number_of_channels.push_back(7);
-  formats2.number_of_channels.push_back(8);
-  formats2.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats2.bytes_per_sample.push_back(2);
-  formats2.valid_bits_per_sample.push_back(16);
-  formats2.frame_rates.push_back(22'050);
-  formats2.frame_rates.push_back(44'100);
-  formats2.frame_rates.push_back(88'200);
-  formats2.frame_rates.push_back(176'400);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats2 = {};
+  AddChannelSet(formats2, 4);
+  AddChannelSet(formats2, 5);
+  AddChannelSet(formats2, 6);
+  AddChannelSet(formats2, 7);
+  AddChannelSet(formats2, 8);
+  formats2.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats2.mutable_bytes_per_sample()->push_back(2);
+  formats2.mutable_valid_bits_per_sample()->push_back(16);
+  formats2.mutable_frame_rates()->push_back(22'050);
+  formats2.mutable_frame_rates()->push_back(44'100);
+  formats2.mutable_frame_rates()->push_back(88'200);
+  formats2.mutable_frame_rates()->push_back(176'400);
   fmts.push_back(std::move(formats2));
 
   sample_format_inout = fuchsia::media::AudioSampleFormat::SIGNED_16;
@@ -204,19 +212,19 @@ TEST(UtilsFormatTest, SelectBestFormatOutsideRanges) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatOutsideRangesFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.number_of_channels.push_back(1);
-  formats.number_of_channels.push_back(2);
-  formats.number_of_channels.push_back(4);
-  formats.number_of_channels.push_back(8);
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
-  formats.bytes_per_sample.push_back(4);
-  formats.valid_bits_per_sample.push_back(32);
-  formats.frame_rates.push_back(16'000);
-  formats.frame_rates.push_back(24'000);
-  formats.frame_rates.push_back(48'000);
-  formats.frame_rates.push_back(96'000);
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  AddChannelSet(formats, 1);
+  AddChannelSet(formats, 2);
+  AddChannelSet(formats, 4);
+  AddChannelSet(formats, 8);
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
+  formats.mutable_bytes_per_sample()->push_back(4);
+  formats.mutable_valid_bits_per_sample()->push_back(32);
+  formats.mutable_frame_rates()->push_back(16'000);
+  formats.mutable_frame_rates()->push_back(24'000);
+  formats.mutable_frame_rates()->push_back(48'000);
+  formats.mutable_frame_rates()->push_back(96'000);
   fmts.push_back(std::move(formats));
 
   fuchsia::media::AudioSampleFormat sample_format_inout =
@@ -241,17 +249,17 @@ TEST(UtilsFormatTest, SelectBestFormatOutsideRangesFidl) {
   ASSERT_EQ(channels_inout, static_cast<uint32_t>(2));                // Prefer 2 channels.
 
   // Add a second format range.
-  fuchsia::hardware::audio::PcmSupportedFormats formats2 = {};
-  formats2.number_of_channels.push_back(4);
-  formats2.number_of_channels.push_back(5);
-  formats2.number_of_channels.push_back(6);
-  formats2.number_of_channels.push_back(7);
-  formats2.number_of_channels.push_back(8);
-  formats2.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats2.bytes_per_sample.push_back(2);
-  formats2.valid_bits_per_sample.push_back(16);
-  formats2.frame_rates.push_back(16'000);
-  formats2.frame_rates.push_back(24'000);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats2 = {};
+  AddChannelSet(formats2, 4);
+  AddChannelSet(formats2, 5);
+  AddChannelSet(formats2, 6);
+  AddChannelSet(formats2, 7);
+  AddChannelSet(formats2, 8);
+  formats2.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats2.mutable_bytes_per_sample()->push_back(2);
+  formats2.mutable_valid_bits_per_sample()->push_back(16);
+  formats2.mutable_frame_rates()->push_back(16'000);
+  formats2.mutable_frame_rates()->push_back(24'000);
   fmts.push_back(std::move(formats2));
 
   frames_per_second_inout = 0;
@@ -297,24 +305,24 @@ TEST(UtilsFormatTest, SelectBestFormatError) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatErrorFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
 
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.number_of_channels.push_back(1);
-  formats.number_of_channels.push_back(2);
-  formats.number_of_channels.push_back(4);
-  formats.number_of_channels.push_back(8);
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
-  formats.bytes_per_sample.push_back(1);
-  formats.valid_bits_per_sample.push_back(32);
-  formats.frame_rates.push_back(8'000);
-  formats.frame_rates.push_back(16'000);
-  formats.frame_rates.push_back(24'000);
-  formats.frame_rates.push_back(48'000);
-  formats.frame_rates.push_back(96'000);
-  formats.frame_rates.push_back(192'000);
-  formats.frame_rates.push_back(384'000);
-  formats.frame_rates.push_back(768'000);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  AddChannelSet(formats, 1);
+  AddChannelSet(formats, 2);
+  AddChannelSet(formats, 4);
+  AddChannelSet(formats, 8);
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_FLOAT);
+  formats.mutable_bytes_per_sample()->push_back(1);
+  formats.mutable_valid_bits_per_sample()->push_back(32);
+  formats.mutable_frame_rates()->push_back(8'000);
+  formats.mutable_frame_rates()->push_back(16'000);
+  formats.mutable_frame_rates()->push_back(24'000);
+  formats.mutable_frame_rates()->push_back(48'000);
+  formats.mutable_frame_rates()->push_back(96'000);
+  formats.mutable_frame_rates()->push_back(192'000);
+  formats.mutable_frame_rates()->push_back(384'000);
+  formats.mutable_frame_rates()->push_back(768'000);
   fmts.push_back(std::move(formats));
 
   fuchsia::media::AudioSampleFormat sample_format_inout = {};  // Bad format
@@ -332,7 +340,7 @@ TEST(UtilsFormatTest, SelectBestFormatErrorFidl) {
   ASSERT_EQ(SelectBestFormat(fmts, &frames_per_second_inout, &channels_inout, nullptr),
             ZX_ERR_INVALID_ARGS);  // Bad pointer.
 
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> empty_fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> empty_fmts;
   ASSERT_EQ(
       SelectBestFormat(empty_fmts, &frames_per_second_inout, &channels_inout, &sample_format_inout),
       ZX_ERR_NOT_SUPPORTED);

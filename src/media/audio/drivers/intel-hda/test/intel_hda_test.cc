@@ -49,8 +49,8 @@ void CheckBasicStreamInfo(AudioDeviceStream* stream) {
 
   // Fetch supported audio formats, and ensure it is non-empty with some number of channels.
   ASSERT_OK(stream->GetSupportedFormats([](const audio_fidl::wire::SupportedFormats& formats) {
-    auto& pcm = formats.pcm_supported_formats();
-    EXPECT_GT(pcm.number_of_channels[0], 0);
+    auto& pcm = formats.pcm_supported_formats2();
+    EXPECT_GT(pcm.channel_sets()[0].attributes().count(), 0);
   }));
 }
 

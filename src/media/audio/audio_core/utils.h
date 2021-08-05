@@ -62,9 +62,10 @@ class AtomicGenerationId {
 // the "best" form and update the in/out parameters, then return ZX_OK.  If no
 // formats exist, or all format ranges get completely rejected, return an error
 // and leave the in/out params as they were.
-zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& fmts,
-                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-                             fuchsia::media::AudioSampleFormat* sample_format_inout);
+zx_status_t SelectBestFormat(
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& fmts,
+    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+    fuchsia::media::AudioSampleFormat* sample_format_inout);
 zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmts,
                              uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                              fuchsia::media::AudioSampleFormat* sample_format_inout);
@@ -73,7 +74,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 // the driver supported list then return true, otherwise return false.
 bool IsFormatInSupported(
     const fuchsia::media::AudioStreamType& stream_type,
-    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats);
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& supported_formats);
 
 // A simple extension to the libfzl VmoMapper which mixes in ref counting state
 // to allow for shared VmoMapper semantics.

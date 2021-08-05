@@ -140,21 +140,21 @@ void usage(const char* prog_name) {
 
 void dump_formats(const audio::utils::AudioDeviceStream& stream) {
   stream.GetSupportedFormats([](const fuchsia_hardware_audio::wire::SupportedFormats& formats) {
-    auto& pcm = formats.pcm_supported_formats();
+    auto& pcm = formats.pcm_supported_formats2();
     printf("\nNumber of channels      :");
-    for (auto i : pcm.number_of_channels) {
-      printf(" %u", i);
+    for (auto i : pcm.channel_sets()) {
+      printf(" %zu", i.attributes().count());
     }
     printf("\nFrame rate              :");
-    for (auto i : pcm.frame_rates) {
+    for (auto i : pcm.frame_rates()) {
       printf(" %uHz", i);
     }
     printf("\nBits per channel        :");
-    for (auto i : pcm.bytes_per_sample) {
+    for (auto i : pcm.bytes_per_sample()) {
       printf(" %u", 8 * i);
     }
     printf("\nValid bits per channel  :");
-    for (auto i : pcm.valid_bits_per_sample) {
+    for (auto i : pcm.valid_bits_per_sample()) {
       printf(" %u", i);
     }
     printf("\n");

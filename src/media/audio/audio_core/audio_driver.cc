@@ -200,8 +200,9 @@ zx_status_t AudioDriver::GetDriverInfo() {
   stream_config_fidl_->GetSupportedFormats(
       [this](std::vector<fuchsia::hardware::audio::SupportedFormats> formats) {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+        formats_.reserve(formats.size());
         for (auto& i : formats) {
-          formats_.emplace_back(i.pcm_supported_formats());
+          formats_.emplace_back(std::move(*i.mutable_pcm_supported_formats2()));
         }
         // Record that we have fetched our format list. This will transition us to Unconfigured
         // state and let our owner know if we are done fetching all the initial driver info needed

@@ -29,12 +29,12 @@ void AdminTest::SelectFirstFormat() {
   ASSERT_NE(pcm_formats().size(), 0u);
 
   auto& first_format = pcm_formats()[0];
-  pcm_format_.number_of_channels = first_format.number_of_channels[0];
+  pcm_format_.number_of_channels = first_format.channel_sets()[0].attributes().size();
   pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
-  pcm_format_.sample_format = first_format.sample_formats[0];
-  pcm_format_.bytes_per_sample = first_format.bytes_per_sample[0];
-  pcm_format_.valid_bits_per_sample = first_format.valid_bits_per_sample[0];
-  pcm_format_.frame_rate = first_format.frame_rates[0];
+  pcm_format_.sample_format = first_format.sample_formats()[0];
+  pcm_format_.bytes_per_sample = first_format.bytes_per_sample()[0];
+  pcm_format_.valid_bits_per_sample = first_format.valid_bits_per_sample()[0];
+  pcm_format_.frame_rate = first_format.frame_rates()[0];
 }
 
 void AdminTest::SelectLastFormat() {
@@ -42,14 +42,14 @@ void AdminTest::SelectLastFormat() {
 
   auto& last_format = pcm_formats()[pcm_formats().size() - 1];
   pcm_format_.number_of_channels =
-      last_format.number_of_channels[last_format.number_of_channels.size() - 1];
+      last_format.channel_sets()[last_format.channel_sets().size() - 1].attributes().size();
   pcm_format_.channels_to_use_bitmask = (1 << pcm_format_.number_of_channels) - 1;  // Use all.
-  pcm_format_.sample_format = last_format.sample_formats[last_format.sample_formats.size() - 1];
+  pcm_format_.sample_format = last_format.sample_formats()[last_format.sample_formats().size() - 1];
   pcm_format_.bytes_per_sample =
-      last_format.bytes_per_sample[last_format.bytes_per_sample.size() - 1];
+      last_format.bytes_per_sample()[last_format.bytes_per_sample().size() - 1];
   pcm_format_.valid_bits_per_sample =
-      last_format.valid_bits_per_sample[last_format.valid_bits_per_sample.size() - 1];
-  pcm_format_.frame_rate = last_format.frame_rates[last_format.frame_rates.size() - 1];
+      last_format.valid_bits_per_sample()[last_format.valid_bits_per_sample().size() - 1];
+  pcm_format_.frame_rate = last_format.frame_rates()[last_format.frame_rates().size() - 1];
 }
 
 void AdminTest::RequestRingBufferChannel() {

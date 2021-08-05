@@ -392,16 +392,17 @@ TEST_F(SimpleAudioTest, Enumerate1) {
 
   auto ret = client.GetSupportedFormats();
   auto& supported_formats = ret->supported_formats;
-  auto& formats = supported_formats[0].pcm_supported_formats();
-  ASSERT_EQ(1, formats.number_of_channels.count());
-  ASSERT_EQ(1, formats.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats.sample_formats[0]);
-  ASSERT_EQ(1, formats.frame_rates.count());
-  ASSERT_EQ(48000, formats.frame_rates[0]);
-  ASSERT_EQ(1, formats.bytes_per_sample.count());
-  ASSERT_EQ(2, formats.bytes_per_sample[0]);
-  ASSERT_EQ(1, formats.valid_bits_per_sample.count());
-  ASSERT_EQ(16, formats.valid_bits_per_sample[0]);
+  auto& formats = supported_formats[0].pcm_supported_formats2();
+  ASSERT_EQ(1, formats.channel_sets().count());
+  ASSERT_EQ(2, formats.channel_sets()[0].attributes().count());
+  ASSERT_EQ(1, formats.sample_formats().count());
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats.sample_formats()[0]);
+  ASSERT_EQ(1, formats.frame_rates().count());
+  ASSERT_EQ(48000, formats.frame_rates()[0]);
+  ASSERT_EQ(1, formats.bytes_per_sample().count());
+  ASSERT_EQ(2, formats.bytes_per_sample()[0]);
+  ASSERT_EQ(1, formats.valid_bits_per_sample().count());
+  ASSERT_EQ(16, formats.valid_bits_per_sample()[0]);
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -449,39 +450,39 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   auto& supported_formats = ret->supported_formats;
   ASSERT_EQ(2, supported_formats.count());
 
-  auto& formats1 = supported_formats[0].pcm_supported_formats();
-  ASSERT_EQ(3, formats1.number_of_channels.count());
-  ASSERT_EQ(2, formats1.number_of_channels[0]);
-  ASSERT_EQ(3, formats1.number_of_channels[1]);
-  ASSERT_EQ(4, formats1.number_of_channels[2]);
-  ASSERT_EQ(1, formats1.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats1.sample_formats[0]);
-  ASSERT_EQ(5, formats1.frame_rates.count());
+  auto& formats1 = supported_formats[0].pcm_supported_formats2();
+  ASSERT_EQ(3, formats1.channel_sets().count());
+  ASSERT_EQ(2, formats1.channel_sets()[0].attributes().count());
+  ASSERT_EQ(3, formats1.channel_sets()[1].attributes().count());
+  ASSERT_EQ(4, formats1.channel_sets()[2].attributes().count());
+  ASSERT_EQ(1, formats1.sample_formats().count());
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmSigned, formats1.sample_formats()[0]);
+  ASSERT_EQ(5, formats1.frame_rates().count());
   std::set<uint32_t> rates1;
-  for (auto& i : formats1.frame_rates) {
+  for (auto& i : formats1.frame_rates()) {
     rates1.insert(i);
   }
   ASSERT_EQ(rates1, std::set<uint32_t>({48'000, 96'000, 192'000, 384'000, 768'000}));
-  ASSERT_EQ(1, formats1.bytes_per_sample.count());
-  ASSERT_EQ(4, formats1.bytes_per_sample[0]);
-  ASSERT_EQ(1, formats1.valid_bits_per_sample.count());
-  ASSERT_EQ(24, formats1.valid_bits_per_sample[0]);
+  ASSERT_EQ(1, formats1.bytes_per_sample().count());
+  ASSERT_EQ(4, formats1.bytes_per_sample()[0]);
+  ASSERT_EQ(1, formats1.valid_bits_per_sample().count());
+  ASSERT_EQ(24, formats1.valid_bits_per_sample()[0]);
 
-  auto& formats2 = supported_formats[1].pcm_supported_formats();
-  ASSERT_EQ(1, formats2.number_of_channels.count());
-  ASSERT_EQ(1, formats2.number_of_channels[0]);
-  ASSERT_EQ(1, formats2.sample_formats.count());
-  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmFloat, formats2.sample_formats[0]);
-  ASSERT_EQ(1, formats2.frame_rates.count());
+  auto& formats2 = supported_formats[1].pcm_supported_formats2();
+  ASSERT_EQ(1, formats2.channel_sets().count());
+  ASSERT_EQ(1, formats2.channel_sets()[0].attributes().count());
+  ASSERT_EQ(1, formats2.sample_formats().count());
+  ASSERT_EQ(audio_fidl::wire::SampleFormat::kPcmFloat, formats2.sample_formats()[0]);
+  ASSERT_EQ(1, formats2.frame_rates().count());
   std::set<uint32_t> rates2;
-  for (auto& i : formats2.frame_rates) {
+  for (auto& i : formats2.frame_rates()) {
     rates2.insert(i);
   }
   ASSERT_EQ(rates2, std::set<uint32_t>({88'200}));
-  ASSERT_EQ(1, formats2.bytes_per_sample.count());
-  ASSERT_EQ(4, formats2.bytes_per_sample[0]);
-  ASSERT_EQ(1, formats2.valid_bits_per_sample.count());
-  ASSERT_EQ(32, formats2.valid_bits_per_sample[0]);
+  ASSERT_EQ(1, formats2.bytes_per_sample().count());
+  ASSERT_EQ(4, formats2.bytes_per_sample()[0]);
+  ASSERT_EQ(1, formats2.valid_bits_per_sample().count());
+  ASSERT_EQ(32, formats2.valid_bits_per_sample()[0]);
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();

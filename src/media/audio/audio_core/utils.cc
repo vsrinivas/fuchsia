@@ -21,16 +21,16 @@ namespace media::audio {
 bool IsSampleFormatInSupported(
     fuchsia::hardware::audio::SampleFormat sample_format, uint8_t bytes_per_sample,
     uint8_t valid_bits_per_sample,
-    const fuchsia::hardware::audio::PcmSupportedFormats& supported_formats) {
-  auto& sf = supported_formats.sample_formats;
+    const fuchsia::hardware::audio::PcmSupportedFormats2& supported_formats) {
+  auto& sf = supported_formats.sample_formats();
   if (std::find(sf.begin(), sf.end(), sample_format) == sf.end()) {
     return false;
   }
-  auto& bps = supported_formats.bytes_per_sample;
+  auto& bps = supported_formats.bytes_per_sample();
   if (std::find(bps.begin(), bps.end(), bytes_per_sample) == bps.end()) {
     return false;
   }
-  auto& vbps = supported_formats.valid_bits_per_sample;
+  auto& vbps = supported_formats.valid_bits_per_sample();
   if (std::find(vbps.begin(), vbps.end(), valid_bits_per_sample) == vbps.end()) {
     return false;
   }
@@ -38,9 +38,9 @@ bool IsSampleFormatInSupported(
 }
 
 bool IsNumberOfChannelsInSupported(uint32_t number_of_channels,
-                                   const fuchsia::hardware::audio::PcmSupportedFormats& format) {
-  for (auto channels : format.number_of_channels) {
-    if (channels == number_of_channels) {
+                                   const fuchsia::hardware::audio::PcmSupportedFormats2& format) {
+  for (auto& channel_set : format.channel_sets()) {
+    if (channel_set.attributes().size() == number_of_channels) {
       return true;
     }
   }
@@ -48,8 +48,8 @@ bool IsNumberOfChannelsInSupported(uint32_t number_of_channels,
 }
 
 bool IsRateInSupported(uint32_t frame_rate,
-                       const fuchsia::hardware::audio::PcmSupportedFormats& format) {
-  for (auto rate : format.frame_rates) {
+                       const fuchsia::hardware::audio::PcmSupportedFormats2& format) {
+  for (auto rate : format.frame_rates()) {
     if (rate == frame_rate) {
       return true;
     }
@@ -59,7 +59,7 @@ bool IsRateInSupported(uint32_t frame_rate,
 
 bool IsFormatInSupported(
     const fuchsia::media::AudioStreamType& stream_type,
-    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats) {
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& supported_formats) {
   DriverSampleFormat driver_format = {};
   if (!AudioSampleFormatToDriverSampleFormat(stream_type.sample_format, &driver_format)) {
     return false;
@@ -78,9 +78,10 @@ bool IsFormatInSupported(
   return false;
 }
 
-zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& fmts,
-                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-                             fuchsia::media::AudioSampleFormat* sample_format_inout) {
+zx_status_t SelectBestFormat(
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& fmts,
+    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+    fuchsia::media::AudioSampleFormat* sample_format_inout) {
   TRACE_DURATION("audio", "SelectBestFormat");
   if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
       (sample_format_inout == nullptr)) {
@@ -148,8 +149,13 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
       this_channels = 2;
       channel_count_score = 2;
     } else {
-      this_channels =
-          *std::max_element(format.number_of_channels.begin(), format.number_of_channels.end());
+      auto compare = [](const fuchsia::hardware::audio::ChannelSet& left,
+                        const fuchsia::hardware::audio::ChannelSet& right) {
+        return left.attributes().size() < right.attributes().size();
+      };
+      auto channel_set =
+          std::max_element(format.channel_sets().begin(), format.channel_sets().end(), compare);
+      this_channels = channel_set->attributes().size();
       channel_count_score = 1;
     }
 
@@ -166,7 +172,7 @@ zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupp
       frame_rate_delta = 0;
     } else {
       uint32_t delta = std::numeric_limits<uint32_t>::max();
-      for (auto& i : format.frame_rates) {
+      for (auto& i : format.frame_rates()) {
         if (std::abs((long)i - (long)pref_frame_rate) < delta) {
           delta = std::abs((long)i - (long)pref_frame_rate);
           this_frame_rate = i;

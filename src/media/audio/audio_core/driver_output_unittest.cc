@@ -74,6 +74,14 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
                 .Build()) {}
 
+  void AddChannelSet(fuchsia::hardware::audio::PcmSupportedFormats2& formats,
+                     size_t number_of_channels) {
+    fuchsia::hardware::audio::ChannelSet channel_set = {};
+    std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(number_of_channels);
+    channel_set.set_attributes(std::move(attributes));
+    formats.mutable_channel_sets()->push_back(std::move(channel_set));
+  }
+
   void SetUp() override {
     ThreadingModelFixture::SetUp();
     zx::channel c1, c2;
@@ -119,15 +127,15 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   // Updates the driver to advertise the given format. This will be the only audio format that the
   // driver exposes.
   void ConfigureDriverForSampleFormat(fuchsia::hardware::audio::PcmFormat sample_format) {
-    fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-    formats.number_of_channels.push_back(sample_format.number_of_channels);
-    formats.sample_formats.push_back(sample_format.sample_format);
-    formats.bytes_per_sample.push_back(sample_format.bytes_per_sample);
-    formats.valid_bits_per_sample.push_back(sample_format.valid_bits_per_sample);
-    formats.frame_rates.push_back(sample_format.frame_rate);
+    fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+    AddChannelSet(formats, sample_format.number_of_channels);
+    formats.mutable_sample_formats()->push_back(sample_format.sample_format);
+    formats.mutable_bytes_per_sample()->push_back(sample_format.bytes_per_sample);
+    formats.mutable_valid_bits_per_sample()->push_back(sample_format.valid_bits_per_sample);
+    formats.mutable_frame_rates()->push_back(sample_format.frame_rate);
     ConfigureDriverForSampleFormats(std::move(formats));
   }
-  void ConfigureDriverForSampleFormats(fuchsia::hardware::audio::PcmSupportedFormats formats) {
+  void ConfigureDriverForSampleFormats(fuchsia::hardware::audio::PcmSupportedFormats2 formats) {
     driver_->set_formats(std::move(formats));
   }
 
@@ -393,19 +401,21 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
 
 TEST_F(DriverOutputTest, SelectRateAndChannelizationFromDeviceConfig) {
   // Setup our driver to advertise support for a single format.
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats.bytes_per_sample.push_back(2);
-  formats.valid_bits_per_sample.push_back(16);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.mutable_bytes_per_sample()->push_back(2);
+  formats.mutable_valid_bits_per_sample()->push_back(16);
 
   // Support the requested rate/channelization from the pipeline config, but also support additional
   // rates and channelizations.
-  formats.number_of_channels.push_back(kRequestedDeviceChannels / 2);
-  formats.number_of_channels.push_back(kRequestedDeviceChannels);
-  formats.number_of_channels.push_back(kRequestedDeviceChannels * 2);
-  formats.frame_rates.push_back(kRequestedDeviceRate / 2);
-  formats.frame_rates.push_back(kRequestedDeviceRate);
-  formats.frame_rates.push_back(kRequestedDeviceRate * 2);
+
+  AddChannelSet(formats, kRequestedDeviceChannels / 2);
+  AddChannelSet(formats, kRequestedDeviceChannels);
+  AddChannelSet(formats, kRequestedDeviceChannels * 2);
+
+  formats.mutable_frame_rates()->push_back(kRequestedDeviceRate / 2);
+  formats.mutable_frame_rates()->push_back(kRequestedDeviceRate);
+  formats.mutable_frame_rates()->push_back(kRequestedDeviceRate * 2);
   ConfigureDriverForSampleFormats(std::move(formats));
 
   threading_model().FidlDomain().ScheduleTask(output_->Startup());
@@ -422,16 +432,17 @@ TEST_F(DriverOutputTest, SelectRateAndChannelizationFromDeviceConfig) {
 
 TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
   // Setup our driver to advertise support for a single format.
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats.bytes_per_sample.push_back(2);
-  formats.valid_bits_per_sample.push_back(16);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.mutable_bytes_per_sample()->push_back(2);
+  formats.mutable_valid_bits_per_sample()->push_back(16);
 
   // Support the requested channelization but not the requested sample rate.
   static constexpr int32_t kSupportedFrameRate = kRequestedDeviceRate / 2;
   static constexpr int16_t kSupportedChannels = kRequestedDeviceChannels / 2;
-  formats.number_of_channels.push_back(kSupportedChannels);
-  formats.frame_rates.push_back(kSupportedFrameRate);
+  AddChannelSet(formats, kSupportedChannels);
+
+  formats.mutable_frame_rates()->push_back(kSupportedFrameRate);
   ConfigureDriverForSampleFormats(std::move(formats));
 
   threading_model().FidlDomain().ScheduleTask(output_->Startup());

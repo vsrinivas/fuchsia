@@ -105,12 +105,15 @@ async fn process_audio_requests(
     product: String,
 ) -> Result<(), Error> {
     let dai_props = dai.properties().await?;
-    let supported_formats = PcmSupportedFormats {
-        number_of_channels: vec![pcm_format.number_of_channels],
-        sample_formats: vec![pcm_format.sample_format],
-        bytes_per_sample: vec![pcm_format.bytes_per_sample],
-        valid_bits_per_sample: vec![pcm_format.valid_bits_per_sample],
-        frame_rates: vec![pcm_format.frame_rate],
+    let attributes = Some(vec![ChannelAttributes::EMPTY; pcm_format.number_of_channels as usize]);
+    let channel_set = ChannelSet { attributes: attributes, ..ChannelSet::EMPTY };
+    let supported_formats = PcmSupportedFormats2 {
+        channel_sets: Some(vec![channel_set]),
+        sample_formats: Some(vec![pcm_format.sample_format]),
+        bytes_per_sample: Some(vec![pcm_format.bytes_per_sample]),
+        valid_bits_per_sample: Some(vec![pcm_format.valid_bits_per_sample]),
+        frame_rates: Some(vec![pcm_format.frame_rate]),
+        ..PcmSupportedFormats2::EMPTY
     };
     let mut gain_state_replied = false;
     let mut plug_state_replied = false;
@@ -140,7 +143,7 @@ async fn process_audio_requests(
             }
             StreamConfigRequest::GetSupportedFormats { responder } => {
                 let formats_vector = vec![SupportedFormats {
-                    pcm_supported_formats: Some(supported_formats.clone()),
+                    pcm_supported_formats2: Some(supported_formats.clone()),
                     ..SupportedFormats::EMPTY
                 }];
                 responder.send(&mut formats_vector.into_iter())?;
@@ -339,16 +342,22 @@ mod tests {
         let pcm_formats = supported_formats
             .pop()
             .expect("should be a formats")
-            .pcm_supported_formats
+            .pcm_supported_formats2
             .expect("pcm supported formats");
-        assert_eq!(&[SUPPORTED_PCM_FORMAT.number_of_channels], &pcm_formats.number_of_channels[..]);
-        assert_eq!(&[SUPPORTED_PCM_FORMAT.sample_format], &pcm_formats.sample_formats[..]);
-        assert_eq!(&[SUPPORTED_PCM_FORMAT.bytes_per_sample], &pcm_formats.bytes_per_sample[..]);
+        assert_eq!(
+            SUPPORTED_PCM_FORMAT.number_of_channels as usize,
+            pcm_formats.channel_sets.unwrap()[0].attributes.as_ref().unwrap().len()
+        );
+        assert_eq!(&[SUPPORTED_PCM_FORMAT.sample_format], &pcm_formats.sample_formats.unwrap()[..]);
+        assert_eq!(
+            &[SUPPORTED_PCM_FORMAT.bytes_per_sample],
+            &pcm_formats.bytes_per_sample.unwrap()[..]
+        );
         assert_eq!(
             &[SUPPORTED_PCM_FORMAT.valid_bits_per_sample],
-            &pcm_formats.valid_bits_per_sample[..]
+            &pcm_formats.valid_bits_per_sample.unwrap()[..]
         );
-        assert_eq!(&[SUPPORTED_PCM_FORMAT.frame_rate], &pcm_formats.frame_rates[..]);
+        assert_eq!(&[SUPPORTED_PCM_FORMAT.frame_rate], &pcm_formats.frame_rates.unwrap()[..]);
     }
 
     #[fixture(fix_audio_device)]

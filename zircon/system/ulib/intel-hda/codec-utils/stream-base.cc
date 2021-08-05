@@ -426,19 +426,32 @@ void IntelHDAStreamBase::GetSupportedFormats(
     // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
     // Needs to be alive until the reply is sent.
     FidlCompatibleFormats& src = fidl_compatible_formats[i];
-    audio_fidl::wire::PcmSupportedFormats formats;
-    formats.number_of_channels = ::fidl::VectorView<uint8_t>::FromExternal(
-        src.number_of_channels.data(), src.number_of_channels.size());
-    formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>::FromExternal(
-        src.sample_formats.data(), src.sample_formats.size());
-    formats.frame_rates =
-        ::fidl::VectorView<uint32_t>::FromExternal(src.frame_rates.data(), src.frame_rates.size());
-    formats.bytes_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
-        src.bytes_per_sample.data(), src.bytes_per_sample.size());
-    formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>::FromExternal(
-        src.valid_bits_per_sample.data(), src.valid_bits_per_sample.size());
+    audio_fidl::wire::PcmSupportedFormats2 formats;
+
+    fidl::VectorView<audio_fidl::wire::ChannelSet> channel_sets(allocator,
+                                                                src.number_of_channels.size());
+
+    for (uint8_t j = 0; j < src.number_of_channels.size(); ++j) {
+      fidl::VectorView<audio_fidl::wire::ChannelAttributes> all_attributes(
+          allocator, src.number_of_channels[j]);
+      channel_sets[j].Allocate(allocator);
+      channel_sets[j].set_attributes(allocator, std::move(all_attributes));
+    }
+    formats.Allocate(allocator);
+    formats.set_channel_sets(allocator, std::move(channel_sets));
+    formats.set_sample_formats(allocator,
+                               ::fidl::VectorView<audio_fidl::wire::SampleFormat>::FromExternal(
+                                   src.sample_formats.data(), src.sample_formats.size()));
+    formats.set_frame_rates(allocator, ::fidl::VectorView<uint32_t>::FromExternal(
+                                           src.frame_rates.data(), src.frame_rates.size()));
+    formats.set_bytes_per_sample(
+        allocator, ::fidl::VectorView<uint8_t>::FromExternal(src.bytes_per_sample.data(),
+                                                             src.bytes_per_sample.size()));
+    formats.set_valid_bits_per_sample(
+        allocator, ::fidl::VectorView<uint8_t>::FromExternal(src.valid_bits_per_sample.data(),
+                                                             src.valid_bits_per_sample.size()));
     fidl_formats[i].Allocate(allocator);
-    fidl_formats[i].set_pcm_supported_formats(allocator, std::move(formats));
+    fidl_formats[i].set_pcm_supported_formats2(allocator, std::move(formats));
   }
 
   completer.Reply(std::move(fidl_formats));
