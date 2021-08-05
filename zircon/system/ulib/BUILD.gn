@@ -82,7 +82,6 @@ group("tests") {
     "uart/test",
     "unittest:tests",
     "utf_conversion:tests",
-    "zbi:tests",
     "zbi-bootfs:tests",
     "zbitl:tests",
     "zircon-internal:tests",

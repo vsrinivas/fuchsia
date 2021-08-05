@@ -7,7 +7,6 @@
 #include "boot-shim.h"
 
 #include <lib/ddk/platform-defs.h>
-#include <lib/zbi/zbi.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -17,6 +16,7 @@
 #include "debug.h"
 #include "devicetree.h"
 #include "util.h"
+#include "zbi.h"
 
 // used in boot-shim-config.h and in this file below
 static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t extra,

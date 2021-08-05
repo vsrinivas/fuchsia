@@ -1,8 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include "zbi.h"
+
 #include <assert.h>
-#include <lib/zbi/zbi.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

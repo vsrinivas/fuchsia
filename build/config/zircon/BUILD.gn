@@ -418,7 +418,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/ldmsg/*",
     "//zircon/system/ulib/pretty/*",
     "//zircon/system/ulib/tftp/*",
-    "//zircon/system/ulib/zbi/*",
     "//zircon/system/ulib/zxc/*",
     "//zircon/system/ulib/zxtest/*",
     "//zircon/third_party/*",

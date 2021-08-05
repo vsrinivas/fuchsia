@@ -5,9 +5,23 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/images/args.gni")
+import("//build/test.gni")
 import("//build/toolchain/toolchain_environment.gni")
 import("//build/unification/zx_library.gni")
 import("//build/zircon/c_utils.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":arm64-boot-shim-tests($host_toolchain)" ]
+}
+
+test("arm64-boot-shim-tests") {
+  sources = [
+    "zbi.c",
+    "zbi_test.cc",
+  ]
+  deps = [ "//zircon/public/lib/zxtest" ]
+}
 
 # The boot shims need to be compiled in the special environment for running
 # in physical memory with the MMU disabled.
@@ -19,6 +33,7 @@ if (toolchain_environment == "physmem") {
       "debug.c",
       "devicetree.c",
       "util.c",
+      "zbi.c",
     ]
     deps = [ "//zircon/kernel/lib/libc/string" ]
   }
@@ -48,7 +63,6 @@ template("boot_shim") {
       deps = [
         ":common",
         "//zircon/system/ulib/ddk-platform-defs:headers",
-        "//zircon/system/ulib/zbi",
       ]
       sources = [
         "${board}-uart.c",

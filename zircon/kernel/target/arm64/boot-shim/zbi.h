@@ -20,8 +20,8 @@
 // (3) Tested
 //     Tests for this library can be found at zircon/system/utest/zbi/*
 
-#ifndef LIB_ZBI_ZBI_H_
-#define LIB_ZBI_ZBI_H_
+#ifndef ZIRCON_KERNEL_TARGET_ARM64_BOOT_SHIM_ZBI_H_
+#define ZIRCON_KERNEL_TARGET_ARM64_BOOT_SHIM_ZBI_H_
 
 #include <stddef.h>
 #include <zircon/boot/image.h>
@@ -140,4 +140,4 @@ zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t
 
 __END_CDECLS
 
-#endif  // LIB_ZBI_ZBI_H_
+#endif  // ZIRCON_KERNEL_TARGET_ARM64_BOOT_SHIM_ZBI_H_
