@@ -4,6 +4,7 @@
         mounts: [
             "/:remotefs:root",
             "/data:remotefs:data",
+            "/dev:devfs",
             "/tmp:tmpfs",
         ],
     },

@@ -14,7 +14,18 @@ pub fn dev_tmp_fs(kernel: &Kernel) -> &FileSystemHandle {
 fn init_devfs() -> FileSystemHandle {
     let fs = TmpFs::new();
     let root = fs.root();
-    root.mknod(b"null", FileMode::IFCHR | FileMode::from_bits(0o666), DeviceType::new(1, 3))
+
+    let mkchr = |name, major, minor| {
+        root.mknod(
+            name,
+            FileMode::IFCHR | FileMode::from_bits(0o666),
+            DeviceType::new(major, minor),
+        )
         .unwrap();
+    };
+
+    mkchr(b"null", 1, 3);
+    mkchr(b"zero", 1, 5);
+
     fs
 }
