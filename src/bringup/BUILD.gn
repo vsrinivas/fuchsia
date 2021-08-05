@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("bringup") {
-  deps = [ "bin/virtcon:bootfs" ]
+  deps = [ "bundles:virtcon" ]
 }
 
 group("tests") {

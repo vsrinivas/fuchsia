@@ -43,14 +43,17 @@ group("zedboot") {
 
 group("debugging") {
   deps = [
+    ":virtcon",
     "//build/validate:non_production_tag",
     "//src/bringup/bin/dlog",
     "//src/bringup/bin/trace-benchmark",
   ]
+}
 
+group("virtcon") {
   if (use_legacy_virtcon) {
-    deps += [ "//src/bringup/bin/virtcon:bootfs" ]
+    deps = [ "//src/bringup/bin/virtcon:bootfs" ]
   } else {
-    deps += [ "//src/bringup/bin/virtcon2:bootfs" ]
+    deps = [ "//src/bringup/bin/virtcon2:bootfs" ]
   }
 }
