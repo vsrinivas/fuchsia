@@ -81,6 +81,8 @@ impl DerivedConnection for MutableConnection {
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
+        // since at this point the directory resource has already been opened/created.
         let flags = match new_connection_validate_flags(flags) {
             Ok(updated) => updated,
             Err(status) => {

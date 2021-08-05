@@ -9,9 +9,10 @@ use crate::{common::stricter_or_same_rights, directory::entry::EntryInfo};
 use {
     byteorder::{LittleEndian, WriteBytesExt},
     fidl_fuchsia_io::{
-        MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        CLONE_FLAG_SAME_RIGHTS, MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK,
+        OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -111,6 +112,16 @@ pub fn check_child_connection_flags(
         return Err(zx::Status::INVALID_ARGS);
     }
 
+    // Can only specify OPEN_FLAG_CREATE_IF_ABSENT if OPEN_FLAG_CREATE is also specified.
+    if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 && flags & OPEN_FLAG_CREATE == 0 {
+        return Err(zx::Status::INVALID_ARGS);
+    }
+
+    // Can only use CLONE_FLAG_SAME_RIGHTS when calling Clone.
+    if flags & CLONE_FLAG_SAME_RIGHTS != 0 {
+        return Err(zx::Status::INVALID_ARGS);
+    }
+
     // Expand POSIX flag into new equivalents.
     // TODO(fxbug.dev/81185): Remove branch when removing OPEN_FLAG_POSIX from fuchsia.io.
     if flags & OPEN_FLAG_POSIX != 0 {
@@ -125,8 +136,8 @@ pub fn check_child_connection_flags(
         flags &= !OPEN_FLAG_POSIX_WRITABLE;
     }
 
+    // Can only use CREATE flags if the parent connection is writable.
     if flags & OPEN_FLAG_CREATE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
-        // Can only use CREATE flags if the parent connection is writable.
         return Err(zx::Status::ACCESS_DENIED);
     }
 
@@ -182,11 +193,11 @@ mod tests {
 
     use {
         fidl_fuchsia_io::{
-            OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
-            OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-            OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
+            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+            OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
+            OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon as zx,
     };
@@ -299,6 +310,48 @@ mod tests {
         assert_eq!(
             check_child_connection_flags(0, OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT, 0),
             Err(zx::Status::ACCESS_DENIED),
+        );
+
+        // Need to specify OPEN_FLAG_CREATE if passing OPEN_FLAG_CREATE_IF_ABSENT.
+        assert_eq!(
+            check_child_connection_flags(OPEN_RIGHT_WRITABLE, OPEN_FLAG_CREATE_IF_ABSENT, 0),
+            Err(zx::Status::INVALID_ARGS),
+        );
+    }
+
+    #[test]
+    fn check_child_connection_flags_mode() {
+        // If mode is 0 but we specify OPEN_FLAG_DIRECTORY, ensure the resulting mode is correct.
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY, 0)
+                .expect("check_child_connection_flags failed")
+                .1,
+            MODE_TYPE_DIRECTORY
+        );
+
+        // Ensure that ambiguous flags/mode types are handled correctly.
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_NOT_DIRECTORY, MODE_TYPE_DIRECTORY),
+            Err(zx::Status::INVALID_ARGS),
+        );
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY, MODE_TYPE_FILE),
+            Err(zx::Status::INVALID_ARGS),
+        );
+    }
+
+    #[test]
+    fn check_child_connection_flags_invalid() {
+        // Cannot specify both OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY.
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_DIRECTORY | OPEN_FLAG_NOT_DIRECTORY, 0),
+            Err(zx::Status::INVALID_ARGS),
+        );
+
+        // Cannot specify CLONE_FLAG_SAME_RIGHTS when opening a resource (only permitted via clone).
+        assert_eq!(
+            check_child_connection_flags(0, CLONE_FLAG_SAME_RIGHTS, 0),
+            Err(zx::Status::INVALID_ARGS),
         );
     }
 }

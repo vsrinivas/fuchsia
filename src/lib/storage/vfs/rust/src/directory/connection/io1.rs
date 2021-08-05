@@ -31,9 +31,9 @@ use {
         DirectoryAdminSyncResponder, DirectoryAdminUnlink2Responder, DirectoryAdminUnlinkResponder,
         DirectoryAdminUnmountNodeResponder, DirectoryAdminUnmountResponder,
         DirectoryAdminWatchResponder, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
-        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_EXECUTABLE,
-        OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
@@ -531,7 +531,7 @@ where
             flags |= OPEN_FLAG_DIRECTORY;
         }
 
-        let (mut flags, mode) = match check_child_connection_flags(self.flags, flags, mode) {
+        let (flags, mode) = match check_child_connection_flags(self.flags, flags, mode) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -539,27 +539,14 @@ where
             }
         };
 
-        if path.is_dot() {
-            // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
-            // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
-            // filesystems.
-            if flags & (OPEN_FLAG_CREATE | OPEN_FLAG_NOT_DIRECTORY) != 0 {
-                send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
-                return;
-            }
-
-            // Clone ignores the POSIX flags, but open shouldn't. The flag would have been stripped
-            // above by check_child_connection_flags if we had insufficient privileges, so if
-            // present, we expand those respective rights and remove the flags.
-            if flags & OPEN_FLAG_POSIX_EXECUTABLE != 0 {
-                flags |= OPEN_RIGHT_EXECUTABLE;
-            }
-            if flags & OPEN_FLAG_POSIX_WRITABLE != 0 {
-                flags |= OPEN_RIGHT_WRITABLE;
-            }
-            flags &= !(OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
-
-            self.handle_clone(flags, mode, server_end);
+        // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
+        // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
+        // filesystems.
+        if path.is_dot()
+            && flags & (OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_FLAG_NOT_DIRECTORY)
+                != 0
+        {
+            send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
             return;
         }
 
