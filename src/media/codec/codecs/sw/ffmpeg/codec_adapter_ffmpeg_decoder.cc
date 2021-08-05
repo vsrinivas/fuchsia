@@ -121,7 +121,6 @@ void CodecAdapterFfmpegDecoder::FfmpegFreeBufferCallback(void* ctx, uint8_t* bas
 int CodecAdapterFfmpegDecoder::GetBuffer(
     const AvCodecContext::FrameBufferRequest& decoded_output_info, AVCodecContext* avcodec_context,
     AVFrame* frame, int flags) {
-  size_t buffer_size;
   bool should_config_output = false;
   bool output_increased_in_size = false;
   bool need_new_buffers = false;
@@ -135,7 +134,6 @@ int CodecAdapterFfmpegDecoder::GetBuffer(
           decoded_output_info.buffer_bytes_needed > (*decoded_output_info_).buffer_bytes_needed;
       decoded_output_info_ = {.format = fidl::Clone(decoded_output_info.format),
                               .buffer_bytes_needed = decoded_output_info.buffer_bytes_needed};
-      buffer_size = (*decoded_output_info_).buffer_bytes_needed;
       should_config_output = true;
     }
   }
