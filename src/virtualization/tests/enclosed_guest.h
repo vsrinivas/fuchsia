@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"

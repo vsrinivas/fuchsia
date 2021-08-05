@@ -16,7 +16,7 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -58,14 +58,14 @@ using fuchsia::sys::TerminationReason;
 using ::testing::AnyOf;
 using ::testing::Eq;
 
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::EnclosingEnvironment;
-using sys::testing::TestWithEnvironment;
 using test::appmgr::integration::DataFileReaderWriterPtr;
 
-class RealmTest : virtual public TestWithEnvironment {
+class RealmTest : virtual public TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     OpenNewOutFile();
   }
 

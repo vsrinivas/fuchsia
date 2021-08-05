@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
@@ -33,16 +33,16 @@ constexpr char kDifferentTestUtilURL[] =
 
 using test::appmgr::integration::DataFileReaderWriterPtr;
 
-class IsolatedPersistentStorageTest : virtual public sys::testing::TestWithEnvironment,
+class IsolatedPersistentStorageTest : virtual public gtest::TestWithEnvironmentFixture,
                                       public component::testing::DataFileReaderWriterUtil {
  protected:
   IsolatedPersistentStorageTest()
-      : TestWithEnvironment(),
+      : TestWithEnvironmentFixture(),
         env1_(CreateNewEnclosingEnvironment(kEnvironmentLabel1, CreateServices())),
         env2_(CreateNewEnclosingEnvironment(kEnvironmentLabel2, CreateServices())) {}
 
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
 
     // Random file contents used since we don't explicitly clear /data contents
     // between test runs, and we want to ensure we aren't reading a file written

@@ -7,7 +7,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <gmock/gmock.h>
 #include <src/lib/files/glob.h>

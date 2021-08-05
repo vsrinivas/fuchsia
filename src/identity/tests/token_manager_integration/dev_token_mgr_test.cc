@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -89,7 +89,7 @@ using fuchsia::sys::LaunchInfo;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 
-class DevTokenManagerAppTest : public sys::testing::TestWithEnvironment,
+class DevTokenManagerAppTest : public gtest::TestWithEnvironmentFixture,
                                fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest() : auth_context_provider_binding_(this) {}

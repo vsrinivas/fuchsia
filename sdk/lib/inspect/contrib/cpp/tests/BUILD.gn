@@ -31,7 +31,7 @@ executable("test") {
   deps = [
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]

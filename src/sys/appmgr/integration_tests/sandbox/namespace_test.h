@@ -10,14 +10,14 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <memory>
 #include <string>
 
 #include <gtest/gtest.h>
 
-class NamespaceTest : public sys::testing::TestWithEnvironment {
+class NamespaceTest : public gtest::TestWithEnvironmentFixture {
  protected:
   NamespaceTest() : component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 

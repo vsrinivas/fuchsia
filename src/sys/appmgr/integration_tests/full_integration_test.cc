@@ -6,7 +6,7 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <zircon/errors.h>
 
 #include <memory>
@@ -19,9 +19,9 @@
 #include "src/lib/fxl/macros.h"
 
 using fuchsia::sys::TerminationReason;
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
-using sys::testing::TestWithEnvironment;
 using PowerAdmin = fuchsia::hardware::power::statecontrol::Admin;
 using fuchsia::hardware::power::statecontrol::Admin_Reboot_Result;
 using fuchsia::hardware::power::statecontrol::RebootReason;
@@ -55,7 +55,7 @@ class MockPowerAdmin : public Admin_TestBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(MockPowerAdmin);
 };
 
-class AppmgrTest : public TestWithEnvironment {
+class AppmgrTest : public TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
     auto services = CreateServices();

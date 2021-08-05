@@ -6,7 +6,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -25,7 +25,7 @@ namespace intl_wisdom {
 
 using fuchsia::sys::ComponentControllerPtr;
 using fuchsia::sys::LaunchInfo;
-using sys::testing::TestWithEnvironment;
+using gtest::TestWithEnvironmentFixture;
 
 // The C++ version of the wisdom client-server example.
 constexpr char kIntlWisdomClientPackage[] =
@@ -40,16 +40,16 @@ constexpr char kIntlWisdomClientRustPackage[] =
 // Starts a client, which starts a server and asks it for wisdom. Compares the
 // entire STDOUT output of the client (including the server's response) to an
 // expected output file.
-class IntlWisdomTest : public TestWithEnvironment {
+class IntlWisdomTest : public TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     OpenNewOutFiles();
   }
 
   void TearDown() override {
     CloseOutFiles();
-    TestWithEnvironment::TearDown();
+    TestWithEnvironmentFixture::TearDown();
   }
 
   void OpenNewOutFiles() {

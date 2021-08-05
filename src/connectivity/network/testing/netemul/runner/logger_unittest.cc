@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/diagnostics/test/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/wire_format.h>
 
 #include "log_listener.h"
@@ -19,7 +19,7 @@ namespace testing {
 constexpr const char* kLoggerUrl =
     "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
 
-class LoggerTest : public sys::testing::TestWithEnvironment {
+class LoggerTest : public gtest::TestWithEnvironmentFixture {
  protected:
   fuchsia::sys::LaunchInfo MakeLoggerLaunchInfo() {
     fuchsia::sys::LaunchInfo ret;

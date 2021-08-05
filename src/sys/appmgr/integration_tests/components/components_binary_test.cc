@@ -4,7 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/file.h"
@@ -19,7 +19,7 @@ using sys::testing::EnclosingEnvironment;
 
 constexpr char kRealm[] = "test";
 
-class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
+class ComponentsBinaryTest : public gtest::TestWithEnvironmentFixture {
  protected:
   void OpenNewOutFile() {
     ASSERT_TRUE(tmp_dir_.NewTempFile(&out_file_));

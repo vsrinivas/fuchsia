@@ -13,7 +13,7 @@ void TestHarnessFixture::TearDown() {
   test_harness_launcher_.StopTestHarness();
   RunLoopUntil([&]() { return !test_harness_launcher_.is_test_harness_running(); });
 
-  sys::testing::TestWithEnvironment::TearDown();
+  gtest::TestWithEnvironmentFixture::TearDown();
 }
 
 void AddModToStory(const fuchsia::modular::testing::TestHarnessPtr& test_harness,

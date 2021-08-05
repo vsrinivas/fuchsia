@@ -6,7 +6,7 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <queue>
@@ -35,7 +35,7 @@ constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 constexpr char kOpusFilePath[] = "/pkg/data/media_test_data/sfx-opus-441.webm";
 
 // Base class for mediaplayer tests.
-class MediaPlayerTests : public sys::testing::TestWithEnvironment {
+class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
     auto services = CreateServices();

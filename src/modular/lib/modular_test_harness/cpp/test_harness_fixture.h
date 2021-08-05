@@ -9,13 +9,13 @@
 #include <lib/modular/testing/cpp/test_harness_launcher.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 namespace modular_testing {
 
 // TestHarnessFixture is a googletest fixture that starts up the Modular test harness component
 // and provides the |fuchsia.modular.testing.TestHarness| service.
-class TestHarnessFixture : public sys::testing::TestWithEnvironment {
+class TestHarnessFixture : public gtest::TestWithEnvironmentFixture {
  public:
   TestHarnessFixture();
 

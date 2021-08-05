@@ -158,7 +158,7 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/util",

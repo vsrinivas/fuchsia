@@ -6,7 +6,7 @@
 
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <thread>
@@ -38,7 +38,7 @@ std::string GenerateFakeUrl() {
 }
 };  // namespace
 
-class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
+class TestHarnessImplTest : public gtest::TestWithEnvironmentFixture {
  public:
   TestHarnessImplTest() : harness_impl_(real_env(), [this] { did_exit_ = true; }) {
     harness_impl_.Bind(harness_.NewRequest());

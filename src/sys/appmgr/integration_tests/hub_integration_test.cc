@@ -10,7 +10,7 @@
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
@@ -31,7 +31,7 @@ namespace {
 
 // This test fixture will provide a way to run components in provided launchers
 // and check for errors.
-class HubTest : public sys::testing::TestWithEnvironment {
+class HubTest : public gtest::TestWithEnvironmentFixture {
  protected:
   // This would launch component and check that it returns correct
   // |expected_return_code|.

@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -29,7 +29,7 @@ namespace {
 
 using testing::UnorderedElementsAreArray;
 
-class CollectKernelLogTest : public sys::testing::TestWithEnvironment {
+class CollectKernelLogTest : public gtest::TestWithEnvironmentFixture {
  public:
   CollectKernelLogTest() : executor_(dispatcher()) {}
 

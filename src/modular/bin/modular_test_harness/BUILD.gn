@@ -85,7 +85,7 @@ executable("modular_test_harness_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

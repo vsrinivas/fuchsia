@@ -37,7 +37,7 @@ executable("sync_test_bin") {
 
   deps = [
     ":sync_service",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/fzl",

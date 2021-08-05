@@ -4,7 +4,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -101,7 +101,7 @@ struct RootSession {
   std::unique_ptr<scenic::ViewHolder> view_holder;
 };
 
-class GfxLegacyCoordinateTransformTest2 : public sys::testing::TestWithEnvironment {
+class GfxLegacyCoordinateTransformTest2 : public gtest::TestWithEnvironmentFixture {
   // clang-format off
   static constexpr std::array<float, 9> kIdentityMatrix = {
     1, 0, 0, // column one
@@ -114,7 +114,7 @@ class GfxLegacyCoordinateTransformTest2 : public sys::testing::TestWithEnvironme
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     environment_ = CreateNewEnclosingEnvironment(
         "gfx_legacy_coordinate_transform_test2_environment", CreateServices());
     environment_->ConnectToService(scenic_.NewRequest());
@@ -133,9 +133,9 @@ class GfxLegacyCoordinateTransformTest2 : public sys::testing::TestWithEnvironme
   }
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironment::CreateServices()|.
+  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
   std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
     for (const auto& [name, url] : LocalServices()) {
       const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;

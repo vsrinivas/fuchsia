@@ -6,7 +6,7 @@
 
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -23,8 +23,8 @@ namespace testing {
 #define WAIT_FOR_ETH_ONLINE(ethnu) \
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return eth(ethnu)->online(); }, zx::sec(5)))
 
-using sys::testing::TestWithEnvironment;
-class EthertapClientTest : public TestWithEnvironment {
+using gtest::TestWithEnvironmentFixture;
+class EthertapClientTest : public TestWithEnvironmentFixture {
  public:
   EthertapClientTest() { services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 

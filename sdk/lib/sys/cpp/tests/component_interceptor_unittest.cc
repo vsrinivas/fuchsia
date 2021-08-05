@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <string>
 #include <vector>
@@ -51,7 +51,7 @@ class TestLoader : fuchsia::sys::Loader {
 };
 
 // This fixture gives us a real_env().
-class ComponentInterceptorTest : public sys::testing::TestWithEnvironment {};
+class ComponentInterceptorTest : public gtest::TestWithEnvironmentFixture {};
 
 // This tests fallback-loader and intercept-url cases using the same enclosing
 // environment.

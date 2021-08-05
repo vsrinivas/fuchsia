@@ -28,7 +28,7 @@ executable("sys_inspect_cpp_tests_bin") {
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/zircon/lib/zircon",

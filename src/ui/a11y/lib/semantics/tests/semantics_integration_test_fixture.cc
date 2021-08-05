@@ -95,11 +95,11 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
                     component_context_provider_.context()->outgoing()->debug_dir()) {}
 
 void SemanticsIntegrationTest::SetUp() {
-  TestWithEnvironment::SetUp();
+  TestWithEnvironmentFixture::SetUp();
 
   // This is done in |SetUp| as opposed to the constructor to allow subclasses the opportunity to
   // override |CreateServices()|.
-  auto services = TestWithEnvironment::CreateServices();
+  auto services = TestWithEnvironmentFixture::CreateServices();
   services->AddService(semantics_manager_bindings_.GetHandler(&view_manager_));
 
   // Add test-specific launchable services.

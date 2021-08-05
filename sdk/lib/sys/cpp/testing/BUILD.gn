@@ -54,6 +54,14 @@ source_set("integration") {
   public_configs = [ "//sdk/config" ]
 }
 
+source_set("integration_fixture") {
+  testonly = true
+
+  sources = [ "test_with_environment_fixture.h" ]
+
+  public_deps = [ ":integration" ]
+}
+
 source_set("enclosing_environment") {
   testonly = true
 

@@ -60,7 +60,7 @@ executable("modular_testing_cpp_tests_bin") {
     "//sdk/lib/modular/testing/cpp",
     "//sdk/lib/modular/testing/cpp:fuchsia.modular.test.harness",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",

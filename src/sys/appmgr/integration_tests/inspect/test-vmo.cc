@@ -8,7 +8,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <zircon/device/vfs.h>
 
 #include <gmock/gmock.h>
@@ -26,7 +26,7 @@ constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/appmgr_inspect_integration_tests#meta/"
     "inspect_vmo_test_app.cmx";
 
-class InspectTest : public sys::testing::TestWithEnvironment {
+class InspectTest : public gtest::TestWithEnvironmentFixture {
  protected:
   InspectTest() {
     fuchsia::sys::LaunchInfo launch_info;

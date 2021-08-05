@@ -15,7 +15,7 @@
 #include <lib/fpromise/result.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -91,7 +91,7 @@ class LogListener : public fuchsia::logger::LogListenerSafe {
 
 // Smoke-tests the real environment service for the fuchsia.feedback FIDL interfaces,
 // connecting through FIDL.
-class FeedbackIntegrationTest : public sys::testing::TestWithEnvironment {
+class FeedbackIntegrationTest : public gtest::TestWithEnvironmentFixture {
  public:
   void SetUp() override {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();

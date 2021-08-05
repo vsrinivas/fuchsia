@@ -13,7 +13,7 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
-#include "lib/sys/cpp/testing/test_with_environment.h"
+#include "lib/sys/cpp/testing/test_with_environment_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -21,7 +21,7 @@
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
-class BasemgrImplTest : public sys::testing::TestWithEnvironment {
+class BasemgrImplTest : public gtest::TestWithEnvironmentFixture {
  public:
   BasemgrImplTest() {}
 

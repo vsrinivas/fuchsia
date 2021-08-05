@@ -8,7 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/time.h>
@@ -39,7 +39,7 @@ static constexpr size_t kVmoSize = 1024;
 static constexpr uint32_t kNumVmos = 4;
 
 // Base class for audio consumer tests.
-class AudioConsumerTests : public sys::testing::TestWithEnvironment {
+class AudioConsumerTests : public gtest::TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
     syslog::SetTags({"mediaplayer"});

@@ -104,7 +104,7 @@ executable("focus_dispatcher_unittests_bin") {
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

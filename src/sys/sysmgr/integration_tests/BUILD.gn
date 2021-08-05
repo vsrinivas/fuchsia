@@ -100,7 +100,7 @@ executable("package_updating_loader_test_bin") {
     ":interface",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",

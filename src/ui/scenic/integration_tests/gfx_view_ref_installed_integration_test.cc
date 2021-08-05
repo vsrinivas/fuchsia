@@ -6,7 +6,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -102,12 +102,12 @@ struct RootSession {
 };
 
 // Test fixture that sets up an environment with a Scenic we can connect to.
-class GfxViewRefInstalledIntegrationTest : public sys::testing::TestWithEnvironment {
+class GfxViewRefInstalledIntegrationTest : public gtest::TestWithEnvironmentFixture {
  public:
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     environment_ = CreateNewEnclosingEnvironment(
         "gfx_view_ref_installed_integration_test_environment", CreateServices());
     environment_->ConnectToService(scenic_.NewRequest());
@@ -140,9 +140,9 @@ class GfxViewRefInstalledIntegrationTest : public sys::testing::TestWithEnvironm
   }
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironment::CreateServices()|.
+  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
   std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
     for (const auto& [name, url] : LocalServices()) {
       const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;

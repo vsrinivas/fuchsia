@@ -6,7 +6,7 @@
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -21,7 +21,7 @@ using fuchsia::settings::IntlSettings;
 static const int32_t kTimeoutSec = 30;
 
 // See README.md for more detail about this test.
-class IntlServicesTest : public sys::testing::TestWithEnvironment {
+class IntlServicesTest : public gtest::TestWithEnvironmentFixture {
  public:
   IntlServicesTest()
       : deadline_(zx::clock::get_monotonic() + zx::sec(kTimeoutSec)),

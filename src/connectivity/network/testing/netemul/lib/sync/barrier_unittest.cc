@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "src/lib/testing/predicates/status.h"
 #include "sync_manager.h"
@@ -16,14 +16,14 @@
 namespace netemul {
 namespace testing {
 
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
-using sys::testing::TestWithEnvironment;
 
 static const char* kMainTestBarrier = "test-barrier";
 static const char* kAltTestBarrier = "alt-barrier";
 
-class BarrierTest : public TestWithEnvironment {
+class BarrierTest : public TestWithEnvironmentFixture {
  public:
   using SyncManagerPtr = fidl::InterfacePtr<SyncManager::FSyncManager>;
 

@@ -10,7 +10,7 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
@@ -37,7 +37,7 @@ static constexpr char kTestScriptInput[] = "hello world\n";
 static constexpr char kGuestFileOutputLocation[] = "/root/output/script_output.txt";
 static constexpr char kHostOuputCopyLocation[] = "/data/copy";
 
-class GuestInteractionTest : public sys::testing::TestWithEnvironment {
+class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
  public:
   void CreateEnvironment() {
     ASSERT_TRUE(services_ && !env_);

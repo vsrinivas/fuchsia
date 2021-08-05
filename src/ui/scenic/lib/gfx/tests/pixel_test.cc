@@ -25,7 +25,7 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
                        kIndirectPresentTimeout = zx::sec(90);
 
 // These tests need Scenic and RootPresenter at minimum, which expand to the
-// dependencies below. Using |sys::testing::TestWithEnvironment|, we use
+// dependencies below. Using |gtest::TestWithEnvironmentFixture|, we use
 // |fuchsia.sys.Environment| and |fuchsia.sys.Loader| from the system (declared
 // in our *.cmx sandbox) and launch these other services in the environment we
 // create in our test fixture.
@@ -34,7 +34,7 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
 // and inject/start them via the |fuchsia.test| facet. However that has the
 // disadvantage that it uses one instance of those services across all tests in
 // the binary, making each test not hermetic wrt. the others. A trade-off is
-// that the |sys::testing::TestWithEnvironment| method is more verbose.
+// that the |gtest::TestWithEnvironmentFixture| method is more verbose.
 const std::map<std::string, std::string> LocalServices() {
   return {{"fuchsia.hardware.display.Provider",
            "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
@@ -78,7 +78,7 @@ PixelTest::PixelTest(const std::string& environment_label)
     : environment_label_(environment_label) {}
 
 void PixelTest::SetUp() {
-  TestWithEnvironment::SetUp();
+  TestWithEnvironmentFixture::SetUp();
 
   environment_ = CreateNewEnclosingEnvironment(environment_label_, CreateServices());
 
@@ -94,7 +94,7 @@ void PixelTest::SetUp() {
 }
 
 std::unique_ptr<sys::testing::EnvironmentServices> PixelTest::CreateServices() {
-  auto services = TestWithEnvironment::CreateServices();
+  auto services = TestWithEnvironmentFixture::CreateServices();
 
   for (const auto& entry : LocalServices()) {
     services->AddServiceWithLaunchInfo({.url = entry.second}, entry.first);

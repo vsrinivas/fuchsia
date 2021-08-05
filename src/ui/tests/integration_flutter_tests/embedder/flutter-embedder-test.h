@@ -11,7 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>
@@ -38,7 +38,7 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(10);
 // Timeout to fail the test if it goes beyond this duration.
 constexpr zx::duration kTestTimeout = zx::min(1);
 
-class FlutterEmbedderTestsBase : public sys::testing::TestWithEnvironment {
+class FlutterEmbedderTestsBase : public gtest::TestWithEnvironmentFixture {
  public:
   explicit FlutterEmbedderTestsBase(
       const std::vector<std::pair<const char*, const char*>> injected_services)
@@ -46,10 +46,10 @@ class FlutterEmbedderTestsBase : public sys::testing::TestWithEnvironment {
 
   // |testing::Test|
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     // This is done in |SetUp| as opposed to the constructor to allow subclasses the opportunity to
     // override |CreateServices()|.
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
     CreateServices(services);
 
     // Add test-specific launchable services.
@@ -73,7 +73,7 @@ class FlutterEmbedderTestsBase : public sys::testing::TestWithEnvironment {
   }
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironment::CreateServices()|.
+  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
   virtual void CreateServices(std::unique_ptr<sys::testing::EnvironmentServices>& services) {}
 
   sys::testing::EnclosingEnvironment* environment() { return environment_.get(); }

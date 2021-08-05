@@ -6,7 +6,7 @@
 #include <lib/fidl/cpp/vector.h>
 #include <lib/sys/cpp/testing/component_interceptor.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -37,7 +37,7 @@ constexpr char kIntlPropertyProviderUri[] =
 //
 // Each test creates a hermetic environment and launches a present_view component as a separate
 // process inside of it.
-class PresentViewIntegrationTest : public sys::testing::TestWithEnvironment {
+class PresentViewIntegrationTest : public gtest::TestWithEnvironmentFixture {
  protected:
   // This type encapsulates the possible "return values" that an executing component can produce.
   // The first type is |std::nullptr_t| to allow indicating a component that is still executing.

@@ -133,7 +133,7 @@ executable("sandbox_unittest") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/diagnostics/archivist/fidl:controller",
     "//src/lib/fsl",
     "//src/lib/fxl",

@@ -16,7 +16,7 @@ executable("focus_chain_manager_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.tts",
     "//sdk/fidl/fuchsia.logger",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/focus_chain",

@@ -12,7 +12,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -113,7 +113,7 @@ class ServiceProviderMock : fuchsia::sys::ServiceProvider {
 
 constexpr char kRealm[] = "package_updating_loader_env";
 
-class PackageUpdatingLoaderTest : public sys::testing::TestWithEnvironment {
+class PackageUpdatingLoaderTest : public gtest::TestWithEnvironmentFixture {
  protected:
   void Init(ServiceProviderMock* provider_service) {
     loader_ = std::make_unique<PackageUpdatingLoader>(

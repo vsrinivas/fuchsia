@@ -32,7 +32,7 @@ source_set("data_file_reader_writer_util") {
 
   deps = [
     ":data_file_reader_writer",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
   ]
 }

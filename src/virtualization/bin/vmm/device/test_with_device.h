@@ -6,11 +6,11 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TEST_WITH_DEVICE_H_
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 
-class TestWithDevice : public sys::testing::TestWithEnvironment {
+class TestWithDevice : public gtest::TestWithEnvironmentFixture {
  protected:
   zx_status_t LaunchDevice(const std::string& url, size_t phys_mem_size,
                            fuchsia::virtualization::hardware::StartInfo* start_info,

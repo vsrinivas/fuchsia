@@ -5,7 +5,7 @@
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "src/ui/bin/root_presenter/app.h"
@@ -74,7 +74,7 @@ class FakePointerEventListener : public fuchsia::ui::input::accessibility::Point
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> bindings_;
 };
 
-class AccessibilityPointerEventRegistryTest : public sys::testing::TestWithEnvironment {
+class AccessibilityPointerEventRegistryTest : public gtest::TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
     auto services = CreateServices();

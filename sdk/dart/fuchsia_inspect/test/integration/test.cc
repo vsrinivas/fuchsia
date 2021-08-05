@@ -11,7 +11,7 @@
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include "gmock/gmock.h"
-#include "lib/sys/cpp/testing/test_with_environment.h"
+#include "lib/sys/cpp/testing/test_with_environment_fixture.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/substitute.h"
 
@@ -27,7 +27,7 @@ constexpr char kTestComponent[] =
     "dart-inspect-vmo-test-writer.cmx";
 constexpr char kTestProcessName[] = "dart-inspect-vmo-test-writer.cmx";
 
-class InspectTest : public sys::testing::TestWithEnvironment {
+class InspectTest : public gtest::TestWithEnvironmentFixture {
  protected:
   InspectTest() {
     fuchsia::sys::LaunchInfo launch_info;

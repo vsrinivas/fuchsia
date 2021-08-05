@@ -137,7 +137,7 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
   std::unique_ptr<modular_testing::FakeAgent> fake_agent_;
 };
 
-class SessionmgrIntegrationTestWithoutDefaultHarness : public sys::testing::TestWithEnvironment {};
+class SessionmgrIntegrationTestWithoutDefaultHarness : public gtest::TestWithEnvironmentFixture {};
 
 class IntlPropertyProviderImpl : public fuchsia::intl::PropertyProvider {
  public:

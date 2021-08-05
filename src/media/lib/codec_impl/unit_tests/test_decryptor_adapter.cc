@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
+#include <sdk/lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
 #include "lib/media/codec_impl/decryptor_adapter.h"
@@ -168,7 +168,7 @@ class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
 }  // namespace
 
 template <typename DecryptorAdapterT>
-class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
+class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
  protected:
   DecryptorAdapterTest() : random_device_(), prng_(random_device_()) {
     std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();

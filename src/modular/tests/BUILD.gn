@@ -36,7 +36,7 @@ executable("agent_services_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
@@ -57,7 +57,7 @@ executable("agent_restart_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gmock",
@@ -77,7 +77,7 @@ executable("agent_session_restart_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gmock",
@@ -97,7 +97,7 @@ executable("sessionctl_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionctl:lib",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
@@ -117,7 +117,7 @@ executable("session_shell_test") {
   deps = [
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//src/modular/lib/modular_config:modular_config_constants",
@@ -166,7 +166,7 @@ executable("inspect_session_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -189,7 +189,7 @@ executable("intents_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -211,7 +211,7 @@ executable("module_context_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -238,7 +238,7 @@ executable("sessionmgr_integration_test") {
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr:annotations",
@@ -260,7 +260,7 @@ executable("story_shell_factory_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
@@ -285,7 +285,7 @@ executable("story_shell_test") {
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -306,7 +306,7 @@ executable("component_context_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
@@ -327,7 +327,7 @@ executable("element_manager_test") {
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.element",
     "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
@@ -351,7 +351,7 @@ executable("stories_share_session_runners_test") {
     ":module_with_fake_runner",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
@@ -391,7 +391,7 @@ executable("annotations_test") {
     ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.element",
     "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",

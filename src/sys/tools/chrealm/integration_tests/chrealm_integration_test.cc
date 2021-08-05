@@ -8,7 +8,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -37,7 +37,7 @@ namespace {
 const char kMessage[] = "hello";
 const char kRealm[] = "chrealmtest";
 
-class ChrealmTest : public sys::testing::TestWithEnvironment,
+class ChrealmTest : public gtest::TestWithEnvironmentFixture,
                     public fuchsia::testing::chrealm::TestService {
  public:
   void GetMessage(fuchsia::testing::chrealm::TestService::GetMessageCallback cb) override {

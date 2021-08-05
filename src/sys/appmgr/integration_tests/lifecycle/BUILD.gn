@@ -17,7 +17,7 @@ executable("appmgr-lifecycle-tests-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr:appmgr_for_test",

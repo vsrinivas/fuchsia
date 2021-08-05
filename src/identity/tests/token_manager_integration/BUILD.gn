@@ -24,7 +24,7 @@ executable("bin") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

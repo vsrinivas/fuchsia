@@ -6,7 +6,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/process.h>
@@ -23,7 +23,7 @@ constexpr char kLifecyleComponentUrl[] =
     "fuchsia-pkg://fuchsia.com/appmgr-lifecycle-tests#meta/test-lifecycle-component.cmx";
 constexpr char kRootRealm[] = "app";
 
-class AppmgrLifecycleTest : public sys::testing::TestWithEnvironment,
+class AppmgrLifecycleTest : public gtest::TestWithEnvironmentFixture,
                             public fuchsia::sys::internal::LogConnectionListener {
  public:
   AppmgrLifecycleTest() = default;

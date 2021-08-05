@@ -8,7 +8,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -55,7 +55,7 @@ const std::vector<std::string> GlobalServices() {
           "fuchsia.scheduler.ProfileProvider"};
 }
 
-class PointerInjectorConfigTest : public sys::testing::TestWithEnvironment {
+class PointerInjectorConfigTest : public gtest::TestWithEnvironmentFixture {
  protected:
   explicit PointerInjectorConfigTest() {
     auto services = sys::testing::EnvironmentServices::Create(real_env());

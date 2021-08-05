@@ -4,7 +4,7 @@
 
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/zx/clock.h>
 
 #include <unordered_set>
@@ -35,10 +35,10 @@ namespace testing {
 
 static const EthernetConfig TestEthBuffConfig = {.nbufs = 10, .buff_size = 512};
 
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
-using sys::testing::TestWithEnvironment;
-class NetworkServiceTest : public TestWithEnvironment {
+class NetworkServiceTest : public TestWithEnvironmentFixture {
  public:
   using FNetworkManager = NetworkManager::FNetworkManager;
   using FEndpointManager = EndpointManager::FEndpointManager;

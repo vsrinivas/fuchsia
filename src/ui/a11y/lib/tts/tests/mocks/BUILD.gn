@@ -14,7 +14,7 @@ source_set("mocks") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.tts",
     "//sdk/fidl/fuchsia.logger",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/tts",

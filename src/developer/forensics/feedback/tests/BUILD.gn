@@ -60,7 +60,7 @@ executable("feedback_integration_test_exe") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/testing:gmatchers",

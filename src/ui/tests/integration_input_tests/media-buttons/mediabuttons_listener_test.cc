@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -70,7 +70,7 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
   fit::function<void(const MediaButtonsEvent&)> on_terminate_;
 };
 
-class MediaButtonsListenerTestWithEnvironment : public sys::testing::TestWithEnvironment {
+class MediaButtonsListenerTestWithEnvironment : public gtest::TestWithEnvironmentFixture {
  protected:
   explicit MediaButtonsListenerTestWithEnvironment() {
     auto services = sys::testing::EnvironmentServices::Create(real_env());

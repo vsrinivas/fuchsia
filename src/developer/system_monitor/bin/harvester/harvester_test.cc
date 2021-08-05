@@ -8,7 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async-testing/dispatcher_stub.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <gtest/gtest.h>
 
@@ -76,7 +76,7 @@ TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
 }
 
 class SystemMonitorHarvesterIntegrationTest
-    : public sys::testing::TestWithEnvironment {
+    : public gtest::TestWithEnvironmentFixture {
  public:
   void SetUp() override {
     // Create a test harvester.

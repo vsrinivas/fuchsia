@@ -20,7 +20,7 @@ executable("factory_reset_test") {
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

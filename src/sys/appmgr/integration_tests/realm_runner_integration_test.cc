@@ -6,7 +6,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <unistd.h>
 
 #include <memory>
@@ -30,8 +30,8 @@ namespace component {
 namespace {
 
 using fuchsia::sys::TerminationReason;
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::EnclosingEnvironment;
-using sys::testing::TestWithEnvironment;
 using test::component::mockrunner::MockComponentPtr;
 using test::component::mockrunner::MockComponentSyncPtr;
 using testing::MockRunnerRegistry;
@@ -43,10 +43,10 @@ const char kComponentForRunner[] =
 const char kComponentForRunnerProcessName[] = "fake_component_for_runner.cmx";
 const char kNestedEnvLabel[] = "nested-environment";
 
-class RealmRunnerTest : public TestWithEnvironment {
+class RealmRunnerTest : public TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     auto services = CreateServices();
     ASSERT_EQ(ZX_OK, services->AddService(runner_registry_.GetHandler()));
     enclosing_environment_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
@@ -343,7 +343,7 @@ TEST_F(RealmRunnerTest, ValidateProgramMetadata) {
 class RealmRunnerServiceTest : public RealmRunnerTest {
  protected:
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     auto env_services = CreateServices();
     ASSERT_EQ(ZX_OK, env_services->AddService(runner_registry_.GetHandler()));
     ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(

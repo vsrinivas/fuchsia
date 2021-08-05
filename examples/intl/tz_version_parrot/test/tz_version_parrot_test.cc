@@ -6,7 +6,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -27,8 +27,8 @@ namespace {
 
 using fuchsia::sys::ComponentControllerPtr;
 using fuchsia::sys::LaunchInfo;
+using gtest::TestWithEnvironmentFixture;
 using sys::testing::TerminationResult;
-using sys::testing::TestWithEnvironment;
 
 constexpr char kParrotWithoutTzDataPackage[] =
     "fuchsia-pkg://fuchsia.com/tz_version_parrot#meta/tz_version_parrot.cmx";
@@ -40,16 +40,16 @@ constexpr char kParrotWithTzDataPackageWrongRevision[] =
     "fuchsia-pkg://fuchsia.com/tz_version_parrot#meta/"
     "tz_version_parrot_with_tzdata_wrong_revision.cmx";
 
-class TzVersionParrotTest : public TestWithEnvironment {
+class TzVersionParrotTest : public TestWithEnvironmentFixture {
  protected:
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     OpenNewOutFile();
   }
 
   void TearDown() override {
     CloseOutFile();
-    TestWithEnvironment::TearDown();
+    TestWithEnvironmentFixture::TearDown();
   }
 
   void OpenNewOutFile() {

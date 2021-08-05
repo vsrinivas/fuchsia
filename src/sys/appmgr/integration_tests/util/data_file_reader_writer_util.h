@@ -5,7 +5,7 @@
 #ifndef SRC_SYS_APPMGR_INTEGRATION_TESTS_UTIL_DATA_FILE_READER_WRITER_UTIL_H_
 #define SRC_SYS_APPMGR_INTEGRATION_TESTS_UTIL_DATA_FILE_READER_WRITER_UTIL_H_
 
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <string>
 
@@ -14,7 +14,7 @@
 namespace component {
 namespace testing {
 
-class DataFileReaderWriterUtil : virtual public sys::testing::TestWithEnvironment {
+class DataFileReaderWriterUtil : virtual public gtest::TestWithEnvironmentFixture {
  protected:
   fidl::StringPtr ReadFileSync(const test::appmgr::integration::DataFileReaderWriterPtr& util,
                                std::string path);

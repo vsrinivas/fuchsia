@@ -8,7 +8,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/utc.h>
 
@@ -111,7 +111,7 @@ class FactoryResetImpl : public fuchsia::recovery::FactoryReset {
   bool factory_reset_triggered_{false};
 };
 
-class FactoryResetTest : public sys::testing::TestWithEnvironment {
+class FactoryResetTest : public gtest::TestWithEnvironmentFixture {
  protected:
   explicit FactoryResetTest() {
     // Setup fake sound player and fake factory reset.

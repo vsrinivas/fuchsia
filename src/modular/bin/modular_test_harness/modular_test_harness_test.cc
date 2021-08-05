@@ -7,7 +7,7 @@
 #include <sdk/lib/modular/testing/cpp/test_harness_builder.h>
 #include <sdk/lib/modular/testing/cpp/test_harness_launcher.h>
 #include <sdk/lib/sys/cpp/service_directory.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
+#include <sdk/lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <src/modular/lib/modular_test_harness/cpp/fake_session_shell.h>
 #include <src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h>
 
@@ -45,7 +45,7 @@ TEST_F(ModularTestHarnessTest, DISABLED_SimpleSuccess) {
   RunLoopUntil([&] { return intercepted; });
 }
 
-class ModularTestHarnessDestructionTest : public sys::testing::TestWithEnvironment,
+class ModularTestHarnessDestructionTest : public gtest::TestWithEnvironmentFixture,
                                           protected modular_testing::FakeSessionShell {
  protected:
   ModularTestHarnessDestructionTest()

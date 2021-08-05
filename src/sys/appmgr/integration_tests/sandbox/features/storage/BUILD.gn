@@ -52,7 +52,7 @@ executable("isolated_persistent_storage_bin") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/util:data_file_reader_writer",
     "//src/sys/appmgr/integration_tests/util:data_file_reader_writer_util",

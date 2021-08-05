@@ -198,7 +198,7 @@ source_set("lib") {
   public_deps = [
     ":fake_netstack",
     ":fake_scenic",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/vsh:client",
     "//src/virtualization/third_party/vm_tools:vm_cc_proto",

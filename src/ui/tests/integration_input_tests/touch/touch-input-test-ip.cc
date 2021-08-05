@@ -22,7 +22,7 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -111,7 +111,7 @@ const std::vector<std::string> GlobalServices() {
           "fuchsia.scheduler.ProfileProvider"};
 }
 
-class TouchInputBase : public sys::testing::TestWithEnvironment,
+class TouchInputBase : public gtest::TestWithEnvironmentFixture,
                        public test::touch::ResponseListener {
  protected:
   struct LaunchableService {

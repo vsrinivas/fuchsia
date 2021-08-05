@@ -11,7 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <zircon/device/vfs.h>
 
 #include <gmock/gmock.h>
@@ -33,7 +33,7 @@ constexpr char kTestComponent[] =
     "sys_inspect_cpp.cmx";
 constexpr char kTestProcessName[] = "sys_inspect_cpp.cmx";
 
-class SysInspectTest : public sys::testing::TestWithEnvironment {
+class SysInspectTest : public gtest::TestWithEnvironmentFixture {
  protected:
   SysInspectTest() : executor_(dispatcher()) {
     fuchsia::sys::LaunchInfo launch_info;

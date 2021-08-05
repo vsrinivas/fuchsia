@@ -40,7 +40,7 @@ test("component_cpp_testing_unittests_bin") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl/test:gtest_main",
@@ -67,7 +67,7 @@ test("component_cpp_testing_tests_bin") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",

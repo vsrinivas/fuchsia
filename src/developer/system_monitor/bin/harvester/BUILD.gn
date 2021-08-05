@@ -150,7 +150,7 @@ executable("system_monitor_harvester_test") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

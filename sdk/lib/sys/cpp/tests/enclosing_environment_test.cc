@@ -9,7 +9,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/zx/vmo.h>
 #include <zircon/processargs.h>
 
@@ -69,7 +69,7 @@ class SocketReader {
   async::WaitMethod<SocketReader, &SocketReader::OnData> wait_;
 };
 
-class EnclosingEnvTest : public TestWithEnvironment {};
+class EnclosingEnvTest : public gtest::TestWithEnvironmentFixture {};
 
 TEST_F(EnclosingEnvTest, RespawnService) {
   auto svc = CreateServices();

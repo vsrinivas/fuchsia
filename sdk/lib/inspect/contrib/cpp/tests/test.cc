@@ -5,7 +5,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <regex>
 
@@ -73,7 +73,7 @@ const char CMX2_EXPECTED_DATA[] = R"JSON({
     "version": 1
 })JSON";
 
-class ArchiveReaderTest : public sys::testing::TestWithEnvironment {
+class ArchiveReaderTest : public gtest::TestWithEnvironmentFixture {
  protected:
   ArchiveReaderTest() : executor_(dispatcher()) {
     environment_ = CreateNewEnclosingEnvironment("test", CreateServices());

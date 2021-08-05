@@ -4,7 +4,6 @@
 
 #include "src/modular/lib/modular_config/modular_config.h"
 
-#include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
@@ -22,6 +21,7 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 // Creates the file at |path| in the directory with file descriptor |root_fd| with

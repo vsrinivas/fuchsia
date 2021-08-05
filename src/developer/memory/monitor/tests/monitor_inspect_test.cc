@@ -7,7 +7,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,7 +32,7 @@ constexpr char kTestComponent[] =
     "memory_monitor_test_app.cmx";
 constexpr char kTestProcessName[] = "memory_monitor_test_app.cmx";
 
-class InspectTest : public sys::testing::TestWithEnvironment {
+class InspectTest : public gtest::TestWithEnvironmentFixture {
  protected:
   InspectTest() : test_case_(::testing::UnitTest::GetInstance()->current_test_info()->name()) {
     auto env_services = sys::ServiceDirectory::CreateFromNamespace();

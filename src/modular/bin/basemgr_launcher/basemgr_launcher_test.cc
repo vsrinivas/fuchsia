@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 #include <src/lib/files/glob.h>
 
-#include "lib/sys/cpp/testing/test_with_environment.h"
+#include "lib/sys/cpp/testing/test_with_environment_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -18,7 +18,7 @@
 constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
 constexpr char kScenicGlobPath[] = "/hub/r/env/*/c/scenic.cmx";
 
-class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
+class BasemgrLauncherTest : public gtest::TestWithEnvironmentFixture {
  public:
   BasemgrLauncherTest()
       : interceptor_(sys::testing::ComponentInterceptor::CreateWithEnvironmentLoader(real_env())) {}

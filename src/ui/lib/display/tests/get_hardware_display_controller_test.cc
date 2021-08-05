@@ -7,7 +7,7 @@
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <gtest/gtest.h>
 
@@ -21,7 +21,7 @@ struct fake_context : fpromise::context {
   fpromise::suspended_task suspend_task() override { return fpromise::suspended_task(); }
 };
 
-class GetHardwareDisplayControllerTest : public sys::testing::TestWithEnvironment {};
+class GetHardwareDisplayControllerTest : public gtest::TestWithEnvironmentFixture {};
 
 TEST_F(GetHardwareDisplayControllerTest, ErrorCase) {
   auto promise = GetHardwareDisplayController();

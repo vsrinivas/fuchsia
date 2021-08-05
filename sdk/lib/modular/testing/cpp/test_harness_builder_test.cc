@@ -7,7 +7,7 @@
 #include <lib/modular/testing/cpp/fake_component.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <gmock/gmock.h>
 #include <rapidjson/document.h>

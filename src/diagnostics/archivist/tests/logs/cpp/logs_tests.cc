@@ -6,7 +6,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/wire_format.h>
@@ -104,7 +104,7 @@ bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback
   return true;
 }
 
-using LoggerIntegrationTest = sys::testing::TestWithEnvironment;
+using LoggerIntegrationTest = gtest::TestWithEnvironmentFixture;
 
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Make sure there is one syslog message coming from that pid and with a tag

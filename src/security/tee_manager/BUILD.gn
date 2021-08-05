@@ -71,7 +71,7 @@ source_set("test_common") {
   sources = [ "test/common.cc" ]
   public_deps = [
     "//sdk/fidl/fuchsia.tee",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/security/tee/tee-client-api",

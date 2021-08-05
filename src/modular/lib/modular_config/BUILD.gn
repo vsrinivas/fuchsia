@@ -76,7 +76,7 @@ source_set("unittests") {
     ":modular_config_constants",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
     "//src/modular/lib/pseudo_dir:pseudo_dir_utils",
     "//third_party/googletest:gtest",

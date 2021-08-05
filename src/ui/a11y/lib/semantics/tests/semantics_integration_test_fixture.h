@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <memory>
 
@@ -27,7 +27,7 @@ using fuchsia::accessibility::semantics::Node;
 // that use accessibility to connect to it. For components that are launched from the
 // tests it provides methods to create a presentation and view holder token and method
 // to retrieve the koid of a view launched by the test.
-class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
+class SemanticsIntegrationTest : public gtest::TestWithEnvironmentFixture {
  public:
   SemanticsIntegrationTest(const std::string& environment_label);
 

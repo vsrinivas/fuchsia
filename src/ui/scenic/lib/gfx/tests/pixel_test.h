@@ -8,7 +8,7 @@
 #include <fuchsia/ui/annotation/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/zx/time.h>
@@ -63,7 +63,7 @@ struct TestSession {
 
 // Test fixture that sets up an environment suitable for pixel tests and provides related utilities.
 // By default, the environment includes Scenic, RootPresenter, and their dependencies.
-class PixelTest : public sys::testing::TestWithEnvironment {
+class PixelTest : public gtest::TestWithEnvironmentFixture {
  protected:
   PixelTest(const std::string& environment_label);
 
