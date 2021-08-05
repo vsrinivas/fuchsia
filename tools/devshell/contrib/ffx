@@ -59,9 +59,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! ${found_target}; then
-  # Note: the quotes around get-device-pair are critical, if no fx default
+  # Note: the quotes around get-device-raw are critical, if no fx default
   # device is set, we explicitly want to pass "" here.
-  args=(--target "$(get-device-pair)" "${args[@]}")
+  args=(--target "$(get-device-raw)" "${args[@]}")
 fi
 
 if [[ "${args[*]}" =~ "target default" ]]; then
