@@ -231,6 +231,16 @@ mod tests {
             path = "/".to_string(),
             resource = None,
         }
+        test_parse_large_path_segments => {
+            url = format!(
+                "fuchsia-boot:///{}/{}/{}",
+                "a".repeat(255),
+                "b".repeat(255),
+                "c".repeat(255),
+            ),
+            path = format!("/{}/{}/{}", "a".repeat(255), "b".repeat(255), "c".repeat(255)),
+            resource = None,
+        }
     }
 
     test_parse_err! {
@@ -253,9 +263,9 @@ mod tests {
             ],
             err = ParseError::InvalidPath,
         }
-        test_parse_path_cannot_be_longer_than_100_chars => {
+        test_parse_path_cannot_be_longer_than_255_chars => {
             urls = [
-                "fuchsia-boot:///12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901/",
+                &format!("fuchsia-boot:///fuchsia.com/{}", "a".repeat(256)),
             ],
             err = ParseError::InvalidPath,
         }

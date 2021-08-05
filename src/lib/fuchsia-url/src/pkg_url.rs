@@ -557,6 +557,15 @@ mod tests {
             hash = None,
             resource = Some("foo\tbar"),
         }
+        test_parse_resource_can_have_large_segments => {
+            url = &format!("fuchsia-pkg://fuchsia.com/{}/{}", "a".repeat(255), "b".repeat(255)),
+            host = "fuchsia.com",
+            path = &format!("/{}/{}", "a".repeat(255), "b".repeat(255)),
+            name = &"a".repeat(255),
+            variant = Some("b".repeat(255).as_str()),
+            hash = None,
+            resource = None,
+        }
     }
 
     test_parse_err! {
@@ -572,9 +581,9 @@ mod tests {
             ],
             err = ParseError::InvalidName,
         }
-        test_parse_name_cannot_be_longer_than_100_chars => {
+        test_parse_name_cannot_be_longer_than_255_chars => {
             urls = [
-                "fuchsia-pkg://fuchsia.com/12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901/",
+                &format!("fuchsia-pkg://fuchsia.com/{}", "a".repeat(256)),
             ],
             err = ParseError::InvalidName,
         }

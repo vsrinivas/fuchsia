@@ -6,10 +6,10 @@ fn lowercase_alphanumeric(b: u8) -> bool {
     (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'z')
 }
 
-/// Check if a string conforms to r"^[0-9a-z\-\._]{1,100}$"
+/// Check if a string conforms to r"^[0-9a-z\-\._]{1,255}$"
 pub fn is_name(string: &str) -> bool {
     let len = string.len();
-    if len == 0 || len > 100 {
+    if len == 0 || len > 255 {
         return false;
     }
     string.bytes().all(|b| lowercase_alphanumeric(b) || b == b'-' || b == b'.' || b == b'_')
@@ -46,8 +46,8 @@ mod test {
         assert!(!is_name("foo!*&$4738-._foo421"), "other characters disallowed");
         assert!(!is_name(""), "empty disallowed");
         assert!(is_name("x"), "length one allowed");
-        assert!(is_name(&*"x".repeat(100)), "length 100 allowed");
-        assert!(!is_name(&*"x".repeat(101)), "length 101 disallowed");
+        assert!(is_name(&*"x".repeat(255)), "length 255 allowed");
+        assert!(!is_name(&*"x".repeat(256)), "length 256 disallowed");
     }
 
     #[test]

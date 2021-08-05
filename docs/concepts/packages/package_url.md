@@ -84,7 +84,7 @@ software artifacts (files). The package name is used to locate package metadata
 within a repository. Package metadata must be signed by a role which is trusted by
 the repository root.
 
-A package name consists of a sequence of up to 100 of the following latin-1
+A package name consists of a sequence of up to 255 of the following latin-1
 characters in any order:
 
 * Digits (`0` to `9`)
