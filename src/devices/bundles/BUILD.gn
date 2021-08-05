@@ -6,9 +6,9 @@
 group("drivers") {
   testonly = true
   deps = [
-    "//src/devices/bin/driver-index:fake-driver",
-    "//src/devices/bin/driver-index:fake-driver2",
-    "//src/devices/bin/driver_host:driver-host-restart-driver-driver",
+    "//src/devices/bin/driver-index:test-bind-component",
+    "//src/devices/bin/driver-index:test-bind2-component",
+    "//src/devices/bin/driver_host:driver-host-restart-driver",
     "//src/devices/bin/driver_host:driver-host-test-child-driver",
     "//src/devices/bin/driver_host:driver-host-test-driver",
     "//src/devices/bin/driver_host:unit-test-fail",

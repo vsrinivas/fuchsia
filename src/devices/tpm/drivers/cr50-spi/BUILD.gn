@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("cr50-spi_bind") {
@@ -29,9 +30,14 @@ common_deps = [
   "//zircon/system/ulib/zx",
 ]
 
-driver_module("cr50-spi-driver") {
+driver_module("driver_module") {
+  output_name = "cr50-spi-driver"
   sources = [ "cr50-spi.cc" ]
   deps = common_deps
+}
+
+fuchsia_driver_component("cr50-spi-driver") {
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("cr50-spi-pkg") {

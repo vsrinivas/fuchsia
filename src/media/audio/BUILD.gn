@@ -21,9 +21,9 @@ group("audio") {
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/aml-g12-pdm:aml-g12-pdm-driver",
+    "drivers/aml-g12-pdm:aml-g12-pdm",
     "drivers/aml-g12-tdm",
-    "drivers/aml-g12-tdm:aml-g12-tdm-dai-driver",
+    "drivers/aml-g12-tdm:aml-g12-tdm-dai",
     "drivers/codecs/alc5514",
     "drivers/codecs/alc5663",
     "drivers/codecs/max98373",

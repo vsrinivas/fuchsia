@@ -10,7 +10,7 @@ group("drivers") {
     "drivers/asix-88772b",
     "drivers/dwmac",
     "drivers/ethernet",
-    "drivers/ethernet/netdevice-migration:netdevice-migration-driver",
+    "drivers/ethernet/netdevice-migration:netdevice-migration",
     "drivers/ethertap",
     "drivers/realtek-8211f",
     "drivers/rndis-function",

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 # Defines a controller driver
 #
@@ -62,6 +63,11 @@ template("camera_controller_driver") {
     configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   }
 
+  driver_component_target = "${package_name}_driver_component"
+  fuchsia_driver_component(driver_component_target) {
+    deps = [ ":${driver_target}" ]
+  }
+
   if (defined(invoker.gdc_config_files)) {
     resource("firmware-configs-$target_name") {
       sources = []
@@ -89,7 +95,7 @@ template("camera_controller_driver") {
   }
 
   fuchsia_system_package(package_name) {
-    deps = [ ":${driver_target}" ]
+    deps = [ ":${driver_component_target}" ]
 
     if (defined(invoker.gdc_config_files)) {
       deps += [ ":firmware-configs-$package_name" ]

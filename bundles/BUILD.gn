@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/drivers/assert_driver_components.gni")
 import("//build/drivers/check_included_drivers.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -187,13 +188,13 @@ check_included_drivers("drivers-build-only") {
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
     "//src/devices/bundles:drivers",
-    "//src/diagnostics/validator/logs/ddk/log-test-driver:log-test-driver-driver",
+    "//src/diagnostics/validator/logs/ddk/log-test-driver",
     "//src/graphics/bundles:drivers",
     "//src/lib/isolated_devmgr:crash-device",
     "//src/media/bundles:drivers",
-    "//src/storage/fvm/driver:driver_module",
+    "//src/storage/fvm/driver:driver",
     "//src/ui/bundles:drivers",
-    "//tools/create/goldens/my-driver-cpp:driver",
+    "//tools/create/goldens/my-driver-cpp:component",
     "//zircon/third_party/dev/ethernet/e1000:e1000",
   ]
 }

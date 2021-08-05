@@ -25,7 +25,7 @@ group("tests") {
 group("drivers") {
   deps = [
     "drivers/bus/aml_mipicsi:aml_mipicsi_driver",
-    "drivers/controller/sherlock:sherlock-camera-controller_driver",
+    "drivers/controller/sherlock:sherlock-camera-controller",
     "drivers/hw_accel/gdc:driver",
     "drivers/hw_accel/ge2d:ge2d-driver",
     "drivers/sensors/imx227:driver",

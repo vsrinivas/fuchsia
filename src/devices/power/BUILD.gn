@@ -6,12 +6,12 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-meson-power",
-    "drivers/aml-pwm-regulator:aml-pwm-regulator-driver",
-    "drivers/fusb302:fusb302-driver",
-    "drivers/nelson-brownout-protection:nelson-brownout-protection-driver",
+    "drivers/aml-pwm-regulator:aml-pwm-regulator",
+    "drivers/fusb302:fusb302",
+    "drivers/nelson-brownout-protection:nelson-brownout-protection",
     "drivers/power",
     "drivers/silergy:sy-buck",
-    "drivers/ti-ina231:ti-ina231-driver",
+    "drivers/ti-ina231:ti-ina231",
   ]
 }
 

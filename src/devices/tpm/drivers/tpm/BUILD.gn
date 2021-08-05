@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("tpm_bind") {
@@ -25,9 +26,14 @@ common_deps = [
   "//zircon/system/ulib/zx",
 ]
 
-driver_module("tpm-driver") {
+driver_module("driver_module") {
+  output_name = "tpm-driver"
   sources = [ "tpm.cc" ]
   deps = common_deps
+}
+
+fuchsia_driver_component("tpm-driver") {
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("tpm-pkg") {

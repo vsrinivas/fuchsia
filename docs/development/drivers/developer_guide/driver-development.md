@@ -20,7 +20,7 @@ implements an ethernet protocol. However, drivers that implement the USB stack
 are in [//src/devices/usb/drivers/](/src/devices/usb/drivers) because they
 implement USB protocols.
 
-In the driver's `BUILD.gn`, there should be a `driver_module` target. In order
+In the driver's `BUILD.gn`, there should be a `fuchsia_driver_component` target. In order
 to get a driver to show up under `/boot/driver`, it should be included as under
 the `board_bootfs_labels` list in the relevant board file(s) under //boards. In
 order to get it to show up inside of `/system/driver` it should be added to the
@@ -41,14 +41,17 @@ This will create the directory `<PATH>` containing an empty driver where the
 last segment of `<PATH>` is the driver name and GN target name. After this
 command is run, the following steps need to be followed:
 
-1) Include the `driver_module` or `driver_package` build target in the correct
-place to get your driver included into the system. - For packaged drivers the
+1) Include the `fuchsia_driver_component` or `driver_package` build target in the correct
+place to get your driver included into the system.
+- For packaged drivers the
 `driver_package` build target should be added to the relevant board file in
-`//boards` or `//vendor/<foo>/boards` to a `xx_package_labels` GN argument. -
-For boot drivers the `driver_module` build target should be added to the
+`//boards` or `//vendor/<foo>/boards` to a `xx_package_labels` GN argument.
+- For boot drivers the `fuchsia_driver_component` build target should be added to the
 relevant board file in `//boards` or `//vendor/<foo>/boards` to the
-`board_bootfs_labels` GN argument. 2) Include the `tests` build target in the
-`<PATH>:tests` build target to get your tests included in CQ. 3) Add proper bind
+`board_bootfs_labels` GN argument.
+2) Include the `tests` build target in the
+`<PATH>:tests` build target to get your tests included in CQ.
+3) Add proper bind
 rules in `<NAME>.bind`. 4) Write the functionality for the driver.
 
 ## Declaring a driver

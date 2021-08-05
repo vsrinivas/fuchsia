@@ -7,7 +7,7 @@ group("drivers") {
   deps = [
     "drivers/builtin",
     "drivers/cpu-trace",
-    "drivers/packaged:lib",
+    "drivers/packaged:component",
     "drivers/test",
     "drivers/test-parent:test-parent-sys",
     "drivers/virtio-rng:virtio_rng",

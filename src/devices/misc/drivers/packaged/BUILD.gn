@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("packaged") {
   deps = [ ":package" ]
@@ -19,7 +20,7 @@ driver_module("lib") {
   ]
 }
 
-fuchsia_component("component") {
+fuchsia_driver_component("component") {
   component_name = "packaged_driver"
   manifest = "meta/packaged_driver.cml"
   deps = [ ":lib" ]

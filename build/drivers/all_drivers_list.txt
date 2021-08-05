@@ -29,10 +29,10 @@
 //src/connectivity/ethernet/drivers/usb-cdc-function:usb-cdc-function-driver
 //src/connectivity/ethernet/drivers/virtio:virtio_ethernet-driver
 //src/connectivity/network/drivers/network-device:network-device-driver
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis-mfg
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock-mfg
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis-mfg_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock-mfg_driver
 //src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver-driver
 //src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver
 //src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver-driver
@@ -48,8 +48,8 @@
 //src/connectivity/wlan/testing/wlantap-driver:wlantap_driver-driver
 //src/devices/bin/driver-index:fake-driver
 //src/devices/bin/driver-index:fake-driver2
-//src/devices/bin/driver_host2:test_driver
-//src/devices/bin/driver_host2:test_not_driver
+//src/devices/bin/driver_host2:test_driver_driver
+//src/devices/bin/driver_host2:test_not_driver_driver
 //src/devices/bin/driver_host:driver-host-restart-driver-driver
 //src/devices/bin/driver_host:driver-host-test-child-driver-driver
 //src/devices/bin/driver_host:driver-host-test-driver-driver
@@ -133,7 +133,7 @@
 //src/devices/misc/drivers/builtin:builtin-driver
 //src/devices/misc/drivers/cpu-trace:cpu-trace-driver
 //src/devices/misc/drivers/packaged:lib
-//src/devices/misc/drivers/test-parent:test-parent-sys
+//src/devices/misc/drivers/test-parent:test-parent-sys_driver
 //src/devices/misc/drivers/test:test-driver
 //src/devices/misc/drivers/virtio-rng:virtio_rng-driver
 //src/devices/misc/drivers/virtio-socket:virtio_socket-driver
@@ -141,7 +141,7 @@
 //src/devices/ml/drivers/usb-harriet:usb-harriet-driver
 //src/devices/nand/drivers/aml-rawnand:aml-rawnand-driver
 //src/devices/nand/drivers/broker:nand-broker-driver
-//src/devices/nand/drivers/intel-spi-flash:driver
+//src/devices/nand/drivers/intel-spi-flash:driver_module
 //src/devices/nand/drivers/nand:nand-driver
 //src/devices/nand/drivers/nandpart:nandpart-driver
 //src/devices/nand/drivers/ram-nand:ram-nand-driver
@@ -175,7 +175,7 @@
 //src/devices/serial/drivers/virtio-console:virtio_console-driver
 //src/devices/spi/drivers/aml-spi:aml-spi-driver
 //src/devices/spi/drivers/dw-spi:dw-spi-driver
-//src/devices/spi/drivers/intel-gspi:driver
+//src/devices/spi/drivers/intel-gspi:driver_module
 //src/devices/spi/drivers/spi:spi-driver
 //src/devices/sysmem/drivers/sysmem:sysmem-driver
 //src/devices/tee/drivers/optee:optee-driver
@@ -208,8 +208,8 @@
 //src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-driver
 //src/devices/thermal/drivers/aml-thermal-s912:aml-thermal-s912-driver
 //src/devices/thermal/drivers/aml-thermistor:aml-thermistor-driver
-//src/devices/tpm/drivers/cr50-spi:cr50-spi-driver
-//src/devices/tpm/drivers/tpm:tpm-driver
+//src/devices/tpm/drivers/cr50-spi:driver_module
+//src/devices/tpm/drivers/tpm:driver_module
 //src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-v2-driver
 //src/devices/usb/drivers/dwc2:dwc2-driver
 //src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-driver

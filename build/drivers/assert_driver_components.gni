@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Asserts that there are no dependencies on driver_module targets
+# unless it's an indirect dependency through the fuchsia_driver_component
+# target. In other words, asserts that all driver_module targets are
+# being used through a fuchsia_driver_component. This shows that there
+# aren't any drivers that are missing a component manifest.
+#
+# Parameters
+#   deps
+#   testonly
+#   visibility
+template("assert_driver_components") {
+  metadata_check_target = "${target_name}_metadata_check"
+  metadata_check_output = "${target_gen_dir}/${target_name}_metadata_output"
+  generated_file(metadata_check_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    outputs = [ metadata_check_output ]
+    deps = invoker.deps
+    data_keys = [ "driver_module_labels" ]
+    walk_keys = [ "driver_component_barrier" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${metadata_check_target}" ]
+    script = "//build/drivers/assert_driver_components.py"
+    inputs = [ metadata_check_output ]
+    outputs = [ "${target_out_dir}/${target_name}_assert_driver_components" ]
+    args = [
+      "--metadata_file",
+      rebase_path(metadata_check_output, root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+  }
+}

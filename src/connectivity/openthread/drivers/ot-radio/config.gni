@@ -7,6 +7,7 @@ import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 template("ot_radio_driver") {
   forward_variables_from(invoker,
@@ -23,7 +24,7 @@ template("ot_radio_driver") {
   }
 
   driver_suffix = target_name
-  driver_module("ot-radio-${driver_suffix}") {
+  driver_module("ot-radio-${driver_suffix}_driver") {
     output_name = "ot-radio-driver-${driver_suffix}"
 
     sources = [
@@ -64,6 +65,10 @@ template("ot_radio_driver") {
 
       deps += [ ":version-string-${driver_suffix}" ]
     }
+  }
+
+  fuchsia_driver_component("ot-radio-${driver_suffix}") {
+    deps = [ ":ot-radio-${driver_suffix}_driver" ]
   }
 
   if (internal_access) {

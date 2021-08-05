@@ -3,10 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/config/zircon/standard.gni")
+import("//build/drivers/assert_driver_components.gni")
 
 # Checks that all drivers that exist in the dependencies are in the allowlist
 # given at //build/drivers/all_drivers_list.txt. This will ignore any drivers
 # that are in //vendor/*.
+#
+# This also checks that all drivers included are driver components.
+# For more information on this check see //build/drivers/assert_drivers_components.gni
 #
 # Parameters
 #   contains_all_drivers (optional)
@@ -18,6 +22,15 @@ import("//build/config/zircon/standard.gni")
 #   deps
 #   testonly
 template("check_included_drivers") {
+  assert_driver_components_target = "${target_name}_assert_driver_components"
+  assert_driver_components(assert_driver_components_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                           ])
+  }
+
   metadata_check_target = "${target_name}_metadata_check"
   metadata_check_output = "${target_gen_dir}/${target_name}_metadata_output"
   generated_file(metadata_check_target) {
@@ -32,7 +45,10 @@ template("check_included_drivers") {
 
   action(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [ ":${metadata_check_target}" ]
+    deps = [
+      ":${assert_driver_components_target}",
+      ":${metadata_check_target}",
+    ]
     script = "//build/drivers/check_included_drivers.py"
     inputs = [
       metadata_check_output,

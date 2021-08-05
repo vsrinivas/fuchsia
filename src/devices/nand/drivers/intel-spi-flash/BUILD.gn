@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("intel_spi_flash_bind") {
@@ -39,7 +40,7 @@ common_deps = [
   "//zircon/third_party/ulib/safemath",
 ]
 
-driver_module("driver") {
+driver_module("driver_module") {
   output_name = "intel-spi-flash"
   configs += [
     "//build/config:all_source",
@@ -47,6 +48,11 @@ driver_module("driver") {
   ]
   deps = common_deps
   sources = [ "intel-spi-flash.cc" ]
+}
+
+fuchsia_driver_component("driver") {
+  component_name = "intel-spi-flash"
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("intel-spi-flash") {

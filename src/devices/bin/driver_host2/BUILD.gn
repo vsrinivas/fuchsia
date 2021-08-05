@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/component_manifest_resources.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 
 group("driver_host2") {
@@ -42,11 +44,17 @@ fidl("fuchsia.driverhost.test") {
   sources = [ "driver_host.test.fidl" ]
 }
 
-driver_module("test_driver") {
+driver_bind_rules("bind") {
+  disable_autobind = true
+}
+
+driver_module("test_driver_driver") {
+  output_name = "test_driver"
   testonly = true
   sources = [ "driver_host_test_driver.cc" ]
 
   deps = [
+    ":bind",
     ":fuchsia.driverhost.test_llcpp",
     "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
@@ -55,8 +63,21 @@ driver_module("test_driver") {
   ]
 }
 
-driver_module("test_not_driver") {
+fuchsia_driver_component("test_driver") {
   testonly = true
+  deps = [ ":test_driver_driver" ]
+}
+
+driver_module("test_not_driver_driver") {
+  testonly = true
+  deps = [ ":bind" ]
+
+  output_name = "test_not_driver"
+}
+
+fuchsia_driver_component("test_not_driver") {
+  testonly = true
+  deps = [ ":test_not_driver_driver" ]
 }
 
 executable("unittests") {
