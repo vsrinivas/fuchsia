@@ -187,9 +187,6 @@ class Arena : public AnyArena {
   alignas(FIDL_ALIGNMENT) uint8_t initial_buffer_[initial_capacity];
 };
 
-// TODO(fxbug.dev/79032): Remove this after migrating non-fuchsia.git usages.
-using FidlAllocator = Arena<512>;
-
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_ARENA_H_
