@@ -542,19 +542,19 @@ zx_status_t AmlG12TdmStream::AddFormats() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Add the range for basic audio support.
-  audio_stream_format_range_t range = {};
+  SimpleAudioStream::SupportedFormat format = {};
 
-  range.min_channels = metadata_.ring_buffer.number_of_channels;
-  range.max_channels = metadata_.ring_buffer.number_of_channels;
+  format.range.min_channels = metadata_.ring_buffer.number_of_channels;
+  format.range.max_channels = metadata_.ring_buffer.number_of_channels;
   ZX_ASSERT(metadata_.ring_buffer.bytes_per_sample == 2);
-  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
 
   for (auto& i : AmlTdmConfigDevice::kSupportedFrameRates) {
-    range.min_frames_per_second = i;
-    range.max_frames_per_second = i;
-    range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
-    supported_formats_.push_back(range);
+    format.range.min_frames_per_second = i;
+    format.range.max_frames_per_second = i;
+    format.range.flags =
+        ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
+    supported_formats_.push_back(std::move(format));
   }
 
   return ZX_OK;

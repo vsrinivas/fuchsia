@@ -347,9 +347,9 @@ zx_status_t Vim2SpdifAudioStream::CreateFormatList() {
     range.min_frames_per_second = std::max(MIN_SUPPORTED_RATE, range.min_frames_per_second);
 
     fbl::AllocChecker ac;
-    audio_stream_format_range_t temp_range;
-    audio::audio_stream_format_fidl_from_banjo(range, &temp_range);
-    supported_formats_.push_back(temp_range, &ac);
+    SimpleAudioStream::SupportedFormat format = {};
+    audio::audio_stream_format_fidl_from_banjo(range, &format.range);
+    supported_formats_.push_back(format, &ac);
     if (!ac.check()) {
       zxlogf(ERROR, "Out of memory attempting to construct supported format list.");
       return ZX_ERR_NO_MEMORY;

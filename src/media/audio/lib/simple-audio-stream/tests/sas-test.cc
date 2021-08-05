@@ -81,15 +81,24 @@ class MockSimpleAudio : public SimpleAudioStream {
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
-    audio_stream_format_range_t range = {};
-    range.min_channels = kTestNumberOfChannels;
-    range.max_channels = kTestNumberOfChannels;
-    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = kTestFrameRate;
-    range.max_frames_per_second = kTestFrameRate;
-    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+    SimpleAudioStream::SupportedFormat format = {};
+    format.range.min_channels = kTestNumberOfChannels;
+    format.range.max_channels = kTestNumberOfChannels;
+    format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    format.range.min_frames_per_second = kTestFrameRate;
+    format.range.max_frames_per_second = kTestFrameRate;
+    format.range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
-    supported_formats_.push_back(range);
+    format.frequency_ranges.push_back({
+        .min_frequency = 40,
+        .max_frequency = 3'000,
+    });
+    format.frequency_ranges.push_back({
+        .min_frequency = 3'000,
+        .max_frequency = 25'000,
+    });
+
+    supported_formats_.push_back(std::move(format));
 
     fifo_depth_ = kTestFifoDepth;
     clock_domain_ = kTestClockDomain;
@@ -403,6 +412,14 @@ TEST_F(SimpleAudioTest, Enumerate1) {
   ASSERT_EQ(2, formats.bytes_per_sample()[0]);
   ASSERT_EQ(1, formats.valid_bits_per_sample().count());
   ASSERT_EQ(16, formats.valid_bits_per_sample()[0]);
+
+  auto& channels_attributes = formats.channel_sets()[0].attributes();
+  ASSERT_EQ(2, channels_attributes.count());
+  ASSERT_EQ(40, channels_attributes[0].min_frequency());
+  ASSERT_EQ(3'000, channels_attributes[0].max_frequency());
+  ASSERT_EQ(3'000, channels_attributes[1].min_frequency());
+  ASSERT_EQ(25'000, channels_attributes[1].max_frequency());
+
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();
@@ -414,24 +431,25 @@ TEST_F(SimpleAudioTest, Enumerate2) {
     zx_status_t Init() __TA_REQUIRES(domain_token()) override {
       auto status = MockSimpleAudio::Init();
 
-      audio_stream_format_range_t range1 = {};
-      audio_stream_format_range_t range2 = {};
+      SimpleAudioStream::SupportedFormat format1 = {};
+      SimpleAudioStream::SupportedFormat format2 = {};
 
-      range1.min_channels = 2;
-      range1.max_channels = 4;
-      range1.sample_formats = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
-      range1.min_frames_per_second = 48'000;
-      range1.max_frames_per_second = 768'000;
-      range1.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+      format1.range.min_channels = 2;
+      format1.range.max_channels = 4;
+      format1.range.sample_formats = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+      format1.range.min_frames_per_second = 48'000;
+      format1.range.max_frames_per_second = 768'000;
+      format1.range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
-      range2.min_channels = 1;
-      range2.max_channels = 1;
-      range2.sample_formats = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
-      range2.min_frames_per_second = 88'200;
-      range2.max_frames_per_second = 88'200;
-      range2.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;  // Ok only because min and max fps are equal.
+      format2.range.min_channels = 1;
+      format2.range.max_channels = 1;
+      format2.range.sample_formats = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
+      format2.range.min_frames_per_second = 88'200;
+      format2.range.max_frames_per_second = 88'200;
+      format2.range.flags =
+          ASF_RANGE_FLAG_FPS_CONTINUOUS;  // Ok only because min and max fps are equal.
 
-      supported_formats_ = fbl::Vector<audio_stream_format_range_t>{range1, range2};
+      supported_formats_ = fbl::Vector<SupportedFormat>{format1, format2};
       return status;
     }
   };
@@ -520,14 +538,15 @@ TEST_F(SimpleAudioTest, CreateRingBuffer2) {
   struct MockSimpleAudioLocal : public MockSimpleAudio {
     MockSimpleAudioLocal(zx_device_t* parent) : MockSimpleAudio(parent) {}
     zx_status_t Init() __TA_REQUIRES(domain_token()) override {
-      audio_stream_format_range_t range = {};
-      range.min_channels = 1;
-      range.max_channels = 4;
-      range.sample_formats = AUDIO_SAMPLE_FORMAT_24BIT_IN32 | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
-      range.min_frames_per_second = 22050;
-      range.max_frames_per_second = 88200;
-      range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
-      supported_formats_.push_back(range);
+      SimpleAudioStream::SupportedFormat format = {};
+      format.range.min_channels = 1;
+      format.range.max_channels = 4;
+      format.range.sample_formats =
+          AUDIO_SAMPLE_FORMAT_24BIT_IN32 | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
+      format.range.min_frames_per_second = 22050;
+      format.range.max_frames_per_second = 88200;
+      format.range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
+      supported_formats_.push_back(std::move(format));
       return MockSimpleAudio::Init();
     }
   };

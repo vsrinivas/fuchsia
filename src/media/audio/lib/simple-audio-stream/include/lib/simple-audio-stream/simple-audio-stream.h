@@ -284,10 +284,18 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void SetTurnOnDelay(int64_t turn_on_delay) __TA_REQUIRES(domain_token()) {
     turn_on_delay_nsec_ = turn_on_delay;
   }
+  struct FrequencyRange {
+    uint32_t min_frequency;
+    uint32_t max_frequency;
+  };
 
+  struct SupportedFormat {
+    audio_stream_format_range_t range;
+    std::vector<FrequencyRange> frequency_ranges;
+  };
   // State and capabilities which need to be established and maintained by the
   // driver implementation.
-  fbl::Vector<audio_stream_format_range_t> supported_formats_ __TA_GUARDED(domain_token());
+  fbl::Vector<SupportedFormat> supported_formats_ __TA_GUARDED(domain_token());
   audio_proto::GainState cur_gain_state_ __TA_GUARDED(domain_token());
   audio_stream_unique_id_t unique_id_ __TA_GUARDED(domain_token()) = {};
   char mfr_name_[64] __TA_GUARDED(domain_token()) = {};

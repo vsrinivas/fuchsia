@@ -337,7 +337,7 @@ void SimpleAudioStream::CreateRingBuffer(
   for (const auto& fmt : supported_formats_) {
     if (audio::utils::FormatIsCompatible(pcm_format.frame_rate,
                                          static_cast<uint16_t>(pcm_format.number_of_channels),
-                                         sample_format, fmt)) {
+                                         sample_format, fmt.range)) {
       found_one = true;
       break;
     }
@@ -571,6 +571,7 @@ void SimpleAudioStream::GetSupportedFormats(
     fidl::WireServer<audio_fidl::StreamConfig>::GetSupportedFormatsCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
+  bool ranges_with_one_number_of_channels = true;
   // Build formats compatible with FIDL from a vector of audio_stream_format_range_t.
   // Needs to be alive until the reply is sent.
   struct FidlCompatibleFormats {
@@ -579,27 +580,40 @@ void SimpleAudioStream::GetSupportedFormats(
     fbl::Vector<uint32_t> frame_rates;
     fbl::Vector<uint8_t> valid_bits_per_sample;
     fbl::Vector<uint8_t> bytes_per_sample;
+    fbl::Vector<FrequencyRange> frequency_ranges;
   };
   fbl::Vector<FidlCompatibleFormats> fidl_compatible_formats;
-  for (audio_stream_format_range_t& i : supported_formats_) {
-    std::vector<utils::Format> formats = audio::utils::GetAllFormats(i.sample_formats);
+  for (SupportedFormat& i : supported_formats_) {
+    std::vector<utils::Format> formats = audio::utils::GetAllFormats(i.range.sample_formats);
     ZX_ASSERT(formats.size() >= 1);
     for (utils::Format& j : formats) {
       fbl::Vector<uint32_t> rates;
       // Ignore flags if min and max are equal.
-      if (i.min_frames_per_second == i.max_frames_per_second) {
-        rates.push_back(i.min_frames_per_second);
+      if (i.range.min_frames_per_second == i.range.max_frames_per_second) {
+        rates.push_back(i.range.min_frames_per_second);
       } else {
-        ZX_ASSERT(!(i.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
-        audio::utils::FrameRateEnumerator enumerator(i);
+        ZX_ASSERT(!(i.range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS));
+        audio::utils::FrameRateEnumerator enumerator(i.range);
         for (uint32_t rate : enumerator) {
           rates.push_back(rate);
         }
       }
 
       fbl::Vector<uint8_t> number_of_channels;
-      for (uint8_t j = i.min_channels; j <= i.max_channels; ++j) {
-        number_of_channels.push_back(j);
+      for (uint8_t k = i.range.min_channels; k <= i.range.max_channels; ++k) {
+        number_of_channels.push_back(k);
+      }
+      if (i.range.min_channels != i.range.max_channels) {
+        ranges_with_one_number_of_channels = false;
+      }
+
+      const size_t n_frequencies = i.frequency_ranges.size();
+      fbl::Vector<FrequencyRange> frequency_ranges;
+      for (size_t k = 0; k < n_frequencies; ++k) {
+        frequency_ranges.push_back({
+            .min_frequency = i.frequency_ranges[k].min_frequency,
+            .max_frequency = i.frequency_ranges[k].max_frequency,
+        });
       }
 
       fidl_compatible_formats.push_back({
@@ -608,6 +622,7 @@ void SimpleAudioStream::GetSupportedFormats(
           .frame_rates = std::move(rates),
           .valid_bits_per_sample = {j.valid_bits_per_sample},
           .bytes_per_sample = {j.bytes_per_sample},
+          .frequency_ranges = std::move(frequency_ranges),
       });
     }
   }
@@ -627,6 +642,15 @@ void SimpleAudioStream::GetSupportedFormats(
     for (uint8_t j = 0; j < src.number_of_channels.size(); ++j) {
       fidl::VectorView<audio_fidl::wire::ChannelAttributes> attributes(allocator,
                                                                        src.number_of_channels[j]);
+      if (src.frequency_ranges.size()) {
+        ZX_ASSERT_MSG(ranges_with_one_number_of_channels,
+                      "must have only one number_of_channels for frequency ranges usage");
+        for (uint8_t k = 0; k < src.number_of_channels[j]; ++k) {
+          attributes[k].Allocate(allocator);
+          attributes[k].set_min_frequency(allocator, src.frequency_ranges[k].min_frequency);
+          attributes[k].set_max_frequency(allocator, src.frequency_ranges[k].max_frequency);
+        }
+      }
       channel_sets[j].Allocate(allocator);
       channel_sets[j].set_attributes(allocator, std::move(attributes));
     }

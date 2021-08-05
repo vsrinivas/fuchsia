@@ -152,14 +152,14 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
-    audio_stream_format_range_t range;
-    range.min_channels = 2;
-    range.max_channels = 4;
-    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = 8'000;
-    range.max_frames_per_second = 96'000;
-    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-    supported_formats_.push_back(range);
+    SimpleAudioStream::SupportedFormat format = {};
+    format.range.min_channels = 2;
+    format.range.max_channels = 4;
+    format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    format.range.min_frames_per_second = 8'000;
+    format.range.max_frames_per_second = 96'000;
+    format.range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+    supported_formats_.push_back(std::move(format));
 
     fifo_depth_ = 16;
 
@@ -1434,14 +1434,14 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
-    audio_stream_format_range_t range;
-    range.min_channels = 2;
-    range.max_channels = 2;
-    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = 48'000;
-    range.max_frames_per_second = 96'000;
-    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-    supported_formats_.push_back(range);
+    SimpleAudioStream::SupportedFormat format = {};
+    format.range.min_channels = 2;
+    format.range.max_channels = 2;
+    format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    format.range.min_frames_per_second = 48'000;
+    format.range.max_frames_per_second = 96'000;
+    format.range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+    supported_formats_.push_back(std::move(format));
 
     fifo_depth_ = 16;
 
