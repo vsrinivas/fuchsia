@@ -2,11 +2,10 @@
 
 <<../_v2_banner.md>>
 
-A [realm](/docs/glossary#realm) is a subtree of the
-[component instance tree][topology-instance-tree]. Every
-[component instance](/docs/glossary#component) is the root instance of a realm,
-known as the "component instance's realm", which is closely associated with the
-component instance.
+A [glossary.realm] is the term for any [glossary.component] and its
+[children][glossary.child-component-instance]. In other words, realm is another
+word for any sub-tree of the
+[component instance tree][glossary.component-instance-tree].
 
 Component instances may contain [children](#child-component-instances). Each
 [child component instance](/docs/glossary#child-component-instance) in turn
