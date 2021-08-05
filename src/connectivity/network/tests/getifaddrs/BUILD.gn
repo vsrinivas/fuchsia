@@ -9,7 +9,10 @@ test("getifaddrs-test") {
   if (is_linux || is_fuchsia) {
     sources = [ "getifaddrs_test.cc" ]
   }
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
 }
 
 fuchsia_component("getifaddrs-test-component") {

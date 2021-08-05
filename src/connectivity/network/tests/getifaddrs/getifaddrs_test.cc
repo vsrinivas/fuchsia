@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace {
@@ -60,15 +61,13 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
   want_ifaddrs.push_back(std::make_tuple("ep4", "1234::5:6:7:8", 120, 0, IFF_UP | IFF_RUNNING));
 #endif
 
-  struct ifaddrs* ifaddr;
-  ASSERT_EQ(getifaddrs(&ifaddr), 0) << strerror(errno);
-
-  std::vector<InterfaceAddress> got_ifaddrs;
+  std::vector<InterfaceAddress> unknown_link_local_addrs, other_addrs;
   constexpr size_t link_local_addrs_per_external_interface = 1;
   const size_t want_unknown_link_local_addrs =
       link_local_addrs_per_external_interface * (want_ifaddrs.size() - lo_addrs_count);
-  size_t got_unknown_link_local_addrs = 0;
 
+  struct ifaddrs* ifaddr;
+  ASSERT_EQ(getifaddrs(&ifaddr), 0) << strerror(errno);
   for (auto it = ifaddr; it != nullptr; it = it->ifa_next) {
     const auto if_name = std::string(it->ifa_name);
 #if defined(__linux__)
@@ -89,7 +88,7 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
         const uint8_t prefix_len =
             count_prefix(reinterpret_cast<const uint8_t*>(&netmask->sin_addr.s_addr), 4);
 
-        got_ifaddrs.push_back(std::make_tuple(if_name, std::string(sin_addr), prefix_len, 0,
+        other_addrs.push_back(std::make_tuple(if_name, std::string(sin_addr), prefix_len, 0,
                                               it->ifa_flags & ~unsupported_flags));
         break;
       }
@@ -99,6 +98,9 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
         const char* sin6_addr =
             inet_ntop(AF_INET6, &(addr_in6->sin6_addr), sin6_addr_buf, INET6_ADDRSTRLEN);
 
+        const sockaddr_in6* netmask = reinterpret_cast<sockaddr_in6*>(it->ifa_netmask);
+        const uint8_t prefix_len = count_prefix(netmask->sin6_addr.s6_addr, 16);
+
         const std::string sin6_addr_str = std::string(sin6_addr);
 
         const bool is_known_addr = std::any_of(want_ifaddrs.begin(), want_ifaddrs.end(),
@@ -106,18 +108,16 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
                                                  return std::get<1>(ifaddr) == sin6_addr_str;
                                                });
 
-        // Skip and count auto-generated link-local addresses.
+        InterfaceAddress if_addr =
+            std::make_tuple(if_name, sin6_addr_str, prefix_len, addr_in6->sin6_scope_id,
+                            it->ifa_flags & ~unsupported_flags);
+
         if (IN6_IS_ADDR_LINKLOCAL(addr_in6->sin6_addr.s6_addr) && !is_known_addr) {
-          got_unknown_link_local_addrs++;
-          continue;
+          unknown_link_local_addrs.push_back(std::move(if_addr));
+        } else {
+          other_addrs.push_back(std::move(if_addr));
         }
 
-        const sockaddr_in6* netmask = reinterpret_cast<sockaddr_in6*>(it->ifa_netmask);
-        const uint8_t prefix_len = count_prefix(netmask->sin6_addr.s6_addr, 16);
-
-        got_ifaddrs.push_back(std::make_tuple(if_name, sin6_addr_str, prefix_len,
-                                              addr_in6->sin6_scope_id,
-                                              it->ifa_flags & ~unsupported_flags));
         break;
       }
       case AF_PACKET:
@@ -127,11 +127,10 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
         GTEST_FAIL() << "unexpected address family " << it->ifa_addr->sa_family;
     }
   }
-
-  EXPECT_EQ(got_ifaddrs, want_ifaddrs);
-  EXPECT_EQ(got_unknown_link_local_addrs, want_unknown_link_local_addrs);
-
   freeifaddrs(ifaddr);
+
+  EXPECT_THAT(other_addrs, testing::ContainerEq(want_ifaddrs));
+  EXPECT_THAT(unknown_link_local_addrs, testing::SizeIs(want_unknown_link_local_addrs));
 }
 
 }  // namespace
