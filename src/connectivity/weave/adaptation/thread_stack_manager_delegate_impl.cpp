@@ -293,6 +293,7 @@ bool ThreadStackManagerDelegateImpl::IsThreadProvisioned() {
   switch (device_state.connectivity_state()) {
     case ConnectivityState::INACTIVE:
     case ConnectivityState::OFFLINE:
+    case ConnectivityState::COMMISSIONING:
       return false;
     default:
       return true;
