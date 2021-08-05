@@ -10,21 +10,24 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
+    fuchsia_syslog::fx_log_err,
     futures::{channel::mpsc::Sender, SinkExt},
+    std::cell::RefCell,
     std::collections::HashSet,
+    std::rc::Rc,
 };
 
 /// A [`MouseHandler`] tracks the mouse position and sends updates to clients.
 pub struct MouseHandler {
     /// The current position.
-    current_position: Position,
+    current_position: RefCell<Position>,
 
     /// The maximum position sent to clients, used to bound relative movements
     /// and scale absolute positions from device coordinates.
     max_position: Position,
 
     /// A [`Sender`] used to communicate the current position.
-    position_sender: Option<Sender<Position>>,
+    position_sender: RefCell<Sender<Position>>,
 
     /// The Scenic session to send pointer events to.
     scenic_session: scenic::SessionPtr,
@@ -33,10 +36,10 @@ pub struct MouseHandler {
     scenic_compositor_id: u32,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for MouseHandler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -71,17 +74,17 @@ impl MouseHandler {
     /// - `scenic_compositor_id`: The Scenic compositor id to tag pointer events with.
     pub fn new(
         max_position: Position,
-        position_sender: Option<Sender<Position>>,
+        position_sender: Sender<Position>,
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
-    ) -> MouseHandler {
-        MouseHandler {
+    ) -> Rc<MouseHandler> {
+        Rc::new(MouseHandler {
             max_position,
-            position_sender,
+            position_sender: RefCell::new(position_sender),
             scenic_session,
             scenic_compositor_id,
-            current_position: Position { x: 0.0, y: 0.0 },
-        }
+            current_position: RefCell::new(Position { x: 0.0, y: 0.0 }),
+        })
     }
 
     /// Updates the current cursor position according to the received mouse event.
@@ -94,24 +97,31 @@ impl MouseHandler {
     /// - `mouse_event`: The mouse event to use to update the cursor location.
     /// - `device_descriptor`: The descriptor for the input device generating the input reports.
     async fn update_cursor_position(
-        &mut self,
+        self: &Rc<Self>,
         mouse_event: &mouse::MouseEvent,
         device_descriptor: &mouse::MouseDeviceDescriptor,
     ) {
-        self.current_position = match mouse_event.location {
+        let new_position = match mouse_event.location {
             mouse::MouseLocation::Relative(offset) if offset != Position::zero() => {
-                self.current_position + offset
+                *self.current_position.borrow() + offset
             }
-            mouse::MouseLocation::Absolute(position) if position != self.current_position => {
+            mouse::MouseLocation::Absolute(position)
+                if position != *self.current_position.borrow() =>
+            {
                 self.scale_absolute_position(&position, &device_descriptor)
             }
             _ => return,
         };
+        let mut current_position = self.current_position.borrow_mut();
+        *current_position = new_position;
 
-        Position::clamp(&mut self.current_position, Position::zero(), self.max_position);
+        Position::clamp(&mut *current_position, Position::zero(), self.max_position);
 
-        if let Some(position_sender) = &mut self.position_sender {
-            let _ = position_sender.send(self.current_position).await;
+        match self.position_sender.borrow_mut().send(*current_position).await {
+            Err(e) => {
+                fx_log_err!("Failed to send current mouse position with error {:?}", e);
+            }
+            _ => {}
         }
     }
 
@@ -123,7 +133,7 @@ impl MouseHandler {
     /// - `device_descriptor`: The descriptor for the input device generating the input reports.
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     async fn send_events_to_scenic(
-        &self,
+        self: &Rc<Self>,
         phase: fidl_ui_input::PointerEventPhase,
         buttons: &HashSet<mouse::MouseButton>,
         device_descriptor: &mouse::MouseDeviceDescriptor,
@@ -137,8 +147,8 @@ impl MouseHandler {
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
             phase,
-            x: self.current_position.x,
-            y: self.current_position.y,
+            x: self.current_position.borrow().x,
+            y: self.current_position.borrow().y,
             radius_major: 0.0,
             radius_minor: 0.0,
             buttons,
@@ -165,7 +175,7 @@ impl MouseHandler {
     /// - `position`: Absolute cursor position in device coordinates.
     /// - `device_descriptor`: The descriptor for the input device generating the input reports.
     fn scale_absolute_position(
-        &self,
+        self: &Rc<Self>,
         position: &Position,
         device_descriptor: &mouse::MouseDeviceDescriptor,
     ) -> Position {
@@ -283,9 +293,9 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mut mouse_handler = MouseHandler::new(
+        let mouse_handler = MouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
-            Some(sender),
+            sender,
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
         );
@@ -337,9 +347,9 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mut mouse_handler = MouseHandler::new(
+        let mouse_handler = MouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
-            Some(sender),
+            sender,
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
         );
@@ -395,9 +405,9 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mut mouse_handler = MouseHandler::new(
+        let mouse_handler = MouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
-            Some(sender),
+            sender,
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
         );
@@ -448,9 +458,9 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mut mouse_handler = MouseHandler::new(
+        let mouse_handler = MouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
-            Some(sender),
+            sender,
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
         );

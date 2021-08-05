@@ -24,6 +24,7 @@ use {
         Position, Size,
     },
     scene_management::{self, FlatSceneManager, SceneManager, ScreenCoordinates},
+    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -41,7 +42,7 @@ pub async fn handle_input(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_settings_handler: text_settings::Handler,
+    text_settings_handler: Rc<text_settings::Handler>,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
         vec![
@@ -68,9 +69,9 @@ pub async fn handle_input(
 
 async fn input_handlers(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
-    text_settings_handler: text_settings::Handler,
-) -> Vec<Box<dyn InputHandler>> {
-    let mut handlers: Vec<Box<dyn InputHandler>> = vec![];
+    text_settings_handler: Rc<text_settings::Handler>,
+) -> Vec<Rc<dyn InputHandler>> {
+    let mut handlers: Vec<Rc<dyn InputHandler>> = vec![];
 
     {
         let locked_scene_manager = scene_manager.lock().await;
@@ -92,36 +93,36 @@ async fn input_handlers(
 
 /// Hooks up the text settings handler.
 fn add_text_settings_handler(
-    text_settings_handler: text_settings::Handler,
-    handlers: &mut Vec<Box<dyn InputHandler>>,
+    text_settings_handler: Rc<text_settings::Handler>,
+    handlers: &mut Vec<Rc<dyn InputHandler>>,
 ) {
-    handlers.push(Box::new(text_settings_handler));
+    handlers.push(text_settings_handler);
 }
 
 /// Hooks up the keymapper.  The keymapper requires the text settings handler to
 /// be added as well to support keymapping.  Otherwise, it defaults to applying
 /// the US QWERTY keymap.
-fn add_keymap_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
-    handlers.push(Box::new(keymap::Handler::new()))
+fn add_keymap_handler(handlers: &mut Vec<Rc<dyn InputHandler>>) {
+    handlers.push(keymap::Handler::new())
 }
 
-async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
+async fn add_shortcut_handler(handlers: &mut Vec<Rc<dyn InputHandler>>) {
     if let Ok(manager) = connect_to_protocol::<ui_shortcut::ManagerMarker>() {
         if let Ok(shortcut_handler) = ShortcutHandler::new(manager) {
-            handlers.push(Box::new(shortcut_handler));
+            handlers.push(shortcut_handler);
         }
     }
 }
 
-async fn add_ime(handlers: &mut Vec<Box<dyn InputHandler>>) {
+async fn add_ime(handlers: &mut Vec<Rc<dyn InputHandler>>) {
     if let Ok(ime_handler) = ImeHandler::new().await {
-        handlers.push(Box::new(ime_handler));
+        handlers.push(ime_handler);
     }
 }
 
 async fn add_touch_handler(
     scene_manager: &FlatSceneManager,
-    handlers: &mut Vec<Box<dyn InputHandler>>,
+    handlers: &mut Vec<Rc<dyn InputHandler>>,
 ) {
     let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
     if let Ok(touch_handler) = TouchHandler::new(
@@ -131,13 +132,13 @@ async fn add_touch_handler(
     )
     .await
     {
-        handlers.push(Box::new(touch_handler));
+        handlers.push(touch_handler);
     }
 }
 
 async fn add_mouse_handler(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
-    handlers: &mut Vec<Box<dyn InputHandler>>,
+    handlers: &mut Vec<Rc<dyn InputHandler>>,
 ) {
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
@@ -145,11 +146,11 @@ async fn add_mouse_handler(
         let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
         let mouse_handler = MouseHandler::new(
             Position { x: width_pixels, y: height_pixels },
-            Some(sender),
+            sender,
             scene_manager.session.clone(),
             scene_manager.compositor_id,
         );
-        handlers.push(Box::new(mouse_handler));
+        handlers.push(mouse_handler);
     }
 
     fasync::Task::spawn(async move {

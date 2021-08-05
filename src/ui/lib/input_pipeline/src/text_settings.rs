@@ -9,24 +9,25 @@ use async_trait::async_trait;
 use fidl_fuchsia_input_keymap as fkeymap;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
-use futures::{lock, TryFutureExt, TryStreamExt};
-use std::sync;
+use futures::{TryFutureExt, TryStreamExt};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// The text settings handler instance. Refer to as `text_settings::Handler`.
 /// Its task is to decorate an input event with the keymap identifier.  The instance can
 /// be freely cloned, each clone is thread-safely sharing data with others.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Handler {
     /// Stores the currently active keymap identifier, if present.  Wrapped
-    /// in an arc-mutex as it can be changed out of band through
+    /// in an refcell as it can be changed out of band through
     /// `fuchsia.input.keymap.Configuration/SetLayout`.
-    keymap_id: sync::Arc<lock::Mutex<Option<fkeymap::Id>>>,
+    keymap_id: RefCell<Option<fkeymap::Id>>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for Handler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -36,7 +37,7 @@ impl InputHandler for Handler {
                 event_time,
             } => {
                 // Maybe instead just pass in the keymap ID directly?
-                let keymap_id = match *self.keymap_id.lock().await {
+                let keymap_id = match *self.keymap_id.borrow() {
                     Some(ref id) => match id {
                         fkeymap::Id::FrAzerty => Some("FR_AZERTY".to_owned()),
                         fkeymap::Id::UsDvorak => Some("US_DVORAK".to_owned()),
@@ -67,13 +68,13 @@ impl Handler {
     /// Creates a new text settings handler instance.
     /// `initial` contains the desired initial keymap value to be served.
     /// Usually you want this to be `None`.
-    pub fn new(initial: Option<fkeymap::Id>) -> Self {
-        Handler { keymap_id: sync::Arc::new(lock::Mutex::new(initial)) }
+    pub fn new(initial: Option<fkeymap::Id>) -> Rc<Self> {
+        Rc::new(Handler { keymap_id: RefCell::new(initial) })
     }
 
     /// Processes requests for keymap change from `stream`.
     pub async fn process_keymap_configuration_from(
-        &mut self,
+        self: &Rc<Self>,
         mut stream: fkeymap::ConfigurationRequestStream,
     ) -> Result<(), Error> {
         while let Some(fkeymap::ConfigurationRequest::SetLayout { keymap, responder, .. }) = stream
@@ -82,7 +83,7 @@ impl Handler {
             .context("while trying to serve fuchsia.input.keymap.Configuration")?
         {
             fx_log_debug!("keymap ID set to: {:?}", &keymap);
-            let mut data = self.keymap_id.lock().await;
+            let mut data = self.keymap_id.borrow_mut();
             *data = Some(keymap);
             responder.send()?;
         }
@@ -91,17 +92,17 @@ impl Handler {
 
     /// Gets the currently active keymap ID.
     pub async fn get_keymap_id(&self) -> fkeymap::Id {
-        let lock = self.keymap_id.lock().await;
-        *lock.as_ref().unwrap_or(&fkeymap::Id::UsQwerty)
+        self.keymap_id.borrow().unwrap_or(fkeymap::Id::UsQwerty)
     }
 
     /// Returns the function that can be used to serve
     /// `fuchsia.input.keymap.Configuration` from
     /// `fuchsia_component::server::ServiceFs::add_fidl_service`.
-    pub fn get_serving_fn(&self) -> Box<dyn FnMut(fkeymap::ConfigurationRequestStream) -> ()> {
-        let handler = self.clone();
+    pub fn get_serving_fn(
+        self: Rc<Self>,
+    ) -> Box<dyn FnMut(fkeymap::ConfigurationRequestStream) -> ()> {
         Box::new(move |stream| {
-            let mut handler = handler.clone();
+            let handler = self.clone();
             fasync::Task::local(
                 async move { handler.process_keymap_configuration_from(stream).await }
                     .unwrap_or_else(|e: anyhow::Error| fx_log_err!("can't run: {:?}", e)),
@@ -154,7 +155,7 @@ mod tests {
             Test { keymap_id: Some(fkeymap::Id::UsDvorak), expected: Some("US_DVORAK".to_owned()) },
         ];
         for test in tests {
-            let mut handler = Handler::new(test.keymap_id.clone());
+            let handler = Handler::new(test.keymap_id.clone());
             let expected = get_fake_key_event(test.expected.clone());
             let result = handler.handle_input_event(get_fake_key_event(None)).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
@@ -163,17 +164,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn config_call_processing() {
-        let mut handler = Handler::new(None);
+        let handler = Handler::new(None);
 
         let (client_end, server_end) =
             fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();
 
         // Start an asynchronous handler that processes keymap configuration calls
         // incoming from `server_end`.
-        handler.get_serving_fn()(server_end);
+        handler.clone().get_serving_fn()(server_end);
 
         // Send one input event and verify that it is properly decorated.
-        let result = handler.handle_input_event(get_fake_key_event(None)).await;
+        let result = handler.clone().handle_input_event(get_fake_key_event(None)).await;
         let expected = get_fake_key_event(Some("US_QWERTY".to_owned()));
         assert_eq!(vec![expected], result);
 

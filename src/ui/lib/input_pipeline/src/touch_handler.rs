@@ -11,6 +11,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
+    std::rc::Rc,
 };
 
 /// An input handler that parses touch events and forwards them to Scenic.
@@ -27,10 +28,10 @@ pub struct TouchHandler {
     display_size: Size,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for TouchHandler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -65,11 +66,11 @@ impl TouchHandler {
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
         display_size: Size,
-    ) -> Result<Self, Error> {
+    ) -> Result<Rc<Self>, Error> {
         if display_size == Size::zero() {
             Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
         } else {
-            Ok(TouchHandler { scenic_session, scenic_compositor_id, display_size })
+            Ok(Rc::new(TouchHandler { scenic_session, scenic_compositor_id, display_size }))
         }
     }
 
@@ -286,7 +287,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let mut touch_handler = TouchHandler::new(
+        let touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
@@ -337,7 +338,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let mut touch_handler = TouchHandler::new(
+        let touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
@@ -388,7 +389,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
                 .expect("Failed to create ScenicProxy and stream.");
         let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
-        let mut touch_handler = TouchHandler::new(
+        let touch_handler = TouchHandler::new(
             scenic_session.clone(),
             SCENIC_COMPOSITOR_ID,
             Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },

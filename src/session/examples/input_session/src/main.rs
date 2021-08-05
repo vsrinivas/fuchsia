@@ -10,6 +10,7 @@ use {
     input_pipeline::{
         self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline,
     },
+    std::rc::Rc,
 };
 
 /// A simple InputHandler that prints MouseEvents as they're received.
@@ -21,10 +22,10 @@ impl MouseEventPrinter {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for MouseEventPrinter {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -52,7 +53,7 @@ async fn main() -> Result<(), Error> {
 
     let input_pipeline = InputPipeline::new(
         vec![input_device::InputDeviceType::Mouse],
-        vec![Box::new(MouseEventPrinter::new())],
+        vec![Rc::new(MouseEventPrinter::new())],
     )
     .await
     .context("Failed to create InputPipeline.")?;

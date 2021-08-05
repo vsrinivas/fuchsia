@@ -4,29 +4,29 @@
 
 use {
     crate::input_device, crate::input_handler, async_trait::async_trait,
-    futures::channel::mpsc::Sender,
+    futures::channel::mpsc::Sender, std::cell::RefCell, std::rc::Rc,
 };
 
 /// A fake [`InputHandler`] used for testing. A [`FakeInputHandler`] does not consume InputEvents.
 pub struct FakeInputHandler {
     /// Events received by [`handle_input_event()`] are sent to this channel.
-    event_sender: Sender<input_device::InputEvent>,
+    event_sender: RefCell<Sender<input_device::InputEvent>>,
 }
 
 #[allow(dead_code)]
 impl FakeInputHandler {
-    pub fn new(event_sender: Sender<input_device::InputEvent>) -> Self {
-        FakeInputHandler { event_sender }
+    pub fn new(event_sender: Sender<input_device::InputEvent>) -> Rc<Self> {
+        Rc::new(FakeInputHandler { event_sender: RefCell::new(event_sender) })
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl input_handler::InputHandler for FakeInputHandler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match self.event_sender.try_send(input_event.clone()) {
+        match self.event_sender.borrow_mut().try_send(input_event.clone()) {
             Err(_) => assert!(false),
             _ => {}
         };

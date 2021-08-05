@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, Modifiers},
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     std::convert::TryInto,
+    std::rc::Rc,
 };
 
 pub struct ShortcutHandler {
@@ -18,10 +19,10 @@ pub struct ShortcutHandler {
     manager: ui_shortcut::ManagerProxy,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for ShortcutHandler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match &input_event {
@@ -51,9 +52,9 @@ impl InputHandler for ShortcutHandler {
 
 impl ShortcutHandler {
     /// Creates a new [`ShortcutHandler`] and connects Keyboard and Shortcut services.
-    pub fn new(shortcut_manager_proxy: ui_shortcut::ManagerProxy) -> Result<Self, Error> {
+    pub fn new(shortcut_manager_proxy: ui_shortcut::ManagerProxy) -> Result<Rc<Self>, Error> {
         let handler = ShortcutHandler { manager: shortcut_manager_proxy };
-        Ok(handler)
+        Ok(Rc::new(handler))
     }
 }
 
@@ -106,7 +107,7 @@ mod tests {
     fn create_shortcut_handler(
         key_event_consumed_response: bool,
         _key2_event_consumed_response: bool,
-    ) -> ShortcutHandler {
+    ) -> Rc<ShortcutHandler> {
         let (shortcut_manager_proxy, mut shortcut_manager_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<ui_shortcut::ManagerMarker>()
                 .expect("Failed to create ShortcutManagerProxy and stream");
@@ -137,7 +138,7 @@ mod tests {
         pressed_key3: fidl_fuchsia_input::Key,
         modifiers: Option<fidl_ui_input3::Modifiers>,
         event_time: input_device::EventTime,
-        mut shortcut_handler: ShortcutHandler,
+        shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
@@ -159,7 +160,7 @@ mod tests {
         released_key3: fidl_fuchsia_input::Key,
         modifiers: Option<fidl_ui_input3::Modifiers>,
         event_time: input_device::EventTime,
-        mut shortcut_handler: ShortcutHandler,
+        shortcut_handler: Rc<ShortcutHandler>,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
             input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {

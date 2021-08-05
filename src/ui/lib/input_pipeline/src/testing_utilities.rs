@@ -401,7 +401,7 @@ macro_rules! assert_input_event_sequence_generates_scenic_events {
     ) => {
         for input_event in $input_events {
             let events: Vec<input_device::InputEvent> =
-                $input_handler.handle_input_event(input_event).await;
+                $input_handler.clone().handle_input_event(input_event).await;
             assert_eq!(events.len(), 0);
         }
 
@@ -445,10 +445,10 @@ macro_rules! assert_input_event_sequence_generates_media_buttons_events {
         // The media buttons listener request stream(s).
         media_buttons_listener_request_stream: $media_buttons_listener_request_stream:expr,
     ) => {
-        fasync::Task::spawn(async move {
+        fasync::Task::local(async move {
             for input_event in $input_events {
                 let events: Vec<input_device::InputEvent> =
-                    $input_handler.handle_input_event(input_event).await;
+                    $input_handler.clone().handle_input_event(input_event).await;
                 assert_eq!(events.len(), 0);
             }
         })

@@ -17,6 +17,7 @@ use {
     futures::lock::Mutex,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     scene_management::{self, SceneManager},
+    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -105,7 +106,7 @@ async fn main() -> Result<(), Error> {
             }
             // Serves calls to fuchsia.input.keymap.Configuration.
             ExposedServices::TextSettingsConfig(request_stream) => {
-                let mut handler = text_handler.clone();
+                let handler = text_handler.clone();
                 fasync::Task::local(
                     async move { handler.process_keymap_configuration_from(request_stream).await }
                         .unwrap_or_else(|e| {
@@ -129,7 +130,7 @@ pub async fn handle_manager_request_stream(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_handler: text_settings::Handler,
+    text_handler: Rc<text_settings::Handler>,
 ) {
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         scene_manager.clone(),

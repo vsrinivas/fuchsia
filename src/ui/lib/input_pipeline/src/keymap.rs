@@ -12,24 +12,26 @@ use crate::keyboard;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_debug;
 use keymaps;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// `Handler` applies a keymap to a keyboard event, resolving each key press
 /// to a sequence of Unicode code points.  This allows basic keymap application,
 /// but does not lend itself to generalized text editing.
 ///
 /// Create a new one with [Handler::new].
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct Handler {
     /// Tracks the state of the modifier keys.
-    modifier_state: keymaps::ModifierState,
+    modifier_state: RefCell<keymaps::ModifierState>,
 }
 
 /// This trait implementation allows the [Handler] to be hooked up into the input
 /// pipeline.
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for Handler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -47,13 +49,13 @@ impl InputHandler for Handler {
 
 impl Handler {
     /// Creates a new instance of the keymap handler.
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new() -> Rc<Self> {
+        Rc::new(Default::default())
     }
 
     /// Attaches a key meaning to each passing keyboard event.
     fn process_keyboard_event(
-        &mut self,
+        self: &Rc<Self>,
         event: keyboard::KeyboardEvent,
         device_descriptor: input_device::InputDeviceDescriptor,
         event_time: input_device::EventTime,
@@ -65,14 +67,14 @@ impl Handler {
                 "modifier_state:{:?}, event_type: {:?}"
             ),
             key,
-            &self.modifier_state,
+            self.modifier_state.borrow(),
             event_type
         );
 
-        self.modifier_state.update(*event_type, *key);
+        self.modifier_state.borrow_mut().update(*event_type, *key);
         let mut new_event = event.clone();
         new_event.key_meaning =
-            keymaps::select_keymap(&event.keymap).apply(*key, &self.modifier_state);
+            keymaps::select_keymap(&event.keymap).apply(*key, &*self.modifier_state.borrow());
         vec![input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Keyboard(new_event),
             device_descriptor,
@@ -193,9 +195,10 @@ mod tests {
         ];
         for test in &tests {
             let mut actual: Vec<Option<fidl_fuchsia_ui_input3::KeyMeaning>> = vec![];
-            let mut handler = Handler::new();
+            let handler = Handler::new();
             for event in &test.events {
                 let mut result = handler
+                    .clone()
                     .handle_input_event(event.clone())
                     .await
                     .iter()

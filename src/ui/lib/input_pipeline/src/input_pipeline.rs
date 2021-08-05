@@ -17,6 +17,7 @@ use {
     io_util::open_directory_in_namespace,
     std::collections::HashMap,
     std::path::PathBuf,
+    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -54,7 +55,7 @@ pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<u32, Vec<BoxedInputDevice
 pub struct InputPipeline {
     /// The input handlers that will dispatch InputEvents from the `device_bindings`.
     /// The order of handlers in `input_handlers` is the order
-    input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
+    input_handlers: Vec<Rc<dyn input_handler::InputHandler>>,
 
     /// A clone of this sender is given to every InputDeviceBinding that this pipeline owns.
     /// Each InputDeviceBinding will send InputEvents to the pipeline through this channel.
@@ -80,7 +81,7 @@ impl InputPipeline {
     ///                     `input_handlers`.
     pub async fn new(
         device_types: Vec<input_device::InputDeviceType>,
-        input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
+        input_handlers: Vec<Rc<dyn input_handler::InputHandler>>,
     ) -> Result<Self, Error> {
         let (input_event_sender, input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
@@ -128,12 +129,13 @@ impl InputPipeline {
         while let Some(input_event) = self.input_event_receiver.next().await {
             let mut result_events: Vec<input_device::InputEvent> = vec![input_event];
             // Pass the InputEvent through all InputHandlers
-            for input_handler in &mut self.input_handlers {
+            for input_handler in &self.input_handlers {
                 // The outputted events from one InputHandler serves as the input
                 // events for the next InputHandler.
                 let mut next_result_events: Vec<input_device::InputEvent> = vec![];
                 for event in result_events {
-                    next_result_events.append(&mut input_handler.handle_input_event(event).await);
+                    next_result_events
+                        .append(&mut input_handler.clone().handle_input_event(event).await);
                 }
                 result_events = next_result_events;
             }
@@ -399,7 +401,7 @@ mod tests {
 
         // Build the input pipeline.
         let input_pipeline = InputPipeline {
-            input_handlers: vec![Box::new(input_handler)],
+            input_handlers: vec![input_handler],
             input_event_sender,
             input_event_receiver,
             input_device_types: vec![],
@@ -445,7 +447,7 @@ mod tests {
 
         // Build the input pipeline.
         let input_pipeline = InputPipeline {
-            input_handlers: vec![Box::new(first_input_handler), Box::new(second_input_handler)],
+            input_handlers: vec![first_input_handler, second_input_handler],
             input_event_sender,
             input_event_receiver,
             input_device_types: vec![],

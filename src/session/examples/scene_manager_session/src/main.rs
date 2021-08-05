@@ -14,19 +14,21 @@ use {
         Position,
     },
     scene_management::{self, SceneManager, ScreenCoordinates},
+    std::cell::RefCell,
+    std::rc::Rc,
 };
 
 /// A simple InputHandler that draws a cursor on screen.
 struct SimpleCursor {
-    position: Position,
+    position: RefCell<Position>,
     max_position: Position,
-    scene_manager: scene_management::FlatSceneManager,
+    scene_manager: RefCell<scene_management::FlatSceneManager>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for SimpleCursor {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -35,21 +37,24 @@ impl InputHandler for SimpleCursor {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
                 event_time: _,
             } => {
-                self.position = match mouse_event.location {
+                let mut mut_position = self.position.borrow_mut();
+                *mut_position = match mouse_event.location {
                     mouse::MouseLocation::Relative(offset) if offset != Position::zero() => {
-                        self.position + offset
+                        *mut_position + offset
                     }
-                    mouse::MouseLocation::Absolute(position) if position != self.position => {
+                    mouse::MouseLocation::Absolute(position) if position != *mut_position => {
                         position
                     }
                     _ => return vec![],
                 };
 
-                Position::clamp(&mut self.position, Position { x: 0.0, y: 0.0 }, self.max_position);
+                Position::clamp(&mut *mut_position, Position { x: 0.0, y: 0.0 }, self.max_position);
 
-                self.scene_manager.set_cursor_location(ScreenCoordinates::from_position(
-                    &self.position,
-                    self.scene_manager.display_metrics,
+                let mut scene_manager = self.scene_manager.borrow_mut();
+                let display_metrics = scene_manager.display_metrics.clone();
+                scene_manager.set_cursor_location(ScreenCoordinates::from_position(
+                    &mut *mut_position,
+                    display_metrics,
                 ));
 
                 vec![]
@@ -75,7 +80,11 @@ async fn main() -> Result<(), Error> {
 
     let input_pipeline = InputPipeline::new(
         vec![input_device::InputDeviceType::Mouse],
-        vec![Box::new(SimpleCursor { position, max_position, scene_manager })],
+        vec![Rc::new(SimpleCursor {
+            position: RefCell::new(position),
+            max_position,
+            scene_manager: RefCell::new(scene_manager),
+        })],
     )
     .await
     .context("Failed to create InputPipeline.")?;

@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
     fuchsia_async as fasync, fuchsia_component::server::ServiceFs, fuchsia_syslog::fx_log_warn,
     futures::StreamExt, input_pipeline as input_pipeline_lib, input_pipeline::input_device,
-    input_pipeline::media_buttons_handler::MediaButtonsHandler,
+    input_pipeline::media_buttons_handler::MediaButtonsHandler, std::rc::Rc,
 };
 
 mod input_handlers;
@@ -105,7 +105,7 @@ async fn handle_input_device_registry_request_stream(
 }
 
 async fn handle_media_buttons_listener_registry(
-    media_buttons_handler: MediaButtonsHandler,
+    media_buttons_handler: Rc<MediaButtonsHandler>,
     stream: MediaButtonsListenerRegistryRequestStream,
 ) {
     match media_buttons_handler.handle_device_listener_registry_request_stream(stream).await {

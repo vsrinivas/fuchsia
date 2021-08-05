@@ -12,7 +12,9 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
     keymaps,
+    std::cell::RefCell,
     std::convert::TryInto,
+    std::rc::Rc,
 };
 
 /// [`ImeHandler`] is responsible for dispatching key events to the IME service, thus making sure
@@ -22,13 +24,13 @@ pub struct ImeHandler {
     key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
 
     /// Tracks the state of shift keys, for keymapping purposes.
-    modifier_tracker: keymaps::ModifierState,
+    modifier_tracker: RefCell<keymaps::ModifierState>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InputHandler for ImeHandler {
     async fn handle_input_event(
-        &mut self,
+        self: Rc<Self>,
         input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
         match input_event {
@@ -39,9 +41,13 @@ impl InputHandler for ImeHandler {
                 event_time,
             } => {
                 self.modifier_tracker
+                    .borrow_mut()
                     .update(keyboard_device_event.event_type, keyboard_device_event.key);
-                let key_event =
-                    create_key_event(&keyboard_device_event, event_time, &self.modifier_tracker);
+                let key_event = create_key_event(
+                    &keyboard_device_event,
+                    event_time,
+                    &self.modifier_tracker.borrow(),
+                );
                 self.dispatch_key(key_event).await;
                 // Consume the input event.
                 vec![]
@@ -54,7 +60,7 @@ impl InputHandler for ImeHandler {
 #[allow(dead_code)]
 impl ImeHandler {
     /// Creates a new [`ImeHandler`] by connecting out to the key event injector.
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Rc<Self>, Error> {
         let key_event_injector = connect_to_protocol::<fidl_ui_input3::KeyEventInjectorMarker>()?;
 
         Self::new_handler(key_event_injector).await
@@ -67,10 +73,10 @@ impl ImeHandler {
     /// injector FIDL service.
     async fn new_handler(
         key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
-    ) -> Result<Self, Error> {
+    ) -> Result<Rc<Self>, Error> {
         let handler = ImeHandler { key_event_injector, modifier_tracker: Default::default() };
 
-        Ok(handler)
+        Ok(Rc::new(handler))
     }
 
     /// Dispatches key events to IME and returns KeyboardEvents for unhandled events.
@@ -78,7 +84,7 @@ impl ImeHandler {
     /// # Parameters
     /// `key_events`: The key events to dispatch.
     /// `event_time`: The time in nanoseconds when the events were first recorded.
-    async fn dispatch_key(&mut self, key_event: fidl_ui_input3::KeyEvent) {
+    async fn dispatch_key(self: &Rc<Self>, key_event: fidl_ui_input3::KeyEvent) {
         match self.key_event_injector.inject(key_event).await {
             Err(err) => fx_log_err!("Failed to dispatch key to IME: {:?}", err),
             _ => {}
@@ -125,10 +131,10 @@ mod tests {
         fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_async as fasync, futures::StreamExt,
     };
 
-    fn handle_events(mut ime_handler: ImeHandler, events: Vec<input_device::InputEvent>) {
-        fasync::Task::spawn(async move {
+    fn handle_events(ime_handler: Rc<ImeHandler>, events: Vec<input_device::InputEvent>) {
+        fasync::Task::local(async move {
             for event in events {
-                let unhandled_events = ime_handler.handle_input_event(event).await;
+                let unhandled_events = ime_handler.clone().handle_input_event(event).await;
                 assert_eq!(unhandled_events.len(), 0);
             }
         })
