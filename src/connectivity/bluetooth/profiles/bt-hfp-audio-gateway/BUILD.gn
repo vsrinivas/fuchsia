@@ -142,10 +142,17 @@ fuchsia_package("bt-hfp-audio-gateway-default") {
 }
 
 # The core realm shard to be used by product integrators.
-# This shard should be included in configurations in which HFP-AG support is desired but not A2DP
-# support.
+# This shard should be included in configurations in which only HFP-AG support is desired (no A2DP
+# support).
 core_shard("bt-hfp-audio-gateway-core-shard") {
   shard_file = "meta/bt-hfp-audio-gateway.core_shard.cml"
+}
+
+# The core realm shard to be used by product integrators.
+# This shard should be included in configurations that require both A2DP and HFP Audio Gateway
+# support.
+core_shard("bt-headset-core-shard") {
+  shard_file = "meta/bt-headset.core_shard.cml"
 }
 
 config_data("service_config") {

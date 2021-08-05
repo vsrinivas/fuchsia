@@ -26,8 +26,19 @@ To run the CFv1 component:
 
 Component startup differs based on the component framework version.
 
-For CFv1, there are two ways that the HFP AG profile can be started on a fuchsia system:
-automatically started on boot, or through protocol discovery.
+#### Component Framework v2
+
+Currently, the only way to start the v2 component is via protocol discovery. Include the appropriate
+`core_shard` in your product config target. For configurations in which both A2DP and HFP AG support
+is desired, include the `bt-headset-core-shard`. For configurations in which A2DP is not desired
+but HFP AG is, include the `bt-hfp-audio-gateway-core-shard`.
+When the `fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested, the CFv2 HFP AG component will be
+started.
+
+#### Component Framework v1 (legacy)
+
+There are two ways that the v1 HFP AG profile can be started on a fuchsia system: automatically
+started on boot, or through protocol discovery.
 
 When started through protocol discovery, the profile will not be started until the
 `fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested. Include the `service_config` target in
@@ -40,11 +51,6 @@ To start the HFP AG profile automatically on startup include the `startup_config
 fuchsia build set by using `--with //src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:startup_config`
 on an `fx set` line, or by depending on it alongside the bt-hfp-audio-gateway component in your
 product config target.
-
-For CFv2, the only way to start the component is via protocol discovery. Include the `core_shard` in
-your product config target (e.g add `//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:bt-hfp-audio-gateway-core-shard`).
-When the `fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested, the CFv2 HFP AG component will be
-started.
 
 ## Running tests
 
