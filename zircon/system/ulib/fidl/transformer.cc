@@ -139,10 +139,10 @@ class Transformer {
         src_num_bytes_(src_num_bytes),
         dst_num_bytes_capacity_(dst_num_bytes_capacity),
         error(nullptr) {
-    ZX_ASSERT(transformation_ == FIDL_TRANSFORMATION_V1_TO_V2 ||
-              transformation_ == FIDL_TRANSFORMATION_V2_TO_V1);
-    ZX_ASSERT(FidlIsAligned(src_bytes));
-    ZX_ASSERT(FidlIsAligned(dst_bytes));
+    ZX_DEBUG_ASSERT(transformation_ == FIDL_TRANSFORMATION_V1_TO_V2 ||
+                    transformation_ == FIDL_TRANSFORMATION_V2_TO_V1);
+    ZX_DEBUG_ASSERT(FidlIsAligned(src_bytes));
+    ZX_DEBUG_ASSERT(FidlIsAligned(dst_bytes));
   }
 
   // Performs a transform inside of a primary / new out of line object.
@@ -191,32 +191,66 @@ class Transformer {
   zx_status_t TransformPrimitive(const FidlCodedPrimitive* coded_primitive, uint32_t src_offset,
                                  uint32_t dst_offset) {
     uint32_t size = PrimitiveSize(coded_primitive->type);
+
+    ZX_DEBUG_ASSERT(src_offset + size <= src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(dst_offset + size <= dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
     memcpy(&dst_bytes_[dst_offset], &src_bytes_[src_offset], size);
+
     return ZX_OK;
   }
 
   zx_status_t TransformEnum(const FidlCodedEnum* coded_enum, uint32_t src_offset,
                             uint32_t dst_offset) {
     uint32_t size = PrimitiveSize(coded_enum->underlying_type);
+
+    ZX_DEBUG_ASSERT(src_offset + size <= src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(dst_offset + size <= dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
     memcpy(&dst_bytes_[dst_offset], &src_bytes_[src_offset], size);
+
     return ZX_OK;
   }
 
   zx_status_t TransformBits(const FidlCodedBits* coded_bits, uint32_t src_offset,
                             uint32_t dst_offset) {
     uint32_t size = PrimitiveSize(coded_bits->underlying_type);
+
+    ZX_DEBUG_ASSERT(src_offset + size <= src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(dst_offset + size <= dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
     memcpy(&dst_bytes_[dst_offset], &src_bytes_[src_offset], size);
+
     return ZX_OK;
   }
 
   zx_status_t TransformHandle(const FidlCodedHandle* coded_handle, uint32_t src_offset,
                               uint32_t dst_offset) {
+    ZX_DEBUG_ASSERT(src_offset + sizeof(zx_handle_t) <= src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(dst_offset + sizeof(zx_handle_t) <= dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
     memcpy(&dst_bytes_[dst_offset], &src_bytes_[src_offset], sizeof(zx_handle_t));
+
     return ZX_OK;
   }
 
   zx_status_t TransformStruct(const FidlCodedStruct* coded_struct, uint32_t src_offset,
                               uint32_t dst_offset) {
+    ZX_DEBUG_ASSERT(src_offset + SRC_VALUE(coded_struct->size_v1, coded_struct->size_v2) <=
+                    src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(dst_offset + DST_VALUE(coded_struct->size_v1, coded_struct->size_v2) <=
+                    dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+
     // 1. Copy up to the next non-padding field.
     // 2. Call the inner transformer for that field.
     // 3. Repeat 1 & 2 as needed.
@@ -233,8 +267,8 @@ class Transformer {
           uint32_t new_inner_dst_offset =
               DST_VALUE(element.field.offset_v1, element.field.offset_v2);
 
-          ZX_ASSERT(new_inner_src_offset - inner_src_offset ==
-                    new_inner_dst_offset - inner_dst_offset);
+          ZX_DEBUG_ASSERT(new_inner_src_offset - inner_src_offset ==
+                          new_inner_dst_offset - inner_dst_offset);
           if (new_inner_src_offset > inner_src_offset) {
             memcpy(&dst_bytes_[dst_offset + inner_dst_offset],
                    &src_bytes_[src_offset + inner_src_offset],
@@ -264,7 +298,7 @@ class Transformer {
 
     uint32_t src_size = SRC_VALUE(coded_struct->size_v1, coded_struct->size_v2);
     uint32_t dst_size = DST_VALUE(coded_struct->size_v1, coded_struct->size_v2);
-    ZX_ASSERT(src_size - inner_src_offset == dst_size - inner_dst_offset);
+    ZX_DEBUG_ASSERT(src_size - inner_src_offset == dst_size - inner_dst_offset);
     if (src_size > inner_src_offset) {
       memcpy(&dst_bytes_[dst_offset + inner_dst_offset], &src_bytes_[src_offset + inner_src_offset],
              src_size - inner_src_offset);
@@ -628,8 +662,8 @@ class Transformer {
   }
 
   zx_status_t IncreaseNextOutOfLine(uint32_t src_size, uint32_t dst_size) {
-    ZX_ASSERT(src_size % 8 == 0);
-    ZX_ASSERT(dst_size % 8 == 0);
+    ZX_DEBUG_ASSERT(src_size % 8 == 0);
+    ZX_DEBUG_ASSERT(dst_size % 8 == 0);
 
     uint32_t new_src_next_out_of_line;
     if (add_overflow(src_next_out_of_line_, src_size, &new_src_next_out_of_line)) {
@@ -658,9 +692,9 @@ class Transformer {
 
   template <typename T>
   T src(uint32_t offset) {
-    ZX_ASSERT(offset + sizeof(T) <= src_next_out_of_line_);
-    ZX_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
-    ZX_ASSERT(offset % 8 == 0);
+    ZX_DEBUG_ASSERT(offset + sizeof(T) <= src_next_out_of_line_);
+    ZX_DEBUG_ASSERT(src_next_out_of_line_ <= src_num_bytes_);
+    ZX_DEBUG_ASSERT(offset % 8 == 0);
     // Use memcpy rather than reinterpret_cast to avoid issues
     // due to the strict aliasing rule.
     T value;
@@ -692,9 +726,9 @@ class Transformer {
 
   template <typename T>
   DstTarget<T> dst(uint32_t offset) {
-    ZX_ASSERT(offset + sizeof(T) <= dst_next_out_of_line_);
-    ZX_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
-    ZX_ASSERT(offset % 8 == 0);
+    ZX_DEBUG_ASSERT(offset + sizeof(T) <= dst_next_out_of_line_);
+    ZX_DEBUG_ASSERT(dst_next_out_of_line_ <= dst_num_bytes_capacity_);
+    ZX_DEBUG_ASSERT(offset % 8 == 0);
     return DstTarget<T>(this, offset);
   }
 
