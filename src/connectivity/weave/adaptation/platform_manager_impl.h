@@ -36,6 +36,9 @@ class NL_DLL_EXPORT PlatformManagerImpl final
   // This method will panic if |dispatcher| is NULL.
   void SetDispatcher(async_dispatcher_t* dispatcher);
 
+  // Gets the dispatcher to which tasks should be posted.
+  async_dispatcher_t* GetDispatcher();
+
   // Gets the platform data required for openweave.
   // Platform data contains component context and dispatcher.
   InetLayer::FuchsiaPlatformData* GetPlatformData();

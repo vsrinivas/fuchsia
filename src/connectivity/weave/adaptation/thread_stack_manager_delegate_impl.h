@@ -7,6 +7,7 @@
 
 #include <fuchsia/lowpan/device/cpp/fidl.h>
 #include <fuchsia/lowpan/thread/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
@@ -56,6 +57,28 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   zx_status_t GetProtocols(fuchsia::lowpan::device::Protocols protocols);
   zx_status_t GetDevice(fuchsia::lowpan::device::DeviceSyncPtr& device);
   zx_status_t GetDeviceState(fuchsia::lowpan::device::DeviceState& device_state);
+
+  // Thread-joining-on-startup related functionality and state.
+  WEAVE_ERROR StartThreadJoining();
+  WEAVE_ERROR StartThreadJoiningIteration();
+  void StopThreadJoining();
+  WEAVE_ERROR GetJoinParams(fuchsia::lowpan::JoinParams& join_params);
+  virtual WEAVE_ERROR StartJoiningTimeout(uint32_t delay_milliseconds,
+                                          fit::function<void()> callback);
+  virtual WEAVE_ERROR StartJoiningRetry(uint32_t delay_milliseconds,
+                                        fit::function<void()> callback);
+  virtual void CancelJoiningTimeout();
+  virtual void CancelJoiningRetry();
+  void HandleJoiningTimeout();
+  void HandleJoiningRetryDelay();
+  void HandleProvisioningProgress(
+      fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result);
+
+  async::TaskClosure joining_timeout_;
+  async::TaskClosure joining_retry_delay_;
+  fuchsia::lowpan::device::ProvisioningMonitorPtr provisioning_monitor_;
+  bool joining_in_progress_ = false;
+  bool joining_timeout_expired_ = false;
 };
 
 }  // namespace DeviceLayer

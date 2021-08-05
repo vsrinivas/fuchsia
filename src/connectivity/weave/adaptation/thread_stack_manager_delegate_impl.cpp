@@ -25,7 +25,15 @@ namespace {
 using fuchsia::lowpan::ConnectivityState;
 using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
+using fuchsia::lowpan::JoinerCommissioningParams;
+using fuchsia::lowpan::JoinParams;
+using fuchsia::lowpan::MAX_PROVISION_URL_LEN;
+using fuchsia::lowpan::MAX_VENDOR_DATA_LEN;
+using fuchsia::lowpan::MAX_VENDOR_MODEL_LEN;
+using fuchsia::lowpan::MAX_VENDOR_NAME_LEN;
+using fuchsia::lowpan::MAX_VENDOR_SW_VER_LEN;
 using fuchsia::lowpan::ProvisioningParams;
+using fuchsia::lowpan::PSKD_LEN;
 using fuchsia::lowpan::Role;
 using fuchsia::lowpan::device::AllCounters;
 using fuchsia::lowpan::device::Counters;
@@ -37,6 +45,7 @@ using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::LookupSyncPtr;
 using fuchsia::lowpan::device::MacCounters;
 using fuchsia::lowpan::device::Protocols;
+using fuchsia::lowpan::device::ProvisionError;
 using fuchsia::lowpan::thread::LegacyJoiningSyncPtr;
 using fuchsia::net::IpAddress;
 using fuchsia::net::Ipv4Address;
@@ -44,6 +53,8 @@ using fuchsia::net::Ipv6Address;
 using fuchsia::net::routes::State_Resolve_Result;
 
 using nl::Weave::WeaveInspector;
+using nl::Weave::DeviceLayer::ConfigurationManager;
+using nl::Weave::DeviceLayer::ConfigurationMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::Internal::DeviceNetworkInfo;
 using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
@@ -65,6 +76,18 @@ constexpr size_t k802154MacAddressBufSize =
     sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
 // Fake MAC address returned by GetPrimary802154MACAddress
 constexpr uint8_t kFakeMacAddress[k802154MacAddressBufSize] = {0xFF};
+
+// The maximum buffer size of all info needed for joining parameters.
+constexpr size_t kJoinInfoBufferSize{
+    MaxConstant(ConfigurationManager::kMaxPairingCodeLength + 1,
+                ConfigurationManager::kMaxFirmwareRevisionLength + 1,
+                ConfigurationManager::kMaxProductIdDescriptionLength + 1,
+                ConfigurationManager::kMaxVendorIdDescriptionLength + 1)};
+// The duration that Thread should spend attempting to join an existing network
+// at startup.
+constexpr zx::duration kJoinAtStartupTimeout{zx_duration_from_sec(120)};
+// The duration of delay that should occur between join attempts.
+constexpr zx::duration kJoinAtStartupRetryDelay{zx_duration_from_sec(10)};
 }  // namespace
 
 // Note: Since the functions within this class are intended to function
@@ -149,6 +172,11 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
   }
 
   is_thread_supported_ = true;
+
+  if (!IsThreadProvisioned()) {
+    return StartThreadJoining();
+  }
+
   return WEAVE_NO_ERROR;
 }
 
@@ -402,6 +430,9 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
 
+  // Cancel join operation, if active:
+  StopThreadJoining();
+
   // Set up identity.
   std::vector<uint8_t> network_name{
       netInfo.ThreadNetworkName,
@@ -473,6 +504,9 @@ void ThreadStackManagerDelegateImpl::ClearThreadProvision() {
   if (!IsThreadSupported()) {
     return;
   }
+
+  // Cancel join operation, if active:
+  StopThreadJoining();
 
   // Acquire the thread device.
   status = GetDevice(device);
@@ -676,6 +710,9 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool enable) {
   LegacyJoiningSyncPtr thread_legacy;
   zx_status_t status;
 
+  // Cancel join operation, if active:
+  StopThreadJoining();
+
   // Get the legacy Thread protocol
   status =
       GetProtocols(std::move(Protocols().set_thread_legacy_joining(thread_legacy.NewRequest())));
@@ -773,6 +810,192 @@ nl::Weave::Profiles::DataManagement::event_id_t
 ThreadStackManagerDelegateImpl::LogNetworkWpanStatsEvent(
     Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsEvent* event) {
   return nl::LogEvent(event);
+}
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::StartThreadJoining() {
+  WEAVE_ERROR err =
+      StartJoiningTimeout(kJoinAtStartupTimeout.to_msecs(), [this] { HandleJoiningTimeout(); });
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << "Could not post timeout, cancelling join.";
+    StopThreadJoining();
+    return err;
+  }
+
+  return StartThreadJoiningIteration();
+}
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::StartThreadJoiningIteration() {
+  JoinParams join_params;
+  zx_status_t status = ZX_OK;
+  DeviceExtraSyncPtr device;
+
+  if (provisioning_monitor_) {
+    FX_LOGS(ERROR) << "Already attempting to join.";
+    return WEAVE_ERROR_INCORRECT_STATE;
+  }
+
+  status = GetProtocols(std::move(Protocols().set_device_extra(device.NewRequest())));
+  if (status != ZX_OK || !device) {
+    FX_LOGS(ERROR) << "Could not start Thread joining: Could not get DeviceExtra protocol.";
+    return status;
+  }
+
+  WEAVE_ERROR err = GetJoinParams(join_params);
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
+  FX_LOGS(INFO) << "Requesting Thread network join.";
+  status = device->JoinNetwork(std::move(join_params), provisioning_monitor_.NewRequest());
+  if (status != ZX_OK || !provisioning_monitor_.is_bound()) {
+    FX_LOGS(ERROR) << "Could not begin join network attempt.";
+    return status;
+  }
+
+  provisioning_monitor_->WatchProgress(
+      fit::bind_member(this, &ThreadStackManagerDelegateImpl::HandleProvisioningProgress));
+
+  return WEAVE_NO_ERROR;
+}
+
+void ThreadStackManagerDelegateImpl::StopThreadJoining() {
+  FX_LOGS(INFO) << "Stopping Thread network joining.";
+  provisioning_monitor_.Unbind();
+  CancelJoiningTimeout();
+  CancelJoiningRetry();
+}
+
+void ThreadStackManagerDelegateImpl::CancelJoiningTimeout() { joining_timeout_.Cancel(); }
+
+void ThreadStackManagerDelegateImpl::CancelJoiningRetry() { joining_retry_delay_.Cancel(); }
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::StartJoiningTimeout(uint32_t delay_milliseconds,
+                                                                fit::closure callback) {
+  joining_timeout_.set_handler(std::move(callback));
+  return joining_timeout_.PostDelayed(PlatformMgrImpl().GetDispatcher(),
+                                      zx::msec(delay_milliseconds));
+}
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::StartJoiningRetry(uint32_t delay_milliseconds,
+                                                              fit::closure callback) {
+  joining_retry_delay_.set_handler(std::move(callback));
+  return joining_retry_delay_.PostDelayed(PlatformMgrImpl().GetDispatcher(),
+                                          zx::msec(delay_milliseconds));
+}
+
+WEAVE_ERROR ThreadStackManagerDelegateImpl::GetJoinParams(JoinParams& join_params) {
+  WEAVE_ERROR err = WEAVE_NO_ERROR;
+  JoinerCommissioningParams commissioning_params;
+  size_t config_length_out;
+  char config_buffer[kJoinInfoBufferSize];
+
+  // Copy pairing code as PSKd.
+  err = ConfigurationMgr().GetPairingCode(config_buffer, kJoinInfoBufferSize, config_length_out);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << " Failed to get pairing code: " << nl::ErrorStr(err) << ".";
+    return err;
+  }
+  if (config_length_out > PSKD_LEN) {
+    FX_LOGS(WARNING) << "PSKd was too long, truncating to " << PSKD_LEN << " bytes.";
+    config_length_out = PSKD_LEN;
+  }
+  commissioning_params.set_pskd(std::string(config_buffer, config_length_out));
+
+  // Copy vendor name.
+  err = ConfigurationMgr().GetVendorIdDescription(config_buffer, kJoinInfoBufferSize,
+                                                  config_length_out);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << " Failed to get vendor description: " << nl::ErrorStr(err) << ".";
+    return err;
+  }
+  if (config_length_out > MAX_VENDOR_NAME_LEN) {
+    FX_LOGS(WARNING) << "Vendor name was too long, truncating to " << MAX_VENDOR_NAME_LEN << " bytes.";
+    config_length_out = MAX_VENDOR_NAME_LEN;
+  }
+  commissioning_params.set_vendor_name(std::string(config_buffer, config_length_out));
+
+  // Copy vendor model.
+  err = ConfigurationMgr().GetProductIdDescription(config_buffer, kJoinInfoBufferSize,
+                                                   config_length_out);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << " Failed to get product description: " << nl::ErrorStr(err) << ".";
+    return err;
+  }
+  if (config_length_out > MAX_VENDOR_MODEL_LEN) {
+    FX_LOGS(WARNING) << "Vendor model was too long, truncating to " << MAX_VENDOR_MODEL_LEN << " bytes.";
+    config_length_out = MAX_VENDOR_MODEL_LEN;
+  }
+  commissioning_params.set_vendor_model(std::string(config_buffer, config_length_out));
+
+  // Copy vendor software version.
+  err =
+      ConfigurationMgr().GetFirmwareRevision(config_buffer, kJoinInfoBufferSize, config_length_out);
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << " Failed to get software version: " << nl::ErrorStr(err) << ".";
+    return err;
+  }
+  if (config_length_out > MAX_VENDOR_SW_VER_LEN) {
+    FX_LOGS(WARNING) << "Vendor SW version was too long, truncating to " << MAX_VENDOR_SW_VER_LEN << " bytes.";
+    config_length_out = MAX_VENDOR_SW_VER_LEN;
+  }
+  commissioning_params.set_vendor_sw_version(std::string(config_buffer, config_length_out));
+
+  join_params.set_joiner_parameter(std::move(commissioning_params));
+  return WEAVE_NO_ERROR;
+}
+
+void ThreadStackManagerDelegateImpl::HandleJoiningTimeout() {
+  joining_timeout_expired_ = true;
+  if (!joining_in_progress_) {
+    FX_LOGS(INFO) << "Thread joining attempt timed out, stopping join.";
+    StopThreadJoining();
+  } else {
+    FX_LOGS(INFO) << "Thread joining timeout occurred, but not stoping in-progress join.";
+  }
+}
+
+void ThreadStackManagerDelegateImpl::HandleJoiningRetryDelay() {
+  if (!joining_timeout_expired_) {
+    FX_LOGS(INFO) << "Retrying Thread network join.";
+    StartThreadJoiningIteration();
+  } else {
+    FX_LOGS(INFO) << "Thread joining timeout occured before retry.";
+  }
+}
+
+void ThreadStackManagerDelegateImpl::HandleProvisioningProgress(
+    fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result result) {
+  if (result.is_err() && result.err() != ProvisionError::CANCELED) {
+    joining_in_progress_ = false;
+    provisioning_monitor_.Unbind();
+    // Join failed but not cancelled, delay and retry.
+    if (!joining_timeout_expired_) {
+      FX_LOGS(INFO) << "Did not join network, waiting before retry.";
+      StartJoiningRetry(kJoinAtStartupRetryDelay.to_msecs(), [this] { HandleJoiningRetryDelay(); });
+    }
+    return;
+  }
+
+  if (result.is_err() && result.err() == ProvisionError::CANCELED) {
+    FX_LOGS(INFO) << "Join operation canceled.";
+    StopThreadJoining();
+    return;
+  }
+
+  if (result.response().progress.is_progress()) {
+    if (!joining_in_progress_) {
+      joining_in_progress_ = true;
+      FX_LOGS(INFO) << "Thread joining in progress.";
+    }
+    provisioning_monitor_->WatchProgress(
+        fit::bind_member(this, &ThreadStackManagerDelegateImpl::HandleProvisioningProgress));
+    return;
+  }
+
+  if (result.response().progress.is_identity()) {
+    FX_LOGS(INFO) << "Thread joining attempt completed.";
+    StopThreadJoining();
+  }
 }
 
 }  // namespace DeviceLayer
