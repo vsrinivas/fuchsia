@@ -39,7 +39,7 @@ bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
 }  // namespace
 
 VnodeVmo::VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
-    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {
+    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length) {
   // Check whether the backing VMO has ZX_RIGHT_EXECUTE, which influences later validation and
   // behavior.
   zx_info_handle_basic_t handle_info;
@@ -111,7 +111,7 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR;
   attr->content_size = length_;
-  attr->storage_size = fbl::round_up(attr->content_size, GetMemfsBlksize());
+  attr->storage_size = fbl::round_up(attr->content_size, GetPageSize());
   attr->link_count = link_count_;
   attr->creation_time = create_time_;
   attr->modification_time = modify_time_;

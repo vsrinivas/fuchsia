@@ -36,19 +36,19 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
   ZX_DEBUG_ASSERT(out_root != nullptr);
 
   zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
+  if (zx_status_t status = zx::channel::create(0, &client, &server); status != ZX_OK) {
     return status;
   }
 
   std::unique_ptr<memfs::Vfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  if ((status = memfs::Vfs::Create("<tmp>", &vfs, &root)) != ZX_OK) {
+  if (zx_status_t status = memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root); status != ZX_OK) {
     return status;
   }
-  vfs->SetDispatcher(dispatcher);
+
   std::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(std::move(vfs));
-  if ((status = fs->vfs->ServeDirectory(std::move(root), std::move(server))) != ZX_OK) {
+  if (zx_status_t status = fs->vfs->ServeDirectory(std::move(root), std::move(server));
+      status != ZX_OK) {
     return status;
   }
 

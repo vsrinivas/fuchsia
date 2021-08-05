@@ -153,7 +153,10 @@ zx_status_t FsManager::Initialize(
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
     fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin,
     std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
-  zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
+  global_loop_->StartThread("root-dispatcher");
+
+  zx_status_t status =
+      memfs::Vfs::Create(global_loop_->dispatcher(), "<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
     return status;
   }
@@ -186,8 +189,6 @@ zx_status_t FsManager::Initialize(
     FX_LOGS(ERROR) << "failed to serve /data stats";
   }
 
-  global_loop_->StartThread("root-dispatcher");
-  root_vfs_->SetDispatcher(global_loop_->dispatcher());
   if (dir_request.is_valid()) {
     status = SetupOutgoingDirectory(std::move(dir_request), std::move(loader), watcher);
     if (status != ZX_OK) {

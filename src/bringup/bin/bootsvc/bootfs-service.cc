@@ -98,12 +98,11 @@ zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher, zx::resource v
                                   fbl::RefPtr<BootfsService>* out) {
   auto svc = fbl::AdoptRef(new BootfsService(std::move(vmex_rsrc)));
 
-  zx_status_t status = memfs::Vfs::Create("<root>", &svc->vfs_, &svc->root_);
+  zx_status_t status = memfs::Vfs::Create(dispatcher, "<root>", &svc->vfs_, &svc->root_);
   if (status != ZX_OK) {
     return status;
   }
 
-  svc->vfs_->SetDispatcher(dispatcher);
   *out = std::move(svc);
   return ZX_OK;
 }

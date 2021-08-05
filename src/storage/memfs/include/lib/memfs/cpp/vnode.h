@@ -6,6 +6,7 @@
 #define SRC_STORAGE_MEMFS_INCLUDE_LIB_MEMFS_CPP_VNODE_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/stream.h>
@@ -30,13 +31,11 @@
 
 namespace memfs {
 
-inline uint64_t GetMemfsBlksize() {
-  static const uint64_t kSize = zx_system_get_page_size();
-  return kSize;
-}
-
 class Dnode;
 class Vfs;
+
+// Returns the page size used by Memfs (this is just the system memory page size).
+uint64_t GetPageSize();
 
 class VnodeMemfs : public fs::Vnode {
  public:
@@ -68,16 +67,16 @@ class VnodeMemfs : public fs::Vnode {
   //
   // Caution must be taken when detaching Dnodes from their parents to avoid leaving
   // this reference dangling.
-  Dnode* dnode_;
-  uint32_t link_count_;
+  Dnode* dnode_ = nullptr;
+  uint32_t link_count_ = 0;
 
  protected:
   explicit VnodeMemfs(Vfs* vfs);
 
-  Vfs* vfs_;
-  uint64_t ino_;
-  uint64_t create_time_;
-  uint64_t modify_time_;
+  Vfs* vfs_ = nullptr;
+  uint64_t ino_ = 0;
+  uint64_t create_time_ = 0;
+  uint64_t modify_time_ = 0;
 
   uint64_t GetInoCounter() const { return ino_ctr_.load(std::memory_order_relaxed); }
 
@@ -183,17 +182,17 @@ class VnodeVmo final : public VnodeMemfs {
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
   zx_status_t MakeLocalClone();
 
-  zx_handle_t vmo_;
-  zx_off_t offset_;
-  zx_off_t length_;
-  bool executable_;
-  bool have_local_clone_;
+  zx_handle_t vmo_ = ZX_HANDLE_INVALID;
+  zx_off_t offset_ = 0;
+  zx_off_t length_ = 0;
+  bool executable_ = false;
+  bool have_local_clone_ = false;
 };
 
 class Vfs : public fs::ManagedVfs {
  public:
-  static zx_status_t Create(const char* fs_name, std::unique_ptr<Vfs>* out_vfs,
-                            fbl::RefPtr<VnodeDir>* out_root);
+  static zx_status_t Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
+                            std::unique_ptr<Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root);
 
   ~Vfs();
 
@@ -214,7 +213,7 @@ class Vfs : public fs::ManagedVfs {
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
 
  private:
-  explicit Vfs(const char* name);
+  explicit Vfs(async_dispatcher_t* dispatcher);
 
   // This event's koid is used as a unique identifier for this filesystem instance. This must be
   // an event because it's returned by the fs.Query interface.

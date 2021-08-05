@@ -69,8 +69,7 @@ TEST(VmofileTests, test_vmofile_basic) {
 
   std::unique_ptr<memfs::Vfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  ASSERT_EQ(memfs::Vfs::Create("<tmp>", &vfs, &root), ZX_OK);
-  vfs->SetDispatcher(dispatcher);
+  ASSERT_EQ(memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root), ZX_OK);
 
   zx::vmo read_only_vmo;
   ASSERT_EQ(zx::vmo::create(64, 0, &read_only_vmo), ZX_OK);
@@ -155,8 +154,7 @@ TEST(VmofileTests, test_vmofile_exec) {
 
   std::unique_ptr<memfs::Vfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  ASSERT_EQ(memfs::Vfs::Create("<tmp>", &vfs, &root), ZX_OK);
-  vfs->SetDispatcher(dispatcher);
+  ASSERT_EQ(memfs::Vfs::Create(dispatcher, "<tmp>", &vfs, &root), ZX_OK);
 
   zx::vmo read_exec_vmo;
   ASSERT_EQ(zx::vmo::create(64, 0, &read_exec_vmo), ZX_OK);

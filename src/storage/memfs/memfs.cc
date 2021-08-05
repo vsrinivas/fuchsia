@@ -29,14 +29,11 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace memfs {
-namespace {
 
 size_t GetPageSize() {
   static const size_t kPageSize = static_cast<size_t>(zx_system_get_page_size());
   return kPageSize;
 }
-
-}  // namespace
 
 zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
                          size_t* actual_size) {
@@ -64,11 +61,12 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
   return ZX_OK;
 }
 
-zx_status_t Vfs::Create(const char* name, std::unique_ptr<memfs::Vfs>* out_vfs,
-                        fbl::RefPtr<VnodeDir>* out_root) {
-  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(name));
+zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
+                        std::unique_ptr<memfs::Vfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root) {
+  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(dispatcher));
+
   fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get());
-  std::unique_ptr<Dnode> dn = Dnode::Create(name, root);
+  std::unique_ptr<Dnode> dn = Dnode::Create(fs_name, root);
   root->dnode_ = dn.get();
   fs->root_ = std::move(dn);
 
@@ -80,7 +78,7 @@ zx_status_t Vfs::Create(const char* name, std::unique_ptr<memfs::Vfs>* out_vfs,
   return ZX_OK;
 }
 
-Vfs::Vfs(const char* name) : fs::ManagedVfs() {}
+Vfs::Vfs(async_dispatcher_t* dispatcher) : fs::ManagedVfs(dispatcher) {}
 
 Vfs::~Vfs() = default;
 
@@ -105,12 +103,7 @@ std::atomic<uint64_t> VnodeMemfs::ino_ctr_ = 0;
 std::atomic<uint64_t> VnodeMemfs::deleted_ino_ctr_ = 0;
 
 VnodeMemfs::VnodeMemfs(Vfs* vfs)
-    : dnode_(nullptr),
-      link_count_(0),
-      vfs_(vfs),
-      ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)),
-      create_time_(0),
-      modify_time_(0) {
+    : vfs_(vfs), ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
   std::timespec ts;
   if (std::timespec_get(&ts, TIME_UTC)) {
     create_time_ = modify_time_ = zx_time_from_timespec(ts);

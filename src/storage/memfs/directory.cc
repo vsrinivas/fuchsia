@@ -47,7 +47,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
 
 zx_status_t VnodeDir::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   *info = {};
-  info->block_size = GetMemfsBlksize();
+  info->block_size = GetPageSize();
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
   info->fs_id = vfs()->GetFsId();

@@ -50,8 +50,7 @@ void LoaderServiceTest::CreateTestDirectory(std::vector<TestDirectoryEntry> conf
   ASSERT_FALSE(vfs_);
   ASSERT_FALSE(root_dir_);
 
-  ASSERT_OK(memfs::Vfs::Create("<tmp>", &vfs_, &root_dir_));
-  vfs_->SetDispatcher(fs_loop_.dispatcher());
+  ASSERT_OK(memfs::Vfs::Create(fs_loop_.dispatcher(), "<tmp>", &vfs_, &root_dir_));
 
   for (auto entry : config) {
     ASSERT_NO_FATAL_FAILURE(AddDirectoryEntry(root_dir_, entry));
