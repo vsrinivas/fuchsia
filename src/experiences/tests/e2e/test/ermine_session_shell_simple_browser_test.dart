@@ -5,6 +5,7 @@
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
 @Retry(2)
+@Timeout(Duration(seconds: 60))
 
 import 'dart:async';
 import 'dart:math';
