@@ -13,7 +13,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
 use fuchsia_zircon as zx;
-use regex::{Captures, Regex, RegexSetBuilder};
+use regex::{Captures, Regex};
 use selectors;
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
@@ -650,13 +650,6 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                 options.local.dump_logs = true;
             }
             "--select" => {
-                // Starting out, we require that the 'component' be specified
-                // as full name using v1 or v2 specification.
-                let component_set = RegexSetBuilder::new(&[r#".*.cml"#, r#".*.cmx"#])
-                    .case_insensitive(true)
-                    .build()
-                    .unwrap();
-
                 for selector in args[i + 1].split(',') {
                     let invalid_selector =
                         format!("Invalid component interest selector: '{}'.", selector);
@@ -667,10 +660,6 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     let component = parts.next().ok_or_else(|| invalid_selector.clone())?;
                     let interest = parts.next().ok_or_else(|| invalid_selector.clone())?;
                     if let Some(_extra) = parts.next() {
-                        return Err(invalid_selector.clone());
-                    }
-
-                    if !component_set.is_match(component) {
                         return Err(invalid_selector.clone());
                     }
                     let selector = match selectors::parse_component_selector(&component.to_string())
@@ -1797,7 +1786,7 @@ mod tests {
         #[test]
         fn select_multiple_loglevel() {
             let mut args = vec!["--select".to_string()];
-            args.push("foo.cmx#DEBUG,bar.cml#WARN".to_string());
+            args.push("foo.cmx#DEBUG,core/bar#WARN".to_string());
 
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
@@ -1805,7 +1794,7 @@ mod tests {
                 interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"bar.cml".to_string()).unwrap(),
+                selector: selectors::parse_component_selector(&"core/bar".to_string()).unwrap(),
                 interest: Interest { min_severity: Some(Severity::Warn), ..Interest::EMPTY },
             });
             parse_flag_test_helper(&args, Some(&expected));
@@ -1829,13 +1818,6 @@ mod tests {
             let mut args = vec!["--select".to_string()];
             args.push("foo.cmx##DEBUG".to_string());
 
-            parse_flag_test_helper(&args, None);
-        }
-
-        #[test]
-        fn select_loglevel_component_error() {
-            let mut args = vec!["--select".to_string()];
-            args.push("foo#DEBUG".to_string());
             parse_flag_test_helper(&args, None);
         }
 
