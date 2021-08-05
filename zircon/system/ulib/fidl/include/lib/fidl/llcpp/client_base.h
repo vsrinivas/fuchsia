@@ -177,7 +177,7 @@ class ChannelRefTracker {
 // handling and teardown, and asynchronous transaction tracking. Users should not directly interact
 // with this class. |ClientBase| objects must be managed via std::shared_ptr.
 class ClientBase {
- public:
+ protected:
   // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.
   ClientBase() = default;
   virtual ~ClientBase() = default;
@@ -206,6 +206,7 @@ class ClientBase {
   // succeed. Additional calls will simply return an empty zx::channel.
   zx::channel WaitForChannel();
 
+ public:
   // Stores the given asynchronous transaction response context, setting the txid field.
   void PrepareAsyncTxn(ResponseContext* context);
 
@@ -294,6 +295,10 @@ class ClientBase {
                                                   AsyncEventHandler* maybe_event_handler) = 0;
 
  private:
+  // TODO(fxbug.dev/82085): Instead of protecting methods and adding friends,
+  // we should use composition over inheriting from ClientBase.
+  friend class ClientController;
+
   ChannelRefTracker channel_tracker_;
 
   // Weak reference to the internal binding state.
