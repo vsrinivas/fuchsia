@@ -236,7 +236,7 @@ impl DaemonServiceProvider for Daemon {
 
 #[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
-    async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
+    async fn on_event(&self, event: DaemonEvent) -> Result<events::Status> {
         log::info!("! DaemonEvent::{:?}", event);
 
         match event {
@@ -261,9 +261,8 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
             _ => (),
         }
 
-        // This handler is never done unless the target_collection is dropped,
-        // so always return false.
-        Ok(false)
+        // This handler is never done unless the target_collection is dropped.
+        Ok(events::Status::Waiting)
     }
 }
 
@@ -1179,13 +1178,16 @@ mod test {
                 value: "florp".to_owned(),
             }),
         };
-        assert!(!handler
-            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: Some(t.nodename().expect("mdns target should always have a name.")),
-                ..Default::default()
-            })))
-            .await
-            .unwrap());
+        assert!(
+            handler
+                .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
+                    nodename: Some(t.nodename().expect("mdns target should always have a name.")),
+                    ..Default::default()
+                })))
+                .await
+                .unwrap()
+                == events::Status::Waiting
+        );
 
         assert!(!t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
@@ -1202,13 +1204,16 @@ mod test {
                 value: "this-town-aint-big-enough-for-the-three-of-us".to_owned(),
             }),
         };
-        assert!(!handler
-            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: Some(t.nodename().expect("Handling Mdns traffic for unnamed node")),
-                ..Default::default()
-            })))
-            .await
-            .unwrap());
+        assert!(
+            handler
+                .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
+                    nodename: Some(t.nodename().expect("Handling Mdns traffic for unnamed node")),
+                    ..Default::default()
+                })))
+                .await
+                .unwrap()
+                == events::Status::Waiting
+        );
 
         assert!(t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_second_update);

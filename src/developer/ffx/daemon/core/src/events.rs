@@ -48,10 +48,19 @@ impl<T: EventTrait> EventSynthesizer<T> for Weak<dyn EventSynthesizer<T>> {
     }
 }
 
+/// Determines the status of a handler.
+#[derive(PartialEq, Eq, Debug)]
+pub enum Status {
+    /// Returned when an event handler is done.
+    Done,
+    /// Returned when an event handler is expecting to handle more events.
+    Waiting,
+}
+
 /// Implements a general event handler for any inbound events.
 #[async_trait(?Send)]
 pub trait EventHandler<T: EventTrait> {
-    async fn on_event(&self, event: T) -> Result<bool>;
+    async fn on_event(&self, event: T) -> Result<Status>;
 }
 
 struct DispatcherInner<T: EventTrait + 'static> {
@@ -74,15 +83,15 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
             .map(|r| {
                 // This block merits some explaining:
                 // So originally an event handler would say that it is done by
-                // returning Ok(true). This works around it so that a success
-                // result of `true` will cause the work stream for this handler
+                // returning Ok(Done). This works around it so that a success
+                // result of `Done` will cause the work stream for this handler
                 // to close.
                 //
                 // Otherwise when there is an error, just rewrap it in an Err.
-                // This is just a complicated way to remap Result<bool> to
+                // This is just a complicated way to remap Result<Status> to
                 // Result<()> to preserve the original intended behavior.
                 if let Ok(r) = r {
-                    if r {
+                    if r == Status::Done {
                         Err(anyhow!("dispatcher done"))
                     } else {
                         Ok(())
@@ -174,17 +183,17 @@ where
     T: EventTrait,
     F: Future<Output = bool>,
 {
-    async fn on_event(&self, event: T) -> Result<bool> {
+    async fn on_event(&self, event: T) -> Result<Status> {
         // This is a bit of a race, but will eventually clean things up by the
         // time the next event fires (if the wait_for future is dropped).
         if self.parent_link.upgrade().is_none() {
-            return Ok(true);
+            return Ok(Status::Done);
         }
         if (self.predicate)(event).await {
             self.predicate_matched.send(()).await.context("sending 'done' signal to waiter")?;
-            return Ok(true);
+            return Ok(Status::Done);
         }
-        Ok(false)
+        Ok(Status::Waiting)
     }
 }
 
@@ -354,10 +363,10 @@ mod test {
 
     #[async_trait(?Send)]
     impl EventHandler<i32> for TestHookFirst {
-        async fn on_event(&self, event: i32) -> Result<bool> {
+        async fn on_event(&self, event: i32) -> Result<Status> {
             assert_eq!(event, 5);
             self.callbacks_done.send(true).await.unwrap();
-            Ok(false)
+            Ok(Status::Done)
         }
     }
 
@@ -367,10 +376,10 @@ mod test {
 
     #[async_trait(?Send)]
     impl EventHandler<i32> for TestHookSecond {
-        async fn on_event(&self, event: i32) -> Result<bool> {
+        async fn on_event(&self, event: i32) -> Result<Status> {
             assert_eq!(event, 5);
             self.callbacks_done.send(true).await.unwrap();
-            Ok(false)
+            Ok(Status::Waiting)
         }
     }
 
@@ -485,10 +494,10 @@ mod test {
 
     #[async_trait(?Send)]
     impl EventHandler<EventFailerInput> for EventFailer {
-        async fn on_event(&self, event: EventFailerInput) -> Result<bool> {
+        async fn on_event(&self, event: EventFailerInput) -> Result<Status> {
             match event {
                 EventFailerInput::Fail => Err(anyhow!("test told to fail")),
-                EventFailerInput::Complete => Ok(true),
+                EventFailerInput::Complete => Ok(Status::Done),
             }
         }
     }

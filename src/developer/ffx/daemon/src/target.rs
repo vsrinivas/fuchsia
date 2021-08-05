@@ -1729,10 +1729,10 @@ mod test {
 
     #[async_trait(?Send)]
     impl events::EventHandler<DaemonEvent> for EventPusher {
-        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
+        async fn on_event(&self, event: DaemonEvent) -> Result<events::Status> {
             if let DaemonEvent::NewTarget(TargetInfo { nodename: Some(s), .. }) = event {
                 self.got.send(s).await.unwrap();
-                Ok(false)
+                Ok(events::Status::Waiting)
             } else {
                 panic!("this should never receive any other kind of event");
             }
