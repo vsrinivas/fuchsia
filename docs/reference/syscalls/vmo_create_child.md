@@ -60,11 +60,6 @@ access to only a subrange of the parent vmo, and allowing for the
 **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
 [`zx_vmo_create_physical()`] or [`zx_vmo_create_contiguous()`] and their descendants.
 
-An alias child type of **ZX_VMO_CHILD_COPY_ON_WRITE** is also defined and is equivalent to
-**ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE**. This alias is intended to be used when
-**ZX_VMO_CHILD_SNAPSHOT** is desired, but the VMO may be backed by a user pager. In all other cases,
-you should use one of the precise child types as this alias may change or become deprecated.
-
 In addition, *options* can contain zero or more of the following flags to
 further specify the child's behavior:
 
@@ -93,7 +88,7 @@ discussion of the details of each right.
 
 In all cases if **ZX_VMO_NO_WRITE** is set then **ZX_RIGHT_WRITE** will be removed.
 
-If *options* is **ZX_VMO_CHILD_COPY_ON_WRITE** or **ZX_VMO_CHILD_PRIVATE_PAGER_COPY** and
+If *options* is **ZX_VMO_CHILD_SNAPSHOT** or **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE** and
 **ZX_VMO_CHILD_NO_WRITE** is not set then **ZX_RIGHT_WRITE** will be added and **ZX_RIGHT_EXECUTE**
 will be removed.
 
