@@ -26,6 +26,7 @@ const (
 	TooFewHandles                ErrorCode = "TOO_FEW_HANDLES"
 	UnionFieldNotSet             ErrorCode = "UNION_FIELD_NOT_SET"
 	InvalidInlineBitInEnvelope   ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
+	CountExceedsLimit            ErrorCode = "COUNT_EXCEEDS_LIMIT"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -48,4 +49,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	TooFewHandles:                {},
 	UnionFieldNotSet:             {},
 	InvalidInlineBitInEnvelope:   {},
+	CountExceedsLimit:            {},
 }

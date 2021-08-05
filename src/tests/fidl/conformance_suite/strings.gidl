@@ -21,3 +21,17 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
     },
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
 }
+
+// Test string with count exceeding 32-bit limit (as defined in RFC-0059).
+decode_failure("StringCountExceedsLimit") {
+    // TODO(fxbug.dev/82167) go, rust and dart all panic and don't return proper errors
+    bindings_denylist = [go, rust, dart],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // length of string data
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}

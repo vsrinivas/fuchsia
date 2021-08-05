@@ -19,6 +19,7 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/tables.gidl",
   "//src/tests/fidl/conformance_suite/transformer.gidl",
   "//src/tests/fidl/conformance_suite/union.gidl",
+  "//src/tests/fidl/conformance_suite/vectors.gidl",
 ]
 
 conformance_suite_fidl_target =

@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Test vector with count exceeding 32-bit limit (as defined in RFC-0059).
+decode_failure("VectorCountExceedsLimit") {
+    // TODO(fxbug.dev/82167) go, rust and dart all panic and don't return proper errors
+    bindings_denylist = [go, rust, dart],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // length of vector data
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
