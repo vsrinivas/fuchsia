@@ -130,7 +130,7 @@ From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:24
+From //BUILD.gn:25
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -138,7 +138,7 @@ From //products/bringup.gni:50
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:24
+From //BUILD.gn:25
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -153,7 +153,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:31
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -161,7 +161,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:31
+From //BUILD.gn:32
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -605,7 +605,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:39
+From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -613,7 +613,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:39
+From //BUILD.gn:40
 
 ### camera_debug
 
@@ -1628,7 +1628,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:58
+From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1636,7 +1636,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:58
+From //BUILD.gn:59
 
 ### host_os
 
@@ -3578,7 +3578,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:45
+From //BUILD.gn:46
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -3728,7 +3728,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
@@ -3736,7 +3736,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
