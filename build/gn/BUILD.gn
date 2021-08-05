@@ -132,4 +132,16 @@ action("package_archive") {
     pm_tool_target,
     tarmaker_tool_target,
   ]
+
+  metadata = {
+    # Use by //:archives target to ensure this file is uploaded
+    # to cloud storage after build completion.
+    archives = [
+      {
+        name = "packages"
+        path = rebase_path(outputs[0], root_build_dir)
+        type = "tgz"
+      },
+    ]
+  }
 }
