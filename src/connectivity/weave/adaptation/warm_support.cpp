@@ -119,6 +119,11 @@ PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IP
                                     uint8_t prefix_length, bool add) {
   auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
 
+  if (interface_type == InterfaceType::kInterfaceTypeThread && !ConnectivityMgrImpl().IsThreadProvisioned()) {
+    FX_LOGS(WARNING) << "Not adding address when Thread is not provisioned.";
+    return kPlatformResultFailure;
+  }
+
   // Determine interface name to add/remove from.
   std::optional<std::string> interface_name = GetInterfaceName(interface_type);
   if (!interface_name) {
