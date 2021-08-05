@@ -154,6 +154,9 @@ class MockSimpleAudio : public SimpleAudioStream {
     notify_timer_.Cancel();
     return ZX_OK;
   }
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   void ProcessRingNotification() {
     ScopedToken t(domain_token());

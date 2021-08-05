@@ -250,7 +250,6 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
 
   audio_fidl::wire::PcmFormat pcm_format = {};
   pcm_format.number_of_channels = static_cast<uint8_t>(channel_cnt_);
-  pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
   pcm_format.frame_rate = frames_per_second;
   pcm_format.bytes_per_sample = channel_size_ / 8;
@@ -269,7 +268,14 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   }
   fifo_depth_ = result->properties.fifo_depth();
   external_delay_nsec_ = result->properties.external_delay();
-  return ZX_OK;
+
+  // TODO(81650): Add support to audio-driver-ctl to interactively activate/deactivate channels.
+  auto result2 = fidl::WireCall(rb_ch_).SetActiveChannels(channels_to_use_bitmask);
+  if (result2.status() == ZX_ERR_NOT_SUPPORTED) {
+    printf("Active channel filtering not supported by the driver.\n");
+    return ZX_OK;
+  }
+  return result2.status();
 }
 
 zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring) {

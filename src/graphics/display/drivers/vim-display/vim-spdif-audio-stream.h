@@ -50,6 +50,9 @@ class Vim2SpdifAudioStream : public SimpleAudioStream {
                         zx::vmo* out_buffer) __TA_REQUIRES(domain_token()) override;
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
+  zx_status_t ChangeActiveChannels(uint64_t mask) __TA_REQUIRES(domain_token()) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
   zx_status_t CreateFormatList() __TA_REQUIRES(domain_token());
