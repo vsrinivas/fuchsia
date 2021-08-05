@@ -283,6 +283,14 @@ UART writing can be relatively costly (10 chars/ms) to the entire time
 spent in physboot and it is desirable to exclude this sort of work from
 holistic time measurements.
 
+### kernel.phys.print-stack-max=\<uint32_t>
+**Default:** `0x400`
+
+When there is a crash in the kernel's early boot phase, it can print out stack
+contents on the serial console.  This is the maximum size (in bytes) of stack
+memory that will be dumped; the actual amount dumped depends on stack depth.
+Each 16 bytes of stack is printed on one line using up to 75 characters.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 

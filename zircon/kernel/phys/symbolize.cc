@@ -6,13 +6,16 @@
 
 #include "phys/symbolize.h"
 
+#include <lib/boot-options/boot-options.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 
+#include <ktl/algorithm.h>
 #include <ktl/string_view.h>
 #include <phys/frame-pointer.h>
 #include <phys/stack.h>
+#include <pretty/hexdump.h>
 
 namespace {
 
@@ -151,5 +154,25 @@ void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,
       Printf("%s: Backtrace (via shadow call stack):\n", kProgramName_);
     }
     BackTrace(shadow_call_stack);
+  }
+}
+
+void Symbolize::PrintStack(uintptr_t sp, ktl::optional<size_t> max_size_bytes) {
+  const size_t configured_max = gBootOptions->phys_print_stack_max;
+  auto dump_stack = [max = max_size_bytes.value_or(configured_max), sp, this](
+                        const BootStack& stack, const char* which) {
+    Printf("%s: Partial dump of %s stack at [%p, %p):\n", kProgramName_, which, &stack, &stack + 1);
+    ktl::span whole(reinterpret_cast<const uint64_t*>(stack.stack),
+                    sizeof(stack.stack) / sizeof(uint64_t));
+    const uintptr_t base = reinterpret_cast<uintptr_t>(whole.data());
+    ktl::span used = whole.subspan((sp - base) / sizeof(uint64_t));
+    hexdump(used.data(), ktl::min(max, used.size_bytes()));
+  };
+
+  if (boot_stack.IsOnStack(sp)) {
+    dump_stack(boot_stack, "boot");
+  } else {
+    Printf("%s: Stack pointer is outside expected bounds [%p, %p)\n", kProgramName_, &boot_stack,
+           &boot_stack + 1);
   }
 }

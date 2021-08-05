@@ -20,14 +20,18 @@ PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {
   vprintf(format, args);
   va_end(args);
 
-  // Now print the backtrace.
+  // Now print the backtrace and stack dump.
 
   FramePointer frame_pointer_backtrace = FramePointer::BackTrace();
 
   uintptr_t scsp = GetShadowCallStackPointer();
   ShadowCallStackBacktrace shadow_call_stack_backtrace = boot_shadow_call_stack.BackTrace(scsp);
 
-  Symbolize::GetInstance()->PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
+  Symbolize& symbolize = *Symbolize::GetInstance();
+  symbolize.PrintBacktraces(frame_pointer_backtrace, shadow_call_stack_backtrace);
+
+  uintptr_t sp = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+  symbolize.PrintStack(sp);
 
   // Now crash.
   __builtin_trap();

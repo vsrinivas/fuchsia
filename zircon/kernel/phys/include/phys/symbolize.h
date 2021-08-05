@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <ktl/optional.h>
 #include <ktl/string_view.h>
 #include <phys/main.h>
 
@@ -66,6 +67,10 @@ class Symbolize {
   // Print the trigger markup element for a dumpfile.
   // TODO(mcgrathr): corresponds to a ZBI item
   PHYS_SINGLETHREAD void DumpFile(ktl::string_view type, ktl::string_view name);
+
+  // Dump some stack up to the SP.
+  PHYS_SINGLETHREAD void PrintStack(uintptr_t sp,
+                                    ktl::optional<size_t> max_size_bytes = ktl::nullopt);
 
  private:
   static Symbolize instance_;
