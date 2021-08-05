@@ -44,7 +44,7 @@ using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
 template <>
 struct CodingTraits<::fidl::test::escaping::DocCommentWithQuotes>
     : public EncodableCodingTraits<::fidl::test::escaping::DocCommentWithQuotes,
-                                   1> {};
+                                   1, 1> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::escaping::DocCommentWithQuotes>

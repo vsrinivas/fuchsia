@@ -57,7 +57,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
 
 	private:
 	 {{- if .HasResponse }}
-	   {{ .Response.ClientAllocation.BackingBufferType }} bytes_;
+	   {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
 	 {{- end }}
 };
 {{- end }}

@@ -500,7 +500,7 @@ using Padding1ByteEndPtr = ::std::unique_ptr<Padding1ByteEnd>;
 template <>
 struct CodingTraits<::fidl::test::padding::Padding7ByteMiddle>
     : public EncodableCodingTraits<::fidl::test::padding::Padding7ByteMiddle,
-                                   16> {};
+                                   16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding7ByteMiddle>
@@ -533,8 +533,8 @@ struct Equality<::fidl::test::padding::Padding7ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding7ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding7ByteEnd, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding7ByteEnd, 16,
+                                   16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding7ByteEnd>
@@ -568,7 +568,7 @@ struct Equality<::fidl::test::padding::Padding7ByteEnd> {
 template <>
 struct CodingTraits<::fidl::test::padding::Padding6ByteMiddle>
     : public EncodableCodingTraits<::fidl::test::padding::Padding6ByteMiddle,
-                                   16> {};
+                                   16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding6ByteMiddle>
@@ -601,8 +601,8 @@ struct Equality<::fidl::test::padding::Padding6ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding6ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding6ByteEnd, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding6ByteEnd, 16,
+                                   16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding6ByteEnd>
@@ -636,7 +636,7 @@ struct Equality<::fidl::test::padding::Padding6ByteEnd> {
 template <>
 struct CodingTraits<::fidl::test::padding::Padding5ByteMiddle>
     : public EncodableCodingTraits<::fidl::test::padding::Padding5ByteMiddle,
-                                   16> {};
+                                   16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding5ByteMiddle>
@@ -673,8 +673,8 @@ struct Equality<::fidl::test::padding::Padding5ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding5ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding5ByteEnd, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding5ByteEnd, 16,
+                                   16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding5ByteEnd>
@@ -712,7 +712,7 @@ struct Equality<::fidl::test::padding::Padding5ByteEnd> {
 template <>
 struct CodingTraits<::fidl::test::padding::Padding4ByteMiddle>
     : public EncodableCodingTraits<::fidl::test::padding::Padding4ByteMiddle,
-                                   16> {};
+                                   16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding4ByteMiddle>
@@ -745,8 +745,8 @@ struct Equality<::fidl::test::padding::Padding4ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding4ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding4ByteEnd, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding4ByteEnd, 16,
+                                   16> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding4ByteEnd>
@@ -780,7 +780,7 @@ struct Equality<::fidl::test::padding::Padding4ByteEnd> {
 template <>
 struct CodingTraits<::fidl::test::padding::Padding4ByteAlignmentLength12>
     : public EncodableCodingTraits<
-          ::fidl::test::padding::Padding4ByteAlignmentLength12, 12> {};
+          ::fidl::test::padding::Padding4ByteAlignmentLength12, 12, 12> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding4ByteAlignmentLength12>
@@ -823,7 +823,7 @@ struct Equality<::fidl::test::padding::Padding4ByteAlignmentLength12> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding3ByteMiddle>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding3ByteMiddle,
+    : public EncodableCodingTraits<::fidl::test::padding::Padding3ByteMiddle, 8,
                                    8> {};
 
 template <>
@@ -857,8 +857,8 @@ struct Equality<::fidl::test::padding::Padding3ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding3ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding3ByteEnd, 8> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding3ByteEnd, 8,
+                                   8> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding3ByteEnd>
@@ -891,7 +891,7 @@ struct Equality<::fidl::test::padding::Padding3ByteEnd> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding2ByteMiddle>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding2ByteMiddle,
+    : public EncodableCodingTraits<::fidl::test::padding::Padding2ByteMiddle, 8,
                                    8> {};
 
 template <>
@@ -925,8 +925,8 @@ struct Equality<::fidl::test::padding::Padding2ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding2ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding2ByteEnd, 8> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding2ByteEnd, 8,
+                                   8> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding2ByteEnd>
@@ -960,7 +960,7 @@ struct Equality<::fidl::test::padding::Padding2ByteEnd> {
 template <>
 struct CodingTraits<::fidl::test::padding::Padding2ByteAlignmentLength6>
     : public EncodableCodingTraits<
-          ::fidl::test::padding::Padding2ByteAlignmentLength6, 6> {};
+          ::fidl::test::padding::Padding2ByteAlignmentLength6, 6, 6> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding2ByteAlignmentLength6>
@@ -999,7 +999,7 @@ struct Equality<::fidl::test::padding::Padding2ByteAlignmentLength6> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding1ByteMiddle>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding1ByteMiddle,
+    : public EncodableCodingTraits<::fidl::test::padding::Padding1ByteMiddle, 4,
                                    4> {};
 
 template <>
@@ -1033,8 +1033,8 @@ struct Equality<::fidl::test::padding::Padding1ByteMiddle> {
 };
 template <>
 struct CodingTraits<::fidl::test::padding::Padding1ByteEnd>
-    : public EncodableCodingTraits<::fidl::test::padding::Padding1ByteEnd, 4> {
-};
+    : public EncodableCodingTraits<::fidl::test::padding::Padding1ByteEnd, 4,
+                                   4> {};
 
 template <>
 struct HasPadding<::fidl::test::padding::Padding1ByteEnd>

@@ -12,15 +12,15 @@ class {{ .Name }};
 
 
 {{- define "ClientAllocationComment" -}}
-{{- if SyncCallTotalStackSize . }} Allocates {{ SyncCallTotalStackSize . }} bytes of {{ "" }}
-{{- if not .Request.ClientAllocation.IsStack -}} response {{- else -}}
-  {{- if not .Response.ClientAllocation.IsStack -}} request {{- else -}} message {{- end -}}
+{{- if SyncCallTotalStackSizeV1 . }} Allocates {{ SyncCallTotalStackSizeV1 . }} bytes of {{ "" }}
+{{- if not .Request.ClientAllocationV1.IsStack -}} response {{- else -}}
+  {{- if not .Response.ClientAllocationV1.IsStack -}} request {{- else -}} message {{- end -}}
 {{- end }} buffer on the stack. {{- end }}
-{{- if and .Request.ClientAllocation.IsStack .Response.ClientAllocation.IsStack -}}
+{{- if and .Request.ClientAllocationV1.IsStack .Response.ClientAllocationV1.IsStack -}}
 {{ "" }} No heap allocation necessary.
 {{- else }}
-  {{- if not .Request.ClientAllocation.IsStack }} Request is heap-allocated. {{- end }}
-  {{- if not .Response.ClientAllocation.IsStack }} Response is heap-allocated. {{- end }}
+  {{- if not .Request.ClientAllocationV1.IsStack }} Request is heap-allocated. {{- end }}
+  {{- if not .Response.ClientAllocationV1.IsStack }} Response is heap-allocated. {{- end }}
 {{- end }}
 {{- end }}
 

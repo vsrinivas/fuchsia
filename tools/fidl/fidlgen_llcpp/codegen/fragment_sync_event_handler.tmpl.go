@@ -28,7 +28,7 @@ const fragmentSyncEventHandlerTmpl = `
     return x;
   })();
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  {{ .SyncEventAllocation.BackingBufferType }} read_storage;
+  {{ .SyncEventAllocationV1.BackingBufferType }} read_storage;
   std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
   ::fidl::IncomingMessage msg = fidl::ChannelReadEtc(
       client_end.handle(),

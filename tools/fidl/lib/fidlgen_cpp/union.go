@@ -10,7 +10,6 @@ import (
 
 type Union struct {
 	Attributes
-	TypeShape
 	fidlgen.Strictness
 	fidlgen.Resourceness
 	nameVariants
@@ -22,6 +21,8 @@ type Union struct {
 	WireInvalidOrdinal name
 	Members            []UnionMember
 	Result             *Result
+	TypeShapeV1        TypeShape
+	TypeShapeV2        TypeShape
 }
 
 func (Union) Kind() declKind {
@@ -57,7 +58,8 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	wireOrdinalEnum := name.Wire.nest("Ordinal")
 	u := Union{
 		Attributes:         Attributes{val.Attributes},
-		TypeShape:          TypeShape{val.TypeShapeV1},
+		TypeShapeV1:        TypeShape{val.TypeShapeV1},
+		TypeShapeV2:        TypeShape{val.TypeShapeV2},
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
 		nameVariants:       name,

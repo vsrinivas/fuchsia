@@ -182,7 +182,14 @@ class Example_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(
@@ -204,7 +211,14 @@ class Example_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::error::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -221,7 +235,7 @@ class Example_ResponseEncoder {
 }  // namespace test
 template <>
 struct CodingTraits<::fidl::test::error::Example_foo_Response>
-    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Response,
+    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Response, 8,
                                    8> {};
 
 template <>
@@ -251,12 +265,13 @@ struct IsFidlXUnion<::fidl::test::error::Example_foo_Result>
 
 template <>
 struct CodingTraits<::fidl::test::error::Example_foo_Result>
-    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Result,
-                                   24> {};
+    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Result, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::error::Example_foo_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,

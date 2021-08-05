@@ -80,6 +80,8 @@ struct CodingTraits<::fidl::test::typealiases::obj_type> {
       sizeof(::fidl::test::typealiases::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::typealiases::obj_type);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::typealiases::obj_type);
   static void Encode(
       Encoder* encoder, ::fidl::test::typealiases::obj_type* value,
       size_t offset,
@@ -114,7 +116,7 @@ struct Equality<::fidl::test::typealiases::obj_type> {
 template <>
 struct CodingTraits<::fidl::test::typealiases::ExampleOfUseOfAliases>
     : public EncodableCodingTraits<
-          ::fidl::test::typealiases::ExampleOfUseOfAliases, 88> {};
+          ::fidl::test::typealiases::ExampleOfUseOfAliases, 88, 88> {};
 
 template <>
 struct HasPadding<::fidl::test::typealiases::ExampleOfUseOfAliases>

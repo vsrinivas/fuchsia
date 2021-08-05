@@ -1259,7 +1259,14 @@ class TestProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage
   StrictXUnionHenceResponseMayBeStackAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1273,7 +1280,14 @@ class TestProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage
   FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1300,7 +1314,14 @@ class TestProtocol_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::union_::StrictBoundedXUnion* xu) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, xu, 16);
 
     fidl_trace(
@@ -1315,7 +1336,14 @@ class TestProtocol_ResponseEncoder {
   FlexibleXUnionHenceResponseMustBeHeapAllocated(
       ::fidl::Encoder* _encoder, ::fidl::test::union_::OlderSimpleUnion* xu) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, xu, 16);
 
     fidl_trace(
@@ -2370,11 +2398,12 @@ struct IsFidlXUnion<::fidl::test::union_::Union> : public std::true_type {};
 
 template <>
 struct CodingTraits<::fidl::test::union_::Union>
-    : public EncodableCodingTraits<::fidl::test::union_::Union, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::Union, 24, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::Union>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder, std::unique_ptr<::fidl::test::union_::Union>* value,
@@ -2435,7 +2464,7 @@ struct Equality<::fidl::test::union_::Union> {
 template <>
 struct CodingTraits<::fidl::test::union_::StructWithNullableXUnion>
     : public EncodableCodingTraits<
-          ::fidl::test::union_::StructWithNullableXUnion, 24> {};
+          ::fidl::test::union_::StructWithNullableXUnion, 24, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::union_::StructWithNullableXUnion>
@@ -2471,11 +2500,13 @@ struct IsFidlXUnion<::fidl::test::union_::StrictUnion> : public std::true_type {
 
 template <>
 struct CodingTraits<::fidl::test::union_::StrictUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::StrictUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::StrictUnion, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2540,12 +2571,13 @@ struct IsFidlXUnion<::fidl::test::union_::StrictSimpleXUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::StrictSimpleXUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::StrictSimpleXUnion,
-                                   24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::StrictSimpleXUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictSimpleXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2609,11 +2641,12 @@ struct IsFidlXUnion<::fidl::test::union_::StrictFoo> : public std::true_type {};
 
 template <>
 struct CodingTraits<::fidl::test::union_::StrictFoo>
-    : public EncodableCodingTraits<::fidl::test::union_::StrictFoo, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::StrictFoo, 24, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder, std::unique_ptr<::fidl::test::union_::StrictFoo>* value,
@@ -2674,12 +2707,13 @@ struct IsFidlXUnion<::fidl::test::union_::StrictBoundedXUnion>
 template <>
 struct CodingTraits<::fidl::test::union_::StrictBoundedXUnion>
     : public EncodableCodingTraits<::fidl::test::union_::StrictBoundedXUnion,
-                                   24> {};
+                                   24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::union_::StrictBoundedXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2741,12 +2775,13 @@ struct IsFidlXUnion<::fidl::test::union_::ReverseOrdinalUnion>
 template <>
 struct CodingTraits<::fidl::test::union_::ReverseOrdinalUnion>
     : public EncodableCodingTraits<::fidl::test::union_::ReverseOrdinalUnion,
-                                   24> {};
+                                   24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::union_::ReverseOrdinalUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2805,7 +2840,7 @@ struct Equality<::fidl::test::union_::ReverseOrdinalUnion> {
 };
 template <>
 struct CodingTraits<::fidl::test::union_::Pizza>
-    : public EncodableCodingTraits<::fidl::test::union_::Pizza, 16> {};
+    : public EncodableCodingTraits<::fidl::test::union_::Pizza, 16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::union_::Pizza> : public std::true_type {};
@@ -2833,7 +2868,7 @@ struct Equality<::fidl::test::union_::Pizza> {
 };
 template <>
 struct CodingTraits<::fidl::test::union_::Pasta>
-    : public EncodableCodingTraits<::fidl::test::union_::Pasta, 16> {};
+    : public EncodableCodingTraits<::fidl::test::union_::Pasta, 16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::union_::Pasta> : public std::true_type {};
@@ -2865,12 +2900,13 @@ struct IsFidlXUnion<::fidl::test::union_::StrictPizzaOrPasta>
 
 template <>
 struct CodingTraits<::fidl::test::union_::StrictPizzaOrPasta>
-    : public EncodableCodingTraits<::fidl::test::union_::StrictPizzaOrPasta,
-                                   24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::StrictPizzaOrPasta, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::StrictPizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2933,11 +2969,13 @@ struct IsFidlXUnion<::fidl::test::union_::PizzaOrPasta>
 
 template <>
 struct CodingTraits<::fidl::test::union_::PizzaOrPasta>
-    : public EncodableCodingTraits<::fidl::test::union_::PizzaOrPasta, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::PizzaOrPasta, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::PizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2998,12 +3036,13 @@ struct IsFidlXUnion<::fidl::test::union_::FlexiblePizzaOrPasta>
 template <>
 struct CodingTraits<::fidl::test::union_::FlexiblePizzaOrPasta>
     : public EncodableCodingTraits<::fidl::test::union_::FlexiblePizzaOrPasta,
-                                   24> {};
+                                   24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::union_::FlexiblePizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3068,12 +3107,13 @@ struct IsFidlXUnion<::fidl::test::union_::ExplicitPizzaOrPasta>
 template <>
 struct CodingTraits<::fidl::test::union_::ExplicitPizzaOrPasta>
     : public EncodableCodingTraits<::fidl::test::union_::ExplicitPizzaOrPasta,
-                                   24> {};
+                                   24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::union_::ExplicitPizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3138,12 +3178,13 @@ struct IsFidlXUnion<::fidl::test::union_::OlderSimpleUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::OlderSimpleUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::OlderSimpleUnion, 24> {
-};
+    : public EncodableCodingTraits<::fidl::test::union_::OlderSimpleUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3202,7 +3243,7 @@ struct Equality<::fidl::test::union_::OlderSimpleUnion> {
 template <>
 struct CodingTraits<::fidl::test::union_::NullableUnionStruct>
     : public EncodableCodingTraits<::fidl::test::union_::NullableUnionStruct,
-                                   24> {};
+                                   24, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::union_::NullableUnionStruct>
@@ -3236,12 +3277,13 @@ struct IsFidlXUnion<::fidl::test::union_::NewerSimpleUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::NewerSimpleUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::NewerSimpleUnion, 24> {
-};
+    : public EncodableCodingTraits<::fidl::test::union_::NewerSimpleUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::NewerSimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3305,11 +3347,13 @@ struct IsFidlXUnion<::fidl::test::union_::FlexibleUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::FlexibleUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::FlexibleUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::FlexibleUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::FlexibleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3375,11 +3419,13 @@ struct IsFidlXUnion<::fidl::test::union_::FlexibleFoo> : public std::true_type {
 
 template <>
 struct CodingTraits<::fidl::test::union_::FlexibleFoo>
-    : public EncodableCodingTraits<::fidl::test::union_::FlexibleFoo, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::FlexibleFoo, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::FlexibleFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3438,11 +3484,13 @@ struct IsFidlXUnion<::fidl::test::union_::FieldCollision>
 
 template <>
 struct CodingTraits<::fidl::test::union_::FieldCollision>
-    : public EncodableCodingTraits<::fidl::test::union_::FieldCollision, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::FieldCollision, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::FieldCollision>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3504,11 +3552,13 @@ struct IsFidlXUnion<::fidl::test::union_::ExplicitXUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::ExplicitXUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::ExplicitXUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::ExplicitXUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3566,7 +3616,8 @@ struct Equality<::fidl::test::union_::ExplicitXUnion> {
 };
 template <>
 struct CodingTraits<::fidl::test::union_::UnionSandwich>
-    : public EncodableCodingTraits<::fidl::test::union_::UnionSandwich, 40> {};
+    : public EncodableCodingTraits<::fidl::test::union_::UnionSandwich, 40,
+                                   32> {};
 
 template <>
 struct HasPadding<::fidl::test::union_::UnionSandwich> : public std::true_type {
@@ -3606,11 +3657,13 @@ struct IsFidlXUnion<::fidl::test::union_::ExplicitUnion>
 
 template <>
 struct CodingTraits<::fidl::test::union_::ExplicitUnion>
-    : public EncodableCodingTraits<::fidl::test::union_::ExplicitUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::ExplicitUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3673,12 +3726,13 @@ struct IsFidlXUnion<::fidl::test::union_::ExplicitStrictFoo>
 
 template <>
 struct CodingTraits<::fidl::test::union_::ExplicitStrictFoo>
-    : public EncodableCodingTraits<::fidl::test::union_::ExplicitStrictFoo,
-                                   24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::ExplicitStrictFoo, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitStrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3741,11 +3795,13 @@ struct IsFidlXUnion<::fidl::test::union_::ExplicitFoo> : public std::true_type {
 
 template <>
 struct CodingTraits<::fidl::test::union_::ExplicitFoo>
-    : public EncodableCodingTraits<::fidl::test::union_::ExplicitFoo, 24> {};
+    : public EncodableCodingTraits<::fidl::test::union_::ExplicitFoo, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::union_::ExplicitFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -3800,7 +3856,7 @@ struct Equality<::fidl::test::union_::ExplicitFoo> {
 };
 template <>
 struct CodingTraits<::fidl::test::union_::Empty>
-    : public EncodableCodingTraits<::fidl::test::union_::Empty, 1> {};
+    : public EncodableCodingTraits<::fidl::test::union_::Empty, 1, 1> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::union_::Empty>
@@ -3830,12 +3886,13 @@ struct IsFidlXUnion<::fidl::test::union_::XUnionContainingEmptyStruct>
 template <>
 struct CodingTraits<::fidl::test::union_::XUnionContainingEmptyStruct>
     : public EncodableCodingTraits<
-          ::fidl::test::union_::XUnionContainingEmptyStruct, 24> {};
+          ::fidl::test::union_::XUnionContainingEmptyStruct, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::union_::XUnionContainingEmptyStruct>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,

@@ -6,7 +6,7 @@ package codegen
 
 const fragmentClientAsyncMethodsTmpl = `
 {{- define "AsyncClientAllocationComment" -}}
-{{- $alloc := .Request.ClientAllocation }}
+{{- $alloc := .Request.ClientAllocationV1 }}
 {{- if $alloc.IsStack -}}
 Allocates {{ $alloc.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
 {{- else -}}

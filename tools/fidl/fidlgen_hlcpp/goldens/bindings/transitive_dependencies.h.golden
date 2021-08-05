@@ -43,7 +43,7 @@ using BazPtr = ::std::unique_ptr<Baz>;
 }  // namespace test
 template <>
 struct CodingTraits<::fidl::test::transitivedependencies::Baz>
-    : public EncodableCodingTraits<::fidl::test::transitivedependencies::Baz,
+    : public EncodableCodingTraits<::fidl::test::transitivedependencies::Baz, 4,
                                    4> {};
 
 template <>

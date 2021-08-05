@@ -133,9 +133,9 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 {{- end }}
 template <>
 struct CodingTraits<{{ . }}>
-    : public EncodableCodingTraits<{{ . }}, {{ .InlineSize }}> {};
+    : public EncodableCodingTraits<{{ . }}, {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 
-{{ if .HasPadding }}
+{{ if .TypeShapeV1.HasPadding }}
 template<>
 struct HasPadding<{{ . }}> : public std::true_type {};
 {{ end }}

@@ -33,7 +33,14 @@ class super_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -55,7 +62,14 @@ class super_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
                                           int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -79,7 +93,14 @@ class sub_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -100,7 +121,14 @@ class sub_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::Encoder* _encoder,
                                           int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,

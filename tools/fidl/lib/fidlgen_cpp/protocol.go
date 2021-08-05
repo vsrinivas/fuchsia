@@ -182,10 +182,11 @@ type protocolInner struct {
 
 	// ClientAllocation is the allocation behavior of the client when receiving
 	// FIDL events over this protocol.
-	SyncEventAllocation allocation
-	Methods             []Method
-	FuzzingName         string
-	TestBase            nameVariants
+	SyncEventAllocationV1 allocation
+	SyncEventAllocationV2 allocation
+	Methods               []Method
+	FuzzingName           string
+	TestBase              nameVariants
 }
 
 // Protocol should be created using newProtocol.
@@ -269,7 +270,8 @@ func (args argsWrapper) isResource() bool {
 }
 
 type messageInner struct {
-	TypeShape
+	TypeShapeV1     TypeShape
+	TypeShapeV2     TypeShape
 	HlCodingTable   name
 	WireCodingTable name
 }
@@ -279,9 +281,11 @@ type messageInner struct {
 // message should be created using newMessage.
 type message struct {
 	messageInner
-	IsResource       bool
-	ClientAllocation allocation
-	ServerAllocation allocation
+	IsResource         bool
+	ClientAllocationV1 allocation
+	ClientAllocationV2 allocation
+	ServerAllocationV1 allocation
+	ServerAllocationV2 allocation
 }
 
 // methodContext indicates where the request/response is used.
@@ -298,16 +302,21 @@ type boundednessQuery func(methodContext, fidlgen.Strictness) boundedness
 
 func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 	direction messageDirection) message {
-	ts := inner.TypeShape
 	return message{
 		messageInner: inner,
 		IsResource:   argsWrapper(args).isResource(),
-		ClientAllocation: computeAllocation(
-			ts.MaxTotalSize(),
-			direction.queryBoundedness(clientContext, ts.HasFlexibleEnvelope)),
-		ServerAllocation: computeAllocation(
-			ts.MaxTotalSize(),
-			direction.queryBoundedness(serverContext, ts.HasFlexibleEnvelope)),
+		ClientAllocationV1: computeAllocation(
+			inner.TypeShapeV1.MaxTotalSize(),
+			direction.queryBoundedness(clientContext, inner.TypeShapeV1.HasFlexibleEnvelope)),
+		ClientAllocationV2: computeAllocation(
+			inner.TypeShapeV2.MaxTotalSize(),
+			direction.queryBoundedness(clientContext, inner.TypeShapeV2.HasFlexibleEnvelope)),
+		ServerAllocationV1: computeAllocation(
+			inner.TypeShapeV1.MaxTotalSize(),
+			direction.queryBoundedness(serverContext, inner.TypeShapeV1.HasFlexibleEnvelope)),
+		ServerAllocationV2: computeAllocation(
+			inner.TypeShapeV2.MaxTotalSize(),
+			direction.queryBoundedness(serverContext, inner.TypeShapeV2.HasFlexibleEnvelope)),
 	}
 }
 
@@ -349,8 +358,10 @@ type methodInner struct {
 	Marker       nameVariants
 	wireMethod
 	baseCodingTableName string
-	requestTypeShape    TypeShape
-	responseTypeShape   TypeShape
+	requestTypeShapeV1  TypeShape
+	requestTypeShapeV2  TypeShape
+	responseTypeShapeV1 TypeShape
+	responseTypeShapeV2 TypeShape
 
 	Attributes
 	nameVariants
@@ -442,12 +453,14 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
 		},
 		Request: newMessage(messageInner{
-			TypeShape:       inner.requestTypeShape,
+			TypeShapeV1:     inner.requestTypeShapeV1,
+			TypeShapeV2:     inner.requestTypeShapeV2,
 			HlCodingTable:   hlRequestCodingTable,
 			WireCodingTable: wireRequestCodingTable,
 		}, inner.RequestArgs, wire, messageDirectionRequest),
 		Response: newMessage(messageInner{
-			TypeShape:       inner.responseTypeShape,
+			TypeShapeV1:     inner.responseTypeShapeV1,
+			TypeShapeV2:     inner.responseTypeShapeV2,
 			HlCodingTable:   hlResponseCodingTable,
 			WireCodingTable: wireResponseCodingTable,
 		}, inner.ResponseArgs, wire, messageDirectionResponse),
@@ -499,7 +512,10 @@ func (p Parameter) NameAndType() (string, Type) {
 
 func anyEventHasFlexibleEnvelope(methods []Method) bool {
 	for _, m := range methods {
-		if !m.HasRequest && m.HasResponse && m.Response.HasFlexibleEnvelope {
+		if m.Response.TypeShapeV1.HasFlexibleEnvelope != m.Response.TypeShapeV2.HasFlexibleEnvelope {
+			panic("expected type shape v1 and v2 flexible envelope values to be identical")
+		}
+		if !m.HasRequest && m.HasResponse && m.Response.TypeShapeV1.HasFlexibleEnvelope {
 			return true
 		}
 	}
@@ -532,8 +548,10 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 			// reserved words logic, since that's the behavior in fidlc.
 			baseCodingTableName: codingTableName + string(v.Name),
 			Marker:              methodMarker,
-			requestTypeShape:    TypeShape{v.RequestTypeShapeV1},
-			responseTypeShape:   TypeShape{v.ResponseTypeShapeV1},
+			requestTypeShapeV1:  TypeShape{v.RequestTypeShapeV1},
+			requestTypeShapeV2:  TypeShape{v.RequestTypeShapeV2},
+			responseTypeShapeV1: TypeShape{v.ResponseTypeShapeV1},
+			responseTypeShapeV2: TypeShape{v.ResponseTypeShapeV2},
 			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
 			Attributes:          Attributes{v.Attributes},
 			Ordinal:             v.Ordinal,
@@ -547,10 +565,14 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 		methods = append(methods, method)
 	}
 
-	var maxResponseSize int
+	var maxResponseSizeV1 int
+	var maxResponseSizeV2 int
 	for _, method := range methods {
-		if size := method.Response.MaxTotalSize(); size > maxResponseSize {
-			maxResponseSize = size
+		if size := method.responseTypeShapeV1.MaxTotalSize(); size > maxResponseSizeV1 {
+			maxResponseSizeV1 = size
+		}
+		if size := method.responseTypeShapeV2.MaxTotalSize(); size > maxResponseSizeV2 {
+			maxResponseSizeV2 = size
 		}
 	}
 
@@ -561,8 +583,11 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 		hlMessaging:      hlMessaging,
 		wireTypeNames:    wireTypeNames,
 		DiscoverableName: p.GetServiceName(),
-		SyncEventAllocation: computeAllocation(
-			maxResponseSize, messageDirectionResponse.queryBoundedness(
+		SyncEventAllocationV1: computeAllocation(
+			maxResponseSizeV1, messageDirectionResponse.queryBoundedness(
+				clientContext, anyEventHasFlexibleEnvelope(methods))),
+		SyncEventAllocationV2: computeAllocation(
+			maxResponseSizeV2, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),
 		Methods:     methods,
 		FuzzingName: fuzzingName,

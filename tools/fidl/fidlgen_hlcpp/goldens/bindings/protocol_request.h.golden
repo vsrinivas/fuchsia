@@ -42,7 +42,14 @@ class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::protocolrequest::_internal::
@@ -55,7 +62,14 @@ class Parent_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::protocolrequest::_internal::
@@ -69,7 +83,14 @@ class Parent_RequestEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, c, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -88,7 +109,14 @@ class Parent_RequestEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, r, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -118,7 +146,14 @@ class Parent_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, c, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -136,7 +171,14 @@ class Parent_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, r, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,

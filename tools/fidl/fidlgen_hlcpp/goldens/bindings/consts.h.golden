@@ -130,6 +130,8 @@ struct CodingTraits<::fidl::test::consts::EnumType> {
       sizeof(::fidl::test::consts::EnumType);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::consts::EnumType);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::consts::EnumType);
   static void Encode(
       Encoder* encoder, ::fidl::test::consts::EnumType* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -162,6 +164,8 @@ struct CodingTraits<::fidl::test::consts::BitsType> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::consts::BitsType);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::consts::BitsType);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::consts::BitsType);
   static void Encode(
       Encoder* encoder, ::fidl::test::consts::BitsType* value, size_t offset,

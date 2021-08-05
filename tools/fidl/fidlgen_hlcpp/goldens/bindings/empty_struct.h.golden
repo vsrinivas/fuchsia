@@ -57,7 +57,14 @@ class EmptyProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Send(
       ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -71,7 +78,14 @@ class EmptyProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
       ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(
@@ -97,7 +111,14 @@ class EmptyProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Receive(
       ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -110,7 +131,14 @@ class EmptyProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
       ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, e, 16);
 
     fidl_trace(
@@ -128,7 +156,7 @@ class EmptyProtocol_ResponseEncoder {
 }  // namespace test
 template <>
 struct CodingTraits<::fidl::test::emptystruct::Empty>
-    : public EncodableCodingTraits<::fidl::test::emptystruct::Empty, 1> {};
+    : public EncodableCodingTraits<::fidl::test::emptystruct::Empty, 1, 1> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::emptystruct::Empty>

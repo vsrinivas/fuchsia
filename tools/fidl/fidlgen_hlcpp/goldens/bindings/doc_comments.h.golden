@@ -540,7 +540,14 @@ class Interface_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::doccomments::_internal::
@@ -560,7 +567,14 @@ class Interface_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnEvent(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::doccomments::_internal::
@@ -682,7 +696,7 @@ constexpr int32_t C = 4u;
 }  // namespace test
 template <>
 struct CodingTraits<::fidl::test::doccomments::Table>
-    : public EncodableCodingTraits<::fidl::test::doccomments::Table, 16> {};
+    : public EncodableCodingTraits<::fidl::test::doccomments::Table, 16, 16> {};
 
 inline zx_status_t Clone(const ::fidl::test::doccomments::Table& _value,
                          ::fidl::test::doccomments::Table* result) {
@@ -707,7 +721,7 @@ struct Equality<::fidl::test::doccomments::Table> {
 };
 template <>
 struct CodingTraits<::fidl::test::doccomments::Struct>
-    : public EncodableCodingTraits<::fidl::test::doccomments::Struct, 4> {};
+    : public EncodableCodingTraits<::fidl::test::doccomments::Struct, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::doccomments::Struct>
@@ -736,12 +750,13 @@ struct IsFidlXUnion<::fidl::test::doccomments::StrictUnion>
 
 template <>
 struct CodingTraits<::fidl::test::doccomments::StrictUnion>
-    : public EncodableCodingTraits<::fidl::test::doccomments::StrictUnion, 24> {
-};
+    : public EncodableCodingTraits<::fidl::test::doccomments::StrictUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::StrictUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -802,6 +817,8 @@ struct CodingTraits<::fidl::test::doccomments::MyStrictEnum> {
       sizeof(::fidl::test::doccomments::MyStrictEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyStrictEnum);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::doccomments::MyStrictEnum);
   static void Encode(
       Encoder* encoder, ::fidl::test::doccomments::MyStrictEnum* value,
       size_t offset,
@@ -836,6 +853,8 @@ struct CodingTraits<::fidl::test::doccomments::MyStrictBits> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::doccomments::MyStrictBits);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::doccomments::MyStrictBits);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::doccomments::MyStrictBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::doccomments::MyStrictBits* value,
@@ -874,6 +893,8 @@ struct CodingTraits<::fidl::test::doccomments::MyFlexibleEnum> {
       sizeof(::fidl::test::doccomments::MyFlexibleEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::doccomments::MyFlexibleEnum);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::doccomments::MyFlexibleEnum);
   static void Encode(
       Encoder* encoder, ::fidl::test::doccomments::MyFlexibleEnum* value,
       size_t offset,
@@ -908,6 +929,8 @@ struct CodingTraits<::fidl::test::doccomments::MyFlexibleBits> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::doccomments::MyFlexibleBits);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::doccomments::MyFlexibleBits);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::doccomments::MyFlexibleBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::doccomments::MyFlexibleBits* value,
@@ -946,12 +969,13 @@ struct IsFidlXUnion<::fidl::test::doccomments::FlexibleUnion>
 
 template <>
 struct CodingTraits<::fidl::test::doccomments::FlexibleUnion>
-    : public EncodableCodingTraits<::fidl::test::doccomments::FlexibleUnion,
-                                   24> {};
+    : public EncodableCodingTraits<::fidl::test::doccomments::FlexibleUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,

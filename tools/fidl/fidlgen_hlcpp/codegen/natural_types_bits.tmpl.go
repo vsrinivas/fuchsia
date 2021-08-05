@@ -188,6 +188,7 @@ template <>
 struct CodingTraits<{{ . }}> {
   static constexpr size_t inline_size_old = sizeof({{ . }});
   static constexpr size_t inline_size_v1_no_ee = sizeof({{ . }});
+  static constexpr size_t inline_size_v2 = sizeof({{ . }});
   static void Encode(Encoder* encoder, {{ . }}* value, size_t offset,
                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);

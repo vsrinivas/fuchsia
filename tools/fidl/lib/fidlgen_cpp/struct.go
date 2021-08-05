@@ -13,19 +13,22 @@ import (
 
 type Struct struct {
 	Attributes
-	TypeShape
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType   string
-	Members           []StructMember
-	BackingBufferType string
-	IsResultValue     bool
-	Result            *Result
+	CodingTableType     string
+	Members             []StructMember
+	BackingBufferTypeV1 string
+	BackingBufferTypeV2 string
+	IsResultValue       bool
+	Result              *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
 	// See the struct template for usage.
 	FullDeclMemcpyCompatibleDeps []string
+
+	TypeShapeV1 TypeShape
+	TypeShapeV2 TypeShape
 }
 
 func (Struct) Kind() declKind {
@@ -78,16 +81,19 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	n := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
-	ts := TypeShape{val.TypeShapeV1}
 	r := Struct{
 		Attributes:      Attributes{val.Attributes},
-		TypeShape:       ts,
+		TypeShapeV1:     TypeShape{val.TypeShapeV1},
+		TypeShapeV2:     TypeShape{val.TypeShapeV2},
 		Resourceness:    val.Resourceness,
 		nameVariants:    n,
 		CodingTableType: codingTableType,
 		Members:         []StructMember{},
-		BackingBufferType: computeAllocation(
-			ts.MaxTotalSize(), boundednessBounded).
+		BackingBufferTypeV1: computeAllocation(
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			BackingBufferType(),
+		BackingBufferTypeV2: computeAllocation(
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
 	}
 

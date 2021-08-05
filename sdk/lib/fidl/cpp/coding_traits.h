@@ -30,6 +30,7 @@ struct CodingTraits;
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(T);
+  static constexpr size_t inline_size_v2 = sizeof(T);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -45,6 +46,7 @@ struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
 template <>
 struct CodingTraits<bool> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
+  static constexpr size_t inline_size_v2 = sizeof(bool);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, bool* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -69,6 +71,7 @@ struct CodingTraits<bool> {
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
+  static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
   static void Encode(Encoder* encoder, zx::object_base* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     ZX_ASSERT(maybe_handle_info);
@@ -83,6 +86,7 @@ struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, 
 template <typename T>
 struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsFidlXUnion<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
+  static constexpr size_t inline_size_v2 = sizeof(uintptr_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -122,6 +126,7 @@ void EncodeVectorPointer(EncoderImpl* encoder, size_t count, size_t offset) {
 template <typename T>
 struct CodingTraits<VectorPtr<T>> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -196,6 +201,7 @@ void DecodeVectorBody(UseStdCopy<false>, DecoderImpl* decoder, size_t in_begin_o
 template <typename T>
 struct CodingTraits<::std::vector<T>> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
+  static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, ::std::vector<T>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -220,6 +226,7 @@ struct CodingTraits<::std::vector<T>> {
 template <typename T, size_t N>
 struct CodingTraits<::std::array<T, N>> {
   static constexpr size_t inline_size_v1_no_ee = CodingTraits<T>::inline_size_v1_no_ee * N;
+  static constexpr size_t inline_size_v2 = CodingTraits<T>::inline_size_v2 * N;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -296,9 +303,10 @@ void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope
 }
 #endif
 
-template <typename T, size_t InlineSizeV1NoEE>
+template <typename T, size_t InlineSizeV1NoEE, size_t InlineSizeV2>
 struct EncodableCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = InlineSizeV1NoEE;
+  static constexpr size_t inline_size_v2 = InlineSizeV2;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -312,7 +320,12 @@ struct EncodableCodingTraits {
 
 template <typename T, class EncoderImpl = Encoder>
 size_t EncodingInlineSize(EncoderImpl* encoder) {
-  return CodingTraits<T>::inline_size_v1_no_ee;
+  switch (encoder->wire_format()) {
+    case Encoder::WireFormat::V1:
+      return CodingTraits<T>::inline_size_v1_no_ee;
+    case Encoder::WireFormat::V2:
+      return CodingTraits<T>::inline_size_v2;
+  }
 }
 
 template <typename T, class DecoderImpl = Decoder>

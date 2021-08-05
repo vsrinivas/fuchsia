@@ -14,13 +14,15 @@ type TableFrameItem *TableMember
 
 type Table struct {
 	Attributes
-	TypeShape
 	fidlgen.Resourceness
 	nameVariants
-	CodingTableType   string
-	Members           []TableMember
-	BiggestOrdinal    int
-	BackingBufferType string
+	CodingTableType     string
+	Members             []TableMember
+	BiggestOrdinal      int
+	BackingBufferTypeV1 string
+	BackingBufferTypeV2 string
+	TypeShapeV1         TypeShape
+	TypeShapeV2         TypeShape
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
@@ -81,17 +83,20 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 func (c *compiler) compileTable(val fidlgen.Table) Table {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
-	ts := TypeShape{val.TypeShapeV1}
 	r := Table{
 		Attributes:      Attributes{val.Attributes},
-		TypeShape:       ts,
+		TypeShapeV1:     TypeShape{val.TypeShapeV1},
+		TypeShapeV2:     TypeShape{val.TypeShapeV2},
 		Resourceness:    val.Resourceness,
 		nameVariants:    name,
 		CodingTableType: codingTableType,
 		Members:         nil,
 		BiggestOrdinal:  0,
-		BackingBufferType: computeAllocation(
-			ts.MaxTotalSize(), boundednessBounded).
+		BackingBufferTypeV1: computeAllocation(
+			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
+			BackingBufferType(),
+		BackingBufferTypeV2: computeAllocation(
+			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
 	}
 

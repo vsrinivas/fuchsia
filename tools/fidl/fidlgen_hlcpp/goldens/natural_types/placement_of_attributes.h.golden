@@ -421,7 +421,14 @@ class ExampleProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder,
                                              ::exampleusing::Empty* arg) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, arg, 16);
 
     fidl_trace(
@@ -449,12 +456,13 @@ struct IsFidlXUnion<::fidl::test::placementofattributes::ExampleXUnion>
 template <>
 struct CodingTraits<::fidl::test::placementofattributes::ExampleXUnion>
     : public EncodableCodingTraits<
-          ::fidl::test::placementofattributes::ExampleXUnion, 24> {};
+          ::fidl::test::placementofattributes::ExampleXUnion, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::placementofattributes::ExampleXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -519,12 +527,13 @@ struct IsFidlXUnion<::fidl::test::placementofattributes::ExampleUnion>
 template <>
 struct CodingTraits<::fidl::test::placementofattributes::ExampleUnion>
     : public EncodableCodingTraits<
-          ::fidl::test::placementofattributes::ExampleUnion, 24> {};
+          ::fidl::test::placementofattributes::ExampleUnion, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::placementofattributes::ExampleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -584,7 +593,7 @@ struct Equality<::fidl::test::placementofattributes::ExampleUnion> {
 template <>
 struct CodingTraits<::fidl::test::placementofattributes::ExampleTable>
     : public EncodableCodingTraits<
-          ::fidl::test::placementofattributes::ExampleTable, 16> {};
+          ::fidl::test::placementofattributes::ExampleTable, 16, 16> {};
 
 inline zx_status_t Clone(
     const ::fidl::test::placementofattributes::ExampleTable& _value,
@@ -612,7 +621,7 @@ struct Equality<::fidl::test::placementofattributes::ExampleTable> {
 template <>
 struct CodingTraits<::fidl::test::placementofattributes::ExampleStruct>
     : public EncodableCodingTraits<
-          ::fidl::test::placementofattributes::ExampleStruct, 4> {};
+          ::fidl::test::placementofattributes::ExampleStruct, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::placementofattributes::ExampleStruct>
@@ -643,6 +652,8 @@ struct CodingTraits<::fidl::test::placementofattributes::ExampleEnum> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::placementofattributes::ExampleEnum);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::placementofattributes::ExampleEnum);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::placementofattributes::ExampleEnum);
   static void Encode(
       Encoder* encoder, ::fidl::test::placementofattributes::ExampleEnum* value,
@@ -681,6 +692,8 @@ struct CodingTraits<::fidl::test::placementofattributes::ExampleBits> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::placementofattributes::ExampleBits);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::placementofattributes::ExampleBits);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::placementofattributes::ExampleBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::placementofattributes::ExampleBits* value,

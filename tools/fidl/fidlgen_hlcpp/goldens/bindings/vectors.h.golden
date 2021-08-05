@@ -45,7 +45,7 @@ using ExampleUseOfVectorsPtr = ::std::unique_ptr<ExampleUseOfVectors>;
 template <>
 struct CodingTraits<::fidl::test::vectors::ExampleUseOfVectors>
     : public EncodableCodingTraits<::fidl::test::vectors::ExampleUseOfVectors,
-                                   32> {};
+                                   32, 32> {};
 
 template <>
 struct HasPadding<::fidl::test::vectors::ExampleUseOfVectors>

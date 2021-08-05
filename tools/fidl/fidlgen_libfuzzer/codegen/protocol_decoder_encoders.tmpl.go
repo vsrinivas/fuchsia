@@ -12,7 +12,7 @@ const tmplProtocolDecoderEncoders = `
 {{- if .HasRequest }}
 ::fidl::fuzzing::DecoderEncoderForType{
 	.fidl_type_name = "{{ .WireRequest }}",
-	.has_flexible_envelope = {{ .Request.HasFlexibleEnvelope }},
+	.has_flexible_envelope = {{ .Request.TypeShapeV1.HasFlexibleEnvelope }},
 	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireRequest }}>,
 },
 {{- end -}}
@@ -20,7 +20,7 @@ const tmplProtocolDecoderEncoders = `
 {{- if .HasResponse }}
 ::fidl::fuzzing::DecoderEncoderForType{
 	.fidl_type_name = "{{ .WireResponse }}",
-	.has_flexible_envelope = {{ .Response.HasFlexibleEnvelope }},
+	.has_flexible_envelope = {{ .Response.TypeShapeV1.HasFlexibleEnvelope }},
 	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireResponse }}>,
 },
 {{- end -}}

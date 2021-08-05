@@ -201,6 +201,8 @@ struct CodingTraits<::fidl::test::handles::obj_type> {
       sizeof(::fidl::test::handles::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::handles::obj_type);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::handles::obj_type);
   static void Encode(
       Encoder* encoder, ::fidl::test::handles::obj_type* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -232,7 +234,7 @@ struct Equality<::fidl::test::handles::obj_type> {
 
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>
-    : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};
+    : public EncodableCodingTraits<::fidl::test::handles::Handles, 132, 132> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::handles::Handles>

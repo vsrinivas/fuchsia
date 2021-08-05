@@ -39,7 +39,14 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -61,7 +68,14 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,

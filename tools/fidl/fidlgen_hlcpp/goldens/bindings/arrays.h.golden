@@ -440,12 +440,13 @@ struct IsFidlXUnion<::fidl::test::arrays::UnionSmallArray>
 
 template <>
 struct CodingTraits<::fidl::test::arrays::UnionSmallArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::UnionSmallArray, 24> {
-};
+    : public EncodableCodingTraits<::fidl::test::arrays::UnionSmallArray, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionSmallArray>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -506,12 +507,13 @@ struct IsFidlXUnion<::fidl::test::arrays::UnionLargeArray>
 
 template <>
 struct CodingTraits<::fidl::test::arrays::UnionLargeArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::UnionLargeArray, 24> {
-};
+    : public EncodableCodingTraits<::fidl::test::arrays::UnionLargeArray, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::arrays::UnionLargeArray>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -568,8 +570,8 @@ struct Equality<::fidl::test::arrays::UnionLargeArray> {
 };
 template <>
 struct CodingTraits<::fidl::test::arrays::TableSmallArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::TableSmallArray, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::arrays::TableSmallArray, 16,
+                                   16> {};
 
 inline zx_status_t Clone(const ::fidl::test::arrays::TableSmallArray& _value,
                          ::fidl::test::arrays::TableSmallArray* result) {
@@ -594,8 +596,8 @@ struct Equality<::fidl::test::arrays::TableSmallArray> {
 };
 template <>
 struct CodingTraits<::fidl::test::arrays::TableLargeArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::TableLargeArray, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::arrays::TableLargeArray, 16,
+                                   16> {};
 
 inline zx_status_t Clone(const ::fidl::test::arrays::TableLargeArray& _value,
                          ::fidl::test::arrays::TableLargeArray* result) {
@@ -620,8 +622,8 @@ struct Equality<::fidl::test::arrays::TableLargeArray> {
 };
 template <>
 struct CodingTraits<::fidl::test::arrays::StructSmallArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::StructSmallArray, 8> {
-};
+    : public EncodableCodingTraits<::fidl::test::arrays::StructSmallArray, 8,
+                                   8> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::arrays::StructSmallArray>
@@ -646,7 +648,7 @@ struct Equality<::fidl::test::arrays::StructSmallArray> {
 };
 template <>
 struct CodingTraits<::fidl::test::arrays::StructLargeArray>
-    : public EncodableCodingTraits<::fidl::test::arrays::StructLargeArray,
+    : public EncodableCodingTraits<::fidl::test::arrays::StructLargeArray, 400,
                                    400> {};
 
 template <>

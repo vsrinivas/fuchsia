@@ -44,7 +44,7 @@ using FooPtr = ::std::unique_ptr<Foo>;
 template <>
 struct CodingTraits<::fidl::test::structdefaultvalueenumlibraryreference::Foo>
     : public EncodableCodingTraits<
-          ::fidl::test::structdefaultvalueenumlibraryreference::Foo, 4> {};
+          ::fidl::test::structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<

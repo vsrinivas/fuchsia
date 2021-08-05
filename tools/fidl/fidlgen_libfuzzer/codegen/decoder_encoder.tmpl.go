@@ -8,7 +8,7 @@ const tmplDecoderEncoder = `
 {{- define "DecoderEncoder" -}}
 ::fidl::fuzzing::DecoderEncoderForType{
 	.fidl_type_name = "{{ .Wire }}",
-	.has_flexible_envelope = {{ .HasFlexibleEnvelope }},
+	.has_flexible_envelope = {{ .TypeShapeV1.HasFlexibleEnvelope }},
 	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}>,
 },
 {{- end -}}

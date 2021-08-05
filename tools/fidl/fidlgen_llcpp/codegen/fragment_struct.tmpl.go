@@ -21,11 +21,11 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 struct {{ .Name }} {
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .InlineSize }};
+  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV1.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .TypeShapeV1.InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .HasPointer }};
+  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
 
   {{- range .Members }}
 {{ "" }}
@@ -47,7 +47,7 @@ struct {{ .Name }} {
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
           .iovecs = iovecs_,
           .iovec_capacity = iovec_capacity,
-    {{- if gt .MaxHandles 0 }}
+    {{- if gt .TypeShapeV1.MaxHandles 0 }}
           .handles = handles_,
           .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
     {{- end }}
@@ -75,7 +75,7 @@ struct {{ .Name }} {
 
    private:
     ::fidl::internal::IovecBuffer iovecs_;
-    {{- if gt .MaxHandles 0 }}
+    {{- if gt .TypeShapeV1.MaxHandles 0 }}
       zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     {{- end }}
     ::fidl::OutgoingMessage message_;
@@ -105,7 +105,7 @@ struct {{ .Name }} {
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
    private:
-    {{ .BackingBufferType }} backing_buffer_;
+    {{ .BackingBufferTypeV1 }} backing_buffer_;
     UnownedEncodedMessage message_;
   };
 

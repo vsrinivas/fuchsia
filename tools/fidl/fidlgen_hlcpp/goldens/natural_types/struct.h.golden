@@ -71,7 +71,7 @@ using BasicStructPtr = ::std::unique_ptr<BasicStruct>;
 }  // namespace test
 template <>
 struct CodingTraits<::fidl::test::struct_::Simple>
-    : public EncodableCodingTraits<::fidl::test::struct_::Simple, 2> {};
+    : public EncodableCodingTraits<::fidl::test::struct_::Simple, 2, 2> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::struct_::Simple>
@@ -100,7 +100,8 @@ struct Equality<::fidl::test::struct_::Simple> {
 };
 template <>
 struct CodingTraits<::fidl::test::struct_::BasicStruct>
-    : public EncodableCodingTraits<::fidl::test::struct_::BasicStruct, 24> {};
+    : public EncodableCodingTraits<::fidl::test::struct_::BasicStruct, 24, 24> {
+};
 
 template <>
 struct HasPadding<::fidl::test::struct_::BasicStruct> : public std::true_type {

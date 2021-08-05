@@ -375,7 +375,14 @@ class HandleRightsProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage NoResponseMethod(
       ::fidl::Encoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, h, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -394,7 +401,14 @@ class HandleRightsProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
                                                      ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, h, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -424,7 +438,14 @@ class HandleRightsProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::Encoder* _encoder,
                                                      ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, h, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -442,7 +463,14 @@ class HandleRightsProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::Encoder* _encoder,
                                               ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, h, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -881,7 +909,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestNoResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -895,7 +930,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -909,7 +951,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -923,7 +972,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestNoResponse(
       ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, arg, 16);
 
     fidl_trace(
@@ -938,7 +994,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
       ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, arg, 16);
 
     fidl_trace(
@@ -953,7 +1016,14 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
       ::fidl::Encoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, arg, 16);
 
     fidl_trace(
@@ -991,7 +1061,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1004,7 +1081,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
       ::fidl::Encoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, ret, 16);
 
     fidl_trace(
@@ -1018,7 +1102,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1031,7 +1122,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
       ::fidl::Encoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, ret, 16);
 
     fidl_trace(
@@ -1045,7 +1143,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnEmptyResponse(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1058,7 +1163,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnWithResponse(::fidl::Encoder* _encoder,
                                                      ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, ret, 16);
 
     fidl_trace(
@@ -1087,7 +1199,14 @@ class Transitional_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
                                               int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, x, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1101,7 +1220,14 @@ class Transitional_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::Encoder* _encoder,
                                              int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, x, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1126,7 +1252,14 @@ class Transitional_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::Encoder* _encoder,
                                               int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1139,7 +1272,14 @@ class Transitional_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Event(::fidl::Encoder* _encoder,
                                             int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, x, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1254,7 +1394,14 @@ class MethodWithUnion_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage UnionMethod(
       ::fidl::Encoder* _encoder, ::fidl::test::protocols::TheUnion* u) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, u, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1330,7 +1477,14 @@ class WithProtocolEnds_RequestEncoder {
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
           in) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, in, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -1350,7 +1504,14 @@ class WithProtocolEnds_RequestEncoder {
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
           in) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, in, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -1368,7 +1529,14 @@ class WithProtocolEnds_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
       ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* in) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, in, 16);
 
     fidl_trace(
@@ -1399,7 +1567,14 @@ class WithProtocolEnds_ResponseEncoder {
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
           out) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, out, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -1418,7 +1593,14 @@ class WithProtocolEnds_ResponseEncoder {
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
           out) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, out, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -1435,7 +1617,14 @@ class WithProtocolEnds_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
       ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* out) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, out, 16);
 
     fidl_trace(
@@ -1465,7 +1654,14 @@ class ManyParameters_RequestEncoder {
                                               bool* p10, bool* p11, bool* p12,
                                               bool* p13, bool* p14, bool* p15) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, p1, 16);
 
     ::fidl::Encode(_encoder, p2, 17);
@@ -1666,7 +1862,14 @@ class WithErrorSyntax_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1680,7 +1883,14 @@ class WithErrorSyntax_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1693,7 +1903,14 @@ class WithErrorSyntax_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::protocols::_internal::
@@ -1706,7 +1923,14 @@ class WithErrorSyntax_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1739,7 +1963,14 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(
@@ -1755,7 +1986,14 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(
@@ -1770,7 +2008,14 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1784,7 +2029,14 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(
@@ -1809,7 +2061,14 @@ class DiscoverableProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::protocols::_internal::
@@ -1847,7 +2106,14 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::Encoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, a, 16);
 
     ::fidl::Encode(_encoder, b, 24);
@@ -1863,7 +2129,14 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, a, 16);
 
     ::fidl::Encode(_encoder, b, 24);
@@ -1879,7 +2152,14 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder,
                                                  ::zx::handle* h) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, h, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_NONE,
@@ -1897,7 +2177,14 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
                                                    ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, a, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -1932,7 +2219,14 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage EventA(::fidl::Encoder* _encoder,
                                              int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, a, 16);
 
     ::fidl::Encode(_encoder, b, 24);
@@ -1947,7 +2241,14 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::Encoder* _encoder,
                                               int64_t* result) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -1959,7 +2260,14 @@ class ChannelProtocol_ResponseEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::protocols::_internal::
@@ -1971,7 +2279,14 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
                                                    ::zx::socket* b) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, b, 16,
                    ::fidl::HandleInformation{
                        .object_type = ZX_OBJ_TYPE_SOCKET,
@@ -1995,6 +2310,8 @@ struct CodingTraits<::fidl::test::protocols::rights> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::protocols::rights);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::protocols::rights);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::protocols::rights);
   static void Encode(
       Encoder* encoder, ::fidl::test::protocols::rights* value, size_t offset,
@@ -2031,6 +2348,8 @@ struct CodingTraits<::fidl::test::protocols::obj_type> {
       sizeof(::fidl::test::protocols::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::protocols::obj_type);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::protocols::obj_type);
   static void Encode(
       Encoder* encoder, ::fidl::test::protocols::obj_type* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -2064,8 +2383,8 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response, 4> {
-};
+          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response, 4,
+          4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2109,13 +2428,14 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result, 24> {
-};
+          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result, 24,
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2192,7 +2512,7 @@ struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public EncodableCodingTraits<
           ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response,
-          24> {};
+          24, 24> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2239,13 +2559,14 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result,
-          24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result, 24,
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2320,7 +2641,7 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1,
           1> {};
 
 template <>
@@ -2362,13 +2683,14 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
-          24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result, 24,
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2443,7 +2765,8 @@ template <>
 struct CodingTraits<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2477,11 +2800,13 @@ struct IsFidlXUnion<::fidl::test::protocols::TheUnion> : public std::true_type {
 
 template <>
 struct CodingTraits<::fidl::test::protocols::TheUnion>
-    : public EncodableCodingTraits<::fidl::test::protocols::TheUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::protocols::TheUnion, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::protocols::TheUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -2536,8 +2861,8 @@ struct Equality<::fidl::test::protocols::TheUnion> {
 
 template <>
 struct CodingTraits<::fidl::test::protocols::ProtocolEnds>
-    : public EncodableCodingTraits<::fidl::test::protocols::ProtocolEnds, 16> {
-};
+    : public EncodableCodingTraits<::fidl::test::protocols::ProtocolEnds, 16,
+                                   16> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::protocols::ProtocolEnds>
@@ -2580,6 +2905,8 @@ struct CodingTraits<::fidl::test::protocols::ErrorEnum> {
       sizeof(::fidl::test::protocols::ErrorEnum);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::protocols::ErrorEnum);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::protocols::ErrorEnum);
   static void Encode(
       Encoder* encoder, ::fidl::test::protocols::ErrorEnum* value,
       size_t offset,
@@ -2615,12 +2942,14 @@ struct IsFidlXUnion<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
 template <>
 struct CodingTraits<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24> {};
+          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,

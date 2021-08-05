@@ -85,7 +85,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "client request inlined",
 			fidl:          "protocol P { Method(struct { a array<uint8, 496>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    512,
@@ -95,7 +95,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "client request boxed due to message size",
 			fidl:          "protocol P { Method(struct { a array<uint8, 497>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -106,7 +106,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "client request inlined despite message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method(struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Request.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    48,
@@ -117,7 +117,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "client response boxed due to message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method() -> (struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ClientAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ClientAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -127,7 +127,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "server response inlined",
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 496>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    512,
@@ -137,7 +137,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 		{
 			desc:          "server response boxed due to message size",
 			fidl:          "protocol P { Method() -> (struct { a array<uint8, 497>; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -148,7 +148,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 			desc: "server response inlined despite message flexibility",
 			fidl: "type Flexible = flexible union { 1: a int32; };" +
 				"protocol P { Method() -> (struct { a Flexible; }); };",
-			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocation },
+			actualChooser: func(p Protocol) allocation { return p.Methods[0].Response.ServerAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    48,
@@ -161,7 +161,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { a int32; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocation },
+			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    24,
@@ -174,7 +174,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { a array<uint8, 497>; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocation },
+			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -188,7 +188,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    -> Event1(struct { f Flexible; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocation },
+			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: false,
 				Size:    0,
@@ -202,7 +202,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 				"    Method() -> (struct { f Flexible; });" +
 				"    -> Event2(struct { a int32; b int32; });" +
 				"};",
-			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocation },
+			actualChooser: func(p Protocol) allocation { return p.SyncEventAllocationV1 },
 			expected: allocation{
 				IsStack: true,
 				Size:    32,

@@ -467,11 +467,12 @@ struct IsFidlXUnion<{{ . }}> : public std::true_type {};
 
 template <>
 struct CodingTraits<{{ . }}>
-    : public EncodableCodingTraits<{{ . }}, {{ .InlineSize }}> {};
+    : public EncodableCodingTraits<{{ . }}, 24, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<{{ . }}>> {
-  static constexpr size_t inline_size_v1_no_ee = {{ .InlineSize }};
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ . }}>* value, size_t offset,
                      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {

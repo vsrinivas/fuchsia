@@ -90,11 +90,11 @@ class {{ .Name }} {
   {{- end }}
 
   static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
-  static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .InlineSize }};
+  static constexpr uint32_t MaxNumHandles = {{ .TypeShapeV1.MaxHandles }};
+  static constexpr uint32_t PrimarySize = {{ .TypeShapeV1.InlineSize }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
-  static constexpr bool HasPointer = {{ .HasPointer }};
+  static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
+  static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
 
   {{- if .IsResourceType }}
 

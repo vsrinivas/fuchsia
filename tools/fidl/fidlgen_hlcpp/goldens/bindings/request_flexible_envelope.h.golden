@@ -246,7 +246,14 @@ class Protocol_RequestEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::StrictFoo* s) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(
@@ -262,7 +269,14 @@ class Protocol_RequestEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::FlexibleFoo* s) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, s, 16);
 
     fidl_trace(
@@ -289,7 +303,14 @@ class Protocol_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::FlexibleFoo* f) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, f, 16);
 
     fidl_trace(
@@ -304,7 +325,14 @@ class Protocol_ResponseEncoder {
       ::fidl::Encoder* _encoder,
       ::fidl::test::requestflexibleenvelope::StrictFoo* f) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(40 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, f, 16);
 
     fidl_trace(
@@ -327,12 +355,13 @@ struct IsFidlXUnion<::fidl::test::requestflexibleenvelope::StrictFoo>
 template <>
 struct CodingTraits<::fidl::test::requestflexibleenvelope::StrictFoo>
     : public EncodableCodingTraits<
-          ::fidl::test::requestflexibleenvelope::StrictFoo, 24> {};
+          ::fidl::test::requestflexibleenvelope::StrictFoo, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::requestflexibleenvelope::StrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -398,12 +427,13 @@ struct IsFidlXUnion<::fidl::test::requestflexibleenvelope::FlexibleFoo>
 template <>
 struct CodingTraits<::fidl::test::requestflexibleenvelope::FlexibleFoo>
     : public EncodableCodingTraits<
-          ::fidl::test::requestflexibleenvelope::FlexibleFoo, 24> {};
+          ::fidl::test::requestflexibleenvelope::FlexibleFoo, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::requestflexibleenvelope::FlexibleFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,

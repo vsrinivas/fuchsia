@@ -166,13 +166,23 @@ func closeHandles(argumentName string, argumentValue string, argumentType cpp.Ty
 
 // These are the helper functions we inject for use by the templates.
 var utilityFuncs = template.FuncMap{
-	"SyncCallTotalStackSize": func(m cpp.Method) int {
+	"SyncCallTotalStackSizeV1": func(m cpp.Method) int {
 		totalSize := 0
-		if m.Request.ClientAllocation.IsStack {
-			totalSize += m.Request.ClientAllocation.Size
+		if m.Request.ClientAllocationV1.IsStack {
+			totalSize += m.Request.ClientAllocationV1.Size
 		}
-		if m.Response.ClientAllocation.IsStack {
-			totalSize += m.Response.ClientAllocation.Size
+		if m.Response.ClientAllocationV1.IsStack {
+			totalSize += m.Response.ClientAllocationV1.Size
+		}
+		return totalSize
+	},
+	"SyncCallTotalStackSizeV2": func(m cpp.Method) int {
+		totalSize := 0
+		if m.Request.ClientAllocationV2.IsStack {
+			totalSize += m.Request.ClientAllocationV2.Size
+		}
+		if m.Response.ClientAllocationV2.IsStack {
+			totalSize += m.Response.ClientAllocationV2.Size
 		}
 		return totalSize
 	},

@@ -291,6 +291,8 @@ struct CodingTraits<::fidl::test::handlesintypes::obj_type> {
       sizeof(::fidl::test::handlesintypes::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::handlesintypes::obj_type);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::handlesintypes::obj_type);
   static void Encode(
       Encoder* encoder, ::fidl::test::handlesintypes::obj_type* value,
       size_t offset,
@@ -329,12 +331,13 @@ struct IsFidlXUnion<::fidl::test::handlesintypes::UnionWithHandle>
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::UnionWithHandle>
     : public EncodableCodingTraits<
-          ::fidl::test::handlesintypes::UnionWithHandle, 24> {};
+          ::fidl::test::handlesintypes::UnionWithHandle, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::handlesintypes::UnionWithHandle>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -397,7 +400,7 @@ struct Equality<::fidl::test::handlesintypes::UnionWithHandle> {
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::TableWithHandle>
     : public EncodableCodingTraits<
-          ::fidl::test::handlesintypes::TableWithHandle, 16> {};
+          ::fidl::test::handlesintypes::TableWithHandle, 16, 16> {};
 
 inline zx_status_t Clone(
     const ::fidl::test::handlesintypes::TableWithHandle& _value,
@@ -429,7 +432,7 @@ struct Equality<::fidl::test::handlesintypes::TableWithHandle> {
 template <>
 struct CodingTraits<::fidl::test::handlesintypes::HandlesInTypes>
     : public EncodableCodingTraits<::fidl::test::handlesintypes::HandlesInTypes,
-                                   104> {};
+                                   104, 96> {};
 
 template <>
 struct HasPadding<::fidl::test::handlesintypes::HandlesInTypes>

@@ -499,12 +499,13 @@ struct IsFidlXUnion<::fidl::test::unionsandwich::UnionSize8Alignment4>
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::UnionSize8Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::UnionSize8Alignment4, 24> {};
+          ::fidl::test::unionsandwich::UnionSize8Alignment4, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::unionsandwich::UnionSize8Alignment4>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -564,7 +565,7 @@ struct Equality<::fidl::test::unionsandwich::UnionSize8Alignment4> {
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::SandwichUnionSize8Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::SandwichUnionSize8Alignment4, 40> {};
+          ::fidl::test::unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
 
 template <>
 struct HasPadding<::fidl::test::unionsandwich::SandwichUnionSize8Alignment4>
@@ -611,12 +612,13 @@ struct IsFidlXUnion<::fidl::test::unionsandwich::UnionSize36Alignment4>
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::UnionSize36Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::UnionSize36Alignment4, 24> {};
+          ::fidl::test::unionsandwich::UnionSize36Alignment4, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::unionsandwich::UnionSize36Alignment4>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -678,7 +680,8 @@ struct Equality<::fidl::test::unionsandwich::UnionSize36Alignment4> {
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::SandwichUnionSize36Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::SandwichUnionSize36Alignment4, 40> {};
+          ::fidl::test::unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {
+};
 
 template <>
 struct HasPadding<::fidl::test::unionsandwich::SandwichUnionSize36Alignment4>
@@ -725,12 +728,13 @@ struct IsFidlXUnion<::fidl::test::unionsandwich::UnionSize12Alignment4>
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::UnionSize12Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::UnionSize12Alignment4, 24> {};
+          ::fidl::test::unionsandwich::UnionSize12Alignment4, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::unionsandwich::UnionSize12Alignment4>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -792,7 +796,8 @@ struct Equality<::fidl::test::unionsandwich::UnionSize12Alignment4> {
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::SandwichUnionSize12Alignment4>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::SandwichUnionSize12Alignment4, 40> {};
+          ::fidl::test::unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {
+};
 
 template <>
 struct HasPadding<::fidl::test::unionsandwich::SandwichUnionSize12Alignment4>
@@ -836,7 +841,7 @@ struct Equality<::fidl::test::unionsandwich::SandwichUnionSize12Alignment4> {
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::StructSize16Alignment8>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::StructSize16Alignment8, 16> {};
+          ::fidl::test::unionsandwich::StructSize16Alignment8, 16, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::unionsandwich::StructSize16Alignment8>
@@ -872,12 +877,13 @@ struct IsFidlXUnion<::fidl::test::unionsandwich::UnionSize24Alignment8>
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::UnionSize24Alignment8>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::UnionSize24Alignment8, 24> {};
+          ::fidl::test::unionsandwich::UnionSize24Alignment8, 24, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::fidl::test::unionsandwich::UnionSize24Alignment8>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -939,7 +945,8 @@ struct Equality<::fidl::test::unionsandwich::UnionSize24Alignment8> {
 template <>
 struct CodingTraits<::fidl::test::unionsandwich::SandwichUnionSize24Alignment8>
     : public EncodableCodingTraits<
-          ::fidl::test::unionsandwich::SandwichUnionSize24Alignment8, 40> {};
+          ::fidl::test::unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {
+};
 
 template <>
 struct HasPadding<::fidl::test::unionsandwich::SandwichUnionSize24Alignment8>

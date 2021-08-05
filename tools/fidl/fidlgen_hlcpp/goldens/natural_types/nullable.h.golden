@@ -333,7 +333,14 @@ class SimpleProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder, int32_t* a,
                                           int32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, a, 16);
 
     ::fidl::Encode(_encoder, b, 20);
@@ -357,7 +364,14 @@ class SimpleProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::Encoder* _encoder,
                                           int32_t* sum) {
     fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::Encoder::WireFormat::V2:
+        _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+        break;
+    }
     ::fidl::Encode(_encoder, sum, 16);
 
     fidl_trace(DidHLCPPEncode,
@@ -400,7 +414,7 @@ using Int32WrapperPtr = ::std::unique_ptr<Int32Wrapper>;
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableVector>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableVector, 16> {};
+          ::fidl::test::nullable::StructWithNullableVector, 16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::nullable::StructWithNullableVector>
@@ -433,7 +447,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableVector> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableUnion>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableUnion, 24> {};
+          ::fidl::test::nullable::StructWithNullableUnion, 24, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::nullable::StructWithNullableUnion>
@@ -467,7 +481,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableUnion> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableStruct>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableStruct, 8> {};
+          ::fidl::test::nullable::StructWithNullableStruct, 8, 8> {};
 
 template <>
 struct HasPadding<::fidl::test::nullable::StructWithNullableStruct>
@@ -502,7 +516,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableStruct> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableString>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableString, 16> {};
+          ::fidl::test::nullable::StructWithNullableString, 16, 16> {};
 
 template <>
 struct HasPadding<::fidl::test::nullable::StructWithNullableString>
@@ -537,7 +551,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableString> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableRequest>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableRequest, 4> {};
+          ::fidl::test::nullable::StructWithNullableRequest, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableRequest>
@@ -571,7 +585,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableProtocol, 4> {};
+          ::fidl::test::nullable::StructWithNullableProtocol, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableProtocol>
@@ -605,7 +619,7 @@ struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
 template <>
 struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
     : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableHandle, 4> {};
+          ::fidl::test::nullable::StructWithNullableHandle, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableHandle>
@@ -639,11 +653,13 @@ struct IsFidlXUnion<::fidl::test::nullable::SimpleUnion>
 
 template <>
 struct CodingTraits<::fidl::test::nullable::SimpleUnion>
-    : public EncodableCodingTraits<::fidl::test::nullable::SimpleUnion, 24> {};
+    : public EncodableCodingTraits<::fidl::test::nullable::SimpleUnion, 24,
+                                   16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::fidl::test::nullable::SimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
@@ -701,7 +717,8 @@ struct Equality<::fidl::test::nullable::SimpleUnion> {
 };
 template <>
 struct CodingTraits<::fidl::test::nullable::Int32Wrapper>
-    : public EncodableCodingTraits<::fidl::test::nullable::Int32Wrapper, 4> {};
+    : public EncodableCodingTraits<::fidl::test::nullable::Int32Wrapper, 4, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<::fidl::test::nullable::Int32Wrapper>

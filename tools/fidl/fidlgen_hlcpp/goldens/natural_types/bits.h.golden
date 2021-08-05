@@ -251,6 +251,8 @@ struct CodingTraits<::fidl::test::bits::StrictBits> {
       sizeof(::fidl::test::bits::StrictBits);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::bits::StrictBits);
+  static constexpr size_t inline_size_v2 =
+      sizeof(::fidl::test::bits::StrictBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::StrictBits* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -285,6 +287,7 @@ struct CodingTraits<::fidl::test::bits::MyBits> {
   static constexpr size_t inline_size_old = sizeof(::fidl::test::bits::MyBits);
   static constexpr size_t inline_size_v1_no_ee =
       sizeof(::fidl::test::bits::MyBits);
+  static constexpr size_t inline_size_v2 = sizeof(::fidl::test::bits::MyBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::MyBits* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -319,6 +322,8 @@ struct CodingTraits<::fidl::test::bits::FlexibleBits> {
   static constexpr size_t inline_size_old =
       sizeof(::fidl::test::bits::FlexibleBits);
   static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::bits::FlexibleBits);
+  static constexpr size_t inline_size_v2 =
       sizeof(::fidl::test::bits::FlexibleBits);
   static void Encode(
       Encoder* encoder, ::fidl::test::bits::FlexibleBits* value, size_t offset,
