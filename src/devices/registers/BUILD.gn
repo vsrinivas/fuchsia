@@ -10,3 +10,8 @@ group("tests") {
     "testing:tests",
   ]
 }
+
+group("drivers") {
+  testonly = true
+  deps = [ "drivers/registers:registers-driver" ]
+}

@@ -1,0 +1,5 @@
+//src/connectivity/ethernet/drivers/realtek-8111:realtek-8111-driver
+//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:test_driver_module-driver
+//src/devices/board/drivers/x86:platform-bus-x86-driver
+//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver
+//src/ui/input/drivers/pc-ps2:pc-ps2-driver

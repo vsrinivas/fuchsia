@@ -42,6 +42,8 @@ driver_module("netdevice-migration-driver") {
   deps = [
     ":netdevice-migration-bind",
     ":src",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
   ]
 }
 

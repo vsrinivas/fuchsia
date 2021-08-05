@@ -1,0 +1,2 @@
+//src/media/drivers/amlogic_decoder:amlogic_decoder_test-driver
+//src/media/drivers/amlogic_decoder:amlogic_video_decoder-driver

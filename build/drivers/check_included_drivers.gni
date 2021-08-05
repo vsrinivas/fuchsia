@@ -1,0 +1,66 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/zircon/standard.gni")
+
+# Checks that all drivers that exist in the dependencies are in the allowlist
+# given at //build/drivers/all_drivers_list.txt. This will ignore any drivers
+# that are in //vendor/*.
+#
+# Parameters
+#   contains_all_drivers (optional)
+#     If this is true then this target also checks that the dependencies contain
+#     every target in the allowlist.
+#     Type: bool
+#     Default: false
+#
+#   deps
+#   testonly
+template("check_included_drivers") {
+  metadata_check_target = "${target_name}_metadata_check"
+  metadata_check_output = "${target_gen_dir}/${target_name}_metadata_output"
+  generated_file(metadata_check_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    outputs = [ metadata_check_output ]
+    deps = invoker.deps
+
+    # driver_module_labels should be a list of qualified GN labels without toolchain information
+    data_keys = [ "driver_module_labels" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ ":${metadata_check_target}" ]
+    script = "//build/drivers/check_included_drivers.py"
+    inputs = [
+      metadata_check_output,
+      "//build/drivers/all_drivers_list.txt",
+    ]
+    outputs = [ "${target_out_dir}/${target_name}_check_included_drivers" ]
+    args = [
+      "--driver_list",
+      rebase_path(metadata_check_output, root_build_dir),
+      "--allowlist",
+      rebase_path("//build/drivers/all_drivers_list.txt", root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+    ]
+
+    foreach(cpu, standard_fuchsia_cpus) {
+      if (current_cpu == cpu) {
+        inputs += [ "//build/drivers/all_drivers_list_${cpu}.txt" ]
+        args += [
+          "--allowlist_arch_specific",
+          rebase_path("//build/drivers/all_drivers_list_${cpu}.txt",
+                      root_build_dir),
+        ]
+      }
+    }
+
+    if (defined(invoker.contains_all_drivers) && invoker.contains_all_drivers) {
+      args += [ "--contains_all_drivers" ]
+    }
+  }
+}

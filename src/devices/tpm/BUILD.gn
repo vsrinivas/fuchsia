@@ -6,7 +6,9 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/cr50-spi",
+    "drivers/cr50-spi:cr50-spi-driver",
     "drivers/tpm",
+    "drivers/tpm:tpm-driver",
   ]
 }
 

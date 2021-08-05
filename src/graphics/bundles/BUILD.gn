@@ -7,10 +7,17 @@ group("drivers") {
   testonly = true
   deps = [
     "//src/graphics/display:drivers",
+    "//src/graphics/display/drivers/aml-hdmi:aml-hdmi-driver",
+    "//src/graphics/display/drivers/simple:simple.amd-kaveri-driver",
+    "//src/graphics/display/drivers/simple:simple.bochs-driver",
+    "//src/graphics/display/drivers/simple:simple.intel-driver",
+    "//src/graphics/display/drivers/simple:simple.nv-driver",
+    "//src/graphics/display/drivers/simple:simple.vmware-driver",
     "//src/graphics/drivers/aml-gpu",
     "//src/graphics/drivers/misc/goldfish:goldfish_driver",
     "//src/graphics/drivers/misc/goldfish_address_space:address_space_driver",
     "//src/graphics/drivers/misc/goldfish_control:control_driver",
+    "//src/graphics/drivers/misc/goldfish_sync:goldfish_sync_driver-driver",
     "//src/graphics/drivers/msd-arm-mali:msd_arm",
     "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
     "//src/graphics/drivers/msd-intel-gen:msd_intel",

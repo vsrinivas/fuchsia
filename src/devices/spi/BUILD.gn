@@ -7,6 +7,7 @@ group("drivers") {
   deps = [
     "drivers/aml-spi",
     "drivers/dw-spi",
+    "drivers/intel-gspi:driver",
     "drivers/spi",
   ]
 }

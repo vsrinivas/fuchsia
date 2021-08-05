@@ -26,3 +26,32 @@ group("tests") {
     "string-bind-test",
   ]
 }
+
+group("drivers") {
+  testonly = true
+  deps = [
+    "bind-fail-test:driver",
+    "bind-test:bind-test-driver",
+    "bind-test-v2:bind-test-driver-v2-driver",
+    "ddk-environment-test:ddk-environment-test",
+    "ddk-fallback-test:ddk-fallback-test-driver",
+    "ddk-fallback-test:ddk-not-fallback-test-driver",
+    "ddk-fidl-test:fidl-async-llcpp-driver",
+    "ddk-fidl-test:fidl-llcpp-driver",
+    "ddk-firmware-test:ddk-firmware-test",
+    "ddk-instance-lifecycle-test:driver",
+    "ddk-lifecycle:ddk-lifecycle-test",
+    "ddk-metadata-test:driver",
+    "ddk-power:ddk-power-test",
+    "ddk-power:ddk-power-test-child",
+    "ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
+    "ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
+    "device-watcher:test-driver-driver",
+    "driver-inspect-test:driver",
+    "isolateddevmgr:isolateddevmgr-test-driver",
+    "mock-device:mock-device",
+    "string-bind-test:child-driver-driver",
+    "string-bind-test:parent-driver-driver",
+    "sysdev:sysdev",
+  ]
+}

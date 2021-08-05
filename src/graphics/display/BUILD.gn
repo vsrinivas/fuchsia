@@ -8,12 +8,18 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-canvas",
+    "drivers/aml-hdmi:aml-hdmi-driver",
     "drivers/amlogic-display",
     "drivers/display",
     "drivers/dsi-dw",
     "drivers/fake:fake-display",
     "drivers/goldfish-display",
     "drivers/intel-i915",
+    "drivers/simple:simple.amd-kaveri-driver",
+    "drivers/simple:simple.bochs-driver",
+    "drivers/simple:simple.intel-driver",
+    "drivers/simple:simple.nv-driver",
+    "drivers/simple:simple.vmware-driver",
     "drivers/ssd1306:ssd1306_driver",
     "drivers/vim-display",
   ]

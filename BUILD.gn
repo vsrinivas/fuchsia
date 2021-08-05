@@ -5,6 +5,7 @@
 import("//build/board.gni")
 import("//build/config/build_api_module.gni")
 import("//build/config/compiler.gni")
+import("//build/drivers/check_included_drivers.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
@@ -937,12 +938,21 @@ group("rbe_config.metadata") {
   }
 }
 
+check_included_drivers("drivers-check") {
+  testonly = true
+  deps = [
+    "//build:tests",
+    "//build/images:packages",
+  ]
+}
+
 ###
 ### Top-level targets.
 ###
 group("default") {
   testonly = true
   deps = [
+    "//:drivers-check",
     "//:host",
     "//build:tests",
     "//build/images:packages",

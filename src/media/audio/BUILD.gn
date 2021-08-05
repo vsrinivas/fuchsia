@@ -21,7 +21,9 @@ group("audio") {
 group("drivers") {
   testonly = true
   deps = [
+    "drivers/aml-g12-pdm:aml-g12-pdm-driver",
     "drivers/aml-g12-tdm",
+    "drivers/aml-g12-tdm:aml-g12-tdm-dai-driver",
     "drivers/codecs/alc5514",
     "drivers/codecs/alc5663",
     "drivers/codecs/max98373",
@@ -30,6 +32,7 @@ group("drivers") {
     "drivers/codecs/tas5720",
     "drivers/codecs/tas5782",
     "drivers/codecs/tas58xx",
+    "drivers/dai-test",
     "drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
     "drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "drivers/intel-hda/codecs/realtek:realtek-audio-codec",

@@ -15,13 +15,15 @@ group("drivers") {
     "drivers/testing:wlanphy-testdev",
     "drivers/third_party/atheros/ath10k:ath10k_driver",
     "drivers/third_party/broadcom/brcmfmac:driver_module",
-    "drivers/third_party/broadcom/brcmfmac:test_driver_module",
     "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
     "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",
     "drivers/wlanphy:wlanphy_driver",
     "testing/wlantap-driver:wlantap_driver",
   ]
+  if (current_cpu == "x64") {
+    deps += [ "drivers/third_party/broadcom/brcmfmac:test_driver_module" ]
+  }
 }
 
 common_packages = [

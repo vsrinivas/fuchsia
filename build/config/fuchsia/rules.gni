@@ -118,6 +118,10 @@ template("driver_module") {
     }
 
     metadata = {
+      # Used by the check_included_drivers template.
+      driver_module_labels =
+          [ get_label_info(":$_target_name", "label_no_toolchain") ]
+
       # Used by the distribution_manifest template.
       distribution_entries = [
         {
