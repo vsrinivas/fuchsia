@@ -6,7 +6,9 @@ use {
     anyhow::*,
     errors::ffx_bail,
     fuchsia_async::TimeoutExt,
+    serde::Serialize,
     serde_json::Value,
+    std::borrow::Cow,
     std::process::Stdio,
     std::time::Instant,
     std::{env, io::Write, path::PathBuf, process::Command, time::Duration},
@@ -117,37 +119,19 @@ impl Isolate {
         let user_config_dir = xdg_config_home.join("Fuchsia/ffx/config");
         std::fs::create_dir_all(&user_config_dir)?;
 
-        // TODO(raggi): use structured programming to write the JSON
         std::fs::write(
             user_config_dir.join("config.json"),
-            format!(
-                r##"{{
-            "log": {{
-                "enabled": true,
-                "dir": "{}"
-            }},
-            "overnet": {{
-                "socket": "{}"
-            }},
-            "test": {{
-                "is-isolated": true
-            }}
-            }}"##,
+            serde_json::to_string(&UserConfig::for_test(
                 log_dir.to_string_lossy(),
-                ascendd_path.to_string_lossy()
-            ),
+                ascendd_path.to_string_lossy(),
+            ))?,
         )?;
 
         std::fs::write(
             user_config_dir.join(".ffx_env"),
-            format!(
-                r##"{{
-            "user": "{}",
-            "build": null,
-            "global": null
-            }}"##,
-                user_config_dir.join("config.json").to_string_lossy()
-            ),
+            serde_json::to_string(&FfxEnvConfig::for_test(
+                user_config_dir.join("config.json").to_string_lossy(),
+            ))?,
         )?;
 
         Ok(Isolate { _tmpdir: tmpdir, home_dir, xdg_config_home, ascendd_path })
@@ -299,5 +283,52 @@ pub struct TestCase {
 impl TestCase {
     pub fn new(name: &'static str, f: TestFn) -> Self {
         Self { name, f }
+    }
+}
+
+#[derive(Serialize)]
+struct UserConfig<'a> {
+    log: UserConfigLog<'a>,
+    overnet: UserConfigOvernet<'a>,
+    test: UserConfigTest,
+}
+
+#[derive(Serialize)]
+struct UserConfigLog<'a> {
+    enabled: bool,
+    dir: Cow<'a, str>,
+}
+
+#[derive(Serialize)]
+struct UserConfigOvernet<'a> {
+    socket: Cow<'a, str>,
+}
+
+#[derive(Serialize)]
+struct UserConfigTest {
+    #[serde(rename(serialize = "is-isolated"))]
+    is_isolated: bool,
+}
+
+impl<'a> UserConfig<'a> {
+    fn for_test(dir: Cow<'a, str>, socket: Cow<'a, str>) -> Self {
+        Self {
+            log: UserConfigLog { enabled: true, dir },
+            overnet: UserConfigOvernet { socket },
+            test: UserConfigTest { is_isolated: true },
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct FfxEnvConfig<'a> {
+    user: Cow<'a, str>,
+    build: Option<&'static str>,
+    global: Option<&'static str>,
+}
+
+impl<'a> FfxEnvConfig<'a> {
+    fn for_test(user: Cow<'a, str>) -> Self {
+        Self { user, build: None, global: None }
     }
 }
