@@ -8,6 +8,7 @@
 
 namespace metadata {
 
+static constexpr uint32_t kMaxNumberOfChannelsInRingBuffer = 64;
 static constexpr uint32_t kMaxNumberOfCodecs = 8;
 static constexpr uint32_t kMaxNumberOfExternalDelays = 8;
 
@@ -35,9 +36,15 @@ struct ExternalDelay {
   int64_t nsecs;
 };
 
+struct FrequencyRange {
+  uint32_t min_frequency;
+  uint32_t max_frequency;
+};
+
 struct RingBuffer {
   uint8_t number_of_channels;
   uint8_t bytes_per_sample;  // If not specified (set to 0), then 2 bytes.
+  FrequencyRange frequency_ranges[kMaxNumberOfChannelsInRingBuffer];  // Optional.
 };
 
 struct Dai {

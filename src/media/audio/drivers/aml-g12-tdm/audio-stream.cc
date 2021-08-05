@@ -549,6 +549,13 @@ zx_status_t AmlG12TdmStream::AddFormats() {
   ZX_ASSERT(metadata_.ring_buffer.bytes_per_sample == 2);
   format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
 
+  for (size_t i = 0; i < metadata_.ring_buffer.number_of_channels; ++i) {
+    SimpleAudioStream::FrequencyRange range = {};
+    range.min_frequency = metadata_.ring_buffer.frequency_ranges[i].min_frequency;
+    range.max_frequency = metadata_.ring_buffer.frequency_ranges[i].max_frequency;
+    format.frequency_ranges.push_back(std::move(range));
+  }
+
   for (auto& i : AmlTdmConfigDevice::kSupportedFrameRates) {
     format.range.min_frames_per_second = i;
     format.range.max_frames_per_second = i;

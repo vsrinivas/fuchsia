@@ -418,6 +418,15 @@ zx_status_t Sherlock::AudioInit() {
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
   if (is_sherlock) {
     metadata.dai.type = metadata::DaiType::I2s;
+    // Ranges could be wider, but only using them crossed-over at 1'200 Hz in this product.
+    metadata.ring_buffer.frequency_ranges[0].min_frequency = 20;
+    metadata.ring_buffer.frequency_ranges[0].max_frequency = 1'600;
+    metadata.ring_buffer.frequency_ranges[1].min_frequency = 20;
+    metadata.ring_buffer.frequency_ranges[1].max_frequency = 1'600;
+    metadata.ring_buffer.frequency_ranges[2].min_frequency = 1'000;
+    metadata.ring_buffer.frequency_ranges[2].max_frequency = 40'000;
+    metadata.ring_buffer.frequency_ranges[3].min_frequency = 1'000;
+    metadata.ring_buffer.frequency_ranges[3].max_frequency = 40'000;
     metadata.codecs.number_of_codecs = 3;
     metadata.codecs.types[0] = metadata::CodecType::Tas5720;
     metadata.codecs.types[1] = metadata::CodecType::Tas5720;
