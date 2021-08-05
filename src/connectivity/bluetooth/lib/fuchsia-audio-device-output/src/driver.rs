@@ -145,7 +145,7 @@ pub struct SoftPcmOutput {
 
     /// The supported format of this output.
     /// Currently only support one format per output is supported.
-    supported_formats: PcmSupportedFormats2,
+    supported_formats: PcmSupportedFormats,
 
     /// The minimum amount of time between audio frames output from the frame stream.
     /// Used to calculate minimum audio buffer sizes.
@@ -196,13 +196,13 @@ impl SoftPcmOutput {
         let number_of_channels = pcm_format.channel_map.len();
         let attributes = vec![ChannelAttributes::EMPTY; number_of_channels];
         let channel_set = ChannelSet { attributes: Some(attributes), ..ChannelSet::EMPTY };
-        let supported_formats = PcmSupportedFormats2 {
+        let supported_formats = PcmSupportedFormats {
             channel_sets: Some(vec![channel_set]),
             sample_formats: Some(vec![SampleFormat::PcmSigned]),
             bytes_per_sample: Some(vec![(pcm_format.bits_per_sample / 8) as u8]),
             valid_bits_per_sample: Some(vec![pcm_format.bits_per_sample as u8]),
             frame_rates: Some(vec![pcm_format.frames_per_second]),
-            ..PcmSupportedFormats2::EMPTY
+            ..PcmSupportedFormats::EMPTY
         };
 
         let stream = SoftPcmOutput {
@@ -293,7 +293,7 @@ impl SoftPcmOutput {
             StreamConfigRequest::GetSupportedFormats { responder } => {
                 let pcm_formats = self.supported_formats.clone();
                 let formats_vector = vec![SupportedFormats {
-                    pcm_supported_formats2: Some(pcm_formats),
+                    pcm_supported_formats: Some(pcm_formats),
                     ..SupportedFormats::EMPTY
                 }];
                 responder.send(&mut formats_vector.into_iter())?;
@@ -543,7 +543,7 @@ mod tests {
         };
 
         let first = formats.first().to_owned().expect("supported formats to be present");
-        let pcm = first.pcm_supported_formats2.to_owned().expect("pcm format to be present");
+        let pcm = first.pcm_supported_formats.to_owned().expect("pcm format to be present");
         assert_eq!(pcm.channel_sets.unwrap()[0].attributes.as_ref().unwrap().len(), 2usize);
         assert_eq!(pcm.sample_formats.unwrap()[0],        SampleFormat::PcmSigned);
         assert_eq!(pcm.bytes_per_sample.unwrap()[0],      2u8);

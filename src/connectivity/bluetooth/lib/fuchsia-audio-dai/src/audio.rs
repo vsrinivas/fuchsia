@@ -107,13 +107,13 @@ async fn process_audio_requests(
     let dai_props = dai.properties().await?;
     let attributes = Some(vec![ChannelAttributes::EMPTY; pcm_format.number_of_channels as usize]);
     let channel_set = ChannelSet { attributes: attributes, ..ChannelSet::EMPTY };
-    let supported_formats = PcmSupportedFormats2 {
+    let supported_formats = PcmSupportedFormats {
         channel_sets: Some(vec![channel_set]),
         sample_formats: Some(vec![pcm_format.sample_format]),
         bytes_per_sample: Some(vec![pcm_format.bytes_per_sample]),
         valid_bits_per_sample: Some(vec![pcm_format.valid_bits_per_sample]),
         frame_rates: Some(vec![pcm_format.frame_rate]),
-        ..PcmSupportedFormats2::EMPTY
+        ..PcmSupportedFormats::EMPTY
     };
     let mut gain_state_replied = false;
     let mut plug_state_replied = false;
@@ -143,7 +143,7 @@ async fn process_audio_requests(
             }
             StreamConfigRequest::GetSupportedFormats { responder } => {
                 let formats_vector = vec![SupportedFormats {
-                    pcm_supported_formats2: Some(supported_formats.clone()),
+                    pcm_supported_formats: Some(supported_formats.clone()),
                     ..SupportedFormats::EMPTY
                 }];
                 responder.send(&mut formats_vector.into_iter())?;
@@ -342,7 +342,7 @@ mod tests {
         let pcm_formats = supported_formats
             .pop()
             .expect("should be a formats")
-            .pcm_supported_formats2
+            .pcm_supported_formats
             .expect("pcm supported formats");
         assert_eq!(
             SUPPORTED_PCM_FORMAT.number_of_channels as usize,

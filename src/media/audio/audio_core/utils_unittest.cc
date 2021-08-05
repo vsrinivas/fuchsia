@@ -18,7 +18,7 @@
 namespace media::audio {
 namespace {
 
-void AddChannelSet(fuchsia::hardware::audio::PcmSupportedFormats2& formats,
+void AddChannelSet(fuchsia::hardware::audio::PcmSupportedFormats& formats,
                    size_t number_of_channels) {
   fuchsia::hardware::audio::ChannelSet channel_set = {};
   std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(number_of_channels);
@@ -107,9 +107,9 @@ TEST(UtilsFormatTest, SelectBestFormatFound) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatFoundFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
 
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   AddChannelSet(formats, 1);
   AddChannelSet(formats, 2);
   AddChannelSet(formats, 4);
@@ -134,7 +134,7 @@ TEST(UtilsFormatTest, SelectBestFormatFoundFidl) {
   ASSERT_EQ(channels_inout, static_cast<uint32_t>(1));
 
   // Add a second format range.
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats2 = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats2 = {};
   AddChannelSet(formats2, 4);
   AddChannelSet(formats2, 5);
   AddChannelSet(formats2, 6);
@@ -212,8 +212,8 @@ TEST(UtilsFormatTest, SelectBestFormatOutsideRanges) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatOutsideRangesFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   AddChannelSet(formats, 1);
   AddChannelSet(formats, 2);
   AddChannelSet(formats, 4);
@@ -249,7 +249,7 @@ TEST(UtilsFormatTest, SelectBestFormatOutsideRangesFidl) {
   ASSERT_EQ(channels_inout, static_cast<uint32_t>(2));                // Prefer 2 channels.
 
   // Add a second format range.
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats2 = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats2 = {};
   AddChannelSet(formats2, 4);
   AddChannelSet(formats2, 5);
   AddChannelSet(formats2, 6);
@@ -305,9 +305,9 @@ TEST(UtilsFormatTest, SelectBestFormatError) {
 }
 
 TEST(UtilsFormatTest, SelectBestFormatErrorFidl) {
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> fmts;
 
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   AddChannelSet(formats, 1);
   AddChannelSet(formats, 2);
   AddChannelSet(formats, 4);
@@ -340,7 +340,7 @@ TEST(UtilsFormatTest, SelectBestFormatErrorFidl) {
   ASSERT_EQ(SelectBestFormat(fmts, &frames_per_second_inout, &channels_inout, nullptr),
             ZX_ERR_INVALID_ARGS);  // Bad pointer.
 
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> empty_fmts;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> empty_fmts;
   ASSERT_EQ(
       SelectBestFormat(empty_fmts, &frames_per_second_inout, &channels_inout, &sample_format_inout),
       ZX_ERR_NOT_SUPPORTED);

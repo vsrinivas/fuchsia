@@ -139,7 +139,7 @@ void TestBase::RequestFormats() {
         EXPECT_GT(supported_formats.size(), 0u);
 
         for (size_t i = 0; i < supported_formats.size(); ++i) {
-          auto& format = *supported_formats[i].mutable_pcm_supported_formats2();
+          auto& format = *supported_formats[i].mutable_pcm_supported_formats();
 
           uint8_t largest_bytes_per_sample = 0;
           EXPECT_NE(format.bytes_per_sample().size(), 0u);

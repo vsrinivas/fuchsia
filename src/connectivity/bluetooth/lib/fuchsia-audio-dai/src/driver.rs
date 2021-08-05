@@ -109,8 +109,8 @@ pub(crate) fn ensure_pcm_format_is_supported(
 ) -> Result<(), Error> {
     for format in ring_buffer_formats {
         if let SupportedFormats {
-            pcm_supported_formats2:
-                Some(PcmSupportedFormats2 {
+            pcm_supported_formats:
+                Some(PcmSupportedFormats {
                     channel_sets: Some(channel_sets),
                     sample_formats: Some(sample_formats),
                     bytes_per_sample: Some(bytes_per_sample),

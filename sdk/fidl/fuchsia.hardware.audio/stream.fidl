@@ -57,7 +57,7 @@ type ChannelSet = table {
 
 type SupportedFormats = table {
     /// Supported formats for non-compressed PCM samples with attributes. Required.
-    1: pcm_supported_formats2 PcmSupportedFormats2;
+    1: pcm_supported_formats PcmSupportedFormats;
 };
 
 /// Format supporting non-compressed PCM audio. Frames are made up of number of channels samples
@@ -66,7 +66,7 @@ type SupportedFormats = table {
 /// the driver can be described with one `SupportedFormats` (and hence one `PcmSupportedFormats`),
 /// `GetSupportedFormats` returns more than one `SupportedFormats` in the returned vector.
 /// For more detailed information see [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming).
-type PcmSupportedFormats2 = table {
+type PcmSupportedFormats = table {
     /// Vector of possible `ChannelSets` supported. Required.
     /// A `ChannelSet` defines a number of channels supported plus a number of optional
     /// attributes for these channels.

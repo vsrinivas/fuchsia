@@ -1677,7 +1677,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     ASSERT_OK(supported.status());
 
     auto& attributes =
-        supported->supported_formats[0].pcm_supported_formats2().channel_sets()[0].attributes();
+        supported->supported_formats[0].pcm_supported_formats().channel_sets()[0].attributes();
     ASSERT_EQ(attributes.count(), 2);
     ASSERT_EQ(attributes[0].min_frequency(), 40);
     ASSERT_EQ(attributes[0].max_frequency(), 200);

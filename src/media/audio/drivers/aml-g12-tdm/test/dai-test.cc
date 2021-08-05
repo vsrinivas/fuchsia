@@ -379,7 +379,7 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Result ring_buffer_formats_out;
   ASSERT_OK(client.dai_->GetRingBufferFormats(&ring_buffer_formats_out));
   auto& all_pcm_formats = ring_buffer_formats_out.response().ring_buffer_formats;
-  auto& pcm_formats = all_pcm_formats[0].pcm_supported_formats2();
+  auto& pcm_formats = all_pcm_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, pcm_formats.channel_sets().size());
   ASSERT_EQ(metadata.ring_buffer.number_of_channels,
             pcm_formats.channel_sets()[0].attributes().size());

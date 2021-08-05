@@ -74,7 +74,7 @@ class TestBase : public media::audio::test::TestFixture {
   void RequestFormats();
 
   bool received_get_formats() const { return received_get_formats_; }
-  const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& pcm_formats() const {
+  const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& pcm_formats() const {
     return pcm_formats_;
   }
 
@@ -101,7 +101,7 @@ class TestBase : public media::audio::test::TestFixture {
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_;
 
   bool received_get_formats_ = false;
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> pcm_formats_;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> pcm_formats_;
 };
 
 }  // namespace media::audio::drivers::test

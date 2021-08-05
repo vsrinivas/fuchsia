@@ -202,7 +202,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
         formats_.reserve(formats.size());
         for (auto& i : formats) {
-          formats_.emplace_back(std::move(*i.mutable_pcm_supported_formats2()));
+          formats_.emplace_back(std::move(*i.mutable_pcm_supported_formats()));
         }
         // Record that we have fetched our format list. This will transition us to Unconfigured
         // state and let our owner know if we are done fetching all the initial driver info needed

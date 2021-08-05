@@ -21,7 +21,7 @@ namespace media::audio {
 bool IsSampleFormatInSupported(
     fuchsia::hardware::audio::SampleFormat sample_format, uint8_t bytes_per_sample,
     uint8_t valid_bits_per_sample,
-    const fuchsia::hardware::audio::PcmSupportedFormats2& supported_formats) {
+    const fuchsia::hardware::audio::PcmSupportedFormats& supported_formats) {
   auto& sf = supported_formats.sample_formats();
   if (std::find(sf.begin(), sf.end(), sample_format) == sf.end()) {
     return false;
@@ -38,7 +38,7 @@ bool IsSampleFormatInSupported(
 }
 
 bool IsNumberOfChannelsInSupported(uint32_t number_of_channels,
-                                   const fuchsia::hardware::audio::PcmSupportedFormats2& format) {
+                                   const fuchsia::hardware::audio::PcmSupportedFormats& format) {
   for (auto& channel_set : format.channel_sets()) {
     if (channel_set.attributes().size() == number_of_channels) {
       return true;
@@ -48,7 +48,7 @@ bool IsNumberOfChannelsInSupported(uint32_t number_of_channels,
 }
 
 bool IsRateInSupported(uint32_t frame_rate,
-                       const fuchsia::hardware::audio::PcmSupportedFormats2& format) {
+                       const fuchsia::hardware::audio::PcmSupportedFormats& format) {
   for (auto rate : format.frame_rates()) {
     if (rate == frame_rate) {
       return true;
@@ -59,7 +59,7 @@ bool IsRateInSupported(uint32_t frame_rate,
 
 bool IsFormatInSupported(
     const fuchsia::media::AudioStreamType& stream_type,
-    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& supported_formats) {
+    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& supported_formats) {
   DriverSampleFormat driver_format = {};
   if (!AudioSampleFormatToDriverSampleFormat(stream_type.sample_format, &driver_format)) {
     return false;
@@ -78,10 +78,9 @@ bool IsFormatInSupported(
   return false;
 }
 
-zx_status_t SelectBestFormat(
-    const std::vector<fuchsia::hardware::audio::PcmSupportedFormats2>& fmts,
-    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-    fuchsia::media::AudioSampleFormat* sample_format_inout) {
+zx_status_t SelectBestFormat(const std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& fmts,
+                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+                             fuchsia::media::AudioSampleFormat* sample_format_inout) {
   TRACE_DURATION("audio", "SelectBestFormat");
   if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
       (sample_format_inout == nullptr)) {

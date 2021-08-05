@@ -426,7 +426,7 @@ void IntelHDAStreamBase::GetSupportedFormats(
     // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
     // Needs to be alive until the reply is sent.
     FidlCompatibleFormats& src = fidl_compatible_formats[i];
-    audio_fidl::wire::PcmSupportedFormats2 formats;
+    audio_fidl::wire::PcmSupportedFormats formats;
 
     fidl::VectorView<audio_fidl::wire::ChannelSet> channel_sets(allocator,
                                                                 src.number_of_channels.size());
@@ -451,7 +451,7 @@ void IntelHDAStreamBase::GetSupportedFormats(
         allocator, ::fidl::VectorView<uint8_t>::FromExternal(src.valid_bits_per_sample.data(),
                                                              src.valid_bits_per_sample.size()));
     fidl_formats[i].Allocate(allocator);
-    fidl_formats[i].set_pcm_supported_formats2(allocator, std::move(formats));
+    fidl_formats[i].set_pcm_supported_formats(allocator, std::move(formats));
   }
 
   completer.Reply(std::move(fidl_formats));

@@ -55,7 +55,7 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
 TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
   // Publish a format that has a matching sample rate, and also formats with double and half the
   // requested rate.
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   fuchsia::hardware::audio::ChannelSet channel_set = {};
   constexpr size_t kSupportedNumberOfChannels = 1;
   std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(kSupportedNumberOfChannels);
@@ -81,7 +81,7 @@ TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
 TEST_P(AudioInputTestDriver, FallBackToAlternativeRateIfPreferredRateIsNotSupported) {
   ASSERT_NE(GetParam(), 0);  // Invalid frame rate passed as test parameter.
   const int32_t kSupportedRate = GetParam() * 2;
-  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   fuchsia::hardware::audio::ChannelSet channel_set = {};
   constexpr size_t kSupportedNumberOfChannels = 1;
   std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(kSupportedNumberOfChannels);

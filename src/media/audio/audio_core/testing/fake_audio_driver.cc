@@ -74,7 +74,7 @@ void FakeAudioDriver::GetProperties(
 void FakeAudioDriver::GetSupportedFormats(
     fuchsia::hardware::audio::StreamConfig::GetSupportedFormatsCallback callback) {
   fuchsia::hardware::audio::SupportedFormats formats = {};
-  formats.set_pcm_supported_formats2(std::move(formats_));
+  formats.set_pcm_supported_formats(std::move(formats_));
 
   std::vector<fuchsia::hardware::audio::SupportedFormats> all_formats = {};
   all_formats.push_back(std::move(formats));

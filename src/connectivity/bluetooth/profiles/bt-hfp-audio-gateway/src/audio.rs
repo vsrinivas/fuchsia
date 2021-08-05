@@ -271,7 +271,7 @@ mod test {
             let _prop = self.client.get_properties().await?;
             let formats = self.client.get_supported_formats().await?;
             // Pick the first one, why not.
-            let pcm_formats = formats.first().unwrap().pcm_supported_formats2.as_ref().unwrap();
+            let pcm_formats = formats.first().unwrap().pcm_supported_formats.as_ref().unwrap();
             let pcm_format = Some(PcmFormat {
                 number_of_channels: pcm_formats.channel_sets.as_ref().unwrap()[0]
                     .attributes

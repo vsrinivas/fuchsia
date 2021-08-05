@@ -201,13 +201,13 @@ fn mock_dai_device(
     let attributes = vec![ChannelAttributes::EMPTY; number_of_channels];
     let channel_set = ChannelSet { attributes: Some(attributes), ..ChannelSet::EMPTY };
     let supported_pcm_formats = SupportedFormats {
-        pcm_supported_formats2: Some(PcmSupportedFormats2 {
+        pcm_supported_formats: Some(PcmSupportedFormats {
             channel_sets: Some(vec![channel_set]),
             sample_formats: Some(vec![SampleFormat::PcmSigned]),
             bytes_per_sample: Some(vec![2]),
             valid_bits_per_sample: Some(vec![16]),
             frame_rates: Some(vec![8000, 16000, 32000, 48000, 96000]),
-            ..PcmSupportedFormats2::EMPTY
+            ..PcmSupportedFormats::EMPTY
         }),
         ..SupportedFormats::EMPTY
     };

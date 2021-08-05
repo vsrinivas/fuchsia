@@ -401,7 +401,7 @@ TEST_F(SimpleAudioTest, Enumerate1) {
 
   auto ret = client.GetSupportedFormats();
   auto& supported_formats = ret->supported_formats;
-  auto& formats = supported_formats[0].pcm_supported_formats2();
+  auto& formats = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(1, formats.channel_sets().count());
   ASSERT_EQ(2, formats.channel_sets()[0].attributes().count());
   ASSERT_EQ(1, formats.sample_formats().count());
@@ -468,7 +468,7 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   auto& supported_formats = ret->supported_formats;
   ASSERT_EQ(2, supported_formats.count());
 
-  auto& formats1 = supported_formats[0].pcm_supported_formats2();
+  auto& formats1 = supported_formats[0].pcm_supported_formats();
   ASSERT_EQ(3, formats1.channel_sets().count());
   ASSERT_EQ(2, formats1.channel_sets()[0].attributes().count());
   ASSERT_EQ(3, formats1.channel_sets()[1].attributes().count());
@@ -486,7 +486,7 @@ TEST_F(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(1, formats1.valid_bits_per_sample().count());
   ASSERT_EQ(24, formats1.valid_bits_per_sample()[0]);
 
-  auto& formats2 = supported_formats[1].pcm_supported_formats2();
+  auto& formats2 = supported_formats[1].pcm_supported_formats();
   ASSERT_EQ(1, formats2.channel_sets().count());
   ASSERT_EQ(1, formats2.channel_sets()[0].attributes().count());
   ASSERT_EQ(1, formats2.sample_formats().count());

@@ -344,7 +344,7 @@ void UsbAudioStream::GetSupportedFormats(
     FidlCompatibleFormats& src = fidl_compatible_formats[i];
     audio_fidl::wire::SupportedFormats& dst = fidl_formats[i];
 
-    audio_fidl::wire::PcmSupportedFormats2 formats;
+    audio_fidl::wire::PcmSupportedFormats formats;
     formats.Allocate(allocator);
     fidl::VectorView<audio_fidl::wire::ChannelSet> channel_sets(allocator,
                                                                 src.number_of_channels.size());
@@ -369,7 +369,7 @@ void UsbAudioStream::GetSupportedFormats(
                                                              src.valid_bits_per_sample.size()));
 
     dst.Allocate(allocator);
-    dst.set_pcm_supported_formats2(allocator, std::move(formats));
+    dst.set_pcm_supported_formats(allocator, std::move(formats));
   }
 
   completer.Reply(std::move(fidl_formats));

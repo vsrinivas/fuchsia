@@ -262,7 +262,7 @@ void AmlG12TdmDai::GetProperties(::fuchsia::hardware::audio::Dai::GetPropertiesC
 void AmlG12TdmDai::GetRingBufferFormats(GetRingBufferFormatsCallback callback) {
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Result result;
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Response response;
-  ::fuchsia::hardware::audio::PcmSupportedFormats2 pcm_formats;
+  ::fuchsia::hardware::audio::PcmSupportedFormats pcm_formats;
   ::fuchsia::hardware::audio::ChannelSet channel_set;
   std::vector<::fuchsia::hardware::audio::ChannelAttributes> attributes(
       metadata_.ring_buffer.number_of_channels);
@@ -277,7 +277,7 @@ void AmlG12TdmDai::GetRingBufferFormats(GetRingBufferFormatsCallback callback) {
     pcm_formats.mutable_frame_rates()->push_back(AmlTdmConfigDevice::kSupportedFrameRates[i]);
   }
   ::fuchsia::hardware::audio::SupportedFormats formats;
-  formats.set_pcm_supported_formats2(std::move(pcm_formats));
+  formats.set_pcm_supported_formats(std::move(pcm_formats));
   response.ring_buffer_formats.push_back(std::move(formats));
   result.set_response(std::move(response));
   callback(std::move(result));
