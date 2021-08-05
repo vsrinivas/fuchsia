@@ -23,7 +23,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{AsHandleRef, Status},
     std::{
-        any::Any,
         borrow::Borrow,
         cell::UnsafeCell,
         cmp::PartialEq,
@@ -550,10 +549,6 @@ impl MutableDirectory for FatDirectory {
         &*self.filesystem
     }
 
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {
-        self as Arc<dyn Any + Sync + Send>
-    }
-
     async fn sync(&self) -> Result<(), Status> {
         // TODO(fxbug.dev/55291): Support sync on root of fatfs volume.
         Ok(())
@@ -859,7 +854,7 @@ mod tests {
     }
 
     impl Sealed for DummySink {
-        fn open(self: Box<Self>) -> Box<dyn Any> {
+        fn open(self: Box<Self>) -> Box<dyn std::any::Any> {
             self
         }
     }

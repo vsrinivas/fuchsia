@@ -39,7 +39,6 @@ use {
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
     std::{
-        any::Any,
         boxed::Box,
         clone::Clone,
         collections::{
@@ -510,10 +509,6 @@ where
 
     fn get_filesystem(&self) -> &dyn Filesystem {
         &self.fs
-    }
-
-    fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
-        self as Arc<Any + Send + Sync>
     }
 }
 

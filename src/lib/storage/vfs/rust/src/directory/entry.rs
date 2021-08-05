@@ -6,7 +6,7 @@
 
 #![warn(missing_docs)]
 
-use crate::{execution_scope::ExecutionScope, path::Path};
+use crate::{common::IntoAny, execution_scope::ExecutionScope, path::Path};
 
 use {
     fidl::endpoints::ServerEnd,
@@ -68,22 +68,6 @@ impl fmt::Debug for EntryInfo {
         } else {
             write!(f, "{}({})", type_str, self.inode())
         }
-    }
-}
-
-/// Trait to be used as a supertrait when an object should allow dynamic casting to an Any.
-///
-/// Separate trait since [`into_any`] requires Self to be Sized, which cannot be satisfied in a
-/// trait without preventing it from being object safe (thus disallowing dynamic dispatch).
-/// Since we provide a generic implementation, the size of each concrete type is known.
-pub trait IntoAny: std::any::Any {
-    /// Cast the given object into a `dyn std::any::Any`.
-    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync>;
-}
-
-impl<T: 'static + Send + Sync> IntoAny for T {
-    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync> {
-        self as Arc<dyn std::any::Any + Send + Sync>
     }
 }
 

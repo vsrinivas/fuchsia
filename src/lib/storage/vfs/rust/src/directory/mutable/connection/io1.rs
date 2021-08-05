@@ -486,10 +486,6 @@ mod tests {
             &*self.fs
         }
 
-        fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
-            self as Arc<dyn Any + Send + Sync>
-        }
-
         async fn sync(&self) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Sync)
         }

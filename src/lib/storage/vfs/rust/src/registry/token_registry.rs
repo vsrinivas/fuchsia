@@ -284,7 +284,7 @@ mod tests {
             fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
             fuchsia_async::Channel,
             fuchsia_zircon::Status,
-            std::{any::Any, sync::Arc},
+            std::sync::Arc,
         };
 
         pub(super) struct MockDirectory {}
@@ -375,10 +375,6 @@ mod tests {
 
             fn get_filesystem(&self) -> &dyn Filesystem {
                 panic!("Not implemented!")
-            }
-
-            fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
-                panic!("Not implemented!");
             }
 
             async fn sync(&self) -> Result<(), Status> {

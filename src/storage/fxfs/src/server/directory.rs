@@ -437,10 +437,6 @@ impl MutableDirectory for FxDirectory {
         self.volume().as_ref()
     }
 
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {
-        self as Arc<dyn Any + Sync + Send>
-    }
-
     async fn sync(&self) -> Result<(), Status> {
         // TODO(csuter): Support sync on root of fxfs volume.
         Ok(())

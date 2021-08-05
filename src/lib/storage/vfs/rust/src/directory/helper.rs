@@ -13,7 +13,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_io::NodeAttributes,
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    std::sync::Arc,
 };
 
 /// `DirectlyMutable` is a superset of `MutableDirectory` which also allows server-side management
@@ -127,9 +127,6 @@ pub trait DirectlyMutable: Directory + Send + Sync {
 
     /// Get the filesystem this directory belongs to.
     fn get_filesystem(&self) -> &dyn Filesystem;
-
-    /// Turn this DirectlyMutable into an Any.
-    fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync>;
 }
 
 #[async_trait]
@@ -152,10 +149,6 @@ impl<T: DirectlyMutable> MutableDirectory for T {
 
     fn get_filesystem(&self) -> &dyn Filesystem {
         (self as &dyn DirectlyMutable).get_filesystem()
-    }
-
-    fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
-        (self as Arc<dyn DirectlyMutable>).into_any()
     }
 
     async fn sync(&self) -> Result<(), Status> {

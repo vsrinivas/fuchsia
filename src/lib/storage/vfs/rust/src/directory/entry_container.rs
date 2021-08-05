@@ -6,6 +6,7 @@
 //! content.
 
 use crate::{
+    common::IntoAny,
     directory::{dirents_sink, entry::DirectoryEntry, traversal_position::TraversalPosition},
     execution_scope::ExecutionScope,
     filesystem::Filesystem,
@@ -17,7 +18,7 @@ use {
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
-    std::{any::Any, sync::Arc},
+    std::sync::Arc,
 };
 
 pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
@@ -48,7 +49,7 @@ impl<'a> From<BoxFuture<'a, GetEntryResult>> for AsyncGetEntry<'a> {
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
 #[async_trait]
-pub trait Directory: Any + Send + Sync {
+pub trait Directory: IntoAny + Send + Sync {
     /// Returns a reference to a contained directory entry.  Used when linking entries.
     fn get_entry(self: Arc<Self>, name: &str) -> AsyncGetEntry;
 
@@ -104,9 +105,6 @@ pub trait MutableDirectory: Directory {
 
     /// Gets the filesystem this directory belongs to.
     fn get_filesystem(&self) -> &dyn Filesystem;
-
-    /// Gets this directory as an Any.
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 
     /// Syncs the directory.
     async fn sync(&self) -> Result<(), Status>;
