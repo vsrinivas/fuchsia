@@ -46,8 +46,6 @@
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -530,6 +528,24 @@
             path: "/svc_for_sys/fuchsia.wlan.device.service.DeviceService",
         },
 
+        // From location
+        {
+            protocol: "fuchsia.location.position.EmergencyProvider",
+            path: "/svc_for_sys/fuchsia.location.position.EmergencyProvider",
+        },
+        {
+            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
+            path: "/svc_for_sys/fuchsia.location.sensor.WlanBaseStationWatcher",
+        },
+        {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            path: "/svc_for_sys/fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+        },
+        {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            path: "/svc_for_sys/fuchsia.location.namedplace.RegulatoryRegionWatcher",
+        },
+
         // From session_manager
         {
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
@@ -585,8 +601,6 @@
                 "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",

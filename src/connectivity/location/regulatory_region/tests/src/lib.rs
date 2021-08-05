@@ -4,21 +4,24 @@
 
 use {
     anyhow::{Context as _, Error},
+    cm_rust,
+    fidl::endpoints::DiscoverableProtocolMarker as _,
+    fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_location_namedplace::{
         RegulatoryRegionConfiguratorMarker, RegulatoryRegionConfiguratorProxy as ConfigProxy,
         RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherProxy as WatcherProxy,
     },
-    fidl_fuchsia_sys::LauncherProxy,
-    fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{connect_to_protocol, launch, launcher, App},
-        fuchsia_single_component_package_url,
+    fidl_fuchsia_sys2 as fsys2,
+    fuchsia_component::client::connect_to_named_protocol_at_dir_root,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        Moniker, RealmInstance,
     },
 };
 
-const COMPONENT_URL: &str = fuchsia_single_component_package_url!("regulatory_region");
+const REGION_COMPONENT_NAME: &str = "regulatory_region";
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_none_state_sending_get_region_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -47,7 +50,7 @@ async fn from_none_state_sending_get_region_then_set_yields_expected_region() ->
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_none_state_sending_set_then_get_region_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -72,7 +75,7 @@ async fn from_none_state_sending_set_then_get_region_yields_expected_region() ->
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_some_state_sending_get_region_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -106,7 +109,7 @@ async fn from_some_state_sending_get_region_then_set_yields_expected_region() ->
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_some_state_sending_set_then_get_region_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -136,7 +139,7 @@ async fn from_some_state_sending_set_then_get_region_yields_expected_region() ->
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_none_state_sending_get_region_yields_none() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -147,7 +150,7 @@ async fn from_none_state_sending_get_region_yields_none() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_some_state_reloading_service_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -162,48 +165,109 @@ async fn from_some_state_reloading_service_yields_expected_region() -> Result<()
     assert_eq!(Some(SECOND_REGION.to_string()), watcher.get_region_update().await?);
 
     // Restart the service backing the protocols so that it will read the cached value.
-    let test_context = new_test_context_without_clear()?;
-    let watcher = &test_context.watcher;
+    stop_component(&test_context._realm_instance, REGION_COMPONENT_NAME).await;
+    let watcher = &test_context
+        ._realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<RegulatoryRegionWatcherMarker>()
+        .context("Failed to connect to Watcher protocol")?;
     assert_eq!(Some(SECOND_REGION.to_string()), watcher.get_region_update().await?);
     Ok(())
 }
 
 // Bundles together the handles needed to communicate with the Configurator and Watcher protocols.
-// These items are bundled together to ensure that `launcher` and `region_service` outlive the
+// These items are bundled together to ensure that `realm_instance` outlives the
 // protocols instances. Without that guarantee, the process backing the protocols my terminate
 // prematurely.
 struct TestContext {
-    _launcher: LauncherProxy, // May be unread; exists primarily for lifetime management.
-    _region_service: App,     // May be unread; exists primarily for lifetime management.
+    _realm_instance: RealmInstance, // May be unread; exists primarily for lifetime management.
     configurator: ConfigProxy,
     watcher: WatcherProxy,
 }
 
-async fn new_test_context() -> Result<TestContext, Error> {
-    // NOTE: this clears isolated-cache-storage in order to clear the regulatory region cache, but
-    // it will also clear everything in cache.
-    let cache_control = connect_to_protocol::<systest::CacheControlMarker>()?;
-    cache_control.clear().await.context("Failed to clear cache")?;
-    new_test_context_without_clear()
+async fn stop_component(realm_ref: &RealmInstance, child_name: &str) {
+    let lifecycle = connect_to_named_protocol_at_dir_root::<fsys2::LifecycleControllerMarker>(
+        realm_ref.root.get_exposed_dir(),
+        &format!("hub/debug/{}", fsys2::LifecycleControllerMarker::PROTOCOL_NAME),
+    )
+    .expect("Failed to connect to LifecycleController");
+    lifecycle.stop(&format!("./{}:0", child_name), true).await.unwrap().unwrap();
 }
 
-/// Set up the protocol services for the without clearing the regulatory region cache.
-fn new_test_context_without_clear() -> Result<TestContext, Error> {
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let region_service = launch(&launcher, COMPONENT_URL.to_string(), None)
-        .context("Failed to launch region service")?;
-    let configurator = region_service
-        .connect_to_protocol::<RegulatoryRegionConfiguratorMarker>()
+async fn new_test_context() -> Result<TestContext, Error> {
+    // Create a new RealmBuilder instance, which we will use to define a new realm
+    let mut builder = RealmBuilder::new().await?;
+    builder
+        // Add regulatory_region to the realm, which will be fetched with a URL
+        .add_component(
+            REGION_COMPONENT_NAME,
+            ComponentSource::url(
+                "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
+            ),
+        )
+        .await?
+        // Route the logsink to `regulatory_region`, so it can inform us of any issues
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::above_root(),
+            targets: vec![RouteEndpoint::component(REGION_COMPONENT_NAME)],
+        })?
+        // Route the cache
+        .add_route(CapabilityRoute {
+            capability: Capability::storage("cache", "/cache"),
+            source: RouteEndpoint::above_root(),
+            targets: vec![RouteEndpoint::component(REGION_COMPONENT_NAME)],
+        })?
+        // Route the two regulatory fidl services to the realm parent
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol(
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            ),
+            source: RouteEndpoint::component(REGION_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::above_root()],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.location.namedplace.RegulatoryRegionWatcher"),
+            source: RouteEndpoint::component(REGION_COMPONENT_NAME),
+            targets: vec![RouteEndpoint::above_root()],
+        })?;
+
+    let mut realm = builder.build();
+
+    // Expose to the hub to the test, for controlling lifecycle
+    // TODO(fxbug.dev/82074): Once realmbuilder supports "framework" as a source, this can be moved
+    // up above with the other `add_route`s.
+    let mut decl = realm.get_decl(&Moniker::root()).await?;
+    let cm_rust::ComponentDecl { offers: _offers, exposes, .. } = &mut decl;
+    let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+        source: cm_rust::ExposeSource::Framework,
+        source_name: cm_rust::CapabilityName("hub".to_string()),
+        target: cm_rust::ExposeTarget::Parent,
+        target_name: cm_rust::CapabilityName("hub".to_string()),
+        rights: Some(fio2::R_STAR_DIR),
+        subdir: None,
+    }));
+    let () = realm.set_component(&Moniker::root(), decl).await?;
+
+    // Creates the realm, and add it to the collection to start its execution
+    let realm_instance = realm.create().await?;
+
+    // Connects to the two fidl services
+    let configurator = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<RegulatoryRegionConfiguratorMarker>()
         .context("Failed to connect to Configurator protocol")?;
-    let watcher = region_service
-        .connect_to_protocol::<RegulatoryRegionWatcherMarker>()
+    let watcher = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<RegulatoryRegionWatcherMarker>()
         .context("Failed to connect to Watcher protocol")?;
-    Ok(TestContext { _launcher: launcher, _region_service: region_service, configurator, watcher })
+
+    Ok(TestContext { _realm_instance: realm_instance, configurator, watcher })
 }
 
 // The tests below are for the deprecated get_update function
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_none_state_sending_get_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -228,7 +292,7 @@ async fn from_none_state_sending_get_then_set_yields_expected_region() -> Result
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_none_state_sending_set_then_get_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -249,7 +313,7 @@ async fn from_none_state_sending_set_then_get_yields_expected_region() -> Result
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_some_state_sending_get_then_set_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;
@@ -279,7 +343,7 @@ async fn from_some_state_sending_get_then_set_yields_expected_region() -> Result
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn from_some_state_sending_set_then_get_yields_expected_region() -> Result<(), Error> {
     // Set up handles.
     let test_context = new_test_context().await?;

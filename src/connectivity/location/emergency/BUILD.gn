@@ -83,7 +83,7 @@ group("pkg") {
 
 fuchsia_package_with_single_component("emergency") {
   deps = [ ":bin" ]
-  manifest = "meta/emergency.cmx"
+  manifest = "meta/emergency.cml"
 }
 
 fuchsia_unittest_component("emergency-test") {

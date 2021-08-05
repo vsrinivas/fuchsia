@@ -5,10 +5,10 @@
                 "fuchsia.factory.lowpan.FactoryLookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.factory.lowpan.FactoryRegister": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator": [
-                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx"
+                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region_v1.cmx"
                 ],
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher": [
-                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx"
+                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region_v1.cmx"
                 ],
                 "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",

@@ -83,6 +83,14 @@
             url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
         },
         {
+            name: "emergency",
+            url: "fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm",
+        },
+        {
+            name: "regulatory_region",
+            url: "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
+        },
+        {
             name: "font_provider",
             url: "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cm",
         },
@@ -157,6 +165,22 @@
         },
     ],
     offer: [
+        {
+            protocol: [
+                "fuchsia.location.position.EmergencyProvider",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
+            ],
+            from: "#emergency",
+            to: "#appmgr",
+        },
+        {
+            protocol: [
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            ],
+            from: "#regulatory_region",
+            to: "#appmgr",
+        },
         {
             protocol: "fuchsia.devicesettings.DeviceSettingsManager",
             from: "#device_settings",
@@ -329,6 +353,12 @@
             subdir: "pkg-resolver",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#emergency" ],
+            subdir: "emergency",
+        },
+        {
             directory: "dev",
             from: "parent",
             as: "skip-block",
@@ -407,6 +437,7 @@
                 "#dhcpd",
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
+                "#emergency",
                 "#font_provider",
                 "#http-client",
                 "#hwinfo",
@@ -414,6 +445,7 @@
                 "#log-stats",
                 "#pkg-cache",
                 "#pkg-resolver",
+                "#regulatory_region",
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
@@ -709,7 +741,10 @@
         {
             protocol: "fuchsia.net.http.Loader",
             from: "#http-client",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#emergency",
+            ],
         },
         {
             protocol: [
@@ -737,6 +772,12 @@
             dependency: "weak_for_migration",
         },
         {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#appmgr",
+            to: [ "#emergency" ],
+            dependency: "weak_for_migration",
+        },
+        {
             storage: "data",
             from: "self",
             to: [
@@ -759,6 +800,11 @@
             ],
             from: "self",
             to: "#last_reboot",
+        },
+        {
+            storage: [ "cache" ],
+            from: "self",
+            to: "#regulatory_region",
         },
         {
             protocol: "fuchsia.media.sounds.Player",

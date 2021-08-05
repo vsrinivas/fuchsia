@@ -226,13 +226,7 @@
         // See https://fxbug.dev/74359 for more details.
         {
             instance_id: "9b2aac8bc3465533c6d6e8261478b0ab5a5db2b32cabd3b894ed40f8a695ac0f",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/regulatory_region",
         },
         {
             instance_id: "21cfa3a89262d5a856acab7166b36af59fcdaa2227256638cf0a6202e265a199",

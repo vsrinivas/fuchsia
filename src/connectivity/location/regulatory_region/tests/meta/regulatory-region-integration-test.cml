@@ -1,0 +1,18 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/regulatory_region_integration_test",
+        args: [ "--test-threads=1" ],
+    },
+    offer: [
+        {
+            storage: "cache",
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
+}

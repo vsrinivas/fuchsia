@@ -63,16 +63,22 @@ group("tests") {
 
 fuchsia_package_with_single_component("regulatory_region") {
   deps = [ ":bin" ]
+  manifest = "meta/regulatory_region.cml"
+}
+
+# Keep a v1 version of the manifest until all dependencies are migrated
+fuchsia_package_with_single_component("regulatory_region_v1") {
+  deps = [ ":bin" ]
   manifest = "meta/regulatory_region.cmx"
 }
 
 fuchsia_unittest_component("regulatory-region-test") {
-  manifest = "meta/regulatory_region_test.cmx"
+  manifest = "meta/regulatory_region_test.cml"
   deps = [ ":bin_test" ]
 }
 
 fuchsia_unittest_component("regulatory-region-lib-test") {
-  manifest = "meta/regulatory_region_lib_lib_test.cmx"
+  manifest = "meta/regulatory_region_lib_test.cml"
   deps = [ ":lib_test" ]
 }
 

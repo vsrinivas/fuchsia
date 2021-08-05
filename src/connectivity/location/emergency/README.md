@@ -21,7 +21,7 @@ to the `fx set` invocation.
 ## Running
 
 ```
-$ fx shell run fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cmx
+$ fx ffx component run fuchsia-pkg://fuchsia.com/emergency#meta/emergency.cm
 ```
 
 ## Testing

@@ -29,10 +29,18 @@
             to: "#wlancfg",
         },
         {
+            protocol: [ "fuchsia.location.sensor.WlanBaseStationWatcher" ],
+            from: "#emergency",
+            to: "#wlancfg",
+        },
+        {
+            protocol: [ "fuchsia.location.namedplace.RegulatoryRegionWatcher" ],
+            from: "#regulatory_region",
+            to: "#wlancfg",
+        },
+        {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.metrics.MetricEventLoggerFactory",
             ],
             from: "#appmgr",

@@ -1,0 +1,37 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/emergency",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.location.position.EmergencyProvider",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.net.http.Loader",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.location.position.EmergencyProvider",
+                "fuchsia.location.sensor.WlanBaseStationWatcher",
+            ],
+            from: "self",
+        },
+    ],
+}

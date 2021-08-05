@@ -1,0 +1,30 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/regulatory_region",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            ],
+        },
+    ],
+    use: [
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            ],
+            from: "self",
+        },
+    ],
+}

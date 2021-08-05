@@ -1,0 +1,15 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/regulatory_region_lib_lib_test",
+    },
+    use: [
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+    ],
+}
