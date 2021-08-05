@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 pub mod command_builder;
-pub mod config;
 pub mod launcher;
 mod logo;
 mod rest;

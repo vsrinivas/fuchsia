@@ -13,7 +13,10 @@ ffx_plugin("ffx_scrutiny_list") {
     "package:ffx_scrutiny_package_list",
     "packages:ffx_scrutiny_packages_list",
   ]
-  deps = [ "//src/security/scrutiny/lib/frontend" ]
+  deps = [
+    "//src/security/scrutiny/lib/config",
+    "//src/security/scrutiny/lib/frontend",
+  ]
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 
   sources = [ "src/args.rs" ]

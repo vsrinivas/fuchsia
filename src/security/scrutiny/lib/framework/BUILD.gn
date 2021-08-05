@@ -12,6 +12,7 @@ if (is_host) {
     edition = "2018"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
+      "//src/security/scrutiny/lib/config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",

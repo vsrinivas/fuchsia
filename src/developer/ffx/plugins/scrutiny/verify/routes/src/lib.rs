@@ -6,11 +6,8 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_routes_args::ScrutinyRoutesCommand,
-    scrutiny_frontend::{
-        command_builder::CommandBuilder,
-        config::{Config, LaunchConfig, RuntimeConfig},
-        launcher,
-    },
+    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
+    scrutiny_frontend::{command_builder::CommandBuilder, launcher},
 };
 
 #[ffx_plugin()]

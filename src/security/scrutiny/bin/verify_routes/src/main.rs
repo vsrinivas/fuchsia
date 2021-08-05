@@ -5,7 +5,8 @@
 use {
     anyhow::{bail, Result},
     clap::{App, Arg},
-    scrutiny_frontend::{command_builder::CommandBuilder, config::Config, launcher},
+    scrutiny_config::Config,
+    scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     serde::{Deserialize, Serialize},
     serde_json,
     std::{env, fs},

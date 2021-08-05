@@ -11,6 +11,7 @@ if (is_host) {
     with_unit_tests = true
     edition = "2018"
     deps = [
+      "//src/security/scrutiny/lib/config",
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/plugins",
       "//src/security/scrutiny/lib/utils",
@@ -36,7 +37,6 @@ if (is_host) {
 
     sources = [
       "src/command_builder.rs",
-      "src/config.rs",
       "src/launcher.rs",
       "src/lib.rs",
       "src/logo.rs",

@@ -7,6 +7,7 @@ import("//build/host.gni")
 group("lib") {
   if (is_host) {
     public_deps = [
+      "//src/security/scrutiny/lib/config",
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/frontend",
       "//src/security/scrutiny/lib/plugins",
@@ -19,6 +20,7 @@ group("lib") {
 group("tests") {
   testonly = true
   public_deps = [
+    "//src/security/scrutiny/lib/config:tests($host_toolchain)",
     "//src/security/scrutiny/lib/framework:tests($host_toolchain)",
     "//src/security/scrutiny/lib/frontend:tests($host_toolchain)",
     "//src/security/scrutiny/lib/plugins:tests($host_toolchain)",

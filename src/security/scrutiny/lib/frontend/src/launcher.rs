@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{config::Config, scrutiny::Scrutiny},
+    crate::scrutiny::Scrutiny,
     anyhow::Result,
+    scrutiny_config::Config,
     scrutiny_plugins::{
         core::CorePlugin, engine::EnginePlugin, search::SearchPlugin, sys::SysRealmPlugin,
         toolkit::ToolkitPlugin, verify::VerifyPlugin,

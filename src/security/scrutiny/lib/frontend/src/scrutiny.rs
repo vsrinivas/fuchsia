@@ -3,13 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        config::{Config, LoggingVerbosity},
-        logo,
-        rest::service::RestService,
-        rest::visualizer::Visualizer,
-        shell::Shell,
-    },
+    crate::{logo, rest::service::RestService, rest::visualizer::Visualizer, shell::Shell},
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,
@@ -20,6 +14,7 @@ use {
         },
         model::model::{DataModel, ModelEnvironment},
     },
+    scrutiny_config::{Config, LoggingVerbosity},
     simplelog::{Config as SimpleLogConfig, LevelFilter, WriteLogger},
     std::{
         env,

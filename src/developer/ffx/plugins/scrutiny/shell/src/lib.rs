@@ -6,10 +6,8 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_shell_args::ScrutinyShellCommand,
-    scrutiny_frontend::{
-        config::{Config, LaunchConfig, LoggingVerbosity, RuntimeConfig},
-        launcher,
-    },
+    scrutiny_config::{Config, LaunchConfig, LoggingVerbosity, RuntimeConfig},
+    scrutiny_frontend::launcher,
     std::path::PathBuf,
 };
 

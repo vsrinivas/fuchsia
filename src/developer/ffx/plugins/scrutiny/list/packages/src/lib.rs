@@ -6,10 +6,8 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_scrutiny_packages_list_args::ScrutinyPackagesCommand,
-    scrutiny_frontend::{
-        config::{Config, LaunchConfig, RuntimeConfig},
-        launcher,
-    },
+    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
+    scrutiny_frontend::launcher,
 };
 
 #[ffx_plugin()]
