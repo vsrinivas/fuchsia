@@ -72,6 +72,9 @@ class TestBundle {
   /// Supercedes any parallel value stored in the test definition.
   final String parallelOverride;
 
+  /// Whether or not to use run-test-suite instead of ffx for running v2 tests.
+  final bool useRunTestSuite;
+
   static bool hasDeviceTests(List<TestBundle> testBundles) {
     return testBundles
         .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
@@ -118,6 +121,7 @@ class TestBundle {
     @required this.confidence,
     @required this.directoryBuilder,
     @required this.parallelOverride,
+    @required this.useRunTestSuite,
     this.environment = const <String, String>{},
     this.extraFlags = const [],
     this.fxPath,
@@ -182,6 +186,7 @@ class TestBundle {
       timeElapsedSink: timeElapsedSink,
       workingDirectory: workingDirectory,
       parallelOverride: testsConfig.flags.parallel,
+      useRunTestSuite: testsConfig.flags.fallbackUseRunTestSuite,
     );
   }
 
@@ -198,7 +203,8 @@ class TestBundle {
   Stream<TestEvent> run() async* {
     var testType = testDefinition.testType;
     var executionHandle = testDefinition.createExecutionHandle(
-        parallelOverride: parallelOverride);
+        parallelOverride: parallelOverride,
+        useRunTestSuiteForV2: useRunTestSuite);
     if (testType == TestType.unsupportedDeviceTest) {
       yield UnrunnableTestEvent(executionHandle.handle);
       return;

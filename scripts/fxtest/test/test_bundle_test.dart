@@ -149,5 +149,33 @@ void main() {
         ].join(' '),
       );
     });
+
+    test(
+        'should use run-test-suite for component suite tests with run-test-suite override',
+        () {
+      const componentUrl =
+          'fuchsia-pkg://fuchsia.com/pkg-name#meta/component-name.cm';
+      final testDef = TestDefinition.fromJson(
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'x64',
+            'label': '//scripts/lib:lib_tests(//build/toolchain:host_x64)',
+            'name': 'lib_tests',
+            'os': 'fuchsia',
+            'package_url': componentUrl,
+            'runtime_deps': 'host_x64/gen/scripts/lib/lib_tests.deps.json',
+          }
+        },
+        buildDir: '/whatever',
+      );
+      final commandTokens = testDef
+          .createExecutionHandle(useRunTestSuiteForV2: true)
+          .getInvocationTokens([]);
+      expect(
+        commandTokens.fullCommand,
+        ['fx', 'shell', 'run-test-suite', componentUrl].join(' '),
+      );
+    });
   });
 }

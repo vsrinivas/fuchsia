@@ -54,6 +54,7 @@ class Flags {
   final String count;
   final String parallel;
   final bool runDisabledTests;
+  final bool fallbackUseRunTestSuite;
 
   Flags({
     this.dryRun = false,
@@ -86,6 +87,7 @@ class Flags {
     this.count,
     this.parallel,
     this.runDisabledTests = false,
+    this.fallbackUseRunTestSuite,
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
@@ -123,7 +125,8 @@ class Flags {
         timeout: int.parse(argResults['timeout'] ?? '0'),
         count: argResults['count'],
         parallel: argResults['parallel'],
-        runDisabledTests: argResults['also-run-disabled-tests']);
+        runDisabledTests: argResults['also-run-disabled-tests'],
+        fallbackUseRunTestSuite: argResults['use-run-test-suite']);
   }
 
   @override
@@ -238,7 +241,9 @@ class TestsConfig {
     }
     // We do not add the parallel option here, as it may also be specified via
     // test spec. Instead, it is added later.
-    if (flags.runDisabledTests) {
+    if (flags.runDisabledTests && flags.fallbackUseRunTestSuite) {
+      v2runnerTokens.add('--also-run-disabled-tests');
+    } else if (flags.runDisabledTests) {
       v2runnerTokens.add('--run-disabled');
     }
     if (flags.timeout > 0) {

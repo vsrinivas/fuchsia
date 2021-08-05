@@ -392,7 +392,8 @@ class InfoFormatter extends OutputFormatter {
 
 List<String> infoPrint(TestDefinition testDefinition) {
   var command = testDefinition
-      .createExecutionHandle(parallelOverride: null)
+      .createExecutionHandle(
+          parallelOverride: null, useRunTestSuiteForV2: false)
       .getInvocationTokens(const []).toString();
   return <String>[
     _isTruthy(command) ? 'command: $command' : null,

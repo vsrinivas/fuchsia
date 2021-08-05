@@ -193,7 +193,8 @@ class TestsManifestReader {
           // captures all tests. Therefore, any such sibling entry further down
           // `tests.json` will only result in duplicate work.
           var handle = testDefinition
-              .createExecutionHandle(parallelOverride: null)
+              .createExecutionHandle(
+                  parallelOverride: null, useRunTestSuiteForV2: false)
               .handle;
           if (seenPackages.contains(handle)) {
             numDuplicateTests += 1;

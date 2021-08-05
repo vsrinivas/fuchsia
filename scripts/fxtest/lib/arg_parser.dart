@@ -177,6 +177,11 @@ command and not the tests.''')
       help:
           '''Whether to also run tests that have been marked disabled/ignored by
       the test author.''')
+  ..addFlag('use-run-test-suite',
+      defaultsTo: false,
+      help:
+          '''Whether to fallback to using run-test-suite instead of ffx test. This
+          option is a temporary escape hatch.''')
   ..addOption('timeout',
       defaultsTo: '0',
       help: '''Test timeout in seconds. The test is killed if not completed when

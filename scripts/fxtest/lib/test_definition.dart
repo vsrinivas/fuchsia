@@ -133,7 +133,12 @@ class TestDefinition {
     return PackageUrl.copyWithHash(other: packageUrl, hash: hash);
   }
 
-  ExecutionHandle createExecutionHandle({String parallelOverride}) {
+  /// Create an execution handle using the test definition, and using any overrides
+  /// specified by the invoker.
+  ExecutionHandle createExecutionHandle({
+    String parallelOverride,
+    bool useRunTestSuiteForV2 = false,
+  }) {
     switch (testType) {
       case TestType.component:
         return ExecutionHandle.component(decoratedPackageUrl.toString(), os);
@@ -143,6 +148,11 @@ class TestDefinition {
           flags.addAll(['--parallel', parallelOverride]);
         } else if (parallel != null) {
           flags.addAll(['--parallel', parallel]);
+        }
+        if (useRunTestSuiteForV2) {
+          return ExecutionHandle.suiteFallbackRunTestSuite(
+              decoratedPackageUrl.toString(), os,
+              flags: flags);
         }
         return ExecutionHandle.suite(decoratedPackageUrl.toString(), os,
             flags: flags);

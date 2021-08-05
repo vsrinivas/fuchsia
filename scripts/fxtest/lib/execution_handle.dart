@@ -11,6 +11,10 @@ enum TestType {
   host,
   suite,
 
+  /// Components v2 tests that are run using run-test-suite rather than using ffx
+  /// test.
+  suiteFallbackRunTestSuite,
+
   /// Special tests that start on the host and then interact with a device.
   /// These tests do not always clean up after themselves and thus must be
   /// opted-in to for any given test run.
@@ -73,6 +77,9 @@ class ExecutionHandle {
   ExecutionHandle.suite(this.handle, this.os,
       {this.flags = const [], this.environment = const {}})
       : testType = TestType.suite;
+  ExecutionHandle.suiteFallbackRunTestSuite(this.handle, this.os,
+      {this.flags = const [], this.environment = const {}})
+      : testType = TestType.suiteFallbackRunTestSuite;
   ExecutionHandle.host(this.handle, this.os, {this.environment = const {}})
       : testType = TestType.host,
         flags = [];
@@ -102,6 +109,8 @@ class ExecutionHandle {
       return _getHostTokens();
     } else if (testType == TestType.suite) {
       return _getSuiteTokens(runnerFlags);
+    } else if (testType == TestType.suiteFallbackRunTestSuite) {
+      return _getSuiteFallbackTokens(runnerFlags);
     } else if (testType == TestType.e2e) {
       return _getEndToEndTokens();
     }
@@ -148,6 +157,17 @@ class ExecutionHandle {
       'test',
       'run',
       '--disable-output-directory'
+    ]..addAll(runnerFlags.map((flag) => "'$flag'"));
+    return CommandTokens(['fx', ...subCommand, ...flags, handle]);
+  }
+
+  /// Handler for `tests.json` entries containing the `packageUrl` key ending
+  /// in ".cm", when using run-test-suite is specified.
+  CommandTokens _getSuiteFallbackTokens(List<String> runnerFlags) {
+    // Structured output is disabled until we understand how fx will interact with it.
+    List<String> subCommand = [
+      'shell',
+      'run-test-suite',
     ]..addAll(runnerFlags.map((flag) => "'$flag'"));
     return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }
