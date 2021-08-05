@@ -31,12 +31,10 @@ TEST(AnalyticsTest, SymbolizationAnalyticsBuilder) {
   builder.TotalTimerStop();
 
   auto parameters = builder.build().parameters();
-  ASSERT_EQ(parameters["utt"], parameters["plt"]);
-  ASSERT_GE(std::stoll(parameters["plt"]), std::stoll(parameters["pdt"]));
-  ASSERT_GE(std::stoll(parameters["pdt"]), 0LL);
+  ASSERT_GE(std::stoll(parameters["utt"]), std::stoll(parameters["cm11"]));
+  ASSERT_GE(std::stoll(parameters["cm11"]), 0LL);
   parameters["utt"] = "100";
-  parameters["plt"] = "100";
-  parameters["pdt"] = "50";
+  parameters["cm11"] = "50";
 
   const std::map<std::string, std::string> expected_result{
       {"t", "timing"}, {"utc", "symbolization"},
@@ -45,8 +43,8 @@ TEST(AnalyticsTest, SymbolizationAnalyticsBuilder) {
       {"cm4", "4"},    {"cm5", "5"},
       {"cm6", "6"},    {"cm7", "1"},
       {"cm8", "1"},    {"cm9", "1"},
-      {"cm10", "0"},   {"utt", "100"},
-      {"plt", "100"},  {"pdt", "50"}};
+      {"cm10", "0"},   {"cm11", "50"},
+      {"utt", "100"}};
   EXPECT_THAT(parameters, ContainerEq(expected_result));
 }
 

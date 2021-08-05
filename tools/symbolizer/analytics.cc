@@ -89,10 +89,6 @@ analytics::google_analytics::Timing SymbolizationAnalyticsBuilder::build() {
   // utv=<empty>
   // utt=<total wall time spent, in milliseconds>
   auto timing = analytics::google_analytics::Timing("symbolization", "", total_time_ms);
-  // plt=<total wall time spent, in milliseconds>
-  timing.SetPageLoadTime(total_time_ms);
-  // pdt=<downloading time spent, in milliseconds>
-  timing.SetPageDownloadTime(download_time_ms);
 
   // Custom parameters.
   // cm1=<1 if "at least one invalid input" else 0>
@@ -115,6 +111,8 @@ analytics::google_analytics::Timing SymbolizationAnalyticsBuilder::build() {
   parameters.SetCustomMetric(9, static_cast<int64_t>(number_of_frames_invalid_));
   // cm10=<1 if "remote symbol lookup is enabled" else 0>
   parameters.SetCustomMetric(10, remote_symbol_lookup_enabled_);
+  // cm11=<downloading time spent, in milliseconds>
+  parameters.SetCustomMetric(11, download_time_ms);
 
   timing.AddGeneralParameters(parameters);
 

@@ -143,7 +143,7 @@ TEST(SymbolizerImpl, Analytics) {
   symbolizer.Backtrace(1, 0x7010, Symbolizer::AddressType::kUnknown, "");
   symbolizer.Reset(false);
 
-  ASSERT_EQ(parameters.size(), 16u);
+  ASSERT_EQ(parameters.size(), 15u);
 
   // cm1=<1 if "at least one invalid input" else 0>
   ASSERT_EQ(parameters["cm1"], "0");
@@ -165,6 +165,8 @@ TEST(SymbolizerImpl, Analytics) {
   ASSERT_EQ(parameters["cm9"], "1");
   // cm10=<1 if "remote symbol lookup is enabled" else 0>
   ASSERT_EQ(parameters["cm10"], "0");
+  // cm11=<downloading time spent, in milliseconds>
+  ASSERT_EQ(parameters["cm11"], "0");
 
   // t=timing
   ASSERT_EQ(parameters["t"], "timing");
@@ -174,11 +176,7 @@ TEST(SymbolizerImpl, Analytics) {
   ASSERT_EQ(parameters["utv"], "");
 
   // utt=<total wall time spent, in milliseconds>
-  // plt=<total wall time spent, in milliseconds>
   ASSERT_GE(std::stoi(parameters["utt"]), 0);
-  ASSERT_GE(std::stoi(parameters["plt"]), 0);
-  // pdt=<downloading time spent, in milliseconds>
-  ASSERT_EQ(parameters["pdt"], "0");
 }
 
 }  // namespace
