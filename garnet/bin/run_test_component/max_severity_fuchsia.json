@@ -25,48 +25,12 @@
             "url": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers_test.cmx"
         },
         {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/config_unittest.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/data_provider_unittest.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/datastore_unittest.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/feedback_data_integration_test.cmx"
-        },
-        {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/feedback-utils-tests#meta/oneshot_ptr_unittest.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/flatland_renderer_unittests#meta/flatland_renderer_unittests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/flatland_unittests#meta/flatland_unittests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/fvm-integration-test#meta/fvm-integration-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/gfx_apptests#meta/gfx_apptests.cmx"
-        },
-        {
-            "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/gfx_unittests#meta/gfx_unittests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/input_unittests#meta/input_unittests.cmx"
         },
         {
             "max_severity": "ERROR",
@@ -95,14 +59,6 @@
         {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/paver-test#meta/paver-test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_unittests#meta/scenic_unittests.cmx"
-        },
-        {
-            "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/scheduling_unittests#meta/scheduling_unittests.cmx"
         },
         {
             "max_severity": "ERROR",

@@ -205,6 +205,11 @@ fuchsia_unittest_package("flatland_renderer_unittests") {
 fuchsia_unittest_package("gfx_apptests") {
   manifest = "meta/gfx_apptests.cmx"
   deps = [ "lib/gfx/tests:apptests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("gfx_pixeltests") {
