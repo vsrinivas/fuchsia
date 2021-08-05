@@ -24,7 +24,7 @@ pub use fd_table::*;
 pub use file_object::*;
 pub use fs_context::*;
 pub use fs_node::*;
-pub use namespace::SymlinkFollowing;
+pub use namespace::SymlinkMode;
 pub use namespace::*;
 pub use null_file::*;
 pub use observer_list::*;

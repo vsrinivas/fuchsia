@@ -198,7 +198,7 @@ fn lookup_node_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    symlink_follow_mode: SymlinkFollowing,
+    symlink_follow_mode: SymlinkMode,
 ) -> Result<FsNodeHandle, Errno> {
     lookup_parent_at(task, dir_fd, user_path, |parent, basename| {
         Ok(parent.lookup(&task.fs, basename, symlink_follow_mode)?.node)
@@ -232,7 +232,7 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -331,9 +331,9 @@ pub fn sys_newfstatat(
         return Err(ENOSYS);
     }
     let node = if flags & AT_SYMLINK_NOFOLLOW != 0 {
-        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?
+        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?
     } else {
-        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Enabled)?
+        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::max_follow())?
     };
     let result = node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
@@ -347,7 +347,7 @@ pub fn sys_readlinkat(
     buffer: UserAddress,
     buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let node = lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?;
+    let node = lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?;
     let link = node.readlink()?;
 
     // Cap the returned length at buffer_size.
@@ -372,7 +372,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, SymlinkFollowing::Enabled)?;
+    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, SymlinkMode::max_follow())?;
     // TODO: Check for writability.
     node.truncate(length)?;
     Ok(SUCCESS)
@@ -453,7 +453,7 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return Err(EINVAL);
     }
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkFollowing::Enabled)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkMode::max_follow())?;
     node.info_write().mode = mode;
     Ok(SUCCESS)
 }

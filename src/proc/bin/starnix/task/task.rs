@@ -424,6 +424,69 @@ impl Task {
         self.open_file_at(FdNumber::AT_FDCWD, path, flags, FileMode::default())
     }
 
+    /// Resolves a path for open.
+    ///
+    /// If the final path component points to a symlink, the symlink is followed (as long as
+    /// the symlink traversal limit has not been reached).
+    ///
+    /// If the final path component (after following any symlinks, if enabled) does not exist,
+    /// and `flags` contains `OpenFlags::CREAT`, a new node is created at the location of the
+    /// final path component.
+    fn resolve_open_path(
+        &self,
+        dir: NamespaceNode,
+        path: FsString,
+        mode: FileMode,
+        flags: OpenFlags,
+        symlink_mode: SymlinkMode,
+    ) -> Result<NamespaceNode, Errno> {
+        let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
+        let (parent, basename) =
+            self.fs.lookup_parent(dir.clone(), &path, SymlinkMode::max_follow())?;
+        // The remaining follows tracks how many symlink traversals remain before ELOOP should
+        // be returned.
+        let remaining_follows = match symlink_mode {
+            SymlinkMode::Follow(count) => count,
+            SymlinkMode::NoFollow => 0,
+        };
+
+        match parent.lookup(&self.fs, basename, SymlinkMode::NoFollow) {
+            Ok(node) => {
+                if node.node.info().mode.is_lnk() {
+                    if remaining_follows == 0 && must_create {
+                        // Since `must_create` is set, and a node was found, this returns EEXIST
+                        // instead of ELOOP.
+                        return Err(EEXIST);
+                    } else if remaining_follows == 0 {
+                        // A symlink was found, but too many symlink traversals have been
+                        // attempted.
+                        return Err(ELOOP);
+                    }
+
+                    let path = node.node.readlink()?;
+                    let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
+                    self.resolve_open_path(
+                        dir,
+                        path,
+                        mode,
+                        flags,
+                        SymlinkMode::Follow(remaining_follows - 1),
+                    )
+                } else {
+                    if must_create {
+                        return Err(EEXIST);
+                    }
+                    Ok(node)
+                }
+            }
+            Err(ENOENT) if flags.contains(OpenFlags::CREAT) => {
+                let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
+                parent.mknod(&basename, FileMode::IFREG | access, DeviceType::NONE)
+            }
+            error => error,
+        }
+    }
+
     /// The primary entry point for opening files relative to a task.
     ///
     /// Absolute paths are resolve relative to the root of the FsContext for
@@ -440,31 +503,14 @@ impl Task {
         flags: OpenFlags,
         mode: FileMode,
     ) -> Result<FileHandle, Errno> {
-        let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        let (parent, basename) = self.fs.lookup_parent(dir, path)?;
-
         let nofollow = flags.contains(OpenFlags::NOFOLLOW);
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
 
-        let symlink_mode = if nofollow || must_create {
-            SymlinkFollowing::Disabled
-        } else {
-            SymlinkFollowing::Enabled
-        };
+        let symlink_mode =
+            if nofollow || must_create { SymlinkMode::NoFollow } else { SymlinkMode::max_follow() };
 
-        let node = match parent.lookup(&self.fs, basename, symlink_mode) {
-            Ok(node) => {
-                if must_create {
-                    return Err(EEXIST);
-                }
-                node
-            }
-            Err(ENOENT) if flags.contains(OpenFlags::CREAT) => {
-                let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-                parent.mknod(basename, FileMode::IFREG | access, DeviceType::NONE)?
-            }
-            result => result?,
-        };
+        let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
+        let node = self.resolve_open_path(dir, path.to_vec(), mode, flags, symlink_mode)?;
 
         // Be sure not to reference the mode argument after this point.
         // Below, we shadow the mode argument with the mode of the file we are
@@ -519,7 +565,7 @@ impl Task {
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        self.fs.lookup_parent(dir, path)
+        self.fs.lookup_parent(dir, path, SymlinkMode::max_follow())
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

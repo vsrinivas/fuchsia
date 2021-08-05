@@ -120,14 +120,25 @@ impl Mount {
     }
 }
 
-/// The `SymlinkFollowing` enum encodes how symlinks are followed during path traversal.
-#[derive(PartialEq, Eq, Copy, Clone)]
-pub enum SymlinkFollowing {
-    /// Symlinks will be followed.
-    Enabled,
+/// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 
-    /// Symlinks will not be followed.
-    Disabled,
+/// A counter representing the number of remaining symlink traversals. Path resolution uses
+/// this to determine whether or not symlinks can be followed.
+pub enum SymlinkMode {
+    Follow(u8),
+    NoFollow,
+}
+
+/// The maximum number of symlink traversals that can be made during path resolution.
+const MAX_SYMLINK_FOLLOWS: u8 = 40;
+
+impl SymlinkMode {
+    /// Returns a `SymlinkMode::Follow` with a count that is set to the maximum number of
+    /// symlinks that can be followed during path traversal.
+    pub fn max_follow() -> SymlinkMode {
+        SymlinkMode::Follow(MAX_SYMLINK_FOLLOWS)
+    }
 }
 
 /// A node in a mount namespace.
@@ -195,7 +206,7 @@ impl NamespaceNode {
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EINVAL);
         }
-        let child = self.lookup(context, name, SymlinkFollowing::Disabled)?;
+        let child = self.lookup(context, name, SymlinkMode::NoFollow)?;
 
         let unlink = || {
             if child.mountpoint().is_some() {
@@ -221,7 +232,7 @@ impl NamespaceNode {
         &self,
         context: &FsContext,
         name: &FsStr,
-        symlink_mode: SymlinkFollowing,
+        symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
         if name == b"." || name == b"" {
             Ok(self.clone())
@@ -230,10 +241,28 @@ impl NamespaceNode {
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
             let mut child = self.with_new_node(self.node.component_lookup(name)?);
-            // TODO: this should be a loop resovling chained symlinks.
-            if child.node.info().mode.is_lnk() && symlink_mode == SymlinkFollowing::Enabled {
-                let path = child.node.readlink()?;
-                child = context.lookup_node(context.root.clone(), &path)?;
+            while child.node.info().mode.is_lnk() {
+                match symlink_mode {
+                    SymlinkMode::Follow(count) if count > 0 => {
+                        let link_target = child.node.readlink()?;
+                        let link_directory = if link_target[0] == b'/' {
+                            context.root.clone()
+                        } else {
+                            self.clone()
+                        };
+                        child = context.lookup_node(
+                            link_directory,
+                            &link_target,
+                            SymlinkMode::Follow(count - 1),
+                        )?;
+                    }
+                    SymlinkMode::Follow(0) => {
+                        return Err(ELOOP);
+                    }
+                    _ => {
+                        break;
+                    }
+                };
             }
 
             if let Some(namespace) = self.namespace() {
@@ -361,16 +390,16 @@ mod test {
         let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         let pts =
-            dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).expect("failed to lookup pts");
+            dev.lookup(&context, b"pts", SymlinkMode::max_follow()).expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.node, &dev.node));
 
@@ -392,20 +421,20 @@ mod test {
         let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
         let new_dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.node, &new_dev.node));
         assert_ne!(&dev, &new_dev);
 
         let _new_pts = new_dev
-            .lookup(&context, b"pts", SymlinkFollowing::Enabled)
+            .lookup(&context, b"pts", SymlinkMode::max_follow())
             .expect("failed to lookup pts");
-        assert!(dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).is_err());
+        assert!(dev.lookup(&context, b"pts", SymlinkMode::max_follow()).is_err());
 
         Ok(())
     }
@@ -423,16 +452,16 @@ mod test {
         let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         let pts =
-            dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).expect("failed to lookup pts");
+            dev.lookup(&context, b"pts", SymlinkMode::max_follow()).expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());

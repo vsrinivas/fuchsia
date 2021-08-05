@@ -242,7 +242,11 @@ fn create_filesystem_from_spec<'a>(
         "bind" => {
             let fs_src = fs_src.ok_or_else(|| anyhow!("bind mount requires specifying a path"))?;
             let fs_ctx = fs_ctx.ok_or_else(|| anyhow!("bind mount cannot be the root"))?;
-            Node(fs_ctx.lookup_node(fs_ctx.root.clone(), fs_src.as_bytes())?.node)
+            Node(
+                fs_ctx
+                    .lookup_node(fs_ctx.root.clone(), fs_src.as_bytes(), SymlinkMode::max_follow())?
+                    .node,
+            )
         }
         _ => anyhow::bail!("invalid fs type {:?}", fs_type),
     };
@@ -316,7 +320,8 @@ fn start_component(
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
             create_filesystem_from_spec(&kernel, &pkg, Some(&fs), mount_spec)?;
-        let mount_point = fs.lookup_node(fs.root.clone(), mount_point)?;
+        let mount_point =
+            fs.lookup_node(fs.root.clone(), mount_point, SymlinkMode::max_follow())?;
         match child_fs {
             WhatToMount::Fs(fs) => mount_point.mount(fs.root().clone())?,
             WhatToMount::Node(node) => mount_point.mount(node)?,
@@ -327,9 +332,9 @@ fn start_component(
     // TODO(tbodt): Remove once apexd works.
     if let Some(apexes) = apex_hack {
         fs.root
-            .lookup(&fs, b"apex", SymlinkFollowing::Enabled)?
+            .lookup(&fs, b"apex", SymlinkMode::max_follow())?
             .mount(TmpFs::new().root().clone())?;
-        let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkFollowing::Enabled)?;
+        let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkMode::max_follow())?;
         for apex in apexes {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.mknod(
@@ -337,8 +342,11 @@ fn start_component(
                 FileMode::IFDIR | FileMode::from_bits(0o700),
                 DeviceType::NONE,
             )?;
-            let apex_source =
-                fs.lookup_node(fs.root.clone(), &[b"/system/apex/", apex].concat())?;
+            let apex_source = fs.lookup_node(
+                fs.root.clone(),
+                &[b"/system/apex/", apex].concat(),
+                SymlinkMode::max_follow(),
+            )?;
             apex_subdir.mount(apex_source.node)?;
         }
     }

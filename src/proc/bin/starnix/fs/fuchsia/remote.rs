@@ -156,11 +156,11 @@ mod test {
         let ns = Namespace::new(fs.clone());
         let context = FsContext::new(fs);
         let root = ns.root();
-        assert_eq!(root.lookup(&context, b"nib", SymlinkFollowing::Enabled).err(), Some(ENOENT));
-        root.lookup(&context, b"lib", SymlinkFollowing::Enabled).unwrap();
+        assert_eq!(root.lookup(&context, b"nib", SymlinkMode::max_follow()).err(), Some(ENOENT));
+        root.lookup(&context, b"lib", SymlinkMode::max_follow()).unwrap();
 
         let _test_file = root
-            .lookup(&context, b"bin/hello_starnix", SymlinkFollowing::Enabled)?
+            .lookup(&context, b"bin/hello_starnix", SymlinkMode::max_follow())?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }
