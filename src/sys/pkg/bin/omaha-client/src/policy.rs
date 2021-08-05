@@ -134,7 +134,10 @@ impl Policy for FuchsiaPolicy {
                     // the last time and use that.
                     last_update_time @ _ => {
                         info!("Using Standard logic.");
-                        CheckTiming::builder().time(last_update_time + interval).build()
+                        CheckTiming::builder()
+                            .time(last_update_time + interval)
+                            .minimum_wait(policy_data.config.retry_delay)
+                            .build()
                     }
                 }
             }
@@ -810,6 +813,7 @@ mod tests {
         //  - the policy-computed next update time is a standard poll interval from the last.
         let expected = CheckTiming::builder()
             .time(schedule.last_update_time.unwrap() + PERIODIC_INTERVAL)
+            .minimum_wait(RETRY_DELAY)
             .build();
         debug_print_check_timing_test_data(
             "normal operation",
@@ -1048,6 +1052,7 @@ mod tests {
         //  - the computed next update time is a server-dictated poll interval from now.
         let expected = CheckTiming::builder()
             .time(schedule.last_update_time.unwrap() + server_dictated_poll_interval)
+            .minimum_wait(RETRY_DELAY)
             .build();
         debug_print_check_timing_test_data("server dictated", expected, result, None, now);
         assert_eq!(result, expected);
@@ -1065,7 +1070,9 @@ mod tests {
         // Set up the state for this check:
         //  - custom policy config
         let periodic_interval = Duration::from_secs(9999);
-        let policy_config = PolicyConfig { periodic_interval, ..PolicyConfig::default() };
+        let retry_delay = Duration::from_secs(50);
+        let policy_config =
+            PolicyConfig { periodic_interval, retry_delay, ..PolicyConfig::default() };
         //  - the time is "now"
         let policy_data = UpdatePolicyDataBuilder::new(now).config(policy_config).build();
         // Execute the policy check.
@@ -1079,6 +1086,7 @@ mod tests {
         //  - the policy-computed next update time is `periodic_interval` from the last.
         let expected = CheckTiming::builder()
             .time(schedule.last_update_time.unwrap() + periodic_interval)
+            .minimum_wait(retry_delay)
             .build();
         debug_print_check_timing_test_data(
             "policy config",
