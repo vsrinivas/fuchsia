@@ -12,12 +12,32 @@
             url: "fuchsia-pkg://fuchsia.com/component_hub_integration_test#meta/foo.cml",
         },
     ],
+    capabilities: [
+        {
+            directory: "minfs",
+            rights: [ "rw*" ],
+            path: "/minfs",
+        },
+        { protocol: "fuchsia.foo.Bar" },
+    ],
     use: [
         {
             directory: "hub",
             from: "framework",
             rights: [ "r*" ],
             path: "/hub",
+        },
+    ],
+    expose: [
+        // These capabilities aren't actually being served.
+        // `select` should still be able to find them.
+        {
+            directory: "minfs",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.foo.Bar",
+            from: "self",
         },
     ],
 }

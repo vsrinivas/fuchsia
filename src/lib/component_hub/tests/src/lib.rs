@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    component_hub::io::Directory, component_hub::list::Component,
-    component_hub::show::find_components, std::path::PathBuf,
+    component_hub::io::Directory,
+    component_hub::{list, select, show},
+    std::path::PathBuf,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -12,7 +13,7 @@ async fn list() {
     let hub_path = PathBuf::from("/hub");
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
-    let component = Component::parse("test".to_string(), hub_dir).await.unwrap();
+    let component = list::Component::parse("test".to_string(), hub_dir).await.unwrap();
 
     assert!(!component.is_cmx);
     assert!(component.is_running);
@@ -32,7 +33,7 @@ async fn show() {
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
     let components =
-        find_components("test.cm".to_string(), ".".to_string(), ".".to_string(), hub_dir)
+        show::find_components("test.cm".to_string(), ".".to_string(), ".".to_string(), hub_dir)
             .await
             .unwrap();
 
@@ -61,4 +62,35 @@ async fn show() {
     // We do not verify the contents of the execution, because they are largely dependent on
     // the Rust Test Runner
     assert!(component.execution.is_some());
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn select() {
+    let hub_path = PathBuf::from("/hub");
+    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+
+    let components = select::find_components(
+        "fuchsia.foo.Bar".to_string(),
+        ".".to_string(),
+        ".".to_string(),
+        hub_dir,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(components.len(), 1);
+    let component = &components[0];
+    assert_eq!(component.as_str(), ".");
+
+    let hub_path = PathBuf::from("/hub");
+    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+
+    let components =
+        select::find_components("minfs".to_string(), ".".to_string(), ".".to_string(), hub_dir)
+            .await
+            .unwrap();
+
+    assert_eq!(components.len(), 1);
+    let component = &components[0];
+    assert_eq!(component.as_str(), ".");
 }

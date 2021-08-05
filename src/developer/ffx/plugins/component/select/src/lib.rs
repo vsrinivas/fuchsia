@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, Subcommand},
+    component_hub::{io::Directory, select::find_components},
     errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_component_select_args::{
@@ -43,8 +43,11 @@ async fn select_capability(remote_proxy: rc::RemoteControlProxy, capability: &st
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, Subcommand::Select).await;
-    component.print_components_exposing_capability(&capability);
+    let matching_components =
+        find_components(capability.to_string(), ".".to_string(), ".".to_string(), hub_dir).await?;
+    for component in matching_components {
+        println!("{}", component);
+    }
     Ok(())
 }
 
