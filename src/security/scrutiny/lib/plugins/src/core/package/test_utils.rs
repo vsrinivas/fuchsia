@@ -12,7 +12,8 @@ use {
         },
     },
     anyhow::{anyhow, Result},
-    scrutiny::model::model::{DataModel, ModelEnvironment},
+    scrutiny::model::model::DataModel,
+    scrutiny_config::ModelConfig,
     std::io::{Error, ErrorKind},
     std::{
         collections::HashMap,
@@ -211,8 +212,6 @@ pub fn create_model() -> (String, Arc<DataModel>) {
     let uri_clone = uri.clone();
     (
         uri_clone,
-        Arc::new(
-            DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap(),
-        ),
+        Arc::new(DataModel::connect(ModelConfig { uri, build_path, repository_path }).unwrap()),
     )
 }

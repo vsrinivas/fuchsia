@@ -12,7 +12,7 @@ use {
             dispatcher::ControllerDispatcher, manager::PluginManager, plugin::Plugin,
             scheduler::CollectorScheduler,
         },
-        model::model::{DataModel, ModelEnvironment},
+        model::model::DataModel,
     },
     scrutiny_config::{Config, LoggingVerbosity},
     simplelog::{Config as SimpleLogConfig, LevelFilter, WriteLogger},
@@ -60,11 +60,7 @@ impl Scrutiny {
             let _ = WriteLogger::init(log_level, SimpleLogConfig::default(), log_file);
         }
 
-        let model = Arc::new(DataModel::connect(ModelEnvironment {
-            uri: config.runtime.model.path.clone(),
-            build_path: config.runtime.model.build_path.clone(),
-            repository_path: config.runtime.model.repository_path.clone(),
-        })?);
+        let model = Arc::new(DataModel::connect(config.runtime.model.clone())?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let visualizer = if let Some(server_config) = &config.runtime.server {
             Some(Arc::new(RwLock::new(Visualizer::new(
@@ -178,7 +174,7 @@ impl Scrutiny {
             "trace" => LoggingVerbosity::Trace,
             _ => LoggingVerbosity::Off,
         };
-        config.runtime.model.path = args.value_of("model").unwrap().to_string();
+        config.runtime.model.uri = args.value_of("model").unwrap().to_string();
         if let Some(build_path) = args.value_of("build") {
             config.runtime.model.build_path = Path::new(build_path).to_path_buf();
         }
@@ -289,7 +285,7 @@ mod tests {
             vec!["scrutiny", "-m", "baz"].into_iter().map(String::from).collect(),
         )
         .unwrap();
-        assert_eq!(result.runtime.model.path, "baz".to_string());
+        assert_eq!(result.runtime.model.uri, "baz".to_string());
     }
 
     #[test]

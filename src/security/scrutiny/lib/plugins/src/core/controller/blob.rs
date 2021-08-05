@@ -15,8 +15,6 @@ use {
     std::sync::Arc,
 };
 
-pub const REPOSITORY_PATH: &str = "amber-files/repository";
-
 #[derive(Deserialize, Serialize)]
 struct BlobRequest {
     merkle: String,
@@ -34,7 +32,7 @@ pub struct BlobController {}
 
 impl DataController for BlobController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let repository_path = model.env().build_path().join(REPOSITORY_PATH);
+        let repository_path = model.config().repository_path();
         let blob_getter = ArtifactGetter::new(&repository_path);
 
         let req: BlobRequest = serde_json::from_value(query)?;

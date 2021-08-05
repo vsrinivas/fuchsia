@@ -166,10 +166,10 @@ impl From<String> for LoggingVerbosity {
 
 /// The DataModel is a required feature of the Scrutiny runtime. Every
 /// configuration must include a model configuration.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct ModelConfig {
     /// Path to the model data.
-    pub path: String,
+    pub uri: String,
     /// Path to the Fuchsia build directory.
     pub build_path: PathBuf,
     /// Path to the local Fuchsia package repository.
@@ -183,10 +183,19 @@ impl ModelConfig {
     pub fn default() -> ModelConfig {
         let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
         let repository_path = build_path.join("amber-files/repository");
-        ModelConfig { path: "{memory}".to_string(), build_path, repository_path }
+        ModelConfig { uri: "{memory}".to_string(), build_path, repository_path }
     }
     pub fn minimal() -> ModelConfig {
         ModelConfig::default()
+    }
+    pub fn uri(&self) -> String {
+        self.uri.clone()
+    }
+    pub fn build_path(&self) -> PathBuf {
+        self.build_path.clone()
+    }
+    pub fn repository_path(&self) -> PathBuf {
+        self.repository_path.clone()
     }
 }
 

@@ -3,20 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    scrutiny::model::model::{DataModel, ModelEnvironment},
-    std::sync::Arc,
+    scrutiny::model::model::DataModel, scrutiny_config::ModelConfig, std::sync::Arc,
     tempfile::tempdir,
 };
+
+/// Creates a simple fake model configuration that uses an in memory uri and
+/// tempdata() directories for the required build locations.
+pub fn fake_model_config() -> ModelConfig {
+    ModelConfig {
+        uri: "{memory}".to_string(),
+        build_path: tempdir().unwrap().into_path(),
+        repository_path: tempdir().unwrap().into_path(),
+    }
+}
 
 /// Constructs a simple fake data model with an in memory uri and tempdata()
 /// build directory.
 pub fn fake_data_model() -> Arc<DataModel> {
-    Arc::new(
-        DataModel::connect(ModelEnvironment {
-            uri: "{memory}".to_string(),
-            build_path: tempdir().unwrap().into_path(),
-            repository_path: tempdir().unwrap().into_path(),
-        })
-        .unwrap(),
-    )
+    Arc::new(DataModel::connect(fake_model_config()).unwrap())
 }

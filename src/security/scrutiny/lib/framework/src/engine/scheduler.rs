@@ -296,7 +296,7 @@ impl CollectorScheduler {
 }
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::model::ModelEnvironment, tempfile::tempdir};
+    use {super::*, scrutiny_testing::fake::fake_model_config};
 
     struct MockCollector {
         id: u32,
@@ -324,15 +324,7 @@ mod tests {
 
     /// Utility function to create a temporary collector.
     fn create_scheduler() -> CollectorScheduler {
-        let store_dir = tempdir().unwrap();
-        let build_tmp_dir = tempdir().unwrap();
-        let repository_tmp_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let build_path = build_tmp_dir.into_path();
-        let repository_path = repository_tmp_dir.into_path();
-        let model = Arc::new(
-            DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap(),
-        );
+        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
         CollectorScheduler::new(model)
     }
 

@@ -36,7 +36,7 @@ pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let fuchsia_build_dir = model.env().build_path();
+        let fuchsia_build_dir = model.config().build_path();
         let blob_dir = fuchsia_build_dir.join(BLOBS_PATH);
 
         let request: PackageExtractRequest = serde_json::from_value(query)?;

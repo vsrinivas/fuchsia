@@ -266,11 +266,11 @@ mod tests {
             model::{
                 collector::DataCollector,
                 controller::{ConnectionMode, DataController},
-                model::{DataModel, ModelEnvironment},
+                model::DataModel,
             },
         },
+        scrutiny_testing::fake::fake_model_config,
         serde_json::{json, value::Value},
-        tempfile::tempdir,
     };
 
     #[derive(Default)]
@@ -328,15 +328,7 @@ mod tests {
     );
 
     fn create_manager() -> PluginManager {
-        let store_dir = tempdir().unwrap();
-        let build_tmp_dir = tempdir().unwrap();
-        let repository_tmp_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let build_path = build_tmp_dir.into_path();
-        let repository_path = repository_tmp_dir.into_path();
-        let model = Arc::new(
-            DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap(),
-        );
+        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         PluginManager::new(collector, dispatcher)
@@ -439,15 +431,7 @@ mod tests {
 
     #[test]
     fn test_dispatcher_hook() {
-        let store_dir = tempdir().unwrap();
-        let build_tmp_dir = tempdir().unwrap();
-        let repository_tmp_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let build_path = build_tmp_dir.into_path();
-        let repository_path = repository_tmp_dir.into_path();
-        let model = Arc::new(
-            DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap(),
-        );
+        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let mut manager = PluginManager::new(collector, Arc::clone(&dispatcher));

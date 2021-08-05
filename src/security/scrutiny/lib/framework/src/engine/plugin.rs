@@ -79,11 +79,11 @@ mod tests {
         super::*,
         crate::model::collector::DataCollector,
         crate::model::controller::DataController,
-        crate::model::model::{DataModel, ModelEnvironment},
+        crate::model::model::DataModel,
         anyhow::Result,
+        scrutiny_testing::fake::fake_model_config,
         serde_json::{json, value::Value},
         std::sync::Arc,
-        tempfile::tempdir,
     };
 
     #[derive(Default)]
@@ -116,13 +116,7 @@ mod tests {
     );
 
     fn test_model() -> Arc<DataModel> {
-        let store_dir = tempdir().unwrap();
-        let build_dir = tempdir().unwrap();
-        let repository_dir = tempdir().unwrap();
-        let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-        let build_path = build_dir.into_path();
-        let repository_path = repository_dir.into_path();
-        Arc::new(DataModel::connect(ModelEnvironment { uri, build_path, repository_path }).unwrap())
+        Arc::new(DataModel::connect(fake_model_config()).unwrap())
     }
 
     #[test]

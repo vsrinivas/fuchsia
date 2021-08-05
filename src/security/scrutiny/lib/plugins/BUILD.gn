@@ -17,6 +17,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-url",
+      "//src/security/scrutiny/lib/config",
       "//src/security/scrutiny/lib/framework",
       "//src/security/scrutiny/lib/utils",
       "//src/sys/lib/cm_fidl_validator",

@@ -620,7 +620,7 @@ impl DataCollector for PackageDataCollector {
     /// Collects and builds a DAG of component nodes (with manifests) and routes that
     /// connect the nodes.
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
-        let repository_path = model.env().repository_path();
+        let repository_path = model.config().repository_path();
         let package_reader: Box<dyn PackageReader> =
             Box::new(PackageServerReader::new(Box::new(ArtifactGetter::new(&repository_path))));
         let artifact_reader: Box<dyn PackageGetter> =

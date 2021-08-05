@@ -8,39 +8,17 @@ use {
         store::{embedded::EmbeddedStore, memory::MemoryStore, store::Store},
     },
     anyhow::{Error, Result},
+    scrutiny_config::ModelConfig,
     serde::{Deserialize, Serialize},
     serde_json,
     std::{
         any::Any,
         boxed::Box,
         collections::HashMap,
-        path::PathBuf,
         sync::{Arc, Mutex},
     },
     uuid::Uuid,
 };
-
-/// The ModelEnvironment specifies the runtime configuration that defines where
-/// `DataCollectors` should retrieve information for the current model. This is
-/// important to allow collectors to dynamically change their collection source
-/// based on configuration such as where the build directory is located etc.
-#[derive(Serialize, Deserialize)]
-pub struct ModelEnvironment {
-    pub uri: String,
-    pub build_path: PathBuf,
-    pub repository_path: PathBuf,
-}
-
-impl ModelEnvironment {
-    /// Helper function to return a clone of the build path.
-    pub fn build_path(&self) -> PathBuf {
-        self.build_path.clone()
-    }
-    /// Helper function to return a clone of the repository path.
-    pub fn repository_path(&self) -> PathBuf {
-        self.repository_path.clone()
-    }
-}
 
 /// The DataModel is the public facing data abstraction which acts as the
 /// driver for the underlying data store. It is the job of the data model to
@@ -48,25 +26,24 @@ impl ModelEnvironment {
 /// that is expected by the application.
 pub struct DataModel {
     collections: Mutex<HashMap<Uuid, Arc<dyn Any + 'static + Send + Sync>>>,
-    environment: ModelEnvironment,
+    config: ModelConfig,
     store: Mutex<Box<dyn Store>>,
 }
 
 impl DataModel {
     /// Connects to the internal data store and setups everything.
-    pub fn connect(environment: ModelEnvironment) -> Result<Self> {
-        let store: Mutex<Box<dyn Store>> =
-            DataModel::setup_schema(Self::store_factory(&environment)?)?;
+    pub fn connect(config: ModelConfig) -> Result<Self> {
+        let store: Mutex<Box<dyn Store>> = DataModel::setup_schema(Self::store_factory(&config)?)?;
 
-        Ok(Self { collections: Mutex::new(HashMap::new()), environment, store })
+        Ok(Self { collections: Mutex::new(HashMap::new()), config, store })
     }
 
     /// Selects the internal store based on the URI set.
-    fn store_factory(environment: &ModelEnvironment) -> Result<Box<dyn Store>> {
-        if environment.uri == "{memory}" {
-            Ok(Box::new(MemoryStore::connect(environment.uri.clone())?))
+    fn store_factory(config: &ModelConfig) -> Result<Box<dyn Store>> {
+        if config.uri == "{memory}" {
+            Ok(Box::new(MemoryStore::connect(config.uri.clone())?))
         } else {
-            Ok(Box::new(EmbeddedStore::connect(environment.uri.clone())?))
+            Ok(Box::new(EmbeddedStore::connect(config.uri.clone())?))
         }
     }
 
@@ -166,10 +143,10 @@ impl DataModel {
         store.remove(&uuid)
     }
 
-    /// Returns an immutable reference to the ModelEnvironment which can be
+    /// Returns an immutable reference to the ModelConfig which can be
     /// retrieved by `DataControllers` and `DataControllers`.
-    pub fn env(&self) -> &ModelEnvironment {
-        &self.environment
+    pub fn config(&self) -> &ModelConfig {
+        &self.config
     }
 }
 

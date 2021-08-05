@@ -28,7 +28,7 @@ pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
     }
 
     if let Some(model_path) = cmd.model {
-        config.runtime.model.path = model_path;
+        config.runtime.model.uri = model_path;
     }
 
     if let Some(log_path) = cmd.log {
