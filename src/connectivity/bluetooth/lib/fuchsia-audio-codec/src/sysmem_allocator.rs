@@ -20,9 +20,9 @@ use {
         task::{Context, Poll},
         FutureExt,
     },
-    log::error,
     std::convert::TryInto,
     std::pin::Pin,
+    tracing::error,
 };
 
 /// A set of buffers that have been allocated with the SysmemAllocator.
@@ -144,7 +144,7 @@ impl SysmemAllocation {
         let mut res = Self::bind(allocator, client_end_token, constraints)?;
 
         if let Self::WaitingForSync { token_fn, .. } = &mut res {
-            token_fn.replace(Box::new(move || token_target_fn(token)));
+            *token_fn = Some(Box::new(move || token_target_fn(token)));
         }
 
         Ok(res)
@@ -297,7 +297,7 @@ mod tests {
         assert!(exec.run_until_stalled(&mut sync_fut).is_ready());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allocate_future() {
         let mut exec = fasync::TestExecutor::new().expect("executor creation");
 
@@ -437,7 +437,7 @@ mod tests {
         assert_eq!(buffers.settings(), &buffer_settings);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn with_system_allocator() {
         let mut exec = fasync::TestExecutor::new().expect("executor creation");
         let sysmem_client = fuchsia_component::client::connect_to_protocol::<AllocatorMarker>()

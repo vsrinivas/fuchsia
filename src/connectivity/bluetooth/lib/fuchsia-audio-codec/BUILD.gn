@@ -23,13 +23,15 @@ rustc_library("fuchsia-audio-codec") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/lib/mundane",
+    "//src/lib/testing/fixture",
     "//src/media/stream_processors/test:stream_processor_test_lib",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
@@ -41,6 +43,8 @@ rustc_library("fuchsia-audio-codec") {
     "src/stream_processor.rs",
     "src/sysmem_allocator.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 resource("test-data") {

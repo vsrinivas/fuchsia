@@ -16,7 +16,6 @@ use {
         task::{Context, Poll, Waker},
         Future, StreamExt,
     },
-    log::{trace, warn},
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{HashSet, VecDeque},
@@ -25,6 +24,7 @@ use {
         pin::Pin,
         sync::Arc,
     },
+    tracing::{trace, warn},
 };
 
 use crate::{
@@ -240,7 +240,9 @@ impl StreamProcessorInner {
             StreamProcessorEvent::OnFreeInputPacket {
                 free_input_packet: PacketHeader { packet_index: Some(idx), .. },
             } => {
-                self.client_owned.insert(InputBufferIndex(idx));
+                if !self.client_owned.insert(InputBufferIndex(idx)) {
+                    warn!("Freed an input packet that was already freed: {:?}", idx);
+                }
                 self.setup_input_cursor();
             }
             StreamProcessorEvent::OnOutputEndOfStream { .. } => {
@@ -307,7 +309,7 @@ impl StreamProcessorInner {
         self.input_packet_size = settings.size_bytes.try_into()?;
         let buffer_count = self.input_buffers().len();
         for i in 0..buffer_count {
-            self.client_owned.insert(InputBufferIndex(i.try_into()?));
+            let _ = self.client_owned.insert(InputBufferIndex(i.try_into()?));
         }
         // allocation is complete, and we can write to the input.
         self.setup_input_cursor();
@@ -397,7 +399,9 @@ impl StreamProcessorInner {
     }
 
     fn wake_input(&mut self) {
-        self.input_waker.take().map(Waker::wake);
+        if let Some(w) = self.input_waker.take() {
+            w.wake();
+        }
     }
 
     /// Attempts to set up a new input cursor, out of the current set of client owned input buffers.
@@ -407,11 +411,11 @@ impl StreamProcessorInner {
             // Nothing to be done
             return;
         }
-        let next_idx = match self.client_owned.iter().cloned().next() {
+        let next_idx = match self.client_owned.iter().next() {
             None => return,
-            Some(idx) => idx,
+            Some(idx) => idx.clone(),
         };
-        self.client_owned.take(&next_idx).unwrap();
+        let _ = self.client_owned.remove(&next_idx);
         self.input_cursor = Some((next_idx, 0));
         self.wake_input();
     }
@@ -729,6 +733,7 @@ mod tests {
     use super::*;
 
     use byteorder::{ByteOrder, NativeEndian};
+    use fixture::fixture;
     use fuchsia_async as fasync;
     use futures::{io::AsyncWriteExt, Future, FutureExt};
     use futures_test::task::new_count_waker;
@@ -820,7 +825,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn encode_sbc() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
@@ -936,19 +941,28 @@ mod tests {
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
     }
 
-    #[test]
-    fn decode_sbc() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
+    fn fix_sbc_test_file<F>(_name: &str, test: F)
+    where
+        F: FnOnce(Vec<u8>) -> (),
+    {
         const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
-        const SBC_FRAME_SIZE: usize = 72;
-        const INPUT_FRAMES: usize = 23;
 
         let mut sbc_data = Vec::new();
-        File::open(SBC_TEST_FILE)
+        let _ = File::open(SBC_TEST_FILE)
             .expect("open test file")
             .read_to_end(&mut sbc_data)
             .expect("read test file");
+
+        test(sbc_data)
+    }
+
+    #[fixture(fix_sbc_test_file)]
+    #[fuchsia::test]
+    fn decode_sbc(sbc_data: Vec<u8>) {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        const SBC_FRAME_SIZE: usize = 72;
+        const INPUT_FRAMES: usize = 23;
 
         // SBC codec info corresponding to Mono reference stream.
         let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
@@ -1016,18 +1030,11 @@ mod tests {
         assert!(validated.is_ok(), "Failed hash: {:?}", validated);
     }
 
-    #[test]
-    fn decode_sbc_wakes_output_to_process_events() {
+    #[fixture(fix_sbc_test_file)]
+    #[fuchsia::test]
+    fn decode_sbc_wakes_output_to_process_events(sbc_data: Vec<u8>) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
-        const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
         const SBC_FRAME_SIZE: usize = 72;
-
-        let mut sbc_data = Vec::new();
-        File::open(SBC_TEST_FILE)
-            .expect("open test file")
-            .read_to_end(&mut sbc_data)
-            .expect("read test file");
 
         // SBC codec info corresponding to Mono reference stream.
         let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
@@ -1089,18 +1096,11 @@ mod tests {
         assert_eq!(512, decoded.len(), "Decoded size should be equal to one frame");
     }
 
-    #[test]
-    fn decode_sbc_wakes_input_to_process_events() {
+    #[fixture(fix_sbc_test_file)]
+    #[fuchsia::test]
+    fn decode_sbc_wakes_input_to_process_events(sbc_data: Vec<u8>) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-
-        const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
         const SBC_FRAME_SIZE: usize = 72;
-
-        let mut sbc_data = Vec::new();
-        File::open(SBC_TEST_FILE)
-            .expect("open test file")
-            .read_to_end(&mut sbc_data)
-            .expect("read test file");
 
         // SBC codec info corresponding to Mono reference stream.
         let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
