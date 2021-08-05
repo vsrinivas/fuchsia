@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/access_test",
-        args: [ "--gunit_filter=*.RelativeFile:*.RelativeDir:*.AbsFile:*.AbsDir:*.RelDoesNotExist:*.AbsDoesNotExist:*.InvalidMode:*.InvalidName:*.UsrReadWrite:*.UsrReadWriteExec" ],
+        args: [ "--gunit_filter=-*.NoPerms:*.UsrReadOnly:*.UsrReadExec" ],
     },
 }
