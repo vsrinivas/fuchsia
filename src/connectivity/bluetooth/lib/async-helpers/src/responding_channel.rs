@@ -70,6 +70,9 @@ impl<Resp> Responder<Resp> {
 }
 
 /// The responding end of a channel.
+// TODO(http://fxbug.dev/82145): Consider replacing this with this alias:
+//
+//   pub type Receiver<Req, Resp> = mpsc::Receiver<(Req, Responder<Resp>)>;
 pub struct Receiver<Req, Resp> {
     inner: mpsc::Receiver<(Req, Responder<Resp>)>,
 }
@@ -88,10 +91,7 @@ impl<Req, Resp> Receiver<Req, Resp> {
     /// This function will panic if called after `try_next` has returned `None` or `receive` has
     /// returned an `Err`.
     pub fn try_receive(&mut self) -> Result<Option<(Req, Responder<Resp>)>, Error> {
-        match self.inner.try_next()? {
-            Some((value, responder)) => Ok(Some((value, responder))),
-            None => Ok(None),
-        }
+        Ok(self.inner.try_next()?)
     }
 }
 
@@ -278,11 +278,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn try_receive_panics_after_none_result() {
+    fn try_receive_returns_none_after_none_result() {
         let (_, mut receiver) = channel::<(), ()>(0);
-        let _ = receiver.try_receive();
-        let _ = receiver.try_receive();
+        assert!(receiver.try_receive().unwrap().is_none());
+        assert!(receiver.try_receive().unwrap().is_none());
     }
 
     #[test]

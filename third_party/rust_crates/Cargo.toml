@@ -57,17 +57,17 @@ difference = "2.0.0"
 event-listener = "2.5.1"
 fatfs = { path = "forks/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
-futures = "=0.3.13"
-futures-channel = "=0.3.13"
+futures = "=0.3.14"
+futures-channel = "=0.3.14"
 futures-core = "=0.3.15"
-futures-executor = "=0.3.13"
-futures-io = "=0.3.13"
+futures-executor = "=0.3.14"
+futures-io = "=0.3.14"
 futures-lite = "1.11.3"
-futures-macro = "=0.3.13"
-futures-sink = "=0.3.13"
-futures-task = "=0.3.13"
-futures-test = "=0.3.13"
-futures-util = "=0.3.13"
+futures-macro = "=0.3.14"
+futures-sink = "=0.3.14"
+futures-task = "=0.3.14"
+futures-test = "=0.3.14"
+futures-util = "=0.3.14"
 glob = "0.3.0"
 gpt = "2.0.0"
 heck = "0.3.1"
@@ -367,6 +367,20 @@ rustflags = [
 
 [gn.package.futures-core."0.3.15"]
 env_vars = [ "CARGO_PKG_NAME=futures-core" ]
+
+[gn.package.futures-channel."0.3.14"]
+env_vars = [ "CARGO_PKG_NAME=futures-channel" ]
+
+[gn.package.futures-macro."0.3.14"]
+env_vars = [ "CARGO_PKG_NAME=futures-macro" ]
+rustflags = [ "--cfg=fn_like_proc_macro" ]
+
+[gn.package.futures-task."0.3.14"]
+env_vars = [ "CARGO_PKG_NAME=futures-task" ]
+
+[gn.package.futures-util."0.3.14"]
+env_vars = [ "CARGO_PKG_NAME=futures-util" ]
+rustflags = [ "--cfg=fn_like_proc_macro" ]
 
 [gn.package.getrandom."0.2.2"]
 rustflags = []
