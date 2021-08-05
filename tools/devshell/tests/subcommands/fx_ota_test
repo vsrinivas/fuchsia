@@ -58,7 +58,7 @@ setup_versions_after_update() {
      return 0
    fi
 EOF
-  local system_image_merkle="${FUCHSIA_BUILD_DIR}"/obj/build/images/system_image.meta/meta.far.merkle
+  local system_image_merkle="${FUCHSIA_BUILD_DIR}"/obj/build/images/fuchsia/fuchsia/base.merkle
   mkdir -p "$(dirname "$system_image_merkle")"
   echo "$from_build" > "$system_image_merkle"
 }

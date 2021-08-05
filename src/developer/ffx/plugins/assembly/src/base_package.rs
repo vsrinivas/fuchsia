@@ -47,7 +47,7 @@ pub fn construct_base_package(
 
     let base_package_path = outdir.as_ref().join("base.far");
     let build_results = base_pkg_builder
-        .build(outdir, gendir, &product.base_package_name, &base_package_path)
+        .build(&outdir, gendir, &product.base_package_name, &base_package_path)
         .context("Failed to build the base package")?;
 
     let base_package = File::open(&base_package_path).context("Failed to open the base package")?;
@@ -55,6 +55,10 @@ pub fn construct_base_package(
         .context("Failed to calculate the base merkle")?
         .root();
     info!("Base merkle: {}", &base_merkle);
+
+    // Write the merkle to a file.
+    let merkle_path = outdir.as_ref().join("base.merkle");
+    std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
     Ok(BasePackage {
         merkle: base_merkle,
