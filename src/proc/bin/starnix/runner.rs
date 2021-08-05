@@ -31,7 +31,7 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::devfs::DevFs;
+use crate::fs::devfs::*;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
@@ -42,7 +42,7 @@ use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
 use crate::syscalls::*;
 use crate::task::*;
-use crate::types::FileMode;
+use crate::types::*;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -212,6 +212,7 @@ enum WhatToMount {
 }
 
 fn create_filesystem_from_spec<'a>(
+    kernel: &Kernel,
     pkg: &fio::DirectorySynchronousProxy,
     fs_ctx: Option<&FsContext>,
     spec: &'a str,
@@ -224,7 +225,7 @@ fn create_filesystem_from_spec<'a>(
     let fs_src = iter.next();
     let fs = match fs_type {
         "tmpfs" => Fs(TmpFs::new()),
-        "devfs" => Fs(DevFs::new()),
+        "devfs" => Fs(dev_tmp_fs(kernel).clone()),
         "remotefs" => {
             let fs_src = fs_src.ok_or_else(|| anyhow!("remotefs requires specifying a path"))?;
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
@@ -298,6 +299,7 @@ fn start_component(
     // applied on top of it.
     let mut mounts_iter = mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
+        &kernel,
         &pkg,
         None,
         mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
@@ -312,7 +314,8 @@ fn start_component(
     };
     let fs = FsContext::new(root_fs);
     for mount_spec in mounts_iter {
-        let (mount_point, child_fs) = create_filesystem_from_spec(&pkg, Some(&fs), mount_spec)?;
+        let (mount_point, child_fs) =
+            create_filesystem_from_spec(&kernel, &pkg, Some(&fs), mount_spec)?;
         let mount_point = fs.lookup_node(fs.root.clone(), mount_point)?;
         match child_fs {
             WhatToMount::Fs(fs) => mount_point.mount(fs.root().clone())?,
@@ -329,8 +332,11 @@ fn start_component(
         let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkFollowing::Enabled)?;
         for apex in apexes {
             let apex = apex.as_bytes();
-            let apex_subdir =
-                apex_dir.mknod(apex, FileMode::IFDIR | FileMode::from_bits(0o700), 0)?;
+            let apex_subdir = apex_dir.mknod(
+                apex,
+                FileMode::IFDIR | FileMode::from_bits(0o700),
+                DeviceType::NONE,
+            )?;
             let apex_source =
                 fs.lookup_node(fs.root.clone(), &[b"/system/apex/", apex].concat())?;
             apex_subdir.mount(apex_source.node)?;

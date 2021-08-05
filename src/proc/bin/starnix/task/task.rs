@@ -461,9 +461,9 @@ impl Task {
             }
             Err(ENOENT) if flags.contains(OpenFlags::CREAT) => {
                 let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-                parent.mknod(basename, FileMode::IFREG | access, 0)?
+                parent.mknod(basename, FileMode::IFREG | access, DeviceType::NONE)?
             }
-            result => result?
+            result => result?,
         };
 
         // Be sure not to reference the mode argument after this point.

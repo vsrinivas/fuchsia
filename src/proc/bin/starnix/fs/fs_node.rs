@@ -8,7 +8,7 @@ use std::sync::{Arc, Weak};
 
 use fuchsia_zircon::Time;
 
-use super::{FileOps, ObserverList};
+use crate::device::*;
 use crate::fs::*;
 use crate::types::*;
 
@@ -84,8 +84,8 @@ pub struct FsNodeInfo {
     pub time_create: Time,
     pub time_access: Time,
     pub time_modify: Time,
-    pub dev: dev_t,
-    pub rdev: dev_t,
+    pub dev: DeviceType,
+    pub rdev: DeviceType,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -246,7 +246,19 @@ impl FsNode {
     }
 
     pub fn open(self: &FsNodeHandle, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        self.ops().open(&self, flags)
+        let (mode, rdev) = {
+            // Don't hold the info lock while calling into open_device or self.ops().
+            // TODO: The mode and rdev are immutable and shouldn't require a lock to read.
+            let info = self.info();
+            (info.mode, info.rdev)
+        };
+        if mode.is_chr() {
+            open_character_device(rdev)
+        } else if mode.is_blk() {
+            open_block_device(rdev)
+        } else {
+            self.ops().open(&self, flags)
+        }
     }
 
     pub fn component_lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
@@ -264,7 +276,7 @@ impl FsNode {
         self: &FsNodeHandle,
         name: &FsStr,
         mode: FileMode,
-        dev: dev_t,
+        dev: DeviceType,
         mk_callback: F,
     ) -> Result<FsNodeHandle, Errno>
     where
@@ -292,7 +304,7 @@ impl FsNode {
     #[cfg(test)]
     pub fn mkdir(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         // TODO: apply_umask
-        self.create_node(name, FileMode::IFDIR | FileMode::ALLOW_ALL, 0, |node| {
+        self.create_node(name, FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE, |node| {
             self.ops().mkdir(&self, node)
         })
     }
@@ -301,7 +313,7 @@ impl FsNode {
         self: &FsNodeHandle,
         name: &FsStr,
         mode: FileMode,
-        dev: dev_t,
+        dev: DeviceType,
     ) -> Result<FsNodeHandle, Errno> {
         self.create_node(name, mode, dev, |node| {
             if mode.is_dir() {
@@ -317,7 +329,7 @@ impl FsNode {
         name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
-        self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |node| {
+        self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, DeviceType::NONE, |node| {
             self.ops().create_symlink(node, target)
         })
     }
@@ -361,8 +373,8 @@ impl FsNode {
             st_ctim: timespec_from_time(info.time_create),
             st_mtim: timespec_from_time(info.time_modify),
             st_atim: timespec_from_time(info.time_access),
-            st_dev: info.dev,
-            st_rdev: info.rdev,
+            st_dev: info.dev.bits(),
+            st_rdev: info.rdev.bits(),
             st_blksize: BYTES_PER_BLOCK,
             ..Default::default()
         })

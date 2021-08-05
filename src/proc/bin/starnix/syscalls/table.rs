@@ -73,6 +73,12 @@ impl FromSyscallArg for FileMode {
     }
 }
 
+impl FromSyscallArg for DeviceType {
+    fn from_arg(arg: u64) -> DeviceType {
+        DeviceType::from_bits(arg)
+    }
+}
+
 impl FromSyscallArg for UncheckedSignal {
     fn from_arg(arg: u64) -> UncheckedSignal {
         UncheckedSignal::new(arg)

@@ -398,7 +398,7 @@ pub fn sys_mkdirat(
 ) -> Result<SyscallResult, Errno> {
     let mode = ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.mknod(basename, FileMode::IFDIR | mode, 0)
+        parent.mknod(basename, FileMode::IFDIR | mode, DeviceType::NONE)
     })?;
     Ok(SUCCESS)
 }
@@ -408,7 +408,7 @@ pub fn sys_mknodat(
     dir_fd: FdNumber,
     user_path: UserCString,
     mode: FileMode,
-    dev: dev_t,
+    dev: DeviceType,
 ) -> Result<SyscallResult, Errno> {
     let file_type = match mode & FileMode::IFMT {
         FileMode::IFREG => FileMode::IFREG,

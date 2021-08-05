@@ -26,6 +26,8 @@ pub struct Kernel {
     pub anon_fs: OnceCell<FileSystemHandle>,
     // Owned by pipe.rs
     pub pipe_fs: OnceCell<FileSystemHandle>,
+    // Owned by devfs.rs
+    pub dev_tmp_fs: OnceCell<FileSystemHandle>,
 }
 
 impl Kernel {
@@ -36,6 +38,7 @@ impl Kernel {
             scheduler: RwLock::new(Scheduler::new()),
             anon_fs: OnceCell::new(),
             pipe_fs: OnceCell::new(),
+            dev_tmp_fs: OnceCell::new(),
         }
     }
 

@@ -178,7 +178,12 @@ impl NamespaceNode {
         Ok(self.with_new_node(mk_callback()?))
     }
 
-    pub fn mknod(&self, name: &FsStr, mode: FileMode, dev: dev_t) -> Result<NamespaceNode, Errno> {
+    pub fn mknod(
+        &self,
+        name: &FsStr,
+        mode: FileMode,
+        dev: DeviceType,
+    ) -> Result<NamespaceNode, Errno> {
         self.create_node(name, || self.node.mknod(name, mode, dev))
     }
 

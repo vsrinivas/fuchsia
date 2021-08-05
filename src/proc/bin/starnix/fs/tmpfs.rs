@@ -59,6 +59,8 @@ impl FsNodeOps for TmpfsDirectory {
         match child.info_mut().mode.fmt() {
             FileMode::IFREG => child.set_ops(VmoFileNode::new()?),
             FileMode::IFIFO => child.set_ops(FifoNode::new()),
+            FileMode::IFBLK => child.set_ops(DeviceNode),
+            FileMode::IFCHR => child.set_ops(DeviceNode),
             _ => return Err(EACCES),
         }
         let child = child.into_handle();
@@ -213,6 +215,14 @@ impl FsNodeOps for FifoNode {
     }
 }
 
+pub struct DeviceNode;
+
+impl FsNodeOps for DeviceNode {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        Err(ENOSYS)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -246,7 +256,11 @@ mod test {
         let test_vmo = Arc::new(zx::Vmo::create(test_mem_size).unwrap());
 
         let path = b"test.bin";
-        let _file = task.fs.root.mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL, 0).unwrap();
+        let _file = task
+            .fs
+            .root
+            .mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
+            .unwrap();
 
         let wr_file = task.open_file(path, OpenFlags::RDWR).unwrap();
 
