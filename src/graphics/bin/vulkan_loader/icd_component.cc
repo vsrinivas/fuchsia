@@ -139,13 +139,13 @@ void IcdComponent::Initialize(sys::ComponentContext* context, inspect::Node* par
 
         fidl::InterfaceHandle<fuchsia::io::Directory> directory;
         auto directory_request = directory.NewRequest();
-        realm_->BindChild(
+        realm_->OpenExposedDir(
             child_ref, std::move(directory_request),
             [this, directory = std::move(directory),
              failure_callback = std::move(failure_callback)](
                 fpromise::result<void, fuchsia::component::Error> response) mutable {
               if (response.is_error()) {
-                FX_LOGS(INFO) << component_url_ << " BindChild failed with error "
+                FX_LOGS(INFO) << component_url_ << " OpenExposedDir failed with error "
                               << static_cast<uint32_t>(response.error());
                 node_.CreateUint("bind_response", static_cast<uint32_t>(response.error()),
                                  &value_list_);
