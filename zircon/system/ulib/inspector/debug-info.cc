@@ -212,8 +212,8 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
 #else
 #error unsupported architecture
 #endif
-    fprintf(out, "<== %s %s page fault, PC at 0x%" PRIxPTR "\n", access_type, violation,
-            decoded.pc);
+    fprintf(out, "<== %s %s page fault (error %s), PC at 0x%" PRIxPTR "\n", access_type, violation,
+            zx_status_get_string(static_cast<zx_status_t>(report.context.synth_code)), decoded.pc);
   } else if (report.header.type == ZX_EXCP_POLICY_ERROR) {
     switch (report.context.synth_code) {
       case ZX_EXCP_POLICY_CODE_BAD_SYSCALL:

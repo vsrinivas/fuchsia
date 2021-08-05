@@ -33,6 +33,17 @@ void platform_irq(struct iframe_t* frame);
 struct arch_exception_context {
   struct iframe_t* frame;
   uint64_t cr2;
+  // The |user_synth_code| and |user_synth_data| fields have different values depending on the
+  // exception type.
+  //
+  // 1) For ZX_EXCP_POLICY_ERROR, |user_synth_code| contains the type of the policy error (a
+  // ZX_EXCP_POLICY_CODE_* value), and |user_synth_data| contains additional information relevant to
+  // the policy error (e.g. the syscall number for ZX_EXCP_POLICY_CODE_BAD_SYSCALL).
+  //
+  // 2) For ZX_EXCP_FATAL_PAGE_FAULT, |user_synth_code| contains the |zx_status_t| error code
+  // returned by the page fault handler, typecast to |uint32_t|. |user_synth_data| is 0.
+  //
+  // 3) For all other exception types, |user_synth_code| and |user_synth_data| are both set to 0.
   uint32_t user_synth_code;
   uint32_t user_synth_data;
   bool is_page_fault;

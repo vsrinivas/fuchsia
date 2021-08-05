@@ -105,13 +105,14 @@ KCOUNTER(exceptions_unknown, "exceptions.unknown")
 KCOUNTER(exceptions_access, "exceptions.access_fault")
 
 static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type, iframe_t* iframe,
-                                                          uint32_t esr, uint64_t far) {
+                                                          uint32_t esr, uint64_t far,
+                                                          uint32_t error_code) {
   arch_exception_context_t context = {};
   DEBUG_ASSERT(iframe != nullptr);
   context.frame = iframe;
   context.esr = esr;
   context.far = far;
-  context.user_synth_code = 0;
+  context.user_synth_code = error_code;
   context.user_synth_data = 0;
 
   arch_enable_ints();
@@ -122,7 +123,7 @@ static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type, i
 
 static zx_status_t try_dispatch_user_exception(zx_excp_type_t type, iframe_t* iframe,
                                                uint32_t esr) {
-  return try_dispatch_user_data_fault_exception(type, iframe, esr, 0);
+  return try_dispatch_user_data_fault_exception(type, iframe, esr, 0, 0);
 }
 
 // Prints exception details and then panics.
@@ -205,7 +206,7 @@ static void arm64_watchpoint_exception_handler(iframe_t* iframe, uint exception_
   // We don't need to save the debug state because it doesn't change by an exception. The only
   // way to change the debug state is through the thread write syscall.
 
-  try_dispatch_user_data_fault_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr, far);
+  try_dispatch_user_data_fault_exception(ZX_EXCP_HW_BREAKPOINT, iframe, esr, far, 0);
 }
 
 static void arm64_step_handler(iframe_t* iframe, uint exception_flags, uint32_t esr) {
@@ -276,8 +277,8 @@ static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_fla
   // get a shot at it.
   if (is_user) {
     kcounter_add(exceptions_user, 1);
-    if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) ==
-        ZX_OK) {
+    if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far,
+                                               static_cast<uint32_t>(err)) == ZX_OK) {
       return;
     }
   }
@@ -343,10 +344,11 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
   // kind of fault cannot be resolved by the handler.
   // 0b0001XX is translation faults
   // 0b0011XX is permission faults
+  zx_status_t err = ZX_OK;
   if (likely((dfsc & 0b001100) != 0 && (dfsc & 0b110000) == 0)) {
     arch_enable_ints();
     kcounter_add(exceptions_page, 1);
-    zx_status_t err = vmm_page_fault_handler(far, pf_flags);
+    err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0) {
       return;
@@ -371,7 +373,8 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
     if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
       excp_type = ZX_EXCP_UNALIGNED_ACCESS;
     }
-    if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far) == ZX_OK) {
+    if (try_dispatch_user_data_fault_exception(excp_type, iframe, esr, far,
+                                               static_cast<uint32_t>(err)) == ZX_OK) {
       return;
     }
   }

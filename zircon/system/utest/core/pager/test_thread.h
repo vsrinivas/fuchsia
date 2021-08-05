@@ -30,8 +30,9 @@ class TestThread {
   bool Wait();
   // Block until the test thread terminates with a validation error.
   bool WaitForFailure();
-  // Block until the test thread crashes due to an access to |crash_addr|.
-  bool WaitForCrash(uintptr_t crash_addr);
+  // Block until the test thread crashes due to an access to |crash_addr|. The exception report's
+  // |synth_code| field should be set to |error_status|.
+  bool WaitForCrash(uintptr_t crash_addr, zx_status_t error_status);
   // Block until the test thread is blocked.
   bool WaitForBlocked();
   // Block until the thread terminates.
@@ -51,7 +52,8 @@ class TestThread {
   void Run();
 
  private:
-  bool Wait(bool expect_failure, bool expect_crash, uintptr_t crash_addr);
+  bool Wait(bool expect_failure, bool expect_crash, uintptr_t crash_addr,
+            zx_status_t error_status = ZX_OK);
   void PrintDebugInfo(const zx_exception_report_t& report);
 
   const fbl::Function<bool()> fn_;

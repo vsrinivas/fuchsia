@@ -61,11 +61,12 @@ bool TestThread::WaitForFailure() {
   return Wait(true /* expect_failure */, false /* expect_crash */, 0);
 }
 
-bool TestThread::WaitForCrash(uintptr_t crash_addr) {
-  return Wait(false /* expect_failure */, true /* expect_crash */, crash_addr);
+bool TestThread::WaitForCrash(uintptr_t crash_addr, zx_status_t error_status) {
+  return Wait(false /* expect_failure */, true /* expect_crash */, crash_addr, error_status);
 }
 
-bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_addr) {
+bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_addr,
+                      zx_status_t error_status) {
   zx_signals_t signals;
   ZX_ASSERT(exception_channel_.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                         zx::time::infinite(), &signals) == ZX_OK);
@@ -85,6 +86,9 @@ bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_ad
       uintptr_t actual_crash_addr = report.context.arch.u.arm_64.far;
 #endif
       res &= crash_addr == actual_crash_addr;
+    }
+    if (res) {
+      res &= error_status == static_cast<zx_status_t>(report.context.synth_code);
     }
 
     if (!res) {

@@ -21,6 +21,8 @@ __BEGIN_CDECLS
 // |report.context.arch|.
 
 #define ZX_EXCP_GENERAL                 ((uint32_t) 0x008u)
+// The error code for the fatal page fault can be found in the |synth_code| field
+// of the report, which will be a |zx_status_t| value typecast to a |uint32_t|.
 #define ZX_EXCP_FATAL_PAGE_FAULT        ((uint32_t) 0x108u)
 #define ZX_EXCP_UNDEFINED_INSTRUCTION   ((uint32_t) 0x208u)
 #define ZX_EXCP_SW_BREAKPOINT           ((uint32_t) 0x308u)

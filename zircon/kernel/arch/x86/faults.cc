@@ -348,7 +348,7 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
     struct arch_exception_context context = {
         .frame = frame,
         .cr2 = va,
-        .user_synth_code = 0,
+        .user_synth_code = static_cast<uint32_t>(pf_err),
         .user_synth_data = 0,
         .is_page_fault = true,
     };
