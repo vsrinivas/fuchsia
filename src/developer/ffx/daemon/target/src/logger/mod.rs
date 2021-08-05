@@ -406,7 +406,6 @@ mod test {
     use {
         super::*,
         crate::target::Target,
-        crate::NodeId,
         async_channel::{Receiver, Sender},
         async_lock::Mutex,
         async_trait::async_trait,
@@ -419,6 +418,7 @@ mod test {
             RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
         fidl_fuchsia_diagnostics::DataType,
+        fidl_fuchsia_overnet_protocol::NodeId,
         futures::TryStreamExt,
         rcs::RcsConnection,
         std::rc::Rc,

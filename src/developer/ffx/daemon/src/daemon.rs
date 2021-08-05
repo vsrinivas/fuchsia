@@ -4,14 +4,8 @@
 
 use {
     crate::constants::{get_socket, CURRENT_EXE_HASH},
-    crate::fastboot::{spawn_fastboot_discovery, Fastboot},
-    crate::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     crate::manual_targets,
-    crate::target::{
-        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType, TargetCollection,
-    },
     crate::target_control::TargetControl,
-    crate::zedboot::zedboot_discovery,
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
@@ -23,6 +17,12 @@ use {
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
     ffx_daemon_services::create_service_register_map,
+    ffx_daemon_target::fastboot::{spawn_fastboot_discovery, Fastboot},
+    ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
+    ffx_daemon_target::target::{
+        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType, TargetCollection,
+    },
+    ffx_daemon_target::zedboot::zedboot_discovery,
     fidl::endpoints::{
         ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, Proxy, RequestStream,
     },
@@ -1271,7 +1271,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_collection_empty_error() {
         let d = Daemon::new();
-        assert_eq!(Err(DaemonError::TargetCacheEmpty), d.get_target(None).await);
+        assert_eq!(DaemonError::TargetCacheEmpty, d.get_target(None).await.unwrap_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1281,7 +1281,7 @@ mod test {
         let t2 = Target::new_autoconnected("it-is-rabbit-season");
         d.target_collection.merge_insert(t.clone());
         d.target_collection.merge_insert(t2.clone());
-        assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_target(None).await);
+        assert_eq!(DaemonError::TargetAmbiguous, d.get_target(None).await.unwrap_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

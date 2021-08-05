@@ -70,7 +70,7 @@ impl<B: ByteSlice> Packet<B> {
     }
 }
 
-pub(crate) struct NetworkInterface {
+pub struct NetworkInterface {
     maximum_size: u16,
     sequence: Wrapping<u16>,
     socket: UdpSocket,
@@ -313,10 +313,10 @@ fn make_empty_fastboot_packet(sequence: u16) -> [u8; 4] {
     packet
 }
 
-pub(crate) struct NetworkFactory {}
+pub struct NetworkFactory {}
 
 impl NetworkFactory {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 }

@@ -70,7 +70,7 @@ impl<B: ByteSlice> ZedbootPacket<B> {
     }
 }
 
-pub(crate) fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()>> {
+pub fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()>> {
     Ok(Task::local(interface_discovery(e, ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL)))
 }
 
@@ -79,10 +79,7 @@ async fn port() -> u16 {
 }
 
 // interface_discovery iterates over all multicast interfaces
-pub(crate) async fn interface_discovery(
-    e: events::Queue<DaemonEvent>,
-    discovery_interval: Duration,
-) {
+pub async fn interface_discovery(e: events::Queue<DaemonEvent>, discovery_interval: Duration) {
     log::debug!("Starting Zedboot discovery");
     // See fxbug.dev/62617#c10 for details. A macOS system can end up in
     // a situation where the default routes for protocols are on
@@ -258,7 +255,7 @@ async fn make_sender_socket(addr: SocketAddr) -> Result<UdpSocket> {
     Ok(result)
 }
 
-pub(crate) async fn reboot(to_addr: TargetAddr) -> Result<()> {
+pub async fn reboot(to_addr: TargetAddr) -> Result<()> {
     let zed = ZedbootHeader::new(1, ZEDBOOT_REBOOT, 0);
     let mut to_sock: SocketAddr = to_addr.into();
     to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
@@ -267,7 +264,7 @@ pub(crate) async fn reboot(to_addr: TargetAddr) -> Result<()> {
     sock.send(zed.as_bytes()).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
 }
 
-pub(crate) async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
+pub async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
     let mut buf = [0u8; ZEDBOOT_REBOOT_BOOTLOADER_CMD_LEN];
     LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
     LittleEndian::write_u32(&mut buf[4..8], 1);
@@ -281,7 +278,7 @@ pub(crate) async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
     sock.send(&buf).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
 }
 
-pub(crate) async fn reboot_to_recovery(to_addr: TargetAddr) -> Result<()> {
+pub async fn reboot_to_recovery(to_addr: TargetAddr) -> Result<()> {
     let mut buf = [0u8; ZEDBOOT_REBOOT_RECOVERY_CMD_LEN];
     LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
     LittleEndian::write_u32(&mut buf[4..8], 1);

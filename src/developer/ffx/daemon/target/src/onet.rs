@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::RETRY_DELAY,
     crate::ssh::build_ssh_command,
     crate::target::Target,
+    crate::RETRY_DELAY,
     anyhow::{anyhow, Context, Result},
     async_io::Async,
     ffx_daemon_events::TargetConnectionState,

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::FASTBOOT_CHECK_INTERVAL,
     crate::fastboot::{
         client::{FastbootImpl, InterfaceFactory},
         network::{NetworkFactory, NetworkInterface},
     },
     crate::target::Target,
+    crate::FASTBOOT_CHECK_INTERVAL,
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
     chrono::Duration,
@@ -55,14 +55,14 @@ const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 /// Fastboot, or Zedboot) the service contains both an implementation of the USB transport and
 /// the UDP transport. It is impossible to know which transport will be needed if the target
 /// starts in the Product or Zedboot state so both implementations are present from creation.
-pub(crate) struct Fastboot {
+pub struct Fastboot {
     target: Rc<Target>,
     usb: FastbootImpl<Interface>,
     udp: FastbootImpl<NetworkInterface>,
 }
 
 impl Fastboot {
-    pub(crate) fn new(target: Rc<Target>) -> Self {
+    pub fn new(target: Rc<Target>) -> Self {
         Self {
             target: target.clone(),
             udp: FastbootImpl::new(target.clone(), Box::new(NetworkFactory::new())),
@@ -70,7 +70,7 @@ impl Fastboot {
         }
     }
 
-    pub(crate) async fn handle_fastboot_requests_from_stream(
+    pub async fn handle_fastboot_requests_from_stream(
         &mut self,
         stream: FastbootRequestStream,
     ) -> Result<()> {
@@ -394,7 +394,7 @@ pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &Str
     }
 }
 
-pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
+pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
     fuchsia_async::Task::local(async move {
         loop {
             log::trace!("Looking for fastboot devices");

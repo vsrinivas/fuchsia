@@ -1,12 +1,12 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
-    crate::constants::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
+    crate::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
     addr::TargetAddr,
     anyhow::{anyhow, bail, Error, Result},
     async_trait::async_trait,
@@ -41,7 +41,7 @@ const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 const DEFAULT_SSH_PORT: u16 = 22;
 
 #[derive(Debug, Clone, Hash)]
-pub(crate) enum TargetAddrType {
+pub enum TargetAddrType {
     Ssh,
     Manual,
     Netsvc,
@@ -49,7 +49,7 @@ pub(crate) enum TargetAddrType {
 }
 
 #[derive(Debug, Clone, Hash)]
-pub(crate) struct TargetAddrEntry {
+pub struct TargetAddrEntry {
     addr: TargetAddr,
     timestamp: DateTime<Utc>,
     addr_type: TargetAddrType,
@@ -64,16 +64,12 @@ impl PartialEq for TargetAddrEntry {
 impl Eq for TargetAddrEntry {}
 
 impl TargetAddrEntry {
-    pub(crate) fn new(
-        addr: TargetAddr,
-        timestamp: DateTime<Utc>,
-        addr_type: TargetAddrType,
-    ) -> Self {
+    pub fn new(addr: TargetAddr, timestamp: DateTime<Utc>, addr_type: TargetAddrType) -> Self {
         Self { addr, timestamp, addr_type }
     }
 }
 
-#[cfg(test)]
+/// This imple is intended mainly for testing.
 impl From<TargetAddr> for TargetAddrEntry {
     fn from(addr: TargetAddr) -> Self {
         Self { addr, timestamp: Utc::now(), addr_type: TargetAddrType::Ssh }
@@ -208,7 +204,7 @@ impl Target {
         target
     }
 
-    pub(crate) fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Rc<Self>
+    pub fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Rc<Self>
     where
         S: Into<String>,
         I: Iterator<Item = TargetAddrEntry>,
@@ -475,7 +471,7 @@ impl Target {
         self.state.borrow().clone()
     }
 
-    #[cfg(test)]
+    /// Sets the target state (intended to be used for testing only).
     pub fn set_state(&self, state: TargetConnectionState) {
         // Note: Do not mark this function non-test, as it does not
         // enforce state transition control, such as ensuring that
@@ -595,11 +591,11 @@ impl Target {
         self.ssh_port.borrow().clone()
     }
 
-    pub(crate) fn set_ssh_port(&self, port: Option<u16>) {
+    pub fn set_ssh_port(&self, port: Option<u16>) {
         self.ssh_port.replace(port);
     }
 
-    pub(crate) fn manual_addrs(&self) -> Vec<TargetAddr> {
+    pub fn manual_addrs(&self) -> Vec<TargetAddr> {
         self.addrs
             .borrow()
             .iter()
@@ -610,12 +606,12 @@ impl Target {
             .collect()
     }
 
-    #[cfg(test)]
-    pub(crate) fn addrs_insert(&self, t: TargetAddr) {
+    /// Intended for testing only.
+    pub fn addrs_insert(&self, t: TargetAddr) {
         self.addrs.borrow_mut().replace(t.into());
     }
 
-    #[cfg(test)]
+    /// Intended for testing only.
     pub fn new_autoconnected(n: &str) -> Rc<Self> {
         let s = Self::new_named(n);
         s.update_connection_state(|s| {
@@ -625,8 +621,8 @@ impl Target {
         s
     }
 
-    #[cfg(test)]
-    pub(crate) fn addrs_insert_entry(&self, t: TargetAddrEntry) {
+    /// Intended for testing only.
+    pub fn addrs_insert_entry(&self, t: TargetAddrEntry) {
         self.addrs.borrow_mut().replace(t);
     }
 

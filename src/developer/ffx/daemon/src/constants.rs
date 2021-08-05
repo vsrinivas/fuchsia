@@ -1,25 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use std::time::Duration;
-
-pub(crate) const FASTBOOT_CHECK_INTERVAL: Duration = Duration::from_secs(10);
-pub(crate) const MDNS_BROADCAST_INTERVAL: Duration = Duration::from_secs(20);
-pub(crate) const ZEDBOOT_BROADCAST_INTERVAL: Duration = Duration::from_secs(2);
-
-const GRACE_INTERVAL: Duration = Duration::from_secs(5);
-
-pub(crate) const FASTBOOT_MAX_AGE: Duration =
-    // Rust(#76416): FASTBOOT_CHECK_INTERVAL.saturating_add(GRACE_INTERVAL);
-    Duration::from_secs(FASTBOOT_CHECK_INTERVAL.as_secs() + GRACE_INTERVAL.as_secs());
-pub(crate) const MDNS_MAX_AGE: Duration =
-    Duration::from_secs(MDNS_BROADCAST_INTERVAL.as_secs() + GRACE_INTERVAL.as_secs());
-pub(crate) const ZEDBOOT_MAX_AGE: Duration =
-    Duration::from_secs(ZEDBOOT_BROADCAST_INTERVAL.as_secs() + GRACE_INTERVAL.as_secs());
-
-// Delay between retry attempts to find the RCS.
-pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
-
 pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
 
 #[cfg(not(test))]

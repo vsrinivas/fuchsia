@@ -29,21 +29,21 @@ use {
 const ADMIN_SELECTOR: &str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
 
 #[async_trait(?Send)]
-pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
+pub trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
     async fn open(&mut self, target: &Target) -> Result<T>;
     async fn close(&self);
 }
 
-pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
-    pub(crate) target: Rc<Target>,
-    pub(crate) interface: Option<T>,
-    pub(crate) interface_factory: Box<dyn InterfaceFactory<T>>,
+pub struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
+    pub target: Rc<Target>,
+    pub interface: Option<T>,
+    pub interface_factory: Box<dyn InterfaceFactory<T>>,
     remote_proxy: Once<RemoteControlProxy>,
     admin_proxy: Once<AdminProxy>,
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
-    pub(crate) fn new(target: Rc<Target>, interface_factory: Box<dyn InterfaceFactory<T>>) -> Self {
+    pub fn new(target: Rc<Target>, interface_factory: Box<dyn InterfaceFactory<T>>) -> Self {
         Self {
             target,
             interface: None,
@@ -65,7 +65,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
         Ok(self.interface.as_mut().expect("interface interface not available"))
     }
 
-    pub(crate) async fn handle_fastboot_requests_from_stream(
+    pub async fn handle_fastboot_requests_from_stream(
         &mut self,
         mut stream: FastbootRequestStream,
     ) -> Result<()> {

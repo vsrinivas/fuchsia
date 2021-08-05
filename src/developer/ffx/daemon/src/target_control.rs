@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::fastboot::Fastboot,
-    crate::target::Target,
-    crate::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     anyhow::{anyhow, bail, Result},
     async_utils::async_once::Once,
     ffx_daemon_events::TargetConnectionState,
+    ffx_daemon_target::fastboot::Fastboot,
+    ffx_daemon_target::target::Target,
+    ffx_daemon_target::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     fidl::endpoints::create_endpoints,
     fidl::Error as FidlError,
     fidl_fuchsia_developer_bridge::{

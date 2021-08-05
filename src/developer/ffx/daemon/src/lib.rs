@@ -19,15 +19,9 @@ use {
 
 mod constants;
 mod daemon;
-mod fastboot;
-mod logger;
 mod manual_targets;
-mod onet;
 mod target_control;
-mod zedboot;
 
-pub mod ssh;
-pub mod target;
 pub use constants::{get_socket, LOG_FILE_PREFIX};
 
 pub use daemon::Daemon;
