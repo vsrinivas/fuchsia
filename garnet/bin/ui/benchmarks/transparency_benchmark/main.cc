@@ -190,12 +190,10 @@ class View : public fuchsia::ui::scenic::SessionListener {
     // Build up a list of commands we will send over our Scenic Session.
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
-    float offset = 1.0f;
     for (auto shape_node_id : full_screen_shape_nodes_) {
       int rectangle_id = new_resource_id_++;
       PushCommand(&cmds, scenic::NewCreateRectangleCmd(rectangle_id, view_width_, view_height_));
       PushCommand(&cmds, scenic::NewSetShapeCmd(shape_node_id, rectangle_id));
-      offset += 1.0f;
     }
 
     for (int i = 0; i < kFullScreenLayers; i++) {
