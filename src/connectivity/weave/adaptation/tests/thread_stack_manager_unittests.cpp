@@ -10,6 +10,10 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+
 #include <gtest/gtest.h>
 
 // clang-format off
@@ -32,6 +36,7 @@ namespace {
 using fuchsia::lowpan::ConnectivityState;
 using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
+using fuchsia::lowpan::JoinParams;
 using fuchsia::lowpan::ProvisioningParams;
 using fuchsia::lowpan::Role;
 using fuchsia::lowpan::device::AllCounters;
@@ -44,6 +49,11 @@ using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
 using fuchsia::lowpan::device::MacCounters;
 using fuchsia::lowpan::device::Protocols;
+using fuchsia::lowpan::device::ProvisionError;
+using fuchsia::lowpan::device::ProvisioningMonitor;
+using fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Response;
+using fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result;
+using fuchsia::lowpan::device::ProvisioningProgress;
 using fuchsia::lowpan::device::ServiceError;
 using fuchsia::lowpan::thread::LegacyJoining;
 using fuchsia::net::IpAddress;
@@ -63,6 +73,29 @@ using Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsE
 
 namespace routes = fuchsia::net::routes;
 
+// Note on thread synchronization --
+//
+// Due to the fact that the Weave DeviceLayer APIs are inherently synchronous,
+// FIDL calls are made synchronously. This means that simply having a loop run
+// to process FIDL calls that can be completely controlled by the test is not
+// possible, so the dispatcher that handles FIDL calls runs in a background
+// thread in these tests (see WeaveTestFixture for details on the background
+// thread).
+//
+// In addition, high-level C++ FIDL bindings must be run on the same thread,
+// meaning it is not possible to save a FIDL callback on one thread, destroy
+// the thread, pump the async dispatcher manually, and then kick it back to
+// another thread, since the threads will not match.
+//
+// For that reason, there are tests below which require synchronization with
+// the background thread to properly check behavior of ThreadStackManager.
+// The relevant state changes are synchronized with mutexes and condition
+// variables to ensure the test can check the correct values.
+//
+// There are plans for the adaptation to  use async FIDL calls in delegates,
+// and synchronizing at the API boundary to allow tests like these to bypass
+// these issues. At that point, these synchronization steps can be removed.
+
 const char kFakeInterfaceName[] = "fake0";
 
 constexpr char kTestV4AddrStr[] = "1.2.3.4";
@@ -71,6 +104,22 @@ constexpr char kTestV4AddrBad[] = "4.3.2.1";
 constexpr char kTestV6AddrBad[] = "0A0B:0C0D:0E0F:0001:0203:0405:0607:0809";
 constexpr char kTestV4AddrVal[] = {1, 2, 3, 4};
 constexpr char kTestV6AddrVal[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
+
+constexpr char kFakePairingCode[] = "F4K3C0D3";
+constexpr char kFakeVendor[] = "Fuchsia Vendor";
+constexpr char kFakeProduct[] = "Thread-enabled Product";
+constexpr char kFakeVersion[] = "12.34.567";
+constexpr uint32_t kJoiningTimeMaxMsec = 120000;
+constexpr uint32_t kJoiningRetryDelayMsec = 10000;
+
+// The maximum amount of time to wait for threads to synchronize in tests. See
+// note on thread syncrhonization above for details. This allows a test to
+// fail rather than hang if the state does not update.
+//
+// FLAKE WARNING: If tests that use the wait functions are flaking, increase
+// this value. However the current value should be way, way more than enough to
+// reliably synchronize.
+constexpr std::chrono::milliseconds kMaxSyncTime{10};
 
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
@@ -99,6 +148,107 @@ std::string FormatBytes(const std::vector<uint8_t>& bytes) {
 class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_TestBase,
                                public fuchsia::lowpan::device::testing::DeviceExtra_TestBase {
  public:
+  class FakeProvisioningMonitor final
+      : public fuchsia::lowpan::device::testing::ProvisioningMonitor_TestBase {
+   public:
+    FakeProvisioningMonitor(FakeLowpanDevice* owner) : owner_(owner) {}
+    void NotImplemented_(const std::string& name) override {
+      FAIL() << "Not implemented: " << name;
+    }
+
+    void set_params(JoinParams params) { params_ = std::move(params); }
+    const JoinParams& params() const { return params_; }
+
+    bool IsWatched() { return callback_.operator bool(); }
+    void WatchProgress(WatchProgressCallback callback) override {
+      std::lock_guard<std::mutex> lock{watched_sync_};
+      callback_ = std::move(callback);
+    }
+
+    void CompleteError(ProvisionError error) {
+      std::lock_guard<std::mutex> lock{watched_sync_};
+      WatchProgressCallback callback = std::move(callback_);
+      watched_signal_.notify_one();
+      ProvisioningMonitor_WatchProgress_Result result;
+      result.set_err(error);
+      async::PostTask(owner_->dispatcher_,
+                      [callback = std::move(callback), result = std::move(result)]() mutable {
+                        callback(std::move(result));
+                      });
+    }
+
+    void CompleteOk(Identity identity) {
+      std::lock_guard<std::mutex> lock{watched_sync_};
+      WatchProgressCallback callback = std::move(callback_);
+      watched_signal_.notify_one();
+      ProvisioningMonitor_WatchProgress_Result result;
+
+      Identity cloned_identity;
+      identity.Clone(&cloned_identity);
+      result.set_response(ProvisioningMonitor_WatchProgress_Response(
+          ProvisioningProgress::WithIdentity(std::move(cloned_identity))));
+      owner_->identity_ = std::move(identity);
+
+      // Transition state.
+      switch (owner_->connectivity_state_) {
+        case ConnectivityState::INACTIVE:
+          owner_->connectivity_state_ = ConnectivityState::READY;
+          break;
+        case ConnectivityState::OFFLINE:
+        case ConnectivityState::COMMISSIONING:
+          owner_->connectivity_state_ = ConnectivityState::ATTACHED;
+          break;
+        default:
+          // Do nothing, device is already in the provisioned state.
+          break;
+      }
+
+      async::PostTask(owner_->dispatcher_,
+                      [callback = std::move(callback), result = std::move(result)]() mutable {
+                        callback(std::move(result));
+                      });
+    }
+
+    void UpdateProgress(double progress) {
+      std::lock_guard<std::mutex> lock{watched_sync_};
+      WatchProgressCallback callback = std::move(callback_);
+      watched_signal_.notify_one();
+      if (progress < 0)
+        progress = 0;
+      if (progress > 1)
+        progress = 1;
+
+      async::PostTask(owner_->dispatcher_, [=, callback = std::move(callback)]() mutable {
+        callback(ProvisioningMonitor_WatchProgress_Result::WithResponse(
+            ProvisioningMonitor_WatchProgress_Response(
+                ProvisioningProgress::WithProgress(progress))));
+      });
+    }
+
+    void Reset() {
+      params_ = JoinParams();
+      callback_ = WatchProgressCallback();
+    }
+
+    bool WaitForWatch(bool watched) {
+      std::unique_lock<std::mutex> lock{watched_sync_};
+
+      if (IsWatched() != watched) {
+        watched_signal_.wait_for(lock, kMaxSyncTime, [&] { return IsWatched() == watched; });
+      }
+
+      // Return bind state retrieved inside mutex lock.
+      return IsWatched();
+    }
+
+   private:
+    FakeLowpanDevice* owner_;
+    JoinParams params_;
+    WatchProgressCallback callback_;
+    std::mutex watched_sync_;
+    std::condition_variable watched_signal_;
+  };
+
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
   // Fidl interfaces.
@@ -134,6 +284,18 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
     }
 
     callback();
+  }
+
+  void JoinNetwork(JoinParams params,
+                   fidl::InterfaceRequest<ProvisioningMonitor> request) override {
+    std::lock_guard<std::mutex> lock{prov_mon_bind_sync_};
+    provisioning_monitor_.set_params(std::move(params));
+    provisioning_monitor_binding_.Bind(std::move(request), dispatcher_);
+    prov_mon_bind_signal_.notify_one();
+    provisioning_monitor_binding_.set_error_handler([this](zx_status_t) {
+      prov_mon_bind_signal_.notify_one();
+      provisioning_monitor_.Reset();
+    });
   }
 
   void ProvisionNetwork(ProvisioningParams params, ProvisionNetworkCallback callback) override {
@@ -204,6 +366,20 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
     callback(std::move(cloned_identity));
   }
 
+  // Utilities for testing.
+
+  bool WaitForProvisioningMonitorBinding(bool bound) {
+    std::unique_lock<std::mutex> lock{prov_mon_bind_sync_};
+
+    if (is_provisioning_monitor_bound() != bound) {
+      prov_mon_bind_signal_.wait_for(lock, kMaxSyncTime,
+                                     [&] { return is_provisioning_monitor_bound() == bound; });
+    }
+
+    // Return bind state retrieved inside mutex lock.
+    return is_provisioning_monitor_bound();
+  }
+
   // Accessors/mutators for testing.
 
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
@@ -226,6 +402,9 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
     return *this;
   }
 
+  FakeProvisioningMonitor& provisioning_monitor() { return provisioning_monitor_; }
+  bool is_provisioning_monitor_bound() { return provisioning_monitor_binding_.is_bound(); }
+
  private:
   WatchDeviceStateCallback watch_device_state_callback_;
   async_dispatcher_t* dispatcher_;
@@ -234,6 +413,11 @@ class FakeLowpanDevice final : public fuchsia::lowpan::device::testing::Device_T
   Credential credential_;
   Identity identity_;
   Role role_{Role::DETACHED};
+
+  FakeProvisioningMonitor provisioning_monitor_{this};
+  fidl::Binding<ProvisioningMonitor> provisioning_monitor_binding_{&provisioning_monitor_};
+  std::mutex prov_mon_bind_sync_;
+  std::condition_variable prov_mon_bind_signal_;
 };
 
 class FakeThreadLegacy : public fuchsia::lowpan::thread::testing::LegacyJoining_TestBase {
@@ -401,9 +585,24 @@ class OverridableThreadConfigurationManagerDelegate : public ConfigurationManage
     join_duration_ = std::move(duration);
   }
 
+  void SetVendorIdDescription(std::optional<std::string> vendor_desc) {
+    vendor_desc_ = std::move(vendor_desc);
+  }
+
+  void SetProductIdDescription(std::optional<std::string> product_desc) {
+    product_desc_ = std::move(product_desc);
+  }
+
+  void SetFirmwareRevision(std::optional<std::string> firmware_version) {
+    firmware_version_ = std::move(firmware_version);
+  }
+
  private:
   bool is_thread_enabled_ = true;
   std::optional<uint32_t> join_duration_ = std::nullopt;
+  std::optional<std::string> vendor_desc_ = std::nullopt;
+  std::optional<std::string> product_desc_ = std::nullopt;
+  std::optional<std::string> firmware_version_ = std::nullopt;
 
   bool IsThreadEnabled() override { return is_thread_enabled_; }
   WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override {
@@ -412,6 +611,54 @@ class OverridableThreadConfigurationManagerDelegate : public ConfigurationManage
     }
 
     *duration = *join_duration_;
+    return WEAVE_NO_ERROR;
+  }
+
+  WEAVE_ERROR GetVendorIdDescription(char* buf, size_t buf_size, size_t& out_len) override {
+    if (!vendor_desc_) {
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+
+    const auto& desc = vendor_desc_.value();
+
+    if (desc.size() > buf_size) {
+      return WEAVE_ERROR_BUFFER_TOO_SMALL;
+    }
+
+    std::memcpy(buf, desc.data(), desc.size());
+    out_len = desc.size();
+    return WEAVE_NO_ERROR;
+  }
+
+  WEAVE_ERROR GetProductIdDescription(char* buf, size_t buf_size, size_t& out_len) override {
+    if (!product_desc_) {
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+
+    const auto& desc = product_desc_.value();
+
+    if (desc.size() > buf_size) {
+      return WEAVE_ERROR_BUFFER_TOO_SMALL;
+    }
+
+    std::memcpy(buf, desc.data(), desc.size());
+    out_len = desc.size();
+    return WEAVE_NO_ERROR;
+  }
+
+  WEAVE_ERROR GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len) override {
+    if (!firmware_version_) {
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+
+    const auto& version = firmware_version_.value();
+
+    if (version.size() > buf_size) {
+      return WEAVE_ERROR_BUFFER_TOO_SMALL;
+    }
+
+    std::memcpy(buf, version.data(), version.size());
+    out_len = version.size();
     return WEAVE_NO_ERROR;
   }
 };
@@ -432,8 +679,88 @@ class MockedEventLoggingThreadStackManagerDelegateImpl : public ThreadStackManag
     return kFakeEventId;
   }
 
+  WEAVE_ERROR StartJoiningTimeout(uint32_t, fit::closure) override { return WEAVE_NO_ERROR; }
+  WEAVE_ERROR StartJoiningRetry(uint32_t, fit::closure) override { return WEAVE_NO_ERROR; }
+
   NetworkWpanStatsEvent network_wpan_stats_event_ = {};
   size_t count_log_network_wpan_stats_event_ = 0;
+};
+
+// Mocked time for testing with timers.
+class MockClock {
+ public:
+  struct MockTimer {
+    uint32_t start_time;
+    uint32_t delay;
+    std::shared_ptr<fit::closure> callback;
+
+    uint32_t deadline() const { return start_time + delay; }
+  };
+
+  // Returns "now" in fake test time. 0 is the beginning of the test.
+  uint32_t Now() const { return now_; }
+
+  // Add a timer.
+  void AddTimer(uint32_t delay, fit::closure callback) {
+    // Prevent infinite loop, no 0-delay timer allowed.
+    if (delay == 0) {
+      return;
+    }
+    queue_.push({now_, delay, std::make_shared<fit::closure>(std::move(callback))});
+  }
+
+  // Advance timers.
+  void AdvanceBy(uint32_t duration) {
+    uint32_t deadline = Now() + duration;
+    while (!queue_.empty() && queue_.top().deadline() <= deadline) {
+      MockTimer next = queue_.top();
+      queue_.pop();
+      now_ = next.deadline();
+      (*next.callback)();
+    }
+    now_ = deadline;
+  }
+
+  // The number of active timers.
+  size_t TimerCount() const { return queue_.size(); }
+
+ private:
+  uint32_t now_{0u};
+  const static auto constexpr compare_timer_ = [](const MockTimer& l, const MockTimer& r) {
+    return l.deadline() > r.deadline();
+  };
+  std::priority_queue<MockTimer, std::vector<MockTimer>, decltype(compare_timer_)> queue_{
+      compare_timer_};
+};
+
+class MockedTimerThreadStackManagerDelegateImpl
+    : public MockedEventLoggingThreadStackManagerDelegateImpl {
+ public:
+  MockClock& clock() { return clock_; }
+
+  bool timeout_active() { return timeout_active_; }
+  bool retry_active() { return retry_active_; }
+
+ private:
+  MockClock clock_;
+  bool timeout_active_{false};
+  bool retry_active_{false};
+
+  WEAVE_ERROR StartJoiningTimeout(uint32_t delay, fit::closure callback) override {
+    timeout_active_ = true;
+    clock_.AddTimer(delay, std::move(callback));
+    return WEAVE_NO_ERROR;
+  }
+
+  WEAVE_ERROR StartJoiningRetry(uint32_t delay, fit::closure callback) override {
+    retry_active_ = true;
+    clock_.AddTimer(delay, std::move(callback));
+    return WEAVE_NO_ERROR;
+  }
+
+  void CancelJoiningTimeout() override { timeout_active_ = false; }
+
+  void CancelJoiningRetry() override { retry_active_ = false; }
 };
 
 class ThreadStackManagerTest : public WeaveTestFixture<> {
@@ -445,13 +772,22 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
         fake_routes_.GetHandler(dispatcher()));
   }
 
+  void ResetConfigMgr() {
+    auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
+    config_delegate_ = config_delegate.get();
+    ConfigurationMgrImpl().SetDelegate(nullptr);
+    ConfigurationMgrImpl().SetDelegate(std::move(config_delegate));
+  }
+
   void SetUp() override {
     WeaveTestFixture<>::SetUp();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     RunFixtureLoop();
-    auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
-    config_delegate_ = config_delegate.get();
-    ConfigurationMgrImpl().SetDelegate(std::move(config_delegate));
+    ResetConfigMgr();
+    ConfigurationMgr().StorePairingCode(kFakePairingCode, sizeof(kFakePairingCode));
+    config_delegate_->SetVendorIdDescription(kFakeVendor);
+    config_delegate_->SetProductIdDescription(kFakeProduct);
+    config_delegate_->SetFirmwareRevision(kFakeVersion);
     auto tsm_delegate = std::make_unique<MockedEventLoggingThreadStackManagerDelegateImpl>();
     tsm_delegate_ = tsm_delegate.get();
     ThreadStackMgrImpl().SetDelegate(std::move(tsm_delegate));
@@ -1000,6 +1336,340 @@ TEST_F(ThreadStackManagerTest, GetAndLogThreadStatsCounters) {
   EXPECT_EQ(event.macRxFailInvalidSrcAddr, kRxFakeErrInvalidSrcAddr);
   EXPECT_EQ(event.macRxFailFcs, kRxFakeErrFcs);
   EXPECT_EQ(event.macRxFailOther, kRxFakeErrOther);
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningTimeout) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Advance all the way to the end.
+  delegate->clock().AdvanceBy(kJoiningTimeMaxMsec);
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningSucceeds) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Immediately complete successfully.
+  fake_lookup_.device().provisioning_monitor().CompleteOk(Identity());
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+
+  // Ensure all timers cancelled.
+  EXPECT_FALSE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Ensure TSM agrees it is provisioned.
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningRetries) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Immediately complete with a failure.
+  fake_lookup_.device().provisioning_monitor().CompleteError(ProvisionError::NETWORK_NOT_FOUND);
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+
+  // Ensure retry timer is active.
+  EXPECT_EQ(delegate->clock().TimerCount(), 2u);
+  EXPECT_TRUE(delegate->timeout_active());
+  EXPECT_TRUE(delegate->retry_active());
+
+  // Advance by retry delay.
+  delegate->clock().AdvanceBy(kJoiningRetryDelayMsec);
+
+  // Ensure timer fired
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningProgress) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Immediately report progress.
+  fake_lookup_.device().provisioning_monitor().UpdateProgress(0.25);
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure retry timer is not active.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Report progress.
+  fake_lookup_.device().provisioning_monitor().UpdateProgress(0.5);
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure retry timer is not active.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Report progress.
+  fake_lookup_.device().provisioning_monitor().UpdateProgress(0.75);
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure retry timer is not active.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Complete successfully.
+  fake_lookup_.device().provisioning_monitor().CompleteOk(Identity());
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+
+  // Ensure all timers cancelled.
+  EXPECT_FALSE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Ensure TSM agrees it is provisioned.
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningCanceled) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Immediately complete with a failure.
+  fake_lookup_.device().provisioning_monitor().CompleteError(ProvisionError::CANCELED);
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+
+  // Ensure timers are canceled.
+  EXPECT_FALSE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningTimeoutDoesNotCancelInProgressJoin) {
+  // Reset for Thread joining testing.
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
+
+  // Ensure timeout was set.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure params were set and provisioning monitor is bound.
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().params().is_joiner_parameter());
+  const auto& params = fake_lookup_.device().provisioning_monitor().params().joiner_parameter();
+  ;
+  EXPECT_TRUE(params.has_pskd());
+  EXPECT_TRUE(params.has_vendor_name());
+  EXPECT_TRUE(params.has_vendor_model());
+  EXPECT_TRUE(params.has_vendor_sw_version());
+
+  // Advance until just before timeout
+  delegate->clock().AdvanceBy(kJoiningTimeMaxMsec - (kJoiningRetryDelayMsec / 2));
+
+  // Report progress
+  fake_lookup_.device().provisioning_monitor().UpdateProgress(0.25);
+
+  // Ensure provisioning progress is bound and being watched.
+  EXPECT_TRUE(fake_lookup_.device().WaitForProvisioningMonitorBinding(true));
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().WaitForWatch(true));
+
+  // Ensure timeout is still armed.
+  EXPECT_EQ(delegate->clock().TimerCount(), 1u);
+  EXPECT_TRUE(delegate->timeout_active());
+
+  // Advance until after timeout.
+  delegate->clock().AdvanceBy(kJoiningRetryDelayMsec / 2);
+
+  // Confirm timeout fired.
+  EXPECT_EQ(delegate->clock().TimerCount(), 0u);
+
+  // Ensure provisioning progress is bound and still being watched.
+  EXPECT_TRUE(fake_lookup_.device().is_provisioning_monitor_bound());
+  EXPECT_TRUE(fake_lookup_.device().provisioning_monitor().IsWatched());
+
+  // Complete successfully.
+  fake_lookup_.device().provisioning_monitor().CompleteOk(Identity());
+
+  // Ensure provisioning progress is no longer bound and not being watched.
+  EXPECT_FALSE(fake_lookup_.device().WaitForProvisioningMonitorBinding(false));
+  EXPECT_FALSE(fake_lookup_.device().provisioning_monitor().WaitForWatch(false));
+
+  // Ensure all timers cancelled.
+  EXPECT_FALSE(delegate->timeout_active());
+  EXPECT_FALSE(delegate->retry_active());
+
+  // Ensure TSM agrees it is provisioned.
+  EXPECT_TRUE(ThreadStackMgrImpl()._IsThreadProvisioned());
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningMissingPairingCode) {
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  ResetConfigMgr();
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningMissingVendorName) {
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  config_delegate_->SetVendorIdDescription(std::nullopt);
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningMissingProductName) {
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  config_delegate_->SetProductIdDescription(std::nullopt);
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+}
+
+TEST_F(ThreadStackManagerTest, StartupThreadJoiningMissingFirmwareVersion) {
+  ThreadStackMgrImpl().SetDelegate(nullptr);
+  fake_lookup_.device().provisioning_monitor().Reset();
+  config_delegate_->SetFirmwareRevision(std::nullopt);
+  auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
+  ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
+  EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
 
 }  // namespace testing

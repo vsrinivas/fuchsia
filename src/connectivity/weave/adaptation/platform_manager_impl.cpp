@@ -52,6 +52,11 @@ void PlatformManagerImpl::SetDispatcher(async_dispatcher_t *dispatcher) {
   dispatcher_ = dispatcher;
 }
 
+async_dispatcher_t *PlatformManagerImpl::GetDispatcher() {
+  ZX_ASSERT(dispatcher_ != nullptr);
+  return dispatcher_;
+}
+
 void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
   ZX_ASSERT(dispatcher_ != nullptr);
   async::PostTask(dispatcher_, [ev = *event] { PlatformMgr().DispatchEvent(&ev); });

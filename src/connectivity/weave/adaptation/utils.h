@@ -42,4 +42,16 @@ class BoundedQueue {
   std::mutex mutex_;
   std::queue<T> queue_ FXL_GUARDED_BY(mutex_);
 };
+
+// Helper function to determine largest value as a constexpr (base case).
+template <typename T>
+constexpr const T& MaxConstant(const T& a, const T& b) {
+  return (a > b) ? a : b;
+}
+
+// Helper function to determine largest value as a constexpr (variadic).
+template <typename T, typename... Args>
+constexpr const T& MaxConstant(const T& a, const T& b, const Args&... args) {
+  return MaxConstant(MaxConstant(a, b), args...);
+}
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_UTILS_H_

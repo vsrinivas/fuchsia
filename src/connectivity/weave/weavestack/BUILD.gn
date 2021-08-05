@@ -24,6 +24,8 @@ template("weavestack_lib") {
     ]
 
     public_deps = [
+      "//sdk/fidl/fuchsia.lowpan",
+      "//sdk/fidl/fuchsia.lowpan.device",
       "//sdk/fidl/fuchsia.net.interfaces",
       "//sdk/fidl/fuchsia.weave",
       "//sdk/lib/sys/cpp",
