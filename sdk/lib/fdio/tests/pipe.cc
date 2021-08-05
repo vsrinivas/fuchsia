@@ -102,3 +102,74 @@ TEST(Pipe, PollOutFullPipeAndCloseReadEnd) {
 #endif
   close(fds[1]);
 }
+
+// pipe2() is a Linux extension that Fuchsia supports.
+#if defined(__Fuchsia__) || defined(__linux__)
+
+TEST(Pipe2, NoFlags) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe2(fds, 0));
+  close(fds[0]);
+  close(fds[1]);
+}
+
+TEST(Pipe2, Nonblock) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe2(fds, O_NONBLOCK));
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  int status_flags = fcntl(read_end.get(), F_GETFL);
+  int fd_flags = fcntl(read_end.get(), F_GETFD);
+
+  // Assert that the nonblock flag is set so we don't deadlock below.
+  ASSERT_EQ(O_NONBLOCK, status_flags & O_NONBLOCK);
+
+  // By default, close-on-exec is not set.
+  EXPECT_NE(FD_CLOEXEC, fd_flags & FD_CLOEXEC);
+
+  status_flags = fcntl(write_end.get(), F_GETFL);
+  fd_flags = fcntl(write_end.get(), F_GETFD);
+
+  ASSERT_EQ(O_NONBLOCK, status_flags & O_NONBLOCK);
+  EXPECT_NE(FD_CLOEXEC, fd_flags & FD_CLOEXEC);
+
+  constexpr size_t kBufSize = 4096;
+  char buf[kBufSize] = {};
+
+  // Reading from the read side of an empty pipe should return immediately.
+  ssize_t rv = read(read_end.get(), buf, sizeof(buf));
+  EXPECT_EQ(-1, rv);
+  EXPECT_EQ(EWOULDBLOCK, errno);
+
+  // Filling the write side of the pipe should eventually return EWOULDBLOCK.
+  while (true) {
+    ssize_t rv = write(write_end.get(), buf, kBufSize);
+    if (rv == -1) {
+      ASSERT_EQ(EWOULDBLOCK, errno);
+      break;
+    }
+    ASSERT_GT(rv, 0);
+  }
+}
+
+TEST(Pipe2, Cloexec) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe2(fds, O_CLOEXEC));
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  int status_flags = fcntl(read_end.get(), F_GETFL);
+  int fd_flags = fcntl(read_end.get(), F_GETFD);
+
+  EXPECT_NE(O_NONBLOCK, status_flags & O_NONBLOCK);
+  EXPECT_EQ(FD_CLOEXEC, fd_flags & FD_CLOEXEC);
+
+  status_flags = fcntl(write_end.get(), F_GETFL);
+  fd_flags = fcntl(write_end.get(), F_GETFD);
+
+  EXPECT_NE(O_NONBLOCK, status_flags & O_NONBLOCK);
+  EXPECT_EQ(FD_CLOEXEC, fd_flags & FD_CLOEXEC);
+}
+
+#endif  // defined(__Fuchsia__) || defined(__linux__)

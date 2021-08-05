@@ -1327,13 +1327,28 @@ int futimens(int fd, const struct timespec times[2]) {
   return STATUS(zx_utimens(io, times, 0));
 }
 
-static int socketpair_create(int fd[2], uint32_t options) {
+static int socketpair_create(int fd[2], uint32_t options, int flags) {
+  constexpr int allowed_flags = O_NONBLOCK | O_CLOEXEC;
+  if (flags & ~allowed_flags) {
+    return ERRNO(EINVAL);
+  }
+
   zx::status pair = fdio_internal::zxio::create_pipe_pair(options);
   if (pair.is_error()) {
     return ERROR(pair.status_value());
   }
   auto [left, right] = pair.value();
   std::array<fdio_ptr, 2> ios = {left, right};
+
+  if (flags & O_NONBLOCK) {
+    left->ioflag() |= IOFLAG_NONBLOCK;
+    right->ioflag() |= IOFLAG_NONBLOCK;
+  }
+
+  if (flags & O_CLOEXEC) {
+    left->ioflag() |= IOFLAG_CLOEXEC;
+    right->ioflag() |= IOFLAG_CLOEXEC;
+  }
 
   size_t n = 0;
 
@@ -1351,14 +1366,7 @@ static int socketpair_create(int fd[2], uint32_t options) {
 }
 
 __EXPORT
-int pipe2(int pipefd[2], int flags) {
-  const int allowed_flags = O_NONBLOCK | O_CLOEXEC;
-  if (flags & ~allowed_flags) {
-    return ERRNO(EINVAL);
-  }
-
-  return socketpair_create(pipefd, 0);
-}
+int pipe2(int pipefd[2], int flags) { return socketpair_create(pipefd, 0, flags); }
 
 __EXPORT
 int pipe(int pipefd[2]) { return pipe2(pipefd, 0); }
@@ -1387,7 +1395,7 @@ int socketpair(int domain, int type, int protocol, int fd[2]) {
     return -1;
   }
 
-  return socketpair_create(fd, options);
+  return socketpair_create(fd, options, 0);
 }
 
 __EXPORT
