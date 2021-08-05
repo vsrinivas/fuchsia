@@ -23,6 +23,7 @@ pub struct ExtFilesystem {
 }
 impl FileSystemOps for Arc<ExtFilesystem> {}
 
+#[derive(Clone)]
 struct ExtNode {
     fs: Weak<ExtFilesystem>,
     inode_num: u32,
@@ -58,7 +59,7 @@ struct ExtDirectory {
 
 impl FsNodeOps for ExtDirectory {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(ExtDirFileObject))
+        Ok(Box::new(ExtDirFileObject { inner: self.inner.clone() }))
     }
 
     fn lookup(&self, _node: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
@@ -132,21 +133,88 @@ impl FsNodeOps for ExtSymlink {
     }
 }
 
-struct ExtDirFileObject;
+struct ExtDirFileObject {
+    inner: ExtNode,
+}
 
 impl FileOps for ExtDirFileObject {
     fd_impl_directory!();
 
-    // TODO(tbodt): Implement ext directory reading.
-
     fn seek(
         &self,
-        _file: &FileObject,
+        file: &FileObject,
         _task: &Task,
-        _offset: off_t,
-        _whence: SeekOrigin,
+        offset: off_t,
+        whence: SeekOrigin,
     ) -> Result<off_t, Errno> {
-        Err(ENOSYS)
+        let mut current_offset = file.offset.lock();
+        let new_offset = match whence {
+            SeekOrigin::SET => Some(offset),
+            SeekOrigin::CUR => (*current_offset).checked_add(offset),
+            SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
+        }
+        .ok_or(EINVAL)?;
+
+        if new_offset < 0 {
+            return Err(EINVAL);
+        }
+
+        *current_offset = new_offset;
+        Ok(*current_offset)
+    }
+
+    fn readdir(
+        &self,
+        file: &FileObject,
+        _task: &Task,
+        sink: &mut dyn DirentSink,
+    ) -> Result<(), Errno> {
+        let mut offset = file.offset.lock();
+        if *offset == 0 {
+            sink.add(file.node().info().inode_num, 1, DirectoryEntryType::DIR, b".")?;
+            *offset += 1;
+        }
+        if *offset == 1 {
+            sink.add(
+                file.node().parent().unwrap_or_else(|| file.node()).info().inode_num,
+                2,
+                DirectoryEntryType::DIR,
+                b"..",
+            )?;
+            *offset += 1;
+        }
+
+        let dir_entries =
+            self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
+
+        let start_index = (*offset - 2) as usize;
+        if start_index >= dir_entries.len() {
+            return Ok(());
+        }
+
+        for entry in dir_entries[start_index..].iter() {
+            let next_offset = *offset + 1;
+            let inode_num = entry.e2d_ino.into();
+            let entry_type = directory_entry_type(
+                ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?,
+            );
+            sink.add(inode_num, next_offset, entry_type, entry.name_bytes())?;
+            *offset = next_offset;
+        }
+        Ok(())
+    }
+}
+
+fn directory_entry_type(entry_type: ext_structs::EntryType) -> DirectoryEntryType {
+    match entry_type {
+        ext_structs::EntryType::Unknown => DirectoryEntryType::UNKNOWN,
+        ext_structs::EntryType::RegularFile => DirectoryEntryType::REG,
+        ext_structs::EntryType::Directory => DirectoryEntryType::DIR,
+        ext_structs::EntryType::CharacterDevice => DirectoryEntryType::CHR,
+        ext_structs::EntryType::BlockDevice => DirectoryEntryType::BLK,
+        ext_structs::EntryType::FIFO => DirectoryEntryType::FIFO,
+        ext_structs::EntryType::Socket => DirectoryEntryType::SOCK,
+        ext_structs::EntryType::SymLink => DirectoryEntryType::LNK,
     }
 }
 

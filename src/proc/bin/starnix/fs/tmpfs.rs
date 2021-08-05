@@ -166,7 +166,6 @@ impl FileOps for DirectoryFileObject {
         let mut offset = file.offset.lock();
         let mut readdir_position = self.readdir_position.lock();
         if *offset == 0 {
-            *readdir_position = Bound::Unbounded;
             sink.add(file.node().info().inode_num, 1, DirectoryEntryType::DIR, b".")?;
             *offset += 1;
         }
