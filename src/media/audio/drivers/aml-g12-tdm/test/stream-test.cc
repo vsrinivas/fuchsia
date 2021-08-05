@@ -1657,6 +1657,34 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     stream->DdkRelease();
   }
 
+  void TestAttributes() {
+    metadata::AmlConfig metadata = GetDefaultMetadata();
+    metadata.ring_buffer.frequency_ranges[0].min_frequency = 40;
+    metadata.ring_buffer.frequency_ranges[0].max_frequency = 200;
+    metadata.ring_buffer.frequency_ranges[1].min_frequency = 200;
+    metadata.ring_buffer.frequency_ranges[1].max_frequency = 20'000;
+    ddk_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+    ddk::GpioProtocolClient unused_gpio;
+    auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
+    auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::Device>());
+    fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap.GetChannel();
+    ASSERT_EQ(ch.status(), ZX_OK);
+    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
+
+    // Check channels attributes.
+    auto supported = client.GetSupportedFormats();
+    ASSERT_OK(supported.status());
+
+    auto& attributes =
+        supported->supported_formats[0].pcm_supported_formats2().channel_sets()[0].attributes();
+    ASSERT_EQ(attributes.count(), 2);
+    ASSERT_EQ(attributes[0].min_frequency(), 40);
+    ASSERT_EQ(attributes[0].max_frequency(), 200);
+    ASSERT_EQ(attributes[1].min_frequency(), 200);
+    ASSERT_EQ(attributes[1].max_frequency(), 20'000);
+  }
+
   FakeMmio mmio_;
   fake_pdev::FakePDev pdev_;
   fake_ddk::Bind ddk_;
@@ -1670,6 +1698,8 @@ TEST_F(AmlG12TdmTest, RingBufferSize3) { TestRingBufferSize(3, 1, 4); }  // Roun
 TEST_F(AmlG12TdmTest, RingBufferSize4) { TestRingBufferSize(3, 3, 4); }  // Rounded to both.
 TEST_F(AmlG12TdmTest, RingBufferSize5) { TestRingBufferSize(8, 1, 1); }  // Rounded to frame size.
 TEST_F(AmlG12TdmTest, RingBufferSize6) { TestRingBufferSize(8, 3, 3); }  // Rounded to frame size.
+
+TEST_F(AmlG12TdmTest, Attributes) { TestAttributes(); }
 
 TEST_F(AmlG12TdmTest, Rate) {
   uint32_t mclk_ctrl = 0;
