@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _,
+    anyhow::{anyhow, Context as _},
     fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
@@ -33,7 +33,9 @@ use {
     },
     thiserror::Error,
     vfs::directory::{
-        entry::DirectoryEntry as _, helper::DirectlyMutable as _,
+        entry::DirectoryEntry,
+        entry_container::{AsyncGetEntry, Directory},
+        helper::DirectlyMutable as _,
         mutable::simple::Simple as SimpleMutableDir,
     },
 };
@@ -451,77 +453,103 @@ impl ManagedRealm {
                     // ClientEnd::into_proxy should only return an Err when there is no executor, so
                     // this is not expected to ever cause a panic.
                     let device = device.into_proxy().expect("failed to get device proxy");
-                    let path_clone = path.clone();
-                    // TODO(https://fxbug.dev/76468): if `path` contains separators, for example
-                    // "class/ethernet/test_device", create the necessary intermediary directories
-                    // accordingly.
-                    let response = devfs.add_entry(
-                        &path,
-                        vfs::service::endpoint(
-                            move |_: vfs::execution_scope::ExecutionScope, channel| {
-                                let () = device
-                                    .clone()
-                                    .serve_device(channel.into_zx_channel())
-                                    .unwrap_or_else(|e| {
-                                        error!(
-                                            "failed to serve device on path {}: {:?}",
-                                            path_clone, e
-                                        )
-                                    });
-                            },
-                        ),
-                    );
-                    match response {
-                        Ok(()) => info!("adding virtual device at path '{}/{}'", DEVFS_PATH, path),
-                        Err(e) => {
-                            if e == zx::Status::ALREADY_EXISTS {
-                                warn!(
-                                    "cannot add device at path '{}/{}': path is already in use",
-                                    DEVFS_PATH, path
-                                )
-                            } else {
-                                error!(
-                                    "unexpected error adding entry at path '{}/{}': {}",
-                                    DEVFS_PATH, path, e
-                                )
+                    let devfs = devfs.clone();
+                    let response = (|| async move {
+                        let (dir, device_name) =
+                            recurse_into_dir(devfs, &std::path::Path::new(&path)).await.map_err(
+                                |e| {
+                                    error!("failed to open or create path '{}': {}", path, e);
+                                    zx::Status::INVALID_ARGS
+                                },
+                            )?;
+                        let path_clone = path.clone();
+                        let response = dir.add_entry(
+                            device_name,
+                            vfs::service::endpoint(
+                                move |_: vfs::execution_scope::ExecutionScope, channel| {
+                                    let () = device
+                                        .clone()
+                                        .serve_device(channel.into_zx_channel())
+                                        .unwrap_or_else(|e| {
+                                            error!(
+                                                "failed to serve device on path {}: {}",
+                                                path_clone, e
+                                            )
+                                        });
+                                },
+                            ),
+                        );
+                        match response {
+                            Ok(()) => {
+                                info!("adding virtual device at path '{}/{}'", DEVFS_PATH, path)
+                            }
+                            Err(e) => {
+                                if e == zx::Status::ALREADY_EXISTS {
+                                    warn!(
+                                        "cannot add device at path '{}/{}': path is already in use",
+                                        DEVFS_PATH, path
+                                    )
+                                } else {
+                                    error!(
+                                        "unexpected error adding entry at path '{}/{}': {}",
+                                        DEVFS_PATH, path, e
+                                    )
+                                }
                             }
                         }
-                    }
+                        response
+                    })()
+                    .await;
                     let () = responder
                         .send(&mut response.map_err(zx::Status::into_raw))
                         .context("responding to AddDevice request")?;
                 }
                 ManagedRealmRequest::RemoveDevice { path, responder } => {
-                    let response = match devfs.remove_entry(&path, false) {
-                        Ok(entry) => {
-                            if let Some(entry) = entry {
-                                let _: Arc<dyn vfs::directory::entry::DirectoryEntry> = entry;
-                                info!("removing virtual device at path '{}/{}'", DEVFS_PATH, path);
-                                Ok(())
-                            } else {
-                                warn!(
-                                    "cannot remove device at path '{}/{}': path is not currently \
-                                     bound to a device",
-                                    DEVFS_PATH, path,
-                                );
-                                Err(zx::Status::NOT_FOUND)
+                    let devfs = devfs.clone();
+                    let response = (|| async move {
+                        let (dir, device_name) =
+                            recurse_into_dir(devfs, &std::path::Path::new(&path)).await.map_err(
+                                |e| {
+                                    error!("failed to open or create path '{}': {}", path, e);
+                                    zx::Status::INVALID_ARGS
+                                },
+                            )?;
+                        let response = match dir.remove_entry(device_name, false) {
+                            Ok(entry) => {
+                                if let Some(entry) = entry {
+                                    let _: Arc<dyn vfs::directory::entry::DirectoryEntry> = entry;
+                                    info!(
+                                        "removing virtual device at path '{}/{}'",
+                                        DEVFS_PATH, path
+                                    );
+                                    Ok(())
+                                } else {
+                                    warn!(
+                                        "cannot remove device at path '{}/{}': path is not \
+                                        currently bound to a device",
+                                        DEVFS_PATH, path,
+                                    );
+                                    Err(zx::Status::NOT_FOUND)
+                                }
                             }
-                        }
-                        Err(e) => {
-                            error!(
-                                "error removing device at path '{}/{}': {}",
-                                DEVFS_PATH, path, e
-                            );
-                            Err(e)
-                        }
-                    };
+                            Err(e) => {
+                                error!(
+                                    "error removing device at path '{}/{}': {}",
+                                    DEVFS_PATH, path, e
+                                );
+                                Err(e)
+                            }
+                        };
+                        response
+                    })()
+                    .await;
                     let () = responder
                         .send(&mut response.map_err(zx::Status::into_raw))
                         .context("responding to RemoveDevice request")?;
                 }
                 ManagedRealmRequest::StopChildComponent { child_name, responder } => {
                     let realm_ref = &realm;
-                    let stop_child = || async move {
+                    let response = (|| async move {
                         let lifecycle =
                             fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
                                 fsys2::LifecycleControllerMarker,
@@ -571,8 +599,8 @@ impl ManagedRealm {
                                 }
                             })?;
                         Ok(())
-                    };
-                    let response = stop_child().await;
+                    })()
+                    .await;
                     let () = responder
                         .send(&mut response.map_err(zx::Status::into_raw))
                         .context("responding to StopChildComponent request")?;
@@ -585,6 +613,60 @@ impl ManagedRealm {
 
 fn moniker(realm: &fuchsia_component_test::RealmInstance) -> String {
     format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name())
+}
+
+async fn recurse_into_dir<'a>(
+    root: Arc<SimpleMutableDir>,
+    path: &'a std::path::Path,
+) -> Result<(Arc<SimpleMutableDir>, &'a str)> {
+    async fn get_entry(
+        dir: Arc<impl Directory>,
+        entry: &str,
+    ) -> Result<Arc<dyn DirectoryEntry>, zx::Status> {
+        match dir.get_entry(entry) {
+            AsyncGetEntry::Immediate(result) => result,
+            AsyncGetEntry::Future(future) => future.await,
+        }
+    }
+
+    let file_name = path
+        .file_name()
+        .context("path does not end in a normal file or directory name")?
+        .to_str()
+        .context("invalid file name")?;
+    let parent = path.parent().context("path terminates in a root")?;
+    let root = futures::stream::iter(parent)
+        .map(Ok)
+        .try_fold(root, |root, component| async move {
+            let entry = component.to_str().context("invalid path component")?;
+            // Get a handle to the entry, and create it if it doesn't already exist.
+            let entry = match get_entry(root.clone(), entry).await {
+                Ok(entry) => entry,
+                Err(status) => match status {
+                    zx::Status::NOT_FOUND => {
+                        let () = root
+                            .add_entry(entry, vfs::directory::mutable::simple::simple())
+                            .context("failed to add directory entry")?;
+                        get_entry(root, entry).await.context("failed to get directory entry")?
+                    }
+                    status => {
+                        return Err(anyhow!(
+                            "got unexpected error on get entry '{}': expected {}, got {}",
+                            entry,
+                            zx::Status::NOT_FOUND,
+                            status,
+                        ));
+                    }
+                },
+            };
+            // Downcast the entry to a directory so that we can perform directory operations on it.
+            Ok(entry
+                .into_any()
+                .downcast::<SimpleMutableDir>()
+                .expect("could not downcast entry to a directory"))
+        })
+        .await?;
+    Ok((root, file_name))
 }
 
 fn route_devfs_to_component(
@@ -653,7 +735,7 @@ async fn run_netemul_services(
 
 fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
     let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("create directory marker")?;
+        .context("create directory proxy")?;
     let dir = vfs::directory::mutable::simple::simple();
     let () = dir.clone().open(
         vfs::execution_scope::ExecutionScope::new(),
@@ -1348,7 +1430,7 @@ mod tests {
 
         // ===================== Capability::NetemulDevfs =====================
         let (devfs, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory marker");
+            .expect("create directory proxy");
         let () = counter
             .connect_to_protocol_at(DEVFS_PATH, server_end.into_channel())
             .expect("failed to connect to devfs through counter");
@@ -1843,7 +1925,7 @@ mod tests {
 
     async fn get_devfs_watcher(realm: &fnetemul::ManagedRealmProxy) -> fvfs_watcher::Watcher {
         let (devfs, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory marker");
+            .expect("create directory proxy");
         let () = realm.get_devfs(server).expect("calling get devfs");
         fvfs_watcher::Watcher::new(devfs).await.expect("watcher creation")
     }
@@ -1851,7 +1933,7 @@ mod tests {
     async fn wait_for_event_on_path(
         watcher: &mut fvfs_watcher::Watcher,
         event: fvfs_watcher::WatchEvent,
-        path: std::path::PathBuf,
+        path: &std::path::Path,
     ) {
         let () = watcher
             .try_filter_map(|fvfs_watcher::WatchMessage { event: actual, filename }| {
@@ -1912,7 +1994,7 @@ mod tests {
             let () = wait_for_event_on_path(
                 &mut watcher,
                 fvfs_watcher::WatchEvent::ADD_FILE,
-                std::path::PathBuf::from(&name),
+                &std::path::Path::new(&name),
             )
             .await;
             assert_eq!(
@@ -1953,7 +2035,7 @@ mod tests {
             let () = wait_for_event_on_path(
                 &mut watcher,
                 fvfs_watcher::WatchEvent::REMOVE_FILE,
-                std::path::PathBuf::from(&name),
+                &std::path::Path::new(&name),
             )
             .await;
             assert_eq!(
@@ -2008,13 +2090,13 @@ mod tests {
         let () = wait_for_event_on_path(
             &mut watcher_a,
             fvfs_watcher::WatchEvent::ADD_FILE,
-            std::path::PathBuf::from(TEST_DEVICE_NAME),
+            &std::path::Path::new(TEST_DEVICE_NAME),
         )
         .await;
         // Expect not to see a matching device in `realm_b`'s devfs.
         let devfs_b = {
             let (devfs, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-                .expect("create directory marker");
+                .expect("create directory proxy");
             let () = realm_b.get_devfs(server).expect("calling get devfs");
             devfs
         };
@@ -2148,11 +2230,18 @@ mod tests {
         );
         let counter_storage = connect_to_counter(&realm, COUNTER_A_PROTOCOL_NAME);
         let counter_without_storage = connect_to_counter(&realm, COUNTER_B_PROTOCOL_NAME);
-        assert_eq!(counter_storage.open_storage_at(DATA_PATH).await.unwrap(), Ok(()));
-        assert_eq!(
-            counter_without_storage.open_storage_at(DATA_PATH).await.unwrap(),
-            Err(fuchsia_zircon::Status::NOT_FOUND.into_raw())
-        )
+        let () = counter_storage
+            .open_storage_at(DATA_PATH)
+            .await
+            .expect("calling open storage at")
+            .expect("failed to open storage");
+        let err = counter_without_storage
+            .open_storage_at(DATA_PATH)
+            .await
+            .expect("calling open storage at")
+            .map_err(zx::Status::from_raw)
+            .expect_err("open storage on counter without storage should fail");
+        assert_eq!(err, zx::Status::NOT_FOUND);
     }
 
     #[fixture(with_sandbox)]
@@ -2166,20 +2255,20 @@ mod tests {
             },
         );
         let counter = realm.connect_to_protocol::<CounterMarker>();
-        assert_eq!(counter.increment().await.unwrap(), 1);
+        assert_eq!(counter.increment().await.expect("failed to increment counter"), 1);
         let TestRealm { realm } = realm;
-        assert_eq!(
-            realm
-                .stop_child_component(COUNTER_COMPONENT_NAME)
-                .await
-                .expect("stop child component failed")
-                .map_err(fuchsia_zircon::Status::from_raw),
-            Ok(())
-        );
+        let () = realm
+            .stop_child_component(COUNTER_COMPONENT_NAME)
+            .await
+            .expect("calling stop child component")
+            .map_err(zx::Status::from_raw)
+            .expect("stop child component failed");
+        let err =
+            counter.increment().await.expect_err("increment call on stopped child should fail");
         matches::assert_matches!(
-            counter.increment().await,
-            Err(fidl::Error::ClientChannelClosed { status, protocol_name })
-                if status == fuchsia_zircon::Status::PEER_CLOSED &&
+            err,
+            fidl::Error::ClientChannelClosed { status, protocol_name }
+                if status == zx::Status::PEER_CLOSED &&
                     protocol_name == CounterMarker::PROTOCOL_NAME
         );
     }
@@ -2189,14 +2278,13 @@ mod tests {
     async fn stop_child_component_without_child(sandbox: fnetemul::SandboxProxy) {
         let TestRealm { realm } =
             TestRealm::new(&sandbox, fnetemul::RealmOptions { ..fnetemul::RealmOptions::EMPTY });
-        assert_eq!(
-            realm
-                .stop_child_component(COUNTER_COMPONENT_NAME)
-                .await
-                .expect("stop child component failed")
-                .map_err(fuchsia_zircon::Status::from_raw),
-            Err(fuchsia_zircon::Status::NOT_FOUND)
-        );
+        let err = realm
+            .stop_child_component(COUNTER_COMPONENT_NAME)
+            .await
+            .expect("calling stop child component")
+            .map_err(zx::Status::from_raw)
+            .expect_err("stop child component without child should fail");
+        assert_eq!(err, zx::Status::NOT_FOUND);
     }
 
     #[fixture(with_sandbox)]
@@ -2204,13 +2292,114 @@ mod tests {
     async fn stop_child_component_with_invalid_component_name(sandbox: fnetemul::SandboxProxy) {
         let TestRealm { realm } =
             TestRealm::new(&sandbox, fnetemul::RealmOptions { ..fnetemul::RealmOptions::EMPTY });
-        assert_eq!(
-            realm
-                .stop_child_component("com/.\\/\\.ponent")
-                .await
-                .expect("stop child component failed")
-                .map_err(fuchsia_zircon::Status::from_raw),
-            Err(fuchsia_zircon::Status::INVALID_ARGS)
+        let err = realm
+            .stop_child_component("com/.\\/\\.ponent")
+            .await
+            .expect("calling stop child component")
+            .map_err(zx::Status::from_raw)
+            .expect_err("stop child component with invalid component name should fail");
+        assert_eq!(err, zx::Status::INVALID_ARGS);
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn devfs_intermediate_directories(sandbox: fnetemul::SandboxProxy) {
+        let TestRealm { realm } = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
         );
+        const CLASS_DIR: &str = "class";
+        const ETHERNET_DIR: &str = "ethernet";
+        const TEST_DEVICE_NAME: &str = "ep0";
+        let ethernet_path = format!("{}/{}", CLASS_DIR, ETHERNET_DIR);
+        let test_device_path = format!("{}/{}/{}", CLASS_DIR, ETHERNET_DIR, TEST_DEVICE_NAME);
+        let endpoint = create_endpoint(
+            &sandbox,
+            TEST_DEVICE_NAME,
+            fnetemul_network::EndpointConfig {
+                mtu: 1500,
+                mac: None,
+                backing: fnetemul_network::EndpointBacking::Ethertap,
+            },
+        )
+        .await;
+
+        let (devfs, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
+        let () = realm.get_devfs(server_end).expect("calling get devfs");
+        let mut dev_watcher =
+            fvfs_watcher::Watcher::new(Clone::clone(&devfs)).await.expect("watcher creation");
+        let () = realm
+            .add_device(&test_device_path, get_device_proxy(&endpoint))
+            .await
+            .expect("calling add device")
+            .map_err(zx::Status::from_raw)
+            .expect("error adding device");
+        let () = wait_for_event_on_path(
+            &mut dev_watcher,
+            fvfs_watcher::WatchEvent::ADD_FILE,
+            &std::path::Path::new(CLASS_DIR),
+        )
+        .await;
+
+        let (ethernet, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
+        let () = devfs
+            .open(
+                fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                &ethernet_path,
+                server_end.into_channel().into(),
+            )
+            .expect("calling open");
+        let mut ethernet_watcher =
+            fvfs_watcher::Watcher::new(ethernet).await.expect("watcher creation");
+        let () = wait_for_event_on_path(
+            &mut ethernet_watcher,
+            fvfs_watcher::WatchEvent::EXISTING,
+            &std::path::Path::new(TEST_DEVICE_NAME),
+        )
+        .await;
+        let () = realm
+            .remove_device(&test_device_path)
+            .await
+            .expect("calling remove device")
+            .map_err(zx::Status::from_raw)
+            .expect("error removing device");
+        let () = wait_for_event_on_path(
+            &mut ethernet_watcher,
+            fvfs_watcher::WatchEvent::REMOVE_FILE,
+            &std::path::Path::new(TEST_DEVICE_NAME),
+        )
+        .await;
+    }
+
+    #[fixture(with_sandbox)]
+    // TODO(https://fxbug.dev/74868): when we can allowlist particular ERROR logs in a test, we can
+    // use #[fuchsia::test] which initializes syslog.
+    #[fasync::run_singlethreaded(test)]
+    async fn add_remove_device_invalid_path(sandbox: fnetemul::SandboxProxy) {
+        let TestRealm { realm } = TestRealm::new(&sandbox, fnetemul::RealmOptions::EMPTY);
+        const INVALID_FILE_PATH: &str = "class/ethernet/..";
+        let (device_proxy, _server) =
+            fidl::endpoints::create_endpoints::<fnetemul_network::DeviceProxy_Marker>()
+                .expect("create device proxy endpoints");
+        let err = realm
+            .add_device(INVALID_FILE_PATH, device_proxy)
+            .await
+            .expect("calling add device")
+            .map_err(zx::Status::from_raw)
+            .expect_err("add device with invalid path should fail");
+        assert_eq!(err, zx::Status::INVALID_ARGS);
+        let err = realm
+            .remove_device(INVALID_FILE_PATH)
+            .await
+            .expect("calling remove device")
+            .map_err(zx::Status::from_raw)
+            .expect_err("remove device with invalid path should fail");
+        assert_eq!(err, zx::Status::INVALID_ARGS);
     }
 }
