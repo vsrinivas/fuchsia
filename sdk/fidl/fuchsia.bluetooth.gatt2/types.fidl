@@ -209,20 +209,33 @@ type ReadOptions = flexible union {
     2: long_read LongReadOptions;
 };
 
+/// Represents the supported write modes for writing characteristics &
+/// descriptors to the server.
+type WriteMode = flexible enum {
+    /// In `DEFAULT` mode, wait for a response from the server before returning
+    /// and do not verify the echo response.
+    DEFAULT = 1;
+    /// In `RELIABLE` mode, every value blob is verified against an echo
+    /// response from the server. The procedure is aborted if a value blob has
+    /// not been reliably delivered to the peer.
+    RELIABLE = 2;
+    /// In `WITHOUT_RESPONSE` mode, delivery will not be confirmed before
+    /// returning. Writing without a response is only supported for short
+    /// characteristics with the `WRITE_WITHOUT_RESPONSE` property. The value
+    /// must fit into a single message. It is guaranteed that at least 20 bytes
+    /// will fit into a single message. If the value does not fit, a `FAILURE`
+    /// error will be produced. The value will be written at offset 0.
+    WITHOUT_RESPONSE = 3;
+};
+
 /// Represents the supported options to write a characteristic value to a server.
 type WriteOptions = table {
-    /// If true, wait for acknowledgement from the peer before returning.
-    ///
-    /// If false, delivery will not be confirmed before returning. Writing
-    /// without a response is only supported for short characteristics with the
-    /// `WRITE_WITHOUT_RESPONSE` property. If the written value can't
-    /// fit into a single message, a `FAILURE` error will be returned. To ensure
-    /// that the value fits, it must be at most 20 bytes. `offset` must be 0.
-    ///
+    /// The mode of the write operation.
     /// Optional.
-    /// Default: true
-    1: with_response bool;
+    /// Default: [`WriteMode.DEFAULT`]
+    1: write_mode WriteMode;
     /// Request a write starting at the byte indicated.
+    /// Must be missing or 0 if `write_mode` is [`WriteMode.WITHOUT_RESPONSE`].
     /// Optional.
     /// Default: 0
     2: offset uint16;

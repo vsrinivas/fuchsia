@@ -106,7 +106,11 @@ table/member fuchsia.bluetooth.gatt2/ServiceInfo.primary bool
 table/member fuchsia.bluetooth.gatt2/ServiceInfo.type fuchsia.bluetooth/Uuid
 table fuchsia.bluetooth.gatt2/ServiceInfo
 struct fuchsia.bluetooth.gatt2/ShortReadOptions
+enum/member fuchsia.bluetooth.gatt2/WriteMode.DEFAULT 1
+enum/member fuchsia.bluetooth.gatt2/WriteMode.RELIABLE 2
+enum/member fuchsia.bluetooth.gatt2/WriteMode.WITHOUT_RESPONSE 3
+flexible enum fuchsia.bluetooth.gatt2/WriteMode uint32
 table/member fuchsia.bluetooth.gatt2/WriteOptions.offset uint16
-table/member fuchsia.bluetooth.gatt2/WriteOptions.with_response bool
+table/member fuchsia.bluetooth.gatt2/WriteOptions.write_mode fuchsia.bluetooth.gatt2/WriteMode
 table fuchsia.bluetooth.gatt2/WriteOptions
 library fuchsia.bluetooth.gatt2
