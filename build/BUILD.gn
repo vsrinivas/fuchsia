@@ -40,40 +40,23 @@ group("non_hermetic_deps") {
   # refactors, such as moving a legacy target to a different directory.
   #
   # To regenerate:
-  # { fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/toolchain:host_x64)'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/dart:dartlang)'; } | sed 's|\([^:]*\):.*|"\1/*",|' | sort | uniq
+  # { fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps'; fx gn refs $(fx get-build-dir) '//build:non_hermetic_deps(//build/toolchain:host_x64)'; } | sed 's|\([^:]*\):.*|"\1/*",|' | sort | uniq
   visibility = [
     "//build/images/*",
-    "//build/images/zedboot/*",
+    "//build/images/assembly/*",
+    "//build/images/fuchsia/*",
+    "//build/images/guest/*",
+    "//build/images/recovery/*",
+    "//build/images/sizes/*",
     "//build/prebuilt/*",
-    "//build/python/*",
+    "//build/rust/*",
     "//scripts/sdk/gn/*",
-    "//src/cast/*",
-    "//src/chromium/*",
-    "//src/developer/system_monitor/lib/dockyard/*",
+    "//sdk/lib/zxio/*",
     "//src/graphics/lib/magma/tests/icd_strip/*",
     "//src/lib/assembly/vbmeta/*",
-    "//src/lib/fidl_codec/*",
-    "//src/virtualization/lib/grpc/*",
-    "//src/virtualization/lib/guest_interaction/*",
-    "//src/virtualization/packages/biscotti_guest/third_party/protos/*",
-    "//third_party/cobalt/*",
     "//third_party/crashpad/*",
-    "//third_party/grpc/*",
-    "//third_party/luci-go/*",
     "//third_party/mesa/src/intel/vulkan/*",
-    "//third_party/protobuf/*",
-    "//third_party/tink/proto/*",
-    "//tools/cargo-gnaw/tests/*",
-    "//tools/debug/covargs/api/third_party/codecoverage/*",
-    "//tools/femu-control/femu-grpc/*",
-    "//tools/fidlcat/lib/*",
-    "//tools/fvdl/e2e/*",
-    "//tools/integration/fint/*",
-    "//tools/symbolizer/*",
-    "//tools/virtual_device/proto/*",
     "//vendor/google/*",
-    "//vendor/third_party/widevine_cdm/*",
-    "//zircon/kernel/lib/version/*",
   ]
 
   # TODO(http://fxbug.dev/68780): Remove entry when extract_imported_symbols
