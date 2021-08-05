@@ -21,7 +21,7 @@ pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 
 pub mod fastboot;
 pub mod logger;
-mod onet;
-mod ssh;
+mod overnet;
 pub mod target;
+pub mod target_collection;
 pub mod zedboot;

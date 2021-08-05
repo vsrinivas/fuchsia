@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::ssh::build_ssh_command,
+    super::ssh::build_ssh_command,
     crate::target::Target,
     crate::RETRY_DELAY,
     anyhow::{anyhow, Context, Result},

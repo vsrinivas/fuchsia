@@ -20,8 +20,9 @@ use {
     ffx_daemon_target::fastboot::{spawn_fastboot_discovery, Fastboot},
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     ffx_daemon_target::target::{
-        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType, TargetCollection,
+        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType,
     },
+    ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
     fidl::endpoints::{
         ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, Proxy, RequestStream,
