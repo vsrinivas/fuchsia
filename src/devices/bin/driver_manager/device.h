@@ -568,6 +568,10 @@ class Device
     return device_controller_;
   }
 
+  fidl::WireSharedClient<fuchsia_device_manager::DeviceController>& device_controller() {
+    return device_controller_;
+  }
+
   const std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>>&
   coordinator_binding() const {
     return coordinator_binding_;

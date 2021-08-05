@@ -583,7 +583,7 @@ TEST_F(UnbindTestCase, SendUnbindFails) {
   // Make sending unbind requests to the child device fail.
   // On receiving an unbind request, the coordinator should fail the unbind task
   // and forcibly remove the device.
-  child_device->device->device_controller()->AsyncTeardown();
+  child_device->device->device_controller().AsyncTeardown();
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(parent_device->device));
@@ -609,7 +609,7 @@ TEST_F(UnbindTestCase, SendRemoveFails) {
   // Make sending unbind requests to the device fail.
   // On receiving a remove request, the coordinator should fail the remove task
   // and forcibly remove the device.
-  test_device->device->device_controller()->AsyncTeardown();
+  test_device->device->device_controller().AsyncTeardown();
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(test_device->device));
