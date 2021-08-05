@@ -25,7 +25,7 @@ namespace arch {
 // accessors for specific registers with the right layout types.
 
 // [arm/sysreg]/currentel: CurrentEL, Current Exception Level
-struct ArmCurrentEl : public SysRegBase<ArmCurrentEl> {
+struct ArmCurrentEl : public SysRegBase<ArmCurrentEl, uint64_t, hwreg::EnablePrinter> {
   DEF_FIELD(3, 2, el);
 };
 
@@ -343,6 +343,32 @@ ARCH_ARM64_SYSREG(ArmMairEl1, "mair_el1");
 
 struct ArmMairEl2 : public arch::SysRegDerived<ArmMairEl2, ArmMemoryAttrIndirectionRegister> {};
 ARCH_ARM64_SYSREG(ArmMairEl2, "mair_el2");
+
+// This state is accessed via multiple registers with different bit placements.
+// The three registers DAIF, DAIFSet, and DAIFClr are specified in:
+// [arm/sysreg]/currentel: DAIF, Interrupt Mask Bits
+struct ArmDaif : public SysRegBase<ArmDaif, uint64_t, hwreg::EnablePrinter> {
+  DEF_BIT(9, d);
+  DEF_BIT(8, a);
+  DEF_BIT(7, i);
+  DEF_BIT(6, f);
+};
+ARCH_ARM64_SYSREG(ArmDaif, "daif");
+
+// This is the bit layout used in DAIFSet and DAIFClr for the same bits that
+// can be read or modified with different placements via DAIF.  These two
+// pseudo-registers are accessed via a special MSR instruction form that takes
+// only a four-bit immediate value.  These registers can't really be used from
+// C++ through the normal mechanism, because their intrinsics only accept a
+// constant argument and any layers of inline function around the intrinsics
+// prevent the compiler from allowing a value to be passed down even if it's
+// all done as constexpr.
+struct ArmDaifSetClr : public SysRegBase<ArmDaifSetClr, uint64_t, hwreg::EnablePrinter> {
+  DEF_BIT(3, d);
+  DEF_BIT(2, a);
+  DEF_BIT(1, i);
+  DEF_BIT(0, f);
+};
 
 }  // namespace arch
 

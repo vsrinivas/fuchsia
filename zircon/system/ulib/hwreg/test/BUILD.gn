@@ -5,16 +5,7 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-group("test") {
-  testonly = true
-  deps = [
-    ":libhwreg",
-    ":libhwreg-i2c",
-  ]
-}
-
-test("libhwreg") {
-  output_name = "libhwreg-test"
+test("libhwreg-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "asm-test.cc",
@@ -22,20 +13,14 @@ test("libhwreg") {
     "indirect-test.cc",
   ]
   deps = [
-    "//sdk/lib/fdio",
-    "//src/devices/lib/mmio",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/hwreg-mock",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "..:hwreg",
+    "..:hwreg-mock",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
-test("libhwreg-i2c") {
-  output_name = "libhwreg-i2c-test"
+test("libhwreg-i2c-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "i2c-hwreg-test.cc" ]
   deps = [
@@ -59,6 +44,7 @@ group("tests") {
   # instead be reachable from //src:tests.
   deps = [
     ":libhwreg-i2c-test-pkg",
+    ":libhwreg-test($host_toolchain)",
     ":libhwreg-test-pkg",
     "asm:tests",
   ]
@@ -66,10 +52,10 @@ group("tests") {
 
 fuchsia_unittest_package("libhwreg-test-pkg") {
   package_name = "libhwreg-test"
-  deps = [ ":libhwreg" ]
+  deps = [ ":libhwreg-test" ]
 }
 
 fuchsia_unittest_package("libhwreg-i2c-test-pkg") {
   package_name = "libhwreg-i2c-test"
-  deps = [ ":libhwreg-i2c" ]
+  deps = [ ":libhwreg-i2c-test" ]
 }

@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/arch/arm64/feature-asm.h>
+#include <lib/arch/arm64/sysreg-asm.h>
 #include <lib/arch/asm.h>
 #include <lib/arch/ticks.h>
 #include <zircon/tls.h>
@@ -30,6 +30,28 @@
   mov x29, xzr
   mov x30, xzr
 
+  // Clear any incoming stack pointer so it can't be used accidentally
+  // before the proper stack is set up below.
+  mov sp, x29
+
+  // Mask all interrupts in case the boot loader left them on.
+  msr DAIFSet, #DAIFSETCLR_MASK
+
+  // Reset the exception vector base address registers in case the boot loader
+  // left an old table in place (which we might already be clobbering, and
+  // almost certainly will be violating the assumptions of).
+  mrs x16, CurrentEL
+  cmp x16, #CURRENT_EL_EL_FIELD(1)
+  beq .Lel1
+  cmp x16, #CURRENT_EL_EL_FIELD(2)
+  beq .Lel2
+.Lel3:
+  msr VBAR_EL3, xzr
+.Lel2:
+  msr VBAR_EL2, xzr
+.Lel1:
+  msr VBAR_EL1, xzr
+
   // Clear .bss.  Note this assumes it's aligned to 16, which is ensured
   // by BOOT_STACK_ALIGN (and other alignments in .bss) and the linker script.
   adr_global x9, _edata
@@ -42,7 +64,7 @@
   // Set up the stacks and the thread pointer area.
   tp .req x9
   adr_global tp, boot_thread_pointer
-  msr tpidr_el1, tp
+  msr TPIDR_EL1, tp
 
   // Stack guard canary value.
   boot_stack_guard .req x10

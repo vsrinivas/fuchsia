@@ -54,7 +54,7 @@ class AsmHeader {
             FieldMacro(prefix, name, bit_high_incl, bit_low);
           }
         });
-    RegisterMacros(prefix, T{}.rsvdz_mask(), ~T{}.fields_mask());
+    RegisterMacros(prefix, T{}.rsvdz_mask(), T{}.fields_mask(), ~T{}.fields_mask());
     return *this;
   }
 
@@ -77,7 +77,7 @@ class AsmHeader {
 
   void FieldMacro(std::string_view prefix, const char* name, uint32_t bit_high_incl,
                   uint32_t bit_low);
-  void RegisterMacros(std::string_view prefix, uint64_t rsvdz, uint64_t unkn);
+  void RegisterMacros(std::string_view prefix, uint64_t rsvdz, uint64_t known, uint64_t unknown);
 };
 
 }  // namespace hwreg

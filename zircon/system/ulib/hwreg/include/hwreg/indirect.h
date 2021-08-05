@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <zircon/assert.h>
-#include <zircon/threads.h>
+#include <zircon/compiler.h>
 
 #include <mutex>
 #include <type_traits>
@@ -17,9 +17,10 @@
 
 namespace hwreg {
 
-// IndirectIo is a replacement for RegisterMmio that sequences access to a common PCI device construct
-// where two registers, "index" and "data", are used to read and write a much larger store,
-// logically private_store[index] = data.
+// IndirectIo is a replacement for RegisterMmio that sequences access to a
+// common PCI device construct where two registers, "index" and "data", are
+// used to read and write a much larger store, logically private_store[index] =
+// data.
 //
 // Example usage from VGA:
 //
@@ -38,7 +39,8 @@ namespace hwreg {
 //   CrtcReg::Get(0x04).ReadFrom(&io).set_reg_value(0x55).WriteTo(&io);
 //   CrtcReg::Get(0x05).ReadFrom(&io).set_reg_value(0x81).WriteTo(&io);
 // }
-template <uint32_t index_offset, uint32_t data_offset, typename IndexType = uint8_t, typename RegisterIo = RegisterMmio>
+template <uint32_t index_offset, uint32_t data_offset, typename IndexType = uint8_t,
+          typename RegisterIo = RegisterMmio>
 class IndirectIo {
  public:
   explicit IndirectIo(RegisterIo io) : io_(std::move(io)) {}

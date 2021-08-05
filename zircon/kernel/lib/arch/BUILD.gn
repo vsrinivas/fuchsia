@@ -40,7 +40,7 @@ zx_library("arch") {
     # library need never realize it's distinct.
     deps += [ zircon_cpu ]
     public_deps += [
-      ":gen-arm64-feature-asm",
+      ":gen-arm64-sysreg-asm",
       ":gen-x86-msr-asm",
       "$zircon_cpu:headers",
     ]
@@ -54,9 +54,9 @@ hwreg_asm_header("gen-x86-msr-asm") {
   deps = [ ":arch" ]
 }
 
-hwreg_asm_header("gen-arm64-feature-asm") {
+hwreg_asm_header("gen-arm64-sysreg-asm") {
   visibility = [ ":*" ]
-  output_name = "lib/arch/arm64/feature-asm.h"
-  sources = [ "gen-arm64-feature-asm.cc" ]
+  output_name = "lib/arch/arm64/sysreg-asm.h"
+  sources = [ "gen-arm64-sysreg-asm.cc" ]
   deps = [ ":arch" ]
 }

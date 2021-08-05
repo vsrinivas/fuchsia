@@ -97,25 +97,40 @@ AsmHeader& AsmHeader::Macro(std::string_view name, uint64_t value) {
 
 void AsmHeader::FieldMacro(std::string_view prefix, const char* field_name, uint32_t bit_high_incl,
                            uint32_t bit_low) {
+  // Compose the name with the prefix and upcase.
   std::string name(prefix);
   name += field_name;
   for (auto& c : name) {
     c = static_cast<char>(std::toupper(c));
   }
+
+  // The macro under the field's unadorned name is its unshifted mask.
   Macro(name, internal::ComputeMask<uint64_t>(bit_high_incl - bit_low + 1) << bit_low);
+
   if (bit_high_incl == bit_low) {
     // Single bits also get a bit-number macro (rendered in decimal).
     Macro(name + "_BIT", std::to_string(bit_low));
+  } else {
+    // Larger fields get a pair of _SHIFT and _MASK macros too.
+    Macro(name + "_SHIFT", std::to_string(bit_low));
+    Macro(name + "_MASK", internal::ComputeMask<uint64_t>(bit_high_incl - bit_low + 1));
+
+    // A convenience function-like macro uses the shift and mask macros.
+    Macro(name + "_FIELD(x)", "(((x) & " + name + "_MASK) << " + name + "_SHIFT)");
   }
 }
 
-void AsmHeader::RegisterMacros(std::string_view prefix, uint64_t rsvdz, uint64_t unknown) {
+void AsmHeader::RegisterMacros(std::string_view prefix, uint64_t rsvdz, uint64_t known,
+                               uint64_t unknown) {
   std::string name(prefix);
   for (auto& c : name) {
     c = static_cast<char>(std::toupper(c));
   }
   if (rsvdz != 0) {
     Macro(name + "RSVDZ", rsvdz);
+  }
+  if (known != 0) {
+    Macro(name + "MASK", known);
   }
   if (unknown != 0) {
     Macro(name + "UNKNOWN", unknown);
