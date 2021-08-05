@@ -1,0 +1,39 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-repo-builder") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/tuf",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:lazy_static",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:matches",
+  ]
+
+  sources = [ "src/lib.rs" ]
+
+  inputs = [
+    "test_data/ed25519-1.pk8.der",
+    "test_data/ed25519-2.pk8.der",
+    "test_data/ed25519-3.pk8.der",
+    "test_data/ed25519-4.pk8.der",
+    "test_data/ed25519-5.pk8.der",
+    "test_data/ed25519-6.pk8.der",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":fuchsia-repo-builder_test($host_toolchain)" ]
+}
