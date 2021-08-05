@@ -6,7 +6,7 @@ use {
     crate::{input_actor::InputActor, session::Session, session_actor::SessionActor, Args},
     async_trait::async_trait,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_scenic as fscenic,
-    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_protocol},
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
@@ -33,10 +33,10 @@ impl ScenicEnvironment {
         let (scenic_exposed_dir, server_end) =
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         realm_svc
-            .bind_child(&mut child, server_end)
+            .open_exposed_dir(&mut child, server_end)
             .await
-            .expect("Could not send bind_child command")
-            .expect("bind_child command did not succeed");
+            .expect("Could not send open_exposed_dir command")
+            .expect("open_exposed_dir command did not succeed");
 
         Self { args, scenic_exposed_dir }
     }
