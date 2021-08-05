@@ -49,8 +49,12 @@ type RingBufferProperties = table {
     3: needs_cache_flush_or_invalidate bool;
 
     /// The driver's best estimate of the amount of time it takes the hardware to actually start
-    /// playback/capture after a `Start` command is completed as defined by the returned
-    /// `start_time`.
+    /// playback/capture after:
+    /// 1. A `Start` command is completed as defined by the returned `start_time`, or
+    /// 2. A channel is moved from the inactive to the active state using the `SetActiveChannels`
+    /// command and is completed as defined by the returned `set_time` making a channel active to
+    /// actually playback/capture some time after the same channel was made inactive by a previous
+    /// `SetActiveChannels` command.
     /// It may take some time for the hardware to get into fully operational mode, for example due
     /// a power state change or communication delays within the driver's multiple hardware entities
     /// as in a Bluetooth driver. This delay must be taken into account if not getting the initial
@@ -122,6 +126,8 @@ protocol RingBuffer {
     /// Start the ring buffer. The `start_time` value (in the CLOCK_MONOTONIC timeline) indicates
     /// when position began moving, starting at the beginning of the ring buffer.
     /// external_delay impact should not be incorporated into 'start_time'.
+    /// If `SetActiveChannels` is not called before `Start`, then by default all channels will be
+    /// active.
     Start() -> (struct {
         start_time zx.time;
     });
@@ -130,4 +136,37 @@ protocol RingBuffer {
     /// notifications will be sent until `Start` is called again.
     // TODO(fxbug.dev/39494): Add timestamp parameter.
     Stop() -> ();
+
+    /// Sets which channels are active via a bitmask.
+    /// The least significant bit corresponds to channel index 0.
+    /// Channels not set (bits are 0) in the bitmask are inactive.
+    /// Inactive channels indicate to the driver that it may turn off hardware associated with the
+    /// inactive channels. A subsequent `SetActiveChannels` setting an inactive channel to active
+    /// may incur in a `turn_on_delay` to actually restart playback/capture of the channels.
+    /// The total number of channels is the `number_of_channels` in `Format`, specifically in
+    /// `PcmFormat`, i.e. this bitmask has up to `number_of_channels` bits set (maximum 64).
+    /// Deactivating one, several, or all channels does not `Stop` the ring buffer.
+    /// `SetActiveChannels` does not change the ring buffer's behavior with regard to
+    /// `Start`/`Stop`, specifically position.  Once `Start` is called, a ring buffer's position
+    /// advances (and position notifications sent as needed) regardless of the number of active
+    /// channels, including if no channels are active. This means that the format in the
+    /// ring buffer is not changed.
+    /// By default all channels are active. Note that a ring buffer may be configured to only use
+    /// a subset of the channels via `PcmFormat`'s `channels_to_use_bitmask` which is independent
+    /// of this setting. Hence, if this ring buffer is only using a subset of channels per
+    /// `channels_to_use_bitmask`, activating via this bitmask won't override that setting.
+    /// If the driver does not support deactivating channels it must return `ZX_ERR_NOT_SUPPORTED`.
+    /// If the mask is incorrect, i.e. enables channels outside the number of bits
+    /// to use for a given `number_of_channels`, then the driver may return `ZX_ERR_INVALID_ARGS`.
+    /// The `set_time` value (in the CLOCK_MONOTONIC timeline) indicates when configuring
+    /// the hardware to activate or deactivate channels is completed. `set_time` does not include
+    /// the potential `turn_on_delay`, the driver does not delay the reply waiting for the
+    /// hardware to actually turn on, the driver replies with a `set_time` indicating when the
+    /// hardware configuration was completed.
+    /// For input channels, it is not required that the driver zero-out inactive channels.
+    SetActiveChannels(struct {
+        active_channels_bitmask uint64;
+    }) -> (struct {
+        set_time zx.time;
+    }) error zx.status;
 };

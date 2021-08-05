@@ -415,6 +415,9 @@ impl SoftPcmOutput {
             RingBufferRequest::WatchClockRecoveryPositionInfo { responder } => {
                 self.frame_vmo.lock().set_position_responder(responder);
             }
+            RingBufferRequest::SetActiveChannels { active_channels_bitmask: _, responder } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            }
         }
         Ok(())
     }
@@ -663,6 +666,15 @@ mod tests {
         assert!(result.is_ok());
 
         let _ring_buffer_properties = exec.run_until_stalled(&mut ring_buffer.get_properties());
+
+        let some_active_channels_mask = 0xc3u64;
+        let result =
+            exec.run_until_stalled(&mut ring_buffer.set_active_channels(some_active_channels_mask));
+        assert!(result.is_ready());
+        let _ = match result {
+            Poll::Ready(Ok(Err(e))) => assert_eq!(e, zx::Status::NOT_SUPPORTED.into_raw()),
+            x => panic!("Expected error reply to set_active_channels, got {:?}", x),
+        };
 
         let clock_recovery_notifications_per_ring = 10u32;
         let _ = exec.run_until_stalled(

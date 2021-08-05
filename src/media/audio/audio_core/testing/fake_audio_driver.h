@@ -85,6 +85,11 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
               fuchsia::hardware::audio::RingBuffer::GetVmoCallback callback) final;
   void Start(fuchsia::hardware::audio::RingBuffer::StartCallback callback) final;
   void Stop(fuchsia::hardware::audio::RingBuffer::StopCallback callback) final;
+  void SetActiveChannels(
+      uint64_t active_channels_bitmask,
+      fuchsia::hardware::audio::RingBuffer::SetActiveChannelsCallback callback) override {
+    callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+  }
 
   void PositionNotification();
 

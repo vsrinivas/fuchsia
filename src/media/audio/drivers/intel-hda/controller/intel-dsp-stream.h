@@ -58,6 +58,10 @@ class IntelDspStream : public codecs::IntelHDAStreamBase,
   void WatchClockRecoveryPositionInfo(
       WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+  void SetActiveChannels(SetActiveChannelsRequestView request,
+                         SetActiveChannelsCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
  private:
   friend class fbl::RefPtr<IntelDspStream>;

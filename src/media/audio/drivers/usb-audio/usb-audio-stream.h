@@ -193,6 +193,10 @@ class UsbAudioStream : public UsbAudioStreamBase,
                       StreamChannel::WatchPlugStateCompleter::Sync& completer);
   void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
                StreamChannel::SetGainCompleter::Sync& completer);
+  void SetActiveChannels(SetActiveChannelsRequestView request,
+                         SetActiveChannelsCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void DeactivateStreamChannelLocked(StreamChannel* channel) __TA_REQUIRES(lock_);
 

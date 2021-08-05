@@ -410,6 +410,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                       StreamChannel::WatchPlugStateCompleter::Sync& completer);
   void SetGain(audio_fidl::wire::GainState target_state,
                StreamChannel::SetGainCompleter::Sync& completer);
+  void SetActiveChannels(SetActiveChannelsRequestView request,
+                         SetActiveChannelsCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   void DeactivateStreamChannel(StreamChannel* channel) __TA_REQUIRES(domain_token(), channel_lock_);
 

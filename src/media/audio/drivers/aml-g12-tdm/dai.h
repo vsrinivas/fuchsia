@@ -68,6 +68,10 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
               GetVmoCallback callback) override;
   void Start(StartCallback callback) override;
   void Stop(StopCallback callback) override;
+  void SetActiveChannels(uint64_t active_channels_bitmask,
+                         SetActiveChannelsCallback callback) override {
+    callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
+  }
 
   zx_status_t InitBuffer(size_t size);
   void ProcessRingNotification();
