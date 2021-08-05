@@ -59,7 +59,9 @@ zx_status_t VirtualAudioStream::Init() {
 
   supported_formats_.reset();
   for (auto range : parent_->supported_formats_) {
-    supported_formats_.push_back(range);
+    SimpleAudioStream::SupportedFormat format = {};
+    format.range = range;
+    supported_formats_.push_back(std::move(format));
   }
 
   fifo_depth_ = parent_->fifo_depth_;

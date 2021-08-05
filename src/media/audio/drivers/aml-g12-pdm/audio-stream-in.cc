@@ -300,15 +300,15 @@ zx_status_t AudioStreamIn::AddFormats() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  audio_stream_format_range_t range = {};
-  range.min_channels = metadata_.number_of_channels;
-  range.max_channels = metadata_.number_of_channels;
-  range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  range.min_frames_per_second = kMinSampleRate;
-  range.max_frames_per_second = kMaxSampleRate;
-  range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+  SimpleAudioStream::SupportedFormat format = {};
+  format.range.min_channels = metadata_.number_of_channels;
+  format.range.max_channels = metadata_.number_of_channels;
+  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  format.range.min_frames_per_second = kMinSampleRate;
+  format.range.max_frames_per_second = kMaxSampleRate;
+  format.range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
-  supported_formats_.push_back(range);
+  supported_formats_.push_back(std::move(format));
 
   return ZX_OK;
 }
