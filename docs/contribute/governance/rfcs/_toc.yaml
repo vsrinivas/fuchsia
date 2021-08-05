@@ -251,3 +251,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0118_swd_policy_at_image_assembly_rfc.md
 - title: "RFC-0119: System-absolute paths considered harmful"
   path: /docs/contribute/governance/rfcs/0119_system_absolute_paths_considered_harmful.md
+- title: "RFC-0120: Standalone use of the FIDL wire format"
+  path: /docs/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format.md

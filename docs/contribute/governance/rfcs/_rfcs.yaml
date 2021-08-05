@@ -1548,3 +1548,16 @@
   reviewers: ['aaronwood@google.com', 'jsankey@google.com', 'jayzhuang@google.com', 'raggi@google.com', 'fangism@google.com', 'abarth@google.com', 'maruel@google.com']
   submitted: '2021-06-20'
   reviewed: '2021-070-28'
+
+- name: 'RFC-0120'
+  title: 'Standalone use of the FIDL wire format'
+  short_description: 'This RFC formalizes the requirements to use (i.e. encode and decode) the FIDL wire format absent of a transport. It also specifies a rubric on how bindings should expose this functionality.'
+  authors: ['yifeit@google.com']
+  file: '0120_standalone_use_of_fidl_wire_format.md'
+  area: ['FIDL']
+  issue: ['45252']
+  gerrit_change_id: ['551813']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'geb@google.com', 'mkember@google.com', 'tamird@google.com', 'surajmalhotra@google.com']
+  submitted: '2021-07-02'
+  reviewed: '2021-08-04'
