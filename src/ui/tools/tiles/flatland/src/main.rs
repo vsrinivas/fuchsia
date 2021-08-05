@@ -17,7 +17,7 @@ use fidl_fuchsia_ui_gfx::Vec3;
 use fuchsia_async as fasync;
 use fuchsia_component as component;
 use fuchsia_component::client::{connect_to_protocol, launch, App};
-use fuchsia_scenic::{flatland, ViewRefPair};
+use fuchsia_scenic::flatland;
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
     future,
@@ -165,16 +165,13 @@ impl Service {
         let id = self.next_id;
 
         let app = launch(&self.launcher, url.clone(), args)?;
-        let view_provider =
-            app.connect_to_protocol::<ui_app::TemporaryFlatlandViewProviderMarker>()?;
+        let view_provider = app.connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         let mut link_tokens = flatland::LinkTokenPair::new()?;
-        let mut view_ref_pair = ViewRefPair::new()?;
         view_provider
-            .create_view(
-                &mut link_tokens.view_creation_token,
-                &mut view_ref_pair.control_ref,
-                &mut view_ref_pair.view_ref,
-            )
+            .create_view2(ui_app::CreateView2Args {
+                view_creation_token: Some(link_tokens.view_creation_token),
+                ..ui_app::CreateView2Args::EMPTY
+            })
             .expect("fidl error");
 
         let mut transform_id = flatland::TransformId { value: id.into() };

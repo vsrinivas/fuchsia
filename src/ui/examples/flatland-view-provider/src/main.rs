@@ -11,7 +11,7 @@ use {
     fuchsia_framebuffer::{
         sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
     },
-    fuchsia_scenic::{flatland, BufferCollectionTokenPair},
+    fuchsia_scenic::{flatland, BufferCollectionTokenPair, ViewRefPair},
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{unbounded, UnboundedSender},
@@ -327,24 +327,29 @@ impl AppModel {
 }
 
 fn setup_fidl_services(sender: UnboundedSender<MessageInternal>) {
-    let view_provider_cb = move |stream: fapp::TemporaryFlatlandViewProviderRequestStream| {
+    let view_provider_cb = move |stream: fapp::ViewProviderRequestStream| {
         let sender = sender.clone();
         fasync::Task::local(
             stream
                 .try_for_each(move |req| {
                     match req {
-                        fapp::TemporaryFlatlandViewProviderRequest::CreateView {
-                            view_creation_token,
-                            view_ref_control,
-                            view_ref,
-                            control_handle: _,
-                        } => sender
-                            .unbounded_send(MessageInternal::CreateView(
-                                view_creation_token,
-                                view_ref_control,
-                                view_ref,
-                            ))
-                            .expect("failed to send MessageInternal."),
+                        fapp::ViewProviderRequest::CreateView2 { args, .. } => {
+                            let view_creation_token = args.view_creation_token.unwrap();
+                            // We do not get passed a view ref so create our own.
+                            let ViewRefPair { control_ref, view_ref } =
+                                ViewRefPair::new().expect("unable to create view ref pair");
+
+                            sender
+                                .unbounded_send(MessageInternal::CreateView(
+                                    view_creation_token,
+                                    control_ref,
+                                    view_ref,
+                                ))
+                                .expect("failed to send MessageInternal.");
+                        }
+                        unhandled_req => {
+                            warn!("Unhandled ViewProvider request: {:?}", unhandled_req);
+                        }
                     };
                     future::ok(())
                 })

@@ -62,17 +62,23 @@ protocol ViewProvider {
         view_ref_control fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
     });
+
+    /// Creates a new View under the control of the ViewProvider.
+    ///
+    /// The args are provided as a table, for forward compatibility.  See documentation on the
+    /// individual table fields.
+    // TODO(fxbug.dev/81959): use "resource table" syntax when it becomes available, thus getting
+    // rid of the need for CreateView2Args.  Hopefully this will be done by the time we want to
+    // rename CreateView2() to CreateView(), once the latter is deleted.
+    @transitional
+    CreateView2(resource struct {
+        args CreateView2Args;
+    });
 };
 
-// TODO(fxbug.dev/64653) This is a placeholder analogue to ViewProvider in the context of Flatland,
-// which will be replaced once we have agreed what we actually want it to look like.  For example:
-// should CreateView() return a value?  Should one of the args be a table, so that this can be
-// extended?
-@discoverable
-protocol TemporaryFlatlandViewProvider {
-    CreateView(resource struct {
-        view_creation_token fuchsia.ui.views.ViewCreationToken;
-        view_ref_control fuchsia.ui.views.ViewRefControl;
-        view_ref fuchsia.ui.views.ViewRef;
-    });
+// Args for ViewProvider.CreateView2(), see above.
+type CreateView2Args = resource table {
+    /// Non-optional.  This token can be provided to Flatland to attach the client's child view
+    /// to the parent's viewport.
+    1: view_creation_token fuchsia.ui.views.ViewCreationToken;
 };

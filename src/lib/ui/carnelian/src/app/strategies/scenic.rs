@@ -170,6 +170,12 @@ impl AppStrategy for ScenicAppStrategy {
                                 view_ref,
                                 ..
                             } => (token, view_ref_control, view_ref),
+
+                            ViewProviderRequest::CreateView2 { .. } => {
+                                // TODO(fxbug.dev/78617): CreateView2 indicates that Carnelian is to
+                                // be embedded as a child in a Flatland scene graph instead of Gfx.
+                                panic!("ViewProvider.CreateView2 not handled");
+                            }
                         };
                         let view_token = ViewToken { value: token };
                         sender
