@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::task::Waker,
-    log::info,
+    tracing::info,
 };
 
 use crate::driver::frames_from_duration;
@@ -286,12 +286,14 @@ impl FrameVmo {
 mod tests {
     use super::*;
 
+    use fixture::fixture;
     use fuchsia_zircon as zx;
 
     // Convenience choice because one byte = one frame.
     const TEST_FORMAT: AudioSampleFormat = AudioSampleFormat::Eight { unsigned: false };
     const TEST_CHANNELS: u16 = 1;
     const TEST_FPS: u32 = 48000;
+    const TEST_FRAMES: usize = TEST_FPS as usize / 2;
 
     // At 48kHz, each frame is 20833 and 1/3 nanoseconds. We add one nanosecond
     // because we always overestimate durations.
@@ -305,10 +307,16 @@ mod tests {
         vmo
     }
 
-    #[test]
-    fn test_duration_from_frames() {
-        let vmo = get_test_vmo(5);
+    fn with_test_vmo<F>(_name: &str, test: F)
+    where
+        F: FnOnce(FrameVmo) -> (),
+    {
+        test(get_test_vmo(TEST_FRAMES))
+    }
 
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_duration_from_frames(vmo: FrameVmo) {
         assert_eq!(ONE_FRAME_NANOS.nanos(), vmo.duration_from_frames(1));
         assert_eq!(TWO_FRAME_NANOS.nanos(), vmo.duration_from_frames(2));
         assert_eq!(THREE_FRAME_NANOS.nanos(), vmo.duration_from_frames(3));
@@ -318,10 +326,9 @@ mod tests {
         assert_eq!(1500.millis(), vmo.duration_from_frames(72000));
     }
 
-    #[test]
-    fn test_frames_from_duration() {
-        let vmo = get_test_vmo(5);
-
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_frames_from_duration(vmo: FrameVmo) {
         assert_eq!(0, vmo.frames_from_duration(0.nanos()));
 
         assert_eq!(0, vmo.frames_from_duration((ONE_FRAME_NANOS - 1).nanos()));
@@ -343,10 +350,10 @@ mod tests {
         fasync::Time::now().into()
     }
 
-    #[test]
-    fn test_next_frame_after() {
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_next_frame_after(mut vmo: FrameVmo) {
         let _exec = fasync::TestExecutor::new();
-        let mut vmo = get_test_vmo(5);
 
         assert_eq!(Err(Error::InvalidState), vmo.next_frame_after(get_time_now()));
 
@@ -366,16 +373,18 @@ mod tests {
         assert_eq!(Ok(one_sec_later), vmo.next_frame_after(one_sec_later - 1.nanos()));
     }
 
-    #[test]
-    fn test_start_stop() {
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_start_stop(mut vmo: FrameVmo) {
         let _exec = fasync::TestExecutor::new();
-        let mut vmo = get_test_vmo(5);
 
         let start_time = get_time_now();
         assert_eq!(Ok(()), vmo.start(start_time));
         assert_eq!(Err(Error::InvalidState), vmo.start(start_time));
 
-        vmo.stop();
+        assert!(vmo.stop());
+        // stop is idempotent, but will return false if it was already stopped
+        assert!(!vmo.stop());
 
         assert_eq!(Ok(()), vmo.start(start_time));
     }
@@ -386,16 +395,16 @@ mod tests {
         duration: zx::Duration,
         frames: usize,
     ) {
-        vmo.stop();
+        let _ = vmo.stop();
         let start_time = zx::Time::from_nanos(time_nanos);
         assert_eq!(Ok(()), vmo.start(start_time));
         assert_eq!(frames, vmo.frames_before(start_time + duration));
     }
 
-    #[test]
-    fn test_frames_before() {
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_frames_before(mut vmo: FrameVmo) {
         let _exec = fasync::TestExecutor::new();
-        let mut vmo = get_test_vmo(5);
 
         let start_time = get_time_now();
         assert_eq!(Ok(()), vmo.start(start_time));
@@ -421,12 +430,11 @@ mod tests {
         test_frames_before_exact(&mut vmo, 714329925362, 219292000.nanos(), 10526);
     }
 
-    #[test]
-    fn test_get_frames() {
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_get_frames(mut vmo: FrameVmo) {
         let exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
-        let frames = TEST_FPS as usize / 2;
-        let mut vmo = get_test_vmo(frames);
 
         let start_time = get_time_now();
         assert_eq!(Ok(()), vmo.start(start_time));
@@ -439,7 +447,7 @@ mod tests {
         let (bytes, missed) = res.unwrap();
 
         assert_eq!(0, missed);
-        assert_eq!(frames / 2 - 1, bytes.len());
+        assert_eq!(TEST_FRAMES / 2 - 1, bytes.len());
 
         // Each `dur` period should pseudo-fill half the vmo.
         // After 750 ms, we should have the oildest frame half-way through
@@ -455,7 +463,7 @@ mod tests {
         assert!(res.is_ok());
         let (bytes, missed) = res.unwrap();
         assert_eq!(0, missed);
-        assert_eq!(frames / 2, bytes.len());
+        assert_eq!(TEST_FRAMES / 2, bytes.len());
 
         // Should be able to get a set of frames that is all located before the oldest point.
         // This should be from about a quarter in to halfway in.
@@ -464,7 +472,7 @@ mod tests {
         assert!(res.is_ok());
         let (bytes, missed) = res.unwrap();
         assert_eq!(0, missed);
-        assert_eq!(frames / 4, bytes.len());
+        assert_eq!(TEST_FRAMES / 4, bytes.len());
 
         // Get a set of frames that is exactly the whole buffer.
         let res = vmo.get_frames(get_time_now() - 500.millis(), get_time_now());
@@ -473,10 +481,10 @@ mod tests {
         let (bytes, missed) = res.unwrap();
 
         assert_eq!(0, missed);
-        assert_eq!(frames, bytes.len());
+        assert_eq!(TEST_FRAMES, bytes.len());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multibyte_get_frames() {
         let _exec = fasync::TestExecutor::new();
         let mut vmo = FrameVmo::new().expect("can't make a framevmo");
@@ -499,12 +507,11 @@ mod tests {
         assert_eq!(frames * 2 - 4, bytes.len())
     }
 
-    #[test]
-    fn test_get_frames_boundaries() {
+    #[fixture(with_test_vmo)]
+    #[fuchsia::test]
+    fn test_get_frames_boundaries(mut vmo: FrameVmo) {
         let exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
-        let frames = TEST_FPS as usize / 2;
-        let mut vmo = get_test_vmo(frames);
 
         // Start in the past so we can be sure the whole test is always in the past.
         let start_time = get_time_now() - 400.millis();
@@ -551,6 +558,10 @@ mod tests {
             moment_start = moment_end;
         }
 
-        assert_eq!(frames / 2 - 1, all_frames_len, "should be a quarter second worth of frames");
+        assert_eq!(
+            TEST_FRAMES / 2 - 1,
+            all_frames_len,
+            "should be a quarter second worth of frames"
+        );
     }
 }

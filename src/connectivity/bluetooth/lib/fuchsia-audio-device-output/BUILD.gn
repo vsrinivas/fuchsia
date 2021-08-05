@@ -21,11 +21,16 @@ rustc_library("fuchsia-audio-device-output") {
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/testing/fixture",
   ]
 
   sources = [
@@ -34,6 +39,8 @@ rustc_library("fuchsia-audio-device-output") {
     "src/lib.rs",
     "src/types.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("fuchsia-audio-device-output-tests") {

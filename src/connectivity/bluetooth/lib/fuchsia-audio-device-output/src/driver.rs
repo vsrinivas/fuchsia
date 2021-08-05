@@ -14,9 +14,9 @@ use {
         task::{Context, Poll},
         Future, StreamExt,
     },
-    log::{info, warn},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
+    tracing::{info, warn},
 };
 
 use crate::frame_vmo;
@@ -432,12 +432,17 @@ mod tests {
 
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat};
 
+    use fixture::fixture;
     use futures::future;
 
     const TEST_UNIQUE_ID: &[u8; 16] = &[5; 16];
     const TEST_CLOCK_DOMAIN: u32 = 0x00010203;
 
-    fn setup() -> (StreamConfigProxy, AudioFrameStream) {
+    fn with_audio_frame_stream<F>(_name: &str, test: F)
+    where
+        F: FnOnce(fasync::TestExecutor, StreamConfigProxy, AudioFrameStream) -> (),
+    {
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let format = PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
             bits_per_sample: 16,
@@ -453,10 +458,10 @@ mod tests {
             zx::Duration::from_millis(100),
         )
         .expect("should always build");
-        (client.into_proxy().expect("channel should be available"), frame_stream)
+        test(exec, client.into_proxy().expect("channel should be available"), frame_stream)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_frames_from_duration() {
         const FPS: usize = 48000;
         // At 48kHz, each frame is 20833 and 1/3 nanoseconds. We add one nanosecond
@@ -481,7 +486,7 @@ mod tests {
         assert_eq!(10660, frames_from_duration(FPS, 222084000.nanos()));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn soft_pcm_audio_should_end_when_stream_dropped() {
         let format = PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
@@ -509,12 +514,10 @@ mod tests {
         assert_eq!(Err(zx::Status::PEER_CLOSED), client.channel().write(&[0], &mut Vec::new()));
     }
 
-    #[test]
+    #[fixture(with_audio_frame_stream)]
+    #[fuchsia::test]
     #[rustfmt::skip]
-    fn soft_pcm_audio_out() {
-        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
-        let (stream_config, mut frame_stream) = setup();
-
+    fn soft_pcm_audio_out(mut exec: fasync::TestExecutor, stream_config: StreamConfigProxy, mut frame_stream: AudioFrameStream) {
         let result = exec.run_until_stalled(&mut stream_config.get_properties());
         assert!(result.is_ready());
         let props1 = match result {
@@ -600,7 +603,7 @@ mod tests {
         assert_eq!(Ok(()), audio_vmo.write(&sent_audio, 0));
 
         exec.set_fake_time(fasync::Time::from_nanos(42));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let start_time = exec.run_until_stalled(&mut ring_buffer.start());
         if let Poll::Ready(s) = start_time {
             assert_eq!(s.expect("start time error"), 42);
@@ -614,7 +617,7 @@ mod tests {
 
         // Run the ring buffer for a bit over 1 second.
         exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(1001)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
 
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
@@ -643,10 +646,13 @@ mod tests {
         assert!(!result.is_ready());
     }
 
-    #[test]
-    fn send_positions() {
-        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
-        let (stream_config, mut frame_stream) = setup();
+    #[fixture(with_audio_frame_stream)]
+    #[fuchsia::test]
+    fn send_positions(
+        mut exec: fasync::TestExecutor,
+        stream_config: StreamConfigProxy,
+        mut frame_stream: AudioFrameStream,
+    ) {
         let _stream_config_properties = exec.run_until_stalled(&mut stream_config.get_properties());
         let _formats = exec.run_until_stalled(&mut stream_config.get_supported_formats());
         let (ring_buffer, server) = fidl::endpoints::create_proxy::<RingBufferMarker>()
@@ -685,7 +691,7 @@ mod tests {
         ); // 2 seconds.
 
         exec.set_fake_time(fasync::Time::from_nanos(42));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let start_time = exec.run_until_stalled(&mut ring_buffer.start());
         if let Poll::Ready(s) = start_time {
             assert_eq!(s.expect("start time error"), 42);
@@ -703,7 +709,7 @@ mod tests {
         // Now advance in between notifications, with a 2 seconds total in the ring buffer
         // and 10 notifications per ring we can get watch notifications every 200 msecs.
         exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
         let result = exec.run_until_stalled(&mut position_info);
@@ -714,7 +720,7 @@ mod tests {
         let result = exec.run_until_stalled(&mut position_info);
         assert!(!result.is_ready());
         exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
         let result = exec.run_until_stalled(&mut position_info);
@@ -725,7 +731,7 @@ mod tests {
         let result = exec.run_until_stalled(&mut position_info);
         assert!(!result.is_ready());
         exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(201)));
-        exec.wake_expired_timers();
+        let _ = exec.wake_expired_timers();
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
         let result = exec.run_until_stalled(&mut position_info);
