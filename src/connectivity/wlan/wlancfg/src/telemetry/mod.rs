@@ -784,8 +784,7 @@ mod tests {
         fidl_fuchsia_wlan_stats::{self, ClientMlmeStats, Counter, PacketCounter},
         fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
-        std::{cmp::min, collections::HashMap, pin::Pin},
-        wlan_common::assert_variant,
+        std::{cmp::min, pin::Pin},
     };
 
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
@@ -1484,20 +1483,14 @@ mod tests {
 
         test_helper.advance_by(6.hours(), test_fut.as_mut());
 
-        let uptime_ratios: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::CONNECTED_UPTIME_RATIO_METRIC_ID)
-            .collect();
+        let uptime_ratios =
+            test_helper.get_logged_metrics(metrics::CONNECTED_UPTIME_RATIO_METRIC_ID);
         assert_eq!(uptime_ratios.len(), 1);
         // 12 hours of uptime, 6 hours of adjusted downtime => 66.66% uptime
         assert_eq!(uptime_ratios[0].payload, MetricEventPayload::IntegerValue(6666));
 
-        let uptime_ratio_breakdowns: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID)
-            .collect();
+        let uptime_ratio_breakdowns = test_helper
+            .get_logged_metrics(metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID);
         assert_eq!(uptime_ratio_breakdowns.len(), 1);
         assert_eq!(
             uptime_ratio_breakdowns[0].event_codes,
@@ -1521,23 +1514,15 @@ mod tests {
 
         test_helper.advance_by(18.hours(), test_fut.as_mut());
 
-        let dpdc_ratios: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID)
-            .collect();
+        let dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
         assert_eq!(dpdc_ratios.len(), 1);
         // 1 disconnect, 0.25 day connected => 4 disconnects per day connected
         // (which equals 40_0000 in TenThousandth unit)
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
 
-        let dpdc_ratio_breakdowns: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| {
-                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID
-            })
-            .collect();
+        let dpdc_ratio_breakdowns = test_helper
+            .get_logged_metrics(metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID);
         assert_eq!(dpdc_ratio_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_breakdowns[0].event_codes,
@@ -1546,13 +1531,9 @@ mod tests {
         );
         assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
 
-        let dpdc_ratio_7d_breakdowns: Vec<_> = test_helper
-            .cobalt_events
-            .drain(..)
-            .filter(|ev| {
-                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID
-            })
-            .collect();
+        let dpdc_ratio_7d_breakdowns = test_helper.get_logged_metrics(
+            metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
+        );
         assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_7d_breakdowns[0].event_codes,
@@ -1561,6 +1542,9 @@ mod tests {
         );
         assert_eq!(dpdc_ratio_7d_breakdowns[0].payload, MetricEventPayload::Count(1));
 
+        // Clear record of logged Cobalt events
+        test_helper.cobalt_events.clear();
+
         // Connect for another 1 day to dilute the 7d ratio
         test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -1568,21 +1552,13 @@ mod tests {
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
         // No disconnect in the last day, so the 1d ratio would be 0.
-        let dpdc_ratios: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID)
-            .collect();
+        let dpdc_ratios =
+            test_helper.get_logged_metrics(metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID);
         assert_eq!(dpdc_ratios.len(), 1);
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
-        let dpdc_ratio_breakdowns: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| {
-                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID
-            })
-            .collect();
+        let dpdc_ratio_breakdowns = test_helper
+            .get_logged_metrics(metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID);
         assert_eq!(dpdc_ratio_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_breakdowns[0].event_codes,
@@ -1591,13 +1567,9 @@ mod tests {
         assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
 
         // In the last 7 days, 1 disconnects and 1.25 days connected => 0.8 dpdc ratio
-        let dpdc_ratio_7d_breakdowns: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| {
-                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID
-            })
-            .collect();
+        let dpdc_ratio_7d_breakdowns = test_helper.get_logged_metrics(
+            metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
+        );
         assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
         assert_eq!(
             dpdc_ratio_7d_breakdowns[0].event_codes,
@@ -1646,21 +1618,23 @@ mod tests {
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
-        let ratios: HashMap<_, _> =
-            test_helper.cobalt_events.drain(..).map(|ev| (ev.metric_id, ev.payload)).collect();
-        let high_rx_drop_time_ratio =
-            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
+        let high_rx_drop_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
         // 2 hours of high RX drop rate, 24 hours connected => 8.33% duration
-        assert_variant!(high_rx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(833)));
+        assert_eq!(high_rx_drop_time_ratios.len(), 1);
+        assert_eq!(high_rx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(833));
 
-        let high_tx_drop_time_ratio =
-            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
+        let high_tx_drop_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
         // 1 hour of high RX drop rate, 24 hours connected => 4.16% duration
-        assert_variant!(high_tx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(416)));
+        assert_eq!(high_tx_drop_time_ratios.len(), 1);
+        assert_eq!(high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(416));
 
         // 4 hours of no RX, 24 hours connected => 16.66% duration
-        let no_rx_time_ratio = ratios.get(&metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
-        assert_variant!(no_rx_time_ratio, Some(&MetricEventPayload::IntegerValue(1666)));
+        let no_rx_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
+        assert_eq!(no_rx_time_ratios.len(), 1);
+        assert_eq!(no_rx_time_ratios[0].payload, MetricEventPayload::IntegerValue(1666));
     }
 
     #[fuchsia::test]
@@ -1674,18 +1648,20 @@ mod tests {
 
         test_helper.advance_by(24.hours(), test_fut.as_mut());
 
-        let ratios: HashMap<_, _> =
-            test_helper.cobalt_events.drain(..).map(|ev| (ev.metric_id, ev.payload)).collect();
-        let high_rx_drop_time_ratio =
-            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
-        assert_variant!(high_rx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+        let high_rx_drop_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(high_rx_drop_time_ratios.len(), 1);
+        assert_eq!(high_rx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
-        let high_tx_drop_time_ratio =
-            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
-        assert_variant!(high_tx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+        let high_tx_drop_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(high_tx_drop_time_ratios.len(), 1);
+        assert_eq!(high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
-        let no_rx_time_ratio = ratios.get(&metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
-        assert_variant!(no_rx_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+        let no_rx_time_ratios =
+            test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
+        assert_eq!(no_rx_time_ratios.len(), 1);
+        assert_eq!(no_rx_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
     }
 
     #[fuchsia::test]
@@ -1697,27 +1673,24 @@ mod tests {
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
-        let total_wlan_uptime_durs: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID)
-            .collect();
+        let total_wlan_uptime_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID);
         assert_eq!(total_wlan_uptime_durs.len(), 1);
         assert_eq!(
             total_wlan_uptime_durs[0].payload,
             MetricEventPayload::IntegerValue(1.hour().into_micros())
         );
 
-        let connected_durs: Vec<_> = test_helper
-            .cobalt_events
-            .drain(..)
-            .filter(|ev| ev.metric_id == metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID)
-            .collect();
+        let connected_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID);
         assert_eq!(connected_durs.len(), 1);
         assert_eq!(
             connected_durs[0].payload,
             MetricEventPayload::IntegerValue(1.hour().into_micros())
         );
+
+        // Clear record of logged Cobalt events
+        test_helper.cobalt_events.clear();
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
 
@@ -1738,11 +1711,8 @@ mod tests {
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
-        let total_wlan_uptime_durs: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID)
-            .collect();
+        let total_wlan_uptime_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID);
         assert_eq!(total_wlan_uptime_durs.len(), 1);
         // 30 minutes connected uptime + 15 minutes downtime near saved network
         assert_eq!(
@@ -1750,11 +1720,8 @@ mod tests {
             MetricEventPayload::IntegerValue(45.minutes().into_micros())
         );
 
-        let connected_durs: Vec<_> = test_helper
-            .cobalt_events
-            .drain(..)
-            .filter(|ev| ev.metric_id == metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID)
-            .collect();
+        let connected_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID);
         assert_eq!(connected_durs.len(), 1);
         assert_eq!(
             connected_durs[0].payload,
@@ -1802,33 +1769,23 @@ mod tests {
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
-        let rx_high_drop_durs: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_HIGH_RX_PACKET_DROP_METRIC_ID)
-            .collect();
+        let rx_high_drop_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_TIME_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
         assert_eq!(rx_high_drop_durs.len(), 1);
         assert_eq!(
             rx_high_drop_durs[0].payload,
             MetricEventPayload::IntegerValue(20.minutes().into_micros())
         );
 
-        let tx_high_drop_durs: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_HIGH_TX_PACKET_DROP_METRIC_ID)
-            .collect();
+        let tx_high_drop_durs =
+            test_helper.get_logged_metrics(metrics::TOTAL_TIME_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
         assert_eq!(tx_high_drop_durs.len(), 1);
         assert_eq!(
             tx_high_drop_durs[0].payload,
             MetricEventPayload::IntegerValue(10.minutes().into_micros())
         );
 
-        let no_rx_durs: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_NO_RX_METRIC_ID)
-            .collect();
+        let no_rx_durs = test_helper.get_logged_metrics(metrics::TOTAL_TIME_WITH_NO_RX_METRIC_ID);
         assert_eq!(no_rx_durs.len(), 1);
         assert_eq!(
             no_rx_durs[0].payload,
@@ -1849,11 +1806,8 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        let disconnect_counts: Vec<_> = test_helper
-            .cobalt_events
-            .iter()
-            .filter(|ev| ev.metric_id == metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID)
-            .collect();
+        let disconnect_counts =
+            test_helper.get_logged_metrics(metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID);
         assert_eq!(disconnect_counts.len(), 1);
         assert_eq!(disconnect_counts[0].payload, MetricEventPayload::Count(1));
     }
@@ -1865,7 +1819,7 @@ mod tests {
         cobalt_1dot1_stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
         iface_stats_req_handler: Option<Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>>,
         /// As requests to Cobalt are responded to via `self.drain_cobalt_events()`,
-        /// their payloads are drained to this Vec
+        /// their payloads are drained to this HashMap
         cobalt_events: Vec<MetricEvent>,
 
         // Note: keep the executor field last in the struct so it gets dropped last.
@@ -1970,6 +1924,10 @@ mod tests {
                     made_progress = true;
                 }
             }
+        }
+
+        fn get_logged_metrics(&self, metric_id: u32) -> Vec<MetricEvent> {
+            self.cobalt_events.iter().filter(|ev| ev.metric_id == metric_id).cloned().collect()
         }
     }
 
