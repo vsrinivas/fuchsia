@@ -108,12 +108,25 @@ pub(crate) fn ensure_pcm_format_is_supported(
     pcm_format: &PcmFormat,
 ) -> Result<(), Error> {
     for format in ring_buffer_formats {
-        if let SupportedFormats { pcm_supported_formats: Some(pcm_supported), .. } = format {
-            if pcm_supported.number_of_channels.contains(&pcm_format.number_of_channels)
-                && pcm_supported.sample_formats.contains(&pcm_format.sample_format)
-                && pcm_supported.bytes_per_sample.contains(&pcm_format.bytes_per_sample)
-                && pcm_supported.valid_bits_per_sample.contains(&pcm_format.valid_bits_per_sample)
-                && pcm_supported.frame_rates.contains(&pcm_format.frame_rate)
+        if let SupportedFormats {
+            pcm_supported_formats2:
+                Some(PcmSupportedFormats2 {
+                    channel_sets: Some(channel_sets),
+                    sample_formats: Some(sample_formats),
+                    bytes_per_sample: Some(bytes_per_sample),
+                    valid_bits_per_sample: Some(valid_bits_per_sample),
+                    frame_rates: Some(frame_rates),
+                    ..
+                }),
+            ..
+        } = format
+        {
+            if channel_sets[0].attributes.as_ref().unwrap().len()
+                == pcm_format.number_of_channels as usize
+                && sample_formats.contains(&pcm_format.sample_format)
+                && bytes_per_sample.contains(&pcm_format.bytes_per_sample)
+                && valid_bits_per_sample.contains(&pcm_format.valid_bits_per_sample)
+                && frame_rates.contains(&pcm_format.frame_rate)
             {
                 return Ok(());
             }

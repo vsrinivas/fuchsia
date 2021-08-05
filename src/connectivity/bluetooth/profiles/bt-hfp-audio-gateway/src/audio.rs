@@ -271,14 +271,18 @@ mod test {
             let _prop = self.client.get_properties().await?;
             let formats = self.client.get_supported_formats().await?;
             // Pick the first one, why not.
-            let pcm_formats = formats.first().unwrap().pcm_supported_formats.as_ref().unwrap();
+            let pcm_formats = formats.first().unwrap().pcm_supported_formats2.as_ref().unwrap();
             let pcm_format = Some(PcmFormat {
-                number_of_channels: pcm_formats.number_of_channels[0],
+                number_of_channels: pcm_formats.channel_sets.as_ref().unwrap()[0]
+                    .attributes
+                    .as_ref()
+                    .unwrap()
+                    .len() as u8,
                 channels_to_use_bitmask: 0xffffffffu64,
-                sample_format: pcm_formats.sample_formats[0],
-                bytes_per_sample: pcm_formats.bytes_per_sample[0],
-                valid_bits_per_sample: pcm_formats.valid_bits_per_sample[0],
-                frame_rate: pcm_formats.frame_rates[0],
+                sample_format: pcm_formats.sample_formats.as_ref().unwrap()[0],
+                bytes_per_sample: pcm_formats.bytes_per_sample.as_ref().unwrap()[0],
+                valid_bits_per_sample: pcm_formats.valid_bits_per_sample.as_ref().unwrap()[0],
+                frame_rate: pcm_formats.frame_rates.as_ref().unwrap()[0],
             });
             let (proxy, server_end) = fidl::endpoints::create_proxy()?;
             self.client.create_ring_buffer(

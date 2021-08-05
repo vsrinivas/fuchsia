@@ -246,7 +246,7 @@ class AudioDriver {
   // Plug detection state.
   bool pd_hardwired_ = false;
 
-  std::vector<fuchsia::hardware::audio::PcmSupportedFormats> formats_;
+  std::vector<fuchsia::hardware::audio::PcmSupportedFormats2> formats_;
 
   // FIDL interface pointers.
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_fidl_;

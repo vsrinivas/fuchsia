@@ -43,7 +43,7 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   void set_cur_agc(bool cur_agc) { cur_agc_ = cur_agc; }
   void set_can_mute(bool can_mute) { can_mute_ = can_mute; }
   void set_cur_mute(bool cur_mute) { cur_mute_ = cur_mute; }
-  void set_formats(fuchsia::hardware::audio::PcmSupportedFormats formats) {
+  void set_formats(fuchsia::hardware::audio::PcmSupportedFormats2 formats) {
     formats_ = std::move(formats);
   }
   void set_clock_domain(uint32_t clock_domain) { clock_domain_ = clock_domain; }
@@ -104,7 +104,7 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   bool cur_mute_ = false;
   bool plug_state_sent_ = false;
   bool gain_state_sent_ = false;
-  fuchsia::hardware::audio::PcmSupportedFormats formats_ = {};
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats_ = {};
   uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
   size_t ring_buffer_size_;
   zx::vmo ring_buffer_;

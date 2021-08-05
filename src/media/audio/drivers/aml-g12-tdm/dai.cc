@@ -262,16 +262,22 @@ void AmlG12TdmDai::GetProperties(::fuchsia::hardware::audio::Dai::GetPropertiesC
 void AmlG12TdmDai::GetRingBufferFormats(GetRingBufferFormatsCallback callback) {
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Result result;
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Response response;
-  ::fuchsia::hardware::audio::PcmSupportedFormats pcm_formats;
-  pcm_formats.number_of_channels.push_back(metadata_.ring_buffer.number_of_channels);
-  pcm_formats.sample_formats.push_back(::fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  pcm_formats.bytes_per_sample.push_back(metadata_.ring_buffer.bytes_per_sample);
-  pcm_formats.valid_bits_per_sample.push_back(metadata_.ring_buffer.bytes_per_sample * 8);
+  ::fuchsia::hardware::audio::PcmSupportedFormats2 pcm_formats;
+  ::fuchsia::hardware::audio::ChannelSet channel_set;
+  std::vector<::fuchsia::hardware::audio::ChannelAttributes> attributes(
+      metadata_.ring_buffer.number_of_channels);
+  channel_set.set_attributes(std::move(attributes));
+  pcm_formats.mutable_channel_sets()->push_back(std::move(channel_set));
+  pcm_formats.mutable_sample_formats()->push_back(
+      ::fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  pcm_formats.mutable_bytes_per_sample()->push_back(metadata_.ring_buffer.bytes_per_sample);
+  pcm_formats.mutable_valid_bits_per_sample()->push_back(metadata_.ring_buffer.bytes_per_sample *
+                                                         8);
   for (size_t i = 0; i < countof(AmlTdmConfigDevice::kSupportedFrameRates); ++i) {
-    pcm_formats.frame_rates.push_back(AmlTdmConfigDevice::kSupportedFrameRates[i]);
+    pcm_formats.mutable_frame_rates()->push_back(AmlTdmConfigDevice::kSupportedFrameRates[i]);
   }
   ::fuchsia::hardware::audio::SupportedFormats formats;
-  formats.set_pcm_supported_formats(std::move(pcm_formats));
+  formats.set_pcm_supported_formats2(std::move(pcm_formats));
   response.ring_buffer_formats.push_back(std::move(formats));
   result.set_response(std::move(response));
   callback(std::move(result));

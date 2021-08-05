@@ -6,13 +6,13 @@
 
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
 #include <thread>
 
-#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -379,21 +379,22 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   ::fuchsia::hardware::audio::Dai_GetRingBufferFormats_Result ring_buffer_formats_out;
   ASSERT_OK(client.dai_->GetRingBufferFormats(&ring_buffer_formats_out));
   auto& all_pcm_formats = ring_buffer_formats_out.response().ring_buffer_formats;
-  auto& pcm_formats = all_pcm_formats[0].pcm_supported_formats();
-  ASSERT_EQ(1, pcm_formats.number_of_channels.size());
-  ASSERT_EQ(metadata.ring_buffer.number_of_channels, pcm_formats.number_of_channels[0]);
-  ASSERT_EQ(1, pcm_formats.sample_formats.size());
-  ASSERT_EQ(::fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, pcm_formats.sample_formats[0]);
-  ASSERT_EQ(5, pcm_formats.frame_rates.size());
-  ASSERT_EQ(8'000, pcm_formats.frame_rates[0]);
-  ASSERT_EQ(16'000, pcm_formats.frame_rates[1]);
-  ASSERT_EQ(32'000, pcm_formats.frame_rates[2]);
-  ASSERT_EQ(48'000, pcm_formats.frame_rates[3]);
-  ASSERT_EQ(96'000, pcm_formats.frame_rates[4]);
-  ASSERT_EQ(1, pcm_formats.bytes_per_sample.size());
-  ASSERT_EQ(2, pcm_formats.bytes_per_sample[0]);
-  ASSERT_EQ(1, pcm_formats.valid_bits_per_sample.size());
-  ASSERT_EQ(16, pcm_formats.valid_bits_per_sample[0]);
+  auto& pcm_formats = all_pcm_formats[0].pcm_supported_formats2();
+  ASSERT_EQ(1, pcm_formats.channel_sets().size());
+  ASSERT_EQ(metadata.ring_buffer.number_of_channels,
+            pcm_formats.channel_sets()[0].attributes().size());
+  ASSERT_EQ(1, pcm_formats.sample_formats().size());
+  ASSERT_EQ(::fuchsia::hardware::audio::SampleFormat::PCM_SIGNED, pcm_formats.sample_formats()[0]);
+  ASSERT_EQ(5, pcm_formats.frame_rates().size());
+  ASSERT_EQ(8'000, pcm_formats.frame_rates()[0]);
+  ASSERT_EQ(16'000, pcm_formats.frame_rates()[1]);
+  ASSERT_EQ(32'000, pcm_formats.frame_rates()[2]);
+  ASSERT_EQ(48'000, pcm_formats.frame_rates()[3]);
+  ASSERT_EQ(96'000, pcm_formats.frame_rates()[4]);
+  ASSERT_EQ(1, pcm_formats.bytes_per_sample().size());
+  ASSERT_EQ(2, pcm_formats.bytes_per_sample()[0]);
+  ASSERT_EQ(1, pcm_formats.valid_bits_per_sample().size());
+  ASSERT_EQ(16, pcm_formats.valid_bits_per_sample()[0]);
 
   // Get DAI formats.
   ::fuchsia::hardware::audio::Dai_GetDaiFormats_Result dai_formats_out;
@@ -405,12 +406,12 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   ASSERT_EQ(metadata.dai.number_of_channels, dai_formats.number_of_channels[0]);
   ASSERT_EQ(1, dai_formats.sample_formats.size());
   ASSERT_EQ(::fuchsia::hardware::audio::DaiSampleFormat::PCM_SIGNED, dai_formats.sample_formats[0]);
-  ASSERT_EQ(5, pcm_formats.frame_rates.size());
-  ASSERT_EQ(8'000, pcm_formats.frame_rates[0]);
-  ASSERT_EQ(16'000, pcm_formats.frame_rates[1]);
-  ASSERT_EQ(32'000, pcm_formats.frame_rates[2]);
-  ASSERT_EQ(48'000, pcm_formats.frame_rates[3]);
-  ASSERT_EQ(96'000, pcm_formats.frame_rates[4]);
+  ASSERT_EQ(5, pcm_formats.frame_rates().size());
+  ASSERT_EQ(8'000, pcm_formats.frame_rates()[0]);
+  ASSERT_EQ(16'000, pcm_formats.frame_rates()[1]);
+  ASSERT_EQ(32'000, pcm_formats.frame_rates()[2]);
+  ASSERT_EQ(48'000, pcm_formats.frame_rates()[3]);
+  ASSERT_EQ(96'000, pcm_formats.frame_rates()[4]);
   ASSERT_EQ(1, dai_formats.bits_per_slot.size());
   ASSERT_EQ(32, dai_formats.bits_per_slot[0]);
   ASSERT_EQ(1, dai_formats.bits_per_sample.size());
@@ -428,14 +429,15 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   dai_format.bits_per_slot = dai_formats.bits_per_slot[0];
 
   ::fuchsia::hardware::audio::Format ring_buffer_format = {};
-  ring_buffer_format.mutable_pcm_format()->number_of_channels = pcm_formats.number_of_channels[0];
+  ring_buffer_format.mutable_pcm_format()->number_of_channels =
+      pcm_formats.channel_sets()[0].attributes().size();
   ring_buffer_format.mutable_pcm_format()->channels_to_use_bitmask =
       (1 << ring_buffer_format.pcm_format().number_of_channels) - 1;  // Use all.
-  ring_buffer_format.mutable_pcm_format()->sample_format = pcm_formats.sample_formats[0];
-  ring_buffer_format.mutable_pcm_format()->frame_rate = pcm_formats.frame_rates[0];
-  ring_buffer_format.mutable_pcm_format()->bytes_per_sample = pcm_formats.bytes_per_sample[0];
+  ring_buffer_format.mutable_pcm_format()->sample_format = pcm_formats.sample_formats()[0];
+  ring_buffer_format.mutable_pcm_format()->frame_rate = pcm_formats.frame_rates()[0];
+  ring_buffer_format.mutable_pcm_format()->bytes_per_sample = pcm_formats.bytes_per_sample()[0];
   ring_buffer_format.mutable_pcm_format()->valid_bits_per_sample =
-      pcm_formats.valid_bits_per_sample[0];
+      pcm_formats.valid_bits_per_sample()[0];
 
   // Check ring buffer properties
   {

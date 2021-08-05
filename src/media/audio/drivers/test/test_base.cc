@@ -139,33 +139,35 @@ void TestBase::RequestFormats() {
         EXPECT_GT(supported_formats.size(), 0u);
 
         for (size_t i = 0; i < supported_formats.size(); ++i) {
-          auto& format = supported_formats[i].pcm_supported_formats();
+          auto& format = *supported_formats[i].mutable_pcm_supported_formats2();
 
           uint8_t largest_bytes_per_sample = 0;
-          EXPECT_NE(format.bytes_per_sample.size(), 0u);
-          for (size_t j = 0; j < format.bytes_per_sample.size(); ++j) {
-            EXPECT_NE(format.bytes_per_sample[j], 0u);
-            if (format.bytes_per_sample[j] > largest_bytes_per_sample) {
-              largest_bytes_per_sample = format.bytes_per_sample[j];
+          EXPECT_NE(format.bytes_per_sample().size(), 0u);
+          for (size_t j = 0; j < format.bytes_per_sample().size(); ++j) {
+            EXPECT_NE(format.bytes_per_sample()[j], 0u);
+            if (format.bytes_per_sample()[j] > largest_bytes_per_sample) {
+              largest_bytes_per_sample = format.bytes_per_sample()[j];
             }
           }
-          for (size_t j = 0; j < format.valid_bits_per_sample.size(); ++j) {
-            EXPECT_LE(format.valid_bits_per_sample[j], largest_bytes_per_sample * 8);
+          for (size_t j = 0; j < format.valid_bits_per_sample().size(); ++j) {
+            EXPECT_LE(format.valid_bits_per_sample()[j], largest_bytes_per_sample * 8);
           }
 
-          EXPECT_NE(format.frame_rates.size(), 0u);
-          for (size_t j = 0; j < format.frame_rates.size(); ++j) {
-            EXPECT_GE(format.frame_rates[j], fuchsia::media::MIN_PCM_FRAMES_PER_SECOND);
-            EXPECT_LE(format.frame_rates[j], fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
+          EXPECT_NE(format.frame_rates().size(), 0u);
+          for (size_t j = 0; j < format.frame_rates().size(); ++j) {
+            EXPECT_GE(format.frame_rates()[j], fuchsia::media::MIN_PCM_FRAMES_PER_SECOND);
+            EXPECT_LE(format.frame_rates()[j], fuchsia::media::MAX_PCM_FRAMES_PER_SECOND);
           }
 
-          EXPECT_NE(format.number_of_channels.size(), 0u);
-          for (size_t j = 0; j < format.number_of_channels.size(); ++j) {
-            EXPECT_GE(format.number_of_channels[j], fuchsia::media::MIN_PCM_CHANNEL_COUNT);
-            EXPECT_LE(format.number_of_channels[j], fuchsia::media::MAX_PCM_CHANNEL_COUNT);
+          EXPECT_NE(format.channel_sets().size(), 0u);
+          for (size_t j = 0; j < format.channel_sets().size(); ++j) {
+            EXPECT_GE(format.channel_sets()[j].attributes().size(),
+                      fuchsia::media::MIN_PCM_CHANNEL_COUNT);
+            EXPECT_LE(format.channel_sets()[j].attributes().size(),
+                      fuchsia::media::MAX_PCM_CHANNEL_COUNT);
           }
 
-          pcm_formats_.push_back(format);
+          pcm_formats_.push_back(std::move(format));
         }
 
         received_get_formats_ = true;

@@ -55,14 +55,18 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
 TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
   // Publish a format that has a matching sample rate, and also formats with double and half the
   // requested rate.
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.number_of_channels.push_back(1);
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats.bytes_per_sample.push_back(2);
-  formats.valid_bits_per_sample.push_back(16);
-  formats.frame_rates.push_back(GetParam());
-  formats.frame_rates.push_back(2 * GetParam());
-  formats.frame_rates.push_back(GetParam() / 2);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::ChannelSet channel_set = {};
+  constexpr size_t kSupportedNumberOfChannels = 1;
+  std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(kSupportedNumberOfChannels);
+  channel_set.set_attributes(std::move(attributes));
+  formats.mutable_channel_sets()->push_back(std::move(channel_set));
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.mutable_bytes_per_sample()->push_back(2);
+  formats.mutable_valid_bits_per_sample()->push_back(16);
+  formats.mutable_frame_rates()->push_back(GetParam());
+  formats.mutable_frame_rates()->push_back(2 * GetParam());
+  formats.mutable_frame_rates()->push_back(GetParam() / 2);
   remote_driver_->set_formats(std::move(formats));
 
   remote_driver_->Start();
@@ -77,12 +81,16 @@ TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
 TEST_P(AudioInputTestDriver, FallBackToAlternativeRateIfPreferredRateIsNotSupported) {
   ASSERT_NE(GetParam(), 0);  // Invalid frame rate passed as test parameter.
   const int32_t kSupportedRate = GetParam() * 2;
-  fuchsia::hardware::audio::PcmSupportedFormats formats = {};
-  formats.number_of_channels.push_back(1);
-  formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
-  formats.bytes_per_sample.push_back(2);
-  formats.valid_bits_per_sample.push_back(16);
-  formats.frame_rates.push_back(kSupportedRate);
+  fuchsia::hardware::audio::PcmSupportedFormats2 formats = {};
+  fuchsia::hardware::audio::ChannelSet channel_set = {};
+  constexpr size_t kSupportedNumberOfChannels = 1;
+  std::vector<fuchsia::hardware::audio::ChannelAttributes> attributes(kSupportedNumberOfChannels);
+  channel_set.set_attributes(std::move(attributes));
+  formats.mutable_channel_sets()->push_back(std::move(channel_set));
+  formats.mutable_sample_formats()->push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);
+  formats.mutable_bytes_per_sample()->push_back(2);
+  formats.mutable_valid_bits_per_sample()->push_back(16);
+  formats.mutable_frame_rates()->push_back(kSupportedRate);
   remote_driver_->set_formats(std::move(formats));
 
   remote_driver_->Start();
