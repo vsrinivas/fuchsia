@@ -388,7 +388,7 @@ mod tests {
         let event = Arc::new(zx::Event::create().unwrap());
         event.signal_handle(zx::Signals::NONE, serial_signals()).unwrap();
         // Check that bits _are_ set here
-        fasync::OnSignals::new(&*event, serial_signals()).await.unwrap();
+        let _ = fasync::OnSignals::new(&*event, serial_signals()).await.unwrap();
 
         // Clear bits
         let signal = clear_and_create_signal_fut(&*event).unwrap();
@@ -407,7 +407,7 @@ mod tests {
         // `create_new_signal_succeeds` ensures this does not panic
         let (_event, signal) = create_new_signal().await;
         // signal stalls out and panics because no signal bits are set
-        signal.await.unwrap();
+        let _ = signal.await.unwrap();
     }
 
     #[fasync::run_until_stalled(test)]
@@ -451,7 +451,7 @@ mod tests {
         transport.read_async = Box::new(|_, _| {});
 
         // stalls
-        transport.next().await;
+        let _ = transport.next().await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -472,7 +472,7 @@ mod tests {
             read_state.lock().event.signal_handle(zx::Signals::NONE, unexpected_signal).unwrap();
         });
         // stalls
-        transport.next().await;
+        let _ = transport.next().await;
     }
 
     #[fasync::run_until_stalled(test)]

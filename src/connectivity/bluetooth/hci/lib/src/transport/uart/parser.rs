@@ -236,7 +236,7 @@ pub(super) fn consume_next_packet(
         .map(|pkt| {
             // drop bytes used to create the packet
             let consumed = UartHeader::SIZE + pkt.inner().len();
-            buffer.drain(..consumed);
+            drop(buffer.drain(..consumed));
             pkt
         })
 }

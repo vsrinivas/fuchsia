@@ -41,6 +41,8 @@ rustc_staticlib("bt-hci") {
     "src/transport/uart/parser.rs",
     "src/worker.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 static_library("serial_impl_async_wrapper") {

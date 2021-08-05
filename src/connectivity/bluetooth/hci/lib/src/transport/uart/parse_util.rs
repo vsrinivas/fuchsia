@@ -105,7 +105,7 @@ mod tests {
         // Offset start of VecDeque to force wrapping
         for _ in 0..START_B {
             q.push_back(99);
-            q.pop_front();
+            let _ = q.pop_front();
         }
         // Populate VecDeque
         for i in START..END {

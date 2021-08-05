@@ -64,7 +64,7 @@ impl WorkerHandle {
         let (th_tx, th_rx) = std::sync::mpsc::channel();
 
         let thread_builder = std::thread::Builder::new().name(name.into());
-        thread_builder.spawn(move || {
+        let _ = thread_builder.spawn(move || {
             bt_log_spew!("spawned worker thread");
 
             // Create and immediately run a closure returning a result for more convenient error
@@ -173,10 +173,14 @@ impl Worker {
                     }
                 }
                 (Message::OpenAcl(c), responder) => {
-                    try_open_channel(c, &mut host_acl, responder).await;
+                    if !try_open_channel(c, &mut host_acl, responder).await {
+                        bt_log_warn!("failed to open ACL channel");
+                    }
                 }
                 (Message::OpenSnoop(c), responder) => {
-                    try_open_channel(c, &mut snoop.channel, responder).await;
+                    if !try_open_channel(c, &mut snoop.channel, responder).await {
+                        bt_log_warn!("failed to open snoop channel");
+                    }
                 }
                 (Message::Unbind, mut responder) => {
                     // Close all open resources before responding to Unbind message
@@ -267,7 +271,9 @@ async fn run(mut control_plane: Receiver<(Message, Responder)>) {
                                 responder.send(zx::Status::ALREADY_BOUND).await
                                     .unwrap_or_else(log_responder_error);
                             } else {
-                                try_open_channel(c, &mut worker.snoop.channel, responder).await;
+                                if !try_open_channel(c, &mut worker.snoop.channel, responder).await {
+                                    bt_log_warn!("failed to open snoop channel");
+                                }
                             }
                         }
                         (Message::Unbind, mut responder) => {
@@ -406,7 +412,7 @@ mod tests {
     async fn build_worker_not_yet_complete() {
         let (mut control_plane, mut receiver) = ControlPlane::new();
         let worker = async move {
-            Worker::build(&mut receiver).await;
+            let _ = Worker::build(&mut receiver).await;
             panic!("worker stopped unexpectedly");
         }
         .fuse();

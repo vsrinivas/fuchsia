@@ -108,7 +108,7 @@ impl ControlPlane {
     /// Ther is no way to reopen an ControlPlane after it is closed and close calls made after
     /// an ControlPlane is closed will have no effect.
     pub fn close(&mut self) {
-        self.sender.take();
+        self.sender = None;
     }
 }
 
@@ -230,7 +230,7 @@ mod tests {
     fn control_plane_send_success() {
         let (mut control_plane, mut receiver) = ControlPlane::new();
 
-        std::thread::spawn(move || {
+        let _ = std::thread::spawn(move || {
             let mut e = fuchsia_async::TestExecutor::new().unwrap();
             let fut = async {
                 let (_, mut responder) = receiver.next().await.expect(

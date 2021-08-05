@@ -164,7 +164,7 @@ mod tests {
     fn worker_lifecycle() {
         // TestWorker::start will panic if the worker was not started correctly.
         // TestWorker is dropped immediately, calling bt_hci_transport_shutdown in the process.
-        TestWorker::start();
+        let _ = TestWorker::start();
     }
 
     #[test]
@@ -172,7 +172,7 @@ mod tests {
     fn start_bt_hci_transport_null_name() {
         let mut worker = std::ptr::null_mut();
         // This should panic due to a null pointer passed as the `name` argument.
-        unsafe { bt_hci_transport_start(std::ptr::null(), &mut worker) };
+        let _ = unsafe { bt_hci_transport_start(std::ptr::null(), &mut worker) };
     }
 
     #[test]
@@ -202,7 +202,9 @@ mod tests {
     #[should_panic]
     fn open_transport_uart_with_null_worker() {
         let serial = Box::new(serial_impl_async_protocol_t::new());
-        unsafe { bt_hci_transport_open_uart(std::ptr::null(), Box::into_raw(serial), TIMEOUT_MS) };
+        let _ = unsafe {
+            bt_hci_transport_open_uart(std::ptr::null(), Box::into_raw(serial), TIMEOUT_MS)
+        };
     }
 
     #[test]
@@ -226,7 +228,7 @@ mod tests {
     #[should_panic]
     fn open_command_with_null_worker() {
         let (cmd, _cmd) = zx::Channel::create().unwrap();
-        unsafe {
+        let _ = unsafe {
             bt_hci_transport_open_command_channel(std::ptr::null(), cmd.raw_handle(), TIMEOUT_MS)
         };
     }
@@ -252,7 +254,7 @@ mod tests {
     #[should_panic]
     fn open_acl_data_with_null_worker() {
         let (acl, _acl) = zx::Channel::create().unwrap();
-        unsafe {
+        let _ = unsafe {
             bt_hci_transport_open_acl_data_channel(std::ptr::null(), acl.raw_handle(), TIMEOUT_MS)
         };
     }
@@ -278,7 +280,7 @@ mod tests {
     #[should_panic]
     fn open_snoop_with_null_worker() {
         let (snoop, _snoop) = zx::Channel::create().unwrap();
-        unsafe {
+        let _ = unsafe {
             bt_hci_transport_open_snoop_channel(std::ptr::null(), snoop.raw_handle(), TIMEOUT_MS)
         };
     }

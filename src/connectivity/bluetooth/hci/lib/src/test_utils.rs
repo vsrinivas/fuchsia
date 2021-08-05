@@ -107,7 +107,7 @@ impl HwTransport for TestTransport {
         self.next_packet.take().expect("packet should be ready in test transport")
     }
     unsafe fn unbind(&mut self) {
-        self.unbound.signal();
+        let _ = self.unbound.signal();
     }
 }
 

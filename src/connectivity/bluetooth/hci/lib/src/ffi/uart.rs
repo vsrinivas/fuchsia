@@ -249,7 +249,9 @@ mod tests {
     fn serial_write_complete_succeeds() {
         let event = Arc::new(zx::Event::create().unwrap());
         let event_ = event.clone();
-        std::thread::spawn(move || serial_write_complete(Arc::into_raw(event_), zx::sys::ZX_OK));
+        let _ = std::thread::spawn(move || {
+            serial_write_complete(Arc::into_raw(event_), zx::sys::ZX_OK)
+        });
         // wait_handle call will be terminated if signal is not set for 5s.
         let res = event
             .wait_handle(IO_COMPLETE | IO_ERROR, zx::Time::after(5.seconds()))
