@@ -328,6 +328,10 @@ class Transformer {
       error = "expected present marker on non-empty string";
       return ZX_ERR_INVALID_ARGS;
     }
+    if (count > std::numeric_limits<uint32_t>::max()) {
+      error = "count exceeds the maximum value that fits in a uint32_t";
+      return ZX_ERR_INVALID_ARGS;
+    }
     dst_u64(dst_offset + 8) = src_u64(src_offset + 8);
 
     // Copy body.
@@ -352,6 +356,10 @@ class Transformer {
       error = "expected present marker on non-empty vector";
       return ZX_ERR_INVALID_ARGS;
     }
+    if (count > std::numeric_limits<uint32_t>::max()) {
+      error = "count exceeds the maximum value that fits in a uint32_t";
+      return ZX_ERR_INVALID_ARGS;
+    }
     dst_u64(dst_offset + 8) = src_u64(src_offset + 8);
 
     uint32_t src_element_size =
@@ -361,8 +369,19 @@ class Transformer {
 
     uint32_t src_body_offset = src_next_out_of_line_;
     uint32_t dst_body_offset = dst_next_out_of_line_;
-    zx_status_t status = IncreaseNextOutOfLine(FIDL_ALIGN(count * src_element_size),
-                                               FIDL_ALIGN(count * dst_element_size));
+
+    uint32_t src_size;
+    if (mul_overflow(count, src_element_size, &src_size)) {
+      error = "exceeded src array size";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint32_t dst_size;
+    if (mul_overflow(count, dst_element_size, &dst_size)) {
+      error = "exceeded dst array size";
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = IncreaseNextOutOfLine(FIDL_ALIGN(src_size), FIDL_ALIGN(dst_size));
     if (status != ZX_OK) {
       return status;
     }
