@@ -214,6 +214,13 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                             .repo_url(RepoUrl::new(n)?)
                                             .build();
                                     }
+                                    // The storage type can be overridden to persistent via the
+                                    // command line.
+                                    if persist {
+                                        repo = RepositoryConfigBuilder::from(repo)
+                                            .repo_storage_type(RepositoryStorageType::Persistent)
+                                            .build();
+                                    }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r
                                 }
@@ -252,6 +259,13 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     if let Some(n) = name {
                                         repo = RepositoryConfigBuilder::from(repo)
                                             .repo_url(RepoUrl::new(n)?)
+                                            .build();
+                                    }
+                                    // The storage type can be overridden to persistent via the
+                                    // command line.
+                                    if persist {
+                                        repo = RepositoryConfigBuilder::from(repo)
+                                            .repo_storage_type(RepositoryStorageType::Persistent)
                                             .build();
                                     }
                                     let r = repo_manager.add(repo.into()).await?;

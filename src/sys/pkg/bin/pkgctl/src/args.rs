@@ -104,7 +104,7 @@ pub enum RepoConfigFormat {
 #[argh(subcommand, name = "file")]
 /// Add a respository config from a local file, in JSON format, which contains the different repository metadata and URLs.
 pub struct RepoAddFileCommand {
-    /// for v1 configs: persist TUF metadata for repositories provided to the RepoManager.
+    /// persist TUF metadata for repositories provided to the RepoManager.
     #[argh(switch, short = 'p')]
     pub persist: bool,
     /// the expected config.json file format version.
@@ -127,7 +127,7 @@ pub struct RepoAddFileCommand {
 #[argh(subcommand, name = "url")]
 /// Add a respository config via http, in JSON format, which contains the different repository metadata and URLs.
 pub struct RepoAddUrlCommand {
-    /// for v1 configs: persist TUF metadata for repositories provided to the RepoManager.
+    /// persist TUF metadata for repositories provided to the RepoManager.
     #[argh(switch, short = 'p')]
     pub persist: bool,
     /// the expected config.json file format version.
@@ -415,6 +415,20 @@ mod tests {
             },
         );
         check(
+            &["repo", "add", "file", "-p", "foo"],
+            RepoCommand {
+                verbose: false,
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::File(RepoAddFileCommand {
+                        persist: true,
+                        format: RepoConfigFormat::Version2,
+                        name: None,
+                        file: "foo".into(),
+                    }),
+                })),
+            },
+        );
+        check(
             &["repo", "add", "file", "-p", "-f", "1", "foo"],
             RepoCommand {
                 verbose: false,
@@ -449,6 +463,20 @@ mod tests {
                 subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
                     subcommand: RepoAddSubCommand::Url(RepoAddUrlCommand {
                         persist: false,
+                        format: RepoConfigFormat::Version2,
+                        name: Some("devhost".to_string()),
+                        repo_url: "http://foo.tld/fuchsia/config.json".into(),
+                    }),
+                })),
+            },
+        );
+        check(
+            &["repo", "add", "url", "-p", "-n", "devhost", "http://foo.tld/fuchsia/config.json"],
+            RepoCommand {
+                verbose: false,
+                subcommand: Some(RepoSubCommand::Add(RepoAddCommand {
+                    subcommand: RepoAddSubCommand::Url(RepoAddUrlCommand {
+                        persist: true,
                         format: RepoConfigFormat::Version2,
                         name: Some("devhost".to_string()),
                         repo_url: "http://foo.tld/fuchsia/config.json".into(),
