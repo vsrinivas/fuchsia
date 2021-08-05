@@ -251,6 +251,11 @@ class FakeThreadStackManagerDelegate : public DeviceLayer::ThreadStackManagerDel
  public:
   WEAVE_ERROR InitThreadStack() override { return WEAVE_NO_ERROR; }
   std::string GetInterfaceName() const override { return kThreadInterfaceName; }
+  bool IsThreadProvisioned() override { return is_thread_provisioned_; }
+
+  void set_is_thread_provisioned(bool provisioned) { is_thread_provisioned_ = provisioned; }
+ private:
+  bool is_thread_provisioned_{true};
 };
 
 // Fake implementation of the fuchsia::netstack::Netstack that provides
@@ -463,7 +468,9 @@ class WarmTest : public testing::WeaveTestFixture<> {
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<FakeConnectivityManagerDelegate>());
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<FakeThreadStackManagerDelegate>());
+    auto tsm = std::make_unique<FakeThreadStackManagerDelegate>();
+    fake_thread_stack_manager_ = tsm.get();
+    ThreadStackMgrImpl().SetDelegate(std::move(tsm));
     ThreadStackMgrImpl().InitThreadStack();
     Warm::Platform::Init(nullptr);
 
@@ -487,6 +494,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeNetInterfaces& fake_net_interfaces() { return fake_net_interfaces_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
   FakeStack& fake_stack() { return fake_stack_; }
+  FakeThreadStackManagerDelegate& fake_thread_stack_manager() { return *fake_thread_stack_manager_; };
 
   void AddOwnedInterface(std::string name) {
     fake_net_stack_.AddOwnedInterface(name);
@@ -522,6 +530,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   FakeNetInterfaces fake_net_interfaces_;
   FakeStack fake_stack_;
   sys::testing::ComponentContextProvider context_provider_;
+  FakeThreadStackManagerDelegate* fake_thread_stack_manager_;
 };
 
 TEST_F(WarmTest, AddRemoveAddressThread) {
@@ -548,6 +557,28 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Confirm that it worked.
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
+}
+
+TEST_F(WarmTest, AddAddressThreadUnprovisioned) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPAddress addr;
+
+  // Fake unprovisioned TSM.
+  fake_thread_stack_manager().set_is_thread_provisioned(false);
+
+  // Sanity check - no addresses assigned.
+  OwnedInterface& lowpan = GetThreadInterface();
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+
+  // Attempt to add the address.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Confirm that nothing was changed.
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
   EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
