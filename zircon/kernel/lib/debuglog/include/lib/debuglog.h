@@ -19,7 +19,7 @@
 #include <ktl/string_view.h>
 #include <ktl/type_traits.h>
 
-struct DLog;
+class DLog;
 typedef struct dlog_header dlog_header_t;
 typedef struct dlog_record dlog_record_t;
 
