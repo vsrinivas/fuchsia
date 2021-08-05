@@ -1982,6 +1982,51 @@ void Coordinator::DumpDrivers(DumpDriversRequestView request,
     }
     first = false;
   }
+
+  // Check the driver index for drivers.
+  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
+    completer.Reply(writer.status(), writer.written(), writer.available());
+    return;
+  }
+
+  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
+      std::move(driver_index_client.value()), dispatcher());
+  auto info_result = driver_index->GetDriverInfo_Sync(fidl::VectorView<fidl::StringView>());
+  // There are still some environments where we can't connect to DriverIndex.
+  if (info_result.status() != ZX_OK) {
+    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
+    completer.Reply(writer.status(), writer.written(), writer.available());
+    return;
+  }
+  if (info_result->result.is_err()) {
+    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
+    completer.Reply(writer.status(), writer.written(), writer.available());
+    return;
+  }
+  const auto& drivers = info_result->result.response().drivers;
+  for (const auto& driver : drivers) {
+    const char* name = driver.has_name() ? driver.name().data() : "<unknown>";
+    writer.Printf("%sName    : %s\n", first ? "" : "\n", name);
+
+    const char* url = driver.has_url() ? driver.url().data() : "<unknown>";
+    writer.Printf("Driver  : %s\n", url);
+
+    if (!driver.has_bind_rules() || !driver.bind_rules().is_bytecode_v2()) {
+      continue;
+    }
+
+    writer.Printf("Bytecode Version   : %u\n", 2);
+    auto bytecode = driver.bind_rules().bytecode_v2();
+    writer.Printf("Bytecode (%lu byte%s): \n", bytecode.count(),
+                  (bytecode.count() == 1) ? "" : "s");
+    for (uint32_t i = 0; i < bytecode.count(); ++i) {
+      writer.Printf("0x%02x", (bytecode[i]));
+    }
+    writer.Printf("\n");
+  }
+
   completer.Reply(writer.status(), writer.written(), writer.available());
 }
 
