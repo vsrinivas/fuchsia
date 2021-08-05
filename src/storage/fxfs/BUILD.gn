@@ -49,8 +49,10 @@ fxfs_sources = [
   "src/object_store.rs",
   "src/object_store/allocator.rs",
   "src/object_store/allocator/merge.rs",
+  "src/object_store/caching_object_handle.rs",
   "src/object_store/constants.rs",
   "src/object_store/crypt.rs",
+  "src/object_store/data_buffer.rs",
   "src/object_store/directory.rs",
   "src/object_store/filesystem.rs",
   "src/object_store/fsck.rs",
@@ -71,6 +73,7 @@ fxfs_sources = [
   "src/object_store/transaction.rs",
   "src/object_store/tree.rs",
   "src/object_store/volume.rs",
+  "src/object_store/writeback_cache.rs",
   "src/testing.rs",
   "src/testing/fake_object.rs",
   "src/trace.rs",
@@ -98,6 +101,7 @@ if (is_fuchsia) {
     "//garnet/lib/rust/io_util",
   ]
   fxfs_sources += [
+    "src/object_store/vmo_data_buffer.rs",
     "src/remote_crypt.rs",
     "src/server.rs",
     "src/server/directory.rs",

@@ -7,14 +7,15 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         object_store::{
-            allocator::Allocator,
+            allocator::{Allocator, Hold, Reservation},
             crypt::Crypt,
             journal::{super_block::SuperBlock, Journal},
             object_manager::ObjectManager,
             trace_duration,
             transaction::{
                 AssocObj, LockKey, LockManager, MetadataReservation, Mutation, Options, ReadGuard,
-                Transaction, TransactionHandler, WriteGuard,
+                Transaction, TransactionHandler, TransactionLocks, WriteGuard,
+                TRANSACTION_METADATA_MAX_AMOUNT,
             },
             ObjectStore,
         },
@@ -180,6 +181,10 @@ impl FxFilesystem {
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
+        if let Some(graveyard) = filesystem.objects.graveyard() {
+            // Start the graveyard's background reaping task.
+            graveyard.reap_async(filesystem.journal.journal_file_offset());
+        }
         Ok(filesystem.into())
     }
 
@@ -208,7 +213,8 @@ impl FxFilesystem {
         filesystem.journal.replay(filesystem.clone()).await?;
         if !options.read_only {
             if let Some(graveyard) = filesystem.objects.graveyard() {
-                // Purge the graveyard of old entries in a background task.
+                // Purge the graveyard of old entries in a background task; once that's done the
+                // reaper will continue to run and purge newly received entries.
                 graveyard.reap_async(filesystem.journal.journal_file_offset());
             }
         }
@@ -262,6 +268,51 @@ impl FxFilesystem {
     pub fn super_block(&self) -> SuperBlock {
         self.journal.super_block()
     }
+
+    async fn reservation_for_transaction<'a>(
+        self: &Arc<Self>,
+        options: Options<'a>,
+    ) -> Result<(MetadataReservation, Option<&'a Reservation>, Option<Hold<'a>>), Error> {
+        if !options.skip_journal_checks {
+            // TODO(csuter): for now, we don't allow for transactions that might be inflight but
+            // not committed.  In theory, if there are a large number of them, it would be possible
+            // to run out of journal space.  We should probably have an in-flight limit.
+            self.journal.check_journal_space().await?;
+        }
+
+        // We support three options for metadata space reservation:
+        //
+        //   1. We can borrow from the filesystem's metadata reservation.  This should only be
+        //      be used on the understanding that eventually, potentially after a full compaction,
+        //      there should be no net increase in space used.  For example, unlinking an object
+        //      should eventually decrease the amount of space used and setting most attributes
+        //      should not result in any change.
+        //
+        //   2. A reservation is provided in which case we'll place a hold on some of it for
+        //      metadata.
+        //
+        //   3. No reservation is supplied, so we try and reserve space with the allocator now,
+        //      and will return NoSpace if that fails.
+        let mut hold = None;
+        let metadata_reservation = if options.borrow_metadata_space {
+            MetadataReservation::Borrowed
+        } else {
+            match options.allocator_reservation {
+                Some(reservation) => {
+                    hold = Some(reservation.hold(TRANSACTION_METADATA_MAX_AMOUNT)?);
+                    MetadataReservation::Hold(TRANSACTION_METADATA_MAX_AMOUNT)
+                }
+                None => {
+                    let reservation = self
+                        .allocator()
+                        .reserve(TRANSACTION_METADATA_MAX_AMOUNT)
+                        .ok_or(FxfsError::NoSpace)?;
+                    MetadataReservation::Reservation(reservation)
+                }
+            }
+        };
+        Ok((metadata_reservation, options.allocator_reservation, hold))
+    }
 }
 
 impl Drop for FxFilesystem {
@@ -302,7 +353,7 @@ impl Filesystem for FxFilesystem {
     fn get_info(&self) -> Info {
         Info {
             total_bytes: self.device.get().unwrap().size(),
-            used_bytes: self.object_manager().allocator().get_allocated_bytes(),
+            used_bytes: self.object_manager().allocator().get_used_bytes(),
             block_size: self.block_size(),
         }
     }
@@ -319,55 +370,33 @@ impl TransactionHandler for FxFilesystem {
         locks: &[LockKey],
         options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
-        if !options.skip_journal_checks {
-            // TODO(csuter): for now, we don't allow for transactions that might be inflight but
-            // not committed.  In theory, if there are a large number of them, it would be possible
-            // to run out of journal space.  We should probably have an in-flight limit.
-            self.journal.check_journal_space().await?;
-        }
-
-        // This is the amount of space that we reserve for metadata.  A transaction should not take
-        // more than this.  At time of writing, this means that a single transaction must not take
-        // any more than 16 KiB of space when written to the journal (see
-        // object_manager::reserved_space_from_journal_usage).
-        const METADATA_RESERVATION_AMOUNT: u64 = 32_768;
-
-        // We support three options for metadata space reservation:
-        //
-        //   1. We can borrow from the filesystem's metadata reservation.  This should only be
-        //      be used on the understanding that eventually, potentially after a full compaction,
-        //      there should be no net increase in space used.  For example, unlinking an object
-        //      should eventually decrease the amount of space used and setting most attributes
-        //      should not result in any change.
-        //
-        //   2. A reservation is provided in which case we'll place a hold on some of it for
-        //      metadata.
-        //
-        //   3. No reservation is supplied, so we try and reserve space with the allocator now,
-        //      and will return NoSpace if that fails.
-        let mut hold = None;
-        let metadata_reservation = if options.borrow_metadata_space {
-            MetadataReservation::Borrowed
-        } else {
-            match options.allocator_reservation {
-                Some(reservation) => {
-                    hold = Some(reservation.hold(METADATA_RESERVATION_AMOUNT)?);
-                    MetadataReservation::Hold(METADATA_RESERVATION_AMOUNT)
-                }
-                None => {
-                    let reservation = self
-                        .allocator()
-                        .reserve(METADATA_RESERVATION_AMOUNT)
-                        .ok_or(FxfsError::NoSpace)?;
-                    MetadataReservation::Reservation(reservation)
-                }
-            }
-        };
+        let (metadata_reservation, allocator_reservation, hold) =
+            self.reservation_for_transaction(options).await?;
         let mut transaction =
             Transaction::new(self, metadata_reservation, &[LockKey::Filesystem], locks).await;
         hold.map(|mut h| h.take()); // Transaction takes ownership from here on.
-        transaction.allocator_reservation = options.allocator_reservation;
+        transaction.allocator_reservation = allocator_reservation;
         Ok(transaction)
+    }
+
+    async fn new_transaction_with_locks<'a>(
+        self: Arc<Self>,
+        locks: TransactionLocks<'_>,
+        options: Options<'a>,
+    ) -> Result<Transaction<'a>, Error> {
+        let (metadata_reservation, allocator_reservation, hold) =
+            self.reservation_for_transaction(options).await?;
+        let mut transaction =
+            Transaction::new_with_locks(self, metadata_reservation, &[LockKey::Filesystem], locks)
+                .await;
+        hold.map(|mut h| h.take()); // Transaction takes ownership from here on.
+        transaction.allocator_reservation = allocator_reservation;
+        Ok(transaction)
+    }
+
+    async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a> {
+        let lock_manager: &LockManager = self.as_ref();
+        TransactionLocks(lock_manager.txn_lock(lock_keys).await)
     }
 
     async fn commit_transaction(

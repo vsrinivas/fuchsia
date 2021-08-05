@@ -50,6 +50,15 @@ pub struct Options<'a> {
     pub allocator_reservation: Option<&'a Reservation>,
 }
 
+// This is the amount of space that we reserve for metadata when we are creating a new transaction.
+// A transaction should not take more than this.  At time of writing, this means that a single
+// transaction must not take any more than 16 KiB of space when written to the journal (see
+// object_manager::reserved_space_from_journal_usage).
+pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = 32_768;
+
+#[must_use]
+pub struct TransactionLocks<'a>(pub WriteGuard<'a>);
+
 #[async_trait]
 pub trait TransactionHandler: Send + Sync {
     /// Initiates a new transaction.  Implementations should check to see that a transaction can be
@@ -60,6 +69,19 @@ pub trait TransactionHandler: Send + Sync {
         lock_keys: &[LockKey],
         options: Options<'a>,
     ) -> Result<Transaction<'a>, Error>;
+
+    /// Like |new_transaction|, but with an already-acquired set of locks.
+    async fn new_transaction_with_locks<'a>(
+        self: Arc<Self>,
+        locks: TransactionLocks<'_>,
+        options: Options<'a>,
+    ) -> Result<Transaction<'a>, Error>;
+
+    /// Acquires transaction locks for |lock_keys| which can later be put into a transaction via
+    /// new_transaction_with_locks.
+    /// This is useful in situations where the lock needs to be held before the transaction options
+    /// can be determined, e.g. to take the allocator reservation.
+    async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a>;
 
     /// Implementations should perform any required journaling and then apply the mutations via
     /// ObjectManager's apply_mutation method.  Any mutations within the transaction should be
@@ -436,6 +458,27 @@ impl<'a> Transaction<'a> {
             let mut read_guard = debug_assert_not_too_long!(lock_manager.read_lock(read_locks));
             let mut write_guard = debug_assert_not_too_long!(lock_manager.txn_lock(txn_locks));
             (std::mem::take(&mut read_guard.lock_keys), std::mem::take(&mut write_guard.lock_keys))
+        };
+        Transaction {
+            handler,
+            mutations: BTreeSet::new(),
+            txn_locks,
+            read_locks,
+            allocator_reservation: None,
+            metadata_reservation,
+        }
+    }
+
+    pub async fn new_with_locks<H: TransactionHandler + AsRef<LockManager> + 'static>(
+        handler: Arc<H>,
+        metadata_reservation: MetadataReservation,
+        read_locks: &[LockKey],
+        mut txn_locks: TransactionLocks<'_>,
+    ) -> Transaction<'a> {
+        let (read_locks, txn_locks) = {
+            let lock_manager: &LockManager = handler.as_ref().as_ref();
+            let mut read_guard = debug_assert_not_too_long!(lock_manager.read_lock(read_locks));
+            (std::mem::take(&mut read_guard.lock_keys), std::mem::take(&mut txn_locks.0.lock_keys))
         };
         Transaction {
             handler,

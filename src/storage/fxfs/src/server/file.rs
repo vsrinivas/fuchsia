@@ -6,7 +6,8 @@ use {
     crate::{
         object_handle::ObjectHandle,
         object_store::{
-            filesystem::SyncOptions, round_down, transaction::Options, StoreObjectHandle, Timestamp,
+            filesystem::SyncOptions, transaction::Options, CachingObjectHandle, StoreObjectHandle,
+            Timestamp,
         },
         server::{
             directory::FxDirectory,
@@ -25,7 +26,7 @@ use {
     std::{
         any::Any,
         sync::{
-            atomic::{AtomicUsize, Ordering},
+            atomic::{AtomicBool, AtomicUsize, Ordering},
             Arc,
         },
     },
@@ -50,35 +51,30 @@ const PURGED: usize = 1 << (usize::BITS - 1);
 
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
-    handle: StoreObjectHandle<FxVolume>,
+    handle: CachingObjectHandle<FxVolume>,
     open_count: AtomicUsize,
+    has_written: AtomicBool,
 }
 
 impl FxFile {
     pub fn new(handle: StoreObjectHandle<FxVolume>) -> Self {
-        Self { handle, open_count: AtomicUsize::new(0) }
+        Self {
+            handle: CachingObjectHandle::new(handle),
+            open_count: AtomicUsize::new(0),
+            has_written: AtomicBool::new(false),
+        }
     }
 
     pub fn open_count(&self) -> usize {
         self.open_count.load(Ordering::Relaxed)
     }
 
-    async fn write_or_append(
-        &self,
-        offset: Option<u64>,
-        content: &[u8],
-    ) -> Result<(u64, u64), Error> {
-        // We must create the transaction first so that we lock the size in the case that this is
-        // append.
-        let mut transaction = self.handle.new_transaction().await?;
-        let offset = offset.unwrap_or_else(|| self.handle.get_size());
-        let start = round_down(offset, self.handle.block_size());
-        let align = (offset - start) as usize;
-        let mut buf = self.handle.allocate_buffer(align + content.len());
-        buf.as_mut_slice()[align..].copy_from_slice(content);
-        self.handle.txn_write(&mut transaction, offset, buf.subslice(align..)).await?;
-        transaction.commit().await?;
-        Ok((content.len() as u64, offset + content.len() as u64))
+    async fn write_or_append(&self, offset: Option<u64>, content: &[u8]) -> Result<u64, Error> {
+        let mut buf = self.handle.allocate_buffer(content.len());
+        buf.as_mut_slice().copy_from_slice(content);
+        let size = self.handle.write_or_append_cached(offset, buf.as_ref()).await?;
+        self.has_written.store(true, Ordering::Relaxed);
+        Ok(size)
     }
 
     pub fn create_connection(
@@ -203,27 +199,20 @@ impl File for FxFile {
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
         self.write_or_append(Some(offset), content)
             .await
-            .map(|(done, _)| done)
+            .map(|_| content.len() as u64)
             .map_err(map_to_status)
     }
 
     async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        self.write_or_append(None, content).await.map_err(map_to_status)
+        self.write_or_append(None, content)
+            .await
+            .map(|size| (content.len() as u64, size))
+            .map_err(map_to_status)
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
-        // It's safe to skip the space checks even if we're growing the file here because it won't
-        // actually use any data on disk (either for data or metadata).
-        let mut transaction = self
-            .handle
-            .new_transaction_with_options(Options {
-                borrow_metadata_space: true,
-                ..Default::default()
-            })
-            .await
-            .map_err(map_to_status)?;
-        self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
-        transaction.commit().await.map_err(map_to_status)?;
+        self.handle.truncate_cached(length);
+        self.has_written.store(true, Ordering::Relaxed);
         Ok(())
     }
 
@@ -284,21 +273,28 @@ impl File for FxFile {
             )
         };
         self.handle
-            .update_timestamps(transaction.as_mut(), crtime, mtime)
+            .write_timestamps_cached(transaction.as_mut(), crtime, mtime)
             .await
             .map_err(map_to_status)?;
         if let Some(t) = transaction {
             t.commit().await.map_err(map_to_status)?;
         }
+        self.has_written.store(true, Ordering::Relaxed);
         Ok(())
     }
 
     async fn close(&self) -> Result<(), Status> {
+        if self.has_written.load(Ordering::Relaxed) {
+            if let Err(e) = self.handle.flush().await {
+                log::warn!("{} Flush failed: {:?}", self.object_id(), e);
+            }
+        }
         self.open_count_sub_one();
         Ok(())
     }
 
     async fn sync(&self) -> Result<(), Status> {
+        self.handle.flush().await.map_err(map_to_status)?;
         // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
         // match minfs.
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
@@ -444,6 +440,15 @@ mod tests {
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");
         assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
+        // We haven't synced yet, but the pending writes should have blocks reserved still.
+        assert_eq!(attrs.storage_size, fixture.fs().block_size() as u64);
+
+        let status = file.sync().await.expect("FIDL call failed");
+        Status::ok(status).expect("sync failed");
+
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
         assert_eq!(attrs.storage_size, fixture.fs().block_size() as u64);
 
         close_file_checked(file).await;
@@ -504,13 +509,14 @@ mod tests {
                 file.write(input.as_bytes()).await.expect("FIDL call failed");
             Status::ok(status).expect("File write was successful");
             assert_eq!(bytes_written as usize, input.as_bytes().len());
+            close_file_checked(file).await;
         }
 
         let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
         let (status, buf) = file.read_at(fio::MAX_BUF, 0).await.expect("FIDL call failed");
         Status::ok(status).expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
-        assert!(buf.iter().eq(expected_output.as_bytes().iter()));
+        assert_eq!(&buf[..], expected_output.as_bytes());
 
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");

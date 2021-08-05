@@ -29,38 +29,26 @@ use {
         cmp::min,
         ops::{Bound, Range},
         sync::{
-            atomic::{self, AtomicBool},
-            Arc, Mutex,
+            atomic::{self, AtomicBool, AtomicU64},
+            Arc,
         },
     },
     storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
 };
 
-// Property updates which are pending a flush.  These can be set by update_timestamps and are
-// flushed along with any other updates on write.  While set, the object's properties
-// (get_properties) will reflect the pending values.  This is useful for performance, e.g. to permit
-// updating properties on a buffered write but deferring the flush until later.
-// TODO(jfsulliv): We should flush these when we close the handle.
-#[derive(Clone, Debug, Default)]
-struct PendingPropertyUpdates {
-    creation_time: Option<Timestamp>,
-    modification_time: Option<Timestamp>,
-}
-
 // TODO(csuter): We should probably be a little more frugal about what we store here since there
-// could be a lot of these structures. We could change the size to be atomic.
-pub struct StoreObjectHandle<S> {
+// could be a lot of these structures.
+pub struct StoreObjectHandle<S: AsRef<ObjectStore> + Send + Sync + 'static> {
     owner: Arc<S>,
-    object_id: u64,
-    attribute_id: u64,
+    pub(super) object_id: u64,
+    pub(super) attribute_id: u64,
+    pub(super) options: HandleOptions,
+    pub(super) trace: AtomicBool,
     keys: Option<UnwrappedKeys>,
-    size: Mutex<u64>,
-    options: HandleOptions,
-    pending_properties: Mutex<PendingPropertyUpdates>,
-    trace: AtomicBool,
+    content_size: AtomicU64,
 }
 
-impl<S: AsRef<ObjectStore>> StoreObjectHandle<S> {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     pub fn new(
         owner: Arc<S>,
         object_id: u64,
@@ -75,10 +63,9 @@ impl<S: AsRef<ObjectStore>> StoreObjectHandle<S> {
             object_id,
             keys,
             attribute_id,
-            size: Mutex::new(size),
             options,
-            pending_properties: Mutex::new(PendingPropertyUpdates::default()),
             trace: AtomicBool::new(trace),
+            content_size: AtomicU64::new(size),
         }
     }
 }
@@ -90,41 +77,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
 
     pub fn store(&self) -> &ObjectStore {
         self.owner.as_ref().as_ref()
-    }
-
-    async fn write_timestamps<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        crtime: Option<Timestamp>,
-        mtime: Option<Timestamp>,
-    ) -> Result<(), Error> {
-        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
-            return Ok(());
-        }
-        let mut item = self.txn_get_object(transaction).await?;
-        if let ObjectValue::Object { ref mut attributes, .. } = item.value {
-            if let Some(time) = crtime {
-                attributes.creation_time = time;
-            }
-            if let Some(time) = mtime {
-                attributes.modification_time = time;
-            }
-        } else {
-            bail!(FxfsError::Inconsistent);
-        };
-        transaction.add(
-            self.store().store_object_id(),
-            Mutation::replace_or_insert_object(item.key, item.value),
-        );
-        Ok(())
-    }
-
-    async fn apply_pending_properties<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-    ) -> Result<(), Error> {
-        let pending = std::mem::take(&mut *self.pending_properties.lock().unwrap());
-        self.write_timestamps(transaction, pending.creation_time, pending.modification_time).await
     }
 
     /// Extend the file with the given extent.  The only use case for this right now is for files
@@ -198,10 +150,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             .copy_from_slice(buf.as_slice());
         if trace {
             log::info!(
-                "{}.{} W {:?}",
+                "{}.{} W {:?} ({})",
                 self.store().store_object_id(),
                 self.object_id,
-                device_offset..device_offset + transfer_buf.len() as u64
+                device_offset..device_offset + transfer_buf.len() as u64,
+                transfer_buf.len(),
             );
         }
         if let Some(keys) = &self.keys {
@@ -251,10 +204,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                         ..device_offset + overlap.end - extent_key.range.start;
                     if trace {
                         log::info!(
-                            "{}.{} D {:?}",
+                            "{}.{} D {:?} ({}) from extent {:?}",
                             self.store().store_object_id(),
                             self.object_id,
-                            range
+                            range,
+                            range.end - range.start,
+                            extent_key
                         );
                     }
                     allocator.deallocate(transaction, range).await?;
@@ -364,13 +319,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     }
 }
 
-impl<S: Send + Sync + 'static> AssociatedObject for StoreObjectHandle<S> {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> AssociatedObject for StoreObjectHandle<S> {
     fn will_apply_mutation(&self, mutation: &Mutation) {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation {
                 item: ObjectItem { value: ObjectValue::Attribute { size }, .. },
                 ..
-            }) => *self.size.lock().unwrap() = *size,
+            }) => self.content_size.store(*size, atomic::Ordering::Relaxed),
             _ => {}
         }
     }
@@ -522,13 +477,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     async fn txn_write<'a>(
         &'a self,
         transaction: &mut Transaction<'a>,
-        mut offset: u64,
+        offset: u64,
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
         if buf.is_empty() {
             return Ok(());
         }
-        self.apply_pending_properties(transaction).await?;
         let block_size = u64::from(self.block_size());
         let aligned = round_down(offset, block_size)
             ..round_up(offset + buf.len() as u64, block_size).ok_or(FxfsError::TooBig)?;
@@ -550,24 +504,31 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         let trace = self.trace.load(atomic::Ordering::Relaxed);
         let futures = FuturesUnordered::new();
         let mut aligned_offset = aligned.start;
+        let mut current_offset = offset;
         while buf_offset < buf.len() {
             let device_range = allocator
                 .allocate(transaction, aligned.end - aligned_offset)
                 .await
                 .context("allocation failed")?;
             if trace {
-                log::info!("{}.{} A {:?}", store_id, self.object_id, device_range);
+                log::info!(
+                    "{}.{} A {:?} ({})",
+                    store_id,
+                    self.object_id,
+                    device_range,
+                    device_range.end - device_range.start
+                );
             }
             allocated += device_range.end - device_range.start;
             let end = aligned_offset + device_range.end - device_range.start;
-            let len = min(buf.len() - buf_offset, (end - offset) as usize);
+            let len = min(buf.len() - buf_offset, (end - current_offset) as usize);
             assert!(len > 0);
             futures.push(async move {
                 let checksum = self
                     .write_at(
-                        offset,
+                        current_offset,
                         buf.subslice(buf_offset..buf_offset + len),
-                        device_range.start + offset % block_size,
+                        device_range.start + current_offset % block_size,
                         true,
                     )
                     .await?;
@@ -578,7 +539,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             });
             aligned_offset = end;
             buf_offset += len;
-            offset += len as u64;
+            current_offset += len as u64;
         }
         let (mutations, _): (Vec<_>, _) = try_join!(futures.try_collect(), async {
             let deallocated = self.deallocate_old_extents(transaction, aligned.clone()).await?;
@@ -587,6 +548,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         for m in mutations {
             transaction.add(store_id, m);
         }
+
         Ok(())
     }
 
@@ -632,7 +594,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     }
 
     fn get_size(&self) -> u64 {
-        *self.size.lock().unwrap()
+        self.content_size.load(atomic::Ordering::Relaxed)
     }
 
     async fn truncate<'a>(
@@ -641,6 +603,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         size: u64,
     ) -> Result<(), Error> {
         let old_size = self.txn_get_size(transaction);
+        if self.trace.load(atomic::Ordering::Relaxed) {
+            log::info!(
+                "{}.{} T {}/{} -> {}",
+                self.store().store_object_id(),
+                self.object_id,
+                old_size,
+                self.get_size(),
+                size
+            );
+        }
         if size < old_size {
             let block_size = self.block_size().into();
             let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
@@ -674,7 +646,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             ),
             AssocObj::Borrowed(self),
         );
-        self.apply_pending_properties(transaction).await?;
+
         Ok(())
     }
 
@@ -775,28 +747,31 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         Ok(ranges)
     }
 
-    async fn update_timestamps<'a>(
+    async fn write_timestamps<'a>(
         &'a self,
-        transaction: Option<&mut Transaction<'a>>,
+        transaction: &mut Transaction<'a>,
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
     ) -> Result<(), Error> {
-        let (crtime, mtime) = {
-            let mut pending = self.pending_properties.lock().unwrap();
-
-            if transaction.is_none() {
-                // Just buffer the new values for later.
-                if crtime.is_some() {
-                    pending.creation_time = crtime;
-                }
-                if mtime.is_some() {
-                    pending.modification_time = mtime;
-                }
-                return Ok(());
+        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
+            return Ok(());
+        }
+        let mut item = self.txn_get_object(transaction).await?;
+        if let ObjectValue::Object { ref mut attributes, .. } = item.value {
+            if let Some(time) = crtime {
+                attributes.creation_time = time;
             }
-            (crtime.or(pending.creation_time.clone()), mtime.or(pending.modification_time.clone()))
+            if let Some(time) = mtime {
+                attributes.modification_time = time;
+            }
+        } else {
+            bail!(FxfsError::Inconsistent);
         };
-        self.write_timestamps(transaction.unwrap(), crtime, mtime).await
+        transaction.add(
+            self.store().store_object_id(),
+            Mutation::replace_or_insert_object(item.key, item.value),
+        );
+        Ok(())
     }
 
     // TODO(jfsulliv): Make StoreObjectHandle per-object (not per-attribute as it currently is)
@@ -821,21 +796,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             ObjectValue::Object {
                 kind: ObjectKind::File { refs, allocated_size, .. },
                 attributes: ObjectAttributes { creation_time, modification_time },
-            } => {
-                let data_attribute_size = self.get_size();
-                let pending = self.pending_properties.lock().unwrap();
-                Ok(ObjectProperties {
-                    refs,
-                    allocated_size,
-                    data_attribute_size,
-                    creation_time: pending.creation_time.clone().unwrap_or(creation_time),
-                    modification_time: pending
-                        .modification_time
-                        .clone()
-                        .unwrap_or(modification_time),
-                    sub_dirs: 0,
-                })
-            }
+            } => Ok(ObjectProperties {
+                refs,
+                allocated_size,
+                data_attribute_size: self.get_size(),
+                creation_time,
+                modification_time,
+                sub_dirs: 0,
+            }),
             _ => bail!(FxfsError::NotFile),
         }
     }
@@ -1490,7 +1458,7 @@ mod tests {
 
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object
-            .update_timestamps(Some(&mut transaction), Some(CRTIME), Some(MTIME))
+            .write_timestamps(&mut transaction, Some(CRTIME), Some(MTIME))
             .await
             .expect("update_timestamps failed");
         transaction.commit().await.expect("commit failed");
@@ -1507,48 +1475,6 @@ mod tests {
                 ..
             }
         );
-        fs.close().await.expect("Close failed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_pending_properties() {
-        let (fs, object) = test_filesystem_and_object().await;
-        let crtime = Timestamp::from_nanos(1234u64);
-        let mtime = Timestamp::from_nanos(5678u64);
-
-        object
-            .update_timestamps(None, Some(crtime.clone()), None)
-            .await
-            .expect("update_timestamps failed");
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_eq!(properties.creation_time, crtime);
-        assert_ne!(properties.modification_time, mtime);
-
-        object
-            .update_timestamps(None, None, Some(mtime.clone()))
-            .await
-            .expect("update_timestamps failed");
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_eq!(properties.creation_time, crtime);
-        assert_eq!(properties.modification_time, mtime);
-
-        object
-            .update_timestamps(None, None, Some(mtime.clone()))
-            .await
-            .expect("update_timestamps failed");
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_eq!(properties.creation_time, crtime);
-        assert_eq!(properties.modification_time, mtime);
-
-        // Writes should flush the pending attrs, rather than using the current time (which would
-        // change mtime).
-        let mut buf = object.allocate_buffer(5);
-        buf.as_mut_slice().copy_from_slice(b"hello");
-        object.write(0, buf.as_ref()).await.expect("write failed");
-
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_eq!(properties.creation_time, crtime);
-        assert_eq!(properties.modification_time, mtime);
         fs.close().await.expect("Close failed");
     }
 }

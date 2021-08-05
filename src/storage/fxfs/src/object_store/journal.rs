@@ -892,7 +892,7 @@ impl Journal {
                 let mut inner = self.inner.lock().unwrap();
                 if inner.terminate {
                     // If the flush error is set, this will never make progress, since we can't
-                    // extent the journal any more.
+                    // extend the journal any more.
                     break Err(anyhow!(FxfsError::JournalFlushError).context("Journal closed"));
                 }
                 if self.objects.last_end_offset() - inner.super_block.journal_checkpoint.file_offset

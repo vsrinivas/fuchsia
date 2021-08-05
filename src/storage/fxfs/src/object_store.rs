@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 mod allocator;
+pub mod caching_object_handle;
 mod constants;
 pub mod crypt;
+pub mod data_buffer;
 pub mod directory;
 pub mod filesystem;
 pub mod fsck;
@@ -18,8 +20,12 @@ pub mod store_object_handle;
 mod testing;
 pub mod transaction;
 mod tree;
+#[cfg(target_os = "fuchsia")]
+pub mod vmo_data_buffer;
 pub mod volume;
+mod writeback_cache;
 
+pub use caching_object_handle::CachingObjectHandle;
 pub use directory::Directory;
 pub use filesystem::FxFilesystem;
 pub use record::{ObjectDescriptor, Timestamp};
@@ -63,15 +69,9 @@ use {
             atomic::{self, AtomicU64},
             Arc, Mutex, Weak,
         },
-        time::{Duration, SystemTime, UNIX_EPOCH},
     },
     storage_device::Device,
 };
-
-// TODO(jfsulliv): This probably could have a better home.
-pub fn current_time() -> Timestamp {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).into()
-}
 
 // StoreInfo stores information about the object store.  This is stored within the parent object
 // store, and is used, for example, to get the persistent layer objects.
@@ -244,7 +244,7 @@ impl ObjectStore {
         Ok(store)
     }
 
-    pub async fn open_object<S: AsRef<ObjectStore>>(
+    pub async fn open_object<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         object_id: u64,
         options: HandleOptions,
@@ -289,7 +289,7 @@ impl ObjectStore {
         }
     }
 
-    async fn create_object_with_id<S: AsRef<ObjectStore>>(
+    async fn create_object_with_id<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         transaction: &mut Transaction<'_>,
         object_id: u64,
@@ -309,7 +309,7 @@ impl ObjectStore {
         // should update last_object_id in case the caller wants to create more objects in
         // the same transaction.
         store.update_last_object_id(object_id);
-        let now = current_time();
+        let now = Timestamp::now();
         transaction.add(
             store.store_object_id(),
             Mutation::insert_object(
@@ -335,7 +335,7 @@ impl ObjectStore {
         ))
     }
 
-    pub async fn create_object<S: AsRef<ObjectStore>>(
+    pub async fn create_object<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         owner: &Arc<S>,
         mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
@@ -599,7 +599,7 @@ impl ObjectStore {
         self.last_object_id.fetch_add(1, atomic::Ordering::Relaxed) + 1
     }
 
-    fn allocator(&self) -> Arc<dyn Allocator> {
+    pub fn allocator(&self) -> Arc<dyn Allocator> {
         self.filesystem().allocator()
     }
 

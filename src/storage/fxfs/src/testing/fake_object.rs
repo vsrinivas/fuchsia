@@ -8,7 +8,7 @@ use {
         object_store::{
             transaction::{
                 LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
-                TransactionHandler, WriteGuard,
+                TransactionHandler, TransactionLocks, WriteGuard,
             },
             Timestamp,
         },
@@ -68,6 +68,19 @@ impl TransactionHandler for FakeObject {
         _options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         Ok(Transaction::new(self, MetadataReservation::Borrowed, &[], locks).await)
+    }
+
+    async fn new_transaction_with_locks<'a>(
+        self: Arc<Self>,
+        locks: TransactionLocks<'_>,
+        _options: Options<'a>,
+    ) -> Result<Transaction<'a>, Error> {
+        Ok(Transaction::new_with_locks(self, MetadataReservation::Borrowed, &[], locks).await)
+    }
+
+    async fn transaction_lock<'a>(&'a self, lock_keys: &[LockKey]) -> TransactionLocks<'a> {
+        let lock_manager: &LockManager = self.as_ref();
+        TransactionLocks(lock_manager.txn_lock(lock_keys).await)
     }
 
     async fn commit_transaction(
@@ -162,9 +175,9 @@ impl ObjectHandle for FakeObjectHandle {
         panic!("Unsupported");
     }
 
-    async fn update_timestamps<'a>(
+    async fn write_timestamps<'a>(
         &'a self,
-        _transaction: Option<&mut Transaction<'a>>,
+        _transaction: &mut Transaction<'a>,
         _ctime: Option<Timestamp>,
         _mtime: Option<Timestamp>,
     ) -> Result<(), Error> {

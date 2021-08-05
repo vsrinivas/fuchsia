@@ -105,6 +105,10 @@ impl Allocator for FakeAllocator {
         (inner.alloc_bytes - inner.dealloc_bytes) as u64
     }
 
+    fn get_used_bytes(&self) -> u64 {
+        self.get_allocated_bytes()
+    }
+
     async fn validate_mutation(
         &self,
         _journal_offset: u64,

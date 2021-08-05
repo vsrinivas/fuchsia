@@ -10,6 +10,7 @@ use {
     std::cmp::{max, min},
     std::convert::From,
     std::ops::Range,
+    std::time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 /// The common case for extents which cover the data payload of some object.
@@ -306,6 +307,10 @@ pub struct Timestamp {
 impl Timestamp {
     const NSEC_PER_SEC: u64 = 1_000_000_000;
 
+    pub fn now() -> Self {
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).into()
+    }
+
     pub const fn zero() -> Self {
         Self { secs: 0, nanos: 0 }
     }
@@ -326,6 +331,12 @@ impl Timestamp {
 impl From<std::time::Duration> for Timestamp {
     fn from(duration: std::time::Duration) -> Timestamp {
         Timestamp { secs: duration.as_secs(), nanos: duration.subsec_nanos() }
+    }
+}
+
+impl From<Timestamp> for std::time::Duration {
+    fn from(timestamp: Timestamp) -> std::time::Duration {
+        Duration::new(timestamp.secs, timestamp.nanos)
     }
 }
 

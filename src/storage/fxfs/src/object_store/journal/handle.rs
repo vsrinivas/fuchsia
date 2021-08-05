@@ -159,9 +159,9 @@ impl ObjectHandle for Handle {
         unreachable!();
     }
 
-    async fn update_timestamps<'a>(
+    async fn write_timestamps<'a>(
         &'a self,
-        _transaction: Option<&mut Transaction<'a>>,
+        _transaction: &mut Transaction<'a>,
         _ctime: Option<Timestamp>,
         _mtime: Option<Timestamp>,
     ) -> Result<(), Error> {

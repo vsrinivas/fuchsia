@@ -102,6 +102,9 @@ pub trait Allocator: Send + Sync {
     /// Returns the number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
 
+    /// Returns the number of allocated and reserved bytes.
+    fn get_used_bytes(&self) -> u64;
+
     /// Used during replay to validate a mutation.  This should return false if the mutation is not
     /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
     /// data out-of-order, or because of a malicious actor.
@@ -792,6 +795,11 @@ impl Allocator for SimpleAllocator {
 
     fn get_allocated_bytes(&self) -> u64 {
         self.inner.lock().unwrap().allocated_bytes as u64
+    }
+
+    fn get_used_bytes(&self) -> u64 {
+        let inner = self.inner.lock().unwrap();
+        inner.allocated_bytes as u64 + inner.reserved_bytes
     }
 
     async fn validate_mutation(

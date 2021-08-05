@@ -11,7 +11,6 @@ use {
         },
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
-            current_time,
             record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
                 Timestamp,
@@ -74,7 +73,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
         let object_id = store.get_next_object_id();
-        let now = current_time();
+        let now = Timestamp::now();
         transaction.add(
             store.store_object_id,
             Mutation::insert_object(
@@ -144,7 +143,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
             ),
         );
-        self.update_attributes(transaction, None, Some(current_time()), |item| {
+        self.update_attributes(transaction, None, Some(Timestamp::now()), |item| {
             if let ObjectItem {
                 value: ObjectValue::Object { kind: ObjectKind::Directory { sub_dirs }, .. },
                 ..
@@ -175,7 +174,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
             ),
         );
-        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await?;
+        self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await?;
         Ok(handle)
     }
 
@@ -193,7 +192,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(store_object_id, ObjectDescriptor::Volume),
             ),
         );
-        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await
+        self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await
     }
 
     /// Inserts a child into the directory.
@@ -214,7 +213,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(object_id, descriptor),
             ),
         );
-        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await
+        self.update_attributes(transaction, None, Some(Timestamp::now()), |_| {}).await
     }
 
     /// Updates attributes for the object.  `updater` is a callback that allows modifications to
@@ -418,7 +417,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         }
     };
     let store_id = dst.0.store().store_object_id();
-    let now = current_time();
+    let now = Timestamp::now();
     let new_value = if let Some((src_dir, src_name)) = src {
         assert_eq!(store_id, src_dir.store().store_object_id());
         transaction.add(

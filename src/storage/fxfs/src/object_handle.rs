@@ -51,7 +51,10 @@ pub trait ObjectHandle: Send + Sync + 'static {
     /// |offset| and |buf| must both be block-aligned.
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
 
-    /// Writes |buf| to the device at |offset|.
+    /// Writes |buf| to the device at |offset|.  Note that this is a direct write which will be
+    /// less performant than |write_cached|, which is preferred when it is not necessary to
+    /// incorporate other work into the transaction.
+    ///
     /// The alignment of |offset| and |buf.range().start| must be equal (but they do not need to be
     /// block-aligned).
     async fn txn_write<'a>(
@@ -92,9 +95,9 @@ pub trait ObjectHandle: Send + Sync + 'static {
     /// If |transaction| is unset, the updates can be deferred until a later write.
     /// |get_properties| must immediately reflect the new values, though (i.e. they must be
     /// buffered).
-    async fn update_timestamps<'a>(
+    async fn write_timestamps<'a>(
         &'a self,
-        transaction: Option<&mut Transaction<'a>>,
+        transaction: &mut Transaction<'a>,
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
     ) -> Result<(), Error>;

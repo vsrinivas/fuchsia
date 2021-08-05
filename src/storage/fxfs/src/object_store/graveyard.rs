@@ -10,9 +10,9 @@ use {
             types::{ItemRef, LayerIterator},
         },
         object_store::{
-            current_time,
             record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
+                Timestamp,
             },
             transaction::{Mutation, Options, Transaction},
             ObjectStore,
@@ -73,7 +73,7 @@ impl Graveyard {
     ) -> Result<Arc<Graveyard>, Error> {
         store.ensure_open().await?;
         let object_id = store.get_next_object_id();
-        let now = current_time();
+        let now = Timestamp::now();
         transaction.add(
             store.store_object_id,
             Mutation::insert_object(
