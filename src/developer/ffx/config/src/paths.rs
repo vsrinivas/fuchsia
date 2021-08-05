@@ -93,6 +93,15 @@ pub(crate) fn get_config_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
+pub fn default_env_path() -> Result<PathBuf> {
+    // Environment file that keeps track of configuration files
+    const ENV_FILE: &str = ".ffx_env";
+    get_config_base_path().map(|mut path| {
+        path.push(ENV_FILE);
+        path
+    })
+}
+
 #[cfg(not(target_os = "macos"))]
 fn get_data_base() -> Result<PathBuf> {
     var("XDG_DATA_HOME").map(PathBuf::from).or_else(|_| {
@@ -128,7 +137,10 @@ pub(crate) fn get_default_user_file_path() -> PathBuf {
 
 #[cfg(not(test))]
 pub(crate) fn get_default_user_file_path() -> PathBuf {
+    // Default user configuration file
+    const DEFAULT_USER_CONFIG: &str = ".ffx_user_config.json";
+
     let mut default_path = get_config_base_path().expect("cannot get configuration base path");
-    default_path.push(crate::constants::DEFAULT_USER_CONFIG);
+    default_path.push(DEFAULT_USER_CONFIG);
     default_path
 }

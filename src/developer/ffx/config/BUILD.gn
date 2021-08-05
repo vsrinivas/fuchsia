@@ -43,7 +43,6 @@ if (is_host) {
       "src/api/query.rs",
       "src/api/value.rs",
       "src/cache.rs",
-      "src/constants.rs",
       "src/environment.rs",
       "src/file_backed_config.rs",
       "src/lib.rs",

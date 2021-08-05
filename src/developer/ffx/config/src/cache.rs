@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{self, CONFIG_CACHE_TIMEOUT},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
-    crate::paths::get_config_base_path,
     crate::runtime::populate_runtime_config,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Result},
     async_lock::RwLock,
     serde_json::Value,
     std::sync::Arc,
@@ -16,9 +14,12 @@ use {
         collections::HashMap,
         path::PathBuf,
         sync::{Mutex, Once},
-        time::Instant,
+        time::{Duration, Instant},
     },
 };
+
+// Timeout for the config cache.
+pub const CONFIG_CACHE_TIMEOUT: Duration = Duration::from_secs(3);
 
 struct CacheItem {
     created: Instant,
@@ -30,59 +31,58 @@ type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
 static INIT: Once = Once::new();
 
 lazy_static::lazy_static! {
-    static ref ENV_FILE: Mutex<Option<String>> = Mutex::new(None);
+    static ref ENV_FILE: Mutex<Option<PathBuf>> = Mutex::new(None);
     static ref RUNTIME: Mutex<Option<Value>> = Mutex::new(None);
     static ref CACHE: Cache = RwLock::new(HashMap::new());
 }
 
 #[cfg(not(test))]
-pub fn env_file() -> Option<String> {
-    ENV_FILE.lock().unwrap().as_ref().map(|v| format!("{}", v))
+pub fn env_file() -> Option<PathBuf> {
+    ENV_FILE.lock().unwrap().as_ref().map(|p| p.to_path_buf())
 }
 
-pub fn test_env_file() -> Option<String> {
+pub fn test_env_file() -> PathBuf {
     use tempfile::NamedTempFile;
     lazy_static::lazy_static! {
         static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
     }
     Environment::init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
-    FILE.path().to_str().map(|s| s.to_string())
+    FILE.path().to_path_buf()
 }
 
 #[cfg(test)]
-pub fn env_file() -> Option<String> {
-    test_env_file()
+pub fn env_file() -> Option<PathBuf> {
+    Some(test_env_file())
 }
 
-/// Initialize the configuration infrastructure in a manner suitable for tests,
-/// with the environment coming from a temporary file.
-pub fn init_config_test() -> Result<()> {
-    init_config(&vec![], &None, &test_env_file())
-}
-
-pub fn init_config(
+/// Initialize the configuration. If env is not given, a new test environment is configured.  init()
+/// is a static once operation. Only the first call in a process runtime takes effect, so users must
+/// call this early with the required values, such as in main() in the ffx binary.
+pub fn init(
     runtime: &[String],
-    runtime_overrides: &Option<String>,
-    env_override: &Option<String>,
+    runtime_overrides: Option<String>,
+    env: Option<PathBuf>,
 ) -> Result<()> {
     let mut ret = Ok(());
 
     // If it's already been initialize, just fail silently. This will allow a setup method to be
     // called by unit tests over and over again without issue.
     INIT.call_once(|| {
-        ret = init_config_impl(runtime, runtime_overrides, env_override);
+        ret = init_impl(runtime, runtime_overrides, env);
     });
 
     ret
 }
 
-fn init_config_impl(
+fn init_impl(
     runtime: &[String],
-    runtime_overrides: &Option<String>,
-    env_override: &Option<String>,
+    runtime_overrides: Option<String>,
+    env: Option<PathBuf>,
 ) -> Result<()> {
+    let env = env.unwrap_or_else(|| test_env_file());
+
     let mut populated_runtime = Value::Null;
-    runtime.iter().chain(runtime_overrides).try_for_each(|r| {
+    runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
         if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
             crate::api::value::merge(&mut populated_runtime, &v)
         };
@@ -95,22 +95,12 @@ fn init_config_impl(
         }
     }
 
-    let env_path = if let Some(f) = env_override {
-        PathBuf::from(f)
-    } else {
-        let mut path = get_config_base_path().context("locating environment file directory")?;
-        path.push(constants::ENV_FILE);
-        path
-    };
-
-    if !env_path.is_file() {
-        log::debug!("initializing environment {}", env_path.display());
-        Environment::init_env_file(&env_path)?;
+    if !env.is_file() {
+        log::debug!("initializing environment {}", env.display());
+        Environment::init_env_file(&env)?;
     }
-    env_path.to_str().map(String::from).context("getting environment file").and_then(|e| {
-        let _ = ENV_FILE.lock().unwrap().replace(e);
-        Ok(())
-    })
+    ENV_FILE.lock().unwrap().replace(env);
+    Ok(())
 }
 
 fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {

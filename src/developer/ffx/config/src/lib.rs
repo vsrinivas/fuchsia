@@ -31,7 +31,6 @@ use {
 pub use config_macros::FfxConfigBacked;
 
 pub mod api;
-pub mod constants;
 pub mod environment;
 pub mod logging;
 pub mod sdk;
@@ -44,7 +43,9 @@ mod persistent_config;
 mod priority_config;
 mod runtime;
 
-pub use cache::{env_file, init_config, init_config_test};
+pub use cache::{env_file, init};
+
+pub use paths::default_env_path;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ConfigLevel {

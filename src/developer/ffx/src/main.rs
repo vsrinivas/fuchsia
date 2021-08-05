@@ -26,6 +26,7 @@ use {
     std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
+    std::path::PathBuf,
     std::time::{Duration, Instant},
 };
 
@@ -267,7 +268,23 @@ async fn run() -> Result<i32> {
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
     let overrides = set_hash_config(app.runtime_config_overrides())?;
-    ffx_config::init_config(&*app.config, &overrides, &app.env)?;
+
+    let env = match app.env {
+        Some(ref env) => PathBuf::from(env),
+        None => match ffx_config::default_env_path() {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!(
+                    "ffx could not determine the default environment configuration path: {}",
+                    e
+                );
+                eprintln!("Ensure that $HOME is set, or pass the --env option to specify an environment configuration path");
+                return Ok(1);
+            }
+        },
+    };
+
+    ffx_config::init(&*app.config, overrides, Some(env))?;
     ffx_config::logging::init(is_daemon(&app.subcommand)).await?;
 
     log::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());

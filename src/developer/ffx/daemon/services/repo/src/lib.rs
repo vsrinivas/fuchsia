@@ -908,9 +908,9 @@ mod tests {
     // * clear out the config keys before we run each test to make sure state isn't leaked across
     //   tests.
     fn run_test<F: Future>(fut: F) -> F::Output {
-        ffx_config::init_config_test().unwrap();
-
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
+            ffx_config::init(&[], None, None).unwrap();
+
             // Since ffx_config is global, it's possible to leave behind entries
             // across tests. Lets clean them up.
             let _ = pkg::config::remove_repository(REPO_NAME).await;

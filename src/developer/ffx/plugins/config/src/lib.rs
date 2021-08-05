@@ -18,7 +18,7 @@ use {
     std::collections::HashMap,
     std::fs::File,
     std::io::Write,
-    std::path::Path,
+    std::path::PathBuf,
 };
 
 #[ffx_plugin()]
@@ -107,39 +107,38 @@ fn exec_env_set<W: Write + Sync>(
     mut writer: W,
     env: &mut Environment,
     s: &EnvSetCommand,
-    file: String,
+    file: PathBuf,
 ) -> Result<()> {
-    let file_str = format!("{}", s.file);
-    if !Path::new(&file_str).exists() {
-        writeln!(writer, "\"{}\" does not exist, creating empty json file", &file_str)?;
-        let mut file = File::create(&file_str).context("opening write buffer")?;
+    if !file.exists() {
+        writeln!(writer, "\"{}\" does not exist, creating empty json file", file.display())?;
+        let mut file = File::create(&file).context("opening write buffer")?;
         file.write_all(b"{}").context("writing configuration file")?;
         file.sync_all().context("syncing configuration file to filesystem")?;
     }
     match &s.level {
         ConfigLevel::User => match env.user.as_mut() {
-            Some(v) => *v = file_str,
-            None => env.user = Some(file_str),
+            Some(v) => *v = file.display().to_string(),
+            None => env.user = Some(file.display().to_string()),
         },
         ConfigLevel::Build => match &s.build_dir {
             Some(build_dir) => match env.build.as_mut() {
                 Some(b) => match b.get_mut(&s.file) {
                     Some(e) => *e = build_dir.to_string(),
                     None => {
-                        b.insert(build_dir.to_string(), file_str);
+                        b.insert(build_dir.to_string(), file.display().to_string());
                     }
                 },
                 None => {
                     let mut build = HashMap::new();
-                    build.insert(build_dir.to_string(), file_str);
+                    build.insert(build_dir.to_string(), file.display().to_string());
                     env.build = Some(build);
                 }
             },
             None => ffx_bail!("Missing --build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
-            Some(v) => *v = file_str,
-            None => env.global = Some(file_str),
+            Some(v) => *v = file.display().to_string(),
+            None => env.global = Some(file.display().to_string()),
         },
         _ => ffx_bail!("This configuration is not stored in the enivronment."),
     }
