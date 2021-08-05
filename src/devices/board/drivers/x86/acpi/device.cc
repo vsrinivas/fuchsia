@@ -9,6 +9,7 @@
 #include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <zircon/syscalls/resource.h>
+#include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
 
@@ -180,26 +181,6 @@ void Device::DdkInit(ddk::InitTxn txn) {
   }
 
   txn.Reply(result);
-}
-
-zx_status_t Device::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
-  zx_status_t st = ReportCurrentResources();
-  if (st != ZX_OK) {
-    return st;
-  }
-
-  if (index >= pio_resources_.size()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  const DevicePioResource& res = pio_resources_[index];
-
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  // TODO: figure out what to pass to name here
-  return zx::resource::create(*zx::unowned_resource{get_root_resource()}, ZX_RSRC_KIND_IOPORT,
-                              res.base_address, res.address_length, device_get_name(zxdev_), 0,
-                              out_pio);
 }
 
 zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
@@ -376,5 +357,35 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
   }
 
   completer.ReplySuccess(std::move(out_irq));
+}
+
+void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) {
+  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  zx_status_t st = ReportCurrentResources();
+  if (st != ZX_OK) {
+    completer.ReplyError(st);
+    return;
+  }
+
+  if (request->index >= pio_resources_.size()) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  const DevicePioResource& res = pio_resources_[request->index];
+
+  char name[ZX_MAX_NAME_LEN];
+  snprintf(name, ZX_MAX_NAME_LEN, "%s-ioport-%u", device_get_name(zxdev_), request->index);
+
+  zx::resource out_pio;
+  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+  zx_status_t status =
+      zx::resource::create(*zx::unowned_resource{get_root_resource()}, ZX_RSRC_KIND_IOPORT,
+                           res.base_address, res.address_length, name, 0, &out_pio);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(std::move(out_pio));
+  }
 }
 }  // namespace acpi

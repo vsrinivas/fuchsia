@@ -284,6 +284,13 @@ protocol Device {
         irq zx.handle:INTERRUPT;
     }) error zx.status;
 
+    /// Get the "index"th I/O port for this device.
+    GetPio(struct {
+        index uint32;
+    }) -> (resource struct {
+        pio zx.handle:RESOURCE;
+    }) error zx.status;
+
     /// Evaluate the object at the given |path|, relative to this device, with |parameters| as
     /// arguments.
     /// |mode| determines how the return value is treated.

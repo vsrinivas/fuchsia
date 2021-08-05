@@ -22,12 +22,6 @@ protocol Acpi {
     ConnectServer(resource struct {
         server zx.handle:CHANNEL;
     }) -> ();
-    GetPio(struct {
-        index uint32;
-    }) -> (resource struct {
-        s zx.status;
-        pio zx.handle:RESOURCE;
-    });
     GetMmio(struct {
         index uint32;
     }) -> (resource struct {

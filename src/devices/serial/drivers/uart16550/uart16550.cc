@@ -79,21 +79,22 @@ bool Uart16550::NotifyCallbackSet() {
 // interrupt handler thread.
 zx_status_t Uart16550::Init() {
   zx::resource io_port;
-  auto status = acpi_.GetPio(kPioIndex, &io_port);
-  if (status != ZX_OK) {
+  auto pio = acpi_fidl_.borrow().GetPio(kPioIndex);
+  if (!pio.ok() || pio->result.is_err()) {
     zxlogf(DEBUG, "%s: acpi_.GetPio failed", __func__);
-    return status;
+    return pio.ok() ? pio->result.err() : pio.status();
   }
+  io_port.reset(pio->result.mutable_response().pio.release());
 
   auto irq = acpi_fidl_.borrow().MapInterrupt(kIrqIndex);
   if (!irq.ok() || irq->result.is_err()) {
     zxlogf(ERROR, "%s: acpi_.MapInterrupt failed", __func__);
-    return status;
+    return irq.ok() ? irq->result.err() : irq.status();
   }
   interrupt_.reset(irq->result.mutable_response().irq.release());
 
   zx_info_resource_t resource_info;
-  status =
+  zx_status_t status =
       io_port.get_info(ZX_INFO_RESOURCE, &resource_info, sizeof(resource_info), nullptr, nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: io_port.get_info failed", __func__);

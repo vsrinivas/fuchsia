@@ -117,7 +117,6 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   zx_device_t* platform_bus() const { return platform_bus_; }
   zx_device_t** mutable_zxdev() { return &zxdev_; }
 
-  zx_status_t AcpiGetPio(uint32_t index, zx::resource* out_pio);
   zx_status_t AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio);
   zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
   zx_status_t AcpiConnectSysmem(zx::channel connection);
@@ -130,6 +129,7 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
                       EvaluateObjectCompleter::Sync& completer) override;
   void MapInterrupt(MapInterruptRequestView request,
                     MapInterruptCompleter::Sync& completer) override;
+  void GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
