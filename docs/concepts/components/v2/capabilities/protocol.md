@@ -2,14 +2,14 @@
 
 <<../../_v2_banner.md>>
 
-A [protocol capability][glossary.protocol-capability] allows
-components to connect to [FIDL protocols][glossary.protocol]
-provided either by other components or the component framework itself.
+A [protocol capability][glossary.protocol-capability] is a capability backed
+by a [glossary.channel] that speaks a particular
+[FIDL protocol][glossary.protocol]. 
 
 Note: _Protocol_ and _service_ capabilities are distinct types of
-capabilities. A protocol represents a single instance of a
-[FIDL protocols][glossary.protocol], while a service represents zero or
-more instances of a [FIDL service][glossary.service].
+capabilities. A protocol capability represents a single instance of a
+[FIDL protocol][glossary.protocol], while a service capability represents zero
+or more instances of a [FIDL service][glossary.service].
 See the documentation on [service capabilities][service-capability]
 for more details.
 
@@ -151,6 +151,7 @@ For a list of these protocols and what they can be used for, see
 
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.channel]: /docs/glossary/README.md#channel
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.protocol-capability]: /docs/glossary/README.md#protocol-capability
 [glossary.service]: /docs/glossary/README.md#service

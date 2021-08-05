@@ -5,15 +5,17 @@
 Caution: service capabilities are experimental and in development. Their
 behavior and APIs could change at any time.
 
-[Service capabilities][glossary.service-capability] allow components
-to connect to [FIDL services][glossary.service]
-provided either by other components or the component framework itself.
+A [service capability][glossary.service-capability] is a capability that
+enables discovery of one or more individually named
+[FIDL service][glossary.service] instances. Service capabilities are backed by
+a [glossary.channel] that speaks the `Directory` protocol, where each entry in
+the directory exposes each named FIDL service.
 
 Note: _Protocol_ and _service_ capabilities are distinct types of capabilities.
-A protocol represents a single instance of a
-[FIDL protocol][glossary.protocol], while a service represents zero or more
-instances of a [FIDL service][glossary.service]. See the documentation on
-[protocol capabilities][protocol-capability] for more details.
+A protocol capability represents a single instance of a
+[FIDL protocol][glossary.protocol], while a service capability represents zero
+or more instances of a [FIDL service][glossary.service]. See the documentation
+on [protocol capabilities][protocol-capability] for more details.
 
 ## Providing service capabilities {#provide}
 
@@ -168,6 +170,7 @@ Note: For a working example of routing a service capability between components,
 see [`//examples/components/services`][routing-example].
 
 [collection]: /docs/concepts/components/v2/realms.md#collections
+[glossary.channel]: /docs/glossary/README.md#channel
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.protocol]: /docs/glossary/README.md#protocol
