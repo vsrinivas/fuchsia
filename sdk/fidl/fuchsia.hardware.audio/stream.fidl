@@ -7,8 +7,10 @@ using zx;
 
 const UNIQUE_ID_SIZE uint32 = 16;
 const MAX_UI_STRING_SIZE uint32 = 256;
+const MAX_COUNT_CHANNELS_IN_RING_BUFFER uint32 = 64;
 const MAX_COUNT_CHANNELS_TO_USE uint32 = 64;
 const MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS uint32 = 64;
+const MAX_COUNT_CHANNEL_SETS uint32 = 64;
 const MAX_COUNT_SUPPORTED_SAMPLE_FORMATS uint32 = 3;
 const MAX_COUNT_SUPPORTED_RATES uint32 = 64;
 const MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE uint32 = 8;
@@ -30,39 +32,78 @@ type SampleFormat = strict enum : uint8 {
     PCM_FLOAT = 3;
 };
 
-type SupportedFormats = table {
-    /// Supported formats for non-compressed PCM samples.
-    1: pcm_supported_formats PcmSupportedFormats;
+type ChannelAttributes = table {
+    /// Minimum frequency guaranteed to be emitted by (or captured in) this channel, in Hz. Optional.
+    /// If both `min_frequency` and `max_frequency` are not included, then this channel is assumed
+    /// to cover the full frequency range of this device.
+    /// TODO(fxbug.dev/81743): Define expectations beyond these min/max limits and enable drivers
+    /// to express tolerances related to this.
+    1: min_frequency uint32;
+
+    /// Maximum frequency guaranteed to be emitted by (or captured in) this channel, in Hz. Optional.
+    /// If both `min_frequency` and `max_frequency` are not included, then this channel is assumed
+    /// to cover the full frequency range of this device.
+    /// TODO(fxbug.dev/81743): Define expectations beyond these min/max limits and enable drivers
+    /// to express tolerances related to this.
+    2: max_frequency uint32;
 };
 
-/// Format supporting non-compressed PCM audio. Frames are made up of `number_of_channels` samples
+type ChannelSet = table {
+    /// Describes attributes for this channel set. Required.
+    /// The size of this vector defines the number of channels supported by this `ChannelSet`.
+    /// Each element of the vector defines attributes of a single channel.
+    1: attributes vector<ChannelAttributes>:MAX_COUNT_CHANNELS_IN_RING_BUFFER;
+};
+
+type SupportedFormats = table {
+    @deprecated("Use `pcm_supported_formats2` instead")
+    1: pcm_supported_formats PcmSupportedFormats;
+
+    /// Supported formats for non-compressed PCM samples with attributes. Required.
+    2: pcm_supported_formats2 PcmSupportedFormats2;
+};
+
+@deprecated("Use `PcmSupportedFormats2` instead")
+type PcmSupportedFormats = struct {
+    number_of_channels vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS;
+    sample_formats vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS;
+    bytes_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE;
+    valid_bits_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE;
+    frame_rates vector<uint32>:MAX_COUNT_SUPPORTED_RATES;
+};
+
+/// Format supporting non-compressed PCM audio. Frames are made up of number of channels samples
 /// which have `valid_bits_per_sample` bits of left-justified data within `bytes_per_sample`
 /// bytes. All values listed in each vector are supported. When not all combinations supported by
 /// the driver can be described with one `SupportedFormats` (and hence one `PcmSupportedFormats`),
 /// `GetSupportedFormats` returns more than one `SupportedFormats` in the returned vector.
-/// For more detailed information see //docs/concepts/drivers/driver_interfaces/audio_streaming.md.
-type PcmSupportedFormats = struct {
-    /// Vector of possible number of channels supported in ascending order.
-    number_of_channels vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS;
+/// For more detailed information see [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming).
+type PcmSupportedFormats2 = table {
+    /// Vector of possible `ChannelSets` supported. Required.
+    /// A `ChannelSet` defines a number of channels supported plus a number of optional
+    /// attributes for these channels.
+    /// Only one `ChannelSet` is allowed for each unique number of channels.
+    1: channel_sets vector<ChannelSet>:MAX_COUNT_CHANNEL_SETS;
 
-    /// Vector of possible `SampleFormat`s supported.
-    sample_formats vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS;
+    /// Vector of possible `SampleFormat`s supported. Required.
+    2: sample_formats vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS;
 
     /// Vector of possible number of bits allocated to hold a sample,
     /// equal or bigger than the actual sample size in `valid_bits_per_sample` in ascending order.
-    bytes_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE;
+    /// Required.
+    3: bytes_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE;
 
     /// Vector of possible number of bits in a sample in ascending order, must be equal or smaller
     /// than `bytes_per_channel` for samples to fit. If smaller, bits are left justified, and any
-    /// additional bits will be ignored.
-    valid_bits_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE;
+    /// additional bits will be ignored. Required.
+    4: valid_bits_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE;
 
-    /// Vector of possible frame rates supported in ascending order.
-    frame_rates vector<uint32>:MAX_COUNT_SUPPORTED_RATES;
+    /// Vector of possible frame rates supported in ascending order. Required.
+    5: frame_rates vector<uint32>:MAX_COUNT_SUPPORTED_RATES;
 };
 
 type Format = table {
-    /// Format supporting non-compressed PCM samples.
+    /// Format supporting non-compressed PCM samples. Required.
     1: pcm_format PcmFormat;
 };
 
@@ -102,17 +143,16 @@ type GainState = table {
     /// Current Automatic Gain Control (AGC) state. If not included, AGC is disabled.
     2: agc_enabled bool;
 
-    /// Current gain in decibels. Must be included.
+    /// Current gain in decibels. Required.
     3: gain_db float32;
 };
 
 /// Plug state as returned by the driver.
 type PlugState = table {
-    /// Stream is currently plugged in. Must be included.
+    /// Stream is currently plugged in. Required
     1: plugged bool;
 
-    /// Timestamps the information provided in the rest of the fields of this struct.
-    /// Must be included.
+    /// Timestamps the information provided in the rest of the fields of this struct. Required.
     2: plug_state_time zx.time;
 };
 
@@ -128,7 +168,7 @@ type StreamProperties = table {
     /// A unique identifier. If not included, there is no unique id for the StreamConfig.
     1: unique_id array<uint8, UNIQUE_ID_SIZE>;
 
-    /// Stream type is input or output. Must be included.
+    /// Stream type is input or output. Required.
     2: is_input bool;
 
     /// Gain mute capability. If not included, the StreamConfig can't mute.
@@ -137,18 +177,18 @@ type StreamProperties = table {
     /// Automatic Gain Control (AGC) capability. If not included, the StreamConfig can't AGC.
     4: can_agc bool;
 
-    /// Minimum gain in decibels. Must be included.
+    /// Minimum gain in decibels. Required.
     5: min_gain_db float32;
 
-    /// Maximum gain in decibels. Must be included.
+    /// Maximum gain in decibels. Required.
     6: max_gain_db float32;
 
     /// Gain step in decibels, this value must not be negative, but may be zero to convey an
     /// effectively continuous range of values. Must not exceed `max_gain_db` - `min_gain_db`.
-    /// Must be included.
+    /// Required.
     7: gain_step_db float32;
 
-    /// Plug Detect Capabilities. Must be included.
+    /// Plug Detect Capabilities. Required.
     8: plug_detect_capabilities PlugDetectCapabilities;
 
     /// UI string for the manufacturer name. If not included, the manufacturer is unspecified.
@@ -168,7 +208,7 @@ type StreamProperties = table {
     /// timing information present in the position notification updates in order to recover the
     /// clock of the audio stream. The clock_domain comes from an system wide entity (or instance a
     /// platform bus or clock tree/global driver). Audio drivers retrieve clock_domain from such
-    /// system wide entity. Must be included.
+    /// system wide entity. Required.
    11: clock_domain clock_domain;
 };
 
