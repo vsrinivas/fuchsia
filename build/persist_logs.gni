@@ -105,7 +105,7 @@ template("persist_logs") {
 
   config_data(target_name) {
     for_pkg = "sysmgr"
-    sources = [ rebase_path(output_file) ]
+    sources = [ output_file ]
     outputs = [ "${target_name}_log_listener.config" ]
     deps = [ ":$logs_action_name" ]
   }

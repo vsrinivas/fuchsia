@@ -36,10 +36,8 @@ template("prebuilt_binaries") {
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
-      "-build-dir",
-      rebase_path(root_build_dir),
       "-build-id-dir-out",
-      rebase_path("$root_build_dir/.build-id"),
+      rebase_path("$root_build_dir/.build-id", root_build_dir),
       "-cpu",
       target_cpu,
       "-os",
@@ -49,7 +47,7 @@ template("prebuilt_binaries") {
       "-dump-syms",
       breakpad_dump_syms,
       "-depfile",
-      rebase_path(depfile),
+      rebase_path(depfile, root_build_dir),
     ]
 
     if (defined(invoker.debug_archive)) {

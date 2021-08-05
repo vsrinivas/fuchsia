@@ -113,7 +113,7 @@ template("prebuilt_package") {
       "--name",
       pkg_name,
       "--archive",
-      rebase_path(archive),
+      rebase_path(archive, root_build_dir),
       "--workdir",
       rebase_path(meta_dir, root_build_dir),
       "--system-rsp",

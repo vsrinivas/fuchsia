@@ -121,8 +121,7 @@ if (current_toolchain == dart_toolchain) {
     _flutter_tester_label = "//src/flutter:flutter_tester"
     _flutter_tester_gen_dir =
         get_label_info(_flutter_tester_label, "target_gen_dir")
-    _flutter_tester_bin =
-        rebase_path("${_flutter_tester_gen_dir}/flutter_tester")
+    _flutter_tester_bin = "${_flutter_tester_gen_dir}/flutter_tester"
 
     _precompiled_kernel_target_names = []
     _tests_json = []

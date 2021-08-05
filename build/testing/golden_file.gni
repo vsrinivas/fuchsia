@@ -36,11 +36,11 @@ template("golden_file") {
 
     args = [
       "--golden",
-      rebase_path(golden),
+      rebase_path(golden, root_build_dir),
       "--current",
-      rebase_path(current),
+      rebase_path(current, root_build_dir),
       "--stamp",
-      rebase_path(stamp_file),
+      rebase_path(stamp_file, root_build_dir),
     ]
 
     warn_on_changes =

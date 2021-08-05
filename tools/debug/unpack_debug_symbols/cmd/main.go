@@ -30,7 +30,6 @@ import (
 
 var (
 	debugArchive   string
-	buildDir       string
 	buildIDDirIn   string
 	buildIDDirOut  string
 	outputManifest string
@@ -53,7 +52,6 @@ func init() {
 	level = logger.WarningLevel
 
 	flag.StringVar(&debugArchive, "debug-archive", "", "path to archive of debug binaries")
-	flag.StringVar(&buildDir, "build-dir", "", "path to the build directory")
 	flag.StringVar(&buildIDDirIn, "build-id-dir-in", "", "path to an input .build-id directory")
 	flag.StringVar(&buildIDDirOut, "build-id-dir-out", "", "path to an output .build-id directory to populate")
 	flag.StringVar(&outputManifest, "output-manifest", "", "path to output a json manifest of debug binaries to")
@@ -305,19 +303,28 @@ func unpack(ctx context.Context, br *BatchRunner) ([]binaryRef, error) {
 	return out, nil
 }
 
-func writeManifest(bfrs []binaryRef) error {
-	out := []binary{}
+// relIfAbs returns path relative to `base` if input `path` is absolute.
+func relIfAbs(base, path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		return path, nil
+	}
+	return filepath.Rel(base, path)
+}
+
+func writeManifest(bfrs []binaryRef, buildDir string) error {
+	var out []binary
 	for _, bfr := range bfrs {
 		// Even though these files live outside of the build directory,
 		// relativize them as is conventional for build API metadata.
-		relDebug, err := filepath.Rel(buildDir, bfr.ref.Filepath)
+		relDebug, err := relIfAbs(buildDir, bfr.ref.Filepath)
 		if err != nil {
 			return err
 		}
-		relBreakpad, err := filepath.Rel(buildDir, bfr.breakpad)
+		relBreakpad, err := relIfAbs(buildDir, bfr.breakpad)
 		if err != nil {
 			return err
 		}
+
 		out = append(out, binary{
 			CPU:      cpu,
 			Debug:    relDebug,
@@ -345,9 +352,6 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = logger.WithLogger(ctx, log)
-	if buildDir == "" {
-		log.Fatalf("-build-dir is required.")
-	}
 	if buildIDDirOut == "" {
 		log.Fatalf("-build-id-dir-out is required.")
 	}
@@ -361,6 +365,12 @@ func main() {
 		log.Fatalf("-depfile is required.")
 	}
 
+	// This tool is always executed by the build in the build directory.
+	buildDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current working directory: %v", err)
+	}
+
 	// This action should rerun if the input .build-id directory or debug archive changes.
 	var dep string
 	if buildIDDirIn != "" {
@@ -369,7 +379,7 @@ func main() {
 			log.Fatalf("while checking if build-id-dir-in existed: %v", err)
 		}
 		if empty {
-			if err := writeManifest(nil); err != nil {
+			if err := writeManifest(nil, buildDir); err != nil {
 				log.Fatalf("failed to write empty manifest: %v", err)
 			}
 			log.Tracef("%s does not exist, no work needed", buildIDDirIn)
@@ -396,7 +406,7 @@ func main() {
 			log.Fatalf("error in checking state of build-id dir: %v", err)
 		}
 		if empty {
-			if err := writeManifest(nil); err != nil {
+			if err := writeManifest(nil, buildDir); err != nil {
 				log.Fatalf("failed to write empty manifest: %v", err)
 			}
 			log.Infof("build-id directory is empty; no work to do")
@@ -435,7 +445,7 @@ func main() {
 
 	// TODO: write the manifest to a tmp file and rename it into place.
 	log.Tracef("writing manifest now")
-	if err = writeManifest(bfrs); err != nil {
+	if err = writeManifest(bfrs, buildDir); err != nil {
 		log.Fatalf("%v", err)
 	}
 

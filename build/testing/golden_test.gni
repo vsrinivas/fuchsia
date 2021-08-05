@@ -130,7 +130,7 @@ template("golden_test") {
       inputs = []
       reformat_goldens_bin = "/bin/cat"
       if (defined(invoker.reformat_goldens_bin)) {
-        inputs += [ rebase_path(invoker.reformat_goldens_bin) ]
+        inputs += [ invoker.reformat_goldens_bin ]
         reformat_goldens_bin =
             rebase_path(invoker.reformat_goldens_bin, root_build_dir)
       }

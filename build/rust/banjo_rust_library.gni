@@ -52,8 +52,8 @@ template("banjo_rust_library") {
     }
 
     non_rust_deps = [ ":$generation_target_name($banjo_toolchain)" ]
-    source_root = rebase_path("$file_stem.rs")
-    sources = [ rebase_path("$file_stem.rs") ]
+    source_root = "$file_stem.rs"
+    sources = [ "$file_stem.rs" ]
   }
 }
 

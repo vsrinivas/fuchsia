@@ -114,7 +114,7 @@ template("intl_strings") {
       {
         foo = rebase_path(output_file_name, root_build_dir)
         dest = "assets/locales/${locale}/${base_name}.json"
-        path = rebase_path(output_file_name)
+        path = rebase_path(output_file_name, root_build_dir)
       },
     ]
 
