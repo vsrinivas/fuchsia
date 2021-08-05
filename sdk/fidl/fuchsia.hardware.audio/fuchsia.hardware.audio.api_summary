@@ -138,12 +138,6 @@ struct/member fuchsia.hardware.audio/PcmFormat.number_of_channels uint8
 struct/member fuchsia.hardware.audio/PcmFormat.sample_format fuchsia.hardware.audio/SampleFormat
 struct/member fuchsia.hardware.audio/PcmFormat.valid_bits_per_sample uint8
 struct fuchsia.hardware.audio/PcmFormat
-struct/member fuchsia.hardware.audio/PcmSupportedFormats.bytes_per_sample vector<uint8>:8
-struct/member fuchsia.hardware.audio/PcmSupportedFormats.frame_rates vector<uint32>:64
-struct/member fuchsia.hardware.audio/PcmSupportedFormats.number_of_channels vector<uint8>:64
-struct/member fuchsia.hardware.audio/PcmSupportedFormats.sample_formats vector<fuchsia.hardware.audio/SampleFormat>:3
-struct/member fuchsia.hardware.audio/PcmSupportedFormats.valid_bits_per_sample vector<uint8>:8
-struct fuchsia.hardware.audio/PcmSupportedFormats
 table/member fuchsia.hardware.audio/PcmSupportedFormats2.bytes_per_sample vector<uint8>:8
 table/member fuchsia.hardware.audio/PcmSupportedFormats2.channel_sets vector<fuchsia.hardware.audio/ChannelSet>:64
 table/member fuchsia.hardware.audio/PcmSupportedFormats2.frame_rates vector<uint32>:64
@@ -205,7 +199,6 @@ table/member fuchsia.hardware.audio/StreamProperties.plug_detect_capabilities fu
 table/member fuchsia.hardware.audio/StreamProperties.product string:256
 table/member fuchsia.hardware.audio/StreamProperties.unique_id array<uint8,16>
 table fuchsia.hardware.audio/StreamProperties
-table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats fuchsia.hardware.audio/PcmSupportedFormats
 table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats2 fuchsia.hardware.audio/PcmSupportedFormats2
 table fuchsia.hardware.audio/SupportedFormats
 const fuchsia.hardware.audio/UNIQUE_ID_SIZE uint32 16

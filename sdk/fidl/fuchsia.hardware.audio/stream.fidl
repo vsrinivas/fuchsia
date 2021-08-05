@@ -56,20 +56,8 @@ type ChannelSet = table {
 };
 
 type SupportedFormats = table {
-    @deprecated("Use `pcm_supported_formats2` instead")
-    1: pcm_supported_formats PcmSupportedFormats;
-
     /// Supported formats for non-compressed PCM samples with attributes. Required.
-    2: pcm_supported_formats2 PcmSupportedFormats2;
-};
-
-@deprecated("Use `PcmSupportedFormats2` instead")
-type PcmSupportedFormats = struct {
-    number_of_channels vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS;
-    sample_formats vector<SampleFormat>:MAX_COUNT_SUPPORTED_SAMPLE_FORMATS;
-    bytes_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE;
-    valid_bits_per_sample vector<uint8>:MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE;
-    frame_rates vector<uint32>:MAX_COUNT_SUPPORTED_RATES;
+    1: pcm_supported_formats2 PcmSupportedFormats2;
 };
 
 /// Format supporting non-compressed PCM audio. Frames are made up of number of channels samples
