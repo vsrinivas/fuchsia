@@ -130,7 +130,6 @@ constexpr ErrorDef ErrIncludeCycle("There is an includes-cycle in declarations")
 // ---------------------------------------------------------------------------
 // Library::Compile: Compilation, Resolution, Validation
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<> ErrAnonymousLayout("anonymous layouts are not yet fully supported");
 constexpr ErrorDef<flat::Name> ErrAnonymousNameReference("cannot refer to anonymous name {}");
 constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>>
     ErrUnknownDependentLibrary(

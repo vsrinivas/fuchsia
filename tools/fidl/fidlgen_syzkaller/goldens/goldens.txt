@@ -1,3 +1,4 @@
+anonymous.syz.txt.golden
 arrays.syz.txt.golden
 bindings_denylist.syz.txt.golden
 bits.syz.txt.golden

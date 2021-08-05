@@ -10,6 +10,10 @@
 <thead><tr><th>Name</th><th>Description</th></tr></thead>
 <tbody class="list">
 <tr>
+    <td><a href="fidl.test.anonymous/index">fidl.test.anonymous</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.arrays/index">fidl.test.arrays</a></td>
     <td></td>
 </tr>

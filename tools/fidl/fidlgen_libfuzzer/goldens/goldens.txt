@@ -1,3 +1,7 @@
+anonymous.cc.golden
+anonymous.h.golden
+anonymous_decode_encode.cc.golden
+anonymous_decode_encode.h.golden
 bindings_denylist.cc.golden
 bindings_denylist.h.golden
 bindings_denylist_decode_encode.cc.golden

@@ -1,0 +1,1156 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.anonymous",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.anonymous/BitsMember",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "result",
+        "response",
+        "bits_member"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 37,
+        "column": 21,
+        "length": 72
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "3",
+      "members": [
+        {
+          "name": "BIT_ONE",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 38,
+            "column": 13,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "0b01",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0b01"
+            }
+          }
+        },
+        {
+          "name": "BIT_TWO",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 39,
+            "column": 13,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "0b10",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "0b10"
+            }
+          }
+        }
+      ],
+      "strict": false
+    },
+    {
+      "name": "fidl.test.anonymous/Flags",
+      "maybe_naming_context": [
+        "Expression",
+        "function_application",
+        "flags"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 18,
+        "column": 18,
+        "length": 52
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "mask": "1",
+      "members": [
+        {
+          "name": "INLINE",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 19,
+            "column": 13,
+            "length": 6
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "0x01",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x01"
+            }
+          }
+        }
+      ],
+      "strict": false
+    }
+  ],
+  "const_declarations": [],
+  "enum_declarations": [
+    {
+      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "result",
+        "err"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 41,
+        "column": 14,
+        "length": 67
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "ERROR_ONE",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 42,
+            "column": 9,
+            "length": 9
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "ERROR_TWO",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 43,
+            "column": 9,
+            "length": 9
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
+    },
+    {
+      "name": "fidl.test.anonymous/Op",
+      "maybe_naming_context": [
+        "Expression",
+        "bin_op",
+        "op"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 6,
+        "column": 12,
+        "length": 88
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "ADD",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 7,
+            "column": 13,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "MUL",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 8,
+            "column": 13,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        },
+        {
+          "name": "DIV",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 9,
+            "column": 13,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "3",
+            "expression": "3",
+            "literal": {
+              "kind": "numeric",
+              "value": "3",
+              "expression": "3"
+            }
+          }
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
+    }
+  ],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.anonymous/SomeProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 24,
+        "column": 10,
+        "length": 12
+      },
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 8941579241812366574,
+          "name": "SomeMethod",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 25,
+            "column": 5,
+            "length": 10
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.anonymous/UnionMember",
+                "nullable": false
+              },
+              "name": "union_member",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+                "line": 26,
+                "column": 9,
+                "length": 12
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 0
+              }
+            },
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.anonymous/TableMember",
+                "nullable": false
+              },
+              "name": "table_member",
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+                "line": 30,
+                "column": 9,
+                "length": 12
+              },
+              "field_shape_v1": {
+                "offset": 40,
+                "padding": 0
+              },
+              "field_shape_v2": {
+                "offset": 32,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_request_payload": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 56,
+            "alignment": 8,
+            "depth": 3,
+            "max_handles": 0,
+            "max_out_of_line": 72,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "maybe_request_type_shape_v2": {
+            "inline_size": 48,
+            "alignment": 8,
+            "depth": 3,
+            "max_handles": 0,
+            "max_out_of_line": 48,
+            "has_padding": true,
+            "has_flexible_envelope": true
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+                "nullable": false
+              },
+              "name": "result",
+              "location": {
+                "filename": "generated",
+                "line": 1,
+                "column": 1,
+                "length": 6
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v2": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_response_payload": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 40,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 8,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "maybe_response_type_shape_v2": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false
+          },
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.anonymous/TableData",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "table_member",
+        "table_data"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 32,
+        "column": 34,
+        "length": 50
+      },
+      "is_request_or_response": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "data",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 33,
+            "column": 17,
+            "length": 4
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 25,
+        "column": 16,
+        "length": 266
+      },
+      "is_request_or_response": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/UnionMember",
+            "nullable": false
+          },
+          "name": "union_member",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 26,
+            "column": 9,
+            "length": 12
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/TableMember",
+            "nullable": false
+          },
+          "name": "table_member",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 30,
+            "column": 9,
+            "length": 12
+          },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 16,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 32,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "result",
+        "response"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 36,
+        "column": 12,
+        "length": 108
+      },
+      "is_request_or_response": false,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/BitsMember",
+            "nullable": false
+          },
+          "name": "bits_member",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 37,
+            "column": 9,
+            "length": 11
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 36,
+        "column": 11,
+        "length": 110
+      },
+      "is_request_or_response": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+            "nullable": false
+          },
+          "name": "result",
+          "location": {
+            "filename": "generated",
+            "line": 1,
+            "column": 1,
+            "length": 6
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/BinOp",
+      "maybe_naming_context": [
+        "Expression",
+        "bin_op"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 5,
+        "column": 15,
+        "length": 184
+      },
+      "is_request_or_response": false,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/Op",
+            "nullable": false
+          },
+          "name": "op",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 6,
+            "column": 9,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/Expression",
+            "nullable": true
+          },
+          "name": "left",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 11,
+            "column": 9,
+            "length": 4
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/Expression",
+            "nullable": true
+          },
+          "name": "right",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 12,
+            "column": 9,
+            "length": 5
+          },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 56,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 40,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "fidl.test.anonymous/TableMember",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "table_member"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 30,
+        "column": 22,
+        "length": 131
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 31,
+            "column": 13,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "identifier",
+              "identifier": "fidl.test.anonymous/TableData",
+              "nullable": false
+            },
+            "maybe_element_count": 10,
+            "nullable": false
+          },
+          "name": "table_data",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 32,
+            "column": 16,
+            "length": 10
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 64,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 3,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/FunctionApplication",
+      "maybe_naming_context": [
+        "Expression",
+        "function_application"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 14,
+        "column": 29,
+        "length": 180
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "string",
+            "maybe_element_count": 100,
+            "nullable": false
+          },
+          "name": "func",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 15,
+            "column": 12,
+            "length": 4
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 16,
+            "column": 9,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "identifier",
+              "identifier": "fidl.test.anonymous/Expression",
+              "nullable": true
+            },
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "name": "args",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 17,
+            "column": 12,
+            "length": 4
+          }
+        },
+        {
+          "ordinal": 4,
+          "reserved": false,
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/Flags",
+            "nullable": false
+          },
+          "name": "flags",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 18,
+            "column": 12,
+            "length": 5
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "fidl.test.anonymous/UnionMember",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "union_member"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 26,
+        "column": 22,
+        "length": 75
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 27,
+            "column": 13,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "union_data",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 28,
+            "column": 16,
+            "length": 10
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+      "maybe_naming_context": [
+        "SomeProtocol",
+        "SomeMethod",
+        "result"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 36,
+        "column": 11,
+        "length": 110
+      },
+      "maybe_attributes": [
+        {
+          "name": "result",
+          "value": "",
+          "arguments": []
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "response",
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+            "nullable": false
+          },
+          "location": {
+            "filename": "generated",
+            "line": 2,
+            "column": 1,
+            "length": 8
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "err",
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+            "nullable": false
+          },
+          "location": {
+            "filename": "generated",
+            "line": 3,
+            "column": 1,
+            "length": 3
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "fidl.test.anonymous/Expression",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+        "line": 3,
+        "column": 6,
+        "length": 10
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "value",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 4,
+            "column": 8,
+            "length": 5
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "name": "bin_op",
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/BinOp",
+            "nullable": false
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 5,
+            "column": 8,
+            "length": 6
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "name": "function_application",
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/FunctionApplication",
+            "nullable": false
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "line": 14,
+            "column": 8,
+            "length": 20
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 4294967295,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    }
+  ],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.anonymous/UnionMember",
+    "fidl.test.anonymous/TableData",
+    "fidl.test.anonymous/TableMember",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+    "fidl.test.anonymous/Op",
+    "fidl.test.anonymous/BinOp",
+    "fidl.test.anonymous/Flags",
+    "fidl.test.anonymous/FunctionApplication",
+    "fidl.test.anonymous/Expression",
+    "fidl.test.anonymous/BitsMember",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+    "fidl.test.anonymous/SomeProtocol"
+  ],
+  "declarations": {
+    "fidl.test.anonymous/BitsMember": "bits",
+    "fidl.test.anonymous/Flags": "bits",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Error": "enum",
+    "fidl.test.anonymous/Op": "enum",
+    "fidl.test.anonymous/SomeProtocol": "interface",
+    "fidl.test.anonymous/TableData": "struct",
+    "fidl.test.anonymous/SomeProtocolSomeMethodRequest": "struct",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Response": "struct",
+    "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse": "struct",
+    "fidl.test.anonymous/BinOp": "struct",
+    "fidl.test.anonymous/TableMember": "table",
+    "fidl.test.anonymous/FunctionApplication": "table",
+    "fidl.test.anonymous/UnionMember": "union",
+    "fidl.test.anonymous/SomeProtocol_SomeMethod_Result": "union",
+    "fidl.test.anonymous/Expression": "union"
+  }
+}

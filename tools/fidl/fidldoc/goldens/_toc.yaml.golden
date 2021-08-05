@@ -3,6 +3,8 @@ toc:
   path: /README.md
 - title: API
   section:
+  - title: fidl.test.anonymous
+    path: /fidl.test.anonymous
   - title: fidl.test.arrays
     path: /fidl.test.arrays
   - title: fidl.test.bindingsdenylist

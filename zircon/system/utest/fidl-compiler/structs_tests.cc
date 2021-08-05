@@ -421,7 +421,6 @@ type Foo = struct {
 TEST(StructsTests, BadTypeCannotBeBoxed) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowAnonymousLayouts);
   for (const std::string& definition : {
            "type Foo = struct { union_member box<union { 1: data uint8; }>; };",
            "type Foo = struct { table_member box<table { 1: data uint8; }>; };",

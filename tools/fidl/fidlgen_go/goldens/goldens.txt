@@ -1,3 +1,4 @@
+anonymous.go.golden
 arrays.go.golden
 bindings_denylist.go.golden
 bits.go.golden

@@ -1,3 +1,5 @@
+anonymous.json.golden
+anonymous.tables.c.golden
 arrays.json.golden
 arrays.tables.c.golden
 bindings_denylist.json.golden

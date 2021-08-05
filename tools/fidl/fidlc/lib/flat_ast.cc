@@ -3573,12 +3573,6 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
   }
 
   if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
-    // all inline type constructors are anonymous unless they are the RHS of a top level type
-    // declaration (type Foo = ...), which we check by seeing if the naming context has a parent.
-    if (context->IsLayoutMember() &&
-        !experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowAnonymousLayouts))
-      return Fail(ErrAnonymousLayout, raw_type_ctor->span());
-
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
     if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list),
                        is_request_or_response))

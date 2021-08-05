@@ -1,3 +1,5 @@
+anonymous_async.dart.golden
+anonymous_test.dart.golden
 arrays_async.dart.golden
 arrays_test.dart.golden
 bindings_denylist_async.dart.golden

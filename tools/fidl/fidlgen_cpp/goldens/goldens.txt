@@ -1,3 +1,5 @@
+anonymous.cc.golden
+anonymous.h.golden
 arrays.cc.golden
 arrays.h.golden
 bindings_denylist.cc.golden

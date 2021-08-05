@@ -1,5 +1,6 @@
 README.md.golden
 _toc.yaml.golden
+anonymous.md.golden
 arrays.md.golden
 bindings_denylist.md.golden
 bits.md.golden

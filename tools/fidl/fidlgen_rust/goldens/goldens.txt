@@ -1,3 +1,4 @@
+anonymous.rs.golden
 arrays.rs.golden
 bindings_denylist.rs.golden
 bits.rs.golden

@@ -1,0 +1,45 @@
+library fidl.test.anonymous;
+
+type Expression = flexible union {
+    1: value uint64;
+    2: bin_op struct {
+        op flexible enum {
+            ADD = 1;
+            MUL = 2;
+            DIV = 3;
+        };
+        left Expression:optional;
+        right Expression:optional;
+    };
+    3: function_application table {
+        1: func string:100;
+        2: reserved;
+        3: args vector<Expression:optional>:5;
+        4: flags bits : uint16 {
+            INLINE = 0x01;
+        };
+    };
+};
+
+protocol SomeProtocol {
+    SomeMethod(struct {
+        union_member union {
+            1: reserved;
+            2: union_data uint8;
+        };
+        table_member table {
+            1: reserved;
+            2: table_data vector<struct {
+                data uint8;
+            }>:10;
+        };
+    }) -> (struct {
+        bits_member bits {
+            BIT_ONE = 0b01;
+            BIT_TWO = 0b10;
+        };
+    }) error enum : uint32 {
+        ERROR_ONE = 1;
+        ERROR_TWO = 2;
+    };
+};

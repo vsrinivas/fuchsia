@@ -95,10 +95,6 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     return parent_;
   }
 
-  // TODO(fxbug.dev/74683): this is used to determine if this is a user specified
-  // anonymous layout, which is currently gated behind an experimental flag.
-  bool IsLayoutMember() const { return kind_ == ElementKind::kLayoutMember; }
-
   std::string FlattenedName() const {
     switch (kind_) {
       case ElementKind::kDecl:

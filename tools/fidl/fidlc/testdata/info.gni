@@ -47,6 +47,24 @@ import("//build/fidl/toolchain.gni")
 # Please keep sorted by name.
 fidl_testdata_info = [
   {
+    name = "anonymous"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.anonymous"
+    build_denylist = [
+      # TODO(fxbug.dev/7644): Dart does not support recursive types
+      "fidlgen_dart",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
+
+      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
+      "fidlgen_cpp",
+    ]
+  },
+  {
     name = "arrays"
     target = "//tools/fidl/fidlc/testdata:fidl.test.arrays"
     denylist = [

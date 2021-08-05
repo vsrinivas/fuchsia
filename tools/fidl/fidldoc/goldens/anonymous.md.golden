@@ -1,0 +1,368 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# fidl.test.anonymous
+
+
+
+## **PROTOCOLS**
+
+## SomeProtocol {#SomeProtocol}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=24)*
+
+
+
+### SomeMethod {#SomeProtocol.SomeMethod}
+
+
+
+#### Request {#SomeProtocol.SomeMethod_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>union_member</code></td>
+            <td>
+                <code><a class='link' href='#UnionMember'>UnionMember</a></code>
+            </td>
+        </tr><tr>
+            <td><code>table_member</code></td>
+            <td>
+                <code><a class='link' href='#TableMember'>TableMember</a></code>
+            </td>
+        </tr></table>
+
+
+#### Response {#SomeProtocol.SomeMethod_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>result</code></td>
+            <td>
+                <code><a class='link' href='#SomeProtocol_SomeMethod_Result'>SomeProtocol_SomeMethod_Result</a></code>
+            </td>
+        </tr></table>
+
+
+
+## **STRUCTS**
+
+### BinOp  {#BinOp data-text="BinOp"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=5)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="BinOp.op">
+            <td><code>op</code></td>
+            <td>
+                <code><a class='link' href='#Op'>Op</a></code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr><tr id="BinOp.left">
+            <td><code>left</code></td>
+            <td>
+                <code><a class='link' href='#Expression'>Expression</a>?</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr><tr id="BinOp.right">
+            <td><code>right</code></td>
+            <td>
+                <code><a class='link' href='#Expression'>Expression</a>?</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+### SomeProtocol_SomeMethod_Response  {#SomeProtocol_SomeMethod_Response data-text="SomeProtocol_SomeMethod_Response"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=36)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SomeProtocol_SomeMethod_Response.bits_member">
+            <td><code>bits_member</code></td>
+            <td>
+                <code><a class='link' href='#BitsMember'>BitsMember</a></code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+### TableData  {#TableData data-text="TableData"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=32)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TableData.data">
+            <td><code>data</code></td>
+            <td>
+                <code>uint8</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+
+
+## **ENUMS**
+
+### Op [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Op}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=6)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Op.ADD">
+            <td><code>ADD</code></td>
+            <td><code>1</code></td>
+            <td>
+</td>
+        </tr><tr id="Op.MUL">
+            <td><code>MUL</code></td>
+            <td><code>2</code></td>
+            <td>
+</td>
+        </tr><tr id="Op.DIV">
+            <td><code>DIV</code></td>
+            <td><code>3</code></td>
+            <td>
+</td>
+        </tr></table>
+
+### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=41)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_ONE">
+            <td><code>ERROR_ONE</code></td>
+            <td><code>1</code></td>
+            <td>
+</td>
+        </tr><tr id="SomeProtocol_SomeMethod_Error.ERROR_TWO">
+            <td><code>ERROR_TWO</code></td>
+            <td><code>2</code></td>
+            <td>
+</td>
+        </tr></table>
+
+
+
+## **TABLES**
+
+### FunctionApplication  {#FunctionApplication data-text="FunctionApplication"}
+
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=14)*
+
+
+
+
+<table>
+    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr id="FunctionApplication.func">
+            <td>1</td>
+            <td><code>func</code></td>
+            <td>
+                <code>string[100]</code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="FunctionApplication.">
+            <td>2</td>
+            <td><code>RESERVED</code></td>
+            <td>
+                <code></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="FunctionApplication.args">
+            <td>3</td>
+            <td><code>args</code></td>
+            <td>
+                <code>vector&lt;<a class='link' href='#Expression'>Expression</a>&gt;[5]</code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="FunctionApplication.flags">
+            <td>4</td>
+            <td><code>flags</code></td>
+            <td>
+                <code><a class='link' href='#Flags'>Flags</a></code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+### TableMember  {#TableMember data-text="TableMember"}
+
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=30)*
+
+
+
+
+<table>
+    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr id="TableMember.">
+            <td>1</td>
+            <td><code>RESERVED</code></td>
+            <td>
+                <code></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="TableMember.table_data">
+            <td>2</td>
+            <td><code>table_data</code></td>
+            <td>
+                <code>vector&lt;<a class='link' href='#TableData'>TableData</a>&gt;[10]</code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+
+
+## **UNIONS**
+
+### Expression [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Expression data-text="Expression"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=3)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
+            <td><code>value</code></td>
+            <td>
+                <code>uint64</code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="Expression.bin_op">
+            <td><code>bin_op</code></td>
+            <td>
+                <code><a class='link' href='#BinOp'>BinOp</a></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="Expression.function_application">
+            <td><code>function_application</code></td>
+            <td>
+                <code><a class='link' href='#FunctionApplication'>FunctionApplication</a></code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+### SomeProtocol_SomeMethod_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#SomeProtocol_SomeMethod_Result data-text="SomeProtocol_SomeMethod_Result"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=36)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
+            <td><code>response</code></td>
+            <td>
+                <code><a class='link' href='#SomeProtocol_SomeMethod_Response'>SomeProtocol_SomeMethod_Response</a></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="SomeProtocol_SomeMethod_Result.err">
+            <td><code>err</code></td>
+            <td>
+                <code><a class='link' href='#SomeProtocol_SomeMethod_Error'>SomeProtocol_SomeMethod_Error</a></code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+### UnionMember [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionMember data-text="UnionMember"}
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=26)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
+            <td><code></code></td>
+            <td>
+                <code></code>
+            </td>
+            <td>
+</td>
+        </tr><tr id="UnionMember.union_data">
+            <td><code>union_data</code></td>
+            <td>
+                <code>uint8</code>
+            </td>
+            <td>
+</td>
+        </tr></table>
+
+
+
+## **BITS**
+
+### BitsMember [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#BitsMember}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="BitsMember.BIT_ONE">
+            <td>BIT_ONE</td>
+            <td>1</td>
+            <td>
+</td>
+        </tr><tr id="BitsMember.BIT_TWO">
+            <td>BIT_TWO</td>
+            <td>2</td>
+            <td>
+</td>
+        </tr></table>
+
+### Flags [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Flags}
+Type: <code>uint16</code>
+
+*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=18)*
+
+
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Flags.INLINE">
+            <td>INLINE</td>
+            <td>1</td>
+            <td>
+</td>
+        </tr></table>
+
+
+
+
+

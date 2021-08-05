@@ -1,3 +1,6 @@
+anonymous.cc.golden
+anonymous.h.golden
+anonymous_test_base.h.golden
 arrays.cc.golden
 arrays.h.golden
 arrays_test_base.h.golden
