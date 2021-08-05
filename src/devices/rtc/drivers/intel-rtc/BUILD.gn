@@ -3,8 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/test.gni")
 
 assert(current_cpu == "x64")
 
@@ -15,20 +17,22 @@ driver_bind_rules("intel_rtc_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
+common_deps = [
+  ":intel_rtc_bind",
+  "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
+  "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+  "//src/devices/lib/acpi",
+  "//src/devices/lib/driver",
+  "//src/devices/rtc/lib/rtc",
+  "//src/devices/rtc/lib/rtc:rtc_llcpp",
+  "//src/lib/ddk",
+  "//src/lib/ddktl",
+]
+
 driver_module("intel-rtc-driver") {
   output_name = "intel-rtc"
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "intel-rtc.c" ]
-  deps = [
-    ":intel_rtc_bind",
-    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
-    "//src/devices/rtc/lib/rtc",
-    "//src/lib/ddk",
-  ]
+  sources = [ "intel-rtc.cc" ]
+  deps = common_deps
 }
 
 fuchsia_driver_component("intel-rtc") {
@@ -36,7 +40,28 @@ fuchsia_driver_component("intel-rtc") {
   deps = [ ":intel-rtc-driver" ]
 }
 
+test("intel-rtc-test-bin") {
+  output_name = "intel-rtc-test"
+  sources = [
+    "intel-rtc-test.cc",
+    "intel-rtc.cc",
+  ]
+
+  cflags = [ "-DFOR_TEST" ]
+  deps = common_deps + [
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/zxtest",
+         ]
+}
+
+fuchsia_unittest_package("intel-rtc-test") {
+  deps = [ ":intel-rtc-test-bin" ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":intel_rtc_bind_test" ]
+  deps = [
+    ":intel-rtc-test",
+    ":intel_rtc_bind_test",
+  ]
 }
