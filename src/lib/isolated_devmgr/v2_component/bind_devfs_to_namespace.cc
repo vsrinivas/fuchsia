@@ -47,9 +47,9 @@ zx::status<> BindDevfsToNamespace() {
     return status;
   }
   fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir;
-  fuchsia::sys2::Realm_BindChild_Result result;
-  status = zx::make_status(realm->BindChild(fuchsia::sys2::ChildRef{.name = "isolated-devmgr"},
-                                            exposed_dir.NewRequest(), &result));
+  fuchsia::sys2::Realm_OpenExposedDir_Result result;
+  status = zx::make_status(realm->OpenExposedDir(fuchsia::sys2::ChildRef{.name = "isolated-devmgr"},
+                                                 exposed_dir.NewRequest(), &result));
   if (status.is_error() || result.is_err()) {
     FX_LOGS(ERROR) << "Unable to connect to child: " << status.status_string();
     return status;
