@@ -26,7 +26,7 @@ template("plugins") {
 
   script_args = [
     "--out",
-    rebase_path(generated_file),
+    rebase_path(generated_file, root_build_dir),
     "--args",
     invoker.args,
     "--execution_lib",

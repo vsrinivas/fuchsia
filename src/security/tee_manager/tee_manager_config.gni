@@ -46,7 +46,7 @@ template("tee_manager_config") {
 
   config_data(target_name) {
     for_pkg = "tee_manager"
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
 
     outputs = [ "tee_manager.config" ]
 

@@ -107,12 +107,12 @@ template("target_archive_common") {
       args = [ "--compile" ]
 
       # single `.c` file
-      args += [ rebase_path(_data_sources[0]) ]
+      args += [ rebase_path(_data_sources[0], root_build_dir) ]
 
       # NOTE: only a single `.o` file is supported
       args += [
         "-o",
-        rebase_path(outputs[0]),
+        rebase_path(outputs[0], root_build_dir),
       ]
 
       # includes
@@ -120,7 +120,7 @@ template("target_archive_common") {
         foreach(_include_dir, invoker.data_include_dirs) {
           args += [
             "-I",
-            rebase_path(_include_dir),
+            rebase_path(_include_dir, root_build_dir),
           ]
         }
       }

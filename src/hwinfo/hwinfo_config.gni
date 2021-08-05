@@ -57,7 +57,7 @@ template("hwinfo_config") {
 
   config_data(target_name) {
     for_pkg = "hwinfo"
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
 
     outputs = [ "${invoker.type}_config.json" ]
 

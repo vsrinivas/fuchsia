@@ -30,7 +30,7 @@ template("command") {
     script = "${root_out_dir}/obj/src/developer/ffx/build/gn_generate_cmd.pyz"
     args = [
       "--out",
-      rebase_path(generated_file),
+      rebase_path(generated_file, root_build_dir),
       "--deps",
       lib_str,
       "--template",

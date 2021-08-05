@@ -53,9 +53,9 @@ template("wasm_bindings") {
 
     file_name = ""
     if (dep_name == "lib") {
-      file_name = rebase_path("${dep_out_dir}/lib.wasm")
+      file_name = "${dep_out_dir}/lib.wasm"
     } else {
-      file_name = rebase_path("${dep_out_dir}/lib${dep_name}.wasm")
+      file_name = "${dep_out_dir}/lib${dep_name}.wasm"
     }
 
     tool = "//src/diagnostics/wasm/bindgen:bin"
@@ -64,7 +64,7 @@ template("wasm_bindings") {
     output_dir = "$target_out_dir/$target_name"
 
     args = [
-      file_name,
+      rebase_path(file_name, root_build_dir),
       rebase_path(output_dir, root_build_dir),
     ]
 

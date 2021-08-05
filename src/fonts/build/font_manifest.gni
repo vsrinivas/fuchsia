@@ -107,33 +107,33 @@ template("font_manifest") {
     if (font_pkgs_paths != [] && font_catalog_paths != [] && font_files != []) {
       args += [
         "--all-fonts",
-        rebase_path(all_fonts_path),
+        rebase_path(all_fonts_path, root_build_dir),
       ]
 
       args += [
         "--local-fonts",
-        rebase_path(local_fonts_path),
+        rebase_path(local_fonts_path, root_build_dir),
       ]
 
       args += [
         "--font-dir",
-        rebase_path(fonts_dir),
+        rebase_path(fonts_dir, root_build_dir),
       ]
 
       args += [ "--font-pkgs" ]
       foreach(font_pkgs_path, font_pkgs_paths) {
-        args += [ rebase_path(font_pkgs_path) ]
+        args += [ rebase_path(font_pkgs_path, root_build_dir) ]
       }
 
       args += [ "--font-catalog" ]
       foreach(font_catalog_path, font_catalog_paths) {
-        args += [ rebase_path(font_catalog_path) ]
+        args += [ rebase_path(font_catalog_path, root_build_dir) ]
       }
 
       if (defined(product_config_path)) {
         args += [
           "--product-config",
-          rebase_path(product_config_path),
+          rebase_path(product_config_path, root_build_dir),
         ]
       }
     } else {
@@ -146,7 +146,7 @@ template("font_manifest") {
 
     args += [
       "--output",
-      rebase_path(output),
+      rebase_path(output, root_build_dir),
     ]
   }
 }

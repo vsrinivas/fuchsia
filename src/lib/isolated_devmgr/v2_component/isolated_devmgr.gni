@@ -4,13 +4,6 @@
 
 import("//build/components.gni")
 
-isolated_devmgr_v2_manifest_path = rebase_path("meta/isolated-devmgr.cml")
-isolated_devmgr_v2_deps = rebase_path([
-                                        ":driver-manager-support",
-                                        ":driver-manager-test",
-                                      ])
-isolated_devmgr_v2_deps += [ "//src/devices/bin/driver-index:component" ]
-
 # Produces a (testonly) component with an isolated driver manager to launch drivers. The component
 # name will always be `isolated-devmgr`.
 #
@@ -52,8 +45,12 @@ template("isolated_devmgr_v2_component") {
     forward_variables_from(invoker, [ "visibility" ])
     testonly = true
     component_name = "isolated-devmgr"
-    manifest = isolated_devmgr_v2_manifest_path
-    deps = isolated_devmgr_v2_deps
+    manifest = "//src/lib/isolated_devmgr/v2_component/meta/isolated-devmgr.cml"
+    deps = [
+      "//src/devices/bin/driver-index:component",
+      "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
+      "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
+    ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

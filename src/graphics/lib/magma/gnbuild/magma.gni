@@ -95,8 +95,7 @@ template("magma_vulkan_icd") {
       configs += invoker.configs
     }
     if (!is_debug) {
-      version_script =
-          rebase_path("//src/graphics/lib/magma/scripts/libvulkan.version")
+      version_script = "//src/graphics/lib/magma/scripts/libvulkan.version"
       if (!defined(invoker.inputs)) {
         inputs = []
       }
@@ -104,7 +103,8 @@ template("magma_vulkan_icd") {
       if (!defined(invoker.ldflags)) {
         ldflags = []
       }
-      ldflags += [ "-Wl,--version-script=$version_script" ]
+      ldflags += [ "-Wl,--version-script=" +
+                   rebase_path(version_script, root_build_dir) ]
     }
 
     # Do not build ICDs with instrumented build variants, otherwise
@@ -120,8 +120,6 @@ template("magma_vulkan_icd") {
     verify_imported_symbols_target_name =
         "${target_name}__verify_imported_symbols"
 
-    imported_symbols_allowlist_file =
-        rebase_path(invoker.imported_symbols_allowlist)
     generated_imported_symbols_file =
         "$target_gen_dir/${invoker.output_name}.imported_symbols.list"
     extract_imported_symbols(extract_imported_symbols_target_name) {
@@ -136,7 +134,7 @@ template("magma_vulkan_icd") {
 
     verify_imported_symbols(verify_imported_symbols_target_name) {
       current = generated_imported_symbols_file
-      allowlist = imported_symbols_allowlist_file
+      allowlist = invoker.imported_symbols_allowlist
       library_name = lib_name
       deps = [ ":$extract_imported_symbols_target_name" ]
     }
@@ -204,7 +202,7 @@ template("icd_config_data") {
       ]
       outputs = [ manifest_file ]
     }
-    manifest_files += [ rebase_path(manifest_file) ]
+    manifest_files += [ manifest_file ]
     manifest_targets += [ ":${manifest_target}" ]
   }
   if (defined(invoker.resource_target_name)) {

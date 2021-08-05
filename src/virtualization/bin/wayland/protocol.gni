@@ -41,9 +41,9 @@ template("wayland_protocol") {
     outputs = [ target_crate_root ]
     args = [
       "-i",
-      rebase_path(invoker.protocol),
+      rebase_path(invoker.protocol, root_build_dir),
       "-o",
-      rebase_path(target_crate_root),
+      rebase_path(target_crate_root, root_build_dir),
     ]
     foreach(dep, protocol_deps) {
       args += [

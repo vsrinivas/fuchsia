@@ -24,7 +24,7 @@ template("generate_flavors") {
                              "testonly",
                            ])
     package_name = invoker.target_name
-    visibility = [ rebase_path(":${invoker.target_name}") ]
+    visibility = [ ":${invoker.target_name}" ]
     default = "release"
     flavors = [
       {
@@ -57,7 +57,7 @@ template("generate_config") {
                              "sources",
                              "testonly",
                            ])
-    visibility = [ rebase_path(":${invoker.target_name}") ]
+    visibility = [ ":${invoker.target_name}" ]
   }
 }
 

@@ -29,7 +29,7 @@ template("services") {
       "--deps_full",
       string_join(",", services_deps),
       "--out",
-      rebase_path(generated_file),
+      rebase_path(generated_file, root_build_dir),
     ]
 
     inputs = [ "//src/developer/ffx/build/templates/services_macro.md" ] +

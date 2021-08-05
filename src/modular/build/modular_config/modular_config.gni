@@ -99,7 +99,7 @@ template("modular_config") {
 
   config_data(invoker.target_name) {
     for_pkg = for_pkg
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
     outputs = [ output_name ]
 
     deps = config_data_deps

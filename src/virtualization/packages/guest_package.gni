@@ -81,7 +81,7 @@ template("guest_package") {
         invoker.memory,
       ]
     }
-    args += [ rebase_path("$guest_config_file") ]
+    args += [ rebase_path("$guest_config_file", root_build_dir) ]
   }
 
   guest_resource_target_name = "${target_name}_guest_resource"

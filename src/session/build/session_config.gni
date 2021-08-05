@@ -15,7 +15,7 @@ import("//build/config.gni")
 template("session_config") {
   config_data(target_name) {
     for_pkg = "session_manager"
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
     outputs = [ "startup.config" ]
   }
 }

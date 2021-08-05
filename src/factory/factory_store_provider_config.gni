@@ -56,7 +56,7 @@ template("factory_store_provider_config") {
 
   config_data(target_name) {
     for_pkg = "factory_store_providers"
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
 
     outputs = [ "${invoker.provider}.config" ]
 
@@ -106,7 +106,7 @@ template("factory_store_provider_factory_config") {
 
   config_data(target_name) {
     for_pkg = "factory_store_providers"
-    sources = [ rebase_path(invoker.config) ]
+    sources = [ invoker.config ]
 
     outputs = [ "factory.config" ]
 

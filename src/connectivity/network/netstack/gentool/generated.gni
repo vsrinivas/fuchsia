@@ -90,9 +90,9 @@ template("generated_go") {
       outputs = [ gen_dst ]
 
       args = [
-        rebase_path(f.template),
+        rebase_path(f.template, root_build_dir),
         rebase_path(gen_dst, root_build_dir),
-        rebase_path(f.src),
+        rebase_path(f.src, root_build_dir),
       ]
 
       public_deps = copy_deps
