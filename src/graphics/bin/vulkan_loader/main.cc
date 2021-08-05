@@ -72,6 +72,12 @@ int main(int argc, const char* const* argv) {
     return -1;
   }
 
+  status = app.InitManifestFs();
+  if (status != ZX_OK) {
+    FX_LOGS(INFO) << "Failed to initialize manifest fs " << status;
+    return -1;
+  }
+
   MagmaDependencyInjection manager(context.get());
   status = manager.Initialize();
   if (status != ZX_OK) {

@@ -10,7 +10,15 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
+#include <filesystem>
+
 #include <gtest/gtest.h>
+
+zx_status_t ForceWaitForIdle(fuchsia::vulkan::loader::LoaderSyncPtr& loader) {
+  zx::vmo vmo;
+  // manifest.json remaps this to bin/pkg-server.
+  return loader->Get("libvulkan_fake.so", &vmo);
+}
 
 TEST(VulkanLoader, ManifestLoad) {
   fuchsia::vulkan::loader::LoaderSyncPtr loader;
@@ -160,4 +168,15 @@ TEST(VulkanLoader, GoldfishSyncDeviceFs) {
     fuchsia::io::NodeInfo result;
     EXPECT_EQ(ZX_OK, device_ptr->Describe(&result)) << " class " << device_class;
   }
+}
+
+TEST(VulkanLoader, DebugFilesystems) {
+  fuchsia::vulkan::loader::LoaderSyncPtr loader;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
+                                        loader.NewRequest().TakeChannel().release()));
+  ForceWaitForIdle(loader);
+  const std::string debug_path("/parent_hub/children/vulkan_loader/exec/out/debug/");
+
+  EXPECT_TRUE(std::filesystem::exists(debug_path + "device-fs/class/gpu/000"));
+  EXPECT_TRUE(std::filesystem::exists(debug_path + "manifest-fs/0libvulkan_fake.so.json"));
 }

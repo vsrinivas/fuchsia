@@ -66,6 +66,11 @@
             from: "#test_lib_provider",
             to: [ "#vulkan_loader" ],
         },
+        {
+            directory: "hub",
+            from: "framework",
+            to: "#test_driver",
+        },
     ],
     expose: [
         {

@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/vfs/cpp/remote_dir.h>
 
 #include "src/graphics/bin/vulkan_loader/goldfish_device.h"
 #include "src/graphics/bin/vulkan_loader/icd_component.h"
@@ -54,6 +55,17 @@ zx_status_t LoaderApp::InitDeviceFs() {
                          fbl::MakeRefCounted<fs::RemoteDir>(
                              fidl::ClientEnd<fuchsia_io::Directory>(gpu_dir.TakeChannel())));
   }
+
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client));
+  if ((status = ServeDeviceFs(std::move(server))) != ZX_OK) {
+    return status;
+  }
+  context_->outgoing()->debug_dir()->AddEntry("device-fs", std::move(devfs_out));
   return ZX_OK;
 }
 
@@ -67,6 +79,20 @@ zx_status_t LoaderApp::ServeManifestFs(zx::channel dir_request) {
   auto options = fs::VnodeConnectionOptions::ReadWrite();
   return manifest_fs_.Serve(manifest_fs_root_node_,
                             fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+}
+
+zx_status_t LoaderApp::InitManifestFs() {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client));
+  if ((status = ServeManifestFs(std::move(server))) != ZX_OK) {
+    return status;
+  }
+  context_->outgoing()->debug_dir()->AddEntry("manifest-fs", std::move(devfs_out));
+  return ZX_OK;
 }
 
 zx_status_t LoaderApp::InitDeviceWatcher() {

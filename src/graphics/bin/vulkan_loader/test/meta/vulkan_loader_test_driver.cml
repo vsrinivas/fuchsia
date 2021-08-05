@@ -1,12 +1,18 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/vulkan_loader_test",
     },
     use: [
         { protocol: "fuchsia.vulkan.loader.Loader" },
+        {
+            directory: "hub",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/parent_hub",
+        },
     ],
 }

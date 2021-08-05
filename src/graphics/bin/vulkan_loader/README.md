@@ -99,6 +99,15 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 * `manifest_path` is the location of the [Khronos ICD manifest json file][loaderinterface] relative
     to the exposed `contents` directory.
 
+## Debugging
+
+The loader service exposes inspect data (under `core/vulkan_loader`) about its
+current state and what components it has loaded. `manifest-fs` and `device-fs`
+are also exposed through the [hub][hub] at
+`/hub-v2/children/core/children/vulkan_loader/exec/out/debug/`. The loader
+service must be launched first; one way to do that is using [ffx component
+knock][ffx-knock].
+
 [GetIcdList]: https://fuchsia.dev/reference/fidl/fuchsia.gpu.magma#Device.GetIcdList
 [VMO]: /docs/glossary.md#virtual-memory-object
 [ICD]: /docs/concepts/system/abi/system.md#vulkan-icd
@@ -108,3 +117,5 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [loaderinterface]: https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md
 [meta-far]: /docs/concepts/packages/package.md#meta-far
+[hub]: /docs/concepts/components/v2/hub.md
+[ffx-knock]: /docs/reference/tools/sdk/ffx.md#knock

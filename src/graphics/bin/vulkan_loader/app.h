@@ -62,6 +62,7 @@ class LoaderApp {
   zx_status_t InitDeviceWatcher();
 
   zx_status_t InitDeviceFs();
+  zx_status_t InitManifestFs();
   zx_status_t ServeDeviceFs(zx::channel dir_request);
   zx_status_t ServeManifestFs(zx::channel dir_request);
 
