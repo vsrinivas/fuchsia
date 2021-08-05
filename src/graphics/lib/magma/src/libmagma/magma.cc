@@ -272,6 +272,7 @@ magma_status_t magma_execute_command_buffer_with_resources(
     magma_connection_t connection, uint32_t context_id,
     struct magma_system_command_buffer* system_command_buffer,
     struct magma_system_exec_resource* resources, uint64_t* semaphore_ids) {
+  TRACE_DURATION("magma", "execute command buffer");
   magma_command_buffer command_buffer = {
       .resource_count = system_command_buffer->resource_count,
       .batch_buffer_resource_index = system_command_buffer->batch_buffer_resource_index,
@@ -297,6 +298,7 @@ magma_status_t magma_execute_command_buffer_with_resources(
 magma_status_t magma_execute_command_buffer_with_resources2(
     magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
     struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
+  TRACE_DURATION("magma", "execute command buffer");
   if (command_buffer->resource_count > 0) {
     DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->resource_count);
 
