@@ -8,9 +8,6 @@ import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 import("//tools/cmc/build/cmc.gni")
 
-# Set to true to enable Fxfs
-use_fxfs = false
-
 declare_args() {
   # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
   # can grow as needed if there are extra slices available in FVM. This limit prevents the blobfs
@@ -34,6 +31,11 @@ declare_args() {
   # If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
   # corrupted. Setting this flag to true helps debugging corruptions.
   extract_minfs_metadata_on_corruption = false
+
+  # This flag isn't stable yet, don't use it.
+  # Set to true to enable fxfs instead of minfs.  If set, any existing minfs partition will be
+  # migrated in-place to fxfs when fshost mounts it.
+  unstable_feature_use_fxfs = false
 }
 
 group("tests") {
@@ -219,7 +221,7 @@ source_set("block-watcher") {
     sources += [ "extract-metadata-noop.cc" ]
   }
 
-  if (use_fxfs) {
+  if (unstable_feature_use_fxfs) {
     deps += [ "//src/storage/fxfs" ]
   }
 
@@ -258,7 +260,7 @@ executable("fshost") {
     "//zircon/system/ulib/zbi-bootfs",
   ]
 
-  if (use_fxfs) {
+  if (unstable_feature_use_fxfs) {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
@@ -417,7 +419,7 @@ cmc_merge("test-fshost.cml") {
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
   ]
-  if (use_fxfs) {
+  if (unstable_feature_use_fxfs) {
     sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
@@ -496,7 +498,7 @@ cmc_merge("fshost.cml") {
   if (!bootfs_only) {
     sources += [ "meta/core_fshost.cml" ]
   }
-  if (use_fxfs) {
+  if (unstable_feature_use_fxfs) {
     sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
@@ -566,7 +568,8 @@ template("fshost_config") {
       contents += [ "apply-limits-to-ramdisk" ]
     }
 
-    if (defined(invoker.use_fxfs) && invoker.use_fxfs) {
+    if (defined(invoker.unstable_feature_use_fxfs) &&
+        invoker.unstable_feature_use_fxfs) {
       contents += [ "use-fxfs" ]
     }
 
@@ -599,8 +602,8 @@ fshost_config("default_config") {
   gpt_all = false
   no_minfs_zxcrypt = false
   sandbox_decompression = false
-  if (use_fxfs) {
-    use_fxfs = true
+  if (unstable_feature_use_fxfs) {
+    unstable_feature_use_fxfs = true
   }
 }
 
