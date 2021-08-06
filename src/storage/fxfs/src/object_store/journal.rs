@@ -1095,7 +1095,7 @@ impl JournalWriter {
 mod tests {
     use {
         crate::{
-            object_handle::{ObjectHandle, ObjectHandleExt},
+            object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
                 directory::Directory,
@@ -1205,7 +1205,7 @@ mod tests {
             transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
-            handle.write(0, buf.as_ref()).await.expect("write failed");
+            handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
             // As this is the first sync, this will actually trigger a new super-block, but normally
             // this would not be the case.
             fs.sync(SyncOptions::default()).await.expect("sync failed");
@@ -1260,7 +1260,7 @@ mod tests {
             transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
-            handle.write(0, buf.as_ref()).await.expect("write failed");
+            handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             object_ids.push(handle.object_id());
 
@@ -1279,7 +1279,7 @@ mod tests {
                 transaction.commit().await.expect("commit failed");
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
-                handle.write(0, buf.as_ref()).await.expect("write failed");
+                handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
                 object_ids.push(handle.object_id());
             }
         }
@@ -1322,7 +1322,7 @@ mod tests {
             transaction.commit().await.expect("commit failed");
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
-            handle.write(0, buf.as_ref()).await.expect("write failed");
+            handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             object_ids.push(handle.object_id());
         }

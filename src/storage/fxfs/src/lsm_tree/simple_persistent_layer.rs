@@ -7,7 +7,7 @@ use {
         lsm_tree::types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
         },
-        object_handle::{ObjectHandle, WriteBytes},
+        object_handle::{ReadObjectHandle, WriteBytes},
     },
     anyhow::{bail, Context, Error},
     async_trait::async_trait,
@@ -26,7 +26,7 @@ use {
 /// for items is done via a simple binary search. Each block starts with a 2 byte item count so
 /// there is a 64k item limit per block.
 pub struct SimplePersistentLayer {
-    object_handle: Arc<dyn ObjectHandle>,
+    object_handle: Arc<dyn ReadObjectHandle>,
     block_size: u32,
     size: u64,
     close_event: Mutex<Option<Event>>,
@@ -113,7 +113,7 @@ impl SimplePersistentLayer {
     /// interface to the object).  The layer should have been written prior using
     /// SimplePersistentLayerWriter.
     pub async fn open(
-        object_handle: impl ObjectHandle + 'static,
+        object_handle: impl ReadObjectHandle + 'static,
         block_size: u32,
     ) -> Result<Arc<Self>, Error> {
         let size = object_handle.get_size();
@@ -128,7 +128,7 @@ impl SimplePersistentLayer {
 
 #[async_trait]
 impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
-    fn handle(&self) -> Option<&dyn ObjectHandle> {
+    fn handle(&self) -> Option<&dyn ReadObjectHandle> {
         Some(self.object_handle.as_ref())
     }
 
@@ -229,7 +229,7 @@ impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
         SimplePersistentLayerWriter { block_size, buf: vec![0; 2], writer, item_count: 0 }
     }
 
-    async fn flush_some(&mut self, len: usize) -> Result<(), Error> {
+    async fn write_some(&mut self, len: usize) -> Result<(), Error> {
         if self.item_count == 0 {
             return Ok(());
         }
@@ -249,6 +249,7 @@ impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
         &mut self,
         item: ItemRef<'_, K, V>,
     ) -> Result<(), Error> {
+        // TODO(jfsulliv): Simplify all of this by implementing std::io::Writer for WriteBytes.
         // Note the length before we write this item.
         let len = self.buf.len();
         bincode::serialize_into(&mut self.buf, &item)?;
@@ -256,7 +257,7 @@ impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
         // If writing the item took us over a block, flush the bytes in the buffer prior to this
         // item.
         if self.buf.len() > self.block_size as usize - 1 || self.item_count == 65535 {
-            self.flush_some(len).await?;
+            self.write_some(len).await?;
         }
 
         self.item_count += 1;
@@ -264,7 +265,8 @@ impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
     }
 
     async fn flush(&mut self) -> Result<(), Error> {
-        self.flush_some(self.buf.len()).await
+        self.write_some(self.buf.len()).await?;
+        self.writer.complete().await
     }
 }
 
@@ -283,7 +285,6 @@ mod tests {
         crate::{
             lsm_tree::types::{DefaultOrdUpperBound, Item, ItemRef, Layer, LayerWriter},
             object_handle::Writer,
-            object_store::transaction,
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
@@ -299,10 +300,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -325,10 +323,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -359,10 +354,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -385,10 +377,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             writer.flush().await.expect("flush failed");
         }
 
@@ -408,10 +397,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
@@ -435,10 +421,7 @@ mod tests {
 
         let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
         {
-            let mut writer = SimplePersistentLayerWriter::new(
-                Writer::new(&handle, transaction::Options::default()),
-                BLOCK_SIZE,
-            );
+            let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }

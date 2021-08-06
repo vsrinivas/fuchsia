@@ -134,7 +134,7 @@ mod tests {
     use {
         super::JournalWriter,
         crate::{
-            object_handle::ObjectHandle,
+            object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
@@ -154,7 +154,7 @@ mod tests {
         writer.pad_to_block().expect("pad_to_block failed");
         let handle = FakeObjectHandle::new(object.clone());
         let (offset, buf) = writer.take_buffer(&handle).unwrap();
-        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
+        handle.write_or_append(Some(offset), buf.as_ref()).await.expect("overwrite failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
@@ -183,7 +183,7 @@ mod tests {
         writer.pad_to_block().expect("pad_to_block failed");
         let handle = FakeObjectHandle::new(object.clone());
         let (offset, buf) = writer.take_buffer(&handle).unwrap();
-        handle.overwrite(offset, buf.as_ref()).await.expect("overwrite failed");
+        handle.write_or_append(Some(offset), buf.as_ref()).await.expect("overwrite failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);

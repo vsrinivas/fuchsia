@@ -3,19 +3,36 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{
-        transaction::{self, Transaction},
-        Timestamp,
-    },
+    crate::object_store::Timestamp,
     anyhow::{bail, Error},
     async_trait::async_trait,
-    std::ops::Range,
     storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
 };
 
 // Some places use Default and assume that zero is an invalid object ID, so this cannot be changed
 // easily.
 pub const INVALID_OBJECT_ID: u64 = 0;
+
+/// A handle for a generic object.  For objects with a data payload, use the ReadObjectHandle or
+/// WriteObjectHandle traits.
+pub trait ObjectHandle: Send + Sync + 'static {
+    /// Returns the object identifier for this object which will be unique for the store that the
+    /// object is contained in, but not necessarily unique within the entire system.
+    fn object_id(&self) -> u64;
+
+    // Returns the size of the object.
+    fn get_size(&self) -> u64;
+
+    /// Returns the filesystem block size, which should be at least as big as the device block size,
+    /// but not necessarily the same.
+    fn block_size(&self) -> u32;
+
+    /// Allocates a buffer for doing I/O (read and write) for the object.
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
+
+    /// Sets tracing for this object.
+    fn set_trace(&self, _v: bool) {}
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ObjectProperties {
@@ -35,97 +52,46 @@ pub struct ObjectProperties {
 }
 
 #[async_trait]
-pub trait ObjectHandle: Send + Sync + 'static {
-    /// Returns the object identifier for this object which will be unique for the store that the
-    /// object is contained in, but not necessarily unique within the entire system.
-    fn object_id(&self) -> u64;
+pub trait GetProperties {
+    /// Gets the object's properties.
+    async fn get_properties(&self) -> Result<ObjectProperties, Error>;
+}
 
-    /// Returns the filesystem block size, which should be at least as big as the device block size,
-    /// but not necessarily the same.
-    fn block_size(&self) -> u32;
-
-    /// Allocates a buffer for doing I/O (read and write) for the object.
-    fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
-
+#[async_trait]
+pub trait ReadObjectHandle: ObjectHandle {
     /// Fills |buf| with up to |buf.len()| bytes read from |offset| on the underlying device.
     /// |offset| and |buf| must both be block-aligned.
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
+}
 
-    /// Writes |buf| to the device at |offset|.  Note that this is a direct write which will be
-    /// less performant than |write_cached|, which is preferred when it is not necessary to
-    /// incorporate other work into the transaction.
-    ///
-    /// The alignment of |offset| and |buf.range().start| must be equal (but they do not need to be
-    /// block-aligned).
-    async fn txn_write<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        offset: u64,
-        buf: BufferRef<'_>,
-    ) -> Result<(), Error>;
+#[async_trait]
+pub trait WriteObjectHandle: ObjectHandle {
+    /// Writes |buf.len())| bytes at |offset| (or the end of the file), returning the object size
+    /// after writing.
+    /// The writes may be cached, in which case a later call to |flush| is necessary to persist the
+    /// writes.
+    async fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error>;
 
-    /// Writes |buf| to the device at |offset|.  The ranges involved *must* already be allocated and
-    /// the buffer must be aligned whole blocks.
-    async fn overwrite(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error>;
+    /// Truncates the object to |size| bytes.
+    /// The truncate may be cached, in which case a later call to |flush| is necessary to persist
+    /// the truncate.
+    async fn truncate(&self, size: u64) -> Result<(), Error>;
 
-    // Returns the size of the object.
-    fn get_size(&self) -> u64;
-
-    /// Sets the size of the object to |size|.  If this extends the object, a hole is created.  If
-    /// this shrinks the object, space will be deallocated (if there are no more references to the
-    /// data).
-    async fn truncate<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        size: u64,
-    ) -> Result<(), Error>;
-
-    /// Preallocates the given file range.  Data will not be initialised so this should be a
-    /// privileged operation for now.  The data can be later written to using an overwrite mode.
-    /// Returns the device ranges allocated.  Existing allocated ranges will be left untouched and
-    /// the ranges returned will include those.
-    async fn preallocate_range<'a>(
-        &'a self,
-        transaction: &mut Transaction<'a>,
-        range: Range<u64>,
-    ) -> Result<Vec<Range<u64>>, Error>;
-
-    /// Updates the timestamps for the object.  If either argument is None, that timestamp is not
-    /// modified.
-    /// If |transaction| is unset, the updates can be deferred until a later write.
-    /// |get_properties| must immediately reflect the new values, though (i.e. they must be
-    /// buffered).
+    /// Updates the timestamps for the object.
+    /// The truncate may be cached, in which case a later call to |flush| is necessary to persist
+    /// the truncate.
     async fn write_timestamps<'a>(
         &'a self,
-        transaction: &mut Transaction<'a>,
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
     ) -> Result<(), Error>;
 
-    /// Gets the object's properties.
-    async fn get_properties(&self) -> Result<ObjectProperties, Error>;
-
-    /// Returns a new transaction including a lock for this handle.
-    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
-        self.new_transaction_with_options(transaction::Options::default()).await
-    }
-
-    /// Returns a new transaction including a lock for this handle and the given options.
-    async fn new_transaction_with_options<'a>(
-        &self,
-        options: transaction::Options<'a>,
-    ) -> Result<Transaction<'a>, Error>;
-
-    /// Sets tracing for this object.
-    fn set_trace(&self, _v: bool) {}
-
-    /// Flushes the object and the underlying device.  This is expensive and should be used
-    /// sparingly.
-    async fn flush_device(&self) -> Result<(), Error>;
+    /// Flushes all pending data and metadata updates for the object.
+    async fn flush(&self) -> Result<(), Error>;
 }
 
 #[async_trait]
-pub trait ObjectHandleExt: ObjectHandle {
+pub trait ObjectHandleExt: ReadObjectHandle {
     // Returns the contents of the object. The object must be < |limit| bytes in size.
     async fn contents(&self, limit: usize) -> Result<Box<[u8]>, Error> {
         let size = self.get_size();
@@ -138,22 +104,17 @@ pub trait ObjectHandleExt: ObjectHandle {
         vec.copy_from_slice(&buf.as_slice());
         Ok(vec.into())
     }
-
-    /// Performs a write within a transaction.
-    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        let mut transaction = self.new_transaction().await?;
-        self.txn_write(&mut transaction, offset, buf).await?;
-        transaction.commit().await?;
-        Ok(())
-    }
 }
 
 #[async_trait]
-impl<T: ObjectHandle + ?Sized> ObjectHandleExt for T {}
+impl<T: ReadObjectHandle + ?Sized> ObjectHandleExt for T {}
 
 #[async_trait]
 pub trait WriteBytes {
+    fn handle(&self) -> &dyn WriteObjectHandle;
+
     async fn write_bytes(&mut self, buf: &[u8]) -> Result<(), Error>;
+    async fn complete(&mut self) -> Result<(), Error>;
 
     fn skip(&mut self, amount: u64);
 }
@@ -161,38 +122,36 @@ pub trait WriteBytes {
 const BUFFER_SIZE: usize = 131_072;
 
 pub struct Writer<'a> {
-    handle: &'a dyn ObjectHandle,
-    options: transaction::Options<'a>,
+    handle: &'a dyn WriteObjectHandle,
     buffer: Buffer<'a>,
     offset: u64,
 }
 
 impl<'a> Writer<'a> {
-    pub fn new(handle: &'a dyn ObjectHandle, options: transaction::Options<'a>) -> Self {
-        Self { handle, options, buffer: handle.allocate_buffer(BUFFER_SIZE), offset: 0 }
-    }
-
-    pub fn handle(&self) -> &dyn ObjectHandle {
-        self.handle
+    pub fn new(handle: &'a dyn WriteObjectHandle) -> Self {
+        Self { handle, buffer: handle.allocate_buffer(BUFFER_SIZE), offset: 0 }
     }
 }
 
 #[async_trait]
 impl WriteBytes for Writer<'_> {
+    fn handle(&self) -> &dyn WriteObjectHandle {
+        self.handle
+    }
+
     async fn write_bytes(&mut self, mut buf: &[u8]) -> Result<(), Error> {
         while buf.len() > 0 {
             let to_do = std::cmp::min(buf.len(), BUFFER_SIZE);
             self.buffer.subslice_mut(..to_do).as_mut_slice().copy_from_slice(&buf[..to_do]);
-            let mut transaction =
-                self.handle.new_transaction_with_options(self.options.clone()).await?;
-            self.handle
-                .txn_write(&mut transaction, self.offset, self.buffer.subslice(..to_do))
-                .await?;
-            transaction.commit().await?;
+            self.handle.write_or_append(Some(self.offset), self.buffer.subslice(..to_do)).await?;
             self.offset += to_do as u64;
             buf = &buf[to_do..];
         }
         Ok(())
+    }
+
+    async fn complete(&mut self) -> Result<(), Error> {
+        self.handle.flush().await
     }
 
     fn skip(&mut self, amount: u64) {

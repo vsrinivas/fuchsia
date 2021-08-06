@@ -492,13 +492,14 @@ mod tests {
         super::remove,
         crate::{
             errors::FxfsError,
+            object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
                 directory::{replace_child, Directory, ReplacedChild},
                 filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
                 record::Timestamp,
                 transaction::{Options, TransactionHandler},
-                HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
+                HandleOptions, ObjectDescriptor, ObjectStore,
             },
         },
         fuchsia_async as fasync,
@@ -840,9 +841,9 @@ mod tests {
         {
             let mut buf = foo.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             buf.as_mut_slice().fill(0xaa);
-            foo.write(0, buf.as_ref()).await.expect("write failed");
+            foo.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
             buf.as_mut_slice().fill(0xbb);
-            bar.write(0, buf.as_ref()).await.expect("write failed");
+            bar.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
         }
         std::mem::drop(bar);
         std::mem::drop(foo);

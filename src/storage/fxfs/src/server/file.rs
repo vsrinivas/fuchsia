@@ -4,10 +4,9 @@
 
 use {
     crate::{
-        object_handle::ObjectHandle,
+        object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
-            filesystem::SyncOptions, transaction::Options, CachingObjectHandle, StoreObjectHandle,
-            Timestamp,
+            filesystem::SyncOptions, CachingObjectHandle, StoreObjectHandle, Timestamp,
         },
         server::{
             directory::FxDirectory,
@@ -72,7 +71,7 @@ impl FxFile {
     async fn write_or_append(&self, offset: Option<u64>, content: &[u8]) -> Result<u64, Error> {
         let mut buf = self.handle.allocate_buffer(content.len());
         buf.as_mut_slice().copy_from_slice(content);
-        let size = self.handle.write_or_append_cached(offset, buf.as_ref()).await?;
+        let size = self.handle.write_or_append(offset, buf.as_ref()).await?;
         self.has_written.store(true, Ordering::Relaxed);
         Ok(size)
     }
@@ -211,7 +210,7 @@ impl File for FxFile {
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
-        self.handle.truncate_cached(length);
+        self.handle.truncate(length).await.map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
         Ok(())
     }
@@ -259,27 +258,11 @@ impl File for FxFile {
         if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
             return Ok(());
         }
-        let mut transaction = if may_defer {
-            None
-        } else {
-            Some(
-                self.handle
-                    .new_transaction_with_options(Options {
-                        borrow_metadata_space: true,
-                        ..Default::default()
-                    })
-                    .await
-                    .map_err(map_to_status)?,
-            )
-        };
-        self.handle
-            .write_timestamps_cached(transaction.as_mut(), crtime, mtime)
-            .await
-            .map_err(map_to_status)?;
-        if let Some(t) = transaction {
-            t.commit().await.map_err(map_to_status)?;
-        }
+        self.handle.write_timestamps(crtime, mtime).await.map_err(map_to_status)?;
         self.has_written.store(true, Ordering::Relaxed);
+        if !may_defer {
+            self.handle.flush().await.map_err(map_to_status)?;
+        }
         Ok(())
     }
 

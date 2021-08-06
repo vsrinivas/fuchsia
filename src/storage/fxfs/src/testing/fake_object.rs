@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        object_handle::{ObjectHandle, ObjectProperties},
+        object_handle::{
+            GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
+        },
         object_store::{
             transaction::{
                 LockKey, LockManager, MetadataReservation, Options, ReadGuard, Transaction,
@@ -17,7 +19,6 @@ use {
     async_trait::async_trait,
     std::{
         cmp::min,
-        ops::Range,
         sync::{Arc, Mutex},
         vec::Vec,
     },
@@ -45,14 +46,19 @@ impl FakeObject {
         Ok(to_do)
     }
 
-    pub fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
+    pub fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
         let mut our_buf = self.buf.lock().unwrap();
+        let offset = offset.unwrap_or(our_buf.len() as u64);
         let required_len = offset as usize + buf.len();
         if our_buf.len() < required_len {
             our_buf.resize(required_len, 0);
         }
         our_buf[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
-        Ok(())
+        Ok(our_buf.len() as u64)
+    }
+
+    pub fn truncate(&self, size: u64) {
+        self.buf.lock().unwrap().resize(size as usize, 0);
     }
 
     pub fn get_size(&self) -> u64 {
@@ -129,61 +135,21 @@ impl ObjectHandle for FakeObjectHandle {
         0
     }
 
-    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-        self.allocator.allocate_buffer(size)
-    }
-
     fn block_size(&self) -> u32 {
         self.allocator.block_size() as u32
-    }
-
-    async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        self.object.read(offset, buf)
-    }
-
-    async fn txn_write<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        offset: u64,
-        buf: BufferRef<'_>,
-    ) -> Result<(), Error> {
-        self.object.write(offset, buf)
-    }
-
-    async fn overwrite(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        self.object.write(offset, buf)
     }
 
     fn get_size(&self) -> u64 {
         self.object.get_size()
     }
 
-    async fn truncate<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        length: u64,
-    ) -> Result<(), Error> {
-        self.object.buf.lock().unwrap().resize(length as usize, 0);
-        Ok(())
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        self.allocator.allocate_buffer(size)
     }
+}
 
-    async fn preallocate_range<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _range: Range<u64>,
-    ) -> Result<Vec<Range<u64>>, Error> {
-        panic!("Unsupported");
-    }
-
-    async fn write_timestamps<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _ctime: Option<Timestamp>,
-        _mtime: Option<Timestamp>,
-    ) -> Result<(), Error> {
-        Ok(())
-    }
-
+#[async_trait]
+impl GetProperties for FakeObjectHandle {
     async fn get_properties(&self) -> Result<ObjectProperties, Error> {
         let size = self.object.get_size();
         Ok(ObjectProperties {
@@ -195,15 +161,35 @@ impl ObjectHandle for FakeObjectHandle {
             sub_dirs: 0,
         })
     }
+}
 
-    async fn new_transaction_with_options<'a>(
-        &self,
-        options: Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        self.object.clone().new_transaction(&[], options).await
+#[async_trait]
+impl ReadObjectHandle for FakeObjectHandle {
+    async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error> {
+        self.object.read(offset, buf)
+    }
+}
+
+#[async_trait]
+impl WriteObjectHandle for FakeObjectHandle {
+    async fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
+        self.object.write_or_append(offset, buf)
     }
 
-    async fn flush_device(&self) -> Result<(), Error> {
+    async fn truncate(&self, size: u64) -> Result<(), Error> {
+        self.object.truncate(size);
+        Ok(())
+    }
+
+    async fn write_timestamps<'a>(
+        &'a self,
+        _crtime: Option<Timestamp>,
+        _mtime: Option<Timestamp>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn flush(&self) -> Result<(), Error> {
         Ok(())
     }
 }

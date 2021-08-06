@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{lsm_tree::merge, object_handle::ObjectHandle},
+    crate::{lsm_tree::merge, object_handle::ReadObjectHandle},
     anyhow::Error,
     async_trait::async_trait,
     async_utils::event::Event,
@@ -206,7 +206,7 @@ pub trait NextKey: Clone {
 /// Layer is a trait that all layers need to implement (mutable and immutable).
 #[async_trait]
 pub trait Layer<K, V>: Send + Sync {
-    fn handle(&self) -> Option<&dyn ObjectHandle> {
+    fn handle(&self) -> Option<&dyn ReadObjectHandle> {
         None
     }
 

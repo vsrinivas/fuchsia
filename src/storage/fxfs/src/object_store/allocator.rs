@@ -17,11 +17,12 @@ use {
             },
             LSMTree,
         },
-        object_handle::{ObjectHandle, ObjectHandleExt, Writer},
+        object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
             filesystem::{Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
             round_down,
+            store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             HandleOptions, ObjectStore,
         },
@@ -986,7 +987,7 @@ impl Mutations for SimpleAllocator {
             self.tree
                 .compact_with_iterator(
                     CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
-                    Writer::new(&layer_object_handle, txn_options),
+                    DirectWriter::new(&layer_object_handle, txn_options),
                     layer_object_handle.block_size(),
                 )
                 .await?;

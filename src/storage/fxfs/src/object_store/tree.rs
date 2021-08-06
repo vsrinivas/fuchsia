@@ -8,7 +8,7 @@ use {
             types::{BoxedLayerIterator, MergeableKey, Value},
             LSMTree, LockedLayer,
         },
-        object_handle::Writer,
+        object_handle::WriteBytes,
         object_store::journal,
     },
     anyhow::{Context, Error},
@@ -31,7 +31,7 @@ type Layers<K, V> = Vec<LockedLayer<K, V>>;
 /// that should be purged.
 pub async fn flush<'a, K: MergeableKey, V: Value>(
     tree: &'a LSMTree<K, V>,
-    writer: Writer<'_>,
+    writer: impl WriteBytes + Send,
 ) -> Result<(Layers<K, V>, Layers<K, V>), Error>
 where
     LSMTree<K, V>: MajorCompactable<K, V>,

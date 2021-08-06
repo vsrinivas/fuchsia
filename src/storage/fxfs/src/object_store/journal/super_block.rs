@@ -5,7 +5,6 @@
 use {
     crate::{
         lsm_tree::types::{Item, LayerIterator},
-        object_handle::ObjectHandle,
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
@@ -17,7 +16,7 @@ use {
             },
             record::{ExtentKey, ExtentValue, ObjectItem},
             transaction::Options,
-            ObjectStore,
+            ObjectStore, StoreObjectHandle,
         },
     },
     anyhow::{bail, Error},
@@ -186,10 +185,10 @@ impl SuperBlock {
     }
 
     /// Writes the super-block and the records from the root parent store.
-    pub(super) async fn write<'a>(
+    pub(super) async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,
         root_parent_store: &'a ObjectStore,
-        handle: impl ObjectHandle,
+        handle: StoreObjectHandle<S>,
     ) -> Result<(), Error> {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
@@ -226,15 +225,15 @@ impl SuperBlock {
     }
 }
 
-struct SuperBlockWriter<'a, H> {
-    handle: H,
+struct SuperBlockWriter<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> {
+    handle: StoreObjectHandle<S>,
     writer: JournalWriter,
     next_extent_offset: u64,
     reservation: &'a Reservation,
 }
 
-impl<'a, H: ObjectHandle> SuperBlockWriter<'a, H> {
-    fn new(handle: H, reservation: &'a Reservation) -> Self {
+impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> SuperBlockWriter<'a, S> {
+    fn new(handle: StoreObjectHandle<S>, reservation: &'a Reservation) -> Self {
         Self {
             handle,
             writer: JournalWriter::new(SUPER_BLOCK_BLOCK_SIZE, 0),
@@ -315,14 +314,13 @@ mod tests {
         super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
         crate::{
             lsm_tree::types::LayerIterator,
-            object_handle::ObjectHandle,
             object_store::{
                 constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
                 filesystem::Filesystem,
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},
-                HandleOptions, ObjectStore,
+                HandleOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
         },
         fuchsia_async as fasync,
@@ -333,7 +331,7 @@ mod tests {
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
     async fn filesystem_and_super_block_handles(
-    ) -> (Arc<FakeFilesystem>, impl ObjectHandle, impl ObjectHandle) {
+    ) -> (Arc<FakeFilesystem>, StoreObjectHandle<ObjectStore>, StoreObjectHandle<ObjectStore>) {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator::new());

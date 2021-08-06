@@ -39,7 +39,7 @@ use {
             types::{BoxedLayerIterator, Item, ItemRef, LayerIterator},
             LSMTree,
         },
-        object_handle::{ObjectHandle, ObjectHandleExt, Writer, INVALID_OBJECT_ID},
+        object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
@@ -47,6 +47,7 @@ use {
                 Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectItem, ObjectKey,
                 ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
+            store_object_handle::DirectWriter,
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, ObjectStoreMutation,
                 Operation, Options, StoreInfoMutation, Transaction,
@@ -857,10 +858,12 @@ impl Mutations for ObjectStore {
             }
         }
 
+        // TODO(jfsulliv): Add transaction::Options to CachingObjectHandle so that we can get rid of
+        // DirectWriter and use the cached handle for both writing and reading.
         let (object_tree_layers_to_keep, old_object_tree_layers) =
-            tree::flush(&self.tree, Writer::new(&new_object_tree_layer, txn_options)).await?;
+            tree::flush(&self.tree, DirectWriter::new(&new_object_tree_layer, txn_options)).await?;
         let (extent_tree_layers_to_keep, old_extent_tree_layers) =
-            tree::flush(&self.extent_tree, Writer::new(&new_extent_tree_layer, txn_options))
+            tree::flush(&self.extent_tree, DirectWriter::new(&new_extent_tree_layer, txn_options))
                 .await?;
 
         let mut new_object_tree_layers =
@@ -967,7 +970,7 @@ mod tests {
         crate::{
             errors::FxfsError,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
-            object_handle::{ObjectHandle, ObjectHandleExt},
+            object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
                 directory::Directory,
@@ -1156,7 +1159,7 @@ mod tests {
 
         let mut buf = object.allocate_buffer(5);
         buf.as_mut_slice().copy_from_slice(b"hello");
-        object.write(0, buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
         // Getting the layer-set should cause the flush to stall.
         let layer_set = store.tree().layer_set();
@@ -1214,7 +1217,7 @@ mod tests {
             // Allocate an extent in the file.
             let mut buffer = child.allocate_buffer(8192);
             buffer.as_mut_slice().fill(0xaa);
-            child.write(0, buffer.as_ref()).await.expect("write failed");
+            child.write_or_append(Some(0), buffer.as_ref()).await.expect("write failed");
 
             child.object_id()
         };
@@ -1255,7 +1258,7 @@ mod tests {
             // Allocate an extent in the file.
             let mut buffer = child.allocate_buffer(8192);
             buffer.as_mut_slice().fill(0xaa);
-            child.write(0, buffer.as_ref()).await.expect("write failed");
+            child.write_or_append(Some(0), buffer.as_ref()).await.expect("write failed");
 
             child.object_id()
         };
@@ -1315,16 +1318,16 @@ mod tests {
         transaction.commit().await.expect("commit failed");
 
         let buf = object.allocate_buffer(16384);
-        object.write(0, buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
         store.flush().await.expect("flush failed");
 
-        object.write(0, buf.subslice(0..4096)).await.expect("write failed");
+        object.write_or_append(Some(0), buf.subslice(0..4096)).await.expect("write failed");
 
         // At this point, we should have an extent for 0..16384 in a layer that has been flushed,
         // and an extent for 0..4096 that partially overwrites it.  Writing to 0..16384 should
         // overwrite both of those extents.
-        object.write(0, buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
         fsck(&fs).await.expect("fsck failed");
     }

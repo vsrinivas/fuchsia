@@ -5,12 +5,14 @@
 use {
     crate::{
         errors::FxfsError,
-        object_handle::{ObjectHandle, ObjectProperties},
+        object_handle::{
+            GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
+        },
         object_store::{
             allocator::{self},
             record::Timestamp,
             store_object_handle::{round_down, round_up},
-            transaction::{LockKey, Options, Transaction, TRANSACTION_METADATA_MAX_AMOUNT},
+            transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
             writeback_cache::{ReadResult, StorageReservation, WriteResult, WritebackCache},
             AssocObj, Mutation, ObjectKey, ObjectStore, ObjectValue, StoreObjectHandle,
         },
@@ -74,16 +76,92 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
     pub fn store(&self) -> &ObjectStore {
         self.handle.store()
     }
+}
 
-    /// Writes |buf| into the writeback cache.  If |offset| is none, this is an append.
-    /// There are no alignment requirements, although aligned writes are much more efficient
-    /// (unaligned writes to an uncached head/tail block require fetching that block first).
-    /// Returns the size after the write completes.
-    pub async fn write_or_append_cached(
-        &self,
-        offset: Option<u64>,
-        buf: BufferRef<'_>,
-    ) -> Result<u64, Error> {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for CachingObjectHandle<S> {
+    fn set_trace(&self, v: bool) {
+        self.handle.set_trace(v);
+    }
+
+    fn object_id(&self) -> u64 {
+        self.handle.object_id
+    }
+
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        self.handle.allocate_buffer(size)
+    }
+
+    fn block_size(&self) -> u32 {
+        self.handle.block_size()
+    }
+
+    fn get_size(&self) -> u64 {
+        self.cache.content_size()
+    }
+}
+
+#[async_trait]
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> GetProperties for CachingObjectHandle<S> {
+    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
+        let mut props = self.handle.get_properties().await?;
+        let cached_metadata = self.cache.cached_metadata();
+        props.allocated_size = props.allocated_size + cached_metadata.bytes_reserved;
+        props.data_attribute_size = cached_metadata.content_size;
+        props.creation_time =
+            cached_metadata.creation_time.map(|t| t.into()).unwrap_or(props.creation_time);
+        props.modification_time =
+            cached_metadata.modification_time.map(|t| t.into()).unwrap_or(props.modification_time);
+        Ok(props)
+    }
+}
+
+#[async_trait]
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ReadObjectHandle for CachingObjectHandle<S> {
+    async fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
+        loop {
+            let result = self.cache.read(offset, buf.reborrow(), self.block_size() as u64);
+            match result {
+                ReadResult::Done(bytes) => {
+                    return Ok(bytes as usize);
+                }
+                ReadResult::MissingRanges(missing_ranges) => {
+                    let fs = self.store().filesystem();
+                    let _guard = fs
+                        .read_lock(&[LockKey::object_attribute(
+                            self.store().store_object_id,
+                            self.handle.object_id,
+                            self.handle.attribute_id,
+                        )])
+                        .await;
+                    let mut buffer = self.allocate_buffer(CACHE_READ_AHEAD_SIZE as usize);
+                    for missing_range in missing_ranges {
+                        let range = missing_range.range().clone();
+                        let aligned_start = round_down(range.start, CACHE_READ_AHEAD_SIZE);
+                        let align = (range.start - aligned_start) as usize;
+                        let to_read = (range.end - aligned_start) as usize;
+                        let bytes_read =
+                            self.handle.read(aligned_start, buffer.subslice_mut(..to_read)).await?;
+                        let len = bytes_read.saturating_sub(align);
+                        if len == 0 {
+                            // A zero-length read would result in an infinite loop since we'd try to
+                            // read in the same range again, and indicates an inconsistency between
+                            // the object size and the actual amount of stored data.
+                            bail!(FxfsError::Inconsistent);
+                        }
+                        missing_range.populate(buffer.subslice(align..align + len));
+                    }
+                }
+                ReadResult::Contended(event) => {
+                    let _ = event.await;
+                }
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for CachingObjectHandle<S> {
+    async fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
         let time = Timestamp::now().into();
         let bs = self.block_size() as u64;
         loop {
@@ -123,34 +201,21 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
         }
     }
 
-    pub fn truncate_cached(&self, size: u64) {
-        self.cache.resize(size, self.block_size() as u64)
+    async fn truncate(&self, size: u64) -> Result<(), Error> {
+        self.cache.resize(size, self.block_size() as u64);
+        Ok(())
     }
 
-    pub async fn write_timestamps_cached<'a>(
+    async fn write_timestamps<'a>(
         &'a self,
-        transaction: Option<&mut Transaction<'a>>,
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
     ) -> Result<(), Error> {
-        match transaction {
-            None => {
-                self.cache.update_timestamps(crtime.map(|t| t.into()), mtime.map(|t| t.into()));
-                Ok(())
-            }
-            Some(txn) => {
-                let pending = self.cache.take_flushable_metadata();
-                let (crtime, mtime) = (
-                    crtime.or(pending.creation_time.map(|t| t.into())),
-                    mtime.or(pending.modification_time.map(|t| t.into())),
-                );
-                self.handle.write_timestamps(txn, crtime, mtime).await
-            }
-        }
+        self.cache.update_timestamps(crtime.map(|t| t.into()), mtime.map(|t| t.into()));
+        Ok(())
     }
 
-    /// Flushes all pending data writes and metadata updates to disk.
-    pub async fn flush(&self) -> Result<(), Error> {
+    async fn flush(&self) -> Result<(), Error> {
         let bs = self.block_size() as u64;
         let fs = self.store().filesystem();
         let locks = fs
@@ -265,145 +330,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
     }
 }
 
-#[async_trait]
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for CachingObjectHandle<S> {
-    fn set_trace(&self, v: bool) {
-        self.handle.set_trace(v);
-    }
-
-    fn object_id(&self) -> u64 {
-        self.handle.object_id
-    }
-
-    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-        self.handle.allocate_buffer(size)
-    }
-
-    fn block_size(&self) -> u32 {
-        self.handle.block_size()
-    }
-
-    async fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        loop {
-            let result = self.cache.read(offset, buf.reborrow(), self.block_size() as u64);
-            match result {
-                ReadResult::Done(bytes) => {
-                    return Ok(bytes as usize);
-                }
-                ReadResult::MissingRanges(missing_ranges) => {
-                    let fs = self.store().filesystem();
-                    let _guard = fs
-                        .read_lock(&[LockKey::object_attribute(
-                            self.store().store_object_id,
-                            self.handle.object_id,
-                            self.handle.attribute_id,
-                        )])
-                        .await;
-                    let mut buffer = self.allocate_buffer(CACHE_READ_AHEAD_SIZE as usize);
-                    for missing_range in missing_ranges {
-                        let range = missing_range.range().clone();
-                        let aligned_start = round_down(range.start, CACHE_READ_AHEAD_SIZE);
-                        let align = (range.start - aligned_start) as usize;
-                        let to_read = (range.end - aligned_start) as usize;
-                        let bytes_read =
-                            self.handle.read(aligned_start, buffer.subslice_mut(..to_read)).await?;
-                        let len = bytes_read.saturating_sub(align);
-                        if len == 0 {
-                            // A zero-length read would result in an infinite loop since we'd try to
-                            // read in the same range again, and indicates an inconsistency between
-                            // the object size and the actual amount of stored data.
-                            bail!(FxfsError::Inconsistent);
-                        }
-                        missing_range.populate(buffer.subslice(align..align + len));
-                    }
-                }
-                ReadResult::Contended(event) => {
-                    let _ = event.await;
-                }
-            }
-        }
-    }
-
-    async fn txn_write<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _offset: u64,
-        _buf: BufferRef<'_>,
-    ) -> Result<(), Error> {
-        // Writes must go through the cache.
-        unreachable!();
-    }
-
-    async fn overwrite(&self, _offset: u64, _buf: BufferRef<'_>) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    fn get_size(&self) -> u64 {
-        self.cache.content_size()
-    }
-
-    async fn truncate<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _size: u64,
-    ) -> Result<(), Error> {
-        // Truncates must go through the cache.
-        unreachable!();
-    }
-
-    // Must be multiple of block size.
-    async fn preallocate_range<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _file_range: Range<u64>,
-    ) -> Result<Vec<Range<u64>>, Error> {
-        unreachable!();
-    }
-
-    async fn write_timestamps<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _crtime: Option<Timestamp>,
-        _mtime: Option<Timestamp>,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
-        let mut props = self.handle.get_properties().await?;
-        let cached_metadata = self.cache.cached_metadata();
-        props.allocated_size = props.allocated_size + cached_metadata.bytes_reserved;
-        props.data_attribute_size = cached_metadata.content_size;
-        props.creation_time =
-            cached_metadata.creation_time.map(|t| t.into()).unwrap_or(props.creation_time);
-        props.modification_time =
-            cached_metadata.modification_time.map(|t| t.into()).unwrap_or(props.modification_time);
-        Ok(props)
-    }
-
-    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
-        self.handle.new_transaction().await
-    }
-
-    async fn new_transaction_with_options<'a>(
-        &self,
-        options: Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        self.handle.new_transaction_with_options(options).await
-    }
-
-    async fn flush_device(&self) -> Result<(), Error> {
-        self.handle.flush_device().await
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::CACHE_READ_AHEAD_SIZE,
         crate::{
             lsm_tree::types::{ItemRef, LayerIterator},
-            object_handle::{ObjectHandle, ObjectProperties},
+            object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
                 filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
@@ -413,7 +346,6 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
-        matches::assert_matches,
         rand::Rng,
         std::ops::Bound,
         std::sync::Arc,
@@ -428,7 +360,6 @@ mod tests {
     const TEST_DATA_OFFSET: u64 = 5000;
     const TEST_DATA: &[u8] = b"hello";
     const TEST_OBJECT_SIZE: u64 = 5678;
-    const TEST_OBJECT_ALLOCATED_SIZE: u64 = 4096;
 
     async fn test_filesystem() -> OpenFxFilesystem {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
@@ -457,11 +388,11 @@ mod tests {
             let mut buf = object.allocate_buffer(align + TEST_DATA.len());
             buf.as_mut_slice()[align..].copy_from_slice(TEST_DATA);
             object
-                .write_or_append_cached(Some(TEST_DATA_OFFSET), buf.subslice(align..))
+                .write_or_append(Some(TEST_DATA_OFFSET), buf.subslice(align..))
                 .await
                 .expect("write failed");
         }
-        object.truncate_cached(TEST_OBJECT_SIZE);
+        object.truncate(TEST_OBJECT_SIZE).await.expect("truncate failed");
         object.flush().await.expect("flush failed");
         (fs, object)
     }
@@ -527,20 +458,17 @@ mod tests {
 
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
-        object.write_or_append_cached(Some(0), buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
         object.flush().await.expect("flush failed");
 
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
-        object.write_or_append_cached(Some(100), buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(100), buf.as_ref()).await.expect("write failed");
 
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
-        object
-            .write_or_append_cached(Some(TEST_DATA_OFFSET), buf.as_ref())
-            .await
-            .expect("write failed");
+        object.write_or_append(Some(TEST_DATA_OFFSET), buf.as_ref()).await.expect("write failed");
 
         let len = object.get_size() as usize;
         assert_eq!(len, TEST_DATA_OFFSET as usize + TEST_DATA.len());
@@ -565,17 +493,14 @@ mod tests {
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
         // This adds an extent at 0..512.
-        object.write_or_append_cached(Some(0), buf.as_ref()).await.expect("write failed");
-        object.truncate_cached(3); // This deletes 512..1024.
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
+        object.truncate(3).await.expect("truncate failed"); // This deletes 512..1024.
         let data = b"foo";
         let offset = 1500u64;
         let align = (offset % fs.block_size() as u64) as usize;
         let mut buf = object.allocate_buffer(align + data.len());
         buf.as_mut_slice()[align..].copy_from_slice(data);
-        object
-            .write_or_append_cached(Some(1500), buf.subslice(align..))
-            .await
-            .expect("write failed"); // This adds 1024..1536.
+        object.write_or_append(Some(1500), buf.subslice(align..)).await.expect("write failed"); // This adds 1024..1536.
 
         const LEN1: usize = 1503;
         let mut buf = object.allocate_buffer(LEN1);
@@ -600,7 +525,7 @@ mod tests {
         let (fs, object) = test_filesystem_and_object().await;
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
-        object.write_or_append_cached(Some(0), buffer.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buffer.as_ref()).await.expect("write failed");
 
         let store = object.owner();
         let mut transaction = fs
@@ -616,13 +541,13 @@ mod tests {
         let object2 = CachingObjectHandle::new(handle2);
         let mut ef_buffer = object.allocate_buffer(512);
         ef_buffer.as_mut_slice().fill(0xef);
-        object2.write_or_append_cached(Some(0), ef_buffer.as_ref()).await.expect("write failed");
+        object2.write_or_append(Some(0), ef_buffer.as_ref()).await.expect("write failed");
 
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
-        object.write_or_append_cached(Some(512), buffer.as_ref()).await.expect("write failed");
-        object.truncate_cached(1536);
-        object2.write_or_append_cached(Some(512), ef_buffer.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(512), buffer.as_ref()).await.expect("write failed");
+        object.truncate(1536).await.expect("truncate failed");
+        object2.write_or_append(Some(512), ef_buffer.as_ref()).await.expect("write failed");
 
         let mut buffer = object.allocate_buffer(2048);
         buffer.as_mut_slice().fill(123);
@@ -639,12 +564,12 @@ mod tests {
         let (fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(5 * fs.block_size() as usize);
         buf.as_mut_slice().fill(0xaa);
-        object.write_or_append_cached(Some(0), buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
         object.flush().await.expect("flush failed");
 
         let allocator = fs.allocator();
         let allocated_before_truncate = allocator.get_allocated_bytes();
-        object.truncate_cached(fs.block_size() as u64);
+        object.truncate(fs.block_size() as u64).await.expect("truncate failed");
         let allocated_before_flush = allocator.get_allocated_bytes();
         object.flush().await.expect("flush failed");
         let allocated_after = allocator.get_allocated_bytes();
@@ -754,10 +679,7 @@ mod tests {
             let writer = fasync::Task::spawn(async move {
                 let mut buf = cloned_object.allocate_buffer(10);
                 buf.as_mut_slice().fill(123);
-                cloned_object
-                    .write_or_append_cached(Some(0), buf.as_ref())
-                    .await
-                    .expect("write failed");
+                cloned_object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
                 cloned_object.flush().await.expect("flush failed");
             });
             let cloned_object = object.clone();
@@ -776,7 +698,7 @@ mod tests {
             });
             writer.await;
             reader.await;
-            object.truncate_cached(0);
+            object.truncate(0).await.expect("truncate failed");
             object.flush().await.expect("flush failed");
         }
         fs.close().await.expect("Close failed");
@@ -785,58 +707,18 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_properties() {
         let (fs, object) = test_filesystem_and_object().await;
-        const CRTIME: Timestamp = Timestamp::from_nanos(1234);
-        const MTIME: Timestamp = Timestamp::from_nanos(5678);
-
-        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        object
-            .write_timestamps_cached(Some(&mut transaction), Some(CRTIME), Some(MTIME))
-            .await
-            .expect("update_timestamps failed");
-        transaction.commit().await.expect("commit failed");
-        object.flush().await.expect("flush failed");
-
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_matches!(
-            properties,
-            ObjectProperties {
-                refs: 1u64,
-                allocated_size: TEST_OBJECT_ALLOCATED_SIZE,
-                data_attribute_size: TEST_OBJECT_SIZE,
-                creation_time: CRTIME,
-                modification_time: MTIME,
-                ..
-            }
-        );
-        fs.close().await.expect("Close failed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_pending_properties() {
-        let (fs, object) = test_filesystem_and_object().await;
         let crtime = Timestamp::from_nanos(1234u64);
         let mtime = Timestamp::from_nanos(5678u64);
 
         object
-            .write_timestamps_cached(None, Some(crtime.clone()), None)
+            .write_timestamps(Some(crtime.clone()), None)
             .await
             .expect("update_timestamps failed");
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_eq!(properties.creation_time, crtime);
         assert_ne!(properties.modification_time, mtime);
 
-        object
-            .write_timestamps_cached(None, None, Some(mtime.clone()))
-            .await
-            .expect("update_timestamps failed");
-        let properties = object.get_properties().await.expect("get_properties failed");
-        assert_eq!(properties.creation_time, crtime);
-        assert_eq!(properties.modification_time, mtime);
-
-        object
-            .write_timestamps_cached(None, None, Some(mtime.clone()))
-            .await
-            .expect("update_timestamps failed");
+        object.write_timestamps(None, Some(mtime.clone())).await.expect("update_timestamps failed");
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_eq!(properties.creation_time, crtime);
         assert_eq!(properties.modification_time, mtime);
@@ -844,7 +726,7 @@ mod tests {
         // Writes should update mtime.
         let mut buf = object.allocate_buffer(5);
         buf.as_mut_slice().copy_from_slice(b"hello");
-        object.write_or_append_cached(Some(0), buf.as_ref()).await.expect("write failed");
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_eq!(properties.creation_time, crtime);
@@ -877,30 +759,27 @@ mod tests {
 
             // Simple case is an aligned, non-sparse write.
             buf.as_mut_slice()[..12].copy_from_slice(b"hello, mars!");
-            object.write_or_append_cached(Some(0), buf.subslice(..12)).await.expect("write failed");
+            object.write_or_append(Some(0), buf.subslice(..12)).await.expect("write failed");
             assert_eq!(object.get_size(), 12);
 
             // Partially overwrite that write.
             buf.as_mut_slice()[..6].copy_from_slice(b"earth!");
-            object.write_or_append_cached(Some(7), buf.subslice(..6)).await.expect("write failed");
+            object.write_or_append(Some(7), buf.subslice(..6)).await.expect("write failed");
             assert_eq!(object.get_size(), 13);
 
             // Also do an unaligned, sparse appending write.
             buf.as_mut_slice().fill(0xaa);
             object
-                .write_or_append_cached(Some(2 * CACHE_READ_AHEAD_SIZE - 1), buf.as_ref())
+                .write_or_append(Some(2 * CACHE_READ_AHEAD_SIZE - 1), buf.as_ref())
                 .await
                 .expect("write failed");
 
             // Also do an unaligned, sparse non-appending write.
             buf.as_mut_slice().fill(0xbb);
-            object
-                .write_or_append_cached(Some(8000), buf.subslice(..500))
-                .await
-                .expect("write failed");
+            object.write_or_append(Some(8000), buf.subslice(..500)).await.expect("write failed");
 
             // Also truncate.
-            object.truncate_cached(4 * CACHE_READ_AHEAD_SIZE - 2);
+            object.truncate(4 * CACHE_READ_AHEAD_SIZE - 2).await.expect("truncate failed");
 
             object.flush().await.expect("flush failed");
 
@@ -960,24 +839,24 @@ mod tests {
 
             // First, do a write and immediately flush. Only this should persist.
             buf.as_mut_slice()[..5].copy_from_slice(b"hello");
-            object.write_or_append_cached(Some(0), buf.subslice(..5)).await.expect("write failed");
+            object.write_or_append(Some(0), buf.subslice(..5)).await.expect("write failed");
             object.flush().await.expect("Flush failed");
             assert_eq!(object.get_size(), 5);
 
             buf.as_mut_slice()[..5].copy_from_slice(b"bye!!");
-            object.write_or_append_cached(Some(0), buf.subslice(..5)).await.expect("write failed");
+            object.write_or_append(Some(0), buf.subslice(..5)).await.expect("write failed");
 
             buf.as_mut_slice().fill(0xaa);
             object
-                .write_or_append_cached(Some(CACHE_READ_AHEAD_SIZE - 5), buf.as_ref())
+                .write_or_append(Some(CACHE_READ_AHEAD_SIZE - 5), buf.as_ref())
                 .await
                 .expect("write failed");
             buf.as_mut_slice().fill(0xbb);
             object
-                .write_or_append_cached(Some(CACHE_READ_AHEAD_SIZE + 1), buf.as_ref())
+                .write_or_append(Some(CACHE_READ_AHEAD_SIZE + 1), buf.as_ref())
                 .await
                 .expect("write failed");
-            object.truncate_cached(3 * CACHE_READ_AHEAD_SIZE + 6);
+            object.truncate(3 * CACHE_READ_AHEAD_SIZE + 6).await.expect("truncate failed");
 
             let mut buf = object.allocate_buffer(object.get_size() as usize);
             buf.as_mut_slice().fill(0x00);

@@ -450,7 +450,7 @@ mod tests {
     use {
         super::{Filesystem, FxFilesystem, SyncOptions},
         crate::{
-            object_handle::{ObjectHandle, ObjectHandleExt},
+            object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
                 crypt::InsecureCrypt,
                 directory::Directory,
@@ -496,7 +496,7 @@ mod tests {
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
                 for _ in 0..1500 {
-                    handle.write(0, buf.as_ref()).await.expect("write failed");
+                    handle.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
                 }
             }));
         }

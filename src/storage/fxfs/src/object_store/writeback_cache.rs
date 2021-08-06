@@ -875,17 +875,6 @@ impl WritebackCache {
         inner.flush_event = None;
     }
 
-    /// Returns all metadata which can be flushed.
-    pub fn take_flushable_metadata<'a>(&self) -> FlushableMetadata {
-        let mut inner = self.0.lock().unwrap();
-        FlushableMetadata {
-            content_size: inner.data.size() as u64,
-            content_size_changed: std::mem::take(&mut inner.size_changed),
-            creation_time: std::mem::take(&mut inner.creation_time),
-            modification_time: std::mem::take(&mut inner.modification_time),
-        }
-    }
-
     /// Sets the cached timestamp values.  The filesystem should provide values which are truncated
     /// to the filesystem's maximum supported granularity.
     pub fn update_timestamps(

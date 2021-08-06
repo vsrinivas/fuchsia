@@ -6,18 +6,15 @@ use {
     crate::{
         errors::FxfsError,
         lsm_tree::types::ItemRef,
-        object_handle::{ObjectHandle, ObjectProperties},
-        object_store::{
-            record::{ExtentKey, ExtentValue, Timestamp, DEFAULT_DATA_ATTRIBUTE_ID},
-            transaction::{self, Transaction},
-        },
+        object_handle::{ObjectHandle, ReadObjectHandle},
+        object_store::record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
     },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     interval_tree::utils::RangeOps,
     std::{cmp::min, ops::Range, sync::Arc},
     storage_device::{
-        buffer::{Buffer, BufferRef, MutableBufferRef},
+        buffer::{Buffer, MutableBufferRef},
         Device,
     },
 };
@@ -84,7 +81,6 @@ impl Handle {
 
 // TODO(csuter): This doesn't need to be ObjectHandle any more and we could integrate this into
 // JournalReader.
-#[async_trait]
 impl ObjectHandle for Handle {
     fn object_id(&self) -> u64 {
         self.object_id
@@ -98,6 +94,13 @@ impl ObjectHandle for Handle {
         self.device.block_size()
     }
 
+    fn get_size(&self) -> u64 {
+        self.size
+    }
+}
+
+#[async_trait]
+impl ReadObjectHandle for Handle {
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         assert!(offset >= self.start_offset);
         let len = buf.len();
@@ -124,62 +127,5 @@ impl ObjectHandle for Handle {
             file_offset += extent_len;
         }
         Ok(len)
-    }
-
-    async fn txn_write<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _offset: u64,
-        _buf: BufferRef<'_>,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn overwrite(&self, _offset: u64, _buf: BufferRef<'_>) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    fn get_size(&self) -> u64 {
-        self.size
-    }
-
-    async fn truncate<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _length: u64,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn preallocate_range<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _range: Range<u64>,
-    ) -> Result<Vec<Range<u64>>, Error> {
-        unreachable!();
-    }
-
-    async fn write_timestamps<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _ctime: Option<Timestamp>,
-        _mtime: Option<Timestamp>,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
-        unreachable!();
-    }
-
-    async fn new_transaction_with_options<'a>(
-        &self,
-        _options: transaction::Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        unreachable!();
-    }
-
-    async fn flush_device(&self) -> Result<(), Error> {
-        Ok(())
     }
 }

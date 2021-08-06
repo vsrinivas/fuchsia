@@ -9,8 +9,7 @@ pub mod types;
 
 use {
     crate::{
-        object_handle::{ObjectHandle, WriteBytes, Writer},
-        object_store::transaction,
+        object_handle::{ReadObjectHandle, WriteBytes, WriteObjectHandle, Writer},
         trace_duration,
     },
     anyhow::Error,
@@ -30,7 +29,7 @@ use {
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
 
 pub async fn layers_from_handles<K: Key, V: Value>(
-    handles: Box<[impl ObjectHandle + 'static]>,
+    handles: Box<[impl ReadObjectHandle + 'static]>,
 ) -> Result<Vec<Arc<dyn Layer<K, V>>>, Error> {
     let mut layers = Vec::new();
     for handle in Vec::from(handles) {
@@ -76,7 +75,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
     /// Opens an existing tree from the provided handles to the layer objects.
     pub async fn open(
         merge_fn: merge::MergeFn<K, V>,
-        handles: Box<[impl ObjectHandle + 'static]>,
+        handles: Box<[impl ReadObjectHandle + 'static]>,
     ) -> Result<Self, Error> {
         Ok(LSMTree {
             data: RwLock::new(Inner {
@@ -99,7 +98,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
     /// to be used after replay when we are opening a tree and we have discovered the base layers.
     pub async fn append_layers(
         &self,
-        handles: Box<[impl ObjectHandle + 'static]>,
+        handles: Box<[impl ReadObjectHandle + 'static]>,
     ) -> Result<(), Error> {
         let mut layers = layers_from_handles(handles).await?;
         self.data.write().unwrap().layers.append(&mut layers);
@@ -130,11 +129,8 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
     }
 
-    pub fn new_writer<'a>(object_handle: &'a dyn ObjectHandle) -> impl LayerWriter + 'a {
-        SimplePersistentLayerWriter::new(
-            Writer::new(object_handle, transaction::Options::default()),
-            object_handle.block_size(),
-        )
+    pub fn new_writer<'a>(object_handle: &'a dyn WriteObjectHandle) -> impl LayerWriter + 'a {
+        SimplePersistentLayerWriter::new(Writer::new(object_handle), object_handle.block_size())
     }
 
     // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
@@ -157,16 +153,12 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
     }
 
     /// Compacts all the immutable layers.
-    pub async fn compact(&self, object_handle: &impl ObjectHandle) -> Result<(), Error> {
+    pub async fn compact(&self, object_handle: &impl WriteObjectHandle) -> Result<(), Error> {
         let layer_set = self.immutable_layer_set();
         let mut merger = layer_set.merger();
         let iter = merger.seek(Bound::Unbounded).await?;
-        self.compact_with_iterator(
-            iter,
-            Writer::new(object_handle, transaction::Options::default()),
-            object_handle.block_size(),
-        )
-        .await
+        self.compact_with_iterator(iter, Writer::new(object_handle), object_handle.block_size())
+            .await
     }
 
     /// Returns an empty layer-set for this tree.
