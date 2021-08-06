@@ -7,8 +7,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::convert::{Infallible as Never, TryFrom, TryInto};
 use std::io;
 use std::net::Ipv4Addr;
 use std::num::TryFromIntError;
@@ -83,7 +82,7 @@ pub struct LeaseLength {
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::LeaseLength> for LeaseLength {
     type FromError = anyhow::Error;
-    type IntoError = never::Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::LeaseLength) -> Result<Self, Self::FromError> {
         if let fidl_fuchsia_net_dhcp::LeaseLength { default: Some(default_seconds), max, .. } = fidl
@@ -142,7 +141,7 @@ impl ManagedAddresses {
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
     type FromError = anyhow::Error;
-    type IntoError = never::Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::AddressPool) -> Result<Self, Self::FromError> {
         if let fidl_fuchsia_net_dhcp::AddressPool {
@@ -194,8 +193,8 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
 pub struct PermittedMacs(pub Vec<fidl_fuchsia_net_ext::MacAddress>);
 
 impl FidlCompatible<Vec<fidl_fuchsia_net::MacAddress>> for PermittedMacs {
-    type FromError = never::Never;
-    type IntoError = never::Never;
+    type FromError = Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: Vec<fidl_fuchsia_net::MacAddress>) -> Result<Self, Self::FromError> {
         Ok(PermittedMacs(fidl.into_iter().map(|mac| mac.into()).collect()))
@@ -213,7 +212,7 @@ pub struct StaticAssignments(pub HashMap<fidl_fuchsia_net_ext::MacAddress, Ipv4A
 
 impl FidlCompatible<Vec<fidl_fuchsia_net_dhcp::StaticAssignment>> for StaticAssignments {
     type FromError = anyhow::Error;
-    type IntoError = never::Never;
+    type IntoError = Never;
 
     fn try_from_fidl(
         fidl: Vec<fidl_fuchsia_net_dhcp::StaticAssignment>,
@@ -371,7 +370,7 @@ impl TryFrom<Ipv4Addr> for SubnetMask {
 
 impl FidlCompatible<fidl_fuchsia_net::Ipv4Address> for SubnetMask {
     type FromError = anyhow::Error;
-    type IntoError = never::Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net::Ipv4Address) -> Result<Self, Self::FromError> {
         let addr = Ipv4Addr::from_fidl(fidl);

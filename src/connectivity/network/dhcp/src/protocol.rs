@@ -5,7 +5,7 @@
 use net_types::ethernet::Mac as MacAddr;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
+use std::convert::{Infallible as Never, TryFrom, TryInto};
 use std::fmt;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
@@ -1356,7 +1356,7 @@ pub trait FidlCompatible<F>: Sized {
 }
 
 /// Utility trait for infallible FIDL conversion.
-pub trait FromFidlExt<F>: FidlCompatible<F, FromError = never::Never> {
+pub trait FromFidlExt<F>: FidlCompatible<F, FromError = Never> {
     fn from_fidl(fidl: F) -> Self {
         match Self::try_from_fidl(fidl) {
             Ok(slf) => slf,
@@ -1365,7 +1365,7 @@ pub trait FromFidlExt<F>: FidlCompatible<F, FromError = never::Never> {
     }
 }
 /// Utility trait for infallible FIDL conversion.
-pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = never::Never> {
+pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = Never> {
     fn into_fidl(self) -> F {
         match self.try_into_fidl() {
             Ok(fidl) => fidl,
@@ -1374,12 +1374,12 @@ pub trait IntoFidlExt<F>: FidlCompatible<F, IntoError = never::Never> {
     }
 }
 
-impl<F, C: FidlCompatible<F, IntoError = never::Never>> IntoFidlExt<F> for C {}
-impl<F, C: FidlCompatible<F, FromError = never::Never>> FromFidlExt<F> for C {}
+impl<F, C: FidlCompatible<F, IntoError = Never>> IntoFidlExt<F> for C {}
+impl<F, C: FidlCompatible<F, FromError = Never>> FromFidlExt<F> for C {}
 
 impl FidlCompatible<fidl_fuchsia_net::Ipv4Address> for Ipv4Addr {
-    type FromError = never::Never;
-    type IntoError = never::Never;
+    type FromError = Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net::Ipv4Address) -> Result<Self, Self::FromError> {
         Ok(Ipv4Addr::from(fidl.addr))
@@ -1391,8 +1391,8 @@ impl FidlCompatible<fidl_fuchsia_net::Ipv4Address> for Ipv4Addr {
 }
 
 impl FidlCompatible<Vec<fidl_fuchsia_net::Ipv4Address>> for Vec<Ipv4Addr> {
-    type FromError = never::Never;
-    type IntoError = never::Never;
+    type FromError = Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: Vec<fidl_fuchsia_net::Ipv4Address>) -> Result<Self, Self::FromError> {
         Ok(fidl
@@ -1807,7 +1807,7 @@ impl Into<u8> for NodeType {
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::NodeTypes> for NodeType {
     type FromError = ProtocolError;
-    type IntoError = never::Never;
+    type IntoError = Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::NodeTypes) -> Result<NodeType, Self::FromError> {
         match fidl {
@@ -1857,8 +1857,8 @@ impl TryFrom<u8> for Overload {
 }
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::OptionOverloadValue> for Overload {
-    type FromError = never::Never;
-    type IntoError = never::Never;
+    type FromError = Never;
+    type IntoError = Never;
 
     fn try_from_fidl(
         fidl: fidl_fuchsia_net_dhcp::OptionOverloadValue,

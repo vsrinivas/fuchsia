@@ -6,12 +6,12 @@
 
 use alloc::collections::hash_map::Entry;
 use alloc::collections::HashMap;
+use core::convert::Infallible as Never;
 use core::hash::Hash;
 use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::{debug, error};
-use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder};
 use packet_formats::arp::{ArpOp, ArpPacket, ArpPacketBuilder, HType, PType};
 

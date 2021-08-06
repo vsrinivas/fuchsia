@@ -771,8 +771,8 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 
 #[cfg(test)]
 mod test {
+    use core::convert::Infallible as Never;
     use matches::assert_matches;
-    use never::Never;
 
     use super::*;
     use crate::ip::gmp::{Action, GmpAction, MemberState};

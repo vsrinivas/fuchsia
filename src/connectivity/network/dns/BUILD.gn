@@ -51,7 +51,6 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/lib/rust/never",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",

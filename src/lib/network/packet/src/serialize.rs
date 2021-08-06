@@ -5,9 +5,8 @@
 //! Serialization.
 
 use std::cmp;
+use std::convert::Infallible as Never;
 use std::ops::{Range, RangeBounds};
-
-use never::Never;
 
 use crate::{
     canonicalize_range, take_back, take_back_mut, take_front, take_front_mut,

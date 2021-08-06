@@ -6,11 +6,11 @@
 
 use alloc::vec::Vec;
 use core::cmp::PartialEq;
+use core::convert::Infallible as Never;
 use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use never::Never;
 use packet::{BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
@@ -24,7 +24,7 @@ mod private {
 
     /// Used as a default type for traits. Not exported.
     #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
-    pub struct NeverPacket<I: Ip>(never::Never, PhantomData<I>);
+    pub struct NeverPacket<I: Ip>(Never, PhantomData<I>);
 }
 use private::NeverPacket;
 

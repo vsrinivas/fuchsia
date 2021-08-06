@@ -20,6 +20,7 @@ pub use self::icmpv4::*;
 pub use self::icmpv6::*;
 
 use core::cmp;
+use core::convert::Infallible as Never;
 use core::convert::{TryFrom, TryInto};
 use core::fmt::Debug;
 use core::marker::PhantomData;
@@ -29,7 +30,6 @@ use core::ops::Deref;
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
-use never::Never;
 use packet::records::options::{Options, OptionsImpl};
 use packet::{
     AsFragmentedByteSlice, BufferView, FragmentedByteSlice, FromRaw, PacketBuilder,

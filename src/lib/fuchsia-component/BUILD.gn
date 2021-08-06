@@ -33,7 +33,6 @@ rustc_library("fuchsia-component") {
 
   test_deps = [
     "tests:fuchsia.component.client.test-rustc",
-    "//garnet/lib/rust/never",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",

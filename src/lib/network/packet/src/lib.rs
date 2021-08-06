@@ -351,10 +351,10 @@ pub use crate::serialize::*;
 pub use crate::util::*;
 
 use std::cmp;
+use std::convert::Infallible as Never;
 use std::mem;
 use std::ops::{Bound, Range, RangeBounds};
 
-use never::Never;
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 /// A buffer that may be fragmented in multiple parts which are discontiguous in
@@ -1113,27 +1113,29 @@ impl<'a> BufferView<&'a mut [u8]> for EmptyBuf {
     }
 }
 impl<'a> BufferViewMut<&'a mut [u8]> for EmptyBuf {}
-impl ContiguousBufferImpl for Never {}
-impl ContiguousBufferMutImpl for Never {}
+impl FragmentedBuffer for Never {
+    fn len(&self) -> usize {
+        match *self {}
+    }
+
+    fn with_bytes<R, F>(&self, _f: F) -> R
+    where
+        F: for<'a, 'b> FnOnce(FragmentedBytes<'a, 'b>) -> R,
+    {
+        match *self {}
+    }
+}
+impl FragmentedBufferMut for Never {
+    fn with_bytes_mut<R, F>(&mut self, _f: F) -> R
+    where
+        F: for<'a, 'b> FnOnce(FragmentedBytesMut<'a, 'b>) -> R,
+    {
+        match *self {}
+    }
+}
 impl ShrinkBuffer for Never {
     fn shrink_front(&mut self, _n: usize) {}
     fn shrink_back(&mut self, _n: usize) {}
-}
-impl ParseBuffer for Never {
-    fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
-        &'a mut self,
-        _args: ParseArgs,
-    ) -> Result<P, P::Error> {
-        match *self {}
-    }
-}
-impl ParseBufferMut for Never {
-    fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
-        &'a mut self,
-        _args: ParseArgs,
-    ) -> Result<P, P::Error> {
-        match *self {}
-    }
 }
 impl GrowBuffer for Never {
     fn prefix_len(&self) -> usize {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use core::convert::Infallible as Never;
+
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use net_types::ip::{
@@ -9,7 +11,6 @@ use net_types::ip::{
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither, NetstackError};
-use never::Never;
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///
@@ -55,7 +56,7 @@ pub(crate) trait IntoFidl<F>: TryIntoFidl<F, Error = Never> {
     fn into_fidl(self) -> F {
         match self.try_into_fidl() {
             Ok(f) => f,
-            Err(never) => never.into_any(),
+            Err(never) => match never {},
         }
     }
 }
@@ -117,7 +118,7 @@ where
     fn into_core(self) -> C {
         match self.try_into_core() {
             Ok(c) => c,
-            Err(never) => never.into_any(),
+            Err(never) => match never {},
         }
     }
 }
@@ -128,7 +129,7 @@ impl<T> TryIntoFidl<T> for Never {
     type Error = Never;
 
     fn try_into_fidl(self) -> Result<T, Never> {
-        self.into_any()
+        match self {}
     }
 }
 
