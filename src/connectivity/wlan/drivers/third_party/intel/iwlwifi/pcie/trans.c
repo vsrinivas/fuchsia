@@ -3162,7 +3162,6 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
   struct iwl_trans_pcie* trans_pcie;
   struct iwl_trans* trans;
   zx_status_t status;
-  int addr_size;
 
 #if 0   // NEEDS_PORTING
   if (cfg->gen2) {
@@ -3207,11 +3206,9 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
   trans_pcie->def_rx_queue = 0;
 
   if (cfg->use_tfh) {
-    addr_size = 64;
     trans_pcie->max_tbs = IWL_TFH_NUM_TBS;
     trans_pcie->tfd_size = sizeof(struct iwl_tfh_tfd);
   } else {
-    addr_size = 36;
     trans_pcie->max_tbs = IWL_NUM_OF_TBS;
     trans_pcie->tfd_size = sizeof(struct iwl_tfd);
   }

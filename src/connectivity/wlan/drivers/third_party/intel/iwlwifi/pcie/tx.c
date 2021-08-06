@@ -232,7 +232,6 @@ static void iwl_pcie_txq_update_byte_cnt_tbl(struct iwl_trans* trans, struct iwl
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   int write_ptr = txq->write_ptr;
   int txq_id = txq->id;
-  uint8_t sec_ctl = 0;
   uint16_t len = byte_cnt + IWL_TX_CRC_SIZE + IWL_TX_DELIMITER_SIZE;
   __le16 bc_ent;
   struct iwl_tx_cmd* tx_cmd =
@@ -242,8 +241,6 @@ static void iwl_pcie_txq_update_byte_cnt_tbl(struct iwl_trans* trans, struct iwl
   uint8_t sta_id = tx_cmd->sta_id;
 
   scd_bc_tbl = trans_pcie->scd_bc_tbls.addr;
-
-  sec_ctl = tx_cmd->sec_ctl;
 
 #if 0   // NEEDS_PORTING
     // TODO(37594): encryption
