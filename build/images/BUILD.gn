@@ -688,7 +688,11 @@ action("flash_script") {
       "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
       "--fvm=${fvm_partition}",
     ]
-    deps += [ labels.images ]
+    deps += [
+      "fuchsia:copy_blobfs",
+      labels.images,
+    ]
+
     parts += [
       {
         name = fvm_partition
