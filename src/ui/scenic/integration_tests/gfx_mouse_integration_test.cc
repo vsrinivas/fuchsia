@@ -4,7 +4,7 @@
 
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
@@ -188,7 +188,7 @@ struct RootSession {
 
 }  // namespace
 
-class GfxMouseIntegrationTest : public sys::testing::TestWithEnvironment {
+class GfxMouseIntegrationTest : public gtest::TestWithEnvironmentFixture {
  protected:
   static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
   static constexpr uint32_t kDeviceId = 1111;
@@ -204,7 +204,7 @@ class GfxMouseIntegrationTest : public sys::testing::TestWithEnvironment {
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUp() override {
-    TestWithEnvironment::SetUp();
+    TestWithEnvironmentFixture::SetUp();
     environment_ =
         CreateNewEnclosingEnvironment("gfx_mouse_integration_test_environment", CreateServices());
     environment_->ConnectToService(scenic_.NewRequest());
@@ -223,9 +223,9 @@ class GfxMouseIntegrationTest : public sys::testing::TestWithEnvironment {
   }
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
-  // shadows but calls |TestWithEnvironment::CreateServices()|.
+  // shadows but calls |TestWithEnvironmentFixture::CreateServices()|.
   std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
-    auto services = TestWithEnvironment::CreateServices();
+    auto services = TestWithEnvironmentFixture::CreateServices();
     for (const auto& [name, url] : LocalServices()) {
       const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;

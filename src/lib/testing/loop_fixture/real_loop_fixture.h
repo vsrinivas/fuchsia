@@ -5,16 +5,16 @@
 #ifndef SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_FIXTURE_H_
 #define SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_FIXTURE_H_
 
-#include <gtest/gtest.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 
-#include "real_loop.h"
+#include <gtest/gtest.h>
 
 namespace gtest {
 // An extension of Test class which sets up a message loop,
 // async::Loop, for the test. This fixture is meant to be used for
 // multi-process tests.
 //
-// This allows, for example, a test to conveniently excercise FIDL, as FIDL
+// This allows, for example, a test to conveniently exercise FIDL, as FIDL
 // bindings post waits to the thread-local dispatcher.
 //
 // Example:

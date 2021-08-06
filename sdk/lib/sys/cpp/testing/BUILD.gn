@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 
-sdk_source_set("unit") {
+sdk_source_set("cpp") {
   testonly = true
 
   category = "partner"
@@ -16,12 +16,18 @@ sdk_source_set("unit") {
   sources = [
     "component_context_provider.cc",
     "component_context_provider.h",
+    "enclosing_environment.cc",
+    "enclosing_environment.h",
     "fake_component.cc",
     "fake_component.h",
     "fake_launcher.cc",
     "fake_launcher.h",
+    "launcher_impl.cc",
+    "launcher_impl.h",
     "service_directory_provider.cc",
     "service_directory_provider.h",
+    "test_with_environment.cc",
+    "test_with_environment.h",
   ]
 
   public_deps = [
@@ -30,6 +36,7 @@ sdk_source_set("unit") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
   ]
 
   deps = [ "//sdk/lib/fdio" ]
@@ -37,21 +44,12 @@ sdk_source_set("unit") {
   public_configs = [ "//sdk/config" ]
 }
 
-source_set("integration") {
+# DEPRECATED, use `:cpp` instead.
+group("unit") {
+  # TODO(fxbug.dev/82270): Remove or refactor deprecated references to `:unit`.
   testonly = true
 
-  sources = [
-    "test_with_environment.cc",
-    "test_with_environment.h",
-  ]
-
-  public_deps = [
-    ":enclosing_environment",
-    ":realm_builder",
-    "//garnet/public/lib/gtest",
-  ]
-
-  public_configs = [ "//sdk/config" ]
+  public_deps = [ ":cpp" ]
 }
 
 source_set("integration_fixture") {
@@ -59,30 +57,30 @@ source_set("integration_fixture") {
 
   sources = [ "test_with_environment_fixture.h" ]
 
-  public_deps = [ ":integration" ]
+  public_deps = [
+    ":enclosing_environment",
+    ":realm_builder",
+    "//garnet/public/lib/gtest",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+  ]
 }
 
 source_set("enclosing_environment") {
+  # TODO(fxbug.dev/82270): Consider renaming or refactoring this target.
   testonly = true
 
   sources = [
     "component_interceptor.cc",
     "component_interceptor.h",
-    "enclosing_environment.cc",
-    "enclosing_environment.h",
-    "launcher_impl.cc",
-    "launcher_impl.h",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.debugdata",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:bin",
     "//third_party/rapidjson",
   ]
 
-  public_configs = [ "//sdk/config" ]
-
   public_deps = [
+    ":cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -90,6 +88,8 @@ source_set("enclosing_environment") {
     "//sdk/lib/vfs/cpp",
     "//zircon/system/ulib/async-default",
   ]
+
+  public_configs = [ "//sdk/config" ]
 }
 
 # Temporarily house RealmBuiler in its own source_set until it's ready to

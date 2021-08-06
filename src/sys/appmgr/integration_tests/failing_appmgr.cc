@@ -11,7 +11,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>

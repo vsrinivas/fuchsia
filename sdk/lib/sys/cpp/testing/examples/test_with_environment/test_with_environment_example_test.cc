@@ -3,22 +3,29 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <test/placeholders/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
+#include <gtest/gtest.h>
+#include <test/placeholders/cpp/fidl.h>
 
 #include "fake_echo.h"
 
-// This test file demostrates how to use |TestWithEnvironment|.
+// This test file demonstrates how to use |TestWithEnvironment|.
+// Note the Fuchsia SDK does not include gtest, but SDK users can provide their
+// own gtest or other test framework. For convenience (and legacy migration from
+// when |TestWithEnvironment| depended on gtest), Fuchsia in-tree users can use
+// |TestWithEnvironmentFixture|, which simply inherits both
+// |TestWithEnvironment| and gtest |::testing::Test|.
 
 namespace echo {
 namespace testing {
 namespace {
 
 using fuchsia::sys::LaunchInfo;
-using test::placeholders::EchoPtr;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 using sys::testing::TestWithEnvironment;
+using test::placeholders::EchoPtr;
 
 const char kEnvironment[] = "environment_test";
 const auto kTimeout = zx::sec(5);
@@ -26,7 +33,7 @@ const char kFakeEchoUrl[] =
     "fuchsia-pkg://fuchsia.com/test_with_environment_example_test#meta/"
     "fake_echo_app.cmx";
 
-class TestWithEnvironmentExampleTest : public TestWithEnvironment {
+class TestWithEnvironmentExampleTest : public TestWithEnvironment, public ::testing::Test {
  protected:
   std::unique_ptr<EnclosingEnvironment> enclosing_environment_;
   std::string answer_ = "Goodbye World!";

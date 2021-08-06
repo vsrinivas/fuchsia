@@ -11,13 +11,12 @@ group("loop_fixture") {
 }
 
 # Deprecated - new targets should instead depend on:
-# //src/lib/testing/loop_fixture
+# //sdk/lib/testing/loop_fixture (for RealLoop) or
+# //src/lib/testing/loop_fixture (for TestLoop or RealLoopFixture)
 source_set("gtest") {
   testonly = true
 
   sources = [
-    "real_loop.cc",
-    "real_loop.h",
     "real_loop_fixture.h",
     "test_loop.cc",
     "test_loop.h",
@@ -35,6 +34,7 @@ source_set("gtest") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
     "//zircon/system/ulib/async-testing",
   ]
 

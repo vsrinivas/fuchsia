@@ -41,12 +41,8 @@ namespace gtest {
 //
 //     // Check results from FIDL-y stuff here.
 //   }
-class TestWithEnvironmentFixture : public ::sys::testing::TestWithEnvironment {};
-
-// TODO(fxbug.dev/81468): Replace with the following, after removing gtest from
-// |TestWithEnvironment|.
-// class TestWithEnvironmentFixture : public ::sys::testing::TestWithEnvironment,
-//                                   public ::testing::Test {};
+class TestWithEnvironmentFixture : public ::sys::testing::TestWithEnvironment,
+                                   public ::testing::Test {};
 
 }  // namespace gtest
 

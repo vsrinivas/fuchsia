@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
@@ -16,7 +15,12 @@
 
 #include <memory>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
+
+// For Fuchsia in-tree coverage support, the the FIDL service name
+// also known as |fuchsia::debugdata::DebugData::Name_|
+static const char fuchsia_debugdata_DebugData_Name_[] = "fuchsia.debugdata.DebugData";
 
 EnvironmentServices::ParentOverrides::ParentOverrides(ParentOverrides&&) noexcept = default;
 
@@ -36,9 +40,9 @@ EnvironmentServices::EnvironmentServices(const fuchsia::sys::EnvironmentPtr& par
   }
 
   if (parent_overrides.debug_data_service_) {
-    AddSharedService(parent_overrides.debug_data_service_, fuchsia::debugdata::DebugData::Name_);
+    AddSharedService(parent_overrides.debug_data_service_, fuchsia_debugdata_DebugData_Name_);
   } else {
-    AllowParentService(fuchsia::debugdata::DebugData::Name_);
+    AllowParentService(fuchsia_debugdata_DebugData_Name_);
   }
 }
 
@@ -231,4 +235,5 @@ void EnclosingEnvironment::SetRunning(bool running) {
   }
 }
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys

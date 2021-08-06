@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
-#define SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
+#ifndef LIB_ASYNC_LOOP_TESTING_CPP_REAL_LOOP_H_
+#define LIB_ASYNC_LOOP_TESTING_CPP_REAL_LOOP_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -11,8 +11,6 @@
 #include <lib/fit/function.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/zx/time.h>
-
-#include "src/lib/fxl/macros.h"
 
 namespace loop_fixture {
 
@@ -76,7 +74,8 @@ class RealLoop {
   // The message loop for the test.
   async::Loop loop_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(RealLoop);
+  RealLoop(const RealLoop&) = delete;
+  RealLoop& operator=(const RealLoop&) = delete;
 };
 
 // Internal template implementation details
@@ -98,4 +97,4 @@ typename PromiseType::result_type RealLoop::RunPromise(PromiseType promise) {
 
 }  // namespace loop_fixture
 
-#endif  // SRC_LIB_TESTING_LOOP_FIXTURE_REAL_LOOP_H_
+#endif  // LIB_ASYNC_LOOP_TESTING_CPP_REAL_LOOP_H_

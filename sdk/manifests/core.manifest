@@ -129,6 +129,7 @@ sdk://pkg/async-default
 sdk://pkg/async-loop
 sdk://pkg/async-loop-cpp
 sdk://pkg/async-loop-default
+sdk://pkg/async-loop-testing
 sdk://pkg/async-testing
 sdk://pkg/fdio
 sdk://pkg/fidl

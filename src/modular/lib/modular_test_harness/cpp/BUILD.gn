@@ -34,7 +34,10 @@ source_set("test_harness_fixture") {
     "test_harness_fixture.h",
   ]
 
-  public_deps = [ "//sdk/lib/modular/testing/cpp" ]
+  public_deps = [
+    "//sdk/lib/modular/testing/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+  ]
 
   deps = [
     "//garnet/public/lib/svc/cpp",
@@ -45,7 +48,6 @@ source_set("test_harness_fixture") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/modular/bin/sessionmgr/story_runner:story_runner",
     "//src/modular/lib/testing:session_shell_impl",

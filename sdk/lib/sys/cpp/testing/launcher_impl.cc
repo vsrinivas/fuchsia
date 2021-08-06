@@ -6,7 +6,8 @@
 #include <lib/sys/cpp/testing/launcher_impl.h>
 #include <unistd.h>
 
-namespace sys::testing {
+namespace sys {
+namespace testing {
 
 void LauncherImpl::CreateComponent(
     fuchsia::sys::LaunchInfo launch_info,
@@ -20,4 +21,5 @@ void LauncherImpl::CreateComponent(
   launcher_->CreateComponent(std::move(launch_info), std::move(request));
 }
 
-}  // namespace sys::testing
+}  // namespace testing
+}  // namespace sys

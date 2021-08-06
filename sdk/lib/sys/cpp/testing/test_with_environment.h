@@ -6,8 +6,8 @@
 #define LIB_SYS_CPP_TESTING_TEST_WITH_ENVIRONMENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/launcher_impl.h>
 
@@ -21,7 +21,9 @@ struct TerminationResult {
 };
 
 // Test fixture for tests to run Components inside a new isolated Environment,
-// wrapped in a enclosing Environment.
+// wrapped in a enclosing Environment. Typically, the implementing test class
+// derives from both `TestWithEnvironment` and a test framework fixture, such
+// as gtest fixture `testing::Test`.
 //
 // The new isolated Environment, provided to the Component under test, is not
 // visible to any real Environments, such as the Environment that the test
@@ -33,7 +35,6 @@ struct TerminationResult {
 // The isolated Environment is enclosed in a enclosing Environment, allowing the
 // test to provide Loader, Services, and other Directories that are visible to
 // Components under test, and only to those Components.
-//
 //
 // This fixture also allows you to create components in the real environment in
 // which this test was launched. Those components should only be used to
@@ -50,7 +51,7 @@ struct TerminationResult {
 // run your own loop to serve services provided by that environment. So use of
 // SyncPtrs is not advisable unless you can run a loop safely in a new thread
 // which stops running before you kill your EnclosingEnvironment.
-class TestWithEnvironment : public gtest::RealLoopFixture {
+class TestWithEnvironment : public loop_fixture::RealLoop {
  protected:
   TestWithEnvironment();
 

@@ -16,7 +16,7 @@ executable("archive_accessor_ptr_unittest_exe") {
   sources = [ "archive_accessor_ptr_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",
@@ -256,7 +256,7 @@ executable("inspect_unittest_exe") {
   sources = [ "inspect_unittest.cc" ]
 
   deps = [
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/testing:gpretty_printers",

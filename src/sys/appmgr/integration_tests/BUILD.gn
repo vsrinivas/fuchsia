@@ -155,7 +155,6 @@ executable("failing_appmgr_bin") {
   deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/sys/appmgr:appmgr_for_test",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

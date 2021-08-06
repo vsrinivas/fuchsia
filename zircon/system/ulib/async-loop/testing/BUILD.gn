@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+# Simplifies and supports deriving test fixtures with an event loop that
+# supports multi-process tests, and can exercise FIDL.
+zx_library("async-loop-testing") {
+  sdk = "source"
+  sdk_publishable = true
+  sdk_headers = [ "lib/async-loop/testing/cpp/real_loop.h" ]
+  configs += [ "//build/config:all_source" ]
+  sources = [ "real_loop.cc" ]
+
+  public_deps = [
+    # <real_loop.h> has #include <lib/fit/function.h>
+    "//sdk/lib/fit",
+
+    # <real_loop.h> has #include <lib/stdcompat/optional.h>
+    "//sdk/lib/stdcompat",
+
+    # <real_loop.h> has #include <lib/zx/time.h>
+    "//zircon/public/lib/zx",
+
+    # <real_loop.h> has #include <lib/async/cpp/executor.h>
+    "//zircon/system/ulib/async:async-cpp",
+
+    # <real_loop.h> has #include <lib/async-loop/cpp/loop.h>
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+    # <real_loop.h> has #include <lib/async-loop/default.h>
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  deps = [ "//zircon/system/ulib/async-loop:async-loop-default" ]
+}

@@ -1,6 +1,9 @@
 {
   "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/component_context_provider.h": "db15445eb27183ef9402263b5ec907a9",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/enclosing_environment.h": "aa07d6130b587daf581183666b712792",
   "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/fake_component.h": "671483f91fdf74e2ba4ccc0fe5ff7599",
   "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/fake_launcher.h": "c819ee038e1a7c0b7e772c154c0d8259",
-  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/service_directory_provider.h": "c5052c68b670b3dc6c853190c1400610"
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/launcher_impl.h": "98cf8363613923f4a26270d55767e419",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/service_directory_provider.h": "c5052c68b670b3dc6c853190c1400610",
+  "pkg/sys_cpp_testing/include/lib/sys/cpp/testing/test_with_environment.h": "0b13941580979b9653b5cd96e7ef3a48"
 }
