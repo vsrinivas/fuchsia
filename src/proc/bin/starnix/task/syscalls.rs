@@ -369,6 +369,15 @@ pub fn sys_futex(
     Ok(SUCCESS)
 }
 
+pub fn sys_capget(
+    _ctx: &SyscallContext<'_>,
+    _user_header: UserRef<__user_cap_header_struct>,
+    _user_data: UserRef<__user_cap_data_struct>,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!("Stubbed capget has no effect.");
+    Ok(SUCCESS)
+}
+
 #[cfg(test)]
 mod tests {
     use std::u64;

@@ -128,6 +128,7 @@ pub fn dispatch_syscall(
         access[2],
         arch_prctl[2],
         brk[1],
+        capget[2],
         chdir[1],
         clock_gettime[2],
         clock_getres[2],
