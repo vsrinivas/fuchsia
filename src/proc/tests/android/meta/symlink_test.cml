@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/symlink_test",
-        args: [ "--gunit_filter=-SymlinkTest.CannotCreateSymlinkInReadOnlyDir:SymlinkTest.SymlinkAtDegradedPermissions:SymlinkTest.ReadlinkAtDegradedPermissions" ],
     },
 }

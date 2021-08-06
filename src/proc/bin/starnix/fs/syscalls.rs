@@ -347,7 +347,15 @@ pub fn sys_readlinkat(
     buffer: UserAddress,
     buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let node = lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?;
+    let node = lookup_parent_at(ctx.task, dir_fd, user_path, |parent, basename| {
+        let stat = parent.node.stat()?;
+        // TODO(security): This check is obviously not correct, and should be updated once
+        // we have an auth system.
+        if stat.st_mode & S_IRUSR == 0 {
+            return Err(EACCES);
+        }
+        Ok(parent.lookup(&ctx.task.fs, basename, SymlinkMode::NoFollow)?.node)
+    })?;
     let link = node.readlink()?;
 
     // Cap the returned length at buffer_size.
