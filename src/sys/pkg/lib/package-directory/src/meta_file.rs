@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{MetaFileLocation, RootDir},
+    crate::root_dir::RootDir,
     anyhow::{anyhow, Context as _},
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
@@ -26,6 +26,13 @@ use {
         test_utils::assertions::reexport::{DIRENT_TYPE_FILE, INO_UNKNOWN},
     },
 };
+
+/// Location of MetaFile contents within a meta.far
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct MetaFileLocation {
+    pub(crate) offset: u64,
+    pub(crate) length: u64,
+}
 
 pub(crate) struct MetaFile {
     root_dir: Arc<RootDir>,
