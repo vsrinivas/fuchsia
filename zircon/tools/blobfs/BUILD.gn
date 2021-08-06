@@ -9,6 +9,8 @@
 # See fxbug.dev/36139.                   #
 ##########################################
 
+import("//build/sdk/sdk_host_tool.gni")
+
 executable("blobfs") {
   sources = [ "main.cc" ]
   deps = [
@@ -38,4 +40,11 @@ executable("blobfs") {
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
+}
+
+sdk_host_tool("blobfs_sdk") {
+  category = "partner"
+  output_name = "blobfs"
+  sdk_name = "blobfs_do_not_depend"
+  deps = [ ":blobfs" ]
 }

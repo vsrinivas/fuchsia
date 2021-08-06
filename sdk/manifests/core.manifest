@@ -166,6 +166,7 @@ sdk://pkg/vulkan_layers
 sdk://pkg/zx
 sdk://tools/arm64/bindc
 sdk://tools/arm64/blobfs-compression
+sdk://tools/arm64/blobfs_do_not_depend
 sdk://tools/arm64/bootserver
 sdk://tools/arm64/cmc
 sdk://tools/arm64/device-finder
@@ -207,6 +208,7 @@ sdk://tools/symbol-index
 sdk://tools/symbolize
 sdk://tools/x64/bindc
 sdk://tools/x64/blobfs-compression
+sdk://tools/x64/blobfs_do_not_depend
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
 sdk://tools/x64/device-finder

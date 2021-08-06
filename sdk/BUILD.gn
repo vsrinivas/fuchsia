@@ -293,6 +293,7 @@ sdk_molecule("host_tools") {
     "//tools/fidl/fidlc:fidl-format_sdk",
     "//tools/fidl/fidlc:fidlc_sdk",
     "//tools/fidlcat:fidlcat_sdk",
+    "//zircon/tools/blobfs:blobfs_sdk",
     "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
     "//zircon/tools/zbi:zbi_sdk",
