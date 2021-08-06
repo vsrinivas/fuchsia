@@ -303,8 +303,8 @@ void udp6_recv(ip6_hdr* ip, void* _data, size_t len) {
       fb_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)ip->src, sport, dport);
       break;
     default:
-      // Ignore
-      printf("ignoring dport %d", dport);
+      // Ignore, we can receive packets not intended for us e.g. with unicast
+      // flooding.
       return;
   }
 }
@@ -386,10 +386,10 @@ void eth_recv(void* _data, size_t len) {
   // ignore any trailing data in the ethernet frame
   len = n;
 
-  // require that we are the destination
+  // Require that we are the destination. We can receive packets not intended
+  // for us e.g. with unicast flooding.
   if (memcmp(&ll_ip6_addr, ip->dst, IP6_ADDR_LEN) && memcmp(&snm_ip6_addr, ip->dst, IP6_ADDR_LEN) &&
       memcmp(&ip6_ll_all_nodes, ip->dst, IP6_ADDR_LEN)) {
-    printf("we are not dest\n");
     return;
   }
 
