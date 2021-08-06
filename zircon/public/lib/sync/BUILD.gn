@@ -9,6 +9,10 @@ group("sync") {
   public_deps = [ "//zircon/system/ulib/sync" ]
 }
 
+group("sync-cpp") {
+  public_deps = [ "//zircon/system/ulib/sync:sync-cpp" ]
+}
+
 sdk_alias("sync_sdk") {
   target = "//zircon/system/ulib/sync:sync_sdk"
   type = "atom"

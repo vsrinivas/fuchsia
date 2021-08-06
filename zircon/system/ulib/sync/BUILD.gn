@@ -24,3 +24,13 @@ zx_library("sync") {
     "//zircon/system/ulib/zircon-internal",
   ]
 }
+
+source_set("sync-cpp") {
+  public = [ "include/lib/sync/cpp/completion.h" ]
+  include_dirs = [ "include" ]
+  sources = []
+  public_deps = [
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
+  ]
+}

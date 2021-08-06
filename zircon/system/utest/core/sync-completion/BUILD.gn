@@ -7,11 +7,15 @@ source_set("sync-completion") {
 
   testonly = true
   configs += [ "//build/config:all_source" ]
-  sources = [ "completion.cc" ]
+  sources = [
+    "completion.cc",
+    "completion_wrapper.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/sync:sync-cpp",
     "//zircon/public/lib/zxtest",
   ]
 }
