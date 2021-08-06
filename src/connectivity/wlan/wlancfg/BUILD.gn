@@ -246,8 +246,11 @@ fuzzers_package("wlancfg-fuzzers") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":wlancfg-fuzzers",
-    ":wlancfg-tests",
-  ]
+  deps = [ ":wlancfg-fuzzers" ]
+
+  # TODO(fxbug.dev/82278): Flaky test disabled on coverage.
+  # Please fix test and remove condition below.
+  if (!is_coverage) {
+    deps += [ ":wlancfg-tests" ]
+  }
 }
