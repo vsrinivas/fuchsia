@@ -8,12 +8,10 @@ use crate::common::{ElementType, Envelope};
 use crate::json::JsonObject;
 use crate::physical_device::PhysicalDeviceV1;
 use crate::product_bundle::ProductBundleV1;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Read;
-
-type Result<T> = std::result::Result<T, anyhow::Error>;
 
 /// A unique schema identifier.
 #[derive(Debug)]

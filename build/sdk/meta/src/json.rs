@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_reader, from_str, to_string, to_value};
 use std::io::Read;
@@ -19,8 +20,6 @@ enum Error {
     #[allow(dead_code)] // The compiler complains about the variant not being constructed.
     JsonFileInvalid { errors: String },
 }
-
-type Result<T> = std::result::Result<T, anyhow::Error>;
 
 impl From<valico::json_schema::schema::SchemaError> for Error {
     fn from(err: valico::json_schema::schema::SchemaError) -> Self {
@@ -48,6 +47,7 @@ fn format_valico_error(error: &Box<dyn ValicoError>) -> String {
     result
 }
 
+/// Generates the missing schema reference message for the given URL.
 fn format_missing_refs(url: &Url) -> String {
     let mut result = String::new();
     result.push_str("Missing schema reference: ");
@@ -70,7 +70,7 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     fn get_schema_id() -> Result<String> {
         let schema = from_str(Self::get_schema())?;
         let mut scope = json_schema::Scope::new();
-        let url = scope.compile(schema, true).map_err(Error::SchemaInvalid)?;
+        let url = scope.compile(schema, /*ban_unknown=*/true).map_err(Error::SchemaInvalid)?;
         Ok(url.to_string())
     }
 
@@ -81,19 +81,19 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
 
         // Add the schema including all the common definitions.
         scope
-            .compile(from_str(include_str!("../common.json"))?, true)
+            .compile(from_str(include_str!("../common.json"))?, /*ban_unknown=*/true)
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../emu_manifest.json"))?, true)
+            .compile(from_str(include_str!("../emu_manifest.json"))?, /*ban_unknown=*/true)
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../flash_manifest-02.json"))?, true)
+            .compile(from_str(include_str!("../flash_manifest-02.json"))?, /*ban_unknown=*/true)
             .map_err(Error::SchemaInvalid)?;
         scope
-            .compile(from_str(include_str!("../hardware-f6f47515.json"))?, true)
+            .compile(from_str(include_str!("../hardware-f6f47515.json"))?, /*ban_unknown=*/true)
             .map_err(Error::SchemaInvalid)?;
 
-        let validator = scope.compile_and_return(schema, true).map_err(Error::SchemaInvalid)?;
+        let validator = scope.compile_and_return(schema, /*ban_unknown=*/true).map_err(Error::SchemaInvalid)?;
         let value = to_value(self)?;
         let result = validator.validate(&value);
         if !result.is_strictly_valid() {
@@ -146,7 +146,7 @@ mod tests {
     fn test_id() {
         assert_eq!(
             String::from("http://fuchsia.com/schemas/sdk/test_metadata.json"),
-            Metadata::get_schema_id().unwrap()
+            Metadata::get_schema_id().expect("schema id")
         );
     }
 

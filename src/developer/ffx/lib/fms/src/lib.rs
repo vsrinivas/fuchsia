@@ -7,12 +7,10 @@
 //! Uses a unique identifier (FMS Name) to lookup SDK Module metadata.
 
 use {
-    anyhow,
+    anyhow::Result,
     sdk_metadata::{from_reader, Metadata},
     std::{collections::HashMap, io},
 };
-
-type Result<T> = std::result::Result<T, anyhow::Error>;
 
 /// Manager for finding available SDK Modules for download or ensuring that an
 /// SDK Module (artifact) is downloaded.
