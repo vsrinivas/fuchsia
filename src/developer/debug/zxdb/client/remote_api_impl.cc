@@ -166,8 +166,8 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
   if (!session_->stream_) {
     // No connection, asynchronously issue the error.
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback =
-                                                                  std::move(callback)]() mutable {
+      debug::MessageLoop::Current()->PostTask(FROM_HERE, [callback =
+                                                              std::move(callback)]() mutable {
         callback(Err(ErrType::kNoConnection, "No connection to debugged system."), RecvMsgType());
       });
     }

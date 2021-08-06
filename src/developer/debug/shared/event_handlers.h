@@ -14,7 +14,7 @@
 
 // Group of classes dedicated at handling async events associated with zircon's message loop.
 
-namespace debug_ipc {
+namespace debug {
 
 enum class WatchType : uint32_t;
 
@@ -75,6 +75,6 @@ class ChannelExceptionHandler {
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelExceptionHandler);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_EVENT_HANDLERS_H_

@@ -16,7 +16,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 #define STOP_MESSAGE_LOOP() \
   MessageLoop::Current()->PostTask(FROM_HERE, []() { MessageLoop::Current()->QuitNow(); })
@@ -54,7 +54,7 @@ class ActionsTest : public TestWithLoop {
 
 }  // namespace
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 TEST_F(ActionsTest, ScriptFile) {
   // We expect 3 calls

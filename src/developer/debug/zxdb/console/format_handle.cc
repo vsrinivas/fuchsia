@@ -56,9 +56,9 @@ void AppendVmoInfo(const debug_ipc::InfoHandleVmo& vmo, std::vector<std::vector<
   AppendTwoEltRow("# children", NumToString(vmo.num_children, hex), rows);
   AppendTwoEltRow("# mappings", NumToString(vmo.num_mappings, hex), rows);
   AppendTwoEltRow("Share count", NumToString(vmo.share_count, hex), rows);
-  AppendFlags("Flags", debug_ipc::VmoFlagsToStrings(vmo.flags), rows);
+  AppendFlags("Flags", debug::VmoFlagsToStrings(vmo.flags), rows);
   AppendTwoEltRow("Committed bytes", NumToString(vmo.committed_bytes, hex), rows);
-  AppendTwoEltRow("Cache policy", debug_ipc::CachePolicyToString(vmo.cache_policy), rows);
+  AppendTwoEltRow("Cache policy", debug::CachePolicyToString(vmo.cache_policy), rows);
   AppendTwoEltRow("Metadata bytes", NumToString(vmo.metadata_bytes, hex), rows);
   AppendTwoEltRow("Committed change events", NumToString(vmo.committed_change_events, hex), rows);
 }
@@ -73,7 +73,7 @@ OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandle>& handles, bo
   for (const auto& handle : handles) {
     auto& row = rows.emplace_back();
     row.push_back(HandleValueToString(handle.handle_value, hex));
-    row.push_back(debug_ipc::HandleTypeToString(handle.type));
+    row.push_back(debug::HandleTypeToString(handle.type));
     row.push_back(NumToString(handle.koid, hex));
   }
 
@@ -87,9 +87,9 @@ OutputBuffer FormatHandles(const std::vector<debug_ipc::InfoHandle>& handles, bo
 OutputBuffer FormatHandle(const debug_ipc::InfoHandle& handle, bool hex) {
   std::vector<std::vector<std::string>> rows;
   AppendTwoEltRow("Handle", HandleValueToString(handle.handle_value, hex), rows);
-  AppendTwoEltRow("Type", debug_ipc::HandleTypeToString(handle.type), rows);
+  AppendTwoEltRow("Type", debug::HandleTypeToString(handle.type), rows);
   AppendTwoEltRow("Koid", NumToString(handle.koid, hex), rows);
-  AppendFlags("Rights", debug_ipc::HandleRightsToStrings(handle.rights), rows);
+  AppendFlags("Rights", debug::HandleRightsToStrings(handle.rights), rows);
   if (handle.related_koid)
     AppendTwoEltRow("Related koid", NumToString(handle.related_koid, hex), rows);
   if (handle.peer_owner_koid)

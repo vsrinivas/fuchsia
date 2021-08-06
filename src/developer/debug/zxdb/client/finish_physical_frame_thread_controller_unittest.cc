@@ -68,7 +68,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
       std::make_unique<FinishPhysicalFrameThreadController>(thread()->GetStack(), 0),
       [&out_err](const Err& err) {
         out_err = err;
-        debug_ipc::MessageLoop::Current()->QuitNow();
+        debug::MessageLoop::Current()->QuitNow();
       });
   loop().Run();
 
@@ -120,7 +120,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
       std::make_unique<FinishPhysicalFrameThreadController>(thread()->GetStack(), 0),
       [&out_err](const Err& err) {
         out_err = err;
-        debug_ipc::MessageLoop::Current()->QuitNow();
+        debug::MessageLoop::Current()->QuitNow();
       });
   loop().Run();
 

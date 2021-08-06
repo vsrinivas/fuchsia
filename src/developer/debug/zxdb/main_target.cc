@@ -19,14 +19,14 @@ namespace {
 
 // Background thread function that runs the in-process debug agent. The loop
 // must outlive this thread.
-void AgentThread(debug_ipc::MessageLoopZircon* loop, zx::socket socket) {
+void AgentThread(debug::MessageLoopZircon* loop, zx::socket socket) {
   // Bind the message loop to this thread.
   loop->Init();
 
   // This scope forces all the objects to be destroyed before the Cleanup()
   // call which will mark the message loop as not-current.
   {
-    debug_ipc::BufferedZxSocket router_buffer;
+    debug::BufferedZxSocket router_buffer;
     if (!router_buffer.Init(std::move(socket))) {
       fprintf(stderr, "Can't hook up stream.");
       return;
@@ -57,17 +57,17 @@ int main(int argc, char* argv[]) {
   }
 
   // Start background thread to run the agent in-process.
-  debug_ipc::MessageLoopZircon agent_loop;
+  debug::MessageLoopZircon agent_loop;
   std::thread agent_thread(&AgentThread, &agent_loop, std::move(agent_socket));
 
   // Client message loop.
-  debug_ipc::MessageLoopZircon client_loop;
+  debug::MessageLoopZircon client_loop;
   client_loop.Init();
 
   // This scope forces all the objects to be destroyed before the Cleanup()
   // call which will mark the message loop as not-current.
   {
-    debug_ipc::BufferedZxSocket buffer;
+    debug::BufferedZxSocket buffer;
     if (!buffer.Init(std::move(client_socket))) {
       fprintf(stderr, "Can't hook up stream.");
       return 1;
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
   client_loop.Cleanup();
 
   // Ask the background thread to stop and join.
-  agent_loop.PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  agent_loop.PostTask([]() { debug::MessageLoop::Current()->QuitNow(); });
   agent_thread.join();
   return 0;
 }

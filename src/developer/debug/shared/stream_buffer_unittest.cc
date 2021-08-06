@@ -6,12 +6,12 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
 // Implements a simple sink
-class Writer : public debug_ipc::StreamBuffer::Writer {
+class Writer : public StreamBuffer::Writer {
  public:
   // This class reads only up to a given amount of data. It starts as 0 (it
   // can't read anything) and can be increased with this function.
@@ -146,4 +146,4 @@ TEST(StreamBuffer, Write) {
     EXPECT_EQ(i, static_cast<size_t>(sink.data()[i]));
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

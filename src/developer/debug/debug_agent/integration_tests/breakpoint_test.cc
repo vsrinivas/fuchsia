@@ -58,7 +58,7 @@ const char* kModuleToSearch = "libdebug_agent_test_so.so";
 
 class BreakpointStreamBackend : public LocalStreamBackend {
  public:
-  BreakpointStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
+  BreakpointStreamBackend(debug::MessageLoop* loop) : loop_(loop) {}
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
 
@@ -112,7 +112,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   }
 
  private:
-  debug_ipc::MessageLoop* loop_;
+  debug::MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
 
   bool thread_started_ = false;
@@ -131,7 +131,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
 // TODO(fxbug.dev/73422): This test fails, fix and re-enable.
 TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
   // Uncomment for debugging the test.
-  // debug_ipc::SetDebugMode(true);
+  // debug::SetDebugMode(true);
 
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;

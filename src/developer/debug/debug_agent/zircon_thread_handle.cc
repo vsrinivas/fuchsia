@@ -210,13 +210,13 @@ std::vector<debug_ipc::Register> ZirconThreadHandle::WriteRegisters(
     if (auto res = arch::WriteRegisters(thread_, cat_type, cat_regs); res != ZX_OK) {
       FX_LOGS(WARNING) << "Could not write category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug_ipc::ZxStatusToString(res);
+                       << debug::ZxStatusToString(res);
     }
 
     if (auto res = arch::ReadRegisters(thread_, cat_type, written); res != ZX_OK) {
       FX_LOGS(WARNING) << "Could not read category "
                        << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug_ipc::ZxStatusToString(res);
+                       << debug::ZxStatusToString(res);
     }
   }
 
@@ -250,7 +250,7 @@ bool ZirconThreadHandle::UninstallHWBreakpoint(uint64_t address) {
 }
 
 std::optional<WatchpointInfo> ZirconThreadHandle::InstallWatchpoint(
-    debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) {
+    debug_ipc::BreakpointType type, const debug::AddressRange& range) {
   if (!debug_ipc::IsWatchpointType(type))
     return std::nullopt;
 
@@ -272,7 +272,7 @@ std::optional<WatchpointInfo> ZirconThreadHandle::InstallWatchpoint(
   return result;
 }
 
-bool ZirconThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
+bool ZirconThreadHandle::UninstallWatchpoint(const debug::AddressRange& range) {
   std::optional<DebugRegisters> regs = GetDebugRegisters();
   if (!regs)
     return false;

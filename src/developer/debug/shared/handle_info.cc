@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/handle_info.h"
 
-namespace debug_ipc {
+namespace debug {
 
 std::string HandleTypeToString(uint32_t handle_type) {
   // Don't use Zircon headers from here, so need to hardcode the values.
@@ -153,4 +153,4 @@ std::vector<std::string> VmoFlagsToStrings(uint32_t flags) {
   return result;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

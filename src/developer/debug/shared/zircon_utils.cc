@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/zircon_utils.h"
 
-namespace debug_ipc {
+namespace debug {
 
 const char* ExceptionTypeToString(uint32_t type) {
   switch (type) {
@@ -35,4 +35,4 @@ const char* ExceptionTypeToString(uint32_t type) {
   }
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

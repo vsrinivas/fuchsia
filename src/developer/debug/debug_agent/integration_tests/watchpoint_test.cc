@@ -23,7 +23,7 @@ constexpr int kInvalidReturnCode = 0xdeadbeef;
 // The implementation is at the end of the file.
 class WatchpointStreamBackend : public LocalStreamBackend {
  public:
-  WatchpointStreamBackend(MessageLoop* loop) : loop_(loop) {}
+  WatchpointStreamBackend(debug::MessageLoop* loop) : loop_(loop) {}
 
   void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
 
@@ -41,7 +41,7 @@ class WatchpointStreamBackend : public LocalStreamBackend {
 
   // Getters -------------------------------------------------------------------
 
-  MessageLoop* loop() const { return loop_; }
+  debug::MessageLoop* loop() const { return loop_; }
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
 
   zx_koid_t process_koid() const { return process_koid_; }
@@ -65,7 +65,7 @@ class WatchpointStreamBackend : public LocalStreamBackend {
 
   TestStage test_stage_ = TestStage::kWaitingForThread;
 
-  MessageLoop* loop_ = nullptr;
+  debug::MessageLoop* loop_ = nullptr;
   RemoteAPI* remote_api_ = nullptr;
 
   uint64_t so_test_base_addr_ = 0;
@@ -92,7 +92,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
 TEST(Watchpoint, DISABLED_DefaultCase) {
 #endif
   // Activate this is the test is giving you trouble.
-  // debug_ipc::SetDebugMode(true);
+  // debug::SetDebugMode(true);
 
   static constexpr const char kTestSo[] = "debug_agent_test_so.so";
   SoWrapper so_wrapper;

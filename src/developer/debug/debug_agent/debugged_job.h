@@ -35,7 +35,7 @@ class DebuggedJob {
     std::string filter;
     // Filter used to compare against this filter. We keep it around so we don't need to recompile
     // it every time we compare against a new process.
-    debug_ipc::Regex regex;
+    debug::Regex regex;
 
     bool Matches(const std::string& proc_name);
   };

@@ -8,7 +8,7 @@
 #include <deque>
 #include <vector>
 
-namespace debug_ipc {
+namespace debug {
 
 // This class is a buffer that sits between an asynchronous OS read/write source and producers and
 // consumer of stream data.
@@ -73,6 +73,6 @@ class StreamBuffer {
   size_t first_write_buffer_offset_ = 0;  // Position of write_buffer_[0].
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_STREAM_BUFFER_H_

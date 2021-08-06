@@ -191,7 +191,7 @@ void ProcessImpl::ReadMemory(uint64_t address, uint32_t size,
           // The callers expect the callback to be called after this method returns. That means that
           // we can't call it directly. Instead we post a task so that the callback will be called
           // when the caller will be idle.
-          debug_ipc::MessageLoop::Current()->PostTask(
+          debug::MessageLoop::Current()->PostTask(
               FROM_HERE, [callback = std::move(callback), vec = std::move(vec)]() mutable {
                 callback(Err(), MemoryDump(std::move(vec)));
               });

@@ -9,7 +9,7 @@
 
 #include <algorithm>
 
-namespace debug_ipc {
+namespace debug {
 
 BufferedFD::BufferedFD() = default;
 
@@ -147,4 +147,4 @@ size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
   return written;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

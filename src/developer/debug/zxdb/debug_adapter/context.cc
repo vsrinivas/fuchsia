@@ -27,7 +27,7 @@
 
 namespace zxdb {
 
-DebugAdapterContext::DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream)
+DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* stream)
     : session_(session), dap_(dap::Session::create()) {
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
@@ -157,7 +157,7 @@ void DebugAdapterContext::Init() {
   dap_->registerHandler([this](const dap::DisconnectRequest& req) {
     DEBUG_LOG(DebugAdapter) << "DisconnectRequest received";
     if (destroy_connection_cb_) {
-      debug_ipc::MessageLoop::Current()->PostTask(
+      debug::MessageLoop::Current()->PostTask(
           FROM_HERE, [cb = std::move(destroy_connection_cb_)]() mutable { cb(); });
     }
     return dap::DisconnectResponse();

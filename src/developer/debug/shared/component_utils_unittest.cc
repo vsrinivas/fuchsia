@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -34,4 +34,4 @@ TEST(ComponentUtils, ExtractComponentFromPackageUrl) {
   EXPECT_EQ(desc.component_name, COMPONENT);
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

@@ -22,16 +22,15 @@ class TestPipe {
   TestPipe() = default;
   ~TestPipe() = default;
 
-  debug_ipc::StreamBuffer* end1() { return &end1_; }
-  const debug_ipc::StreamBuffer& end1() const { return end1_; }
+  debug::StreamBuffer* end1() { return &end1_; }
+  const debug::StreamBuffer& end1() const { return end1_; }
 
-  debug_ipc::StreamBuffer* end2() { return &end2_; }
-  const debug_ipc::StreamBuffer& end2() const { return end2_; }
+  debug::StreamBuffer* end2() { return &end2_; }
+  const debug::StreamBuffer& end2() const { return end2_; }
 
-  class PipeWriter : public debug_ipc::StreamBuffer::Writer {
+  class PipeWriter : public debug::StreamBuffer::Writer {
    public:
-    PipeWriter(debug_ipc::StreamBuffer& src, debug_ipc::StreamBuffer& sink)
-        : src_(src), sink_(sink) {
+    PipeWriter(debug::StreamBuffer& src, debug::StreamBuffer& sink) : src_(src), sink_(sink) {
       src_.set_writer(this);
     }
 
@@ -41,13 +40,13 @@ class TestPipe {
       sink_.AddReadData(std::vector<char>(data, data + len));
       return len;
     }
-    debug_ipc::StreamBuffer& src_;
-    debug_ipc::StreamBuffer& sink_;
+    debug::StreamBuffer& src_;
+    debug::StreamBuffer& sink_;
   };
 
  private:
-  debug_ipc::StreamBuffer end1_;
-  debug_ipc::StreamBuffer end2_;
+  debug::StreamBuffer end1_;
+  debug::StreamBuffer end2_;
   PipeWriter end1_to_2{end1_, end2_};
   PipeWriter end2_to_1{end2_, end1_};
 

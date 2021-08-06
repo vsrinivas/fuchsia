@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/test_stream_buffer.h"
 
-namespace debug_ipc {
+namespace debug {
 
 TestStreamBuffer::TestStreamBuffer() { stream_.set_writer(this); }
 
@@ -15,4 +15,4 @@ size_t TestStreamBuffer::ConsumeStreamBufferData(const char* data, size_t len) {
   return len;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

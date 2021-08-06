@@ -14,7 +14,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // Multi-threaded arbitrary task queue.
 //
@@ -103,6 +103,6 @@ class WorkerPool {
   FXL_DISALLOW_COPY_AND_ASSIGN(WorkerPool);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_WORKER_POOL_H_

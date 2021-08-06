@@ -14,7 +14,7 @@
 
 namespace zxdb {
 
-using namespace debug_ipc;
+using namespace debug;
 
 namespace {
 

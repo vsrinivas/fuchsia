@@ -39,7 +39,7 @@ class AnalyticsExecutor : public fpromise::executor {
   std::mutex mutex_;
   uint64_t task_count_ = 0;
   bool should_quit_ = false;
-  debug_ipc::PlatformMessageLoop loop_;
+  debug::PlatformMessageLoop loop_;
   // scope_ must be declared after loop_ so that it will be destructed before loop_.
   // This is to make sure promises that are not fulfilled before timeout are abandoned before
   // destruction of the message loop.

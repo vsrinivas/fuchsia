@@ -11,7 +11,7 @@
 namespace debug_agent {
 
 MessageLoopWrapper::MessageLoopWrapper() {
-  loop_ = std::make_unique<debug_ipc::PlatformMessageLoop>();
+  loop_ = std::make_unique<debug::PlatformMessageLoop>();
 
   std::string error_message;
   bool success = loop_->Init(&error_message);

@@ -45,7 +45,7 @@ zx::job CreateJob() {
   zx_handle_t job;
   zx_status_t status = zx_job_create(default_job, 0u, &job);
   if (status != ZX_OK)
-    FX_NOTREACHED() << "Failed to create job: " << ZxStatusToString(status);
+    FX_NOTREACHED() << "Failed to create job: " << debug::ZxStatusToString(status);
   return zx::job(job);
 }
 
@@ -67,7 +67,8 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
                                       nullptr,  // Environ
                                       actions.size(), actions.data(), &process_handle, err_msg);
   if (status != ZX_OK) {
-    FX_NOTREACHED() << "Failed to spawn command (" << ZxStatusToString(status) << "): " << err_msg;
+    FX_NOTREACHED() << "Failed to spawn command (" << debug::ZxStatusToString(status)
+                    << "): " << err_msg;
   }
   return zx::process(process_handle);
 }
@@ -78,7 +79,7 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
 // The class will record all those so that the test can verify the behaviour.
 class JobStreamBackend : public LocalStreamBackend {
  public:
-  JobStreamBackend(MessageLoop* message_loop) : message_loop_(message_loop) {}
+  JobStreamBackend(debug::MessageLoop* message_loop) : message_loop_(message_loop) {}
 
   void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
 
@@ -140,7 +141,7 @@ class JobStreamBackend : public LocalStreamBackend {
   std::vector<NotifyModules> module_events_;
   std::vector<NotifyException> exceptions_;
 
-  MessageLoop* message_loop_ = nullptr;
+  debug::MessageLoop* message_loop_ = nullptr;
   RemoteAPI* remote_api_ = nullptr;
 };
 
@@ -210,7 +211,7 @@ uint64_t FindModuleBaseAddress(const NotifyModules& modules, const std::string& 
 
 TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   MessageLoopWrapper message_loop_wrapper;
-  MessageLoop* message_loop = message_loop_wrapper.loop();
+  debug::MessageLoop* message_loop = message_loop_wrapper.loop();
 
   JobStreamBackend backend(message_loop);
 

@@ -48,10 +48,10 @@ debug::Status ZirconJobHandle::WatchJobExceptions(
     job_watch_handle_.StopWatching();
   } else if (!process_callback_) {
     // Registering for the first time.
-    debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
+    debug::MessageLoopTarget* loop = debug::MessageLoopTarget::Current();
     FX_DCHECK(loop);  // Loop must be created on this thread first.
 
-    debug_ipc::MessageLoopTarget::WatchJobConfig config;
+    debug::MessageLoopTarget::WatchJobConfig config;
     config.job_name = GetName();
     config.job_handle = job_.get();
     config.job_koid = job_koid_;

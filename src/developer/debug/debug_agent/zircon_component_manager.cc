@@ -78,8 +78,8 @@ zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
   FX_DCHECK(!argv.empty());
 
   auto pkg_url = argv.front();
-  debug_ipc::ComponentDescription url_desc;
-  if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &url_desc)) {
+  debug::ComponentDescription url_desc;
+  if (!debug::ExtractComponentFromPackageUrl(pkg_url, &url_desc)) {
     FX_LOGS(WARNING) << "Invalid package url: " << pkg_url;
     return ZX_ERR_INVALID_ARGS;
   }
@@ -142,7 +142,7 @@ debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
 
   root_job->AppendFilter(description.filter);
 
-  if (debug_ipc::IsDebugModeActive()) {
+  if (debug::IsDebugModeActive()) {
     std::stringstream ss;
 
     ss << "Launching component. " << std::endl
@@ -219,7 +219,7 @@ void ZirconComponentManager::OnComponentTerminated(int64_t return_code,
   // If we couldn't find it, the component was already caught and cleaned.
   expected_components_.erase(description.filter);
 
-  if (debug_ipc::IsDebugModeActive()) {
+  if (debug::IsDebugModeActive()) {
     std::stringstream ss;
     ss << "Still expecting the following components: " << expected_components_.size();
     for (auto& expected : expected_components_) {

@@ -191,7 +191,7 @@ void BlockExprNode::EvalBlockFrom(fxl::RefPtr<BlockExprNode> node, size_t index,
       // there can be many statements in a block and we can overflow the stack. Instead, resume
       // evaluation of the next statement back from the message loop. This will be slower but more
       // predictable.
-      debug_ipc::MessageLoop::Current()->PostTask(
+      debug::MessageLoop::Current()->PostTask(
           FROM_HERE, [node = std::move(node), context, index, cb = std::move(cb)]() mutable {
             EvalBlockFrom(std::move(node), index + 1, context, std::move(cb));
           });

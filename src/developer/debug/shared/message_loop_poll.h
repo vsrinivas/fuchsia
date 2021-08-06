@@ -14,7 +14,7 @@
 
 struct pollfd;
 
-namespace debug_ipc {
+namespace debug {
 
 // This MessageLoop implementation uses the Unix poll() function.
 class MessageLoopPoll : public MessageLoop {
@@ -66,6 +66,6 @@ class MessageLoopPoll : public MessageLoop {
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoopPoll);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_POLL_H_

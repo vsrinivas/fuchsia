@@ -9,10 +9,10 @@
 
 #include "src/developer/debug/shared/zx_status_definitions.h"
 
-namespace debug_ipc {
+namespace debug {
 
 const char* ZxStatusToString(zx_status_t status);
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ZX_STATUS_H_

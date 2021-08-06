@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 TEST(Regex, CaseInsensitive) {
   Regex regex;
@@ -34,4 +34,4 @@ TEST(Regex, CaseSensitive) {
   EXPECT_TRUE(regex.Match("TESTaaatest"));
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

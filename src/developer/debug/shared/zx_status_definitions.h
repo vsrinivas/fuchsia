@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-namespace debug_ipc {
+namespace debug {
 
 // This file tracks //zircon/system/public/zircon/errors.h
 // That file holds the zx_status_t definitions and it's not bound to change much, so copying it
@@ -238,6 +238,6 @@ constexpr zx_status_t kZxErrConnectionReset = -75;
 // ZX_ERR_CONNECTION_ABORTED: Connection was aborted.
 constexpr zx_status_t kZxErrConnectionAborted = -76;
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ZX_STATUS_DEFINITIONS_H_

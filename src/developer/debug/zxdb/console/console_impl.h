@@ -42,7 +42,7 @@ class ConsoleImpl : public Console {
   bool SaveHistoryFile();
   void LoadHistoryFile();
 
-  debug_ipc::MessageLoop::WatchHandle stdio_watch_;
+  debug::MessageLoop::WatchHandle stdio_watch_;
 
   line_input::ModalLineInputStdout line_input_;
 

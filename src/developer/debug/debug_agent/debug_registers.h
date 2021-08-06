@@ -46,12 +46,12 @@ class DebugRegisters {
   //
   // Any other |size| values will return error.
   std::optional<WatchpointInfo> SetWatchpoint(debug_ipc::BreakpointType type,
-                                              const debug_ipc::AddressRange& range,
+                                              const debug::AddressRange& range,
                                               uint32_t watchpoint_count);
 
   // Updates the debug registers to remove an installed watchpoint for the given range. Returns
   // true on success, false if the range is not installed.
-  bool RemoveWatchpoint(const debug_ipc::AddressRange& range, uint32_t watchpoint_count);
+  bool RemoveWatchpoint(const debug::AddressRange& range, uint32_t watchpoint_count);
 
   // Decodes the debug registers given the state after a watchpoint exception has been thrown.
   std::optional<WatchpointInfo> DecodeHitWatchpoint() const;

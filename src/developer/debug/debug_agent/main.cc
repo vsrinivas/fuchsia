@@ -24,8 +24,6 @@
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-using namespace debug_ipc;
-
 namespace debug_agent {
 namespace {
 
@@ -119,17 +117,17 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
 
-  debug_ipc::SetLogCategories({LogCategory::kAll});
+  debug::SetLogCategories({debug::LogCategory::kAll});
   if (options.debug_mode) {
     printf("Running the debug agent in debug mode.\n");
-    debug_ipc::SetDebugMode(true);
+    debug::SetDebugMode(true);
   }
 
   if (options.channel_mode || options.port) {
     auto services = sys::ServiceDirectory::CreateFromNamespace();
 
     zx::channel exception_channel;
-    auto message_loop = std::make_unique<PlatformMessageLoop>();
+    auto message_loop = std::make_unique<debug::PlatformMessageLoop>();
     std::string init_error_message;
     if (!message_loop->Init(&init_error_message)) {
       FX_LOGS(ERROR) << init_error_message;

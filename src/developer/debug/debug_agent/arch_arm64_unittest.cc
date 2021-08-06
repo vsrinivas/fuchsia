@@ -22,7 +22,7 @@ TEST(ArchArm64, WriteGeneralRegs) {
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.r[0], 0x0102030405060708u);
   EXPECT_EQ(out.r[1], 0u);
@@ -39,7 +39,7 @@ TEST(ArchArm64, WriteGeneralRegs) {
   regs.emplace_back(debug_ipc::RegisterID::kARMv8_pc, static_cast<uint64_t>(0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.r[0], 0xaabbu);
   EXPECT_EQ(out.r[1], 0u);
@@ -81,7 +81,7 @@ TEST(ArchArm64, WriteVectorRegs) {
 
   zx_thread_state_vector_regs_t out = {};
   zx_status_t res = WriteVectorRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.v[0].low, 0x0000000000000042u);
   EXPECT_EQ(out.v[0].high, 0x1200000000000000u);
@@ -109,7 +109,7 @@ TEST(ArchArm64, WriteDebugRegs) {
 
   zx_thread_state_debug_regs_t out = {};
   zx_status_t res = WriteDebugRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.hw_bps[0].dbgbcr, 0x04030201u);
   EXPECT_EQ(out.hw_bps[1].dbgbcr, 0x05040302u);

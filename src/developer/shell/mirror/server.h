@@ -34,7 +34,7 @@ class SocketConnection {
   // |main_thread_loop| is used for posting a task that creates the debug agent after accepting a
   // a connection. This is because the debug agent assumes it's running on the message loop's
   // thread.
-  Err Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd);
+  Err Accept(debug::MessageLoop* main_thread_loop, int server_fd);
 
   struct SocketConnectionComparator {
     bool operator()(const SocketConnection& one, const SocketConnection& two) {
@@ -50,7 +50,7 @@ class SocketConnection {
   static uint64_t global_id_;
 
   SocketServer* server_;
-  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
+  std::unique_ptr<debug::BufferedFD> buffer_;
   bool connected_ = false;
   uint64_t id_;
 };
@@ -62,7 +62,7 @@ class SocketServer {
 
   // A configuration object for the server.
   struct ConnectionConfig {
-    debug_ipc::PlatformMessageLoop* message_loop = nullptr;
+    debug::PlatformMessageLoop* message_loop = nullptr;
     int port = 0;
     std::optional<std::string> path;
   };
@@ -72,8 +72,7 @@ class SocketServer {
 
   // Sets up loops in a sensible way (one loop to accept a connection, and one loop to respond to
   // requests), and runs a server.  Calls inited_fn when it is done initing.
-  Err RunInLoop(ConnectionConfig config, debug_ipc::FileLineFunction from_here,
-                fit::closure inited_fn);
+  Err RunInLoop(ConnectionConfig config, debug::FileLineFunction from_here, fit::closure inited_fn);
 
   int GetPort() { return config_.port; }
   std::string GetPath() { return *config_.path; }
@@ -96,7 +95,7 @@ class SocketServer {
  private:
   fbl::unique_fd server_socket_;
   std::set<std::unique_ptr<SocketConnection>> connections_;
-  debug_ipc::MessageLoop::WatchHandle connection_monitor_;
+  debug::MessageLoop::WatchHandle connection_monitor_;
   ConnectionConfig config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketServer);
@@ -105,14 +104,14 @@ class SocketServer {
 // Manages sending data along a given StreamBuffer.
 class Update {
  public:
-  Update(debug_ipc::StreamBuffer* stream, const std::string* path)
+  Update(debug::StreamBuffer* stream, const std::string* path)
       : stream_(stream), files_(*path), path_(*path) {}
 
   // Sends the contents of |path| to |stream|.
   Err SendUpdates();
 
  private:
-  debug_ipc::StreamBuffer* stream_;
+  debug::StreamBuffer* stream_;
   Files files_;
   std::string path_;
 };

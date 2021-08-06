@@ -126,7 +126,7 @@ std::string CreateSymbolName(const Command& cmd, const std::vector<std::string>&
 struct DumpModuleContext {
   std::vector<std::string>* names = nullptr;
   std::vector<std::string>* output = nullptr;
-  debug_ipc::Regex* regex = nullptr;  // nullptr if no filter is defined.
+  debug::Regex* regex = nullptr;  // nullptr if no filter is defined.
 };
 
 // Returns true if the list was truncated.
@@ -179,7 +179,7 @@ Err RunVerbSymSearch(ConsoleContext* context, const Command& cmd) {
 
   Console* console = Console::get();
 
-  debug_ipc::Regex regex;
+  debug::Regex regex;
   if (cmd.args().size() == 1) {
     if (!regex.Init(cmd.args().front()))
       return Err("Could not initialize regex %s.", cmd.args().front().c_str());

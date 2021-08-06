@@ -48,7 +48,7 @@ const char* kModuleToSearch = "libdebug_agent_test_so.so";
 
 class ElfSymbolStreamBackend : public MockStreamBackend {
  public:
-  ElfSymbolStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
+  ElfSymbolStreamBackend(debug::MessageLoop* loop) : loop_(loop) {}
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
   const std::string& so_test_build_id() const { return so_test_build_id_; }
@@ -69,7 +69,7 @@ class ElfSymbolStreamBackend : public MockStreamBackend {
   }
 
  private:
-  debug_ipc::MessageLoop* loop_;
+  debug::MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
   std::string so_test_build_id_;
   debug_ipc::SymbolTablesReply reply_;
@@ -100,7 +100,7 @@ TEST(ElfSymbol, Lookup) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, ZX_OK)
-        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug::ZxStatusToString(launch_reply.status);
 
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules

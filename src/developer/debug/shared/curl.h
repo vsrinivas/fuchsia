@@ -17,7 +17,7 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // To use Curl, one must add something like the following to the beginning of their main() function
 // (and include necessary header files).
@@ -121,6 +121,6 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
   FRIEND_MAKE_REF_COUNTED(Curl);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_CURL_H_

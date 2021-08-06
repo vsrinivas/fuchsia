@@ -42,7 +42,7 @@ void DispatchMessage(RemoteAPIAdapter* adapter,
 
 }  // namespace
 
-RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api, debug_ipc::StreamBuffer* stream)
+RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api, debug::StreamBuffer* stream)
     : api_(remote_api), stream_(stream) {}
 
 RemoteAPIAdapter::~RemoteAPIAdapter() {}

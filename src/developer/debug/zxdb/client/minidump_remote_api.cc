@@ -66,26 +66,26 @@ Err ErrNoArch() { return Err("Architecture not supported"); }
 
 template <typename ReplyType>
 void ErrNoLive(fit::callback<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(ErrNoLive(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoDump(fit::callback<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(ErrNoDump(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoArch(fit::callback<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(ErrNoArch(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void Succeed(fit::callback<void(const Err&, ReplyType)> cb, ReplyType r) {
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb = std::move(cb), r]() mutable { cb(Err(), r); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                          [cb = std::move(cb), r]() mutable { cb(Err(), r); });
 }
 
 template <typename ValueType>

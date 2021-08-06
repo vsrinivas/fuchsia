@@ -19,7 +19,7 @@ class Watchpoint : public ProcessBreakpoint {
  public:
   // |type| must be kRead, kReadWrite or kWrite.
   explicit Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
-                      DebuggedProcess* process, const debug_ipc::AddressRange& range);
+                      DebuggedProcess* process, const debug::AddressRange& range);
   ~Watchpoint();
 
   debug_ipc::BreakpointType Type() const override { return type_; }
@@ -41,7 +41,7 @@ class Watchpoint : public ProcessBreakpoint {
     return installed_threads_;
   }
 
-  const debug_ipc::AddressRange& range() const { return range_; }
+  const debug::AddressRange& range() const { return range_; }
 
  private:
   bool Install(DebuggedThread* thread);
@@ -51,7 +51,7 @@ class Watchpoint : public ProcessBreakpoint {
 
   debug_ipc::BreakpointType type_ = debug_ipc::BreakpointType::kLast;
 
-  debug_ipc::AddressRange range_;
+  debug::AddressRange range_;
 
   std::map<zx_koid_t, WatchpointInfo> installed_threads_;
   std::set<zx_koid_t> current_stepping_over_threads_;

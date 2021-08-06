@@ -175,7 +175,7 @@ void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
   SimulateSyscall(std::move(syscall1), controller, interleaved_test, multi_thread);
 
   if (multi_thread) {
-    debug_ipc::MessageLoop::Current()->Run();
+    debug::MessageLoop::Current()->Run();
   }
 
   if (syscall2 != nullptr) {
@@ -276,7 +276,7 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 
   if (!aborted_ && !bad_stack_) {
-    debug_ipc::MessageLoop::Current()->Run();
+    debug::MessageLoop::Current()->Run();
   }
 }
 
@@ -300,7 +300,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
 
   InjectException(notification);
 
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
 }
 
 void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::ExceptionType type,
@@ -322,7 +322,7 @@ void InterceptionWorkflowTest::PerformExceptionTest(
 
   TriggerException(kFirstPid, kFirstThreadKoid, type);
 
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
 }
 
 void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t thread_koid,
@@ -397,11 +397,11 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
     }
   }
 
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
 }
 
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
-                                     debug_ipc::MessageLoop& loop)
+                                     debug::MessageLoop& loop)
     : remote_api_(remote_api), workflow_(&session, &loop) {
   process_koids_ = {kFirstPid, kSecondPid};
   thread_koids_[kFirstPid] = kFirstThreadKoid;
@@ -445,11 +445,11 @@ void ProcessController::Initialize(zxdb::Session& session,
   }
 
   // Attach to processes.
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [this]() {
     workflow_.Attach(process_koids_);
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
 
   // Load modules into program (including the one with the |syscall_name| symbol)
   auto module_symbols = fxl::MakeRefCounted<zxdb::MockModuleSymbols>("zx.so");
@@ -474,9 +474,9 @@ void ProcessController::Initialize(zxdb::Session& session,
     if (target->GetProcess() != nullptr) {
       target->GetProcess()->GetModules(
           [](const zxdb::Err& /*err*/, std::vector<debug_ipc::Module> /*modules*/) {
-            debug_ipc::MessageLoop::Current()->QuitNow();
+            debug::MessageLoop::Current()->QuitNow();
           });
-      debug_ipc::MessageLoop::Current()->Run();
+      debug::MessageLoop::Current()->Run();
     }
   }
 }

@@ -10,7 +10,7 @@
 #include <map>
 #include <vector>
 
-namespace debug_ipc {
+namespace debug {
 
 // This helper class keeps blocks of memory that have been manually added and
 // can reply with subsets of those blocks. This is in turn used by other mocks
@@ -36,6 +36,6 @@ class MockMemory {
   RegisteredMemory mem_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_MOCK_MEMORY_H_

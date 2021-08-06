@@ -62,20 +62,20 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override { return debug_ipc::Arch::kUnknown; }
   void GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), {}); });
   }
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), 0); });
   }
   void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
       cb(GetContextError(), std::vector<uint8_t>());
     });
   }
   void WriteMemory(uint64_t address, std::vector<uint8_t> data, WriteCallback cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(GetContextError()); });
   }
 };
@@ -573,7 +573,7 @@ std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
     return std::nullopt;
 
   uint64_t relative_addr = symbol_context.AbsoluteToRelative(absolute_address);
-  auto found = debug_ipc::LargestLessOrEqual(
+  auto found = debug::LargestLessOrEqual(
       elf_addresses_.begin(), elf_addresses_.end(), relative_addr,
       [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address < addr; },
       [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address == addr; });

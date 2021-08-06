@@ -55,7 +55,7 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
  public:
   using DestroyConnectionCallback = std::function<void()>;
 
-  explicit DebugAdapterContext(Session* session, debug_ipc::StreamBuffer* stream);
+  explicit DebugAdapterContext(Session* session, debug::StreamBuffer* stream);
   virtual ~DebugAdapterContext();
 
   Session* session() { return session_; }
@@ -145,7 +145,7 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
 
 class DebugAdapterReader : public dap::Reader {
  public:
-  explicit DebugAdapterReader(debug_ipc::StreamBuffer* stream) : stream_(stream) {}
+  explicit DebugAdapterReader(debug::StreamBuffer* stream) : stream_(stream) {}
   size_t read(void* buffer, size_t n) override {
     if (!stream_) {
       return 0;
@@ -158,12 +158,12 @@ class DebugAdapterReader : public dap::Reader {
   void close() override { stream_ = nullptr; }
 
  private:
-  debug_ipc::StreamBuffer* stream_ = nullptr;
+  debug::StreamBuffer* stream_ = nullptr;
 };
 
 class DebugAdapterWriter : public dap::Writer {
  public:
-  explicit DebugAdapterWriter(debug_ipc::StreamBuffer* stream) : stream_(stream) {}
+  explicit DebugAdapterWriter(debug::StreamBuffer* stream) : stream_(stream) {}
   bool write(const void* buffer, size_t n) override {
     if (!stream_) {
       return false;
@@ -177,7 +177,7 @@ class DebugAdapterWriter : public dap::Writer {
   void close() override { stream_ = nullptr; }
 
  private:
-  debug_ipc::StreamBuffer* stream_ = nullptr;
+  debug::StreamBuffer* stream_ = nullptr;
 };
 
 }  // namespace zxdb

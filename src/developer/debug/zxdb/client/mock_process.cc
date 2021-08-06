@@ -12,7 +12,7 @@
 
 namespace zxdb {
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 MockProcess::MockProcess(Session* session) : Process(session, Process::StartType::kLaunch) {}
 MockProcess::~MockProcess() = default;

@@ -11,7 +11,7 @@
 
 #include "src/developer/debug/shared/logging/file_line_function.h"
 
-namespace debug_ipc {
+namespace debug {
 
 class LogStatement;
 
@@ -117,6 +117,6 @@ void FlushLogEntries();
 // Returns how many seconds have passed since the program started.
 double SecondsSinceStart();
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_LOGGING_DEBUG_H_

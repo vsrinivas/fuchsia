@@ -17,7 +17,7 @@ namespace {
 using CallPair = std::pair<zx_koid_t, uint64_t>;
 using CallVector = std::vector<CallPair>;
 
-using WPPair = std::pair<zx_koid_t, debug_ipc::AddressRange>;
+using WPPair = std::pair<zx_koid_t, debug::AddressRange>;
 using WPVector = std::vector<WPPair>;
 
 class TestProcessDelegate : public Breakpoint::ProcessDelegate {
@@ -43,13 +43,13 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
   }
 
   debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t process_koid,
-                                   const debug_ipc::AddressRange& range) override {
+                                   const debug::AddressRange& range) override {
     wp_register_calls_.push_back(std::make_pair(process_koid, range));
     return debug::Status();
   }
 
   void UnregisterWatchpoint(Breakpoint*, zx_koid_t process_koid,
-                            const debug_ipc::AddressRange& range) override {
+                            const debug::AddressRange& range) override {
     wp_unregister_calls_.push_back(std::make_pair(process_koid, range));
   }
 
@@ -62,7 +62,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
 };
 
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
-                                                    const debug_ipc::AddressRange& address_range) {
+                                                    const debug::AddressRange& address_range) {
   debug_ipc::ProcessBreakpointSettings settings = {};
   settings.id = {.process = process_koid, .thread = thread_koid};
   settings.address_range = address_range;
@@ -235,8 +235,8 @@ TEST(Breakpoint, WatchpointLocations) {
 
   constexpr zx_koid_t kProcess1Koid = 0x1;
   constexpr zx_koid_t kProcess2Koid = 0x2;
-  constexpr debug_ipc::AddressRange kProcess1Range = {0x100, 0x200};
-  constexpr debug_ipc::AddressRange kProcess2Range = {0x400, 0x800};
+  constexpr debug::AddressRange kProcess1Range = {0x100, 0x200};
+  constexpr debug::AddressRange kProcess2Range = {0x400, 0x800};
 
   debug_ipc::BreakpointSettings settings;
   settings.id = 1;

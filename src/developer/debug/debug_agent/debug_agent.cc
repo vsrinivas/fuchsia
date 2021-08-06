@@ -78,7 +78,7 @@ DebugAgent::~DebugAgent() {
 
 fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void DebugAgent::Connect(debug_ipc::StreamBuffer* stream) {
+void DebugAgent::Connect(debug::StreamBuffer* stream) {
   FX_DCHECK(!stream_) << "A debug agent should not be connected twice!";
   stream_ = stream;
 }
@@ -97,7 +97,7 @@ void DebugAgent::Disconnect() {
   procs_.clear();
 }
 
-debug_ipc::StreamBuffer* DebugAgent::stream() {
+debug::StreamBuffer* DebugAgent::stream() {
   FX_DCHECK(stream_);
   return stream_;
 }
@@ -290,7 +290,7 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::Paus
 
 void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                              debug_ipc::QuitAgentReply* reply) {
-  debug_ipc::MessageLoop::Current()->QuitNow();
+  debug::MessageLoop::Current()->QuitNow();
 };
 
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
@@ -414,7 +414,7 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
 
   DebuggedProcess* process = it->second.get();
 
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [this, process]() mutable {
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [this, process]() mutable {
     debug_ipc::NotifyProcessStarting notify = {};
     notify.koid = process->koid();
     notify.name = process->process_handle().GetName();
@@ -477,7 +477,7 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
 }
 
 debug::Status DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                             const debug_ipc::AddressRange& range) {
+                                             const debug::AddressRange& range) {
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)
     return proc->RegisterWatchpoint(bp, range);
@@ -488,7 +488,7 @@ debug::Status DebugAgent::RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_k
 }
 
 void DebugAgent::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                      const debug_ipc::AddressRange& range) {
+                                      const debug::AddressRange& range) {
   // The process might legitimately be not found if it was terminated.
   DebuggedProcess* proc = GetDebuggedProcess(process_koid);
   if (proc)

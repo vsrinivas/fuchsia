@@ -10,7 +10,7 @@
 #include "src/developer/debug/shared/buffered_stream.h"
 #include "src/developer/debug/shared/message_loop.h"
 
-namespace debug_ipc {
+namespace debug {
 
 class BufferedFD final : public BufferedStream {
  public:
@@ -47,6 +47,6 @@ class BufferedFD final : public BufferedStream {
   MessageLoop::WatchHandle watch_handle_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_BUFFERED_FD_H_

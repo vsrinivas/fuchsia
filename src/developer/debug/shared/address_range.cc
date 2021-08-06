@@ -8,7 +8,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // Implemented out-of-line to avoid bringing <algorithm> into all headers that use address_range.h.
 AddressRange AddressRange::Union(const AddressRange& other) const {
@@ -23,4 +23,4 @@ std::string AddressRange::ToString() const {
   return fxl::StringPrintf("[0x%" PRIx64 ", 0x%" PRIx64 ")", begin_, end_);
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

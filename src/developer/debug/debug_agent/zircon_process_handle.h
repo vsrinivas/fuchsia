@@ -11,7 +11,7 @@
 
 namespace debug_agent {
 
-class ZirconProcessHandle final : public ProcessHandle, public debug_ipc::ZirconExceptionWatcher {
+class ZirconProcessHandle final : public ProcessHandle, public debug::ZirconExceptionWatcher {
  public:
   explicit ZirconProcessHandle(zx::process p);
 
@@ -54,7 +54,7 @@ class ZirconProcessHandle final : public ProcessHandle, public debug_ipc::Zircon
   ProcessHandleObserver* observer_ = nullptr;  // Null means no observer to notify.
 
   // Handle for watching the process exceptions.
-  debug_ipc::MessageLoop::WatchHandle process_watch_handle_;
+  debug::MessageLoop::WatchHandle process_watch_handle_;
 };
 
 }  // namespace debug_agent

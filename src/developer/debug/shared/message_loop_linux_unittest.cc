@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 // Tests that we can get SIGCHLD signals.
 TEST(MessageLoopLinux, SigChild) {
@@ -44,4 +44,4 @@ TEST(MessageLoopLinux, SigChild) {
   loop.Cleanup();
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

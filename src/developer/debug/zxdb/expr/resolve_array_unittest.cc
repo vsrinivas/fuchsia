@@ -136,7 +136,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
                [&called, &result](ErrOrValueVector cb_result) {
                  called = true;
                  result = std::move(cb_result);
-                 debug_ipc::MessageLoop::Current()->QuitNow();
+                 debug::MessageLoop::Current()->QuitNow();
                });
 
   // Should be called async.
@@ -162,7 +162,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   ResolveArrayItem(eval_context, value, kBeginIndex, [&called, &single_result](ErrOrValue result) {
     called = true;
     single_result = std::move(result);
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   // Should be called async.
@@ -221,7 +221,7 @@ TEST_F(ResolveArrayTest, PrettyArray) {
   ResolveArrayItem(eval_context, my_value, kIndex, [&called, &result](ErrOrValue value) {
     called = true;
     result = std::move(value);
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   // The PrettyType executes synchronously so it should complete synchronouly.

@@ -7,27 +7,26 @@
 
 #include <stdint.h>
 
-namespace debug_ipc {
+namespace debug {
 
 constexpr uint64_t kMaxArm64HWBreakpoints = 16;
 
-// Overall functionality for interpreting arm64 specific information. This is defined in debug_ipc
-// because both the client and the debug agent need to access this information.
+// Overall functionality for interpreting arm64 specific information. Both the client and the debug
+// agent need to access this information.
 
 // Macros for obtaining the mask of an arm64 flag.
 // Usage:
 //    FLAG_MASK(Cpsr, EL)
 #define _ARM64_FLAG_MASK(shift, mask) ((uint64_t)((mask) << (shift)))
 #define ARM64_FLAG_MASK(reg, flag) \
-  _ARM64_FLAG_MASK(::debug_ipc::k##reg##_##flag##_##Shift, ::debug_ipc::k##reg##_##flag##_##Mask)
+  _ARM64_FLAG_MASK(::debug::k##reg##_##flag##_##Shift, ::debug::k##reg##_##flag##_##Mask)
 
 // Macros for obtaining the value of an arm64 flag.
 // Usage:
 //    FLAG_VALUE(value, CpsrV)
 #define _ARM64_FLAG_VALUE(value, shift, mask) ((uint8_t)((value >> shift) & mask))
-#define ARM64_FLAG_VALUE(value, reg, flag)                         \
-  _ARM64_FLAG_VALUE(value, ::debug_ipc::k##reg##_##flag##_##Shift, \
-                    ::debug_ipc::k##reg##_##flag##_##Mask)
+#define ARM64_FLAG_VALUE(value, reg, flag) \
+  _ARM64_FLAG_VALUE(value, ::debug::k##reg##_##flag##_##Shift, ::debug::k##reg##_##flag##_##Mask)
 
 // CPSR ------------------------------------------------------------------------
 
@@ -185,6 +184,6 @@ constexpr uint64_t kMDSCR_EL1_TXfull_Mask = 0b1;
 constexpr uint64_t kMDSCR_EL1_RXfull_Shift = 30;
 constexpr uint64_t kMDSCR_EL1_RXfull_Mask = 0b1;
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ARCH_ARM64_H_

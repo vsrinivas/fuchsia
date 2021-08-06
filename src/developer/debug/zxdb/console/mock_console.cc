@@ -18,7 +18,7 @@ void MockConsole::Output(const OutputBuffer& output) {
 
   if (waiting_for_output_) {
     waiting_for_output_ = false;
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   }
 }
 
@@ -28,16 +28,16 @@ void MockConsole::Clear() {
 
   if (waiting_for_output_) {
     waiting_for_output_ = false;
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   }
 }
 
 MockConsole::OutputEvent MockConsole::GetOutputEvent() {
   FX_DCHECK(!waiting_for_output_);
 
-  if (output_queue_.empty() && debug_ipc::MessageLoop::Current()) {
+  if (output_queue_.empty() && debug::MessageLoop::Current()) {
     waiting_for_output_ = true;
-    debug_ipc::MessageLoop::Current()->Run();
+    debug::MessageLoop::Current()->Run();
   }
 
   waiting_for_output_ = false;

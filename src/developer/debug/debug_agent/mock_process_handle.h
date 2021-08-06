@@ -34,7 +34,7 @@ class MockProcessHandle final : public ProcessHandle {
 
   // Use to set mcoked memory values to read. The MockMemory is only used for ReadMemory calls.
   // WriteMemory calls come out in memory_writes().
-  debug_ipc::MockMemory& mock_memory() { return mock_memory_; }
+  debug::MockMemory& mock_memory() { return mock_memory_; }
   std::vector<MemoryWrite>& memory_writes() { return memory_writes_; }
 
   // Value to return from Kill().
@@ -74,7 +74,7 @@ class MockProcessHandle final : public ProcessHandle {
 
   std::vector<MockThreadHandle> threads_;
 
-  debug_ipc::MockMemory mock_memory_;
+  debug::MockMemory mock_memory_;
   std::vector<MemoryWrite> memory_writes_;
 
   debug::Status kill_status_;

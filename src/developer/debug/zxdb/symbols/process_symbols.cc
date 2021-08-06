@@ -283,7 +283,7 @@ const ProcessSymbols::ModuleInfo* ProcessSymbols::InfoForAddress(uint64_t addres
   if (modules_.empty())
     return nullptr;
 
-  auto found = debug_ipc::LargestLessOrEqual(
+  auto found = debug::LargestLessOrEqual(
       modules_.begin(), modules_.end(), address,
       [](const ModuleMap::value_type& v, uint64_t a) { return v.first < a; },
       [](const ModuleMap::value_type& v, uint64_t a) { return v.first == a; });

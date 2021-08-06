@@ -101,7 +101,7 @@ void TargetImpl::Launch(CallbackWithTimestamp callback) {
 
   if (err.has_error()) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), err, weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr), err, 0);
         });
@@ -124,7 +124,7 @@ void TargetImpl::Launch(CallbackWithTimestamp callback) {
 
 void TargetImpl::Kill(Callback callback) {
   if (!process_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr), Err("Error killing: No process."));
         });
@@ -150,7 +150,7 @@ void TargetImpl::Kill(Callback callback) {
 void TargetImpl::Attach(uint64_t koid, CallbackWithTimestamp callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr),
                    Err("Can't attach, program is already running or starting."), 0);
@@ -173,7 +173,7 @@ void TargetImpl::Attach(uint64_t koid, CallbackWithTimestamp callback) {
 
 void TargetImpl::Detach(Callback callback) {
   if (!process_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr), Err("Error detaching: No process."));
         });

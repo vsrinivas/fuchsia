@@ -99,7 +99,7 @@ ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory
   // EOF (ctrl-d) should exit gracefully.
   line_input_.SetEofCallback([this]() {
     line_input_.Hide();
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   // Set stdin to async mode or OnStdinReadable will block.
@@ -116,16 +116,16 @@ fxl::WeakPtr<ConsoleImpl> ConsoleImpl::GetImplWeakPtr() { return impl_weak_facto
 void ConsoleImpl::Init() {
   PreserveStdoutTermios();
 
-  stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
-      debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO,
-      [this](int fd, bool readable, bool, bool) {
-        if (!readable)
-          return;
+  stdio_watch_ =
+      debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead, STDIN_FILENO,
+                                             [this](int fd, bool readable, bool, bool) {
+                                               if (!readable)
+                                                 return;
 
-        char ch;
-        while (read(STDIN_FILENO, &ch, 1) > 0)
-          line_input_.OnInput(ch);
-      });
+                                               char ch;
+                                               while (read(STDIN_FILENO, &ch, 1) > 0)
+                                                 line_input_.OnInput(ch);
+                                             });
 
   LoadHistoryFile();
   line_input_.Show();
@@ -204,7 +204,7 @@ void ConsoleImpl::ModalGetOption(const line_input::ModalPromptOptions& options,
 
 void ConsoleImpl::Quit() {
   line_input_.Hide();
-  debug_ipc::MessageLoop::Current()->QuitNow();
+  debug::MessageLoop::Current()->QuitNow();
 }
 
 void ConsoleImpl::Clear() {

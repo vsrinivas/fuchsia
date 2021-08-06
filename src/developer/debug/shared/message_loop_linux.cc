@@ -11,7 +11,7 @@
 
 #include "src/lib/files/eintr_wrapper.h"
 
-namespace debug_ipc {
+namespace debug {
 
 struct MessageLoopLinux::SignalWatchInfo {
   pid_t pid = -1;
@@ -112,4 +112,4 @@ void MessageLoopLinux::StopWatching(int id) {
   MessageLoopPoll::StopWatching(id);
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

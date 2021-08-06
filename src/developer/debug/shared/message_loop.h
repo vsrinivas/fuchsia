@@ -26,7 +26,7 @@
 #define __TA_REQUIRES(arg)
 #endif
 
-namespace debug_ipc {
+namespace debug {
 
 class MessageLoop;
 
@@ -307,6 +307,6 @@ class MessageLoop::WatchHandle {
 #undef __TA_REQUIRES
 #endif
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_H_

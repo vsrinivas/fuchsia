@@ -81,11 +81,11 @@ DebuggedJob::ProcessHandleSetByKoid DebuggedJob::SetFilters(std::vector<std::str
   for (auto& filter : filters) {
     // We check if this is a package url. If that is the case, me only need the component as a
     // filter, as the whole URL won't match.
-    debug_ipc::ComponentDescription desc;
-    if (debug_ipc::ExtractComponentFromPackageUrl(filter, &desc))
+    debug::ComponentDescription desc;
+    if (debug::ExtractComponentFromPackageUrl(filter, &desc))
       filter = desc.component_name;
 
-    debug_ipc::Regex regex;
+    debug::Regex regex;
     if (!regex.Init(filter))
       FX_LOGS(WARNING) << "Could not initialize regex for filter " << filter;
 
@@ -107,7 +107,7 @@ void DebuggedJob::AppendFilter(std::string filter) {
       return;
   }
 
-  debug_ipc::Regex regex;
+  debug::Regex regex;
   if (!regex.Init(filter)) {
     FX_LOGS(WARNING) << "Could not initialize regex for filter " << filter;
   }

@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -357,4 +357,4 @@ MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(WatchHandle&& othe
   return *this;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

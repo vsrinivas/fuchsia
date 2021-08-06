@@ -163,7 +163,7 @@ void InterceptingProcessObserver::OnSymbolLoadFailure(zxdb::Process* process,
 InterceptionWorkflow::InterceptionWorkflow()
     : session_(new zxdb::Session()),
       delete_session_(true),
-      loop_(new debug_ipc::PlatformMessageLoop()),
+      loop_(new debug::PlatformMessageLoop()),
       delete_loop_(true),
       process_observer_(this),
       thread_observer_(this) {
@@ -175,7 +175,7 @@ InterceptionWorkflow::InterceptionWorkflow()
   session_->thread_observers().AddObserver(&thread_observer_);
 }
 
-InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session, debug_ipc::MessageLoop* loop)
+InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session, debug::MessageLoop* loop)
     : session_(session),
       delete_session_(false),
       loop_(loop),
@@ -257,7 +257,7 @@ void InterceptionWorkflow::Initialize(
   buffer_.set_data_available_callback([this]() { session_->OnStreamReadable(); });
 
   // 3) Provide a loop, if none exists.
-  if (debug_ipc::MessageLoop::Current() == nullptr) {
+  if (debug::MessageLoop::Current() == nullptr) {
     std::string error_message;
     bool success = loop_->Init(&error_message);
     FX_CHECK(success) << error_message;
@@ -599,7 +599,7 @@ void InterceptionWorkflow::DoSetBreakpoints(zxdb::Process* zxdb_process, uint64_
 }
 
 void InterceptionWorkflow::Go() {
-  debug_ipc::MessageLoop* current = debug_ipc::MessageLoop::Current();
+  debug::MessageLoop* current = debug::MessageLoop::Current();
   current->Run();
   current->Cleanup();
 }

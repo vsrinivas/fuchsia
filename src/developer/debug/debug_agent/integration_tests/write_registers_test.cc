@@ -60,7 +60,7 @@ const char* kModuleToSearch = "libdebug_agent_test_so.so";
 // Receives messages from the debug agent and exposes relevant data.
 class RegistersStreamBackend : public MockStreamBackend {
  public:
-  RegistersStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
+  RegistersStreamBackend(debug::MessageLoop* loop) : loop_(loop) {}
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
   const std::vector<NotifyException>& exceptions() const { return exceptions_; }
@@ -115,7 +115,7 @@ class RegistersStreamBackend : public MockStreamBackend {
   std::vector<NotifyException> exceptions_;
   std::optional<debug_ipc::NotifyProcess> process_exit_ = {};
 
-  debug_ipc::MessageLoop* loop_;
+  debug::MessageLoop* loop_;
 };
 
 }  // namespace
@@ -141,7 +141,7 @@ TEST(WriteRegisterTest, BranchOnRAX) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
-        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug::ZxStatusToString(launch_reply.status);
 
     loop->Run();
 
@@ -219,7 +219,7 @@ TEST(WriteRegisterTest, JumpPC) {
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
     ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
-        << "Expected ZX_OK, Got: " << debug_ipc::ZxStatusToString(launch_reply.status);
+        << "Expected ZX_OK, Got: " << debug::ZxStatusToString(launch_reply.status);
 
     loop->Run();
 

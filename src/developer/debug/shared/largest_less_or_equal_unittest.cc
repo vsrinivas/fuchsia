@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 TEST(LargestLessOrEqual, Empty) {
   std::vector<int> empty;
@@ -73,19 +73,19 @@ TEST(LargestLessOrEqual, Duplicates) {
 
   // Querying exactly for a duplicate will return the first one of that sequence.
   EXPECT_EQ(container.begin(), LargestLessOrEqual(container.begin(), container.end(), 1,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                  std::less<int>(), std::equal_to<int>()));
   EXPECT_EQ(container.begin() + 2, LargestLessOrEqual(container.begin(), container.end(), 3,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                      std::less<int>(), std::equal_to<int>()));
   EXPECT_EQ(container.begin() + 5, LargestLessOrEqual(container.begin(), container.end(), 5,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                      std::less<int>(), std::equal_to<int>()));
 
   // Querying for the following value will return the last one of the sequence.
   EXPECT_EQ(container.begin() + 1, LargestLessOrEqual(container.begin(), container.end(), 2,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                      std::less<int>(), std::equal_to<int>()));
   EXPECT_EQ(container.begin() + 4, LargestLessOrEqual(container.begin(), container.end(), 4,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                      std::less<int>(), std::equal_to<int>()));
   EXPECT_EQ(container.begin() + 6, LargestLessOrEqual(container.begin(), container.end(), 6,
-                                                    std::less<int>(), std::equal_to<int>()));
+                                                      std::less<int>(), std::equal_to<int>()));
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

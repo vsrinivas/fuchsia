@@ -48,7 +48,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
     kInvalid,
   };
 
-  BreakpointStreamBackend(MessageLoop* loop, size_t thread_count)
+  BreakpointStreamBackend(debug::MessageLoop* loop, size_t thread_count)
       : loop_(loop), thread_count_(thread_count) {}
 
   void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
@@ -69,7 +69,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
 
   // Getters -------------------------------------------------------------------
 
-  MessageLoop* loop() const { return loop_; }
+  debug::MessageLoop* loop() const { return loop_; }
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
 
@@ -92,7 +92,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   // Similar to ResumeAllThreadsAndRunLoop, but doesn't run the loop.
   void ResumeAllThreads();
 
-  MessageLoop* loop_ = nullptr;
+  debug::MessageLoop* loop_ = nullptr;
   RemoteAPI* remote_api_ = nullptr;
 
   uint64_t so_test_base_addr_ = 0;
@@ -154,8 +154,8 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
 #endif
   // Uncomment these is the test is giving you trouble.
   // Only uncomment SetDebugMode if the test is giving you *real* trouble.
-  // debug_ipc::SetDebugMode(true);
-  // debug_ipc::SetLogCategories({LogCategory::kTest});
+  // debug::SetDebugMode(true);
+  // debug::SetLogCategories({LogCategory::kTest});
 
   // We attempt to load the pre-made .so.
   static constexpr const char kTestSo[] = "debug_agent_test_so.so";

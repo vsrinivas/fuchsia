@@ -9,7 +9,7 @@
 
 #include "src/developer/debug/shared/stream_buffer.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // A base class for implementation-specific version of a buffered stream.
 //
@@ -57,6 +57,6 @@ class BufferedStream : public StreamBuffer::Writer {
   ErrorCallback error_callback_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_BUFFERED_STREAM_H_

@@ -49,8 +49,8 @@ struct DebuggedProcessCreateInfo {
 
 class DebuggedProcess : public ProcessHandleObserver {
  public:
-  using WatchpointMap = std::map<debug_ipc::AddressRange, std::unique_ptr<Watchpoint>,
-                                 debug_ipc::AddressRangeBeginCmp>;
+  using WatchpointMap =
+      std::map<debug::AddressRange, std::unique_ptr<Watchpoint>, debug::AddressRangeBeginCmp>;
 
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
@@ -127,13 +127,13 @@ class DebuggedProcess : public ProcessHandleObserver {
   // Looks for breakpoints at the given address. Null if no breakpoints are at that address.
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
   virtual HardwareBreakpoint* FindHardwareBreakpoint(uint64_t address) const;
-  virtual Watchpoint* FindWatchpoint(const debug_ipc::AddressRange&) const;
+  virtual Watchpoint* FindWatchpoint(const debug::AddressRange&) const;
 
   debug::Status RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
 
-  debug::Status RegisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
-  void UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range);
+  debug::Status RegisterWatchpoint(Breakpoint* bp, const debug::AddressRange& range);
+  void UnregisterWatchpoint(Breakpoint* bp, const debug::AddressRange& range);
 
   // Each time a thread attempts to step over a breakpoint, the breakpoint will enqueue itself and
   // the thread into the step over queue. The step over queue is used so that there is only one

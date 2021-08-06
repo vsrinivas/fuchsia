@@ -62,7 +62,7 @@ class MockRemoteAPIForRegister : public MockRemoteAPI {
     reply.registers.emplace_back(debug_ipc::RegisterID::kX64_rcx,
                                  std::vector<uint8_t>(std::begin(kRcxValue), std::end(kRcxValue)));
 
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(Err(), reply); });
   }
 
@@ -141,7 +141,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   });
 
   // The base pointer should have picked up our register0 value for the base pointer.
-  debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
+  debug::MessageLoop::Current()->RunUntilNoTasks();
   ASSERT_TRUE(called);
   EXPECT_EQ(kMemoryValue, result_base);
 }
@@ -177,7 +177,7 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
     called = true;
   });
 
-  debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
+  debug::MessageLoop::Current()->RunUntilNoTasks();
   ASSERT_TRUE(called);
 
   // The new values should be available for synchronous calling.

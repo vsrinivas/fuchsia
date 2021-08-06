@@ -68,7 +68,7 @@ class SymbolizerImpl : public Symbolizer,
   Printer* printer_;
 
   // The main message loop.
-  debug_ipc::MessageLoopPoll loop_;
+  debug::MessageLoopPoll loop_;
 
   // The entry for interacting with zxdb.
   zxdb::Session session_;

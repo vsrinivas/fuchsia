@@ -78,7 +78,7 @@ std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegis
 void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [id, cb = std::move(cb)]() mutable { cb(RegisterUnavailableErr(id), {}); });
     return;
   }
@@ -104,7 +104,7 @@ void FrameSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vecto
                                             WriteCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
       cb(Err("The register %s can't be written because the frame was deleted.",
              debug_ipc::RegisterIDToString(id)));
     });
@@ -122,7 +122,7 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
 
 void FrameSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
   if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(CallFrameDestroyedErr(), 0); });
     return;
   }

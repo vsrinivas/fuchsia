@@ -13,7 +13,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/socket_watcher.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // An adapter that converts a zx::socket to a StreamBuffer.
 class BufferedZxSocket final : public BufferedStream, public SocketWatcher {
@@ -52,6 +52,6 @@ class BufferedZxSocket final : public BufferedStream, public SocketWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(BufferedZxSocket);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_BUFFERED_ZX_SOCKET_H_

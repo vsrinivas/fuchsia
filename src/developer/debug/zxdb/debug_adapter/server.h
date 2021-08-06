@@ -44,13 +44,13 @@ class DebugAdapterServer {
   uint16_t port_;
 
   fbl::unique_fd server_socket_;
-  debug_ipc::MessageLoop* main_loop_ = nullptr;
+  debug::MessageLoop* main_loop_ = nullptr;
 
   std::unique_ptr<std::thread> background_thread_;
   bool background_thread_exit_ = false;
   fbl::unique_fd exit_pipe_[2];
   std::unique_ptr<DebugAdapterContext> context_;
-  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
+  std::unique_ptr<debug::BufferedFD> buffer_;
 
   fxl::ObserverList<DebugAdapterServerObserver> observers_;
 

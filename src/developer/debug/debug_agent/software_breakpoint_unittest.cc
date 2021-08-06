@@ -120,8 +120,8 @@ std::string ToString(const std::vector<T>& v) {
 }
 
 template <typename T>
-void CheckVectorContainsElements(const debug_ipc::FileLineFunction& location,
-                                 const std::vector<T>& got, const std::vector<T>& expected) {
+void CheckVectorContainsElements(const debug::FileLineFunction& location, const std::vector<T>& got,
+                                 const std::vector<T>& expected) {
   ASSERT_EQ(expected.size(), got.size())
       << location.ToString() << ": "
       << "Expected (" << ToString(expected) << "), Got (" << ToString(got) << ").";

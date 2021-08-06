@@ -72,7 +72,7 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
     called = true;
     EXPECT_TRUE(value.has_error());
     EXPECT_EQ("Invalid pointer 0x10", value.err().msg());
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   EXPECT_FALSE(called);
@@ -86,7 +86,7 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
     called = true;
     EXPECT_TRUE(value.has_error());
     EXPECT_EQ("Invalid pointer 0x10", value.err().msg());
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   EXPECT_FALSE(called);
@@ -141,7 +141,7 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
     EXPECT_FALSE(result.has_error());
     called = true;
     out_value = result.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
 
   // Should have run asynchronously.

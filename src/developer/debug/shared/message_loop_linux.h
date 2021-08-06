@@ -9,7 +9,7 @@
 
 #include "src/developer/debug/shared/message_loop_poll.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // Extension on MessageLoopPool that adds Linux-specific functionality.
 class MessageLoopLinux : public MessageLoopPoll {
@@ -42,6 +42,6 @@ class MessageLoopLinux : public MessageLoopPoll {
   SignalWatchMap signal_watches_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_LINUX_H_

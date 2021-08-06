@@ -255,7 +255,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const zxdb::Err&, debug_ipc::AttachReply)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(zxdb::Err(), debug_ipc::AttachReply()); });
   }
 
@@ -263,7 +263,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
                fit::callback<void(const zxdb::Err&, debug_ipc::ModulesReply)> cb) override {
     debug_ipc::ModulesReply reply;
     data_.PopulateModules(reply.modules);
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
@@ -279,7 +279,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
     }
     debug_ipc::ReadMemoryReply reply;
     data_.PopulateMemoryBlockForAddress(request.address, request.size, reply.blocks.emplace_back());
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
@@ -289,7 +289,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
     // TODO: Parameterize this so we can have more than one test.
     debug_ipc::ReadRegistersReply reply;
     data_.PopulateRegisters(request.id.process, &reply.registers);
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
 
@@ -297,10 +297,10 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
               fit::callback<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb) override {
     debug_ipc::ResumeReply reply;
     data_.Step(request.ids[0].process);
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), reply]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), reply]() mutable {
       cb(zxdb::Err(), reply);
       // This is so that the test can inject the next exception.
-      debug_ipc::MessageLoop::Current()->QuitNow();
+      debug::MessageLoop::Current()->QuitNow();
     });
   }
 
@@ -465,7 +465,7 @@ class InterceptionWorkflowTestArmAborted : public InterceptionWorkflowTest {
 class ProcessController {
  public:
   ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
-                    debug_ipc::MessageLoop& loop);
+                    debug::MessageLoop& loop);
   ~ProcessController();
 
   InterceptionWorkflowTest* remote_api() const { return remote_api_; }

@@ -44,7 +44,7 @@ class SocketServer {
   //            the main thread after the connection has been made. This is because the agent has a
   //            lot of assumptions of being run on the thread of the message loop.
   struct ConnectionConfig {
-    debug_ipc::PlatformMessageLoop* message_loop = nullptr;
+    debug::PlatformMessageLoop* message_loop = nullptr;
     debug_agent::DebugAgent* debug_agent = nullptr;
     int port = 0;
   };
@@ -77,13 +77,13 @@ class SocketConnection {
   // |main_thread_loop| is used for posting a task that creates the debug agent after accepting a
   // a connection. This is because the debug agent assumes it's running on the message loop's
   // thread.
-  bool Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd);
+  bool Accept(debug::MessageLoop* main_thread_loop, int server_fd);
 
  private:
   debug_agent::DebugAgent* debug_agent_ = nullptr;
 
   std::unique_ptr<debug_agent::RemoteAPIAdapter> adapter_;
-  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
+  std::unique_ptr<debug::BufferedFD> buffer_;
   bool connected_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketConnection);

@@ -12,7 +12,7 @@
 namespace debug_agent {
 
 using OwnedStdioHandle = zx::socket;
-using BufferedStdioHandle = debug_ipc::BufferedZxSocket;
+using BufferedStdioHandle = debug::BufferedZxSocket;
 
 // The handles given to a launched process or component.
 //

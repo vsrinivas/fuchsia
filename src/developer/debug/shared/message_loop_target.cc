@@ -20,7 +20,7 @@
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/developer/debug/shared/zx_status.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // MessageLoopTarget -----------------------------------------------------------
 
@@ -43,7 +43,7 @@ bool MessageLoopTarget::Init(std::string* error_message) {
 
   if (status != ZX_OK) {
     *error_message = "Could not initialize message loop: ";
-    error_message->append(debug_ipc::ZxStatusToString(status));
+    error_message->append(debug::ZxStatusToString(status));
     return false;
   }
 
@@ -524,4 +524,4 @@ const char* WatchTypeToString(WatchType type) {
   return "";
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

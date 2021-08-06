@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/component_utils.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -39,4 +39,4 @@ bool ExtractComponentFromPackageUrl(const std::string& url, ComponentDescription
   return true;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

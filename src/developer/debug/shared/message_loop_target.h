@@ -18,7 +18,7 @@
 #include "src/developer/debug/shared/event_handlers.h"
 #include "src/developer/debug/shared/message_loop.h"
 
-namespace debug_ipc {
+namespace debug {
 
 class ExceptionHandler;
 class SignalHandler;
@@ -186,6 +186,6 @@ struct MessageLoopTarget::WatchInfo {
   const async_wait_t* exception_channel_handler_key = nullptr;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_

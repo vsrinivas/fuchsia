@@ -16,7 +16,7 @@
 #include "src/developer/debug/shared/socket_watcher.h"
 #endif
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -511,4 +511,4 @@ TEST(MessageLoop, ZirconSocket) {
 }
 #endif
 
-}  // namespace debug_ipc
+}  // namespace debug

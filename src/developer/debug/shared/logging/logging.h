@@ -10,11 +10,11 @@
 
 #include <sstream>
 
-#include "src/developer/debug/shared/logging/macros.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
+#include "src/developer/debug/shared/logging/macros.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // Normally you would use this macro to create logging statements.
 // Example:
@@ -36,13 +36,12 @@ namespace debug_ipc {
 // }
 //
 
-#define DEBUG_LOG_WITH_LOCATION(category, location)           \
-  ::debug_ipc::LogStatement STRINGIFY(__debug_log, __LINE__)( \
-      location, ::debug_ipc::LogCategory::k##category);       \
+#define DEBUG_LOG_WITH_LOCATION(category, location)                                          \
+  ::debug::LogStatement STRINGIFY(__debug_log, __LINE__)(location,                           \
+                                                         ::debug::LogCategory::k##category); \
   STRINGIFY(__debug_log, __LINE__).stream()
 
-#define DEBUG_LOG(category) \
-  DEBUG_LOG_WITH_LOCATION(category, FROM_HERE)
+#define DEBUG_LOG(category) DEBUG_LOG_WITH_LOCATION(category, FROM_HERE)
 
 // Creates a conditional logger depending whether the debug mode is active or not. See debug.h for
 // more details.
@@ -67,6 +66,6 @@ class LogStatement {
   std::ostringstream stream_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_LOGGING_LOGGING_H_

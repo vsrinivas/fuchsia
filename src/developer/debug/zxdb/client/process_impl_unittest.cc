@@ -30,7 +30,7 @@ class ProcessSink : public MockRemoteAPI {
               fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb) override {
     resume_count_++;
     resume_request_ = request;
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), debug_ipc::ResumeReply()); });
   }
 

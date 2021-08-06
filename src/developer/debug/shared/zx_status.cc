@@ -8,7 +8,7 @@
 
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace debug_ipc {
+namespace debug {
 
 const char* ZxStatusToString(zx_status_t status) {
   switch (status) {
@@ -109,4 +109,4 @@ const char* ZxStatusToString(zx_status_t status) {
   return "<unknown>";
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

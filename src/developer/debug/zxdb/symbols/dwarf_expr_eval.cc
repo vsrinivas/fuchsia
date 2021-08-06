@@ -167,11 +167,11 @@ bool DwarfExprEval::ContinueEval() {
     if (instruction_count == kMaxInstructionsAtOnce) {
       // Enough instructions have run at once. Schedule a callback to continue
       // execution in the message loop.
-      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                  [weak_eval = weak_factory_.GetWeakPtr()]() {
-                                                    if (weak_eval)
-                                                      weak_eval->ContinueEval();
-                                                  });
+      debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [weak_eval = weak_factory_.GetWeakPtr()]() {
+                                                if (weak_eval)
+                                                  weak_eval->ContinueEval();
+                                              });
       return is_complete_;
     }
     instruction_count++;
@@ -885,8 +885,8 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
         if (*is_async_completion) {
           // The nested_eval_ needs to be cleared before continuing, but we can't delete it from
           // within its own callback. Schedule it to be deleted from the message loop.
-          debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                      [old_eval = std::move(nested_eval_)]() {});
+          debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                  [old_eval = std::move(nested_eval_)]() {});
           ContinueEval();
         }
       });

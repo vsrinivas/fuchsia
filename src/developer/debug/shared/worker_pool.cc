@@ -8,7 +8,7 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -241,4 +241,4 @@ void WorkerPool::SignalWork() { work_available_cv_.notify_one(); }
 
 void WorkerPool::SignalAllWorkers() { work_available_cv_.notify_all(); }
 
-}  // namespace debug_ipc
+}  // namespace debug

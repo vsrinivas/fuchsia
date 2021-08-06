@@ -318,7 +318,7 @@ struct ProcessBreakpointSettings {
   uint64_t address = 0;
 
   // Range is used for watchpoints.
-  AddressRange address_range;
+  debug::AddressRange address_range;
 };
 
 // What threads to stop when the breakpoint is hit. These are ordered such that the integer values

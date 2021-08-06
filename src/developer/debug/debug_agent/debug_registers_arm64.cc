@@ -16,7 +16,7 @@ namespace debug_agent {
 namespace {
 
 // Validates that the range is properly aligned and masked. Returns 0 on failure.
-uint64_t ValidateRange(const debug_ipc::AddressRange& range) {
+uint64_t ValidateRange(const debug::AddressRange& range) {
   constexpr uint64_t kMask = 0b11;
 
   if (range.size() == 1) {
@@ -59,7 +59,7 @@ uint32_t GetWatchpointWriteFlag(debug_ipc::BreakpointType type) {
 }
 
 void SetWatchpointFlags(uint32_t* dbgwcr, debug_ipc::BreakpointType type, uint64_t base_address,
-                        const debug_ipc::AddressRange& range) {
+                        const debug::AddressRange& range) {
   if (range.size() == 1) {
     uint32_t bas = 1u << (range.begin() - base_address);
     ARM64_DBGWCR_BAS_SET(dbgwcr, bas);
@@ -169,7 +169,7 @@ bool DebugRegisters::RemoveHWBreakpoint(uint64_t address) {
 }
 
 std::optional<WatchpointInfo> DebugRegisters::SetWatchpoint(debug_ipc::BreakpointType type,
-                                                            const debug_ipc::AddressRange& range,
+                                                            const debug::AddressRange& range,
                                                             uint32_t watchpoint_count) {
   FX_DCHECK(watchpoint_count <= 16);
   if (!IsWatchpointType(type)) {
@@ -212,8 +212,7 @@ std::optional<WatchpointInfo> DebugRegisters::SetWatchpoint(debug_ipc::Breakpoin
   return WatchpointInfo(range, slot);
 }
 
-bool DebugRegisters::RemoveWatchpoint(const debug_ipc::AddressRange& range,
-                                      uint32_t watchpoint_count) {
+bool DebugRegisters::RemoveWatchpoint(const debug::AddressRange& range, uint32_t watchpoint_count) {
   FX_DCHECK(watchpoint_count <= 16);
 
   uint64_t base_address = ValidateRange(range);
@@ -254,7 +253,7 @@ std::optional<WatchpointInfo> DebugRegisters::DecodeHitWatchpoint() const {
   // Get the closest watchpoint.
   uint64_t min_distance = UINT64_MAX;
   int closest_index = -1;
-  debug_ipc::AddressRange closest_range = {};
+  debug::AddressRange closest_range = {};
   for (uint32_t i = 0; i < arch::GetHardwareWatchpointCount(); i++) {
     uint64_t dbgwcr = regs_.hw_wps[i].dbgwcr;
     uint64_t dbgwvr = regs_.hw_wps[i].dbgwvr;  // The actual watchpoint address.
@@ -268,7 +267,7 @@ std::optional<WatchpointInfo> DebugRegisters::DecodeHitWatchpoint() const {
     if (length == 0)
       continue;
 
-    const debug_ipc::AddressRange wp_range = {dbgwvr, dbgwvr + length};
+    const debug::AddressRange wp_range = {dbgwvr, dbgwvr + length};
     if (wp_range.InRange(regs_.far))
       return WatchpointInfo(wp_range, i);
 

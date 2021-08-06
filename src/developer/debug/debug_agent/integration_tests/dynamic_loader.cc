@@ -19,7 +19,7 @@ const char kSoName[] = "debug_agent_test_so.so";
 
 class DynamicLoaderStreamBackend : public LocalStreamBackend {
  public:
-  DynamicLoaderStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
+  DynamicLoaderStreamBackend(debug::MessageLoop* loop) : loop_(loop) {}
 
   void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
 
@@ -44,7 +44,7 @@ class DynamicLoaderStreamBackend : public LocalStreamBackend {
 
   Stage stage_ = Stage::kWaitingForThread;
 
-  debug_ipc::MessageLoop* loop_ = nullptr;
+  debug::MessageLoop* loop_ = nullptr;
   RemoteAPI* remote_api_ = nullptr;
 
   zx_koid_t process_koid_ = 0;

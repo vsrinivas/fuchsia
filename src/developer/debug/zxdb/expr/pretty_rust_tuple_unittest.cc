@@ -45,11 +45,11 @@ class PrettyRustTupleTest : public TestWithLoop {
       EXPECT_EQ(expected, actual);
 
       if (should_quit)
-        debug_ipc::MessageLoop::Current()->QuitNow();
+        debug::MessageLoop::Current()->QuitNow();
     });
     if (!called) {
       should_quit = true;
-      debug_ipc::MessageLoop::Current()->Run();
+      debug::MessageLoop::Current()->Run();
     }
     EXPECT_TRUE(called);
   }

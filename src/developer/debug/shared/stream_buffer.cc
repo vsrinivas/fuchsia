@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-namespace debug_ipc {
+namespace debug {
 
 StreamBuffer::StreamBuffer() = default;
 StreamBuffer::~StreamBuffer() = default;
@@ -96,4 +96,4 @@ void StreamBuffer::FlushWriteBuffer() {
   }
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

@@ -73,8 +73,8 @@ void AsyncDwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
 
                      // Prevent the DwarfExprEval from getting reentrantly deleted from within its
                      // own callback by posting a reference back to the message loop.
-                     debug_ipc::MessageLoop::Current()->PostTask(
-                         FROM_HERE, [this_ref = std::move(this_ref)]() {});
+                     debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                             [this_ref = std::move(this_ref)]() {});
                    });
 }
 

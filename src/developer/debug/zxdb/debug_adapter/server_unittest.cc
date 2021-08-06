@@ -55,8 +55,8 @@ class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObs
   DebugAdapterServer& server() { return server_; }
 
   // DebugAdapterServerObserver methods. Quit loop to continue with the tests.
-  void ClientConnected() override { debug_ipc::MessageLoop::Current()->QuitNow(); }
-  void ClientDisconnected() override { debug_ipc::MessageLoop::Current()->QuitNow(); }
+  void ClientConnected() override { debug::MessageLoop::Current()->QuitNow(); }
+  void ClientDisconnected() override { debug::MessageLoop::Current()->QuitNow(); }
 
  private:
   DebugAdapterServer server_;
@@ -70,7 +70,7 @@ TEST_F(DebugAdapterServerTest, ConnectionTest) {
   TestClient client;
   ASSERT_TRUE(client.Connect(kServerPort));
   // Loop is quit once the observer is notified of the connection
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
   EXPECT_TRUE(server().IsConnected());
 }
 
@@ -81,12 +81,12 @@ TEST_F(DebugAdapterServerTest, ConnectDisconnectTest) {
   ASSERT_TRUE(client.Connect(kServerPort));
 
   // Loop is quit once the observer is notified of the connection
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
   ASSERT_TRUE(server().IsConnected());
   client.Disconnect();
 
   // Loop is quit once the observer is notified of the disconnection
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
   EXPECT_FALSE(server().IsConnected());
 }
 

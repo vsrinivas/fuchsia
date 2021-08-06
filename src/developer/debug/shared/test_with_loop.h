@@ -11,7 +11,7 @@
 
 #include "src/developer/debug/shared/platform_message_loop.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // This class is to be used as a base class for tests requiring a MessageLoop
 // be set up to run them. Derive from it and then use that:
@@ -39,6 +39,6 @@ class TestWithLoop : public testing::Test {
   PlatformMessageLoop loop_;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_TEST_WITH_LOOP_H_

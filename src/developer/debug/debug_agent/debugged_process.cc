@@ -59,9 +59,9 @@ std::string LogPreamble(const DebuggedProcess* process) {
                            process->process_handle().GetName().c_str());
 }
 
-void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess* process,
+void LogRegisterBreakpoint(debug::FileLineFunction location, DebuggedProcess* process,
                            Breakpoint* bp, uint64_t address) {
-  if (!debug_ipc::IsDebugModeActive())
+  if (!debug::IsDebugModeActive())
     return;
 
   std::stringstream ss;
@@ -367,7 +367,7 @@ HardwareBreakpoint* DebuggedProcess::FindHardwareBreakpoint(uint64_t address) co
   return it->second.get();
 }
 
-Watchpoint* DebuggedProcess::FindWatchpoint(const debug_ipc::AddressRange& range) const {
+Watchpoint* DebuggedProcess::FindWatchpoint(const debug::AddressRange& range) const {
   auto it = watchpoints_.lower_bound(range);
   if (it == watchpoints_.end())
     return nullptr;
@@ -423,7 +423,7 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
 }
 
 debug::Status DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
-                                                  const debug_ipc::AddressRange& range) {
+                                                  const debug::AddressRange& range) {
   FX_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->settings().type);
@@ -450,7 +450,7 @@ debug::Status DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
   }
 }
 
-void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug_ipc::AddressRange& range) {
+void DebuggedProcess::UnregisterWatchpoint(Breakpoint* bp, const debug::AddressRange& range) {
   FX_DCHECK(debug_ipc::IsWatchpointType(bp->settings().type))
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->settings().type);

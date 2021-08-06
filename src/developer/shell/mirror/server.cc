@@ -24,7 +24,7 @@ uint64_t SocketConnection::global_id_ = 0;
 
 SocketConnection::~SocketConnection() {}
 
-Err SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int server_fd) {
+Err SocketConnection::Accept(debug::MessageLoop* main_thread_loop, int server_fd) {
   sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
 
@@ -37,22 +37,22 @@ Err SocketConnection::Accept(debug_ipc::MessageLoop* main_thread_loop, int serve
 
   main_thread_loop->PostTask(FROM_HERE, [this, client = std::move(client),
                                          server_loop =
-                                             debug_ipc::MessageLoop::Current()]() mutable {
-    buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(client));
+                                             debug::MessageLoop::Current()]() mutable {
+    buffer_ = std::make_unique<debug::BufferedFD>(std::move(client));
     if (!buffer_->Start()) {
       FX_LOGS(ERROR) << "Error waiting for data.";
-      debug_ipc::MessageLoop::Current()->QuitNow();
+      debug::MessageLoop::Current()->QuitNow();
       return;
     }
 
     buffer_->set_data_available_callback([buffer = buffer_.get(), path = this->server_->GetPath(),
                                           server_loop, connection = this]() {
-      debug_ipc::StreamBuffer stream = buffer->stream();
+      debug::StreamBuffer stream = buffer->stream();
       char buf[32];
       size_t len = stream.Read(buf, 32);
       if (len >= strlen(remote_commands::kQuitCommand) &&
           strncmp(remote_commands::kQuitCommand, buf, len) == 0) {
-        debug_ipc::MessageLoop::Current()->QuitNow();
+        debug::MessageLoop::Current()->QuitNow();
         server_loop->QuitNow();
         return;
       }
@@ -87,8 +87,8 @@ void SocketServer::Run(ConnectionConfig config) {
   // Wait for one connection.
   PRINT_FLUSH("Waiting on port %d for shell connections...\n", config.port);
   config_ = config;
-  connection_monitor_ = debug_ipc::MessageLoop::Current()->WatchFD(
-      debug_ipc::MessageLoop::WatchMode::kRead, server_socket_.get(),
+  connection_monitor_ = debug::MessageLoop::Current()->WatchFD(
+      debug::MessageLoop::WatchMode::kRead, server_socket_.get(),
       [this](int fd, bool readable, bool writable, bool err) {
         if (!readable) {
           return;
@@ -109,12 +109,12 @@ void SocketServer::Run(ConnectionConfig config) {
       });
 }
 
-Err SocketServer::RunInLoop(ConnectionConfig config, debug_ipc::FileLineFunction from_here,
+Err SocketServer::RunInLoop(ConnectionConfig config, debug::FileLineFunction from_here,
                             fit::closure inited_fn) {
   std::string init_error_message;
 
   // This loop manages incoming connections, and runs in this thread.
-  debug_ipc::PlatformMessageLoop server_loop;
+  debug::PlatformMessageLoop server_loop;
   if (!server_loop.Init(&init_error_message)) {
     return Err(kInit, init_error_message);
   }

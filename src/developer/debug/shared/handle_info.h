@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace debug_ipc {
+namespace debug {
 
 // Converts a uint32_t handle type to a string. Returns "<unknown>" on failure.
 std::string HandleTypeToString(uint32_t handle_type);
@@ -24,6 +24,6 @@ std::vector<std::string> HandleRightsToStrings(uint32_t handle_rights);
 // Converts a bitmask of ZX_INFO_VMO_* to a list of strings.
 std::vector<std::string> VmoFlagsToStrings(uint32_t flags);
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_HANDLE_INFO_H_

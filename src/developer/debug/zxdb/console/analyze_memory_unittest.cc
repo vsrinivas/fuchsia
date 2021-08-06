@@ -44,7 +44,7 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   auto analysis = fxl::MakeRefCounted<MemoryAnalysis>(
       opts, [&output](const Err& err, OutputBuffer analysis, uint64_t next_addr) {
         output = analysis;
-        debug_ipc::MessageLoop::Current()->QuitNow();
+        debug::MessageLoop::Current()->QuitNow();
       });
 
   // Setup address space. Make one region inside another. The innermost one should be the one
@@ -109,7 +109,7 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   analysis->SetMemory(MemoryDump(std::move(blocks)));
 
   analysis->Schedule(opts);
-  debug_ipc::MessageLoop::Current()->Run();
+  debug::MessageLoop::Current()->Run();
 
   // The pointer to "inner" aspace entry should be annotated. The "outer" aspace entry is too large
   // and so will be omitted.

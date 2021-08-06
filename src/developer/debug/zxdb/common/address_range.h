@@ -11,10 +11,10 @@ namespace zxdb {
 
 // Bring in the shared AddressRange struct to our namespace so we don't have to qualify everything
 // just because this happens to be shared by the debug agent.
-using AddressRange = ::debug_ipc::AddressRange;
+using AddressRange = ::debug::AddressRange;
 
-using AddressRangeBeginCmp = ::debug_ipc::AddressRangeBeginCmp;
-using AddressRangeEndAddrCmp = ::debug_ipc::AddressRangeEndAddrCmp;
+using AddressRangeBeginCmp = ::debug::AddressRangeBeginCmp;
+using AddressRangeEndAddrCmp = ::debug::AddressRangeEndAddrCmp;
 
 }  // namespace zxdb
 

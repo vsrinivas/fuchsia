@@ -48,11 +48,11 @@ class PSTestRemoteAPI : public MockRemoteAPI {
  public:
   void ProcessTree(const debug_ipc::ProcessTreeRequest& request,
                    fit::callback<void(const Err&, debug_ipc::ProcessTreeReply)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       cb(Err(), GetCannedProcessTreeReply());
 
       // Give control back to the test.
-      debug_ipc::MessageLoop::Current()->QuitNow();
+      debug::MessageLoop::Current()->QuitNow();
     });
   }
 };

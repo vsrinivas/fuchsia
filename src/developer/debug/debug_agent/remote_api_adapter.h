@@ -7,7 +7,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-namespace debug_ipc {
+namespace debug {
 class StreamBuffer;
 }
 
@@ -23,12 +23,12 @@ class RemoteAPIAdapter {
   // whenever there is new data to read on the stream.
   //
   // The pointers must outlive this class (ownership is not taken).
-  RemoteAPIAdapter(RemoteAPI* remote_api, debug_ipc::StreamBuffer* stream);
+  RemoteAPIAdapter(RemoteAPI* remote_api, debug::StreamBuffer* stream);
 
   ~RemoteAPIAdapter();
 
   RemoteAPI* api() { return api_; }
-  debug_ipc::StreamBuffer* stream() { return stream_; }
+  debug::StreamBuffer* stream() { return stream_; }
 
   // Callback for when data is available to read on the stream.
   void OnStreamReadable();
@@ -36,7 +36,7 @@ class RemoteAPIAdapter {
  private:
   // All pointers are non-owning.
   RemoteAPI* api_;
-  debug_ipc::StreamBuffer* stream_;
+  debug::StreamBuffer* stream_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPIAdapter);
 };

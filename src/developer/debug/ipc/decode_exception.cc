@@ -68,7 +68,7 @@ ExceptionType DecodeException(uint32_t code, const X64ExceptionInfo& info) {
 
   std::optional<X64ExceptionInfo::DebugRegs> regs;
   if (auto got = info.FetchDebugRegs()) {
-    DEBUG_LOG(Archx64) << "DR6: " << debug_ipc::DR6ToString(got->dr6);
+    DEBUG_LOG(Archx64) << "DR6: " << debug::DR6ToString(got->dr6);
     regs = std::move(got.value());
   }
 

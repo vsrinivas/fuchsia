@@ -384,10 +384,10 @@ void PrettyZxStatusT::Format(FormatNode* node, const FormatOptions& options,
                              const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   FormatNumericNode(node, options);
 
-  if (node->value().type()->byte_size() == sizeof(debug_ipc::zx_status_t)) {
-    debug_ipc::zx_status_t int_val = node->value().GetAs<debug_ipc::zx_status_t>();
+  if (node->value().type()->byte_size() == sizeof(debug::zx_status_t)) {
+    debug::zx_status_t int_val = node->value().GetAs<debug::zx_status_t>();
     node->set_description(node->description() +
-                          fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
+                          fxl::StringPrintf(" (%s)", debug::ZxStatusToString(int_val)));
   }
 }
 

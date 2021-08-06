@@ -126,14 +126,14 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
       workflow->UnixConnect(*options.unix_connect, attach);
     }
   };
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, connect);
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, connect);
 }
 
 int ConsoleMain(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  debug::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   DecodeOptions decode_options;

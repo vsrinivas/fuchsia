@@ -109,7 +109,7 @@ TEST_F(ThreadImplTest, Frames) {
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.
-  thread->GetStack().SyncFrames([](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  thread->GetStack().SyncFrames([](const Err&) { debug::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // The thread should have the new stack we provided.
@@ -276,7 +276,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   thread->JumpTo(kDestAddress, [&called, &out_err](const Err& err) {
     called = true;
     out_err = err;
-    debug_ipc::MessageLoop::Current()->QuitNow();
+    debug::MessageLoop::Current()->QuitNow();
   });
   EXPECT_FALSE(called);
 

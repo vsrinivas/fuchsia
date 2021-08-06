@@ -24,7 +24,7 @@ DebugAdapterServer::DebugAdapterServer(Session* session, uint16_t port)
 }
 
 Err DebugAdapterServer::Init() {
-  main_loop_ = debug_ipc::MessageLoop::Current();
+  main_loop_ = debug::MessageLoop::Current();
   server_socket_.reset(socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   if (!server_socket_.is_valid()) {
     return Err("Could not create socket.");
@@ -126,7 +126,7 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
     observer.ClientConnected();
   }
 
-  buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(client));
+  buffer_ = std::make_unique<debug::BufferedFD>(std::move(client));
   if (!buffer_->Start()) {
     FX_LOGS(ERROR) << "Failed to initialize debug adapter buffer";
     return;

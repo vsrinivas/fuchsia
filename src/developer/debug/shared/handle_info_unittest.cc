@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -62,4 +62,4 @@ TEST(HandleInfo, VmoFlagsToStrings) {
       VmoFlagsToString(0b1111111));
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

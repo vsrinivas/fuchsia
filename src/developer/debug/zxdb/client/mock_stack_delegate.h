@@ -41,7 +41,7 @@ class MockStackDelegate : public Stack::Delegate {
   }
 
   void SyncFramesForStack(fit::callback<void(const Err&)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), this]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), this]() mutable {
       stack_->SetFramesForTest(std::move(async_frames_), true);
       cb(Err());
     });

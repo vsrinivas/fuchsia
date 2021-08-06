@@ -103,8 +103,8 @@ class ThreadHandle {
 
   // NOTE: AddressRange is what is used to differentiate watchpoints, not |type|.
   virtual std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,
-                                                          const debug_ipc::AddressRange& range) = 0;
-  virtual bool UninstallWatchpoint(const debug_ipc::AddressRange& range) = 0;
+                                                          const debug::AddressRange& range) = 0;
+  virtual bool UninstallWatchpoint(const debug::AddressRange& range) = 0;
 };
 
 }  // namespace debug_agent

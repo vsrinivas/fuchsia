@@ -14,10 +14,10 @@ class MessageLoopWrapper {
  public:
   MessageLoopWrapper();
   ~MessageLoopWrapper();
-  debug_ipc::MessageLoop* loop() { return loop_.get(); }
+  debug::MessageLoop* loop() { return loop_.get(); }
 
  private:
-  std::unique_ptr<debug_ipc::PlatformMessageLoop> loop_;
+  std::unique_ptr<debug::PlatformMessageLoop> loop_;
 };
 
 }  // namespace debug_agent

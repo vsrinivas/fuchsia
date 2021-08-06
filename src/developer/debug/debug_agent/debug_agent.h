@@ -46,10 +46,10 @@ class DebugAgent : public RemoteAPI,
   // Connects the debug agent to a stream buffer.
   // The buffer can be disconnected and the debug agent will remain intact until the moment a new
   // buffer is connected and messages start flowing through again.
-  void Connect(debug_ipc::StreamBuffer*);
+  void Connect(debug::StreamBuffer*);
   void Disconnect();
 
-  debug_ipc::StreamBuffer* stream();
+  debug::StreamBuffer* stream();
 
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
@@ -137,9 +137,9 @@ class DebugAgent : public RemoteAPI,
                        debug_ipc::AddOrChangeBreakpointReply* reply);
 
   debug::Status RegisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                   const debug_ipc::AddressRange& range) override;
+                                   const debug::AddressRange& range) override;
   void UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                            const debug_ipc::AddressRange& range) override;
+                            const debug::AddressRange& range) override;
 
   // Job/Process/Thread Management -----------------------------------------------------------------
 
@@ -164,7 +164,7 @@ class DebugAgent : public RemoteAPI,
 
   std::unique_ptr<SystemInterface> system_interface_;
 
-  debug_ipc::StreamBuffer* stream_ = nullptr;
+  debug::StreamBuffer* stream_ = nullptr;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;

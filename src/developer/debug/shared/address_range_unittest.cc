@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-namespace debug_ipc {
+namespace debug {
 
 TEST(AddressRange, InRange) {
   constexpr AddressRange range(1, 5);
@@ -77,4 +77,4 @@ TEST(AddressRange, Union) {
   EXPECT_EQ(AddressRange(100, 200), range.Union(AddressRange(102, 200)));
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

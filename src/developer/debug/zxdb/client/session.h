@@ -19,10 +19,10 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace debug_ipc {
+namespace debug {
 class BufferedFD;
 class StreamBuffer;
-}  // namespace debug_ipc
+}  // namespace debug
 
 namespace zxdb {
 
@@ -69,7 +69,7 @@ class Session : public SettingStoreObserver {
 
   // Creates with a previously-allocated connection. The pointer must outlive this class. In this
   // mode, the stream can not be disconnected.
-  explicit Session(debug_ipc::StreamBuffer* stream);
+  explicit Session(debug::StreamBuffer* stream);
   virtual ~Session();
 
   fxl::WeakPtr<Session> GetWeakPtr();
@@ -168,7 +168,7 @@ class Session : public SettingStoreObserver {
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
   // For test purposes, so that the Session appears to be connected.
-  void set_stream(debug_ipc::StreamBuffer* stream) { stream_ = stream; }
+  void set_stream(debug::StreamBuffer* stream) { stream_ = stream; }
 
  protected:
   fxl::ObserverList<SessionObserver> observers_;
@@ -201,7 +201,7 @@ class Session : public SettingStoreObserver {
   // Callback when a connection has been successful or failed.
   void ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
                           const debug_ipc::HelloReply& reply,
-                          std::unique_ptr<debug_ipc::BufferedFD> buffer,
+                          std::unique_ptr<debug::BufferedFD> buffer,
                           fit::callback<void(const Err&)> callback);
 
   // Sends a notification to all the UI observers.
@@ -237,7 +237,7 @@ class Session : public SettingStoreObserver {
   //
   // This could be null when the connection_storage_ isn't when we're waiting for the initial
   // connection.
-  debug_ipc::StreamBuffer* stream_ = nullptr;
+  debug::StreamBuffer* stream_ = nullptr;
 
   std::unique_ptr<RemoteAPI> remote_api_;
 
@@ -245,7 +245,7 @@ class Session : public SettingStoreObserver {
   // hold the underlying OS connection that is used to back stream_ as well as the
   //
   // Code should use stream_ for sending and receiving.
-  std::unique_ptr<debug_ipc::BufferedFD> connection_storage_;
+  std::unique_ptr<debug::BufferedFD> connection_storage_;
 
   // Stores what the session is currently connected to.
   std::string minidump_path_;

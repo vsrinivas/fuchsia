@@ -6,7 +6,7 @@
 
 #include "src/developer/debug/shared/largest_less_or_equal.h"
 
-namespace debug_ipc {
+namespace debug {
 
 void MockMemory::AddMemory(uint64_t address, std::vector<uint8_t> data) {
   mem_[address] = std::move(data);
@@ -30,7 +30,7 @@ std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address, uint32_t size) con
 MockMemory::RegisteredMemory::const_iterator MockMemory::FindBlockForAddress(
     uint64_t address) const {
   // Locates the potential map entry covering this address.
-  auto found = debug_ipc::LargestLessOrEqual(
+  auto found = LargestLessOrEqual(
       mem_.begin(), mem_.end(), address,
       [](const RegisteredMemory::value_type& v, uint64_t a) { return v.first < a; },
       [](const RegisteredMemory::value_type& v, uint64_t a) { return v.first == a; });
@@ -44,4 +44,4 @@ MockMemory::RegisteredMemory::const_iterator MockMemory::FindBlockForAddress(
   return found;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

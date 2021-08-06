@@ -57,7 +57,7 @@ std::vector<debug::Status> HandleActions(const std::vector<debug_ipc::ConfigActi
   // We should always return the same amount of responses, in the same order.
   FX_DCHECK(actions.size() == results.size());
 
-  if (debug_ipc::IsDebugModeActive()) {
+  if (debug::IsDebugModeActive()) {
     for (size_t i = 0; i < actions.size(); i++) {
       DEBUG_LOG(Agent) << "Action " << debug_ipc::ConfigAction::TypeToString(actions[i].type)
                        << " (" << actions[i].value << "): " << results[i].message();

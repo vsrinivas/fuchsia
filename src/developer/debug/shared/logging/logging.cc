@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-namespace debug_ipc {
+namespace debug {
 
 LogStatement::LogStatement(FileLineFunction origin, LogCategory category)
     : origin_(std::move(origin)), category_(category) {
@@ -19,9 +19,7 @@ LogStatement::LogStatement(FileLineFunction origin, LogCategory category)
   PushLogEntry(this);
 }
 
-std::string LogStatement::GetMsg() {
-  return stream_.str();
-}
+std::string LogStatement::GetMsg() { return stream_.str(); }
 
 LogStatement::~LogStatement() {
   if (!IsLogCategoryActive(category_))
@@ -33,5 +31,4 @@ LogStatement::~LogStatement() {
   PopLogEntry(category_, origin_, stream_.str(), start_time_, SecondsSinceStart());
 }
 
-}  // namespace debug_ipc
-// namespace debug_ipc
+}  // namespace debug

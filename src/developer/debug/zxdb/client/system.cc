@@ -248,7 +248,7 @@ void Download::Finish() {
   if (!result_cb_)
     return;
 
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
                   path = std::move(path_)]() mutable { result_cb(err, path); });
 
@@ -877,7 +877,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
-    debug_ipc::SetDebugMode(store.GetBool(setting_name));
+    debug::SetDebugMode(store.GetBool(setting_name));
   } else if (setting_name == ClientSettings::System::kSecondChanceExceptions) {
     debug_ipc::UpdateGlobalSettingsRequest request;
     auto updates = ParseExceptionStrategyUpdates(store.GetList(setting_name));
@@ -931,7 +931,7 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
 void System::AttachToProcess(uint64_t pid, Target::CallbackWithTimestamp callback) {
   // Don't allow attaching to a process more than once.
   if (Process* process = ProcessFromKoid(pid)) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback),
                     weak_target = process->GetTarget()->GetWeakPtr(), pid]() mutable {
           callback(weak_target,

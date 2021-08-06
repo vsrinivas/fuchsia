@@ -138,7 +138,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   // Only non-null when in the process of connecting.
   std::unique_ptr<std::thread> thread_;
 
-  debug_ipc::MessageLoop* main_loop_ = nullptr;
+  debug::MessageLoop* main_loop_ = nullptr;
 
   // Access only on the main thread.
   fxl::WeakPtr<Session> session_;
@@ -149,7 +149,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   // the buffer so needs no synchronization. It would be cleaner to pass this in the lambdas to
   // avoid threading confusion, but move-only types can't be bound.
   fbl::unique_fd socket_;
-  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
+  std::unique_ptr<debug::BufferedFD> buffer_;
 
   // Callback when the connection is complete (or fails). Access only on the main thread.
   fit::callback<void(const Err&)> callback_;
@@ -159,7 +159,7 @@ void Session::PendingConnection::Initiate(fxl::WeakPtr<Session> session,
                                           fit::callback<void(const Err&)> callback) {
   FX_DCHECK(!thread_.get());  // Duplicate Initiate() call.
 
-  main_loop_ = debug_ipc::MessageLoop::Current();
+  main_loop_ = debug::MessageLoop::Current();
   session_ = std::move(session);
   callback_ = std::move(callback);
 
@@ -192,7 +192,7 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
   }
 
   FX_DCHECK(socket_.is_valid());
-  buffer_ = std::make_unique<debug_ipc::BufferedFD>(std::move(socket_));
+  buffer_ = std::make_unique<debug::BufferedFD>(std::move(socket_));
   buffer_->Start();
 
   // The connection is now established, so we set up the handlers before we send the first request
@@ -294,7 +294,7 @@ Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
   ListenForSystemSettings();
 }
 
-Session::Session(debug_ipc::StreamBuffer* stream)
+Session::Session(debug::StreamBuffer* stream)
     : stream_(stream), system_(this), weak_factory_(this) {
   ListenForSystemSettings();
 }
@@ -393,7 +393,7 @@ bool Session::ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool 
 
   if (err.has_error()) {
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
+      debug::MessageLoop::Current()->PostTask(
           FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
     }
     return false;
@@ -409,7 +409,7 @@ void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(cons
     return;
 
   if (info.host.empty() && last_connection_.host.empty()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       cb(Err("No previous destination to reconnect to."));
     });
     return;
@@ -450,7 +450,7 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
   Err err = minidump->Open(path);
 
   if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
 
     return;
@@ -481,7 +481,7 @@ void Session::Disconnect(fit::callback<void(const Err&)> callback) {
     }
 
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
+      debug::MessageLoop::Current()->PostTask(
           FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
     }
     return;
@@ -495,7 +495,7 @@ void Session::Disconnect(fit::callback<void(const Err&)> callback) {
     // The connection is persistent (passed in via the constructor) and can't
     // be disconnected.
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
+      debug::MessageLoop::Current()->PostTask(
           FROM_HERE, [callback = std::move(callback)]() mutable {
             callback(Err(ErrType::kGeneral,
                          "The connection can't be disconnected in this build "
@@ -771,7 +771,7 @@ ThreadImpl* Session::ThreadImplFromKoid(const debug_ipc::ProcessThreadId& id) {
 
 void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
                                  const debug_ipc::HelloReply& reply,
-                                 std::unique_ptr<debug_ipc::BufferedFD> buffer,
+                                 std::unique_ptr<debug::BufferedFD> buffer,
                                  fit::callback<void(const Err&)> callback) {
   if (pending.get() != pending_connection_.get()) {
     // When the connection doesn't match the pending one, that means the pending connection was
@@ -926,7 +926,7 @@ void Session::QuitAgent(fit::callback<void(const Err&)> cb) {
   if (!is_connected) {
     Disconnect(nullptr);
     if (cb) {
-      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+      debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
         cb(Err("Not connected to a debug agent."));
       });
     }

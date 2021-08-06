@@ -25,7 +25,7 @@ TEST(ArchX64, WriteGeneralRegs) {
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.rax, 0x0102030405060708u);
   EXPECT_EQ(out.rbx, 0x0102030405060708u);
@@ -52,7 +52,7 @@ TEST(ArchX64, WriteGeneralRegs) {
   regs.emplace_back(debug_ipc::RegisterID::kX64_r10, static_cast<uint64_t>(0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.rax, 0xaabbu);
   EXPECT_EQ(out.rbx, 0x0102030405060708u);
@@ -99,7 +99,7 @@ TEST(ArchX64, WriteFPRegs) {
 
   zx_thread_state_fp_regs_t out = {};
   zx_status_t res = WriteFloatingPointRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.fcw, 0x0201u);
   EXPECT_EQ(out.fsw, 0x0403u);
@@ -127,7 +127,7 @@ TEST(ArchX64, WriteVectorRegs) {
 
   zx_thread_state_vector_regs_t out = {};
   zx_status_t res = WriteVectorRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.zmm[0].v[0], 0x0000000000000042u);
   EXPECT_EQ(out.zmm[0].v[1], 0x0000000000000000u);
@@ -161,7 +161,7 @@ TEST(ArchX64, WriteDebugRegs) {
 
   zx_thread_state_debug_regs_t out = {};
   zx_status_t res = WriteDebugRegisters(regs, &out);
-  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
+  ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
 
   EXPECT_EQ(out.dr[0], 0x0807060504030201u);
   EXPECT_EQ(out.dr[1], 0x0908070605040302u);

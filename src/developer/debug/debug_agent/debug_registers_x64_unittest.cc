@@ -42,14 +42,14 @@ uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
   return -1;
 }
 
-void SetHWBreakpointTest(debug_ipc::FileLineFunction file_line, DebugRegisters& debug_regs,
+void SetHWBreakpointTest(debug::FileLineFunction file_line, DebugRegisters& debug_regs,
                          uint64_t address, bool expected_result) {
   bool result = debug_regs.SetHWBreakpoint(address);
   ASSERT_EQ(result, expected_result) << "[" << file_line.ToString() << "] "
                                      << "Got: " << result << ", expected: " << expected_result;
 }
 
-void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line, DebugRegisters& debug_regs,
+void RemoveHWBreakpointTest(debug::FileLineFunction file_line, DebugRegisters& debug_regs,
                             uint64_t address, bool expected_result) {
   bool result = debug_regs.RemoveHWBreakpoint(address);
   ASSERT_EQ(result, expected_result) << "[" << file_line.ToString() << "] "

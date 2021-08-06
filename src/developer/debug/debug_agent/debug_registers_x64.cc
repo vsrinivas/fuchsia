@@ -42,7 +42,7 @@ bool IsWatchpoint(uint64_t dr7, size_t index) {
   return false;
 }
 
-uint64_t WatchpointAddressAlign(const debug_ipc::AddressRange& range) {
+uint64_t WatchpointAddressAlign(const debug::AddressRange& range) {
   // clang-format off
   switch (range.size()) {
     case 1: return range.begin();
@@ -242,7 +242,7 @@ bool DebugRegisters::RemoveHWBreakpoint(uint64_t address) {
 
 // On x64, watchpoint_count is unnecessary for this computation.
 std::optional<WatchpointInfo> DebugRegisters::SetWatchpoint(debug_ipc::BreakpointType type,
-                                                            const debug_ipc::AddressRange& range,
+                                                            const debug::AddressRange& range,
                                                             uint32_t watchpoint_count) {
   if (!debug_ipc::IsWatchpointType(type))
     return std::nullopt;
@@ -280,8 +280,7 @@ std::optional<WatchpointInfo> DebugRegisters::SetWatchpoint(debug_ipc::Breakpoin
 }
 
 // On x64, watchpoint_count is unnecessary for this computation.
-bool DebugRegisters::RemoveWatchpoint(const debug_ipc::AddressRange& range,
-                                      uint32_t watchpoint_count) {
+bool DebugRegisters::RemoveWatchpoint(const debug::AddressRange& range, uint32_t watchpoint_count) {
   uint64_t aligned_address = WatchpointAddressAlign(range);
   if (!aligned_address)
     return false;

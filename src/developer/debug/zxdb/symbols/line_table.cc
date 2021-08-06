@@ -54,7 +54,7 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
   TargetPointer rel_address = address_context.AbsoluteToRelative(absolute_address);
   // LargestLessOrEqual() will return the first item when it compares equal to an item and that's
   // a sequence of exact matches. That's the behavior we want here.
-  auto found = debug_ipc::LargestLessOrEqual(
+  auto found = debug::LargestLessOrEqual(
       seq.begin(), seq.end(), rel_address,
       [](const Row& row, TargetPointer addr) { return row.Address.Address < addr; },
       [](const Row& row, TargetPointer addr) { return row.Address.Address == addr; });
@@ -81,7 +81,7 @@ const LineTable::Sequence* LineTable::GetSequenceForRelativeAddress(
   if (sequences_.empty())
     return nullptr;
 
-  auto found = debug_ipc::LargestLessOrEqual(
+  auto found = debug::LargestLessOrEqual(
       sequences_.begin(), sequences_.end(), relative_address,
       [](const Sequence& seq, TargetPointer addr) { return seq.addresses.begin() < addr; },
       [](const Sequence& seq, TargetPointer addr) { return seq.addresses.begin() == addr; });

@@ -86,7 +86,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   std::optional<std::tuple<uint8_t*, uint8_t*, uint8_t*>> tls_helpers_;
   std::map<debug_ipc::RegisterID, RegData> regs_;
 
-  debug_ipc::MockMemory memory_;
+  debug::MockMemory memory_;
 
   RegisterWrites register_writes_;  // Logs calls to WriteRegister().
   MemoryWrites memory_writes_;      // Logs calls to WriteMemory().

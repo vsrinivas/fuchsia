@@ -9,7 +9,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-namespace debug_ipc {
+namespace debug {
 
 // Callbacks for exceptions from a process exception port.
 class ZirconExceptionWatcher {
@@ -30,6 +30,6 @@ class ZirconExceptionWatcher {
   virtual void OnException(zx::exception exception_token, zx_exception_info_t exception_info) {}
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ZIRCON_EXCEPTION_WATCHER_H_

@@ -15,7 +15,7 @@
 namespace debug_agent {
 namespace {
 
-using AddressRange = ::debug_ipc::AddressRange;
+using AddressRange = ::debug::AddressRange;
 
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
@@ -24,17 +24,16 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
   }
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
 
-  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t,
-                                   const debug_ipc::AddressRange&) override {
+  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t, const debug::AddressRange&) override {
     return debug::Status();
   }
-  void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
+  void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug::AddressRange&) override {}
 };
 
 // If |thread| is null, it means a process-wide breakpoint.
 debug_ipc::ProcessBreakpointSettings CreateLocation(const MockProcess& process,
                                                     const MockThread* thread,
-                                                    const debug_ipc::AddressRange& range) {
+                                                    const debug::AddressRange& range) {
   debug_ipc::ProcessBreakpointSettings location = {};
   location.id.process = process.koid();
   if (thread)
@@ -122,7 +121,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   debug_ipc::BreakpointSettings settings2;
   settings2.type = debug_ipc::BreakpointType::kWrite;
   settings2.locations.push_back(CreateLocation(process, thread2, kAddressRange));
-  debug_ipc::AddressRange address_range2(kAddressRange.begin(), kAddressRange.end() + 8);
+  debug::AddressRange address_range2(kAddressRange.begin(), kAddressRange.end() + 8);
   settings2.locations.push_back(CreateLocation(process, thread3, address_range2));
 
   Breakpoint breakpoint2(&process_delegate);
@@ -226,7 +225,7 @@ TEST(Watchpoint, InstalledRanges) {
   Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
-  const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
+  const debug::AddressRange kSubRange = {0x900, 0x2100};
   constexpr int kSlot = 1;
   thread1->mock_thread_handle().set_watchpoint_range_to_return(kSubRange);
   thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);
@@ -272,7 +271,7 @@ TEST(Watchpoint, MatchesException) {
   Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
-  const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
+  const debug::AddressRange kSubRange = {0x900, 0x2100};
   constexpr int kSlot = 1;
   thread1->mock_thread_handle().set_watchpoint_range_to_return(kSubRange);
   thread1->mock_thread_handle().set_watchpoint_slot_to_return(kSlot);

@@ -37,7 +37,7 @@ debug::Status MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_i
 debug::Status MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_id,
                                                            zx_koid_t process_koid,
                                                            zx_koid_t thread_koid,
-                                                           const debug_ipc::AddressRange& range,
+                                                           const debug::AddressRange& range,
                                                            debug_ipc::BreakpointType type) {
   debug_ipc::ProcessBreakpointSettings location;
   location.id = {.process = process_koid, .thread = thread_koid};

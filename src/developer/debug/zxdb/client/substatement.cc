@@ -186,7 +186,7 @@ void GetSubstatementCallsForLine(
 
   if (line_code.empty()) {
     // No code for this line to disassemble. All we have are the inlines (if any).
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), inlines = std::move(inlines)]() mutable {
           cb(Err(), std::move(inlines));
         });

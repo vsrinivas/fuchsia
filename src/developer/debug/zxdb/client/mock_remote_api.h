@@ -99,7 +99,7 @@ class MockRemoteAPI : public RemoteAPI {
   int breakpoint_remove_count_ = 0;
   debug_ipc::AddOrChangeBreakpointRequest last_breakpoint_add_;
   debug_ipc::WriteRegistersRequest last_write_registers_;
-  debug_ipc::MockMemory memory_;
+  debug::MockMemory memory_;
 };
 
 }  // namespace zxdb

@@ -26,7 +26,7 @@
 
 namespace zxdb {
 
-using ::debug_ipc::Curl;
+using ::debug::Curl;
 
 namespace {
 
@@ -230,11 +230,11 @@ void CloudStorageSymbolServerImpl::OnAuthenticationResponse(Curl::Error result,
     }
 
     time *= kMilli;
-    debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, time,
-                                                 [weak_this = weak_factory_.GetWeakPtr()]() {
-                                                   if (weak_this)
-                                                     weak_this->AuthRefresh();
-                                                 });
+    debug::MessageLoop::Current()->PostTimer(FROM_HERE, time,
+                                             [weak_this = weak_factory_.GetWeakPtr()]() {
+                                               if (weak_this)
+                                                 weak_this->AuthRefresh();
+                                             });
   }
 
   ChangeState(SymbolServer::State::kReady);
@@ -253,7 +253,7 @@ void CloudStorageSymbolServerImpl::OnAuthenticationResponse(Curl::Error result,
 void CloudStorageSymbolServer::Authenticate(const std::string& data,
                                             fit::callback<void(const Err&)> cb) {
   if (state() != SymbolServer::State::kAuth) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err("Authentication not required.")); });
     return;
   }
@@ -374,7 +374,7 @@ void CloudStorageSymbolServerImpl::CheckFetch(const std::string& build_id,
   auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err("Server not ready."), nullptr); });
     return;
   }
@@ -409,7 +409,7 @@ void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id, DebugSymbo
   auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err("Server not ready."), ""); });
     return;
   }
@@ -438,10 +438,9 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
   // Compute the destination file from the build ID.
   if (build_id.size() <= 2) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [build_id, cb = std::move(cb)]() mutable {
-          cb(Err("Invalid build ID \"" + build_id + "\" for symbol fetch."), "");
-        });
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [build_id, cb = std::move(cb)]() mutable {
+      cb(Err("Invalid build ID \"" + build_id + "\" for symbol fetch."), "");
+    });
     return;
   }
   auto target_path = std::filesystem::path(cache_path) / build_id.substr(0, 2);
@@ -465,7 +464,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
   }
 
   if (!file) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       cb(Err("Error opening temporary file."), "");
     });
     return;

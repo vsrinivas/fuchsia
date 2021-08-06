@@ -10,7 +10,7 @@
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // An implementation of StreamBuffer that provides the simplest-possible buffering to memory for
 // test purposes.
@@ -46,6 +46,6 @@ class TestStreamBuffer : public StreamBuffer::Writer {
   FXL_DISALLOW_COPY_AND_ASSIGN(TestStreamBuffer);
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_TEST_STREAM_BUFFER_H_

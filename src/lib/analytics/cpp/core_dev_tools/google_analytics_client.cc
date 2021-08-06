@@ -12,7 +12,7 @@
 
 namespace analytics::core_dev_tools {
 
-using ::debug_ipc::Curl;
+using ::debug::Curl;
 
 namespace {
 

@@ -20,11 +20,10 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
   }
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
 
-  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t,
-                                   const debug_ipc::AddressRange&) override {
+  debug::Status RegisterWatchpoint(Breakpoint*, zx_koid_t, const debug::AddressRange&) override {
     return debug::Status();
   }
-  void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
+  void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug::AddressRange&) override {}
 };
 
 // Fills a vector with the breakpoint instruction for the current architecture. The size will vary
@@ -47,7 +46,7 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
 }
 
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
-                                                    const debug_ipc::AddressRange& range) {
+                                                    const debug::AddressRange& range) {
   debug_ipc::ProcessBreakpointSettings location = {};
   location.id = {.process = process_koid, .thread = thread_koid};
   location.address_range = range;
@@ -55,8 +54,8 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
   return location;
 }
 
-debug_ipc::AddressRange SetLocation(Breakpoint* breakpoint, zx_koid_t koid,
-                                    const debug_ipc::AddressRange& range) {
+debug::AddressRange SetLocation(Breakpoint* breakpoint, zx_koid_t koid,
+                                const debug::AddressRange& range) {
   debug_ipc::BreakpointSettings settings;
   settings.type = debug_ipc::BreakpointType::kWrite;
   settings.locations.push_back(CreateLocation(koid, 0, range));
@@ -74,7 +73,7 @@ constexpr uint64_t kAddress2 = 0x5678;
 constexpr uint64_t kAddress3 = 0x9abc;
 constexpr uint64_t kAddress4 = 0xdef0;
 
-constexpr debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
+constexpr debug::AddressRange kAddressRange1 = {0x1, 0x2};
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;
@@ -171,14 +170,14 @@ TEST(DebuggedProcess, WatchpointRegistration) {
 
   // 1 byte.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 1};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 1};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).ok());
   }
 
   // 2 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 2};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 2};
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.
@@ -189,14 +188,14 @@ TEST(DebuggedProcess, WatchpointRegistration) {
 
   // 3 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 3};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 3};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 4 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 4};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 4};
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.
@@ -207,35 +206,35 @@ TEST(DebuggedProcess, WatchpointRegistration) {
 
   // 5 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 5};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 5};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 6 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 6};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 6};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 6 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 6};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 6};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 7 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 7};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 7};
     SetLocation(&breakpoint, process.koid(), range);
     ASSERT_TRUE(process.RegisterWatchpoint(&breakpoint, range).has_error());
   }
 
   // 8 bytes.
   for (uint32_t i = 0; i < 16; i++) {
-    debug_ipc::AddressRange range = {0x10 + i, 0x10 + i + 8};
+    debug::AddressRange range = {0x10 + i, 0x10 + i + 8};
     SetLocation(&breakpoint, process.koid(), range);
 
     // Only aligned values should work.

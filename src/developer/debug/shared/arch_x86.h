@@ -9,23 +9,23 @@
 
 #include <string>
 
-namespace debug_ipc {
+namespace debug {
 
-// Overall functionality for interpreting x86 specific information. This is defined in debug_ipc
-// because both the client and the debug agent need to access this information.
+// Overall functionality for interpreting x86 specific information. Both the client and the debug
+// agent need to access this information.
 
 // Macros for obtaining the mask of an x86 flag.
 // Usage:
 //    FLAG_MASK(Dr7LEN0)
 #define _X86_FLAG_MASK(shift, mask) ((uint64_t)((mask) << (shift)))
-#define X86_FLAG_MASK(flag) _X86_FLAG_MASK(::debug_ipc::k##flag##Shift, ::debug_ipc::k##flag##Mask)
+#define X86_FLAG_MASK(flag) _X86_FLAG_MASK(::debug::k##flag##Shift, ::debug::k##flag##Mask)
 
 // Macros for obtaining the value of an x86 flag.
 // Usage:
 //    FLAG_VALUE(value, RflagsNT)
 #define _X86_FLAG_VALUE(value, shift, mask) ((uint8_t)((value >> shift) & mask))
 #define X86_FLAG_VALUE(value, flag) \
-  _X86_FLAG_VALUE(value, ::debug_ipc::k##flag##Shift, ::debug_ipc::k##flag##Mask)
+  _X86_FLAG_VALUE(value, ::debug::k##flag##Shift, ::debug::k##flag##Mask)
 
 constexpr uint64_t kRflagsCFShift = 0;  // Carry Flag.
 constexpr uint64_t kRflagsCFMask = 0x1;
@@ -125,6 +125,6 @@ std::string DR6ToString(uint64_t dr6);
 
 std::string DR7ToString(uint64_t dr7);
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ARCH_X86_H_

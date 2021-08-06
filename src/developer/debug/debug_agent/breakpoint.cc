@@ -55,14 +55,15 @@ void Breakpoint::ProcessDelegate::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t
   FX_NOTREACHED() << "Should override.";
 }
 
-debug::Status Breakpoint::ProcessDelegate::RegisterWatchpoint(
-    Breakpoint* bp, zx_koid_t process_koid, const debug_ipc::AddressRange& range) {
+debug::Status Breakpoint::ProcessDelegate::RegisterWatchpoint(Breakpoint* bp,
+                                                              zx_koid_t process_koid,
+                                                              const debug::AddressRange& range) {
   FX_NOTREACHED() << "Should override.";
   return debug::Status("Expecting override.");
 }
 
 void Breakpoint::ProcessDelegate::UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                                       const debug_ipc::AddressRange& range) {
+                                                       const debug::AddressRange& range) {
   FX_NOTREACHED() << "Should override.";
 }
 
@@ -80,7 +81,7 @@ void LogAppliesToThread(const Breakpoint* bp, zx_koid_t pid, zx_koid_t tid, bool
                         << applies;
 }
 
-void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) {
+void LogSetSettings(debug::FileLineFunction location, const Breakpoint* bp) {
   std::stringstream ss;
 
   // Print a list of locations (process + thread + address) place of an actual breakpoint.

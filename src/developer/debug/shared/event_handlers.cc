@@ -16,7 +16,7 @@
 #include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -192,4 +192,4 @@ void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher, async_wait
   loop->HandleChannelException(handler, std::move(exception), exception_info);
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

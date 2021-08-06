@@ -11,8 +11,8 @@ namespace zxdb {
 OutputBuffer LoopUntilAsyncOutputBufferComplete(fxl::RefPtr<AsyncOutputBuffer> buffer) {
   if (!buffer->is_complete()) {
     // Need to wait for async completion.
-    buffer->SetCompletionCallback([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
-    debug_ipc::MessageLoop::Current()->Run();
+    buffer->SetCompletionCallback([]() { debug::MessageLoop::Current()->QuitNow(); });
+    debug::MessageLoop::Current()->Run();
   }
   return buffer->DestructiveFlatten();
 }

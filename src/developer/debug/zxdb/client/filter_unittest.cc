@@ -14,7 +14,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 class FilterSink : public RemoteAPI {
  public:

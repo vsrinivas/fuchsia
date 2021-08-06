@@ -10,7 +10,7 @@
 
 #include <string>
 
-namespace debug_ipc {
+namespace debug {
 
 // Represents a range of addresses with common operations.
 //
@@ -95,6 +95,6 @@ struct AddressRangeEqualityCmp {
   }
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_ADDRESS_RANGE_H_

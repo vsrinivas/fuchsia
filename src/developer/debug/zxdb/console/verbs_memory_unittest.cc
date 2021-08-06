@@ -13,7 +13,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 class MemoryMockRemoteAPI : public MockRemoteAPI {
  public:

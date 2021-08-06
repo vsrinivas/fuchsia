@@ -53,7 +53,7 @@ class MockDebugAgentHarness {
       debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware);
   debug::Status AddOrChangeBreakpoint(
       uint32_t breakpoint_id, zx_koid_t process_koid, zx_koid_t thread_koid,
-      const debug_ipc::AddressRange& range,
+      const debug::AddressRange& range,
       debug_ipc::BreakpointType type = debug_ipc::BreakpointType::kSoftware);
   void Pause(zx_koid_t process_koid = 0, zx_koid_t thread_koid = 0);
   void Resume(

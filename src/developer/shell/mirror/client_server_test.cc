@@ -25,14 +25,14 @@ class ClientServerTest : public ::testing::Test {
 
 class MessageLoopHolder {
  public:
-  explicit MessageLoopHolder(std::unique_ptr<debug_ipc::PlatformMessageLoop> ptr)
+  explicit MessageLoopHolder(std::unique_ptr<debug::PlatformMessageLoop> ptr)
       : ptr_(std::move(ptr)) {}
   ~MessageLoopHolder() { ptr_->Cleanup(); }
-  debug_ipc::PlatformMessageLoop* operator->() { return ptr_.get(); }
-  debug_ipc::PlatformMessageLoop* get() { return ptr_.get(); }
+  debug::PlatformMessageLoop* operator->() { return ptr_.get(); }
+  debug::PlatformMessageLoop* get() { return ptr_.get(); }
 
  private:
-  std::unique_ptr<debug_ipc::PlatformMessageLoop> ptr_;
+  std::unique_ptr<debug::PlatformMessageLoop> ptr_;
 };
 
 TEST_F(ClientServerTest, RoundTrip) {

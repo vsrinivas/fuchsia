@@ -12,7 +12,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-namespace debug_ipc {
+namespace debug {
 
 // Simple RAII class wrapper over the POSIX regex API.
 //
@@ -44,6 +44,6 @@ class Regex {
   std::optional<regex_t> handle_ = std::nullopt;
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_REGEX_H_

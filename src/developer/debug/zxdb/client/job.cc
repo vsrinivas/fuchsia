@@ -85,7 +85,7 @@ void Job::OnAttachReply(Callback callback, const Err& err, uint64_t koid,
 void Job::AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr), Err("Can't attach, job is already running or starting."));
         });
@@ -125,7 +125,7 @@ void Job::AttachForTesting(uint64_t koid, const std::string& name) {
 
 void Job::Detach(Callback callback) {
   if (state_ != State::kAttached) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), weak_ptr = GetWeakPtr()]() mutable {
           callback(std::move(weak_ptr), Err("Error detaching: No job."));
         });

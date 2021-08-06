@@ -63,7 +63,7 @@ std::optional<containers::array_view<uint8_t>> SymbolDataProvider::GetRegister(
 }
 
 void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), std::vector<uint8_t>()); });
 }
 
@@ -103,15 +103,15 @@ void SymbolDataProvider::GetRegisters(const std::vector<debug_ipc::RegisterID>& 
 
 void SymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
                                        WriteCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb = std::move(cb)]() mutable { cb(NoFrameErr()); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                          [cb = std::move(cb)]() mutable { cb(NoFrameErr()); });
 }
 
 std::optional<uint64_t> SymbolDataProvider::GetFrameBase() { return std::nullopt; }
 
 void SymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), 0); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                          [cb = std::move(cb)]() mutable { cb(NoFrameErr(), 0); });
 }
 
 uint64_t SymbolDataProvider::GetCanonicalFrameAddress() const { return 0; }
@@ -127,14 +127,14 @@ void SymbolDataProvider::GetTLSSegment(const SymbolContext& /*symbol_context*/,
 }
 
 void SymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoProcessErr(), std::vector<uint8_t>()); });
 }
 
 void SymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
                                      WriteCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoProcessErr()); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE,
+                                          [cb = std::move(cb)]() mutable { cb(NoProcessErr()); });
 }
 
 }  // namespace zxdb

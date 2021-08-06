@@ -42,9 +42,9 @@ std::string ThreadPreamble(const DebuggedThread* thread) {
                            thread->process()->process_handle().GetName().c_str(), thread->koid());
 }
 
-void LogHitBreakpoint(debug_ipc::FileLineFunction location, const DebuggedThread* thread,
+void LogHitBreakpoint(debug::FileLineFunction location, const DebuggedThread* thread,
                       ProcessBreakpoint* process_breakpoint, uint64_t address) {
-  if (!debug_ipc::IsDebugModeActive())
+  if (!debug::IsDebugModeActive())
     return;
 
   std::stringstream ss;
@@ -56,9 +56,9 @@ void LogHitBreakpoint(debug_ipc::FileLineFunction location, const DebuggedThread
   DEBUG_LOG_WITH_LOCATION(Thread, location) << ss.str();
 }
 
-void LogExceptionNotification(debug_ipc::FileLineFunction location, const DebuggedThread* thread,
+void LogExceptionNotification(debug::FileLineFunction location, const DebuggedThread* thread,
                               const debug_ipc::NotifyException& exception) {
-  if (!debug_ipc::IsDebugModeActive())
+  if (!debug::IsDebugModeActive())
     return;
 
   std::stringstream ss;

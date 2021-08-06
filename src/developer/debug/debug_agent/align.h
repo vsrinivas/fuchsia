@@ -25,7 +25,7 @@ namespace debug_agent {
 // track this range.
 //
 // If the range cannot be aligned (eg. unaligned 8 byte range), it will return a null option.
-std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange& range);
+std::optional<debug::AddressRange> AlignRange(const debug::AddressRange& range);
 
 }  // namespace debug_agent
 

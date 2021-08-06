@@ -10,7 +10,7 @@
 namespace zxdb {
 
 // Alias for TestWithLoop in our namespace.
-using TestWithLoop = debug_ipc::TestWithLoop;
+using TestWithLoop = debug::TestWithLoop;
 
 }  // namespace zxdb
 

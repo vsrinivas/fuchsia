@@ -160,8 +160,8 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
 int ConsoleMain(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  debug::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
   std::vector<std::string> params;
@@ -187,7 +187,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  debug_ipc::MessageLoopPoll loop;
+  debug::MessageLoopPoll loop;
   std::string error_message;
   if (!loop.Init(&error_message)) {
     fprintf(stderr, "%s", error_message.c_str());
@@ -202,9 +202,9 @@ int ConsoleMain(int argc, const char* argv[]) {
     Analytics::Init(session, options.analytics);
     Analytics::IfEnabledSendInvokeEvent(&session);
 
-    debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
+    debug::SetLogCategories({debug::LogCategory::kAll});
     if (options.debug_mode) {
-      debug_ipc::SetDebugMode(true);
+      debug::SetDebugMode(true);
       session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
     }
 

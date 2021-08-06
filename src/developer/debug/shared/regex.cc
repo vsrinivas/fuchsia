@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace debug_ipc {
+namespace debug {
 
 Regex::Regex() = default;
 
@@ -50,4 +50,4 @@ bool Regex::Match(const std::string& candidate) const {
   return status == 0;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

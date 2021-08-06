@@ -56,7 +56,7 @@ std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegist
 
 void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
                                               GetRegisterCallback callback) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE,
       [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr(), id]() mutable {
         if (!weak_provider) {
@@ -78,14 +78,13 @@ void MockSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector
   register_writes_.emplace_back(id, std::move(data));
 
   // Declare success.
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb = std::move(cb)]() mutable { cb(Err()); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 
 std::optional<uint64_t> MockSymbolDataProvider::GetFrameBase() { return bp_; }
 
 void MockSymbolDataProvider::GetFrameBaseAsync(GetFrameBaseCallback callback) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE,
       [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr()]() mutable {
         if (!weak_provider) {
@@ -103,7 +102,7 @@ std::optional<uint64_t> MockSymbolDataProvider::GetDebugAddressForContext(
 
 void MockSymbolDataProvider::GetTLSSegment(const SymbolContext& /*symbol_context*/,
                                            GetTLSSegmentCallback cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb), tls_segment = tls_segment_]() mutable { cb(tls_segment); });
 }
 
@@ -112,7 +111,7 @@ uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const { return cfa_;
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   std::vector<uint8_t> result = memory_.ReadMemory(address, size);
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [callback = std::move(callback), result]() mutable { callback(Err(), result); });
 }
 
@@ -121,8 +120,7 @@ void MockSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> 
   memory_writes_.emplace_back(address, std::move(data));
 
   // Declare success.
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb = std::move(cb)]() mutable { cb(Err()); });
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err()); });
 }
 
 }  // namespace zxdb

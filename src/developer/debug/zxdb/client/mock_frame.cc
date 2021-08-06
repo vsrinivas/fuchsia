@@ -93,13 +93,13 @@ void MockFrame::GetRegisterCategoryAsync(
   else
     err = Err("Register category unavailable from mock.");
 
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [err, regs, cb = std::move(cb)]() mutable { cb(err, regs); });
 }
 
 void MockFrame::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
                               fit::callback<void(const Err&)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
     cb(Err("Writing registers not (yet) supported by the mock."));
   });
 }
@@ -107,7 +107,7 @@ void MockFrame::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> dat
 std::optional<uint64_t> MockFrame::GetBasePointer() const { return frame_base_; }
 
 void MockFrame::GetBasePointerAsync(fit::callback<void(uint64_t)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [bp = frame_base_, cb = std::move(cb)]() mutable { cb(bp); });
 }
 

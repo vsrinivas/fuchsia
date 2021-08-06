@@ -59,7 +59,7 @@ class DebugAgentMockProcess : public MockProcess {
 
 // Tests -------------------------------------------------------------------------------------------
 
-class DebugAgentTests : public debug_ipc::TestWithLoop {};
+class DebugAgentTests : public debug::TestWithLoop {};
 
 TEST_F(DebugAgentTests, OnGlobalStatus) {
   MockDebugAgentHarness harness;
@@ -293,8 +293,8 @@ TEST_F(DebugAgentTests, OnAttach) {
 }
 
 TEST_F(DebugAgentTests, AttachToLimbo) {
-  // debug_ipc::SetDebugMode(true);
-  // debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
+  // debug::SetDebugMode(true);
+  // debug::SetLogCategories({debug::LogCategory::kAll});
   uint32_t transaction_id = 1u;
 
   MockDebugAgentHarness harness;

@@ -14,7 +14,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -299,4 +299,4 @@ const char* LogCategoryToString(LogCategory category) {
   return "<unknown>";
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

@@ -58,7 +58,7 @@ class VerbStatus : public RemoteAPITest {
 }  // namespace
 
 TEST_F(VerbStatus, Status) {
-  debug_ipc::StreamBuffer stream;
+  debug::StreamBuffer stream;
   session().set_stream(&stream);
   ASSERT_TRUE(session().IsConnected());
 

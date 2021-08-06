@@ -138,7 +138,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   MockThread* thread = process->AddThread(kThreadKoid);
 
   // Add a watchpoint.
-  const debug_ipc::AddressRange kRange = {0x1000, 0x1008};
+  const debug::AddressRange kRange = {0x1000, 0x1008};
   constexpr uint32_t kBreakpointId = 99;
   ASSERT_TRUE(harness
                   .AddOrChangeBreakpoint(kBreakpointId, kProcKoid, kThreadKoid, kRange,

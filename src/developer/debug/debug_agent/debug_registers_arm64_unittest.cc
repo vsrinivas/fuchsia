@@ -144,14 +144,14 @@ bool ResetCheck(DebugRegisters& regs, uint64_t address, uint64_t size,
   return Check(regs, address, size, type, expected, expected_bas);
 }
 
-void SetHWBreakpointTest(debug_ipc::FileLineFunction file_line, DebugRegisters& debug_regs,
+void SetHWBreakpointTest(debug::FileLineFunction file_line, DebugRegisters& debug_regs,
                          uint64_t address, bool expected_result) {
   bool result = debug_regs.SetHWBreakpoint(address);
   ASSERT_EQ(result, expected_result) << "[" << file_line.ToString() << "] "
                                      << "Got: " << result << ", expected: " << expected_result;
 }
 
-void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line, DebugRegisters& debug_regs,
+void RemoveHWBreakpointTest(debug::FileLineFunction file_line, DebugRegisters& debug_regs,
                             uint64_t address, bool expected_result) {
   bool result = debug_regs.RemoveHWBreakpoint(address);
   ASSERT_EQ(result, expected_result) << "[" << file_line.ToString() << "] "
@@ -786,12 +786,12 @@ TEST(DebugRegistersArm64, DifferentTypes) {
 TEST(DebugRegistersArm64, SetupRemoveWatchpoint) {
   DebugRegisters regs;
 
-  const debug_ipc::AddressRange kRange1 = {0x100, 0x101};
-  const debug_ipc::AddressRange kRange2 = {0x100, 0x102};
-  const debug_ipc::AddressRange kRange3 = {0x100, 0x104};
-  const debug_ipc::AddressRange kRange4 = {0x100, 0x108};
-  const debug_ipc::AddressRange kRange5 = {0x100, 0x105};
-  const debug_ipc::AddressRange kRange6 = {0x200, 0x201};
+  const debug::AddressRange kRange1 = {0x100, 0x101};
+  const debug::AddressRange kRange2 = {0x100, 0x102};
+  const debug::AddressRange kRange3 = {0x100, 0x104};
+  const debug::AddressRange kRange4 = {0x100, 0x108};
+  const debug::AddressRange kRange5 = {0x100, 0x105};
+  const debug::AddressRange kRange6 = {0x200, 0x201};
 
   auto install = regs.SetWatchpoint(debug_ipc::BreakpointType::kWrite, kRange1, kWatchpointCount);
   ASSERT_TRUE(install);

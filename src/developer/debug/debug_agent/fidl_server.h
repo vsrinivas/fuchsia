@@ -21,7 +21,7 @@ class DebugAgentImpl : public fuchsia::debugger::DebugAgent {
  private:
   bool has_connection_ = false;
   std::unique_ptr<debug_agent::RemoteAPIAdapter> adapter_;
-  std::unique_ptr<debug_ipc::BufferedZxSocket> buffer_;
+  std::unique_ptr<debug::BufferedZxSocket> buffer_;
   debug_agent::DebugAgent* debug_agent_;
 };
 

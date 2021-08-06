@@ -60,11 +60,11 @@ debug::Status ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
 
   if (!process_watch_handle_.watching()) {
     // Start watching.
-    debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
+    debug::MessageLoopTarget* loop = debug::MessageLoopTarget::Current();
     FX_DCHECK(loop);  // Loop must be created on this thread first.
 
     // Register for debug exceptions.
-    debug_ipc::MessageLoopTarget::WatchProcessConfig config;
+    debug::MessageLoopTarget::WatchProcessConfig config;
     config.process_name = GetName();
     config.process_handle = process_.get();
     config.process_koid = GetKoid();

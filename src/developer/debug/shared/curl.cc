@@ -8,7 +8,7 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -55,7 +55,7 @@ class Curl::MultiHandle final : public fxl::RefCountedThreadSafe<Curl::MultiHand
   CURLM* multi_handle_;
 
   // Manages the ownership of WatchHandles.
-  std::map<curl_socket_t, debug_ipc::MessageLoop::WatchHandle> watches_;
+  std::map<curl_socket_t, MessageLoop::WatchHandle> watches_;
 
   // Manages the ownership of easy handles to prevent them from being destructed when an async
   // transfer is in progress.
@@ -99,7 +99,7 @@ void Curl::MultiHandle::ProcessResponses() {
   }
   process_pending_ = true;
 
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [self = fxl::RefPtr<MultiHandle>(this)]() {
+  MessageLoop::Current()->PostTask(FROM_HERE, [self = fxl::RefPtr<MultiHandle>(this)]() {
     self->process_pending_ = false;
 
     int _ignore;
@@ -136,24 +136,24 @@ int Curl::MultiHandle::SocketFunction(CURL* /*easy*/, curl_socket_t s, int what,
   if (what == CURL_POLL_REMOVE || what == CURL_POLL_NONE) {
     instance_->watches_.erase(s);
   } else {
-    debug_ipc::MessageLoop::WatchMode mode;
+    MessageLoop::WatchMode mode;
 
     switch (what) {
       case CURL_POLL_IN:
-        mode = debug_ipc::MessageLoop::WatchMode::kRead;
+        mode = MessageLoop::WatchMode::kRead;
         break;
       case CURL_POLL_OUT:
-        mode = debug_ipc::MessageLoop::WatchMode::kWrite;
+        mode = MessageLoop::WatchMode::kWrite;
         break;
       case CURL_POLL_INOUT:
-        mode = debug_ipc::MessageLoop::WatchMode::kReadWrite;
+        mode = MessageLoop::WatchMode::kReadWrite;
         break;
       default:
         FX_NOTREACHED();
         return -1;
     }
 
-    instance_->watches_[s] = debug_ipc::MessageLoop::Current()->WatchFD(
+    instance_->watches_[s] = MessageLoop::Current()->WatchFD(
         mode, s,
         [self = fxl::RefPtr<MultiHandle>(instance_)](int fd, bool read, bool write, bool err) {
           int action = 0;
@@ -208,9 +208,9 @@ int Curl::MultiHandle::TimerFunction(CURLM* /*multi*/, long timeout_ms, void* /*
   };
 
   if (timeout_ms == 0) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, std::move(cb));
+    MessageLoop::Current()->PostTask(FROM_HERE, std::move(cb));
   } else {
-    debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, timeout_ms, std::move(cb));
+    MessageLoop::Current()->PostTimer(FROM_HERE, timeout_ms, std::move(cb));
   }
 
   return 0;
@@ -366,4 +366,4 @@ long Curl::ResponseCode() {
   return ret;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

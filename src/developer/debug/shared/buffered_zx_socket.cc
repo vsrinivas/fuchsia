@@ -11,7 +11,7 @@
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 
-namespace debug_ipc {
+namespace debug {
 
 BufferedZxSocket::BufferedZxSocket() = default;
 
@@ -111,4 +111,4 @@ size_t BufferedZxSocket::ConsumeStreamBufferData(const char* data, size_t len) {
   return written;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

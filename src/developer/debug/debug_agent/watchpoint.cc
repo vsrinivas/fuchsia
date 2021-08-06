@@ -39,7 +39,7 @@ enum class WarningType {
   kUninstall,
 };
 
-void Warn(debug_ipc::FileLineFunction origin, WarningType type, zx_koid_t thread_koid,
+void Warn(debug::FileLineFunction origin, WarningType type, zx_koid_t thread_koid,
           uint64_t address) {
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
   printf("[%s:%d][%s] Could not %s HW breakpoint for thread %u at %" PRIX64, origin.file().c_str(),
@@ -88,7 +88,7 @@ std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
 }  // namespace
 
 Watchpoint::Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
-                       DebuggedProcess* process, const debug_ipc::AddressRange& range)
+                       DebuggedProcess* process, const debug::AddressRange& range)
     : ProcessBreakpoint(breakpoint, process, range.begin()), type_(type), range_(range) {
   FX_DCHECK(IsWatchpointType(type))
       << "Wrong breakpoint type: " << debug_ipc::BreakpointTypeToString(type);

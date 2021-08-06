@@ -14,7 +14,7 @@
 
 using namespace std::chrono_literals;
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -71,7 +71,7 @@ void WaitForTasksToBeDone(TestWorkerPoolObserver* observer) {
 
 TEST(WorkerPool, PostTasks) {
   // Enable for debugging the test.
-  // debug_ipc::SetDebugMode(true);
+  // debug::SetDebugMode(true);
 
   std::mutex mutex;
   std::condition_variable task_done_cv;
@@ -176,4 +176,4 @@ void TestWorkerPoolObserver::Reset() {
 
 }  // namespace
 
-}  // namespace debug_ipc
+}  // namespace debug

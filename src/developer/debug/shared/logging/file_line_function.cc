@@ -7,7 +7,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace debug_ipc {
+namespace debug {
 
 FileLineFunction::FileLineFunction() = default;
 FileLineFunction::FileLineFunction(std::string file, int line, std::string function)
@@ -30,4 +30,4 @@ bool operator==(const FileLineFunction& a, const FileLineFunction& b) {
 
 bool operator!=(const FileLineFunction& a, const FileLineFunction& b) { return !operator==(a, b); }
 
-}  // namespace debug_ipc
+}  // namespace debug

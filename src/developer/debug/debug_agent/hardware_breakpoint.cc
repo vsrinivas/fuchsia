@@ -42,7 +42,7 @@ enum class WarningType {
   kUninstall,
 };
 
-void Warn(const debug_ipc::FileLineFunction& origin, WarningType type, zx_koid_t thread_koid,
+void Warn(const debug::FileLineFunction& origin, WarningType type, zx_koid_t thread_koid,
           uint64_t address) {
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
   DEBUG_LOG_WITH_LOCATION(Breakpoint, origin) << fxl::StringPrintf(

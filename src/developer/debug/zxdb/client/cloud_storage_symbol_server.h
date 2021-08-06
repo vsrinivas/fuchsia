@@ -35,7 +35,7 @@ class CloudStorageSymbolServer : public SymbolServer {
 
   // General dispatch from the result of a Curl transaction. Handles the error cases and converts
   // to a zxdb Err.
-  Err HandleRequestResult(debug_ipc::Curl::Error result, long response_code,
+  Err HandleRequestResult(debug::Curl::Error result, long response_code,
                           size_t previous_ready_count);
 
   // Use the refresh token to get a new access token.

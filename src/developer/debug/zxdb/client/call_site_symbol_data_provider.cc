@@ -98,7 +98,7 @@ void CallSiteSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   // site parameters should not be expressed in terms of other call site parameters, so we only need
   // the underlying values. And this avoids the danger of infinitely recursive definitions.
   auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(handle_done));
-  debug_ipc::MessageLoop::Current()->PostTask(
+  debug::MessageLoop::Current()->PostTask(
       FROM_HERE,
       [evaluator, provider = frame_provider_, symbol_context = call_site_symbol_context_,
        expr = param->value_expr()]() { evaluator->Eval(provider, symbol_context, expr); });

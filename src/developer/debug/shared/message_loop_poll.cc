@@ -14,7 +14,7 @@
 #include "src/lib/files/eintr_wrapper.h"
 #include "src/lib/fxl/build_config.h"
 
-namespace debug_ipc {
+namespace debug {
 
 namespace {
 
@@ -267,4 +267,4 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
   // watch_info might be invalid because watcher could have called StopWatching().
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

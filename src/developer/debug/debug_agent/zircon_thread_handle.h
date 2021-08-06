@@ -40,8 +40,8 @@ class ZirconThreadHandle final : public ThreadHandle {
   bool InstallHWBreakpoint(uint64_t address) override;
   bool UninstallHWBreakpoint(uint64_t address) override;
   std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,
-                                                  const debug_ipc::AddressRange& range) override;
-  bool UninstallWatchpoint(const debug_ipc::AddressRange& range) override;
+                                                  const debug::AddressRange& range) override;
+  bool UninstallWatchpoint(const debug::AddressRange& range) override;
 
  private:
   zx_koid_t thread_koid_;

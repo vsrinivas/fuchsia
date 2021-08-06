@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace debug_ipc {
+namespace debug {
 
 // Returns an iterator pointing to the largest element in [first, last) less than or equal to the
 // given |val|. As with std::lower_bound, the range [first, last) must be sorted according to
@@ -47,6 +47,6 @@ BidirectionalIterator LargestLessOrEqual(BidirectionalIterator first, Bidirectio
   return --lower_bound;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_LARGEST_LESS_OR_EQUAL_H_

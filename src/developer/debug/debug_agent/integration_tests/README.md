@@ -24,7 +24,7 @@ Some pre-work needs to be done on each test in order to work properly:
 
 ### MockStreamBackend
 
-This class mocks being a debug_ipc::StreamBuffer::Writer, which is the interface
+This class mocks being a debug::StreamBuffer::Writer, which is the interface
 the DebugAgent uses to write it's notifications. Each test is meant to inherit
 from this class and override the notifications it's interested in.
 

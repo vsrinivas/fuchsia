@@ -44,7 +44,7 @@ debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                                GetMemoryCallback callback) {
   if (!process_) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() mutable {
       cb(ProcessDestroyedErr(), std::vector<uint8_t>());
     });
     return;
@@ -52,7 +52,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 
   // Mistakes may make extremely large memory requests which can OOM the system. Prevent those.
   if (size > 1024 * 1024) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [address, size, cb = std::move(callback)]() mutable {
           cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64 " is too large.",
                                    size, address)),
@@ -97,7 +97,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
                                             WriteCallback cb) {
   if (!process_) {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() mutable { cb(ProcessDestroyedErr()); });
     return;
   }
@@ -161,7 +161,7 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
                        // an owning reference to the DwarfExprEval to the message loop to force it
                        // to get deleted in the future when that's executed rather than from within
                        // this stack frame.
-                       debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [dwarf_eval]() {});
+                       debug::MessageLoop::Current()->PostTask(FROM_HERE, [dwarf_eval]() {});
 
                        if (err.has_error()) {
                          return cb(err);

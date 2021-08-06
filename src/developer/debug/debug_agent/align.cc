@@ -57,7 +57,7 @@ uint64_t GetMask(uint64_t size) {
 
 }  // namespace
 
-std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange& range) {
+std::optional<debug::AddressRange> AlignRange(const debug::AddressRange& range) {
   uint64_t size = range.end() - range.begin();
   uint64_t alignment = GetAlignment(size);
   if (alignment == 0)
@@ -67,11 +67,11 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
   uint64_t mask = GetMask(alignment);
   uint64_t aligned_address = range.begin() & ~mask;
   if (aligned_address == range.begin())
-    return debug_ipc::AddressRange{range.begin(), range.begin() + alignment};
+    return debug::AddressRange{range.begin(), range.begin() + alignment};
 
   // Check if the aligned address + the current size gets the job done.
   if (aligned_address <= range.begin() && (aligned_address + alignment) >= range.end())
-    return debug_ipc::AddressRange{aligned_address, aligned_address + alignment};
+    return debug::AddressRange{aligned_address, aligned_address + alignment};
 
   // See if we can over align this with a range.
 
@@ -93,7 +93,7 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
   // |next_size| == 0 means that there is no range the extends this range.
   if (next_size == 0)
     return std::nullopt;
-  return debug_ipc::AddressRange(aligned_address, aligned_address + next_size);
+  return debug::AddressRange(aligned_address, aligned_address + next_size);
 }
 
 }  // namespace debug_agent

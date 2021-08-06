@@ -13,7 +13,7 @@
 
 namespace debug_agent {
 
-class ZirconJobHandle final : public JobHandle, public debug_ipc::ZirconExceptionWatcher {
+class ZirconJobHandle final : public JobHandle, public debug::ZirconExceptionWatcher {
  public:
   explicit ZirconJobHandle(zx::job j);
   ZirconJobHandle(const ZirconJobHandle& other);
@@ -35,7 +35,7 @@ class ZirconJobHandle final : public JobHandle, public debug_ipc::ZirconExceptio
   zx_koid_t job_koid_;
   zx::job job_;
 
-  debug_ipc::MessageLoop::WatchHandle job_watch_handle_;
+  debug::MessageLoop::WatchHandle job_watch_handle_;
   fit::function<void(std::unique_ptr<ProcessHandle>)> process_callback_;
 };
 

@@ -72,7 +72,7 @@ void FrameImpl::GetRegisterCategoryAsync(
 
   if (!always_request && registers_[category_index]) {
     // Registers known already, asynchronously return the result.
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), weak_frame = weak_factory_.GetWeakPtr(), category_index]() {
           if (weak_frame)
             cb(Err(), *weak_frame->registers_[category_index]);
@@ -84,7 +84,7 @@ void FrameImpl::GetRegisterCategoryAsync(
 
   // The CPU registers will always refer to the top physical frame so don't fetch them otherwise.
   if (!IsInTopmostPhysicalFrame()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() {
       cb(Err("This type of register is unavailable in non-topmost stack frames."), {});
     });
     return;
@@ -113,7 +113,7 @@ void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> dat
   FX_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
 
   if (!IsInTopmostPhysicalFrame()) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
+    debug::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
       cb(Err("Register %s can't be written when the frame is not the topmost.",
              debug_ipc::RegisterIDToString(id)));
     });
@@ -155,7 +155,7 @@ void FrameImpl::GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) {
   if (EnsureBasePointer()) {
     // BP available synchronously but we don't want to reenter the caller.
     FX_DCHECK(computed_base_pointer_);
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [bp = *computed_base_pointer_, cb = std::move(cb)]() mutable { cb(bp); });
   } else {
     // Add pending request for when evaluation is complete.

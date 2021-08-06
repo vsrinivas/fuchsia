@@ -106,14 +106,13 @@ void ThreadImpl::Continue(bool forward_exception) {
       // Synthetic stop. Skip notifying the backend and broadcast a stop notification for the
       // current state.
       controllers_.back()->Log("Synthetic stop.");
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
-            if (thread) {
-              StopInfo info;
-              info.exception_type = debug_ipc::ExceptionType::kSynthetic;
-              thread->OnException(info);
-            }
-          });
+      debug::MessageLoop::Current()->PostTask(FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
+        if (thread) {
+          StopInfo info;
+          info.exception_type = debug_ipc::ExceptionType::kSynthetic;
+          thread->OnException(info);
+        }
+      });
       return;
     } else {
       // Dispatch the continuation message.

@@ -29,7 +29,7 @@ class MockThread : public Thread, public Stack::Delegate {
     return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
   }
   void Pause(fit::callback<void()> on_paused) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
+    debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [on_paused = std::move(on_paused)]() mutable { on_paused(); });
   }
   void Continue(bool forward_exception) override {}

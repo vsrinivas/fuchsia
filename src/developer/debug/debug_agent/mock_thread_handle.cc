@@ -53,7 +53,7 @@ size_t MockThreadHandle::TotalBreakpointUninstallCalls() const {
   return total;
 }
 
-size_t MockThreadHandle::WatchpointInstallCount(const debug_ipc::AddressRange& range) const {
+size_t MockThreadHandle::WatchpointInstallCount(const debug::AddressRange& range) const {
   auto it = wp_installs_.find(range);
   if (it == wp_installs_.end())
     return 0;
@@ -67,7 +67,7 @@ size_t MockThreadHandle::TotalWatchpointInstallCalls() const {
   return total;
 }
 
-size_t MockThreadHandle::WatchpointUninstallCount(const debug_ipc::AddressRange& range) const {
+size_t MockThreadHandle::WatchpointUninstallCount(const debug::AddressRange& range) const {
   auto it = wp_uninstalls_.find(range);
   if (it == wp_uninstalls_.end())
     return 0;
@@ -150,14 +150,14 @@ bool MockThreadHandle::UninstallHWBreakpoint(uint64_t address) {
 }
 
 std::optional<WatchpointInfo> MockThreadHandle::InstallWatchpoint(
-    debug_ipc::BreakpointType type, const debug_ipc::AddressRange& range) {
+    debug_ipc::BreakpointType type, const debug::AddressRange& range) {
   watchpoint_installs_.push_back(WatchpointInstallation{.type = type, .address_range = range});
 
   wp_installs_[range]++;
   return WatchpointInfo(watchpoint_range_to_return_, watchpoint_slot_to_return_);
 }
 
-bool MockThreadHandle::UninstallWatchpoint(const debug_ipc::AddressRange& range) {
+bool MockThreadHandle::UninstallWatchpoint(const debug::AddressRange& range) {
   wp_uninstalls_[range]++;
   return true;
 }

@@ -25,7 +25,7 @@ namespace {
 // TODO(dangyi): This is a poor implementation of the authentication process. Revisit this after
 // fxb/61746 is resolved.
 int AuthMode() {
-  debug_ipc::MessageLoopPoll loop;
+  debug::MessageLoopPoll loop;
   loop.Init(nullptr);
 
   auto server = zxdb::CloudStorageSymbolServer::Impl(nullptr, "");
@@ -74,8 +74,8 @@ int AuthMode() {
 int Main(int argc, const char* argv[]) {
   using ::analytics::core_dev_tools::EarlyProcessAnalyticsOptions;
 
-  debug_ipc::Curl::GlobalInit();
-  auto deferred_cleanup_curl = fit::defer(debug_ipc::Curl::GlobalCleanup);
+  debug::Curl::GlobalInit();
+  auto deferred_cleanup_curl = fit::defer(debug::Curl::GlobalCleanup);
   auto deferred_cleanup_analytics = fit::defer(Analytics::CleanUp);
   CommandLineOptions options;
 

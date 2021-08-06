@@ -30,15 +30,15 @@ void SyncFillAndDescribeFormatNode(const fxl::RefPtr<EvalContext>& eval_context,
   // Populate the value.
   bool called = false;
   FillFormatNodeValue(node, eval_context, fit::defer_callback([&called]() { called = true; }));
-  debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
+  debug::MessageLoop::Current()->RunUntilNoTasks();
   FX_DCHECK(called);
 
   called = false;
   FillFormatNodeDescription(node, opts, eval_context, fit::defer_callback([&called]() {
-                              debug_ipc::MessageLoop::Current()->QuitNow();
+                              debug::MessageLoop::Current()->QuitNow();
                               called = true;
                             }));
-  debug_ipc::MessageLoop::Current()->RunUntilNoTasks();
+  debug::MessageLoop::Current()->RunUntilNoTasks();
   FX_DCHECK(called);
 }
 

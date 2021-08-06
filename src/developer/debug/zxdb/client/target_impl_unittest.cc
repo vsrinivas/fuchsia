@@ -18,7 +18,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::MessageLoop;
+using debug::MessageLoop;
 
 class TargetSink : public RemoteAPI {
  public:
@@ -97,12 +97,12 @@ class TargetImplTest : public TestWithLoop {
   }
   ~TargetImplTest() { session_.reset(); }
 
-  debug_ipc::TestStreamBuffer& stream() { return stream_; }
+  debug::TestStreamBuffer& stream() { return stream_; }
   TargetSink& sink() { return *sink_; }
   Session& session() { return *session_; }
 
  private:
-  debug_ipc::TestStreamBuffer stream_;
+  debug::TestStreamBuffer stream_;
 
   TargetSink* sink_;  // Owned by the session_.
 

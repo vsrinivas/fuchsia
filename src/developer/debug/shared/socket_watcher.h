@@ -11,7 +11,7 @@
 
 #include <zircon/types.h>
 
-namespace debug_ipc {
+namespace debug {
 
 class SocketWatcher {
  public:
@@ -20,6 +20,6 @@ class SocketWatcher {
   virtual void OnSocketError(zx_handle_t socket_handle) {}
 };
 
-}  // namespace debug_ipc
+}  // namespace debug
 
 #endif  // SRC_DEVELOPER_DEBUG_SHARED_SOCKET_WATCHER_H_
