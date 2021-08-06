@@ -87,7 +87,6 @@ if (toolchain_variant.base == "//zircon/system/ulib/c:user.libc_$target_cpu") {
       "src/errno",
       "src/exit",
       "src/fcntl",
-      "src/fenv",
       "src/internal",
       "src/ipc",
       "src/ldso",

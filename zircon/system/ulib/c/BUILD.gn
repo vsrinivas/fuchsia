@@ -17,6 +17,7 @@ assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
 # libc_test() suitable for inclusion in libc-unittests and Zircon's core-tests.
 libc_components = [
   "ctype",
+  "fenv",
   "scudo",
 ]
 

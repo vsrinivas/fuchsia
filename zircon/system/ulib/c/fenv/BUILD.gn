@@ -1,0 +1,50 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../libc.gni")
+
+libc_source_set("fenv") {
+  dir = "$llvm_libc/src/fenv"
+  public = [
+    "feclearexcept.h",
+    "fegetenv.h",
+    "fegetexceptflag.h",
+    "fegetround.h",
+    "feholdexcept.h",
+    "feraiseexcept.h",
+    "fesetenv.h",
+    "fesetexceptflag.h",
+    "fesetround.h",
+    "fetestexcept.h",
+    "feupdateenv.h",
+  ]
+  sources = [
+    "feclearexcept.cpp",
+    "fegetenv.cpp",
+    "fegetexceptflag.cpp",
+    "fegetround.cpp",
+    "feholdexcept.cpp",
+    "feraiseexcept.cpp",
+    "fesetenv.cpp",
+    "fesetexceptflag.cpp",
+    "fesetround.cpp",
+    "fetestexcept.cpp",
+    "feupdateenv.cpp",
+  ]
+}
+
+libc_test("unittests") {
+  dir = "$llvm_libc/test/src/fenv"
+  deps = [ ":fenv.testonly" ]
+  sources = [
+    "enabled_exceptions_test.cpp",
+    "exception_flags_test.cpp",
+    "exception_status_test.cpp",
+    "feclearexcept_test.cpp",
+    "feholdexcept_test.cpp",
+    "feupdateenv_test.cpp",
+    "getenv_and_setenv_test.cpp",
+    "rounding_mode_test.cpp",
+  ]
+}
