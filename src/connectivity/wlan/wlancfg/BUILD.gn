@@ -167,18 +167,6 @@ fuchsia_package("wlancfg") {
   deps = [ ":service" ]
 }
 
-# Keep around a V1 version of the manifest until all tests are migrated
-fuchsia_component("service-v1") {
-  testonly = true
-  component_name = "wlancfg"
-  manifest = "meta/wlancfg.cmx"
-  deps = [ ":bin" ]
-}
-fuchsia_package("wlancfg-v1") {
-  testonly = true
-  deps = [ ":service-v1" ]
-}
-
 core_shard("wlancfg-core-shard") {
   shard_file = "meta/wlancfg.core_shard.cml"
 }

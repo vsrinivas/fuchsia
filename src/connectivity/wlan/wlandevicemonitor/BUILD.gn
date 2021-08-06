@@ -79,25 +79,6 @@ wlandevicemonitor_srcs = [
 wlandevicemonitor_test_deps =
     [ "//src/connectivity/wlan/testing/wlantap-client" ]
 
-# A separate binary is provided for the WLAN hardware simulation tests.  This prevents the
-# isolated device manager code from bleeding over into the production binaries.
-rustc_binary("isolated_dev_mgr_bin") {
-  name = "isolated_dev_mgr_wlandevicemonitor"
-  edition = "2018"
-
-  sources = wlandevicemonitor_srcs
-  deps = wlandevicemonitor_deps
-  features = [ "isolated_dev_mgr" ]
-}
-
-fuchsia_package_with_single_component("isolated_dev_mgr_wlandevicemonitor") {
-  deps = [
-    ":isolated_dev_mgr_bin",
-    ":wlan_metrics_registry",
-  ]
-  manifest = "meta/isolated_dev_mgr_wlandevicemonitor.cmx"
-}
-
 # Because the IsolatedDevMgr works differently in Components Framework v2, a separate build rule is
 # needed so that different test behaviors can be conditionally compiled in.
 rustc_binary("bin") {

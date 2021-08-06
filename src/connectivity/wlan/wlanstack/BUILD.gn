@@ -125,17 +125,6 @@ fuchsia_package("wlanstack") {
   ]
 }
 
-# Keep around a V1 version of the manifest until all tests are migrated
-fuchsia_package_with_single_component("wlanstack-v1") {
-  testonly = true
-  component_name = "wlanstack"
-  deps = [
-    ":bin",
-    ":wlan_metrics_registry",
-  ]
-  manifest = "meta/wlanstack.cmx"
-}
-
 core_shard("wlanstack-core-shard") {
   shard_file = "meta/wlanstack.core_shard.cml"
 }

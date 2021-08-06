@@ -78,12 +78,9 @@ group("tests") {
     "testing/wlantap-driver:wlantap",
     "tools/wlantool:wlantool-tests",
     "wlancfg:tests",
-    "wlancfg:wlancfg-v1",
     "wlancfg/tool:donut-tests",
-    "wlandevicemonitor:isolated_dev_mgr_wlandevicemonitor",
     "wlandevicemonitor:tests",
     "wlanstack:wlanstack-tests",
-    "wlanstack:wlanstack-v1",
   ]
 }
 
