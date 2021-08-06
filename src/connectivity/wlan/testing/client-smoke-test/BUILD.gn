@@ -43,8 +43,7 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("wlan-smoke-test") {
-  manifest = "meta/wlan-smoke-test.cmx"
+fuchsia_shell_package("wlan-smoke-test") {
   deps = [ ":bin" ]
 }
 
