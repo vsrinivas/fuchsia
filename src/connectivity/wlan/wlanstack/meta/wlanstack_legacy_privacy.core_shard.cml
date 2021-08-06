@@ -3,7 +3,7 @@
     children: [
         {
             name: "wlanstack",
-            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cm",
+            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack-legacy-privacy.cm",
             startup: "eager",
             on_terminate: "reboot",
         },

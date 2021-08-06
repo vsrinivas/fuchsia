@@ -24,7 +24,7 @@ core_realm("core") {
   deps = [
     "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
     "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
-    "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
+    "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy-core-shard",
   ]
 }
 
@@ -40,7 +40,7 @@ recovery_packages = [
   "//src/connectivity/network:config",
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlandevicemonitor",
-  "//src/connectivity/wlan/wlanstack:wlanstack-legacy-privacy",
+  "//src/connectivity/wlan/wlanstack",
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/recovery/system:system_recovery",
   "//src/recovery/system:config",

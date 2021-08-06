@@ -100,12 +100,29 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("wlanstack") {
+fuchsia_component("wlanstack-comp") {
+  component_name = "wlanstack"
+  manifest = "meta/wlanstack.cml"
   deps = [
     ":bin",
     ":wlan_metrics_registry",
   ]
-  manifest = "meta/wlanstack.cml"
+}
+
+fuchsia_component("wlanstack-legacy-privacy-comp") {
+  component_name = "wlanstack-legacy-privacy"
+  manifest = "meta/wlanstack_legacy_privacy.cml"
+  deps = [
+    ":bin",
+    ":wlan_metrics_registry",
+  ]
+}
+
+fuchsia_package("wlanstack") {
+  deps = [
+    ":wlanstack-comp",
+    ":wlanstack-legacy-privacy-comp",
+  ]
 }
 
 # Keep around a V1 version of the manifest until all tests are migrated
@@ -130,6 +147,10 @@ fuchsia_package_with_single_component("wlanstack-legacy-privacy") {
 
 core_shard("wlanstack-core-shard") {
   shard_file = "meta/wlanstack.core_shard.cml"
+}
+
+core_shard("wlanstack-legacy-privacy-core-shard") {
+  shard_file = "meta/wlanstack_legacy_privacy.core_shard.cml"
 }
 
 fuchsia_unittest_package("wlanstack-tests") {
