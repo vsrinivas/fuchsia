@@ -21,7 +21,7 @@ use crate::{
     activity_handler, cpu_control_handler, cpu_stats_handler, crash_report_handler,
     dev_control_handler, driver_manager_handler, input_settings_handler, lid_shutdown,
     shutdown_watcher, system_profile_handler, system_shutdown_handler, temperature_handler,
-    thermal_limiter, thermal_policy, thermal_shutdown,
+    thermal_limiter, thermal_load_driver, thermal_policy, thermal_shutdown,
 };
 
 /// Path to the node config JSON file.
@@ -181,6 +181,10 @@ impl PowerManager {
                 service_fs,
             )
             .build()?,
+            "ThermalLoadDriver" => {
+                thermal_load_driver::ThermalLoadDriverBuilder::new_from_json(json_data, &self.nodes)
+                    .build(node_futures)?
+            }
             "ThermalPolicy" => {
                 thermal_policy::ThermalPolicyBuilder::new_from_json(json_data, &self.nodes)
                     .build(node_futures)?

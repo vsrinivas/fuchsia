@@ -232,7 +232,6 @@ impl InspectData {
 mod tests {
     use {
         super::*,
-        crate::message::MessageReturn,
         crate::test::mock_node::{create_dummy_node, MessageMatcher, MockNodeMaker},
         crate::{msg_eq, msg_ok_return},
         fuchsia_async as fasync,

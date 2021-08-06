@@ -335,6 +335,93 @@
       {
         "properties": {
           "type": {
+            "pattern": "ThermalLoadDriver"
+          },
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "poll_interval_s": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "filter_time_constant_s": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              },
+              "temperature_configs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "temperature_handler_node_name": {
+                      "type": "string"
+                    },
+                    "onset_temperature_c": {
+                      "type": "number"
+                    },
+                    "reboot_temperature_c": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "temperature_handler_node_name",
+                    "onset_temperature_c",
+                    "reboot_temperature_c"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "poll_interval_s",
+              "filter_time_constant_s",
+              "temperature_configs"
+            ]
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "system_shutdown_node": {
+                "type": "string"
+              },
+              "thermal_load_notify_nodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "temperature_handler_node_names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "system_shutdown_node",
+              "thermal_load_notify_nodes"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name",
+          "config",
+          "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
             "pattern": "ThermalPolicy"
           },
           "name": {

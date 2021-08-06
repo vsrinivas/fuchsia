@@ -866,7 +866,7 @@ pub mod tests {
     /// is listed before any other nodes that require a driver connection (identified as a node that
     /// contains a string config key called "driver_path").
     #[test]
-    pub fn test_config_file() -> Result<(), anyhow::Error> {
+    pub fn test_config_files() -> Result<(), anyhow::Error> {
         crate::utils::test_each_node_config_file(|config_file| {
             let driver_manager_handler_index =
                 config_file.iter().position(|config| config["type"] == "DriverManagerHandler");

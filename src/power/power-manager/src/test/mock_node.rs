@@ -22,13 +22,13 @@ macro_rules! msg_eq {
 #[macro_export]
 macro_rules! msg_ok_return {
     ($($msg_ret:tt)*) => {
-        Ok(MessageReturn::$($msg_ret)*)
+        Ok(crate::message::MessageReturn::$($msg_ret)*)
     };
 }
 
 /// Emulate the behavior of a Node object by handling incoming messages and responding with
 /// specified data.
-struct MockNode {
+pub struct MockNode {
     /// Name of this MockNode, used mainly for logging
     name: String,
 
@@ -39,6 +39,19 @@ struct MockNode {
 
     /// A count that increases each time the MockNode receives a message, used mainly for logging.
     msg_rcv_count: Cell<u32>,
+}
+
+impl MockNode {
+    /// Add a message response pair to the expected pairs list. This is functionally equivalent to
+    /// supplying the pairs when the mock node is created using the `make` function. However, this
+    /// function is provided to allow specifying additional message pairs that weren't known when
+    /// the mock node was created, or to add pairs later in the test to improve readability.
+    pub fn add_msg_response_pair(
+        &self,
+        pair: (MessageMatcher, Result<MessageReturn, PowerManagerError>),
+    ) {
+        self.msg_response_pairs.borrow_mut().push_back(pair);
+    }
 }
 
 /// Represents the comparison method to be used for determining if the underlying Message matches
@@ -137,7 +150,7 @@ impl MockNodeMaker {
         &mut self,
         name: &'static str,
         msg_response_pairs: Vec<(MessageMatcher, Result<MessageReturn, PowerManagerError>)>,
-    ) -> Rc<dyn Node> {
+    ) -> Rc<MockNode> {
         let node = Rc::new(MockNode {
             name: name.to_string(),
             msg_response_pairs: RefCell::new(VecDeque::from(msg_response_pairs)),

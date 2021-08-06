@@ -115,6 +115,7 @@ rustc_binary("bin") {
     "src/test/mod.rs",
     "src/test/thermal_integration_tests.rs",
     "src/thermal_limiter.rs",
+    "src/thermal_load_driver.rs",
     "src/thermal_policy.rs",
     "src/thermal_shutdown.rs",
     "src/types.rs",

@@ -965,7 +965,7 @@ pub mod tests {
     /// Tests that node config files do not contain instances of CpuControlHandler nodes with
     /// overlapping CPU numbers.
     #[test]
-    pub fn test_config_file() -> Result<(), anyhow::Error> {
+    pub fn test_config_files() -> Result<(), anyhow::Error> {
         crate::utils::test_each_node_config_file(|config_file| {
             let cpu_control_handlers =
                 config_file.iter().filter(|n| n["type"] == "CpuControlHandler");
