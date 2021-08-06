@@ -18,24 +18,13 @@ use crate::{
 
 use {
     anyhow::Error,
-    fidl::{endpoints::ServerEnd, Event, Handle},
+    fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryAdminCloseResponder, DirectoryAdminControlHandle, DirectoryAdminDescribeResponder,
-        DirectoryAdminGetAttrResponder, DirectoryAdminGetDevicePathResponder,
-        DirectoryAdminGetTokenResponder, DirectoryAdminLinkResponder,
-        DirectoryAdminMountAndCreateResponder, DirectoryAdminMountResponder,
-        DirectoryAdminNodeGetFlagsResponder, DirectoryAdminNodeSetFlagsResponder,
-        DirectoryAdminQueryFilesystemResponder, DirectoryAdminReadDirentsResponder,
-        DirectoryAdminRename2Responder, DirectoryAdminRenameResponder, DirectoryAdminRequest,
-        DirectoryAdminRequestStream, DirectoryAdminRewindResponder, DirectoryAdminSetAttrResponder,
-        DirectoryAdminSyncResponder, DirectoryAdminUnlink2Responder, DirectoryAdminUnlinkResponder,
-        DirectoryAdminUnmountNodeResponder, DirectoryAdminUnmountResponder,
-        DirectoryAdminWatchResponder, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
-        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-        OPEN_RIGHT_WRITABLE,
+        DirectoryAdminRequest, DirectoryAdminRequestStream, DirectoryObject, NodeAttributes,
+        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -127,213 +116,6 @@ where
     seek: TraversalPosition,
 }
 
-/// Subset of the [`DirectoryRequest`] protocol that is handled by the
-/// [`BaseConnection::handle_request`] method.
-pub(in crate::directory) enum BaseDirectoryRequest {
-    Clone {
-        flags: u32,
-        object: ServerEnd<NodeMarker>,
-        #[allow(unused)]
-        control_handle: DirectoryAdminControlHandle,
-    },
-    Close {
-        responder: DirectoryAdminCloseResponder,
-    },
-    Describe {
-        responder: DirectoryAdminDescribeResponder,
-    },
-    GetAttr {
-        responder: DirectoryAdminGetAttrResponder,
-    },
-    GetFlags {
-        responder: DirectoryAdminNodeGetFlagsResponder,
-    },
-    SetFlags {
-        #[allow(unused)]
-        flags: u32,
-        responder: DirectoryAdminNodeSetFlagsResponder,
-    },
-    AdvisoryLock {
-        #[allow(unused)]
-        request: fidl_fuchsia_io2::AdvisoryLockRequest,
-        responder: fidl_fuchsia_io::DirectoryAdminAdvisoryLockResponder,
-    },
-    Open {
-        flags: u32,
-        mode: u32,
-        path: String,
-        object: ServerEnd<NodeMarker>,
-        #[allow(unused)]
-        control_handle: DirectoryAdminControlHandle,
-    },
-    AddInotifyFilter {
-        #[allow(unused)]
-        path: String,
-        #[allow(unused)]
-        filter: fidl_fuchsia_io2::InotifyWatchMask,
-        #[allow(unused)]
-        watch_descriptor: u32,
-        #[allow(unused)]
-        socket: fidl::Socket,
-        #[allow(unused)]
-        responder: fidl_fuchsia_io::DirectoryAdminAddInotifyFilterResponder,
-    },
-    ReadDirents {
-        max_bytes: u64,
-        responder: DirectoryAdminReadDirentsResponder,
-    },
-    Rewind {
-        responder: DirectoryAdminRewindResponder,
-    },
-    Link {
-        src: String,
-        dst_parent_token: Handle,
-        dst: String,
-        responder: DirectoryAdminLinkResponder,
-    },
-    Watch {
-        mask: u32,
-        options: u32,
-        watcher: fidl::Channel,
-        responder: DirectoryAdminWatchResponder,
-    },
-    QueryFilesystem {
-        responder: DirectoryAdminQueryFilesystemResponder,
-    },
-    Mount {
-        responder: DirectoryAdminMountResponder,
-    },
-    MountAndCreate {
-        responder: DirectoryAdminMountAndCreateResponder,
-    },
-    Unmount {
-        responder: DirectoryAdminUnmountResponder,
-    },
-    UnmountNode {
-        responder: DirectoryAdminUnmountNodeResponder,
-    },
-    GetDevicePath {
-        responder: DirectoryAdminGetDevicePathResponder,
-    },
-}
-
-pub(in crate::directory) enum DerivedDirectoryRequest {
-    Unlink {
-        path: String,
-        responder: DirectoryAdminUnlinkResponder,
-    },
-    Unlink2 {
-        name: String,
-        options: UnlinkOptions,
-        responder: DirectoryAdminUnlink2Responder,
-    },
-    GetToken {
-        responder: DirectoryAdminGetTokenResponder,
-    },
-    Rename {
-        src: String,
-        dst_parent_token: Handle,
-        dst: String,
-        responder: DirectoryAdminRenameResponder,
-    },
-    Rename2 {
-        src: String,
-        dst_parent_token: Event,
-        dst: String,
-        responder: DirectoryAdminRename2Responder,
-    },
-    SetAttr {
-        flags: u32,
-        attributes: NodeAttributes,
-        responder: DirectoryAdminSetAttrResponder,
-    },
-    Sync {
-        responder: DirectoryAdminSyncResponder,
-    },
-}
-
-pub(in crate::directory) enum DirectoryRequestType {
-    Base(BaseDirectoryRequest),
-    Derived(DerivedDirectoryRequest),
-}
-
-impl From<DirectoryAdminRequest> for DirectoryRequestType {
-    fn from(request: DirectoryAdminRequest) -> Self {
-        use {BaseDirectoryRequest::*, DerivedDirectoryRequest::*, DirectoryRequestType::*};
-
-        match request {
-            DirectoryAdminRequest::Clone { flags, object, control_handle } => {
-                Base(Clone { flags, object, control_handle })
-            }
-            DirectoryAdminRequest::Close { responder } => Base(Close { responder }),
-            DirectoryAdminRequest::Describe { responder } => Base(Describe { responder }),
-            DirectoryAdminRequest::Sync { responder } => Derived(Sync { responder }),
-            DirectoryAdminRequest::GetAttr { responder } => Base(GetAttr { responder }),
-            DirectoryAdminRequest::SetAttr { flags, attributes, responder } => {
-                Derived(SetAttr { flags, attributes, responder })
-            }
-            DirectoryAdminRequest::NodeGetFlags { responder } => Base(GetFlags { responder }),
-            DirectoryAdminRequest::NodeSetFlags { flags, responder } => {
-                Base(SetFlags { flags, responder })
-            }
-            DirectoryAdminRequest::Open { flags, mode, path, object, control_handle } => {
-                Base(Open { flags, mode, path, object, control_handle })
-            }
-            DirectoryAdminRequest::AddInotifyFilter {
-                path,
-                filter,
-                watch_descriptor,
-                socket,
-                responder,
-            } => Base(AddInotifyFilter { path, filter, watch_descriptor, socket, responder }),
-            DirectoryAdminRequest::AdvisoryLock { request, responder } => {
-                Base(AdvisoryLock { request, responder })
-            }
-            DirectoryAdminRequest::Unlink { path, responder } => {
-                Derived(Unlink { path, responder })
-            }
-            DirectoryAdminRequest::Unlink2 { name, options, responder } => {
-                Derived(Unlink2 { name, options, responder })
-            }
-            DirectoryAdminRequest::ReadDirents { max_bytes, responder } => {
-                Base(ReadDirents { max_bytes, responder })
-            }
-            DirectoryAdminRequest::Rewind { responder } => Base(Rewind { responder }),
-            DirectoryAdminRequest::GetToken { responder } => Derived(GetToken { responder }),
-            DirectoryAdminRequest::Rename { src, dst_parent_token, dst, responder } => {
-                Derived(Rename { src, dst_parent_token, dst, responder })
-            }
-            DirectoryAdminRequest::Rename2 { src, dst_parent_token, dst, responder } => {
-                Derived(Rename2 { src, dst_parent_token, dst, responder })
-            }
-            DirectoryAdminRequest::Link { src, dst_parent_token, dst, responder } => {
-                Base(Link { src, dst_parent_token, dst, responder })
-            }
-            DirectoryAdminRequest::Watch { mask, options, watcher, responder } => {
-                Base(Watch { mask, options, watcher, responder })
-            }
-            DirectoryAdminRequest::QueryFilesystem { responder } => {
-                Base(BaseDirectoryRequest::QueryFilesystem { responder })
-            }
-            DirectoryAdminRequest::Mount { responder, .. } => {
-                Base(BaseDirectoryRequest::Mount { responder })
-            }
-            DirectoryAdminRequest::MountAndCreate { responder, .. } => {
-                Base(BaseDirectoryRequest::MountAndCreate { responder })
-            }
-            DirectoryAdminRequest::Unmount { responder } => {
-                Base(BaseDirectoryRequest::Unmount { responder })
-            }
-            DirectoryAdminRequest::UnmountNode { responder } => {
-                Base(BaseDirectoryRequest::UnmountNode { responder })
-            }
-            DirectoryAdminRequest::GetDevicePath { responder } => {
-                Base(BaseDirectoryRequest::GetDevicePath { responder })
-            }
-        }
-    }
-}
-
 #[must_use = "handle_requests() returns an async task that needs to be run"]
 pub(in crate::directory) async fn handle_requests<Connection>(
     mut requests: DirectoryAdminRequestStream,
@@ -384,14 +166,14 @@ where
     #[allow(unreachable_patterns)]
     pub(in crate::directory) async fn handle_request(
         &mut self,
-        request: BaseDirectoryRequest,
+        request: DirectoryAdminRequest,
     ) -> Result<ConnectionState, Error> {
         match request {
-            BaseDirectoryRequest::Clone { flags, object, control_handle: _ } => {
+            DirectoryAdminRequest::Clone { flags, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
-            BaseDirectoryRequest::Close { responder } => {
+            DirectoryAdminRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close");
                 let status = match self.directory.close() {
                     Ok(()) => Status::OK,
@@ -400,12 +182,12 @@ where
                 responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
-            BaseDirectoryRequest::Describe { responder } => {
+            DirectoryAdminRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
             }
-            BaseDirectoryRequest::GetAttr { responder } => {
+            DirectoryAdminRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
                 let (mut attrs, status) = match self.directory.get_attrs().await {
                     Ok(attrs) => (attrs, ZX_OK),
@@ -425,45 +207,45 @@ where
                 attrs.mode = MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES;
                 responder.send(status, &mut attrs)?;
             }
-            BaseDirectoryRequest::GetFlags { responder } => {
+            DirectoryAdminRequest::NodeGetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
-            BaseDirectoryRequest::SetFlags { flags: _, responder } => {
+            DirectoryAdminRequest::NodeSetFlags { flags: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::SetFlags");
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            BaseDirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+            DirectoryAdminRequest::Open { flags, mode, path, object, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            BaseDirectoryRequest::AddInotifyFilter { .. } => {
+            DirectoryAdminRequest::AddInotifyFilter { .. } => {
                 fuchsia_trace::duration!("storage", "Directory::AddInotifyFilter");
             }
-            BaseDirectoryRequest::AdvisoryLock { request: _, responder } => {
+            DirectoryAdminRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {
+            DirectoryAdminRequest::ReadDirents { max_bytes, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::ReadDirents");
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
             }
-            BaseDirectoryRequest::Rewind { responder } => {
+            DirectoryAdminRequest::Rewind { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Rewind");
                 self.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
-            BaseDirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
+            DirectoryAdminRequest::Link { src, dst_parent_token, dst, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Link");
                 self.handle_link(&src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
             }
-            BaseDirectoryRequest::Watch { mask, options, watcher, responder } => {
+            DirectoryAdminRequest::Watch { mask, options, watcher, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Watch");
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
@@ -472,25 +254,47 @@ where
                     self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
                 }
             }
-            BaseDirectoryRequest::QueryFilesystem { responder } => {
+            DirectoryAdminRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
                 match self.directory.query_filesystem() {
                     Err(status) => responder.send(status.into_raw(), None)?,
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            BaseDirectoryRequest::Mount { responder } => responder.send(ZX_ERR_NOT_SUPPORTED)?,
-            BaseDirectoryRequest::MountAndCreate { responder } => {
+            DirectoryAdminRequest::Mount { responder, .. } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?
             }
-            BaseDirectoryRequest::Unmount { responder } => responder.send(ZX_ERR_NOT_SUPPORTED)?,
-            BaseDirectoryRequest::UnmountNode { responder } => {
+            DirectoryAdminRequest::MountAndCreate { responder, .. } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?
+            }
+            DirectoryAdminRequest::Unmount { responder } => responder.send(ZX_ERR_NOT_SUPPORTED)?,
+            DirectoryAdminRequest::UnmountNode { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?
             }
-            BaseDirectoryRequest::GetDevicePath { responder } => {
+            DirectoryAdminRequest::GetDevicePath { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?
             }
-            _ => {}
+            DirectoryAdminRequest::Unlink { path: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryAdminRequest::Unlink2 { responder, .. } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
+            DirectoryAdminRequest::GetToken { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            }
+            DirectoryAdminRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryAdminRequest::Rename2 { src: _, dst_parent_token: _, dst: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
+            DirectoryAdminRequest::SetAttr { responder, .. } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            DirectoryAdminRequest::Sync { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }

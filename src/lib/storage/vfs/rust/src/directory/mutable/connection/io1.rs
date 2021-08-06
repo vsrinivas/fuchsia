@@ -11,7 +11,7 @@ use crate::{
         connection::{
             io1::{
                 handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-                DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
+                DerivedConnection,
             },
             util::OpenDirectory,
         },
@@ -26,6 +26,7 @@ use crate::{
 
 use {
     anyhow::Error,
+    either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
         DirectoryAdminMarker, DirectoryAdminRequest, DirectoryObject, NodeAttributes, NodeInfo,
@@ -148,60 +149,67 @@ impl DerivedConnection for MutableConnection {
         request: DirectoryAdminRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move {
-            match request.into() {
-                DirectoryRequestType::Base(request) => self.base.handle_request(request).await,
-                DirectoryRequestType::Derived(request) => {
-                    self.handle_derived_request(request).await
-                }
+            match self.handle_request(request).await {
+                // If the request was *not* handled (i.e. we got the request back), we pass
+                // the request back into the base handler and return that Result instead.
+                Ok(Right(request)) => self.base.handle_request(request).await,
+                // Otherwise, the request was handled, so we return the new state/error directly.
+                Ok(Left(state)) => Ok(state),
+                Err(error) => Err(error),
             }
         })
     }
 }
 
 impl MutableConnection {
-    async fn handle_derived_request(
+    async fn handle_request(
         &mut self,
-        request: DerivedDirectoryRequest,
-    ) -> Result<ConnectionState, Error> {
+        request: DirectoryAdminRequest,
+    ) -> Result<Either<ConnectionState, DirectoryAdminRequest>, Error> {
         match request {
-            DerivedDirectoryRequest::Unlink { path, responder } => {
+            DirectoryAdminRequest::Unlink { path, responder } => {
                 self.handle_unlink(path, None, |status| responder.send(status.into_raw())).await?;
             }
-            DerivedDirectoryRequest::Unlink2 { name, options, responder } => {
+            DirectoryAdminRequest::Unlink2 { name, options, responder } => {
                 self.handle_unlink(name, Some(options), |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DerivedDirectoryRequest::GetToken { responder } => {
+            DirectoryAdminRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }
-            DerivedDirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
+            DirectoryAdminRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
             }
-            DerivedDirectoryRequest::Rename2 { src, dst_parent_token, dst, responder } => {
+            DirectoryAdminRequest::Rename2 { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
-            DerivedDirectoryRequest::SetAttr { flags, attributes, responder } => {
+            DirectoryAdminRequest::SetAttr { flags, attributes, responder } => {
                 let status = match self.handle_setattr(flags, attributes).await {
                     Ok(()) => Status::OK,
                     Err(status) => status,
                 };
                 responder.send(status.into_raw())?;
             }
-            DerivedDirectoryRequest::Sync { responder } => {
+            DirectoryAdminRequest::Sync { responder } => {
                 responder.send(
                     self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
                 )?;
             }
+            _ => {
+                // Since we haven't handled the request, we return the original request so that
+                // it can be consumed by the base handler instead.
+                return Ok(Right(request));
+            }
         }
-        Ok(ConnectionState::Alive)
+        Ok(Left(ConnectionState::Alive))
     }
 
     async fn handle_setattr(

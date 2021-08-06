@@ -12,7 +12,7 @@ use crate::{
         connection::{
             io1::{
                 handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-                DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
+                DerivedConnection,
             },
             util::OpenDirectory,
         },
@@ -29,7 +29,7 @@ use {
         DirectoryAdminMarker, DirectoryAdminRequest, DirectoryObject, NodeInfo, NodeMarker,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
     },
-    fuchsia_zircon::{sys::ZX_ERR_NOT_SUPPORTED, Status},
+    fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,
 };
@@ -114,45 +114,6 @@ impl DerivedConnection for ImmutableConnection {
         &mut self,
         request: DirectoryAdminRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
-        Box::pin(async move {
-            match request.into() {
-                DirectoryRequestType::Base(request) => self.base.handle_request(request).await,
-                DirectoryRequestType::Derived(request) => {
-                    self.handle_derived_request(request).await
-                }
-            }
-        })
-    }
-}
-
-impl ImmutableConnection {
-    async fn handle_derived_request(
-        &mut self,
-        request: DerivedDirectoryRequest,
-    ) -> Result<ConnectionState, Error> {
-        match request {
-            DerivedDirectoryRequest::Unlink { path: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DerivedDirectoryRequest::Unlink2 { responder, .. } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
-            }
-            DerivedDirectoryRequest::GetToken { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
-            }
-            DerivedDirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DerivedDirectoryRequest::Rename2 { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
-            }
-            DerivedDirectoryRequest::SetAttr { responder, .. } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DerivedDirectoryRequest::Sync { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-        }
-        Ok(ConnectionState::Alive)
+        Box::pin(async move { self.base.handle_request(request).await })
     }
 }
