@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/lseek_test",
-        args: [ "--gunit_filter=-*.DirCurEnd:*.Proc*:*.SysDir:*.SeekCurrentDir:*.EtcPasswdDup" ],
+        args: [ "--gunit_filter=-*.Proc*:*.SysDir:*.EtcPasswdDup" ],
     },
 }
