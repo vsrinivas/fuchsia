@@ -52,10 +52,11 @@ import("//build/dist/fini_manifest.gni")
 #
 #   args
 #     Optional: Additional arguments to the `zbi` tool.  These are switches
-#     that will precede the $sources on the `zbi` command line, so they
-#     can include e.g. `--prefix=...` to affect contents of manifest file.
-#     The most common use is "--entry=..." to provide literal contents right
-#     in the GN file (e.g. for `type = "cmdline"`).
+#     that will precede the $sources and the dependee resources aggregated
+#     under "--files" on the `zbi` command line, so they can include e.g.
+#     `--prefix=...` to affect contents of manifest file.  The most common use
+#     is "--entry=..." to provide literal contents right in the GN file (e.g.
+#     for `type = "cmdline"`).
 #
 #   See manifest_file() for additional parameters.  The manifest file
 #   produced from those parameters contributes to the BOOTFS (as modified
@@ -65,20 +66,32 @@ template("zbi_input") {
   manifest_file = "$target_gen_dir/$target_name.fini"
 
   fini_manifest(target_name) {
-    prefix = ""
     forward_variables_from(invoker,
                            "*",
                            [
                              "args",
                              "metadata",
-                             "type",
                              "sources",
                              "kernel_cmdline_args",
                            ])
 
     metadata = {
       zbi_input_barrier = []
-      zbi_input_args = []
+
+      # Following $args and $sources entries should not be a affected by
+      # previous settings. Reset them now before appending the user-supplied
+      # args (last wins).
+      zbi_input_args = [
+        "--prefix=",
+
+        # The implicit type is always --files, and needs to be reset in
+        # case the previous `zbi_input_args` list collected left a
+        # different `--type=...` as the last state.
+        "--files",
+
+        # Default compression for storage images.
+        "--compressed",
+      ]
 
       # This entry is used by assembly, instead of zbi_input_args, as this isn't
       # in the form of arguments to the zbi tool.
@@ -97,22 +110,13 @@ template("zbi_input") {
       }
 
       # An explicit type applies only to $sources and $args.
-      if (defined(invoker.type) && invoker.type != "") {
-        zbi_input_args += [ "--type=${invoker.type}" ]
-      } else if (defined(invoker.args) || defined(invoker.sources)) {
-        zbi_input_args += [
-          # The implicit type is always --files, and needs to be reset in
-          # case the previous `zbi_input_args` list collected left a
-          # different `--type=...` as the last state.
-          "--files",
-
-          # Following $args and $sources entries shouldn't get a
-          # previously-set prefix.
-          "--prefix=",
-        ]
+      if (defined(type) && type != "") {
+        zbi_input_args += [ "--type=$type" ]
+      }
+      if (defined(prefix) && prefix != "") {
+        zbi_input_args += [ "--prefix=$prefix" ]
       }
 
-      # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
       # $args may also contain "--entry=..." payloads directly.
       if (defined(invoker.args)) {
         zbi_input_args += invoker.args
@@ -122,17 +126,10 @@ template("zbi_input") {
         zbi_input_args += rebase_path(invoker.sources, root_build_dir)
       }
 
-      if (defined(invoker.args)) {
-        # Explicit $args might have set the compression state for its $sources
-        # so be sure to reset to default state.
-        zbi_input_args += [ "--compressed" ]
-      }
-
       # Always include the manifest generated from the deps here.  The
       # presence of the fini_manifest() target will prevent zbi()
       # from collecting entries that are redundant with this manifest.
       zbi_input_args += [
-        "--prefix=$prefix",
         "--files",
         rebase_path(manifest_file, root_build_dir),
       ]
