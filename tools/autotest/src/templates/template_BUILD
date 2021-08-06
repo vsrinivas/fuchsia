@@ -1,0 +1,42 @@
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+ name = "BINARY_NAME"
+ edition = "2018"
+ source_root = "src/BINARY_NAME.rs"
+ sources = [ "src/BINARY_NAME.rs" ]
+ deps = [
+   # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
+   # ex: "//examples/components/routing/fidl:echo-rustc",
+   {COMPONENT_FIDL_BUILD_TARGET},
+   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+   "//src/lib/fidl/rust/fidl",
+   "//src/lib/fuchsia",
+   "//src/lib/fuchsia-component",
+   "//third_party/rust_crates:anyhow",
+   "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("BINARY_NAME") {
+ testonly = true
+ manifest = "meta/BINARY_NAME.cml"
+ deps = [ ":bin" ]
+}
+
+fuchsia_test_package("integration_test_pkg") {
+ package_name = "COMPONENT_NAME"
+ test_components = [ ":BINARY_NAME" ]
+ deps = [
+   ":BINARY_NAME",
+   # Change COMPONENT_BUILD_TARGET to component targets the test use
+   # ex: "//examples/components/routing/echo_server:echo_server_component",
+   {COMPONENT_BUILD_TARGET}, 
+ ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [":integration_test_pkg"]
+}

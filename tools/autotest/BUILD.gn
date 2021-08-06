@@ -1,0 +1,46 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (is_host) {
+  rustc_binary("bin") {
+    name = "autotest"
+    edition = "2018"
+
+    with_unit_tests = true
+    test_environments = [ host_env ]
+    deps = [
+      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/sys/lib/cm_rust",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:regex",
+    ]
+    source_root = "src/main.rs"
+    sources = [
+      "src/args.rs",
+      "src/cm_parser.rs",
+      "src/generate_build.rs",
+      "src/generate_manifest.rs",
+      "src/generate_rust_test.rs",
+      "src/main.rs",
+    ]
+    inputs = [
+      "src/templates/template_BUILD",
+      "src/templates/template_manifest",
+    ]
+  }
+  install_host_tools("host") {
+    deps = [ ":bin" ]
+    outputs = [ "autotest" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bin_test($host_toolchain)" ]
+}
