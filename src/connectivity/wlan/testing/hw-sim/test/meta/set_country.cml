@@ -1,0 +1,13 @@
+{
+    include: [ "//src/connectivity/wlan/testing/hw-sim/test/meta/shared_test_capabilities.shard.cml" ],
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/set-country-driver.cm",
+        },
+        {
+            name: "wlanstack",
+            url: "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cm",
+        },
+    ],
+}

@@ -1,0 +1,25 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.io.Directory",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+                "fuchsia.stash.SecureStore",
+                "fuchsia.wlan.device.service.DeviceMonitor",
+                "fuchsia.wlan.device.service.DeviceService",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+        },
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+}

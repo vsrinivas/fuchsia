@@ -1,0 +1,6 @@
+{
+    include: [ "//src/connectivity/wlan/testing/hw-sim/test/meta/shared_test_driver.shard.cml" ],
+    program: {
+        binary: "bin/simulate_scan",
+    },
+}
