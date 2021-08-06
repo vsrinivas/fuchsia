@@ -9,7 +9,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
@@ -24,6 +23,7 @@
 
 #include "gpt.h"
 #include "gpt_test_data.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace gpt {
 namespace {
@@ -130,9 +130,17 @@ class GptDeviceTest : public zxtest::Test {
 
   void SetInfo(const block_info_t* info) { fake_block_device_.SetInfo(info); }
 
-  void Init() { ddk_.SetProtocol(ZX_PROTOCOL_BLOCK, fake_block_device_.proto()); }
+  void Init() {
+    fake_parent_->AddProtocol(ZX_PROTOCOL_BLOCK, fake_block_device_.proto()->ops,
+                              fake_block_device_.proto()->ctx);
+  }
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
 
-  fake_ddk::Bind ddk_;
+  PartitionDevice* GetDev(size_t device_number) {
+    ZX_ASSERT(fake_parent_->child_count() > device_number);
+    auto iter = std::next(fake_parent_->children().begin(), device_number);
+    return (*iter)->GetDeviceContext<PartitionDevice>();
+  }
 
  protected:
   struct BlockOpResult {
@@ -158,27 +166,19 @@ TEST_F(GptDeviceTest, DeviceTooSmall) {
   const block_info_t info = {20, 512, BLOCK_MAX_TRANSFER_UNBOUNDED, 0, 0};
   SetInfo(&info);
 
-  TableRef tab;
-  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab));
-  ASSERT_EQ(ZX_ERR_NO_SPACE, tab->Bind());
+  ASSERT_EQ(ZX_ERR_NO_SPACE, Bind(nullptr, fake_parent_.get()));
 }
 
 TEST_F(GptDeviceTest, DdkLifecycle) {
   Init();
-  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
-
-  TableRef tab;
-  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
-  ASSERT_OK(tab->Bind());
-
-  ASSERT_EQ(devices.size(), 2);
+  ASSERT_OK(Bind(nullptr, fake_parent_.get()));
+  ASSERT_EQ(fake_parent_->child_count(), 2);
 
   char name[MAX_PARTITION_NAME_LENGTH];
   guid_t guid;
 
   // Device 0
-  PartitionDevice* dev0 = devices[0].get();
-  ASSERT_NOT_NULL(dev0);
+  PartitionDevice* dev0 = GetDev(0);
   ASSERT_OK(dev0->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
   ASSERT_OK(dev0->BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
@@ -192,8 +192,7 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
 
-  PartitionDevice* dev1 = devices[1].get();
-  ASSERT_NOT_NULL(dev1);
+  PartitionDevice* dev1 = GetDev(1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(kPartition1Name, name);
 
@@ -207,33 +206,24 @@ TEST_F(GptDeviceTest, DdkLifecycle) {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART1;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
-
-  dev0->AsyncRemove();
-  dev1->AsyncRemove();
-
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(GptDeviceTest, GuidMapMetadata) {
   Init();
-  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
 
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
+  fake_parent_->SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
-  TableRef tab;
-  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
-  ASSERT_OK(tab->Bind());
-
-  ASSERT_EQ(devices.size(), 2);
+  ASSERT_OK(Bind(nullptr, fake_parent_.get()));
+  ASSERT_EQ(fake_parent_->child_count(), 2);
 
   char name[MAX_PARTITION_NAME_LENGTH];
   guid_t guid;
 
   // Device 0
-  PartitionDevice* dev0 = devices[0].get();
+  PartitionDevice* dev0 = GetDev(0);
   ASSERT_NOT_NULL(dev0);
   ASSERT_OK(dev0->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(strcmp(name, "Linux filesystem"), 0);
@@ -248,7 +238,7 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
 
-  PartitionDevice* dev1 = devices[1].get();
+  PartitionDevice* dev1 = GetDev(1);
   ASSERT_NOT_NULL(dev1);
   ASSERT_OK(dev1->BlockPartitionGetName(name, sizeof(name)));
   ASSERT_EQ(kPartition1Name, name);
@@ -263,30 +253,21 @@ TEST_F(GptDeviceTest, GuidMapMetadata) {
     uint8_t expected_guid[GPT_GUID_LEN] = GUID_UNIQUE_PART1;
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(&guid), expected_guid, GPT_GUID_LEN);
   }
-
-  dev0->AsyncRemove();
-  dev1->AsyncRemove();
-
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(GptDeviceTest, BlockOpsPropagate) {
   Init();
-  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
 
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
+  fake_parent_->SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
-  TableRef tab;
-  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
-  ASSERT_OK(tab->Bind());
+  ASSERT_OK(Bind(nullptr, fake_parent_.get()));
+  ASSERT_EQ(fake_parent_->child_count(), 2);
 
-  ASSERT_EQ(devices.size(), 2);
-
-  PartitionDevice* dev0 = devices[0].get();
-  PartitionDevice* dev1 = devices[1].get();
+  PartitionDevice* dev0 = GetDev(0);
+  PartitionDevice* dev1 = GetDev(1);
 
   block_info_t block_info = {};
   size_t block_op_size = 0;
@@ -347,30 +328,21 @@ TEST_F(GptDeviceTest, BlockOpsPropagate) {
 
   EXPECT_EQ(result.op.command, BLOCK_OP_FLUSH);
   EXPECT_OK(result.status);
-
-  dev0->AsyncRemove();
-  dev1->AsyncRemove();
-
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 TEST_F(GptDeviceTest, BlockOpsOutOfBounds) {
   Init();
-  fbl::Vector<std::unique_ptr<PartitionDevice>> devices;
 
   const guid_map_t guid_map[] = {
       {"Linux filesystem", GUID_METADATA},
   };
-  ddk_.SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
+  fake_parent_->SetMetadata(DEVICE_METADATA_GUID_MAP, &guid_map, sizeof(guid_map));
 
-  TableRef tab;
-  ASSERT_OK(PartitionTable::Create(fake_ddk::kFakeParent, &tab, &devices));
-  ASSERT_OK(tab->Bind());
+  ASSERT_OK(Bind(nullptr, fake_parent_.get()));
+  ASSERT_EQ(fake_parent_->child_count(), 2);
 
-  ASSERT_EQ(devices.size(), 2);
-
-  PartitionDevice* dev0 = devices[0].get();
-  PartitionDevice* dev1 = devices[1].get();
+  PartitionDevice* dev0 = GetDev(0);
+  PartitionDevice* dev1 = GetDev(1);
 
   block_info_t block_info = {};
   size_t block_op_size = 0;
@@ -413,11 +385,6 @@ TEST_F(GptDeviceTest, BlockOpsOutOfBounds) {
   sync_completion_reset(&result.completion);
 
   EXPECT_NOT_OK(result.status);
-
-  dev0->AsyncRemove();
-  dev1->AsyncRemove();
-
-  EXPECT_TRUE(ddk_.Ok());
 }
 
 }  // namespace

@@ -25,9 +25,7 @@
 
 namespace gpt {
 
-class PartitionTable;
 class PartitionDevice;
-using TableRef = fbl::RefPtr<PartitionTable>;
 using DeviceType = ddk::Device<PartitionDevice, ddk::GetProtocolable, ddk::GetSizable>;
 
 class PartitionDevice : public DeviceType,
@@ -45,9 +43,6 @@ class PartitionDevice : public DeviceType,
   // Add device to devhost device list. Once added, the device cannot be deleted directly,
   // AsyncRemove() must be called to schedule an Unbind() and Release().
   zx_status_t Add(uint32_t partition_number, uint32_t flags = 0);
-
-  // Schedule device for unbind and release.
-  void AsyncRemove();
 
   // Block protocol implementation.
   void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
@@ -69,26 +64,9 @@ class PartitionDevice : public DeviceType,
   block_info_t info_{};
 };
 
-class PartitionTable : public fbl::RefCounted<PartitionTable> {
- public:
-  explicit PartitionTable(zx_device_t* parent) : parent_(parent) {}
-
-  // Device bind() interface.
-  // Bind call creates Table and scans partitions.
-  static zx_status_t CreateAndBind(void* ctx, zx_device_t* parent);
-
-  // Breakout of CreateAndBind suitable for testing.
-  static zx_status_t Create(zx_device_t* parent, TableRef* out,
-                            fbl::Vector<std::unique_ptr<PartitionDevice>>* devices = nullptr);
-  zx_status_t Bind();
-
- private:
-  zx_device_t* parent_ = nullptr;
-  uint64_t guid_map_entries_ = 0;
-  guid_map_t guid_map_[DEVICE_METADATA_GUID_MAP_MAX_ENTRIES]{};
-  // Used by tests to retrieve device list. Not managed by this class.
-  fbl::Vector<std::unique_ptr<PartitionDevice>>* devices_ = nullptr;
-};
+// Device bind() interface.
+// Bind call creates Table and scans partitions.
+zx_status_t Bind(void* ctx, zx_device_t* parent);
 
 }  // namespace gpt
 

@@ -182,8 +182,6 @@ zx_status_t PartitionDevice::Add(uint32_t partition_number, uint32_t flags) {
   return status;
 }
 
-void PartitionDevice::AsyncRemove() { device_async_remove(zxdev_); }
-
 void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
   // Pass 32bit status back to caller via 32bit command field
   // Saves from needing custom structs, etc.
@@ -221,47 +219,27 @@ zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_si
   return vmo.read(out_buffer, 0, vmo_size);
 }
 
-zx_status_t PartitionTable::CreateAndBind(void* ctx, zx_device_t* parent) {
-  TableRef tab;
-  zx_status_t status = Create(parent, &tab);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return tab->Bind();
-}
-
-zx_status_t PartitionTable::Create(zx_device_t* parent, TableRef* out,
-                                   fbl::Vector<std::unique_ptr<PartitionDevice>>* devices) {
-  fbl::AllocChecker ac;
-  TableRef tab = fbl::AdoptRef(new (&ac) PartitionTable(parent));
-  if (!ac.check()) {
-    zxlogf(ERROR, "gpt: out of memory");
-    return ZX_ERR_NO_MEMORY;
-  }
-  tab->devices_ = devices;
-  *out = std::move(tab);
-  return ZX_OK;
-}
-
-zx_status_t PartitionTable::Bind() {
+zx_status_t Bind(void* ctx, zx_device_t* parent) {
   size_t actual;
+  uint64_t guid_map_entries = 0;
+  guid_map_t guid_map[DEVICE_METADATA_GUID_MAP_MAX_ENTRIES]{};
   zx_status_t status;
   status =
-      device_get_metadata(parent_, DEVICE_METADATA_GUID_MAP, guid_map_, sizeof(guid_map_), &actual);
+      device_get_metadata(parent, DEVICE_METADATA_GUID_MAP, guid_map, sizeof(guid_map), &actual);
   // TODO(http://fxbug.dev/33999): We should not continue loading the driver here. Upper layer
   //                may rely on guid to take action on a partition.
   if (status != ZX_OK) {
     zxlogf(INFO, "gpt: device_get_metadata failed (%d)", status);
-  } else if (actual % sizeof(guid_map_[0]) != 0) {
+  } else if (actual % sizeof(guid_map[0]) != 0) {
     zxlogf(INFO, "gpt: GUID map size is invalid (%lu)", actual);
   } else {
-    guid_map_entries_ = actual / sizeof(guid_map_[0]);
+    guid_map_entries = actual / sizeof(guid_map[0]);
   }
 
   block_impl_protocol_t block_protocol;
-  if (device_get_protocol(parent_, ZX_PROTOCOL_BLOCK, &block_protocol) != ZX_OK) {
+  if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &block_protocol) != ZX_OK) {
     zxlogf(ERROR, "gpt: ERROR: block device '%s': does not support block protocol",
-           device_get_name(parent_));
+           device_get_name(parent));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -333,7 +311,7 @@ zx_status_t PartitionTable::Bind() {
     ZX_DEBUG_ASSERT(result.value() == true);
 
     fbl::AllocChecker ac;
-    std::unique_ptr<PartitionDevice> device(new (&ac) PartitionDevice(parent_, &block_protocol));
+    std::unique_ptr<PartitionDevice> device(new (&ac) PartitionDevice(parent, &block_protocol));
     if (!ac.check()) {
       zxlogf(ERROR, "gpt: out of memory");
       return ZX_ERR_NO_MEMORY;
@@ -347,7 +325,7 @@ zx_status_t PartitionTable::Bind() {
       zxlogf(ERROR, "gpt: bad partition name, ignoring entry");
       continue;
     }
-    apply_guid_map(guid_map_, guid_map_entries_, partition_name, entry->type);
+    apply_guid_map(guid_map, guid_map_entries, partition_name, entry->type);
 
     char type_guid[GPT_GUID_STRLEN] = {};
     uint8_to_guid_string(type_guid, entry->type);
@@ -361,15 +339,11 @@ zx_status_t PartitionTable::Bind() {
     if ((status = device->Add(partitions)) != ZX_OK) {
       return status;
     }
-    if (devices_ != nullptr) {
-      devices_->push_back(std::move(device));
-    } else {
-      device.release();
-    }
+    device.release();
   }
 
   if (!has_partition) {
-    auto dummy = std::make_unique<DummyDevice>(parent_);
+    auto dummy = std::make_unique<DummyDevice>(parent);
     status = dummy->DdkAdd("dummy", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
       zxlogf(ERROR, "gpt: failed to add dummy %s", zx_status_get_string(status));
@@ -386,7 +360,7 @@ zx_status_t PartitionTable::Bind() {
 constexpr zx_driver_ops_t gpt_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = PartitionTable::CreateAndBind;
+  ops.bind = Bind;
   return ops;
 }();
 
