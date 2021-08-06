@@ -46,7 +46,8 @@ pub struct RunCommand {
 
     /// test filter. Glob pattern for matching tests. Can be
     /// specified multiple times to pass in multiple patterns.
-    /// example: --test-filter glob1 --test-filter glob2.
+    /// Tests may be excluded by prepending a '-' to the glob pattern.
+    /// example: --test-filter glob1 --test-filter glob2 --test-filter -glob3.
     #[argh(option)]
     pub test_filter: Vec<String>,
 

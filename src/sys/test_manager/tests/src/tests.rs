@@ -302,7 +302,7 @@ async fn launch_and_test_gtest_runner_sample_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn filter_test() {
+async fn positive_filter_test() {
     let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
     let mut options = default_run_option();
     options.case_filters_to_run =
@@ -320,6 +320,70 @@ async fn filter_test() {
         RunEvent::case_started("SampleFixture.Test1"),
         RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
         RunEvent::case_finished("SampleFixture.Test1"),
+        RunEvent::case_found("SampleFixture.Test2"),
+        RunEvent::case_started("SampleFixture.Test2"),
+        RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test2"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    assert_eq!(logs, Vec::<String>::new());
+    assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn negative_filter_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+    let mut options = default_run_option();
+    options.case_filters_to_run = Some(vec![
+        "-SampleTest1.*".into(),
+        "-Tests/SampleParameterizedTestFixture.*".into(),
+        "-SampleDisabled.*".into(),
+        "-WriteToStdout.*".into(),
+    ]);
+    let (events, logs) = run_single_test(test_url, options).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("SampleTest2.SimplePass"),
+        RunEvent::case_started("SampleTest2.SimplePass"),
+        RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
+        RunEvent::case_finished("SampleTest2.SimplePass"),
+        RunEvent::case_found("SampleFixture.Test1"),
+        RunEvent::case_started("SampleFixture.Test1"),
+        RunEvent::case_stopped("SampleFixture.Test1", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test1"),
+        RunEvent::case_found("SampleFixture.Test2"),
+        RunEvent::case_started("SampleFixture.Test2"),
+        RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),
+        RunEvent::case_finished("SampleFixture.Test2"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    assert_eq!(logs, Vec::<String>::new());
+    assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn positive_and_negative_filter_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/gtest-runner-example-tests#meta/sample_tests.cm";
+    let mut options = default_run_option();
+    options.case_filters_to_run =
+        Some(vec!["SampleFixture.*".into(), "SampleTest2.*".into(), "-*Test1".into()]);
+    let (events, logs) = run_single_test(test_url, options).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("SampleTest2.SimplePass"),
+        RunEvent::case_started("SampleTest2.SimplePass"),
+        RunEvent::case_stopped("SampleTest2.SimplePass", CaseStatus::Passed),
+        RunEvent::case_finished("SampleTest2.SimplePass"),
         RunEvent::case_found("SampleFixture.Test2"),
         RunEvent::case_started("SampleFixture.Test2"),
         RunEvent::case_stopped("SampleFixture.Test2", CaseStatus::Passed),

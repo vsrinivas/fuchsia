@@ -109,9 +109,25 @@ type RunOptions = table {
 
     /// glob case filter. This filter will match based on glob pattern
     /// [https://en.wikipedia.org/wiki/Glob_(programming)].
-    /// All the filters are ORed. If passed in, only tests matching these
-    /// filters would be executed. If not specified then all test cases will
-    /// be admitted which is equivalent to specifying [ "*" ]
+    /// Only test cases matching at least one pattern will be run. In
+    /// addition, negative filters may be specified by prepending '-'. When
+    /// negative filters are specified, test cases matching the negative filter
+    /// are excluded.
+    /// The behavior of combinations of these filters is as follows:
+    ///  * When no filters are specified, all test cases are run.
+    ///  * When only positive filters are specified, test cases that match at
+    ///    least one filter are run.
+    ///  * When only negative filters are specified, test cases that match none
+    ///    of the filters are run.
+    ///  * When both positive and negative filters are specified, test cases
+    ///    that match at least one positive filter, but do not match any
+    ///    negative filters, are run.
+    ///
+    /// For example, given that a suite has the test cases `Foo.Test1`,
+    /// `Foo.Test2`, `Bar.Test1`, and `Bar.Test2`:
+    ///  * The filters `["Foo.*"]` will execute `Foo.Test1` and `Foo.Test2`.
+    ///  * The filters `["-Foo.*"]` will execute `Bar.Test1` and `Bar.Test2`.
+    ///  * The filters `["Foo.*", "-*.Test1"]` will execute `Foo.Test2`.
     5: case_filters_to_run vector<string:MAX>:MAX;
 
     /// Defines what kind of log iterator the client supports. Default value is

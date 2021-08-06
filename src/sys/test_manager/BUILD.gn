@@ -77,7 +77,10 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+  ]
 
   sources = [
     "src/diagnostics.rs",

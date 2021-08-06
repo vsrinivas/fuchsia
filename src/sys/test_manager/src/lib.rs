@@ -240,7 +240,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
 /// Enumerates test and return invocations.
 async fn enumerate_tests(
     suite: &ftest::SuiteProxy,
-    patterns: Option<Vec<glob::Pattern>>,
+    matcher: Option<CaseMatcher>,
 ) -> Result<Vec<Invocation>, anyhow::Error> {
     debug!("enumerating tests");
     let (case_iterator, server_end) =
@@ -255,7 +255,7 @@ async fn enumerate_tests(
         }
         for case in cases {
             let case_name = case.name.ok_or(format_err!("invocation should contain a name."))?;
-            if patterns.as_ref().map_or(true, |p| p.iter().any(|p| p.matches(&case_name))) {
+            if matcher.as_ref().map_or(true, |m| m.matches(&case_name)) {
                 invocations.push(Invocation {
                     name: Some(case_name),
                     tag: None,
@@ -270,22 +270,42 @@ async fn enumerate_tests(
     Ok(invocations)
 }
 
-fn get_glob_patterns(
-    filters: &Option<Vec<String>>,
-) -> Result<Option<Vec<glob::Pattern>>, anyhow::Error> {
-    filters
-        .as_ref()
-        .map(|filters| {
-            let mut v = vec![];
-            filters.iter().try_for_each(|filter| {
-                let p = glob::Pattern::new(&filter)
-                    .map_err(|e| format_err!("Bad test filter pattern: {}", e))?;
-                v.push(p);
-                Ok::<(), anyhow::Error>(())
-            })?;
-            Ok(v)
-        })
-        .transpose()
+struct CaseMatcher {
+    /// Patterns specifying cases to include.
+    includes: Vec<glob::Pattern>,
+    /// Patterns specifying cases to exclude.
+    excludes: Vec<glob::Pattern>,
+}
+
+impl CaseMatcher {
+    fn new<T: AsRef<str>>(filters: &Vec<T>) -> Result<Self, anyhow::Error> {
+        let mut matcher = CaseMatcher { includes: vec![], excludes: vec![] };
+        filters.iter().try_for_each(|filter| {
+            match filter.as_ref().chars().next() {
+                Some('-') => {
+                    let pattern = glob::Pattern::new(&filter.as_ref()[1..])
+                        .map_err(|e| format_err!("Bad negative test filter pattern: {}", e))?;
+                    matcher.excludes.push(pattern);
+                }
+                Some(_) | None => {
+                    let pattern = glob::Pattern::new(&filter.as_ref())
+                        .map_err(|e| format_err!("Bad test filter pattern: {}", e))?;
+                    matcher.includes.push(pattern);
+                }
+            }
+            Ok::<(), anyhow::Error>(())
+        })?;
+        Ok(matcher)
+    }
+
+    /// Returns whether or not a case should be run.
+    fn matches(&self, case: &str) -> bool {
+        let matches_includes = match self.includes.is_empty() {
+            true => true,
+            false => self.includes.iter().any(|p| p.matches(case)),
+        };
+        matches_includes && !self.excludes.iter().any(|p| p.matches(case))
+    }
 }
 
 fn get_invocation_options(options: ftest_manager::RunOptions) -> ftest::RunOptions {
@@ -307,15 +327,18 @@ async fn run_suite(
     debug!("running test suite {}", test_url);
 
     let fut = async {
-        let patterns = match get_glob_patterns(&options.case_filters_to_run) {
-            Ok(p) => p,
-            Err(e) => {
-                sender.send(Err(LaunchError::InvalidArgs)).await.unwrap();
-                return Err(e);
-            }
+        let matcher = match options.case_filters_to_run.as_ref() {
+            Some(filters) => match CaseMatcher::new(filters) {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    sender.send(Err(LaunchError::InvalidArgs)).await.unwrap();
+                    return Err(e);
+                }
+            },
+            None => None,
         };
 
-        let invocations = match enumerate_tests(&suite, patterns).await {
+        let invocations = match enumerate_tests(&suite, matcher).await {
             Ok(i) => i,
             Err(e) => {
                 sender.send(Err(LaunchError::CaseEnumeration)).await.unwrap();
@@ -1580,7 +1603,8 @@ async fn gen_enclosing_env(handles: MockHandles) -> Result<(), Error> {
 mod tests {
     use {
         super::*, fasync::pin_mut, fidl::endpoints::create_proxy_and_stream,
-        ftest_internal::InfoMarker, matches::assert_matches, std::ops::Add, zx::DurationNum,
+        ftest_internal::InfoMarker, maplit::hashset, matches::assert_matches, std::ops::Add,
+        zx::DurationNum,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -1673,6 +1697,41 @@ mod tests {
         test_map.delete("my_test");
         assert_eq!(test_map.get("my_test"), None);
         assert_eq!(test_map.get("other_test"), Some("other_test_url".into()));
+    }
+
+    #[test]
+    fn case_matcher_tests() {
+        let all_test_case_names = hashset! {
+            "Foo.Test1", "Foo.Test2", "Foo.Test3", "Bar.Test1", "Bar.Test2", "Bar.Test3"
+        };
+
+        let cases = vec![
+            (vec![], all_test_case_names.clone()),
+            (vec!["Foo.Test1"], hashset! {"Foo.Test1"}),
+            (vec!["Foo.*"], hashset! {"Foo.Test1", "Foo.Test2", "Foo.Test3"}),
+            (vec!["-Foo.*"], hashset! {"Bar.Test1", "Bar.Test2", "Bar.Test3"}),
+            (vec!["Foo.*", "-*.Test2"], hashset! {"Foo.Test1", "Foo.Test3"}),
+        ];
+
+        for (filters, expected_matching_cases) in cases.into_iter() {
+            let case_matcher = CaseMatcher::new(&filters).expect("Create case matcher");
+            for test_case in all_test_case_names.iter() {
+                match expected_matching_cases.contains(test_case) {
+                    true => assert!(
+                        case_matcher.matches(test_case),
+                        "Expected filters {:?} to match test case name {}",
+                        filters,
+                        test_case
+                    ),
+                    false => assert!(
+                        !case_matcher.matches(test_case),
+                        "Expected filters {:?} to not match test case name {}",
+                        filters,
+                        test_case
+                    ),
+                }
+            }
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

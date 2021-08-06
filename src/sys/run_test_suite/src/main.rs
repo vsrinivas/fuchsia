@@ -21,7 +21,9 @@ struct Args {
     test_url: String,
 
     /// test filter. Glob pattern for matching tests. Can be specified multiple
-    /// times to pass in multiple patterns. example: --test-filter glob1 --test-filter glob2.
+    /// times to pass in multiple patterns. Tests may be excluded by prepending a
+    /// '-' to the glob pattern.
+    /// example: --test-filter glob1 --test-filter glob2.
     #[argh(option)]
     test_filter: Vec<String>,
 
