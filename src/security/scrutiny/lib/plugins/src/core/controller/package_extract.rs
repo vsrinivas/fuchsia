@@ -29,16 +29,12 @@ pub struct PackageExtractRequest {
     pub output: String,
 }
 
-pub const BLOBS_PATH: &str = "amber-files/repository/blobs";
-
 #[derive(Default)]
 pub struct PackageExtractController {}
 
 impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
-        let fuchsia_build_dir = model.config().build_path();
-        let blob_dir = fuchsia_build_dir.join(BLOBS_PATH);
-
+        let blob_dir = model.config().repository_blobs_path();
         let request: PackageExtractRequest = serde_json::from_value(query)?;
         let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {

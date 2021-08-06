@@ -165,7 +165,11 @@ impl From<String> for LoggingVerbosity {
 }
 
 /// The DataModel is a required feature of the Scrutiny runtime. Every
-/// configuration must include a model configuration.
+/// configuration must include a model configuration. This configuration should
+/// include all global configuration in Fuchsia that model collectors should
+/// utilize about system state. Instead of collectors hard coding paths these
+/// should be tracked here so it is easy to modify all collectors if these
+/// paths or urls change in future releases.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub struct ModelConfig {
     /// Path to the model data.
@@ -174,6 +178,12 @@ pub struct ModelConfig {
     pub build_path: PathBuf,
     /// Path to the local Fuchsia package repository.
     pub repository_path: PathBuf,
+    /// Path to the local Fuchsia package repository blobs.
+    pub repository_blobs_path: PathBuf,
+    /// The URL of the Fuchsia update package.
+    pub update_package_url: String,
+    /// The URL of the Fuchsia config-data package.
+    pub config_data_package_url: String,
 }
 
 impl ModelConfig {
@@ -183,19 +193,42 @@ impl ModelConfig {
     pub fn default() -> ModelConfig {
         let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
         let repository_path = build_path.join("amber-files/repository");
-        ModelConfig { uri: "{memory}".to_string(), build_path, repository_path }
+        let repository_blobs_path = build_path.join("amber-files/blobs");
+        ModelConfig {
+            uri: "{memory}".to_string(),
+            build_path,
+            repository_path,
+            repository_blobs_path,
+            update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
+            config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
+        }
     }
     pub fn minimal() -> ModelConfig {
         ModelConfig::default()
     }
+    /// Model URI used to determine if the model is in memory or on disk.
     pub fn uri(&self) -> String {
         self.uri.clone()
     }
+    /// The root Fuchsia build path.
     pub fn build_path(&self) -> PathBuf {
         self.build_path.clone()
     }
+    /// The Fuchsia repository path.
     pub fn repository_path(&self) -> PathBuf {
         self.repository_path.clone()
+    }
+    /// The Fuchsia repository blobs path.
+    pub fn repository_blobs_path(&self) -> PathBuf {
+        self.repository_blobs_path.clone()
+    }
+    /// The Fuchsia package url of the update package.
+    pub fn update_package_url(&self) -> String {
+        self.update_package_url.clone()
+    }
+    /// The Fuchsia package url of the config data package.
+    pub fn config_data_package_url(&self) -> String {
+        self.config_data_package_url.clone()
     }
 }
 

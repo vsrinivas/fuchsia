@@ -13,13 +13,12 @@ use {
     },
     anyhow::{anyhow, Result},
     scrutiny::model::model::DataModel,
-    scrutiny_config::ModelConfig,
+    scrutiny_testing::fake::fake_model_config,
     std::io::{Error, ErrorKind},
     std::{
         collections::HashMap,
         sync::{Arc, RwLock},
     },
-    tempfile::tempdir,
 };
 
 pub struct MockPackageGetter {
@@ -203,15 +202,7 @@ pub fn create_svc_pkg_def_with_array(
 }
 
 pub fn create_model() -> (String, Arc<DataModel>) {
-    let store_dir = tempdir().unwrap();
-    let build_dir = tempdir().unwrap();
-    let repository_dir = tempdir().unwrap();
-    let uri = store_dir.into_path().into_os_string().into_string().unwrap();
-    let build_path = build_dir.into_path();
-    let repository_path = repository_dir.into_path();
-    let uri_clone = uri.clone();
-    (
-        uri_clone,
-        Arc::new(DataModel::connect(ModelConfig { uri, build_path, repository_path }).unwrap()),
-    )
+    let config = fake_model_config();
+    let uri_clone = config.uri();
+    (uri_clone, Arc::new(DataModel::connect(config).unwrap()))
 }

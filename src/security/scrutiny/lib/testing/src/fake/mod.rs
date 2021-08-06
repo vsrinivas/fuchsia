@@ -14,6 +14,9 @@ pub fn fake_model_config() -> ModelConfig {
         uri: "{memory}".to_string(),
         build_path: tempdir().unwrap().into_path(),
         repository_path: tempdir().unwrap().into_path(),
+        repository_blobs_path: tempdir().unwrap().into_path(),
+        update_package_url: "fuchsia-pkg://fuchsia.com/update".to_string(),
+        config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
     }
 }
 

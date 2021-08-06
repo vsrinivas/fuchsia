@@ -131,7 +131,7 @@ mod tests {
         super::{ComponentManifest, FindSysRealmComponents, ManifestContent},
         crate::core::{
             package::{
-                collector::{self, PackageDataCollector},
+                collector::PackageDataCollector,
                 getter::PackageGetter,
                 test_utils::{self, MockPackageGetter, MockPackageReader},
             },
@@ -141,6 +141,7 @@ mod tests {
             },
         },
         scrutiny::model::controller::DataController,
+        scrutiny_testing::fake::fake_model_config,
         serde_json,
         std::{
             collections::{HashMap, HashSet},
@@ -386,7 +387,7 @@ mod tests {
         meta_map.insert(bar_provider.config_path.clone(), bar_provider.config_content.clone());
         meta_map.insert(buzz_provider.config_path.clone(), buzz_provider.config_content.clone());
         let config_data = test_utils::create_test_package_with_meta(
-            String::from(collector::CONFIG_DATA_PKG_URL),
+            fake_model_config().config_data_package_url(),
             meta_map,
         );
         mock.append_pkg_def(config_data);
@@ -400,9 +401,9 @@ mod tests {
         {
             let mut targets = HashMap::new();
             targets.insert(
-                String::from(collector::CONFIG_DATA_PKG_URL),
+                fake_model_config().config_data_package_url(),
                 FarPackageDefinition {
-                    custom: Custom { merkle: String::from(collector::CONFIG_DATA_PKG_URL) },
+                    custom: Custom { merkle: fake_model_config().config_data_package_url() },
                 },
             );
             targets.insert(
@@ -427,7 +428,14 @@ mod tests {
         let (_unknown, model) = test_utils::create_model();
         let pkg_collector = PackageDataCollector::default();
         let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
-        pkg_collector.collect_with_reader(Box::new(mock), pkg_getter, Arc::clone(&model)).unwrap();
+        pkg_collector
+            .collect_with_reader(
+                fake_model_config(),
+                Box::new(mock),
+                pkg_getter,
+                Arc::clone(&model),
+            )
+            .unwrap();
 
         // Now run the model through our data controller
         let sys_realm = FindSysRealmComponents {};
@@ -506,7 +514,12 @@ mod tests {
         let pkg_collector = PackageDataCollector::default();
         let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
         pkg_collector
-            .collect_with_reader(Box::new(mock_reader), pkg_getter, Arc::clone(&model))
+            .collect_with_reader(
+                fake_model_config(),
+                Box::new(mock_reader),
+                pkg_getter,
+                Arc::clone(&model),
+            )
             .unwrap();
 
         let sys_realm = FindSysRealmComponents {};
