@@ -59,7 +59,6 @@ executable("llcpp_test") {
     "devfs_exporter_test.cc",
     "logger_test.cc",
     "namespace_test.cc",
-    "promise_test.cc",
     "start_args_test.cc",
     "test_base.cc",
     "test_base.h",
