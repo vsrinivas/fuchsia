@@ -3,6 +3,5 @@
     program: {
         binary: "/data/tests/kill_test",
         args: [ "--gunit_filter=KillTest.CanKillAllPIDs:KillTest.CannotKillInvalidPID:KillTest.CannotKillTid" ],
-        environ: [ "TEST_ON_GVISOR=1" ],
     },
 }

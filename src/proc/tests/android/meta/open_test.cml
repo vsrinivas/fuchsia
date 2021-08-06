@@ -1,12 +1,7 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/open_test",
         args: [ "--gunit_filter=*.OTrunc:*.OTruncAndReadOnlyDir:*.OTruncAndReadOnlyFile:*.MustCreateExisting:*.ReadOnly:*.WriteOnly:*.CreateWithAppend:*.ReadWrite:*.RelPath:*.AbsPath:*.AtRelPath:*.AtAbsPath:*.OpenNoFollowSymlink:*.OpenNoFollowStillFollowsLinksInPath:*.Fault:*.AppendOnly:*.AppendConcurrentWrite:*.Truncate:*.NameTooLong:*.DotsFromRoot:*.DirectoryWritableFails:*.FileNotDirectory:*.SymlinkDirectory:*.CanTruncateReadOnly" ],
-        mounts: [
-            "/:remotefs:root",
-            "/data:remotefs:data",
-            "/tmp:tmpfs",
-        ],
     },
 }

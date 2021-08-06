@@ -109,12 +109,18 @@ resource("starnix_dev_placeholder") {
   outputs = [ "root/dev/.placeholder" ]
 }
 
+resource("starnix_data_tmp_placeholder") {
+  sources = [ "placeholder" ]
+  outputs = [ "data/tmp/.placeholder" ]
+}
+
 fuchsia_component("syscalls_test") {
   testonly = true
   check_references = false
   manifest = "meta/syscalls_test.cml"
   deps = [
     ":starnix_data_placeholder",
+    ":starnix_data_tmp_placeholder",
     ":starnix_dev_placeholder",
     ":starnix_tmp_placeholder",
     ":syscalls_test_bin",
@@ -216,6 +222,7 @@ fuchsia_test_package("test_android_distro") {
     ":android_system_image_ext",
     ":init",
     ":sh",
+    ":starnix_data_tmp_placeholder",
     ":syscalls_test",
   ]
 

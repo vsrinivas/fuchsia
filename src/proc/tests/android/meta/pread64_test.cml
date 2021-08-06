@@ -1,12 +1,7 @@
 {
-    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/pread64_test",
         args: [ "--gunit_filter=-*.CantReadSocketPair*:*.Pread64WithOpath:*.DirNotReadable" ],
-        mounts: [
-            "/:remotefs:root",
-            "/data:remotefs:data",
-            "/tmp:tmpfs",
-        ],
     },
 }

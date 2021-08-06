@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/clock_getres_test",
-        environ: [ "TEST_ON_GVISOR=1" ],
     },
 }

@@ -3,6 +3,5 @@
     program: {
         binary: "/data/tests/clock_gettime_test",
         args: [ "--gunit_filter=-ClockGettime.JavaThreadTime:ClockGettime/MonotonicClockTest.IsMonotonic*" ],
-        environ: [ "TEST_ON_GVISOR=1" ],
     },
 }

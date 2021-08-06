@@ -2,10 +2,15 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         mounts: [
-            "/:remotefs:root",
+            "/:ext4:data/system.img",
             "/data:remotefs:data",
             "/dev:devfs",
-            "/tmp:tmpfs",
+            "/data/tmp:tmpfs",
+        ],
+        apex_hack: [ "com.android.runtime" ],
+        environ: [
+            "TEST_TMPDIR=/data/tmp",
+            "TEST_ON_GVISOR=1",
         ],
     },
 }
