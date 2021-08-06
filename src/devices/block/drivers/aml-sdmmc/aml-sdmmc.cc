@@ -30,6 +30,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <string>
 
 #include <bits/limits.h>
 #include <fbl/algorithm.h>
@@ -91,6 +92,30 @@ void AmlSdmmc::ClearStatus() {
       .ReadFrom(&mmio_)
       .set_reg_value(AmlSdmmcStatus::kClearStatus)
       .WriteTo(&mmio_);
+}
+
+void AmlSdmmc::Inspect::Init(const pdev_device_info_t& device_info) {
+  std::string root_name = "aml-sdmmc-port";
+  if (device_info.did == PDEV_DID_AMLOGIC_SDMMC_A) {
+    root_name += 'A';
+  } else if (device_info.did == PDEV_DID_AMLOGIC_SDMMC_B) {
+    root_name += 'B';
+  } else if (device_info.did == PDEV_DID_AMLOGIC_SDMMC_C) {
+    root_name += 'C';
+  } else {
+    root_name += "-unknown";
+  }
+
+  root = inspector.GetRoot().CreateChild(root_name);
+
+  bus_clock_frequency = root.CreateUint(
+      "bus_clock_frequency", AmlSdmmcClock::kCtsOscinClkFreq / AmlSdmmcClock::kDefaultClkDiv);
+  tx_clock_phase = root.CreateUint("tx_clock_phase", AmlSdmmcClock::kDefaultClkTxPhase);
+  adj_delay = root.CreateUint("adj_delay", 0);
+  delay_lines = root.CreateUint("delay_lines", 0);
+  tuning_results = root.CreateString("tuning_results", "none");
+  delay_window_size = root.CreateUint("delay_window_size", 0);
+  max_delay = root.CreateUint("max_delay", 0);
 }
 
 zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
@@ -330,6 +355,7 @@ zx_status_t AmlSdmmc::SdmmcSetBusFreq(uint32_t freq) {
   uint32_t clk = 0, clk_src = 0, clk_div = 0;
   if (freq == 0) {
     AmlSdmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(0).WriteTo(&mmio_);
+    inspect_.bus_clock_frequency.Set(0);
     return ZX_OK;
   }
 
@@ -348,6 +374,7 @@ zx_status_t AmlSdmmc::SdmmcSetBusFreq(uint32_t freq) {
   // Round the divider up so the frequency is rounded down.
   clk_div = (clk + freq - 1) / freq;
   AmlSdmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(clk_div).set_cfg_src(clk_src).WriteTo(&mmio_);
+  inspect_.bus_clock_frequency.Set(clk / clk_div);
   return ZX_OK;
 }
 
@@ -1072,6 +1099,10 @@ AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(fbl::Span<const uint8_t> tuning_bl
 
   AML_SDMMC_INFO("Tuning results: %s", tuning_results);
 
+  // We're only interested in the delay line results, but that is the last step so this string will
+  // end up correct.
+  inspect_.tuning_results.Set(tuning_results);
+
   return best_window;
 }
 
@@ -1167,6 +1198,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
   if (adj_delay_window.size == 0) {
     AML_SDMMC_ERROR("No window found for any phase");
+    inspect_.tuning_results.Set("failed");
     return ZX_ERR_IO;
   }
 
@@ -1174,7 +1206,10 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
       adj_delay_window.size == clk.cfg_div() ? 0 : adj_delay_window.middle() % clk.cfg_div();
 
   clk.set_cfg_tx_phase(best_phase).WriteTo(&mmio_);
+  inspect_.tx_clock_phase.Set(best_phase);
+
   set_adj_delay(best_adj_delay);
+  inspect_.adj_delay.Set(best_adj_delay);
 
   TuneWindow delay_window =
       TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
@@ -1184,8 +1219,11 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     return ZX_ERR_IO;
   }
 
+  inspect_.delay_window_size.Set(delay_window.size);
+
   const uint32_t best_delay = delay_window.middle() % (max_delay() + 1);
   set_delay_lines(best_delay);
+  inspect_.delay_lines.Set(best_delay);
 
   AML_SDMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u", clk.cfg_div(),
                  best_phase, best_adj_delay, best_delay);
@@ -1309,7 +1347,7 @@ zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_r
   return ZX_OK;
 }
 
-zx_status_t AmlSdmmc::Init() {
+zx_status_t AmlSdmmc::Init(const pdev_device_info_t& device_info) {
   // The core clock must be enabled before attempting to access the start register.
   ConfigureDefaultRegs();
 
@@ -1340,12 +1378,15 @@ zx_status_t AmlSdmmc::Init() {
   max_freq_ = board_config_.max_freq;
   min_freq_ = board_config_.min_freq;
 
+  inspect_.Init(device_info);
+  inspect_.max_delay.Set(max_delay() + 1);
+
   return ZX_OK;
 }
 
 zx_status_t AmlSdmmc::Bind() {
-  // Note: This can't be changed without migrating users in other repos.
-  zx_status_t status = DdkAdd("aml-sd-emmc");
+  // Note: This name can't be changed without migrating users in other repos.
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("aml-sd-emmc").set_inspect_vmo(GetInspectVmo()));
   if (status != ZX_OK) {
     irq_.destroy();
     AML_SDMMC_ERROR("DdkAdd failed");
@@ -1414,7 +1455,7 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
       std::make_unique<AmlSdmmc>(parent, std::move(bti), *std::move(mmio), *std::move(pinned_mmio),
                                  config, std::move(irq), reset_gpio);
 
-  if ((status = dev->Init()) != ZX_OK) {
+  if ((status = dev->Init(dev_info)) != ZX_OK) {
     return status;
   }
 

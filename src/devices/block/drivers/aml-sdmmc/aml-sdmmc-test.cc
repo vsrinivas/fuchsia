@@ -4,8 +4,10 @@
 
 #include "aml-sdmmc.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/sdio/hw.h>
 #include <lib/sdmmc/hw.h>
@@ -37,6 +39,16 @@ class TestAmlSdmmc : public AmlSdmmc {
   zx_status_t TestDdkAdd() {
     // call parent's bind
     return Bind();
+  }
+
+  const inspect::Hierarchy* GetInspectRoot(std::string suffix) {
+    const zx::vmo inspect_vmo = GetInspectVmo();
+    if (!inspect_vmo.is_valid()) {
+      return nullptr;
+    }
+
+    inspector_.ReadInspect(inspect_vmo);
+    return inspector_.hierarchy().GetByPath({"aml-sdmmc-port" + suffix});
   }
 
   void DdkRelease() { AmlSdmmc::DdkRelease(); }
@@ -83,6 +95,7 @@ class TestAmlSdmmc : public AmlSdmmc {
   uint32_t successful_transfers_ = 0;
   // The optional interrupt status to set after a request is completed.
   std::optional<uint32_t> interrupt_status_;
+  inspect::InspectTestHelper inspector_;
 };
 
 class AmlSdmmcTest : public zxtest::Test {
@@ -103,7 +116,8 @@ class AmlSdmmcTest : public zxtest::Test {
     mmio_ = ddk::MmioBuffer(mmio_buffer);
 
     memset(bti_paddrs_, 0, sizeof(bti_paddrs_));
-    bti_paddrs_[0] = zx_system_get_page_size();  // This is passed to AmlSdmmc::Init().
+    // This is used by AmlSdmmc::Init() to create the descriptor buffer -- can be any nonzero paddr.
+    bti_paddrs_[0] = zx_system_get_page_size();
 
     zx::bti bti;
     ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, countof(bti_paddrs_),
@@ -200,7 +214,7 @@ TEST_F(AmlSdmmcTest, InitV3) {
 
   AmlSdmmcClock::Get().FromValue(0).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   EXPECT_EQ(AmlSdmmcClock::Get().ReadFrom(&mmio_).reg_value(), AmlSdmmcClockV3::Get()
                                                                    .FromValue(0)
@@ -224,7 +238,7 @@ TEST_F(AmlSdmmcTest, InitV2) {
 
   AmlSdmmcClock::Get().FromValue(0).WriteTo(&mmio_);
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   EXPECT_EQ(AmlSdmmcClock::Get().ReadFrom(&mmio_).reg_value(), AmlSdmmcClockV2::Get()
                                                                    .FromValue(0)
@@ -246,7 +260,7 @@ TEST_F(AmlSdmmcTest, TuningV3) {
       .prefs = 0,
   });
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
@@ -275,7 +289,7 @@ TEST_F(AmlSdmmcTest, TuningV2) {
       .prefs = 0,
   });
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
@@ -296,7 +310,7 @@ TEST_F(AmlSdmmcTest, TuningV2) {
 }
 
 TEST_F(AmlSdmmcTest, TuningAllPass) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
@@ -339,7 +353,7 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningNoWindowWrap) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({.did = PDEV_DID_AMLOGIC_SDMMC_B}));
 
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
@@ -353,6 +367,17 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningNoWindowWrap) {
 
   EXPECT_EQ(clock.cfg_tx_phase(), 3);
   EXPECT_EQ(adjust.adj_delay(), 6);
+
+  const auto* root = dut_->GetInspectRoot("B");
+  ASSERT_NOT_NULL(root);
+
+  const auto* tx_phase = root->node().get_property<inspect::UintPropertyValue>("tx_clock_phase");
+  ASSERT_NOT_NULL(tx_phase);
+  EXPECT_EQ(tx_phase->value(), 3);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 6);
 }
 
 TEST_F(AmlSdmmcTest, AdjDelayTuningLargestWindowChosen) {
@@ -368,7 +393,7 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningLargestWindowChosen) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({.did = PDEV_DID_AMLOGIC_SDMMC_A}));
 
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
@@ -382,6 +407,17 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningLargestWindowChosen) {
 
   EXPECT_EQ(clock.cfg_tx_phase(), 1);
   EXPECT_EQ(adjust.adj_delay(), 0);
+
+  const auto* root = dut_->GetInspectRoot("A");
+  ASSERT_NOT_NULL(root);
+
+  const auto* tx_phase = root->node().get_property<inspect::UintPropertyValue>("tx_clock_phase");
+  ASSERT_NOT_NULL(tx_phase);
+  EXPECT_EQ(tx_phase->value(), 1);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 0);
 }
 
 TEST_F(AmlSdmmcTest, AdjDelayTuningWindowWrap) {
@@ -397,7 +433,7 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningWindowWrap) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({.did = PDEV_DID_AMLOGIC_SDMMC_C}));
 
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
@@ -411,6 +447,17 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningWindowWrap) {
 
   EXPECT_EQ(clock.cfg_tx_phase(), 1);
   EXPECT_EQ(adjust.adj_delay(), 0);
+
+  const auto* root = dut_->GetInspectRoot("C");
+  ASSERT_NOT_NULL(root);
+
+  const auto* tx_phase = root->node().get_property<inspect::UintPropertyValue>("tx_clock_phase");
+  ASSERT_NOT_NULL(tx_phase);
+  EXPECT_EQ(tx_phase->value(), 1);
+
+  const auto* adj_delay = root->node().get_property<inspect::UintPropertyValue>("adj_delay");
+  ASSERT_NOT_NULL(adj_delay);
+  EXPECT_EQ(adj_delay->value(), 0);
 }
 
 TEST_F(AmlSdmmcTest, AdjDelayTuningAllFail) {
@@ -422,12 +469,20 @@ TEST_F(AmlSdmmcTest, AdjDelayTuningAllFail) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({.did = PDEV_DID_AMLOGIC_SDMMC_B}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
   EXPECT_NOT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  const auto* root = dut_->GetInspectRoot("B");
+  ASSERT_NOT_NULL(root);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(), "failed");
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
@@ -449,7 +504,7 @@ TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({.did = PDEV_DID_AMLOGIC_SDMMC_B}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
@@ -471,6 +526,28 @@ TEST_F(AmlSdmmcTest, DelayLineTuningNoWindowWrap) {
   EXPECT_EQ(delay2.dly_7(), 17);
   EXPECT_EQ(delay2.dly_8(), 17);
   EXPECT_EQ(delay2.dly_9(), 17);
+
+  const auto* root = dut_->GetInspectRoot("B");
+  ASSERT_NOT_NULL(root);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 17);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "------------||||||||||---------------------||-------------------");
+
+  const auto* delay_window_size =
+      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
+  ASSERT_NOT_NULL(delay_window_size);
+  EXPECT_EQ(delay_window_size->value(), 10);
+
+  const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
+  ASSERT_NOT_NULL(max_delay);
+  EXPECT_EQ(max_delay->value(), 64);
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
@@ -491,7 +568,7 @@ TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
   });
   // clang-format on
 
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
@@ -513,6 +590,28 @@ TEST_F(AmlSdmmcTest, DelayLineTuningWindowWrap) {
   EXPECT_EQ(delay2.dly_7(), 2);
   EXPECT_EQ(delay2.dly_8(), 2);
   EXPECT_EQ(delay2.dly_9(), 2);
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* delay_lines = root->node().get_property<inspect::UintPropertyValue>("delay_lines");
+  ASSERT_NOT_NULL(delay_lines);
+  EXPECT_EQ(delay_lines->value(), 2);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "|||||||||||||||-----------|||||||||||||||||||---------||||||||||");
+
+  const auto* delay_window_size =
+      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
+  ASSERT_NOT_NULL(delay_window_size);
+  EXPECT_EQ(delay_window_size->value(), 25);
+
+  const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
+  ASSERT_NOT_NULL(max_delay);
+  EXPECT_EQ(max_delay->value(), 64);
 }
 
 TEST_F(AmlSdmmcTest, DelayLineTuningAllFail) {
@@ -529,14 +628,43 @@ TEST_F(AmlSdmmcTest, DelayLineTuningAllFail) {
   });
   // clang-format on
 
-  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  ASSERT_OK(dut_->Init({}));
 
-  ASSERT_OK(dut_->Init());
+  AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
+
   EXPECT_NOT_OK(dut_->SdmmcPerformTuning(SD_SEND_TUNING_BLOCK));
+
+  const auto* root = dut_->GetInspectRoot("-unknown");
+  ASSERT_NOT_NULL(root);
+
+  const auto* tuning_results =
+      root->node().get_property<inspect::StringPropertyValue>("tuning_results");
+  ASSERT_NOT_NULL(tuning_results);
+  EXPECT_STR_EQ(tuning_results->value(),
+                "----------------------------------------------------------------");
+
+  const auto* delay_window_size =
+      root->node().get_property<inspect::UintPropertyValue>("delay_window_size");
+  ASSERT_NOT_NULL(delay_window_size);
+  EXPECT_EQ(delay_window_size->value(), 0);
+
+  const auto* max_delay = root->node().get_property<inspect::UintPropertyValue>("max_delay");
+  ASSERT_NOT_NULL(max_delay);
+  EXPECT_EQ(max_delay->value(), 64);
 }
 
 TEST_F(AmlSdmmcTest, SetBusFreq) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 400'000);
+  }
 
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_bus_width(AmlSdmmcCfg::kBusWidth4Bit).WriteTo(&mmio_);
 
@@ -546,24 +674,75 @@ TEST_F(AmlSdmmcTest, SetBusFreq) {
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 10);
   EXPECT_EQ(clock.cfg_src(), 1);
 
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 100'000'000);
+  }
+
+  // Greater than the max, will be capped at 120 MHz.
   EXPECT_OK(dut_->SdmmcSetBusFreq(200'000'000));
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 9);
   EXPECT_EQ(clock.cfg_src(), 1);
 
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 111'111'111);
+  }
+
   EXPECT_OK(dut_->SdmmcSetBusFreq(0));
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 0);
+
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 0);
+  }
 
   EXPECT_OK(dut_->SdmmcSetBusFreq(54'000'000));
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 19);
   EXPECT_EQ(clock.cfg_src(), 1);
 
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 52'631'578);
+  }
+
   EXPECT_OK(dut_->SdmmcSetBusFreq(400'000));
   EXPECT_EQ(clock.ReadFrom(&mmio_).cfg_div(), 60);
   EXPECT_EQ(clock.cfg_src(), 0);
+
+  {
+    const auto* root = dut_->GetInspectRoot("-unknown");
+    ASSERT_NOT_NULL(root);
+
+    const auto* bus_freq =
+        root->node().get_property<inspect::UintPropertyValue>("bus_clock_frequency");
+    ASSERT_NOT_NULL(bus_freq);
+    EXPECT_EQ(bus_freq->value(), 400'000);
+  }
 }
 
 TEST_F(AmlSdmmcTest, ClearStatus) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   // Set end_of_chain to indicate we're done and to have something to clear
   dut_->SetRequestInterruptStatus(1 << 13);
@@ -576,7 +755,7 @@ TEST_F(AmlSdmmcTest, ClearStatus) {
 }
 
 TEST_F(AmlSdmmcTest, TxCrcError) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   // Set TX CRC error bit (8) and desc_busy bit (30)
   dut_->SetRequestInterruptStatus(1 << 8 | 1 << 30);
@@ -590,7 +769,7 @@ TEST_F(AmlSdmmcTest, TxCrcError) {
 }
 
 TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_req_t request;
   memset(&request, 0, sizeof(request));
@@ -603,7 +782,7 @@ TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -667,7 +846,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -703,7 +882,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -766,7 +945,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -826,7 +1005,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -858,7 +1037,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -921,7 +1100,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -954,7 +1133,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -1017,7 +1196,7 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1094,7 +1273,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1131,7 +1310,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1195,7 +1374,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -1256,7 +1435,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -1289,7 +1468,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -1355,7 +1534,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -1390,7 +1569,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -1455,7 +1634,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
@@ -1522,7 +1701,7 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
 }
 
 TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
@@ -1566,7 +1745,7 @@ TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
 }
 
 TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1686,7 +1865,7 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
 }
 
 TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   bti_paddrs_[1] = 0x1897'7000;
   bti_paddrs_[2] = 0x1997'8000;
@@ -1755,7 +1934,7 @@ TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
 }
 
 TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1791,7 +1970,7 @@ TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
 }
 
 TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   InitializeContiguousPaddrs(10);
 
@@ -1827,7 +2006,7 @@ TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
 }
 
 TEST_F(AmlSdmmcTest, ConsecutiveErrorLogging) {
-  ASSERT_OK(dut_->Init());
+  ASSERT_OK(dut_->Init({}));
 
   // First data error.
   dut_->SetRequestInterruptStatus(1 << 8);

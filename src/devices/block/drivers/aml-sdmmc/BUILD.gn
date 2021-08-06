@@ -44,6 +44,7 @@ driver_module("aml-sdmmc-driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/inspect",
   ]
 }
 
@@ -64,6 +65,7 @@ test("aml-sdmmc-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/block/lib/sdio",
     "//src/devices/block/lib/sdmmc",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -81,6 +83,7 @@ test("aml-sdmmc-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
   ]
 }

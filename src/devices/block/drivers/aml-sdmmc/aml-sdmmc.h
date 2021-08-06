@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/ddk/phys-iter.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -60,7 +61,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]);
 
   // Visible for tests
-  zx_status_t Init();
+  zx_status_t Init(const pdev_device_info_t& device_info);
   void set_board_config(const aml_sdmmc_config_t& board_config) { board_config_ = board_config; }
 
  protected:
@@ -71,6 +72,8 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   virtual void WaitForBus() const;
 
   aml_sdmmc_desc_t* descs() { return static_cast<aml_sdmmc_desc_t*>(descs_buffer_.virt()); }
+
+  zx::vmo GetInspectVmo() const { return inspect_.inspector.DuplicateVmo(); }
 
   ddk::MmioBuffer mmio_;
 
@@ -89,6 +92,20 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     uint64_t offset;
     uint64_t size;
     uint32_t rights;
+  };
+
+  struct Inspect {
+    inspect::Inspector inspector;
+    inspect::Node root;
+    inspect::UintProperty bus_clock_frequency;
+    inspect::UintProperty tx_clock_phase;
+    inspect::UintProperty adj_delay;
+    inspect::UintProperty delay_lines;
+    inspect::StringProperty tuning_results;
+    inspect::UintProperty delay_window_size;
+    inspect::UintProperty max_delay;
+
+    void Init(const pdev_device_info_t& device_info);
   };
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
@@ -154,6 +171,8 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   uint64_t consecutive_cmd_errors_ = 0;
   uint64_t consecutive_data_errors_ = 0;
+
+  Inspect inspect_;
 };
 
 }  // namespace sdmmc
