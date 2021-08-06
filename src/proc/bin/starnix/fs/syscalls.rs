@@ -444,6 +444,19 @@ pub fn sys_unlinkat(
     Ok(SUCCESS)
 }
 
+pub fn sys_fchmod(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    mode: FileMode,
+) -> Result<SyscallResult, Errno> {
+    if mode & FileMode::IFMT != FileMode::EMPTY {
+        return Err(EINVAL);
+    }
+    let file = ctx.task.files.get(dir_fd)?;
+    file.name().node.info_write().mode = mode;
+    Ok(SUCCESS)
+}
+
 pub fn sys_fchmodat(
     ctx: &SyscallContext<'_>,
     dir_fd: FdNumber,

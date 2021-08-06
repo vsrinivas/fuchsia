@@ -141,6 +141,7 @@ pub fn dispatch_syscall(
         exit_group[1],
         faccessat[3],
         fchdir[1],
+        fchmod[2],
         fchmodat[3],
         fchownat[5],
         fcntl[3],
