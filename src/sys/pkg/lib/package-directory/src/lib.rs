@@ -3,24 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::anyhow,
+    anyhow::{anyhow, Context as _},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::NodeMarker,
     fidl_fuchsia_io::{
-        FileProxy, NodeAttributes, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE,
+        FileProxy, NodeAttributes, NodeMarker, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE,
+        VMO_FLAG_READ,
     },
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    std::convert::TryInto,
+    once_cell::sync::OnceCell,
     std::{
         collections::{HashMap, HashSet},
+        convert::TryInto,
         sync::Arc,
     },
-    thiserror::Error,
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -38,7 +38,10 @@ use {
     },
 };
 
-#[derive(Clone, Debug, PartialEq)]
+mod meta_file;
+use meta_file::MetaFile;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct MetaFileLocation {
     offset: u64,
     length: u64,
@@ -51,11 +54,10 @@ struct RootDir {
     meta_far: FileProxy,
     meta_files: HashMap<String, MetaFileLocation>,
     non_meta_files: HashMap<String, fuchsia_hash::Hash>,
-    // Once populated, this option must never be cleared.
-    meta_far_vmo: parking_lot::RwLock<Option<fidl_fuchsia_mem::Buffer>>,
+    meta_far_vmo: OnceCell<zx::Vmo>,
 }
 
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum RootDirError {
     #[error("while opening a node")]
     OpenMetaFar(#[source] io_util::node::OpenError),
@@ -106,7 +108,7 @@ impl RootDir {
             .into_iter()
             .collect();
 
-        let meta_far_vmo = parking_lot::RwLock::new(None);
+        let meta_far_vmo = OnceCell::new();
 
         Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
     }
@@ -140,6 +142,24 @@ impl RootDir {
 
         res.sort_by(|a, b| a.1.cmp(&b.1));
         res
+    }
+
+    async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
+        Ok(if let Some(vmo) = self.meta_far_vmo.get() {
+            vmo
+        } else {
+            let (status, buffer) = self
+                .meta_far
+                .get_buffer(VMO_FLAG_READ)
+                .await
+                .context("meta.far .get_buffer() fidl error")?;
+            let () = zx::Status::ok(status).context("meta.far .get_buffer protocol error")?;
+            if let Some(buffer) = buffer {
+                self.meta_far_vmo.get_or_init(|| buffer.vmo)
+            } else {
+                anyhow::bail!("meta.far get_buffer call succeeded but returned no VMO");
+            }
+        })
     }
 }
 
@@ -190,8 +210,8 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
         }
 
         if canonical_path.starts_with("meta/") {
-            if let Some(meta_file) = self.meta_files.get(canonical_path) {
-                let () = Arc::new(MetaFile::new(meta_file.offset, meta_file.length, self)).open(
+            if let Some(meta_file) = self.meta_files.get(canonical_path).cloned() {
+                let () = Arc::new(MetaFile::new(self, meta_file)).open(
                     scope,
                     flags,
                     mode,
@@ -431,39 +451,6 @@ impl vfs::directory::entry::DirectoryEntry for NonMetaSubdir {
     }
     fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
         EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-    }
-    fn can_hardlink(&self) -> bool {
-        false
-    }
-}
-
-#[allow(dead_code)]
-struct MetaFile {
-    offset: u64,
-    length: u64,
-    root_dir: Arc<RootDir>,
-}
-
-impl MetaFile {
-    pub fn new(offset: u64, length: u64, root_dir: Arc<RootDir>) -> Self {
-        MetaFile { offset, length, root_dir }
-    }
-}
-
-// TODO(fxbug.dev/75601)
-impl vfs::directory::entry::DirectoryEntry for MetaFile {
-    fn open(
-        self: Arc<Self>,
-        _: ExecutionScope,
-        _: u32,
-        _: u32,
-        _: VfsPath,
-        _: ServerEnd<NodeMarker>,
-    ) {
-        todo!()
-    }
-    fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)
     }
     fn can_hardlink(&self) -> bool {
         false
@@ -868,5 +855,31 @@ mod tests {
                 .unwrap(),
             b"content-blob-contents".to_vec()
         );
+    }
+
+    // TODO(fxbug.dev/75601) add test "async fn root_dir_open_meta_file()"
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn root_dir_meta_far_vmo() {
+        let pkg = PackageBuilder::new("pkg").build().await.unwrap();
+        let (metafar_blob, _) = pkg.contents();
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
+
+        // VMO is readable
+        let vmo = root_dir.meta_far_vmo().await.unwrap();
+        let mut buf = [0u8; 8];
+        vmo.read(&mut buf, 0).unwrap();
+        assert_eq!(buf, fuchsia_archive::MAGIC_INDEX_VALUE);
+
+        // Accessing the VMO caches it
+        assert!(root_dir.meta_far_vmo.get().is_some());
+
+        // Accessing the VMO through the cached path works
+        let vmo = root_dir.meta_far_vmo().await.unwrap();
+        let mut buf = [0u8; 8];
+        vmo.read(&mut buf, 0).unwrap();
+        assert_eq!(buf, fuchsia_archive::MAGIC_INDEX_VALUE);
     }
 }
