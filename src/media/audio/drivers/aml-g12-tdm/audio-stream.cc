@@ -550,10 +550,13 @@ zx_status_t AmlG12TdmStream::AddFormats() {
   format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
 
   for (size_t i = 0; i < metadata_.ring_buffer.number_of_channels; ++i) {
-    SimpleAudioStream::FrequencyRange range = {};
-    range.min_frequency = metadata_.ring_buffer.frequency_ranges[i].min_frequency;
-    range.max_frequency = metadata_.ring_buffer.frequency_ranges[i].max_frequency;
-    format.frequency_ranges.push_back(std::move(range));
+    if (metadata_.ring_buffer.frequency_ranges[i].min_frequency ||
+        metadata_.ring_buffer.frequency_ranges[i].max_frequency) {
+      SimpleAudioStream::FrequencyRange range = {};
+      range.min_frequency = metadata_.ring_buffer.frequency_ranges[i].min_frequency;
+      range.max_frequency = metadata_.ring_buffer.frequency_ranges[i].max_frequency;
+      format.frequency_ranges.push_back(std::move(range));
+    }
   }
 
   for (auto& i : AmlTdmConfigDevice::kSupportedFrameRates) {
@@ -561,7 +564,7 @@ zx_status_t AmlG12TdmStream::AddFormats() {
     format.range.max_frames_per_second = i;
     format.range.flags =
         ASF_RANGE_FLAG_FPS_CONTINUOUS;  // No need to specify family when min == max.
-    supported_formats_.push_back(std::move(format));
+    supported_formats_.push_back(format);
   }
 
   return ZX_OK;

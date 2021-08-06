@@ -1676,13 +1676,23 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto supported = client.GetSupportedFormats();
     ASSERT_OK(supported.status());
 
-    auto& attributes =
-        supported->supported_formats[0].pcm_supported_formats2().channel_sets()[0].attributes();
-    ASSERT_EQ(attributes.count(), 2);
-    ASSERT_EQ(attributes[0].min_frequency(), 40);
-    ASSERT_EQ(attributes[0].max_frequency(), 200);
-    ASSERT_EQ(attributes[1].min_frequency(), 200);
-    ASSERT_EQ(attributes[1].max_frequency(), 20'000);
+    auto& pcm_supported_formats0 = supported->supported_formats[0].pcm_supported_formats2();
+    ASSERT_EQ(pcm_supported_formats0.frame_rates()[0], 8'000);
+    auto& attributes0 = pcm_supported_formats0.channel_sets()[0].attributes();
+    ASSERT_EQ(attributes0.count(), 2);
+    ASSERT_EQ(attributes0[0].min_frequency(), 40);
+    ASSERT_EQ(attributes0[0].max_frequency(), 200);
+    ASSERT_EQ(attributes0[1].min_frequency(), 200);
+    ASSERT_EQ(attributes0[1].max_frequency(), 20'000);
+
+    auto& pcm_supported_formats1 = supported->supported_formats[1].pcm_supported_formats2();
+    ASSERT_EQ(pcm_supported_formats1.frame_rates()[0], 16'000);
+    auto& attributes1 = pcm_supported_formats1.channel_sets()[0].attributes();
+    ASSERT_EQ(attributes1.count(), 2);
+    ASSERT_EQ(attributes1[0].min_frequency(), 40);
+    ASSERT_EQ(attributes1[0].max_frequency(), 200);
+    ASSERT_EQ(attributes1[1].min_frequency(), 200);
+    ASSERT_EQ(attributes1[1].max_frequency(), 20'000);
   }
 
   FakeMmio mmio_;
