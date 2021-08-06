@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    packet_encoding::{Decodable, Encodable},
-    std::convert::TryFrom,
-};
+use bitfield::bitfield;
+use packet_encoding::{Decodable, Encodable};
+use std::convert::TryFrom;
 
-use crate::{frame::FrameParseError, DLCI};
+use crate::frame::FrameParseError;
+use crate::DLCI;
 
 /// Length (in bytes) of a Modem Status Command with no break value.
 const MODEM_STATUS_COMMAND_WITHOUT_BREAK_LENGTH: usize = 2;

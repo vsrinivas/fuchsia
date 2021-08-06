@@ -4,7 +4,8 @@
 
 use thiserror::Error;
 
-use crate::{frame::FrameParseError, Role, DLCI};
+use crate::frame::FrameParseError;
+use crate::{Role, DLCI};
 
 /// Errors that occur during the usage of the RFCOMM library.
 #[derive(Error, Debug)]

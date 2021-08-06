@@ -38,6 +38,8 @@ rustc_library("bt-rfcomm") {
     "src/lib.rs",
     "src/profile.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("bt-rfcomm-lib-tests") {

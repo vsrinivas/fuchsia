@@ -17,12 +17,10 @@ mod field;
 /// Definitions for multiplexer command frames.
 pub mod mux_commands;
 
+use self::fcs::{calculate_fcs, verify_fcs};
+use self::field::*;
+use self::mux_commands::MuxCommand;
 use crate::{Role, DLCI};
-use {
-    fcs::{calculate_fcs, verify_fcs},
-    field::*,
-    mux_commands::MuxCommand,
-};
 
 pub_decodable_enum! {
     /// The type of frame provided in the Control field.
@@ -476,9 +474,9 @@ impl Encodable for Frame {
 mod tests {
     use super::*;
 
-    use {matches::assert_matches, std::convert::TryFrom};
-
+    use matches::assert_matches;
     use mux_commands::{MuxCommandParams, RemotePortNegotiationParams};
+    use std::convert::TryFrom;
 
     #[test]
     fn test_is_mux_startup_frame() {

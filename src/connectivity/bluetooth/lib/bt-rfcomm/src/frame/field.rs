@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, std::convert::TryFrom};
+use bitfield::bitfield;
+use std::convert::TryFrom;
 
-use crate::{
-    frame::{error::FrameParseError, FrameTypeMarker},
-    DLCI,
-};
+use crate::frame::{error::FrameParseError, FrameTypeMarker};
+use crate::DLCI;
 
 /// The Address field is the first byte in the frame. See GSM 7.10 Section 5.2.1.2.
 pub(crate) const FRAME_ADDRESS_IDX: usize = 0;

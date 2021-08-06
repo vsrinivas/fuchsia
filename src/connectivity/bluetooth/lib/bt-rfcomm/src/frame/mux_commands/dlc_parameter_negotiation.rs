@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
-    std::convert::TryFrom,
-};
+use bitfield::bitfield;
+use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use std::convert::TryFrom;
 
-use crate::{frame::FrameParseError, DLCI, MAX_RFCOMM_FRAME_SIZE};
+use crate::frame::FrameParseError;
+use crate::{DLCI, MAX_RFCOMM_FRAME_SIZE};
 
 /// The length (in bytes) of a DLC Parameter Negotiation command.
 /// Defined in GSM 7.10 Section 5.4.6.3.1.
@@ -152,7 +151,10 @@ mod tests {
     #[test]
     fn test_parse_too_large_buf() {
         let buf = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]; // Too large.
-        assert!(ParameterNegotiationParams::decode(&buf[..]).is_err());
+        assert_matches!(
+            ParameterNegotiationParams::decode(&buf[..]),
+            Err(FrameParseError::InvalidBufferLength(DLC_PARAMETER_NEGOTIATION_LENGTH, 9))
+        );
     }
 
     #[test]

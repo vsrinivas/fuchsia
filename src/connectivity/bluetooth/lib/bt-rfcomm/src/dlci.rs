@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::format_err, std::convert::TryFrom};
+use anyhow::format_err;
+use std::convert::TryFrom;
 
-use crate::{frame::FrameParseError, RfcommError, Role};
+use crate::frame::FrameParseError;
+use crate::{RfcommError, Role};
 
 /// Identifier for a direct link connection (DLC) between devices.
 ///

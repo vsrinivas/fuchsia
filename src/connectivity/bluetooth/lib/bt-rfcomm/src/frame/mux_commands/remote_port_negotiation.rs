@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    packet_encoding::{Decodable, Encodable},
-    std::convert::TryFrom,
-};
+use bitfield::bitfield;
+use packet_encoding::{Decodable, Encodable};
+use std::convert::TryFrom;
 
 use crate::{frame::FrameParseError, DLCI};
 
@@ -24,14 +22,14 @@ const REMOTE_PORT_NEGOTIATION_LONG_LENGTH: usize = 8;
 const REMOTE_PORT_NEGOTIATION_VALUES_LENGTH: usize = 7;
 
 bitfield! {
-    struct RPNAddressField(u8);
+    struct RpnAddressField(u8);
     impl Debug;
     pub bool, ea_bit, set_ea_bit: 0;
     pub bool, cr_bit, set_cr_bit: 1;
     pub u8, dlci_raw, set_dlci: 7, 2;
 }
 
-impl RPNAddressField {
+impl RpnAddressField {
     fn dlci(&self) -> Result<DLCI, FrameParseError> {
         DLCI::try_from(self.dlci_raw())
     }
@@ -130,7 +128,7 @@ impl Decodable for RemotePortNegotiationParams {
         }
 
         // Address field.
-        let address_field = RPNAddressField(buf[0]);
+        let address_field = RpnAddressField(buf[0]);
         let dlci = address_field.dlci()?;
 
         // Port Values field.
@@ -163,7 +161,7 @@ impl Encodable for RemotePortNegotiationParams {
         }
 
         // E/A bit = 1, C/R bit = 1. See GSM 7.10 Section 5.4.6.3.9 Table 10.
-        let mut address_field = RPNAddressField(0);
+        let mut address_field = RpnAddressField(0);
         address_field.set_ea_bit(true);
         address_field.set_cr_bit(true);
         address_field.set_dlci(u8::from(self.dlci));

@@ -4,10 +4,8 @@
 
 use anyhow::format_err;
 
-use crate::{
-    frame::{error::FrameParseError, FrameTypeMarker},
-    Role,
-};
+use crate::frame::{error::FrameParseError, FrameTypeMarker};
+use crate::Role;
 
 /// The C/R bit in RFCOMM. This is used both at the frame level and the multiplexer
 /// channel command level. See RFCOMM 5.1.3 and 5.4.6, respectively.
@@ -64,6 +62,7 @@ impl CommandResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use matches::assert_matches;
 
     #[test]

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
-    std::convert::TryFrom,
-};
+use bitfield::bitfield;
+use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use std::convert::TryFrom;
 
 /// The DLC PN frame definition.
 mod dlc_parameter_negotiation;
@@ -349,9 +347,9 @@ impl Encodable for MuxCommand {
 mod tests {
     use super::*;
 
+    use dlc_parameter_negotiation::CreditBasedFlowHandshake;
     use matches::assert_matches;
-
-    use {dlc_parameter_negotiation::CreditBasedFlowHandshake, modem_status::ModemStatusSignals};
+    use modem_status::ModemStatusSignals;
 
     #[test]
     fn test_decode_mux_command_empty_buf() {

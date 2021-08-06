@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fuchsia_bluetooth::types::Channel,
-    packet_encoding::{Decodable, Encodable},
-};
+use fuchsia_bluetooth::types::Channel;
+use packet_encoding::{Decodable, Encodable};
 
 use crate::frame::FrameParseError;
 

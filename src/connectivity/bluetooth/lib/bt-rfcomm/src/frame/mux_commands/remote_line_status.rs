@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    bitfield::bitfield,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
-    std::convert::TryFrom,
-};
+use bitfield::bitfield;
+use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use std::convert::TryFrom;
 
-use crate::{frame::FrameParseError, DLCI};
+use crate::frame::FrameParseError;
+use crate::DLCI;
 
 /// The length (in bytes) of the RLS command.
 /// Defined in GSM 7.10 Section 5.4.6.3.10.
