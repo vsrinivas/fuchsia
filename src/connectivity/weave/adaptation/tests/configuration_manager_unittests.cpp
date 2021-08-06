@@ -13,7 +13,6 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
-#include <fuchsia/buildinfo/cpp/fidl_test_base.h>
 #include <fuchsia/factory/cpp/fidl_test_base.h>
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
@@ -27,6 +26,7 @@
 #include <net/ethernet.h>
 
 #include "configuration_manager_delegate_impl.h"
+#include "fake_build_info.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -35,6 +35,8 @@
 
 namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {
+
+using weave::adaptation::testing::FakeBuildInfo;
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
@@ -51,7 +53,6 @@ constexpr char kExpectedVendorIdDescription[] = "Fuchsia Vendor";
 constexpr uint16_t kExpectedProductId = 60209;
 constexpr char kExpectedProductIdDescription[] = "Fuchsia Product";
 constexpr uint64_t kExpectedDeviceId = 65535;
-constexpr char kExpectedFirmwareRevision[] = "0.0.0.1";
 constexpr char kExpectedFirmwareRevisionLocal[] = "prerelease-1";
 constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
 constexpr char kExpectedSerialNumberLocal[] = "ABCD1234";
@@ -59,7 +60,7 @@ constexpr char kExpectedPairingCode[] = "ABC123";
 constexpr char kExpectedManufacturingDateString[] = "1998-09-04T12:34:56";
 constexpr uint16_t kExpectedManufacturingYear = 1998;
 constexpr uint8_t kExpectedManufacturingMonth = 9;
-constexpr uint8_t kExpectedManufacturingDay   = 4;
+constexpr uint8_t kExpectedManufacturingDay = 4;
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
 constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
@@ -91,34 +92,6 @@ WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
 }
 
 }  // namespace
-
-class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void GetBuildInfo(GetBuildInfoCallback callback) override {
-    fuchsia::buildinfo::BuildInfo build_info;
-    if (enable_version_) {
-      build_info.set_version(kExpectedFirmwareRevision);
-    }
-    callback(std::move(build_info));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::buildinfo::Provider> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::buildinfo::Provider> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
-  void EnableVersion(bool enable) { enable_version_ = enable; }
-
- private:
-  fidl::Binding<fuchsia::buildinfo::Provider> binding_{this};
-  async_dispatcher_t* dispatcher_;
-  bool enable_version_ = true;
-};
 
 class FakeHwinfoDevice : public fuchsia::hwinfo::testing::Device_TestBase {
  public:
@@ -422,27 +395,27 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
 
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
   const uint64_t fabric_id = 123456789U;
-  uint64_t stored_fabric_id = 0U;
+  uint64_t stored_fabric_id = 0;
   EXPECT_EQ(ConfigurationMgr().StoreFabricId(fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(ConfigurationMgr().GetFabricId(stored_fabric_id), WEAVE_NO_ERROR);
   EXPECT_EQ(stored_fabric_id, fabric_id);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceId) {
-  uint64_t device_id = 0U;
+  uint64_t device_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(device_id, kExpectedDeviceId);
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorId) {
-  uint16_t vendor_id;
+  uint16_t vendor_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetVendorId(vendor_id), WEAVE_NO_ERROR);
   EXPECT_EQ(vendor_id, kExpectedVendorId);
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorIdDescription) {
-  char vendor_id_description[ConfigurationManager::kMaxVendorIdDescriptionLength + 1];
-  size_t out_len;
+  char vendor_id_description[ConfigurationManager::kMaxVendorIdDescriptionLength + 1] = {};
+  size_t out_len = 0;
   EXPECT_EQ(ConfigurationMgr().GetVendorIdDescription(vendor_id_description,
                                                       sizeof(vendor_id_description), out_len),
             WEAVE_NO_ERROR);
@@ -450,14 +423,14 @@ TEST_F(ConfigurationManagerTest, GetVendorIdDescription) {
 }
 
 TEST_F(ConfigurationManagerTest, GetProductId) {
-  uint16_t product_id;
+  uint16_t product_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetProductId(product_id), WEAVE_NO_ERROR);
   EXPECT_EQ(product_id, kExpectedProductId);
 }
 
 TEST_F(ConfigurationManagerTest, GetProductIdDescription) {
-  char product_id_description[ConfigurationManager::kMaxProductIdDescriptionLength + 1];
-  size_t out_len;
+  char product_id_description[ConfigurationManager::kMaxProductIdDescriptionLength + 1] = {};
+  size_t out_len = 0;
   EXPECT_EQ(ConfigurationMgr().GetProductIdDescription(product_id_description,
                                                        sizeof(product_id_description), out_len),
             WEAVE_NO_ERROR);
@@ -465,29 +438,28 @@ TEST_F(ConfigurationManagerTest, GetProductIdDescription) {
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
-  char firmware_revision[kMaxFirmwareRevisionSize];
-  size_t out_len;
+  char firmware_revision[kMaxFirmwareRevisionSize + 1] = {};
+  size_t out_len = 0;
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
-  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevision, out_len), 0);
+  EXPECT_STREQ(firmware_revision, FakeBuildInfo::kVersion);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevisionLocal) {
-  char firmware_revision[kMaxFirmwareRevisionSize];
+  char firmware_revision[kMaxFirmwareRevisionSize + 1] = {};
   size_t out_len = 0;
 
-  fake_buildinfo().EnableVersion(false);
+  // An empty firmware revision will result in falling back to the revision
+  // provided in the config-data.
+  fake_buildinfo().set_version("");
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-
-  auto delegate =
-      reinterpret_cast<ConfigurationManagerDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
-  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
-  EXPECT_EQ(strncmp(firmware_revision, kExpectedFirmwareRevisionLocal, out_len), 0);
+  EXPECT_STREQ(firmware_revision, kExpectedFirmwareRevisionLocal);
 }
 
 TEST_F(ConfigurationManagerTest, GetSerialNumber) {
@@ -916,7 +888,8 @@ TEST_F(ConfigurationManagerTest, GetManufacturingDate) {
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
-  EXPECT_EQ(ConfigurationMgr().GetManufacturingDate(year, month, day), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_EQ(ConfigurationMgr().GetManufacturingDate(year, month, day),
+            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 
   EXPECT_EQ(year, 0);
   EXPECT_EQ(month, 0);
