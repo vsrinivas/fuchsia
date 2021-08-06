@@ -23,21 +23,14 @@ use fuchsia_zircon as zx;
 // TODO(fxbug.dev/75869): Remove after soft-transition is complete.
 #[doc(hidden)]
 #[deprecated = "Use fidl::endpoints::ProtocolMarker instead"]
-pub trait ServiceMarker: ProtocolMarker {
-    // const NAME: &'static str = <Self as ProtocolMarker>::NAME;
-    // const DEBUG_NAME: &'static str = <Self as ProtocolMarker>::DEBUG_NAME;
-}
+pub trait ServiceMarker: ProtocolMarker {}
 #[allow(deprecated)]
 impl<T: ProtocolMarker> ServiceMarker for T {}
 
 // TODO(fxbug.dev/75869): Remove after soft-transition is complete.
 #[doc(hidden)]
 #[deprecated = "Use fidl::endpoints::DiscoverableProtocolMarker instead"]
-pub trait DiscoverableService: DiscoverableProtocolMarker {
-    // TODO(fxbug.dev/75869): Remove after soft-transition is complete.
-    #[doc(hidden)]
-    const SERVICE_NAME: &'static str = <Self as DiscoverableProtocolMarker>::PROTOCOL_NAME;
-}
+pub trait DiscoverableService: DiscoverableProtocolMarker {}
 #[allow(deprecated)]
 impl<T: DiscoverableProtocolMarker> DiscoverableService for T {}
 
