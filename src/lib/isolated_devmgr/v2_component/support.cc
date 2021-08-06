@@ -35,6 +35,8 @@
 #include <mock-boot-arguments/server.h>
 
 #include "lib/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "zircon/system/public/zircon/device/vfs.h"
 
@@ -243,7 +245,30 @@ int main(void) {
           }));
 
   outgoing.root_dir()->AddEntry("system", fbl::MakeRefCounted<fs::PseudoDir>());
-  outgoing.root_dir()->AddEntry("pkgfs", fbl::MakeRefCounted<fs::PseudoDir>());
+
+  auto pkgfs = fbl::MakeRefCounted<fs::PseudoDir>();
+  // Add the necessary empty base driver manifest.
+  // It's added to /pkgfs/packages/driver-manager-base-config/0/config/base-driver-manifest.json
+  {
+    auto packages = fbl::MakeRefCounted<fs::PseudoDir>();
+    auto driver_manager_base_config = fbl::MakeRefCounted<fs::PseudoDir>();
+    auto zero = fbl::MakeRefCounted<fs::PseudoDir>();
+    auto config = fbl::MakeRefCounted<fs::PseudoDir>();
+    auto base_driver_manifest = fbl::MakeRefCounted<fs::UnbufferedPseudoFile>(
+        [](fbl::String* output) {
+          // Return an empty JSON array.
+          *output = fbl::String("[]");
+          return ZX_OK;
+        },
+        [](std::string_view input) { return ZX_ERR_NOT_SUPPORTED; });
+
+    config->AddEntry("base-driver-manifest.json", std::move(base_driver_manifest));
+    zero->AddEntry("config", std::move(config));
+    driver_manager_base_config->AddEntry("0", std::move(zero));
+    packages->AddEntry("driver-manager-base-config", std::move(driver_manager_base_config));
+    pkgfs->AddEntry("packages", std::move(packages));
+  }
+  outgoing.root_dir()->AddEntry("pkgfs", std::move(pkgfs));
 
   zx::channel dir, server;
   status = zx::channel::create(0, &dir, &server);

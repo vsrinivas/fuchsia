@@ -25,12 +25,12 @@
         {
             directory: "pkgfs-packages-delayed",
             rights: [ "r*" ],
-            path: "/pkgfs",
+            path: "/pkgfs/packages",
         },
         {
             directory: "system-delayed",
             rights: [ "rx*" ],
-            path: "/pkgfs",
+            path: "/system",
         },
         {
             directory: "boot",

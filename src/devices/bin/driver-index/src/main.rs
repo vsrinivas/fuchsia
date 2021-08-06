@@ -36,6 +36,11 @@ fn ignore_peer_closed(err: fidl::Error) -> Result<(), fidl::Error> {
     }
 }
 
+fn log_error(err: anyhow::Error) -> anyhow::Error {
+    log::error!("{:#?}", err);
+    err
+}
+
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
 enum IncomingRequest {
@@ -148,10 +153,14 @@ async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDrive
         .filter(|entry| entry.kind == files_async::DirentKind::File)
         .filter(|entry| entry.name.ends_with(".cm"))
     {
-        let url = "fuchsia-boot:///#meta/".to_string() + &entry.name;
-        let url = url::Url::parse(&url)?;
-        let driver = load_driver(&dir, url).await?;
-        if let Some(driver) = driver {
+        let url_string = "fuchsia-boot:///#meta/".to_string() + &entry.name;
+        let url = url::Url::parse(&url_string)?;
+        let driver = load_driver(&dir, url).await;
+        if let Err(e) = driver {
+            log::error!("Failed to load boot driver: {}: {}", url_string, e);
+            continue;
+        }
+        if let Ok(Some(driver)) = driver {
             log::info!("Found boot driver: {}", driver.component_url.to_string());
             drivers.push(driver);
         }
@@ -459,14 +468,26 @@ async fn main() -> Result<(), anyhow::Error> {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
-    let boot = io_util::open_directory_in_namespace("/boot", fio::OPEN_RIGHT_READABLE)?;
-    let drivers = load_boot_drivers(boot).await?;
+    let boot = io_util::open_directory_in_namespace("/boot", fio::OPEN_RIGHT_READABLE)
+        .context("Failed to open /boot")?;
+    let drivers =
+        load_boot_drivers(boot).await.context("Failed to load boot drivers").map_err(log_error)?;
 
     let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![])));
     let (res1, res2, _) = futures::future::join3(
-        package_resolver::serve(resolver_stream),
-        load_base_drivers(index.clone(), resolver),
-        async move {
+        async {
+            package_resolver::serve(resolver_stream)
+                .await
+                .context("Error running package resolver")
+                .map_err(log_error)
+        },
+        async {
+            load_base_drivers(index.clone(), resolver)
+                .await
+                .context("Error loading base packages")
+                .map_err(log_error)
+        },
+        async {
             service_fs
                 .for_each_concurrent(None, |request: IncomingRequest| async {
                     // match on `request` and handle each protocol.

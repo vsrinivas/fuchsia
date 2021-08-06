@@ -92,9 +92,8 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
         callback();
       });
 
-  // TODO(dgilhooley): Change this back to an ERROR once DriverIndex is used in all tests.
   if (result.status() != ZX_OK) {
-    LOGF(INFO, "Failed to connect to DriverIndex: %d", result.status());
+    LOGF(ERROR, "Failed to connect to DriverIndex: %d", result.status());
   }
 }
 
@@ -198,21 +197,15 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
 
   auto result = driver_index_->MatchDriversV1_Sync(std::move(args));
   if (!result.ok()) {
-    if (result.status() == ZX_ERR_PEER_CLOSED) {
+    if (result.status() != ZX_OK) {
+      LOGF(ERROR, "DriverIndex::MatchDriversV1 failed: %d", result.status());
       return matched_drivers;
     }
-
-    // If DriverManager can't connect initially then this will return CANCELED.
-    // This is normal if driver-index isn't included in the build.
-    if (result.status() != ZX_ERR_CANCELED) {
-      LOGF(ERROR, "DriverIndex: MatchDriver failed: %s", result.status_string());
-    }
-    return matched_drivers;
   }
   // If there's no driver to match then DriverIndex will return ZX_ERR_NOT_FOUND.
   if (result->result.is_err()) {
     if (result->result.err() != ZX_ERR_NOT_FOUND) {
-      LOGF(ERROR, "DriverIndex: MatchDriver returned error: %d", result->result.err());
+      LOGF(ERROR, "DriverIndex: MatchDriversV1 returned error: %d", result->result.err());
     }
     return matched_drivers;
   }

@@ -314,6 +314,7 @@ int main(int argc, char** argv) {
 
     auto driver_index_result = service::Connect<fuchsia_driver_framework::DriverIndex>();
     if (driver_index_result.is_error()) {
+      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
       return driver_index_result.error_value();
     }
 
@@ -346,6 +347,7 @@ int main(int argc, char** argv) {
   if (driver_manager_args.use_driver_index) {
     auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();
     if (driver_index_client.is_error()) {
+      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_client.error_value());
       return driver_index_client.error_value();
     }
     config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
