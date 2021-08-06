@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/stat_test",
+        args: [ "--gunit_filter=-*.Nlinks:*.FstatatEmptyPath:*.FstatatSymlink:*.TrailingSlashNotCleanedReturnsENOTDIR:*.FstatatDirWithOpath:*.StatDoesntChangeAfterRename:*.LinkCountsWithRegularFileChild:*.ZeroLinksOpenFdRegularFileChild_NoSave:*.LinkCountsWithDirChild:*.LstatELOOPPath:*.Statx*:*.AnonDeviceAllocatesUniqueInodesAcrossSaveRestore" ],
+    },
+}

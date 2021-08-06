@@ -125,6 +125,9 @@ gvisor_test_component("sigprocmask_test") {
 gvisor_test_component("sigaltstack_test") {
 }
 
+gvisor_test_component("stat_test") {
+}
+
 gvisor_test_component("symlink_test") {
 }
 
@@ -159,6 +162,7 @@ fuchsia_test_package("test_android_distro") {
     ":sigaction_test",
     ":sigprocmask_test",
     ":sigaltstack_test",
+    ":stat_test",
     ":symlink_test",
   ]
 
