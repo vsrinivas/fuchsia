@@ -16,12 +16,12 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{lock::Mutex, FutureExt},
-    log::{info, trace, warn},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
         sync::Arc,
     },
+    tracing::{info, trace, warn},
 };
 
 use crate::rfcomm::{
@@ -50,7 +50,7 @@ impl Clients {
 
     /// Removes the client that has registered `server_channel`.
     async fn remove(&self, server_channel: &ServerChannel) {
-        self.channel_receivers.lock().await.remove(server_channel);
+        drop(self.channel_receivers.lock().await.remove(server_channel));
     }
 
     /// Clears all the registered clients.
@@ -65,8 +65,8 @@ impl Clients {
         let mut server_channels = self.channel_receivers.lock().await;
         let new_channel = ServerChannel::all().find(|sc| !server_channels.contains_key(&sc));
         new_channel.map(|channel| {
-            trace!("Allocating {:?}", channel);
-            server_channels.insert(channel, proxy);
+            trace!("Reserving RFCOMM channel: {:?}", channel);
+            let _ = server_channels.insert(channel, proxy);
             channel
         })
     }
@@ -212,7 +212,9 @@ impl RfcommServer {
         let mut session = Session::create(id, l2cap, channel_opened_callback);
         let _ = session.iattach(&self.inspect, inspect::unique_name("peer_"));
         let closed_fut = session.finished();
-        self.sessions.insert(id, session);
+        if self.sessions.insert(id, session).is_some() {
+            warn!("Overwriting existing RFCOMM session");
+        }
 
         // Task eagerly removes the Session from the set of active sessions upon termination.
         let detached_session = self.sessions.get(&id).expect("just inserted");
@@ -262,6 +264,7 @@ impl RfcommServer {
 mod tests {
     use super::*;
     use {
+        async_utils::PollExt,
         bt_rfcomm::{frame::mux_commands::*, frame::*, Role, DLCI},
         fidl::{
             encoding::Decodable,
@@ -306,8 +309,7 @@ mod tests {
         assert!(rfcomm.allocate_server_channel(c.clone()).await.is_none());
 
         // De-allocating should work.
-        let mut single_channel = HashSet::new();
-        single_channel.insert(first_channel);
+        let single_channel = vec![first_channel].into_iter().collect();
         rfcomm.free_server_channels(&single_channel).await;
 
         // We should be able to allocate another now that space has freed.
@@ -315,7 +317,7 @@ mod tests {
         assert!(rfcomm.allocate_server_channel(c).await.is_some());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_new_l2cap_connection() {
         let (mut exec, mut rfcomm) = setup_rfcomm_manager();
 
@@ -346,7 +348,7 @@ mod tests {
         assert!(!rfcomm.is_active_session(&id));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_new_rfcomm_channel_is_relayed_to_client() {
         let (mut exec, mut rfcomm) = setup_rfcomm_manager();
 
@@ -363,7 +365,8 @@ mod tests {
 
         let profile_client_fut = s.next();
         pin_mut!(profile_client_fut);
-        assert!(exec.run_until_stalled(&mut profile_client_fut).is_pending());
+        exec.run_until_stalled(&mut profile_client_fut)
+            .expect_pending("waiting for connection request");
 
         // Start up a session with remote peer.
         let id = PeerId(1);
@@ -444,7 +447,7 @@ mod tests {
         (responder, connect_request)
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_request_outbound_connection_succeeds() {
         let (mut exec, mut rfcomm) = setup_rfcomm_manager();
 
@@ -456,13 +459,13 @@ mod tests {
         // Simulate a client connect request.
         let (responder, connect_request_fut) = make_client_connect_request(&mut exec, id);
         pin_mut!(connect_request_fut);
-        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+        exec.run_until_stalled(&mut connect_request_fut).expect_pending("waiting for channel");
         // We expect the open channel request to be OK - still awaiting the channel.
         let server_channel = ServerChannel::try_from(9).unwrap();
         let expected_dlci = server_channel.to_dlci(Role::Responder).unwrap();
         let mut outbound_fut = Box::pin(rfcomm.open_rfcomm_channel(id, server_channel, responder));
         assert_matches!(exec.run_until_stalled(&mut outbound_fut), Poll::Ready(Ok(_)));
-        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+        exec.run_until_stalled(&mut connect_request_fut).expect_pending("waiting for channel");
 
         // Expect to send a frame to the peer - SABM for mux startup.
         expect_frame_received_by_peer(&mut exec, &mut remote);
@@ -496,7 +499,7 @@ mod tests {
         assert_matches!(exec.run_until_stalled(&mut connect_request_fut), Poll::Ready(Ok(Ok(_))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_request_outbound_connection_invalid_peer() {
         let (mut exec, mut rfcomm) = setup_rfcomm_manager();
 
@@ -504,7 +507,7 @@ mod tests {
         let random_id = PeerId(41);
         let (responder, connect_request_fut) = make_client_connect_request(&mut exec, random_id);
         pin_mut!(connect_request_fut);
-        assert!(exec.run_until_stalled(&mut connect_request_fut).is_pending());
+        exec.run_until_stalled(&mut connect_request_fut).expect_pending("waiting for channel");
 
         // We expect the open channel request to fail.
         let server_channel = ServerChannel::try_from(8).unwrap();

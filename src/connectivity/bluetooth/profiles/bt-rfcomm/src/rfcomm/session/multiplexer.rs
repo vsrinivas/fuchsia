@@ -8,8 +8,8 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
     futures::channel::mpsc,
-    log::{trace, warn},
     std::collections::HashMap,
+    tracing::{trace, warn},
 };
 
 use crate::rfcomm::{
@@ -252,7 +252,7 @@ impl SessionMultiplexer {
     ) -> Result<Channel, Error> {
         // If the session parameters have not been negotiated, set them to the default.
         if !self.parameters_negotiated() {
-            self.negotiate_parameters(SessionParameters::default());
+            let _ = self.negotiate_parameters(SessionParameters::default());
         }
 
         // Potentially reserve a new SessionChannel for the provided DLCI.
@@ -313,7 +313,7 @@ mod tests {
 
         // Reserving a channel should add to the inspect tree.
         let dlci = DLCI::try_from(9).unwrap();
-        multiplexer.find_or_create_session_channel(dlci);
+        let _ = multiplexer.find_or_create_session_channel(dlci);
         fuchsia_inspect::assert_data_tree!(inspect, root: {
             multiplexer: {
                 role: "Unassigned",

@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_rfcomm_test::RfcommTestRequestStream,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::{channel::mpsc, Future, SinkExt, StreamExt},
-    log::info,
+    tracing::info,
 };
 
 /// The maximum number of FIDL service client connections that will be serviced concurrently.
@@ -26,8 +26,8 @@ pub fn run_services(
     mut fs: ServiceFs<ServiceObj<'_, Service>>,
     service_sender: mpsc::Sender<Service>,
 ) -> Result<impl Future<Output = ()> + '_, Error> {
-    fs.dir("svc").add_fidl_service(Service::Profile).add_fidl_service(Service::RfcommTest);
-    fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
+    let _ = fs.dir("svc").add_fidl_service(Service::Profile).add_fidl_service(Service::RfcommTest);
+    let _ = fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
 
     let serve_fut = fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |connection| {
         let mut sender = service_sender.clone();

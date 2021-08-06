@@ -269,14 +269,13 @@ pub(crate) mod tests {
         let _exec = fasync::TestExecutor::new().unwrap();
         let mut services = Services::new();
 
-        let mut expected_psms = HashSet::new();
         let mut expected_defs = vec![];
         let mut expected_adv_params =
             AdvertiseParams { services: vec![], parameters: Default::default() };
 
         // Empty collection of Services has no associated PSMs and shouldn't build
         // into any registration data.
-        assert_eq!(services.psms(), expected_psms);
+        assert_eq!(services.psms(), HashSet::new());
         assert_eq!(services.build_registration(), None);
 
         // Insert a new group.
@@ -306,7 +305,7 @@ pub(crate) mod tests {
 
         // We expect the advertisement parameters to include the stricter security
         // requirements, channel parameters, and both handle1 and handle2 ServiceDefinitions.
-        expected_psms.insert(psm);
+        let expected_psms = vec![psm].into_iter().collect();
         expected_defs.extend(defs2);
         expected_adv_params.services = expected_defs.clone();
         expected_adv_params.parameters = new_chan_params;
@@ -337,7 +336,7 @@ pub(crate) mod tests {
         let psm = Psm::new(20);
         let other_def = other_service_definition(psm);
         service_group.set_service_defs(vec![other_def.clone()]);
-        expected_psms.insert(psm);
+        let _ = expected_psms.insert(psm);
         assert_eq!(service_group.allocated_server_channels(), &expected_server_channels);
         assert_eq!(service_group.allocated_psms(), &expected_psms);
 
@@ -345,7 +344,7 @@ pub(crate) mod tests {
         let rfcomm_def = rfcomm_service_definition(Some(sc));
         service_group.set_service_defs(vec![rfcomm_def, other_def]);
 
-        expected_server_channels.insert(sc);
+        let _ = expected_server_channels.insert(sc);
         assert_eq!(service_group.allocated_server_channels(), &expected_server_channels);
         assert_eq!(service_group.allocated_psms(), &expected_psms);
     }

@@ -17,8 +17,8 @@ use {
         future::{BoxFuture, Shared},
         select, FutureExt, SinkExt, StreamExt,
     },
-    log::{error, info, trace},
     std::convert::TryInto,
+    tracing::{error, info, trace},
 };
 
 use crate::rfcomm::{
@@ -657,7 +657,8 @@ mod tests {
 
         {
             let mut data_received_by_client = Box::pin(client.next());
-            assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
+            exec.run_until_stalled(&mut data_received_by_client)
+                .expect_pending("shouldn't have data");
         }
 
         poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
@@ -731,7 +732,7 @@ mod tests {
 
         let data_received_by_client = client.next();
         pin_mut!(data_received_by_client);
-        assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
+        exec.run_until_stalled(&mut data_received_by_client).expect_pending("shouldn't have data");
 
         poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
 
@@ -790,7 +791,8 @@ mod tests {
                 FlowControlledData { user_data: data1, credits: Some(0) },
                 local.as_ref(),
             ));
-            assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
+            exec.run_until_stalled(&mut receive_fut)
+                .expect_pending("should wait for outgoing frame");
             // The user data should be relayed to the RFCOMM client.
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());
             // Because the remote credit count is low (see `initial_credits`), we expect to
@@ -808,7 +810,7 @@ mod tests {
         let data2a = UserData { information: vec![0x45, 0x34] };
         {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2a.clone()));
-            assert!(exec.run_until_stalled(&mut send_fut).is_pending());
+            exec.run_until_stalled(&mut send_fut).expect_pending("should wait for outgoing frame");
             // We have sufficient local credits (2), so frame should be sent. No credits to refresh.
             expect_user_data_frame(&mut exec, &mut outgoing_frames, data2a, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
@@ -817,7 +819,7 @@ mod tests {
         let data2b = UserData { information: vec![0x99] };
         {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2b.clone()));
-            assert!(exec.run_until_stalled(&mut send_fut).is_pending());
+            exec.run_until_stalled(&mut send_fut).expect_pending("should wait for outgoing frame");
             // We have sufficient local credits (1), so frame should be sent. No credits to refresh.
             expect_user_data_frame(&mut exec, &mut outgoing_frames, data2b, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
@@ -850,7 +852,8 @@ mod tests {
                 FlowControlledData { user_data: data3, credits: Some(10) },
                 local.as_ref(),
             ));
-            assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
+            exec.run_until_stalled(&mut receive_fut)
+                .expect_pending("should wait for outgoing frame");
             // Now that we've received 10 credits, we should send the queued user data
             // frames from 2c & 2d.
             expect_user_data_frame(
@@ -859,7 +862,8 @@ mod tests {
                 data2c,
                 None, // Don't expect to replenish (remote = MAX).
             );
-            assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
+            exec.run_until_stalled(&mut receive_fut)
+                .expect_pending("should wait for outgoing frame");
             expect_user_data_frame(
                 &mut exec,
                 &mut outgoing_frames,
@@ -1071,7 +1075,7 @@ mod tests {
         let data2 = UserData { information: vec![0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22] };
         {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2.clone()));
-            assert!(exec.run_until_stalled(&mut send_fut).is_pending());
+            exec.run_until_stalled(&mut send_fut).expect_pending("should wait for outgoing frame");
             // Frame should be sent to the peer (Credits = 255 (max) - 69 (current remote)).
             expect_user_data_frame(&mut exec, &mut outgoing_frames, data2, Some(186));
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());

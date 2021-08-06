@@ -11,7 +11,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect_derive::Inspect,
     futures::{self, channel::mpsc, future, pin_mut},
-    log::warn,
+    tracing::warn,
 };
 
 mod fidl_service;
@@ -49,10 +49,10 @@ pub async fn main() -> Result<(), Error> {
 
     match future::select(services, profile_registrar_fut).await {
         future::Either::Left(((), _)) => {
-            log::warn!("Service FS directory handle closed. Exiting.");
+            warn!("Service FS directory handle closed. Exiting.");
         }
         future::Either::Right(((), _)) => {
-            log::warn!("All Profile related connections have terminated. Exiting.");
+            warn!("All Profile related connections have terminated. Exiting.");
         }
     }
 

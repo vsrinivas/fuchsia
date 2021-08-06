@@ -19,11 +19,11 @@ use {
         self, channel::mpsc, future::BoxFuture, select, sink::SinkExt, stream::StreamExt, Future,
         FutureExt,
     },
-    log::{info, trace, warn},
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
     },
+    tracing::{info, trace, warn},
 };
 
 use crate::fidl_service::Service;
@@ -544,6 +544,7 @@ mod tests {
 
     use crate::types::tests::{other_service_definition, rfcomm_service_definition};
 
+    use async_utils::PollExt;
     use fidl::encoding::Decodable;
     use fidl::endpoints::create_proxy_and_stream;
     use futures::{
@@ -680,15 +681,16 @@ mod tests {
     /// This test validates that the parameters are relayed directly to the Profile Server. Also
     /// validates that when the upstream Advertise call resolves, the result is relayed to the
     /// client.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_empty_advertise_request() {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
-        // A new client connects to bt-rfcomm.cmx.
+        // A new client connects to `bt-rfcomm`.
         let client = {
             let client = new_client(&mut exec, service_sender.clone());
             let _ = exec.run_until_stalled(&mut handler_fut);
@@ -699,7 +701,7 @@ mod tests {
         let services = vec![];
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
 
         let _ = exec.run_until_stalled(&mut handler_fut);
 
@@ -720,13 +722,14 @@ mod tests {
     /// Exercises a service advertisement with no RFCOMM services.
     /// The ProfileRegistrar server should classify the request as non-RFCOMM only, and relay
     /// directly to the upstream Profile Server.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_advertise_request_with_no_rfcomm() -> Result<(), Error> {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client = {
@@ -740,9 +743,10 @@ mod tests {
             vec![bredr::ServiceDefinition::try_from(&other_service_definition(Psm::new(1)))?];
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // The advertisement request should be relayed directly upstream.
         match exec.run_until_stalled(&mut upstream_requests.next()) {
@@ -755,13 +759,14 @@ mod tests {
     /// Exercises connecting l2cap channels while advertising.
     /// The ProfileRegistrar should classify the request as non-RFCOMM, relaying the advertisement
     /// directly, and also relay all l2cap channel requests at the same time.
-    #[test]
+    #[fuchsia::test]
     fn test_connect_l2cap_channels_while_advertising() {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client = {
@@ -777,9 +782,10 @@ mod tests {
             ];
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // The advertisement request should be relayed directly upstream.
         let _adv_responder = match exec.run_until_stalled(&mut upstream_requests.next()) {
@@ -787,9 +793,9 @@ mod tests {
             x => panic!("Expected advertise request, got: {:?}", x),
         };
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
-
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
 
         // Connect an l2cap channel to a peer, which should be relayed directly upstream.
 
@@ -814,7 +820,10 @@ mod tests {
         let mut counting_ctx = Context::from_waker(&waker);
 
         // Polling the handler should register the waker for this connect response.
-        assert!(handler_fut.as_mut().poll(&mut counting_ctx).is_pending());
+        handler_fut
+            .as_mut()
+            .poll(&mut counting_ctx)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         let woke_count_before = fut_wake_count.get();
 
@@ -836,7 +845,10 @@ mod tests {
         );
 
         // Polling again should return the result.
-        assert!(handler_fut.as_mut().poll(&mut counting_ctx).is_pending());
+        handler_fut
+            .as_mut()
+            .poll(&mut counting_ctx)
+            .expect_pending("shouldn't be done while service_sender is live");
         match exec.run_until_stalled(&mut connect_fut) {
             Poll::Ready(Ok(Err(ErrorCode::TimedOut))) => {}
             x => panic!("Expected connect request to be complete, got {:?}", x),
@@ -845,13 +857,14 @@ mod tests {
 
     /// Service advertisement with only RFCOMM services. The services should be assigned
     /// Server Channels and be relayed upstream.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_advertise_request_with_only_rfcomm() -> Result<(), Error> {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client = {
@@ -864,9 +877,10 @@ mod tests {
         let services = vec![bredr::ServiceDefinition::try_from(&rfcomm_service_definition(None))?];
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // Upstream should receive Advertise request for a service with an assigned server channel.
         match exec.run_until_stalled(&mut upstream_requests.next()) {
@@ -881,13 +895,14 @@ mod tests {
 
     /// Service advertisement with both RFCOMM and non-RFCOMM services. Only the RFCOMM
     /// services should be assigned Server Channels, and the group should be registered upstream.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_advertise_request_with_all_services() -> Result<(), Error> {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client = {
@@ -905,7 +920,7 @@ mod tests {
         let n = services.len();
         let (_connection_stream, adv_fut) = make_advertise_request(&client, services);
         pin_mut!(adv_fut);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
 
         let _ = exec.run_until_stalled(&mut handler_fut);
 
@@ -931,13 +946,14 @@ mod tests {
     /// Tests handling two advertise requests with overlapping PSMs. The first one
     /// should succeed and be relayed upstream. The second one should fail since it
     /// is requesting already-allocated PSMs - the responder should be notified of the error.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_advertise_requests_same_psm() -> Result<(), Error> {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client1 = {
@@ -954,9 +970,10 @@ mod tests {
         ];
         let (_connection_stream1, adv_fut1) = make_advertise_request(&client1, services1);
         pin_mut!(adv_fut1);
-        assert!(exec.run_until_stalled(&mut adv_fut1).is_pending());
+        exec.run_until_stalled(&mut adv_fut1).expect_pending("should still be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // Save the Advertise parameters.
         let _adv_req1 = match exec.run_until_stalled(&mut upstream_requests.next()) {
@@ -977,12 +994,13 @@ mod tests {
         ];
         let (_connection_stream2, adv_fut2) = make_advertise_request(&client2, services2);
         pin_mut!(adv_fut2);
-        assert!(exec.run_until_stalled(&mut adv_fut2).is_pending());
+        exec.run_until_stalled(&mut adv_fut2).expect_pending("should should be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // Advertisement 1 is OK. Advertisement 2 should resolve immediately with an ErrorCode.
-        assert!(exec.run_until_stalled(&mut adv_fut1).is_pending());
+        exec.run_until_stalled(&mut adv_fut1).expect_pending("should still be advertising");
         match exec.run_until_stalled(&mut adv_fut2) {
             Poll::Ready(Ok(Err(e))) => assert_eq!(e, ErrorCode::Failed),
             x => panic!("Expected Ready with ErrorCode but got {:?}", x),
@@ -993,13 +1011,14 @@ mod tests {
 
     /// Tests that independent service advertisements from multiple clients are correctly
     /// grouped together and re-registered.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_multiple_service_advertisements() -> Result<(), Error> {
         let (mut exec, server, mut upstream_requests) = setup_server();
 
         let (service_sender, handler_fut) = setup_handler_fut(server);
         pin_mut!(handler_fut);
-        assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // A new client connects to bt-rfcomm.cmx.
         let client1 = {
@@ -1017,9 +1036,10 @@ mod tests {
         let n1 = services1.len();
         let (_connection_stream1, adv_fut1) = make_advertise_request(&client1, services1);
         pin_mut!(adv_fut1);
-        assert!(exec.run_until_stalled(&mut adv_fut1).is_pending());
+        exec.run_until_stalled(&mut adv_fut1).expect_pending("should still be advertising");
 
-        let _ = exec.run_until_stalled(&mut handler_fut);
+        exec.run_until_stalled(&mut handler_fut)
+            .expect_pending("shouldn't be done while service_sender is live");
 
         // First advertisement request relayed upstream.
         let (_receiver1, responder1) = match exec.run_until_stalled(&mut upstream_requests.next()) {
@@ -1046,7 +1066,7 @@ mod tests {
         ];
         let (_connection_stream2, adv_fut2) = make_advertise_request(&client2, services2);
         pin_mut!(adv_fut2);
-        assert!(exec.run_until_stalled(&mut adv_fut2).is_pending());
+        exec.run_until_stalled(&mut adv_fut2).expect_pending("should still be advertising");
 
         let _ = exec.run_until_stalled(&mut handler_fut);
 
@@ -1070,14 +1090,14 @@ mod tests {
             }
             x => panic!("Expected advertise request, got: {:?}", x),
         };
-        assert!(exec.run_until_stalled(&mut adv_fut1).is_pending());
-        assert!(exec.run_until_stalled(&mut adv_fut2).is_pending());
+        exec.run_until_stalled(&mut adv_fut1).expect_pending("should still be advertising");
+        exec.run_until_stalled(&mut adv_fut2).expect_pending("should still be advertising");
 
         Ok(())
     }
 
     /// This test validates that client Search requests are relayed directly upstream.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_search_request() {
         let (mut exec, mut server, mut profile_requests) = setup_server();
 
@@ -1096,7 +1116,7 @@ mod tests {
     }
 
     /// This test validates that client ConnectSco requests are relayed directly upstream.
-    #[test]
+    #[fuchsia::test]
     fn test_handle_connect_sco_request() {
         let (mut exec, mut server, mut profile_requests) = setup_server();
 
@@ -1116,7 +1136,7 @@ mod tests {
 
     /// This tests validates that 1) The call to Profile.Advertise correctly registers upstream and
     /// 2) When the call resolves, the Future resolves.
-    #[test]
+    #[fuchsia::test]
     fn test_advertise_relay() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (upstream, mut upstream_server) =
@@ -1127,7 +1147,7 @@ mod tests {
 
         let advertise_fut = ProfileRegistrar::advertise(upstream, params, connect_client);
         pin_mut!(advertise_fut);
-        assert!(exec.run_until_stalled(&mut advertise_fut).is_pending());
+        exec.run_until_stalled(&mut advertise_fut).expect_pending("should still be advertising");
 
         let (_connection_receiver, responder) = match exec
             .run_until_stalled(&mut upstream_server.next())
@@ -1138,16 +1158,16 @@ mod tests {
             x => panic!("Expected Advertise request but got: {:?}", x),
         };
 
-        assert!(exec.run_until_stalled(&mut advertise_fut).is_pending());
+        exec.run_until_stalled(&mut advertise_fut).expect_pending("should still be advertising");
 
         // Upstream server decides to terminate advertisement - we expect the Future to finish.
         let _ = responder.send(&mut Ok(()));
-        assert!(exec.run_until_stalled(&mut advertise_fut).is_ready());
+        let _ = exec.run_until_stalled(&mut advertise_fut).expect("advertisement should finish");
     }
 
     /// This test validates that incoming connection requests are correctly relayed
     /// to the Sender of the connection task.
-    #[test]
+    #[fuchsia::test]
     fn test_connection_request_relay() {
         let mut exec = fasync::TestExecutor::new().unwrap();
 
@@ -1162,8 +1182,9 @@ mod tests {
         pin_mut!(receiver_fut);
 
         // The task should still be active and no messages sent.
-        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        assert!(exec.run_until_stalled(&mut receiver_fut).is_pending());
+        exec.run_until_stalled(&mut relay_fut)
+            .expect_pending("shouldn't be done while receiver is live");
+        exec.run_until_stalled(&mut receiver_fut).expect_pending("should wait for connection");
 
         // Upstream server gives us a connection.
         let id = PeerId(123);
@@ -1173,7 +1194,8 @@ mod tests {
             .is_ok());
 
         // Run the relay fut - should still be running.
-        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        exec.run_until_stalled(&mut relay_fut)
+            .expect_pending("shouldn't be done while receiver is live");
 
         // The relay should've sent the ConnectionEvent to the receiver.
         match exec.run_until_stalled(&mut receiver_fut) {
@@ -1187,7 +1209,8 @@ mod tests {
         drop(connect_client);
 
         // The relay should notify the sender that the stream has terminated (i.e relay Canceled).
-        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        exec.run_until_stalled(&mut relay_fut)
+            .expect_pending("shouldn't be done while receiver is live");
         match exec.run_until_stalled(&mut receiver_fut) {
             Poll::Ready(Some(ConnectionEvent::AdvertisementCanceled)) => {}
             x => panic!("Expected Canceled but got: {:?}", x),
@@ -1195,6 +1218,6 @@ mod tests {
 
         // Relay should be finished since the channel is closed.
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
-        assert!(exec.run_until_stalled(&mut relay_fut).is_ready());
+        exec.run_until_stalled(&mut relay_fut).expect("relay should finish");
     }
 }
