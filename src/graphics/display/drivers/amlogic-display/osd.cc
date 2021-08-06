@@ -132,8 +132,10 @@ void Osd::WaitForRdmaIdle() {
   bool dumped = false;
   auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   while (stat_reg.RequestLatched(kRdmaChannel) || stat_reg.ChannelDone(kRdmaChannel)) {
-    if (!dumped && zx::clock::get_monotonic() > dump_deadline) {
+    zx::time now = zx::clock::get_monotonic();
+    if (!dumped && now > dump_deadline) {
       rdma_stall_count_.Add(1);
+      last_rdma_stall_timestamp_ns_.Set(now.get());
 
       DISP_INFO("vsync blocked too long waiting for RDMA; dumping registers");
       dumped = true;
@@ -152,14 +154,14 @@ void Osd::WaitForRdmaIdle() {
       }
     }
 
-    zx::time_utc now;
-    if (utc_clock->read(now.get_address()) != ZX_OK) {
+    zx::time_utc now_utc;
+    if (utc_clock->read(now_utc.get_address()) != ZX_OK) {
       DISP_ERROR("failed to read UTC clock");
       return;
     }
 
     // TODO(fxbug.dev/80821): Migrate this driver to use std::condition_variable instead.
-    struct timespec deadline = (now + kRdmaActiveCondWaitTimeout).to_timespec();
+    struct timespec deadline = (now_utc + kRdmaActiveCondWaitTimeout).to_timespec();
     cnd_timedwait(rdma_active_cnd_.get(), rdma_lock_.GetInternal(), &deadline);
 
     stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
@@ -306,6 +308,7 @@ Osd::Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t dis
   rdma_base_channel_done_count_ = inspect_node_.CreateUint("rdma_base_channel_done_count", 0);
   rdma_afbc_channel_done_count_ = inspect_node_.CreateUint("rdma_afbc_channel_done_count", 0);
   rdma_stall_count_ = inspect_node_.CreateUint("rdma_stalls", 0);
+  last_rdma_stall_timestamp_ns_ = inspect_node_.CreateUint("last_rdma_stall_timestamp_ns", 0);
 }
 
 zx_status_t Osd::Init(ddk::PDev& pdev) {
