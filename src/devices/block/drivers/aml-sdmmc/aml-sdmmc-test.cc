@@ -1826,4 +1826,51 @@ TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
 }
 
+TEST_F(AmlSdmmcTest, ConsecutiveErrorLogging) {
+  ASSERT_OK(dut_->Init());
+
+  // First data error.
+  dut_->SetRequestInterruptStatus(1 << 8);
+  sdmmc_req_t request;
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+
+  // First cmd error.
+  dut_->SetRequestInterruptStatus(1 << 11);
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+
+  // Second data error.
+  dut_->SetRequestInterruptStatus(1 << 7);
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+
+  // Second cmd error.
+  dut_->SetRequestInterruptStatus(1 << 11);
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+
+  // cmd/data goes through.
+  dut_->SetRequestInterruptStatus(1 << 13);
+  memset(&request, 0, sizeof(request));
+  request.cmd_flags = SDMMC_RESP_DATA_PRESENT;  // Must be set to clear the data error count.
+  request.blocksize = 32;
+  request.blockcount = 1;
+  request.use_dma = false;
+  uint8_t buffer[32];
+  request.virt_buffer = buffer;
+  request.virt_size = sizeof(buffer);
+  EXPECT_EQ(ZX_OK, dut_->SdmmcRequest(&request));
+
+  // Third data error.
+  dut_->SetRequestInterruptStatus(1 << 7);
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, dut_->SdmmcRequest(&request));
+
+  // Third cmd error.
+  dut_->SetRequestInterruptStatus(1 << 11);
+  memset(&request, 0, sizeof(request));
+  EXPECT_EQ(ZX_ERR_TIMED_OUT, dut_->SdmmcRequest(&request));
+}
+
 }  // namespace sdmmc

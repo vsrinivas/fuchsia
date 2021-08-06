@@ -113,14 +113,14 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_data_errors_);
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                    req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_data_errors_);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
@@ -133,8 +133,8 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
       AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
                       req->arg, status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
-                      req->arg, status_irq.reg_value());
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
@@ -146,17 +146,17 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req->probe_tuning_cmd || is_sd_cmd8) {
-      AML_SDMMC_TRACE("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
-                      req->cmd_idx, req->arg, status_irq.reg_value());
+      AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
+                      status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
-                      req->cmd_idx, req->arg, status_irq.reg_value());
+      AML_SDMMC_ERROR("Reponse timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return ZX_ERR_TIMED_OUT;
   }
   if (status_irq.desc_timeout()) {
-    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, arg=0x%08x, status=0x%08x",
-                    req->cmd_idx, req->arg, status_irq.reg_value());
+    AML_SDMMC_ERROR("Descriptor timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                    req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_data_errors_);
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -168,6 +168,11 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
 
   // At this point we have succeeded and don't need to perform our on-error call
   on_bus_error.cancel();
+
+  consecutive_cmd_errors_ = 0;
+  if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+    consecutive_data_errors_ = 0;
+  }
 
   if (req->cmd_flags & SDMMC_RESP_LEN_136) {
     req->response[0] = AmlSdmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
@@ -215,14 +220,14 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
-                    status_irq.reg_value());
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                    req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   if (status_irq.desc_err()) {
@@ -235,8 +240,8 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
       AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
-                      status_irq.reg_value());
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
@@ -248,17 +253,17 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req.probe_tuning_cmd || is_sd_cmd8) {
-      AML_SDMMC_TRACE("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
-                      req.cmd_idx, req.arg, status_irq.reg_value());
+      AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
+                      status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("No response received before time limit, cmd%d, arg=0x%08x, status=0x%08x",
-                      req.cmd_idx, req.arg, status_irq.reg_value());
+      AML_SDMMC_ERROR("Response timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                      req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return zx::error(ZX_ERR_TIMED_OUT);
   }
   if (status_irq.desc_timeout()) {
-    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx,
-                    req.arg, status_irq.reg_value());
+    AML_SDMMC_ERROR("Descriptor timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+                    req.cmd_idx, req.arg, status_irq.reg_value(), ++consecutive_data_errors_);
     return zx::error(ZX_ERR_TIMED_OUT);
   }
 
@@ -270,6 +275,11 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
 
   // At this point we have succeeded and don't need to perform our on-error call
   on_bus_error.cancel();
+
+  consecutive_cmd_errors_ = 0;
+  if (req.cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+    consecutive_data_errors_ = 0;
+  }
 
   std::array<uint32_t, AmlSdmmc::kResponseCount> response = {};
   if (req.cmd_flags & SDMMC_RESP_LEN_136) {
