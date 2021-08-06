@@ -147,8 +147,8 @@ template <typename FidlType, typename EqualityCheck>
 bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
                    std::vector<zx_handle_info_t> handle_infos, EqualityCheck equality_check) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
-                                         handle_infos.data(),
+  fidl::DecodedMessage<FidlType> decoded(fidl::internal::WireFormatVersion::kV1, bytes.data(),
+                                         static_cast<uint32_t>(bytes.size()), handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
     std::cout << "Decoding failed: " << decoded.error() << std::endl;
@@ -163,8 +163,8 @@ template <typename FidlType>
 bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
-                                         handle_infos.data(),
+  fidl::DecodedMessage<FidlType> decoded(fidl::internal::WireFormatVersion::kV1, bytes.data(),
+                                         static_cast<uint32_t>(bytes.size()), handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;

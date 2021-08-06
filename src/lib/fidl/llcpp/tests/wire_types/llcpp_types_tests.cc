@@ -227,7 +227,8 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fidl::DecodedMessage<VectorStruct> decoded(std::move(converted.incoming_message()));
+  fidl::DecodedMessage<VectorStruct> decoded(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+                                             std::move(converted.incoming_message()));
 
   ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());
   for (uint32_t i = 0; i < vector_view_count; i++) {

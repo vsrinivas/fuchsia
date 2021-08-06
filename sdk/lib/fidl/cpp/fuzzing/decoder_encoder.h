@@ -116,7 +116,13 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   }
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
-  fidl::DecodedMessage<T> decoded(std::move(incoming));
+  std::optional<fidl::DecodedMessage<T>> decoded_initialize_later;
+  if constexpr (kTransactionalMessage) {
+    decoded_initialize_later.emplace(std::move(incoming));
+  } else {
+    decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1, std::move(incoming));
+  }
+  fidl::DecodedMessage<T>& decoded = decoded_initialize_later.value();
 
   if (decoded.status() != ZX_OK) {
     status.status = decoded.status();
@@ -150,7 +156,14 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes,
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  fidl::DecodedMessage<T> decoded2(std::move(conversion.incoming_message()));
+  std::optional<fidl::DecodedMessage<T>> decoded2_initialize_later;
+  if constexpr (kTransactionalMessage) {
+    decoded2_initialize_later.emplace(std::move(conversion.incoming_message()));
+  } else {
+    decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV1,
+                                      std::move(conversion.incoming_message()));
+  }
+  fidl::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
 
   if (decoded2.status() != ZX_OK) {
     status.status = decoded2.status();

@@ -5,12 +5,15 @@
 #include <lib/fidl/llcpp/message.h>
 #include <lib/zx/event.h>
 
+#include <cstring>
 #include <iterator>
 
 #include <gtest/gtest.h>
 
 TEST(OutgoingToIncomingMessage, IovecMessage) {
-  uint8_t bytes[3] = {1, 2, 3};
+  fidl_message_header_t header = {.magic_number = kFidlWireFormatMagicNumberInitial};
+  uint8_t bytes[sizeof(header)];
+  memcpy(bytes, &header, sizeof(header));
   zx_channel_iovec_t iovecs[1] = {
       {.buffer = bytes, .capacity = std::size(bytes), .reserved = 0},
   };
@@ -33,7 +36,9 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
 
 #ifdef __Fuchsia__
 TEST(OutgoingToIncomingMessage, Handles) {
-  uint8_t bytes[16];
+  fidl_message_header_t header = {.magic_number = kFidlWireFormatMagicNumberInitial};
+  uint8_t bytes[sizeof(header)];
+  memcpy(bytes, &header, sizeof(header));
   zx::event ev;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
   zx_handle_disposition_t hd[1] = {zx_handle_disposition_t{
@@ -60,9 +65,9 @@ TEST(OutgoingToIncomingMessage, Handles) {
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
   fidl::IncomingMessage& output = result.incoming_message();
-  EXPECT_EQ(output.byte_actual(), 16u);
+  EXPECT_EQ(output.byte_actual(), std::size(bytes));
   EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
-  EXPECT_EQ(output.handle_actual(), 1u);
+  EXPECT_EQ(output.handle_actual(), std::size(iovecs));
   EXPECT_EQ(output.handles()[0].handle, ev.get());
   EXPECT_EQ(output.handles()[0].type, ZX_OBJ_TYPE_EVENT);
   EXPECT_EQ(output.handles()[0].rights, ZX_DEFAULT_EVENT_RIGHTS);

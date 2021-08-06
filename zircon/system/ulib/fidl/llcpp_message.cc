@@ -60,6 +60,7 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg)
     default:
       ZX_PANIC("unhandled FIDL outgoing message type");
   }
+  is_transactional_ = true;
 }
 
 OutgoingMessage::OutgoingMessage(ConstructorArgs args)
@@ -237,6 +238,7 @@ IncomingMessage::IncomingMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle
                                  uint32_t handle_actual)
     : IncomingMessage(bytes, byte_actual, handles, handle_actual, kSkipMessageHeaderValidation) {
   Validate();
+  is_transactional_ = true;
 }
 
 IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* c_msg) {
@@ -279,6 +281,19 @@ void IncomingMessage::CloseHandles() && {
 }
 
 void IncomingMessage::Decode(const fidl_type_t* message_type) {
+  ZX_ASSERT(is_transactional_);
+  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
+  if (bytes() != nullptr &&
+      (header()->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+    wire_format_version = internal::WireFormatVersion::kV2;
+  }
+  Decode(wire_format_version, message_type);
+}
+
+void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
+                             const fidl_type_t* message_type) {
+  ZX_ASSERT(wire_format_version != internal::WireFormatVersion::kV2);  // Not yet supported.
+
   ZX_DEBUG_ASSERT(status() == ZX_OK);
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
   zx_status_t status = fidl_decode_msg(message_type, &message_, error_address());
@@ -362,6 +377,10 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     return fidl::IncomingMessage(fidl::Result::EncodeError(status));
   }
 
+  if (input.is_transactional()) {
+    return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(),
+                                 num_handles);
+  }
   return fidl::IncomingMessage(buf_bytes.data(), buf_bytes.size(), buf_handles.get(), num_handles,
                                fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }

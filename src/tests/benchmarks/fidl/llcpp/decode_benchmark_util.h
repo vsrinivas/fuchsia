@@ -45,7 +45,8 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     {
       auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
       ZX_ASSERT(converted.ok());
-      auto decoded = fidl::DecodedMessage<FidlType>(std::move(converted.incoming_message()));
+      auto decoded = fidl::DecodedMessage<FidlType>(fidl::internal::kLLCPPInMemoryWireFormatVersion,
+                                                    std::move(converted.incoming_message()));
       ZX_ASSERT(decoded.ok());
     }
 

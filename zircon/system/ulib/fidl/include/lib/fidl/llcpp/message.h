@@ -126,6 +126,7 @@ class OutgoingMessage : public ::fidl::Result {
   // Encodes the data.
   template <typename FidlType>
   void Encode(FidlType* data) {
+    is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
     EncodeImpl(FidlType::Type, data);
   }
 
@@ -171,6 +172,8 @@ class OutgoingMessage : public ::fidl::Result {
                        ::fidl::internal::ResponseContext* context);
 #endif
 
+  bool is_transactional() const { return is_transactional_; }
+
  protected:
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
@@ -211,12 +214,20 @@ class OutgoingMessage : public ::fidl::Result {
   // If OutgoingMessage is constructed with a fidl_outgoing_msg_t* that contains bytes
   // rather than iovec, it is converted to a single-element iovec pointing to the bytes.
   zx_channel_iovec_t converted_byte_message_iovec_ = {};
+  bool is_transactional_ = false;
 };
 
 namespace internal {
 
 template <typename T>
 class DecodedMessageBase;
+
+enum class WireFormatVersion {
+  kV1,
+  kV2,
+};
+
+constexpr WireFormatVersion kLLCPPInMemoryWireFormatVersion = WireFormatVersion::kV1;
 
 }  // namespace internal
 
@@ -352,12 +363,28 @@ class IncomingMessage : public ::fidl::Result {
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
   //
+  // The first 16 bytes of the message must be the FIDL message header and are used for
+  // determining the wire format version for decoding.
+  //
   // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
   //
   // This method should be used after a read.
   template <typename FidlType>
   void Decode() {
+    ZX_ASSERT(is_transactional_);
     Decode(FidlType::Type);
+  }
+
+  // Decodes the message using |FidlType| for the specified |wire_format_version|. If this
+  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
+  //
+  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
+  //
+  // This method should be used after a read.
+  template <typename FidlType>
+  void Decode(internal::WireFormatVersion wire_format_version) {
+    ZX_ASSERT(!is_transactional_);
+    Decode(wire_format_version, FidlType::Type);
   }
 
   // Release the handle ownership after the message has been converted to its
@@ -373,16 +400,28 @@ class IncomingMessage : public ::fidl::Result {
   // Decodes the message using |message_type|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
   //
+  // The first 16 bytes of the message must be the FIDL message header and are used for
+  // determining the wire format version for decoding.
+  //
   // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
   //
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type);
+
+  // Decodes the message using |message_type| for the specified |wire_format_version|. If this
+  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
+  //
+  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
+  //
+  // This method should be used after a read.
+  void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type);
 
   // Performs basic transactional message header validation and sets the |fidl::Result| fields
   // accordingly.
   void Validate();
 
   fidl_incoming_msg_t message_;
+  bool is_transactional_ = false;
 };
 
 #ifdef __Fuchsia__
@@ -414,9 +453,24 @@ class DecodedMessageBase : public ::fidl::Result {
  public:
   // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
   // Consumes |msg|.
+  //
+  // The first 16 bytes of the message are assumed to be the FIDL message header and are used
+  // for determining the wire format version for decoding.
   explicit DecodedMessageBase(::fidl::IncomingMessage&& msg) {
+    static_assert(fidl::IsFidlMessage<FidlType>::value);
     bytes_ = msg.bytes();
     msg.Decode<FidlType>();
+    SetResult(msg);
+  }
+
+  // Creates an |DecodedMessageBase| by decoding the incoming message |msg| as the specified
+  // |wire_format_version|.
+  // Consumes |msg|.
+  explicit DecodedMessageBase(internal::WireFormatVersion wire_format_version,
+                              ::fidl::IncomingMessage&& msg) {
+    static_assert(!fidl::IsFidlMessage<FidlType>::value);
+    bytes_ = msg.bytes();
+    msg.Decode<FidlType>(wire_format_version);
     SetResult(msg);
   }
 
