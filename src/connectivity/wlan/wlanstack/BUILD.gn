@@ -136,15 +136,6 @@ fuchsia_package_with_single_component("wlanstack-v1") {
   manifest = "meta/wlanstack.cmx"
 }
 
-fuchsia_package_with_single_component("wlanstack-legacy-privacy") {
-  package_name = "wlanstack"
-  deps = [
-    ":bin",
-    ":wlan_metrics_registry",
-  ]
-  manifest = "meta/wlanstack_legacy_privacy.cml"
-}
-
 core_shard("wlanstack-core-shard") {
   shard_file = "meta/wlanstack.core_shard.cml"
 }

@@ -26,18 +26,13 @@ group("drivers") {
   }
 }
 
-common_packages = [
-  "wlancfg",
-  "wlandevicemonitor:wlandevicemonitor",
-  "//src/connectivity/location/regulatory_region",
-]
-
 group("packages") {
-  deps = common_packages + [ "wlanstack" ]
-}
-
-group("packages-legacy-privacy") {
-  deps = common_packages + [ "wlanstack:wlanstack-legacy-privacy" ]
+  deps = [
+    "wlancfg",
+    "wlandevicemonitor:wlandevicemonitor",
+    "wlanstack",
+    "//src/connectivity/location/regulatory_region",
+  ]
 }
 
 group("tests") {
