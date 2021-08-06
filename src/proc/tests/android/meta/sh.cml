@@ -4,8 +4,8 @@
         binary: "system/bin/sh",
         args: [ "-i" ],
         mounts: [
-            "/:remotefs:root",
-            "/tmp:tmpfs",
+            "/:ext4:data/system.img",
+            "/data:tmpfs",
         ],
     },
 }

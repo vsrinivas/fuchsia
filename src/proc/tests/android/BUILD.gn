@@ -4,14 +4,6 @@
 
 import("//build/components.gni")
 
-declare_args() {
-  # Which binary to use for //src/proc/bin/android:syscalls_test
-  #
-  # For example, set to "//local/starnix/syscalls" to use a locally built binary.
-  starnix_syscalls_test_label =
-      "//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls"
-}
-
 group("android") {
   deps = [ ":android_system_image" ]
 }
@@ -23,44 +15,7 @@ group("tests") {
   }
 }
 
-template("tar_resource") {
-  main_target = target_name
-  untar_target = "${target_name}__untar"
-  manifest_file = "$target_gen_dir/$target_name.manifest.json"
-  action(untar_target) {
-    script = "tar_to_fini.py"
-    inputs = [ invoker.tarfile ]
-    outputs = [ manifest_file ]
-    depfile = "$target_gen_dir/$target_name.d"
-    args = [
-      "--tar-file",
-      rebase_path(inputs[0], root_build_dir),
-      "--unpack-dir",
-      rebase_path("$target_gen_dir/$target_name", root_build_dir),
-      "--manifest-file",
-      rebase_path(manifest_file, root_build_dir),
-      "--dep-file",
-      rebase_path(depfile, root_build_dir),
-    ]
-    if (defined(invoker.subdir)) {
-      args += [
-        "--package-subdir",
-        invoker.subdir,
-      ]
-    }
-  }
-  distribution_entries_from_fini(main_target) {
-    file = manifest_file
-    deps = [ ":$untar_target" ]
-  }
-}
-
-tar_resource("android_system_image") {
-  tarfile = "//prebuilt/starnix/android-root-amd64/system.img.tar"
-  subdir = "root"
-}
-
-resource("android_system_image_ext") {
+resource("android_system_image") {
   sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
   outputs = [ "data/system.img" ]
 }
@@ -80,52 +35,9 @@ fuchsia_component("sh_test") {
   manifest = "meta/sh_test.cml"
 }
 
-system_image_gen_dir = get_label_info(":android_system_image", "target_gen_dir")
-system_image_base = "$system_image_gen_dir/android_system_image__untar"
-
-resource("system_bin") {
-  sources = [ "$system_image_base/system/bin/bootstrap/linker64" ]
-  outputs = [ "root/system/bin/{{source_file_part}}" ]
-  deps = [ ":android_system_image" ]
-}
-
-resource("syscalls_test_bin") {
-  sources = [ starnix_syscalls_test_label ]
-  outputs = [ "root/system/bin/syscalls_test" ]
-}
-
-resource("starnix_tmp_placeholder") {
-  sources = [ "placeholder" ]
-  outputs = [ "root/tmp/.placeholder" ]
-}
-
-resource("starnix_data_placeholder") {
-  sources = [ "placeholder" ]
-  outputs = [ "root/data/.placeholder" ]
-}
-
-resource("starnix_dev_placeholder") {
-  sources = [ "placeholder" ]
-  outputs = [ "root/dev/.placeholder" ]
-}
-
 resource("starnix_data_tmp_placeholder") {
   sources = [ "placeholder" ]
   outputs = [ "data/tmp/.placeholder" ]
-}
-
-fuchsia_component("syscalls_test") {
-  testonly = true
-  check_references = false
-  manifest = "meta/syscalls_test.cml"
-  deps = [
-    ":starnix_data_placeholder",
-    ":starnix_data_tmp_placeholder",
-    ":starnix_dev_placeholder",
-    ":starnix_tmp_placeholder",
-    ":syscalls_test_bin",
-    ":system_bin",
-  ]
 }
 
 template("gvisor_test_component") {
@@ -219,11 +131,9 @@ gvisor_test_component("symlink_test") {
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
-    ":android_system_image_ext",
     ":init",
     ":sh",
     ":starnix_data_tmp_placeholder",
-    ":syscalls_test",
   ]
 
   test_components = [
