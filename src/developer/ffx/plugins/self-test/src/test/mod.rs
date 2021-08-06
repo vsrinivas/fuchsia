@@ -9,7 +9,7 @@ use {
     serde::Serialize,
     serde_json::Value,
     std::borrow::Cow,
-    std::process::Stdio,
+    std::process::{Child, ExitStatus, Stdio},
     std::time::Instant,
     std::{env, io::Write, path::PathBuf, process::Command, time::Duration},
     std::{future::Future, pin::Pin},
@@ -33,8 +33,7 @@ pub async fn get_target_nodename() -> Result<String> {
     // ensure a daemon is spun up first, so we have a moment to discover targets.
     let start = Instant::now();
     loop {
-        let mut cmd = isolate.ffx(&["ffx", "target", "list"]);
-        let out = fuchsia_async::unblock(move || cmd.output()).await?;
+        let out = isolate.ffx(&["ffx", "target", "list"]).await?;
         if out.stdout.len() > 10 {
             break;
         }
@@ -43,15 +42,12 @@ pub async fn get_target_nodename() -> Result<String> {
         }
     }
 
-    let mut cmd = isolate.ffx(&["target", "list", "-f", "j"]);
-    let out = fuchsia_async::unblock(move || cmd.output().context("failed to execute"))
-        .await
-        .context("getting target list")?;
+    let out = isolate.ffx(&["target", "list", "-f", "j"]).await.context("getting target list")?;
 
     ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
 
     let targets: Value =
-        serde_json::from_slice(&out.stdout).context("parsing output from target list")?;
+        serde_json::from_str(&out.stdout).context("parsing output from target list")?;
 
     let targets = targets.as_array().ok_or(anyhow!("expected target list ot return an array"))?;
 
@@ -69,6 +65,13 @@ pub async fn get_target_nodename() -> Result<String> {
         .as_str()
         .map(|s| s.to_string())
         .ok_or(anyhow!("expected product state target to have a nodename"))
+}
+
+#[derive(Debug)]
+pub struct CommandOutput {
+    pub status: ExitStatus,
+    pub stdout: String,
+    pub stderr: String,
 }
 
 pub struct Isolate {
@@ -137,8 +140,7 @@ impl Isolate {
         Ok(Isolate { _tmpdir: tmpdir, home_dir, xdg_config_home, ascendd_path })
     }
 
-    /// ffx constructs a std::process::Command with the given arguments set to be passed to the ffx binary.
-    pub fn ffx(&self, args: &[&str]) -> std::process::Command {
+    fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
         let mut ffx_path = env::current_exe().expect("could not determine own path");
         // when we daemonize, our path will change to /, so get the canonical path before that occurs.
         ffx_path = std::fs::canonicalize(ffx_path).expect("could not canonicalize own path");
@@ -161,6 +163,23 @@ impl Isolate {
         cmd.env("ASCENDD", &*self.ascendd_path);
         cmd
     }
+
+    pub fn ffx_spawn(&self, args: &[&str]) -> Result<Child> {
+        let mut cmd = self.ffx_cmd(args);
+        let child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+        Ok(child)
+    }
+
+    pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
+        let mut cmd = self.ffx_cmd(args);
+        fuchsia_async::unblock(move || {
+            let out = cmd.output().context("failed to execute")?;
+            let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
+            let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+            Ok::<_, anyhow::Error>(CommandOutput { status: out.status, stdout, stderr })
+        })
+        .await
+    }
 }
 
 impl Drop for Isolate {
@@ -169,7 +188,7 @@ impl Drop for Isolate {
         // invoking ffx daemon stop if there's nothing on the other end.
         let _ = self.ascendd_path;
 
-        let mut cmd = self.ffx(&["daemon", "stop"]);
+        let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::null());
         cmd.stderr(Stdio::null());

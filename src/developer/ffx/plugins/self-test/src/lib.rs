@@ -4,7 +4,7 @@
 
 use {
     crate::test::*, anyhow::*, ffx_core::ffx_plugin, ffx_selftest_args::SelftestCommand,
-    std::process::Stdio, std::time::Duration,
+    std::time::Duration,
 };
 
 mod test;
@@ -36,8 +36,8 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
 async fn test_isolated() -> Result<()> {
     let isolate = Isolate::new("isolated")?;
 
-    let out = isolate.ffx(&["config", "get", "test.is-isolated"]).output()?;
-    assert_eq!(String::from_utf8(out.stdout)?, "true\n");
+    let out = isolate.ffx(&["config", "get", "test.is-isolated"]).await?;
+    assert_eq!(out.stdout, "true\n");
 
     Ok(())
 }
@@ -45,34 +45,12 @@ async fn test_isolated() -> Result<()> {
 async fn test_experiment_not_enabled() -> Result<()> {
     let isolate = Isolate::new("experiment-not-enabled")?;
 
-    let mut cmd = isolate.ffx(&["self-test", "experiment"]);
-    let (status, stdout, stderr) = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
-        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
-        Ok::<_, anyhow::Error>((out.status, stdout, stderr))
-    })
-    .await?;
+    let out = isolate.ffx(&["self-test", "experiment"]).await?;
 
-    ensure!(
-        stdout.lines().count() == 0,
-        "stdout unexpectedly contains output: {}; stderr: {}",
-        stdout,
-        stderr
-    );
-    ensure!(!status.success());
-    ensure!(
-        stderr.contains("experimental subcommand"),
-        "stderr is unexpected: {}; stdout: {}",
-        stderr,
-        stdout
-    );
-    ensure!(
-        stderr.contains("selftest.experiment"),
-        "stderr is unexpected: {}; stdout: {}",
-        stderr,
-        stdout
-    );
+    ensure!(out.stdout.lines().count() == 0, "stdout unexpectedly contains output: {:?}", out);
+    ensure!(!out.status.success());
+    ensure!(out.stderr.contains("experimental subcommand"), "stderr is unexpected: {:?}", out);
+    ensure!(out.stderr.contains("selftest.experiment"), "stderr is unexpected: {:?}", out);
 
     Ok(())
 }
@@ -80,38 +58,29 @@ async fn test_experiment_not_enabled() -> Result<()> {
 async fn test_experiment_enabled() -> Result<()> {
     let isolate = Isolate::new("experiment-enabled")?;
 
-    let mut cmd = isolate.ffx(&["config", "set", "selftest.experiment", "true"]);
-    let _ = fuchsia_async::unblock(move || cmd.output()).await;
+    let _ = isolate.ffx(&["config", "set", "selftest.experiment", "true"]).await?;
 
-    let mut cmd = isolate.ffx(&["self-test", "experiment"]);
-    let (status, stderr) = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
-        Ok::<_, anyhow::Error>((out.status, stderr))
-    })
-    .await?;
+    let out = isolate.ffx(&["self-test", "experiment"]).await?;
 
-    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {:?}", stderr);
-    ensure!(status.success());
+    ensure!(out.stderr.lines().count() == 0, "stderr is unexpected: {:?}", out);
+    ensure!(out.status.success());
 
     Ok(())
 }
 
 async fn test_daemon_echo() -> Result<()> {
     let isolate = Isolate::new("daemon-echo")?;
-    let out = isolate.ffx(&["daemon", "echo"]).output().context("failed to execute")?;
+    let out = isolate.ffx(&["daemon", "echo"]).await?;
 
-    let got = String::from_utf8(out.stdout)?;
     let want = "SUCCESS: received \"Ffx\"\n";
-    assert_eq!(got, want);
+    assert_eq!(out.stdout, want);
 
     Ok(())
 }
 
 async fn test_daemon_config_flag() -> Result<()> {
     let isolate = Isolate::new("daemon-config-flag")?;
-    let mut daemon =
-        isolate.ffx(&["daemon", "start"]).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    let mut daemon = isolate.ffx_spawn(&["daemon", "start"])?;
 
     // This should not terminate the daemon just started, as it won't
     // share an overnet socket with it.
@@ -124,11 +93,11 @@ async fn test_daemon_config_flag() -> Result<()> {
             "daemon",
             "stop",
         ])
-        .output()?;
+        .await?;
 
     assert_eq!(None, daemon.try_wait()?);
 
-    let _out = isolate.ffx(&["daemon", "stop"]).output()?;
+    let _out = isolate.ffx(&["daemon", "stop"]).await?;
     daemon.wait()?;
 
     Ok(())
@@ -136,11 +105,10 @@ async fn test_daemon_config_flag() -> Result<()> {
 
 async fn test_daemon_stop() -> Result<()> {
     let isolate = Isolate::new("daemon-stop")?;
-    let out = isolate.ffx(&["daemon", "stop"]).output().context("failed to execute")?;
-    let got = String::from_utf8(out.stdout)?;
+    let out = isolate.ffx(&["daemon", "stop"]).await?;
     let want = "Stopped daemon.\n";
 
-    assert_eq!(got, want);
+    assert_eq!(out.stdout, want);
 
     Ok(())
 }
@@ -153,18 +121,9 @@ async fn test_target_list() -> Result<()> {
     // It takes a few moments to discover devices on the local network over
     // mdns, so we retry until timeout or a useful value.
     while lines.len() < 2 {
-        let mut cmd = isolate.ffx(&["target", "list"]);
-        cmd.stderr(Stdio::inherit());
-        // Use blocking so that if we get stuck waiting on the subcommand, we
-        // don't block the test case timeout.
-        // TODO(fxbug.dev/60680): cover this issue in all cases by replacing
-        // ffx() return type with a value that handles these semantics.
-        let stdout: Result<String> = fuchsia_async::unblock(move || {
-            let out = cmd.output().context("failed to execute")?;
-            String::from_utf8(out.stdout).context("convert from utf8")
-        })
-        .await;
-        lines = stdout?.lines().map(|s| s.to_owned()).collect();
+        let out = isolate.ffx(&["target", "list"]).await?;
+        // cmd.stderr(Stdio::inherit());
+        lines = out.stdout.lines().map(|s| s.to_owned()).collect();
     }
 
     ensure!(lines.len() >= 2, format!("expected more than one line of output, got:\n{:?}", lines));
@@ -180,19 +139,12 @@ async fn test_target_list() -> Result<()> {
 async fn test_target_get_ssh_address_timeout() -> Result<()> {
     let isolate = Isolate::new("get-ssh-address")?;
 
-    let mut cmd = isolate.ffx(&["--target", "noexist", "target", "get-ssh-address", "-t", "1"]);
-    let (stdout, stderr) = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
-        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
-        Ok::<_, anyhow::Error>((stdout, stderr))
-    })
-    .await?;
+    let out = isolate.ffx(&["--target", "noexist", "target", "get-ssh-address", "-t", "1"]).await?;
 
-    ensure!(stdout.lines().count() == 0, "stdout is unexpected: {}; stderr: {}", stdout, stderr);
+    ensure!(out.stdout.lines().count() == 0, "stdout is unexpected: {:?}", out);
     // stderr names the target, and says timeout.
-    ensure!(stderr.contains("noexist"), "stderr is unexpected: {}; stdout: {}", stderr, stdout);
-    ensure!(stderr.contains("Timeout"), "stderr is unexpected: {}; stdout: {}", stderr, stdout);
+    ensure!(out.stderr.contains("noexist"), "stderr is unexpected: {:?}", out);
+    ensure!(out.stderr.contains("Timeout"), "stderr is unexpected: {:?}", out);
 
     Ok(())
 }
@@ -202,19 +154,12 @@ async fn test_target_get_ssh_address_target_includes_port() -> Result<()> {
 
     let isolate = Isolate::new("get-ssh-address")?;
 
-    let mut cmd =
-        isolate.ffx(&["--target", &target_nodename, "target", "get-ssh-address", "-t", "5"]);
-    let out = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        Ok::<_, anyhow::Error>(out)
-    })
-    .await?;
+    let out = isolate
+        .ffx(&["--target", &target_nodename, "target", "get-ssh-address", "-t", "5"])
+        .await?;
 
-    let stdout = String::from_utf8(out.stdout.clone()).context("convert from utf8")?;
-    let stderr = String::from_utf8(out.stderr.clone()).context("convert from utf8")?;
-
-    ensure!(stdout.contains(":22"), "expected stdout to contain ':22', got {:?}", out);
-    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}", stderr);
+    ensure!(out.stdout.contains(":22"), "expected stdout to contain ':22', got {:?}", out);
+    ensure!(out.stderr.lines().count() == 0, "stderr is unexpected: {:?}", out);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
@@ -223,20 +168,12 @@ async fn test_target_get_ssh_address_target_includes_port() -> Result<()> {
 async fn test_manual_target_add_get_ssh_address() -> Result<()> {
     let isolate = Isolate::new("target-add-get-ssh-address")?;
 
-    let mut cmd = isolate.ffx(&["target", "add", "[::1]:8022"]);
-    let _ = fuchsia_async::unblock(move || cmd.output()).await;
+    let _ = isolate.ffx(&["target", "add", "[::1]:8022"]).await?;
 
-    let mut cmd = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address"]);
-    let (stdout, stderr) = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
-        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
-        Ok::<_, anyhow::Error>((stdout, stderr))
-    })
-    .await?;
+    let out = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address"]).await?;
 
-    ensure!(stdout.contains("[::1]:8022"), "stdout is unexpected: {}; stderr: {}", stdout, stderr);
-    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}; stdout: {}", stderr, stdout);
+    ensure!(out.stdout.contains("[::1]:8022"), "stdout is unexpected: {:?}", out);
+    ensure!(out.stderr.lines().count() == 0, "stderr is unexpected: {:?}", out);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
@@ -245,24 +182,17 @@ async fn test_manual_target_add_get_ssh_address() -> Result<()> {
 async fn test_manual_target_add_get_ssh_address_late_add() -> Result<()> {
     let isolate = Isolate::new("target-add-get-ssh-address-late-add")?;
 
-    let mut cmd = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address", "-t", "10"]);
-    let task = fuchsia_async::unblock(move || {
-        let out = cmd.output().context("failed to execute")?;
-        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
-        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
-        Ok::<_, anyhow::Error>((stdout, stderr))
-    });
+    let task = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address", "-t", "10"]);
 
     // The get-ssh-address should pick up targets added after it has started, as well as before.
     fuchsia_async::Timer::new(Duration::from_millis(500)).await;
 
-    let mut cmd = isolate.ffx(&["target", "add", "[::1]:8022"]);
-    let _ = fuchsia_async::unblock(move || cmd.output()).await;
+    let _ = isolate.ffx(&["target", "add", "[::1]:8022"]).await?;
 
-    let (stdout, stderr) = task.await?;
+    let out = task.await?;
 
-    ensure!(stdout.contains("[::1]:8022"), "stdout is unexpected: {}; stderr: {}", stdout, stderr);
-    ensure!(stderr.lines().count() == 0, "stderr is unexpected: {}; stdout: {}", stderr, stdout);
+    ensure!(out.stdout.contains("[::1]:8022"), "stdout is unexpected: {:?}", out);
+    ensure!(out.stderr.lines().count() == 0, "stderr is unexpected: {:?}", out);
     // TODO: establish a good way to assert against the whole target address.
 
     Ok(())
