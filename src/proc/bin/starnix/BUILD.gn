@@ -35,6 +35,7 @@ if (target_cpu == "x64") {
       "//src/lib/process_builder",
       "//src/lib/syslog/rust:syslog",
       "//src/lib/zerocopy",
+      "//src/lib/zircon/rust:fuchsia-cprng",
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//src/proc/lib/linux_uapi",
       "//src/proc/lib/syncio",

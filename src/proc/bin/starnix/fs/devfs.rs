@@ -26,6 +26,9 @@ fn init_devfs() -> FileSystemHandle {
 
     mkchr(b"null", 1, 3);
     mkchr(b"zero", 1, 5);
+    mkchr(b"full", 1, 7);
+    mkchr(b"random", 1, 8);
+    mkchr(b"urandom", 1, 9);
 
     fs
 }

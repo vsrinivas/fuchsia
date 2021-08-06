@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/dev_test",
+        args: [ "--gunit_filter=-*.TTYExists:*.ReadDevFuseWithoutMount" ],
+    },
+}
