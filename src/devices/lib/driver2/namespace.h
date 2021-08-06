@@ -7,7 +7,7 @@
 
 #include <fuchsia/component/runner/llcpp/fidl.h>
 #include <lib/fdio/namespace.h>
-#include <lib/zx/status.h>
+#include <zircon/device/vfs.h>
 
 namespace driver {
 
@@ -27,12 +27,13 @@ class Namespace {
   // Connect to a service within a driver's namespace.
   template <typename T>
   zx::status<fidl::ClientEnd<T>> Connect(
-      std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) const {
+      std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
+      uint32_t flags = ZX_FS_RIGHT_READABLE) const {
     auto endpoints = fidl::CreateEndpoints<T>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    auto result = Connect(path, endpoints->server.TakeChannel());
+    auto result = Connect(path, flags, endpoints->server.TakeChannel());
     if (result.is_error()) {
       return result.take_error();
     }
@@ -45,7 +46,7 @@ class Namespace {
   Namespace(const Namespace& other) = delete;
   Namespace& operator=(const Namespace& other) = delete;
 
-  zx::status<> Connect(std::string_view path, zx::channel server_end) const;
+  zx::status<> Connect(std::string_view path, uint32_t flags, zx::channel server_end) const;
 
   fdio_ns_t* ns_ = nullptr;
 };

@@ -20,8 +20,9 @@ namespace internal {
 // fidl::WireSharedClient on success.
 template <typename T>
 fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
-    const driver::Namespace& ns, async_dispatcher_t* dispatcher, std::string_view path) {
-  auto result = ns.Connect<T>(path);
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher, std::string_view path,
+    uint32_t flags) {
+  auto result = ns.Connect<T>(path, flags);
   if (result.is_error()) {
     return fpromise::error(result.status_value());
   }
@@ -74,8 +75,9 @@ struct ContinueCall<Func, 1> {
 template <typename T>
 fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
-    std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) {
-  return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));
+    std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
+    uint32_t flags = ZX_FS_RIGHT_READABLE) {
+  return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path, flags));
 }
 
 // Wraps a fpromise::suspended_task in order to provide an ergonomic way to suspend

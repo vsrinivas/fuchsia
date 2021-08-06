@@ -4,8 +4,6 @@
 
 #include "src/devices/lib/driver2/namespace.h"
 
-#include <zircon/device/vfs.h>
-
 namespace driver {
 
 zx::status<Namespace> Namespace::Create(
@@ -43,9 +41,9 @@ Namespace& Namespace::operator=(Namespace&& other) noexcept {
   return *this;
 }
 
-zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end) const {
-  zx_status_t status =
-      fdio_ns_connect(ns_, path.data(), ZX_FS_RIGHT_READABLE, server_end.release());
+zx::status<> Namespace::Connect(std::string_view path, uint32_t flags,
+                                zx::channel server_end) const {
+  zx_status_t status = fdio_ns_connect(ns_, path.data(), flags, server_end.release());
   return zx::make_status(status);
 }
 
