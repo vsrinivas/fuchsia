@@ -275,24 +275,6 @@ zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address, uint32_t length,
   if (address == 0)
     return {};
 
-  uint64_t align_mask = 0;
-  switch (length) {
-    case 1:
-      break;
-    case 2:
-      align_mask = static_cast<uint64_t>(~0b1);
-      break;
-    case 4:
-      align_mask = static_cast<uint64_t>(~0b11);
-      break;
-    case 8:
-      align_mask = static_cast<uint64_t>(~0b111);
-      break;
-    default:
-      FX_NOTREACHED() << "Invalid length: " << length;
-      break;
-  }
-
   uint32_t type_val = (type == WatchpointType::kWrite) ? 0b01 : 0b11;
 
   if (length == 1) {
