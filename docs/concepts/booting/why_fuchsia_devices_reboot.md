@@ -79,8 +79,8 @@ know as base packages.
 
 ### Retry system update
 
-A component responsible for system updates fails to apply an update, so the device
-reboots to try again (or possibly revert the update).
+A component responsible for system updates fails to apply an update, so the
+device reboots to try again (or possibly revert the update).
 
 ### ZBI swap
 
@@ -108,6 +108,11 @@ If a critical component managed by sysmgr crashed, the device reboots.
 ### Factory data reset
 
 Following a data reset to the factory defaults, the device reboots.
+
+### Root job termination
+
+If the userspace root job is terminated, e.g., because one of its critical
+processes crashes, the device reboots.
 
 ### Generic graceful
 
@@ -151,6 +156,7 @@ Session failure              | `SESSION_FAILURE`             | `SessionFailure` 
 Sysmgr failure               | `SYSMGR_FAILURE`              | `SysmgrFailure`            | `fuchsia-sysmgr-failure`
 Critical component failure   | `CRITICAL_COMPONENT_FAILURE`  | `CriticalComponentFailure` | `fuchsia-critical-component-failure`
 Factory data reset           | `FACTORY_DATA_RESET`          | `FactoryDataReset`         | N/A\*
+Root job termination         | `ROOT_JOB_TERMINATION         | `RootJobTermination`       | fuchsia-root-job-termination
 Generic graceful             | *graceful* field set to true  | `GenericGraceful`          | N/A\*
 Generic ungraceful           | *graceful* field set to false | `GenericUngraceful`        | N/A\*\*
 Unknown                      | *graceful* field not set      | `Unknown`                  | `fuchsia-reboot-log-not-parseable`
