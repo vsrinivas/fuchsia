@@ -571,9 +571,10 @@ impl ObjectStore {
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in object_tree_layer_object_ids {
-                let handle =
+                let handle = CachingObjectHandle::new(
                     ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                        .await?;
+                        .await?,
+                );
                 total_size += handle.get_size();
                 handles.push(handle);
             }
@@ -581,9 +582,10 @@ impl ObjectStore {
 
             let mut handles = Vec::new();
             for object_id in extent_tree_layer_object_ids {
-                let handle =
+                let handle = CachingObjectHandle::new(
                     ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                        .await?;
+                        .await?,
+                );
                 total_size += handle.get_size();
                 handles.push(handle);
             }
@@ -867,11 +869,13 @@ impl Mutations for ObjectStore {
                 .await?;
 
         let mut new_object_tree_layers =
-            layers_from_handles(Box::new([new_object_tree_layer])).await?;
+            layers_from_handles(Box::new([CachingObjectHandle::new(new_object_tree_layer)]))
+                .await?;
         new_object_tree_layers.extend(object_tree_layers_to_keep.iter().map(|l| (*l).clone()));
 
         let mut new_extent_tree_layers =
-            layers_from_handles(Box::new([new_extent_tree_layer])).await?;
+            layers_from_handles(Box::new([CachingObjectHandle::new(new_extent_tree_layer)]))
+                .await?;
         new_extent_tree_layers.extend(extent_tree_layers_to_keep.iter().map(|l| (*l).clone()));
 
         let mut serialized_info = Vec::new();

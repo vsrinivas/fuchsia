@@ -24,7 +24,7 @@ use {
             round_down,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
-            HandleOptions, ObjectStore,
+            CachingObjectHandle, HandleOptions, ObjectStore,
         },
         trace_duration,
     },
@@ -422,9 +422,10 @@ impl SimpleAllocator {
                 let mut handles = Vec::new();
                 let mut total_size = 0;
                 for object_id in &info.layers {
-                    let handle =
+                    let handle = CachingObjectHandle::new(
                         ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
-                            .await?;
+                            .await?,
+                    );
                     total_size += handle.get_size();
                     handles.push(handle);
                 }
@@ -1023,7 +1024,8 @@ impl Mutations for SimpleAllocator {
         graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
 
         // TODO(csuter): what if this fails.
-        let layers = layers_from_handles(Box::new([layer_object_handle])).await?;
+        let layers =
+            layers_from_handles(Box::new([CachingObjectHandle::new(layer_object_handle)])).await?;
         transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;
 
         // Now close the layers and purge them.
