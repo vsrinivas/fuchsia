@@ -7,16 +7,14 @@ use {
     anyhow::{anyhow, Context as _},
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
-    fidl_fuchsia_io::NodeMarker,
     fidl_fuchsia_io::{
-        NodeAttributes, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        NodeAttributes, NodeMarker, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
         OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE,
         OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
-    std::convert::TryInto,
     std::sync::Arc,
     vfs::{
         common::send_on_open_with_error,
@@ -131,15 +129,9 @@ impl vfs::file::File for MetaFile {
         offset_chunk: u64,
         mut buffer: storage_device::buffer::MutableBufferRef<'_>,
     ) -> Result<u64, zx::Status> {
-        fn usize_to_u64_safe(u: usize) -> u64 {
-            let ret: u64 = u.try_into().unwrap();
-            static_assertions::assert_eq_size_val!(u, ret);
-            ret
-        }
-
         let offset_far = offset_chunk + self.location.offset;
         let count = std::cmp::min(
-            usize_to_u64_safe(buffer.len()),
+            crate::usize_to_u64_safe(buffer.len()),
             self.location.offset + self.location.length - offset_far,
         );
         let (status, bytes) =
@@ -152,7 +144,7 @@ impl vfs::file::File for MetaFile {
             e
         })?;
         let () = buffer.as_mut_slice()[..bytes.len()].copy_from_slice(&bytes);
-        Ok(usize_to_u64_safe(bytes.len()))
+        Ok(crate::usize_to_u64_safe(bytes.len()))
     }
 
     async fn write_at(&self, _offset: u64, _content: &[u8]) -> Result<u64, zx::Status> {
@@ -249,8 +241,7 @@ impl vfs::file::File for MetaFile {
     }
 
     fn get_filesystem(&self) -> &dyn vfs::filesystem::Filesystem {
-        // TODO(fxbug.dev/75601) Use the conclusion of fxbug.dev/81847 to implement this.
-        todo!();
+        self.root_dir.filesystem.as_ref()
     }
 }
 
@@ -263,7 +254,7 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         matches::assert_matches,
-        std::convert::TryFrom as _,
+        std::convert::{TryFrom as _, TryInto as _},
         vfs::{directory::entry::DirectoryEntry, file::File},
     };
 
@@ -283,7 +274,13 @@ mod tests {
             let (metafar_blob, _) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
             blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-            let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
+            let root_dir = RootDir::new(
+                blobfs_client,
+                metafar_blob.merkle,
+                Arc::new(crate::Filesystem::new(3 * 4096)),
+            )
+            .await
+            .unwrap();
             let location = *root_dir.meta_files.get("meta/file").unwrap();
             (TestEnv { _blobfs_fake: blobfs_fake }, MetaFile::new(Arc::new(root_dir), location))
         }
@@ -379,7 +376,26 @@ mod tests {
         }
     }
 
-    // TODO(fxbug.dev/75601) Test DirectoryEntry::open success when fxbug.dev/81847 is resolved.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_succeeds() {
+        let (_env, meta_file) = TestEnv::new().await;
+        let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+
+        DirectoryEntry::open(
+            Arc::new(meta_file),
+            ExecutionScope::new(),
+            OPEN_FLAG_DESCRIBE,
+            0,
+            VfsPath::validate_and_split(".").unwrap(),
+            server_end,
+        );
+
+        assert_matches!(
+            node_to_file_proxy(proxy).take_event_stream().next().await,
+            Some(Ok(fidl_fuchsia_io::FileEvent::OnOpen_ { s, info: Some(_) }))
+                if s == zx::Status::OK.into_raw()
+        );
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_entry_info() {
@@ -613,5 +629,12 @@ mod tests {
         assert_eq!(File::sync(&meta_file).await, Err(zx::Status::NOT_SUPPORTED));
     }
 
-    // TODO(fxbug.dev/75601) Test File::get_filesystem if we still need it after fxbug.dev/81847.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn file_get_filesystem() {
+        let (_env, meta_file) = TestEnv::new().await;
+
+        let filesystem = File::get_filesystem(&meta_file);
+
+        std::ptr::eq(filesystem, meta_file.root_dir.filesystem.as_ref());
+    }
 }
