@@ -23,6 +23,7 @@ import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/sdk/physical_device.gni")
 import("//build/security.gni")
+import("//build/security/policies_swd.gni")
 import("//build/security/verify_build.gni")
 import("//build/security/verify_routes.gni")
 import("//build/unification/future/images/devmgr_config.gni")
@@ -105,6 +106,14 @@ group("base_packages") {
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
   ]
+  deps = []
+  if (defined(policy_labels.swd)) {
+    foreach(policy, policies_swd) {
+      if (policy.name == policy_labels.swd) {
+        deps += policy.base_package_deps
+      }
+    }
+  }
 }
 
 group("cache_packages") {

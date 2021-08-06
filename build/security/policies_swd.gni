@@ -1,0 +1,61 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines high level SWD Policy configurations.
+
+# Since there are dependencies both in system_image_deps and base_packages, we
+# define two groups per policy.
+# Policy names must be one of the set of
+# ["unrestricted", "local_dynamic_config", "base_components_only"].
+# These groups are added to the build image in //build/images:base_packages
+# and //build/input/product:system_image_deps.
+# Note, the build arg `auto_update_packages` is not captured in the scope of
+# these configurations, despite being SWD related.
+
+# Default policy_labels definition to ease with the transition away from
+# manually defining SWD policies across different product gni files.
+# The transition process will be as follows:
+# 1. Define all SWD policies.
+# 2. Add dependency on SWD policies in base_package_deps and
+#    system_image_deps, but do not apply a SWD policy to retain existing
+#    product behavior.
+# 3. Apply SWD policies in product definitions alongside the existing
+#    SWD targets configuration. Assert that product configuration has not
+#    changed.
+# 4. Remove manually defined SWD targets in product definitions, rely solely
+#    on defined SWD policies to determine product configuration of SWD policy.
+
+# A definition of existing policies is included below:
+# ┌──────────────────────┬──────────────────────────────┬─────────────────────┬────────────────────────────────────┐
+# │ POLICY_NAME          │ enable_dynamic_configuration │ persisted_repos_dir │ disable_executability_restrictions │
+# ├──────────────────────┼──────────────────────────────┼─────────────────────┼────────────────────────────────────┤
+# │ base_components_only │ OFF                          │ OFF                 │ OFF                                │
+# ├──────────────────────┼──────────────────────────────┼─────────────────────┼────────────────────────────────────┤
+# │ local_dynamic_config │ ON                           │ OFF                 │ OFF                                │
+# ├──────────────────────┼──────────────────────────────┼─────────────────────┼────────────────────────────────────┤
+# │ unrestricted         │ ON                           │ ON                  │ ON                                 │
+# └──────────────────────┴──────────────────────────────┴─────────────────────┴────────────────────────────────────┘
+
+policies_swd = [
+  {
+    name = "base_components_only"
+    base_package_deps = []
+    system_image_deps = []
+  },
+  {
+    name = "local_dynamic_config"
+    base_package_deps =
+        [ "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration" ]
+    system_image_deps = []
+  },
+  {
+    name = "unrestricted"
+    base_package_deps = [
+      "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
+      "//src/sys/pkg/bin/pkg-resolver:persisted_repos_dir",
+    ]
+    system_image_deps =
+        [ "//src/sys/pkg:pkgfs-disable-executability-restrictions" ]
+  },
+]
