@@ -165,7 +165,7 @@ impl ArchiveReaderManagerImpl {
         let archive: ArchiveAccessorProxy =
             connect_to_archive_accessor(&parameters.accessor_path).await?;
         let mut reader = ArchiveReader::new();
-        reader.with_archive(archive);
+        reader.with_archive(archive).retry_if_empty(false);
         match parameters.client_selector_configuration {
             Some(Selectors(s)) => {
                 for selector in s.into_iter() {
