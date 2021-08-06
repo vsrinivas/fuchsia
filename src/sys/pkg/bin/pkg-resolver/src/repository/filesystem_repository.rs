@@ -19,11 +19,18 @@ use {
     },
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Mode {
+    ReadOnly,
+    WriteOnly,
+}
+
 pub struct FuchsiaFileSystemRepository<D>
 where
     D: DataInterchange,
 {
     repo_proxy: DirectoryProxy,
+    mode: Mode,
     _interchange: PhantomData<D>,
 }
 
@@ -33,7 +40,7 @@ where
 {
     #[cfg(test)]
     pub fn new(repo_proxy: DirectoryProxy) -> Self {
-        Self { repo_proxy, _interchange: PhantomData }
+        Self { repo_proxy, mode: Mode::ReadOnly, _interchange: PhantomData }
     }
 
     #[cfg(test)]
@@ -47,7 +54,17 @@ where
         )
     }
 
+    // Switches the repo to write only mode, there's no way back.
+    #[cfg(test)]
+    pub fn switch_to_write_only_mode(&mut self) {
+        self.mode = Mode::WriteOnly;
+    }
+
     async fn fetch_path(&self, path: String) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin>> {
+        if self.mode == Mode::WriteOnly {
+            return Err(make_opaque_error(anyhow!("attempt to read in write only mode")));
+        }
+
         let file_proxy =
             io_util::directory::open_file(&self.repo_proxy, &path, OPEN_RIGHT_READABLE)
                 .await
@@ -72,6 +89,10 @@ where
         path: String,
         reader: &mut (dyn AsyncRead + Send + Unpin),
     ) -> tuf::Result<()> {
+        if self.mode == Mode::ReadOnly {
+            return Err(make_opaque_error(anyhow!("attempt to write in read only mode")));
+        }
+
         if let Some(parent) = Path::new(&path).parent() {
             // This is needed because if there's no "/" in `path`, .parent() will return Some("")
             // instead of None.
@@ -204,23 +225,28 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_store_and_fetch_path() {
         let temp = tempdir().unwrap();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
         // Intentionally duplicate test cases to make sure we can overwrite existing file.
         for path in ["file", "a/b", "1/2/3", "a/b"] {
             let expected_data = get_random_buffer();
 
+            repo.mode = Mode::WriteOnly;
             let mut cursor = Cursor::new(&expected_data);
             repo.store_path(path.to_string(), &mut cursor).await.unwrap();
 
+            repo.mode = Mode::ReadOnly;
             let mut data = Vec::new();
             repo.fetch_path(path.to_string()).await.unwrap().read_to_end(&mut data).await.unwrap();
             assert_eq!(data, expected_data);
         }
 
         for path in ["", ".", "/", "./a", "../a", "a/", "a//b", "a/./b", "a/../b"] {
+            repo.mode = Mode::WriteOnly;
             let mut cursor = Cursor::new(&path);
             let store_result = repo.store_path(path.to_string(), &mut cursor).await;
             assert!(store_result.is_err(), "path = {}", path);
+
+            repo.mode = Mode::ReadOnly;
             assert!(repo.fetch_path(path.to_string()).await.is_err(), "path = {}", path);
         }
     }
@@ -265,7 +291,8 @@ mod tests {
     async fn test_store_metadata() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        repo.switch_to_write_only_mode();
         let mut cursor = Cursor::new(&expected_data);
         repo.store_metadata(
             &MetadataPath::new("root").unwrap(),
@@ -283,11 +310,40 @@ mod tests {
     async fn test_store_target() {
         let temp = tempdir().unwrap();
         let expected_data = get_random_buffer();
-        let repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        repo.switch_to_write_only_mode();
         let mut cursor = Cursor::new(&expected_data);
         repo.store_target(&mut cursor, &TargetPath::new("foo/bar".into()).unwrap()).await.unwrap();
 
         let data = std::fs::read(temp.path().join("targets/foo/bar")).unwrap();
         assert_eq!(data, expected_data);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_fetch_fail_when_write_only() {
+        let temp = tempdir().unwrap();
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+        std::fs::write(temp.path().join("foo"), get_random_buffer()).unwrap();
+
+        let mut data = Vec::new();
+        repo.fetch_path("foo".to_string()).await.unwrap().read_to_end(&mut data).await.unwrap();
+
+        repo.switch_to_write_only_mode();
+
+        assert!(repo.fetch_path("foo".to_string()).await.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_store_fail_when_read_only() {
+        let temp = tempdir().unwrap();
+        let mut repo = FuchsiaFileSystemRepository::<Json>::from_temp_dir(&temp);
+
+        let mut cursor = Cursor::new(get_random_buffer());
+        let result = repo.store_path("foo".to_string(), &mut cursor).await;
+        assert!(result.is_err());
+
+        repo.switch_to_write_only_mode();
+
+        repo.store_path("foo".to_string(), &mut cursor).await.unwrap();
     }
 }
