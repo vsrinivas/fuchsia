@@ -238,7 +238,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:20
+From //src/storage/fshost/BUILD.gn:17
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -1184,7 +1184,7 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:36
+From //src/storage/fshost/BUILD.gn:33
 
 ### fastboot_product
 
@@ -1307,7 +1307,7 @@ debug issues.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:32
+From //src/storage/fshost/BUILD.gn:29
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -2313,7 +2313,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:27
+From //src/storage/fshost/BUILD.gn:24
 
 ### minfs_product_maximum_bytes
 
@@ -3766,6 +3766,15 @@ debug archives in tar.bzip2 format into the .build-id directory
 **Current value (from the default):** `false`
 
 From //build/packages/prebuilt_package.gni:13
+
+### unstable_feature_use_fxfs
+This flag isn't stable yet, don't use it.
+Set to true to enable fxfs instead of minfs.  If set, any existing minfs partition will be
+migrated in-place to fxfs when fshost mounts it.
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/BUILD.gn:38
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
