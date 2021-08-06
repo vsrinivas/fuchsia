@@ -14,13 +14,13 @@ use {
         },
     },
     fuchsia_zircon as zx,
-    isolated_devmgr::IsolatedDeviceEnv,
     log::info,
     pin_utils::pin_mut,
-    std::{path::Path, pin::Pin},
+    std::{fs::File, path::Path, pin::Pin},
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
     },
+    wlan_dev::{DeviceEnv, RealDeviceEnv},
 };
 
 const ETH_BUF_FRAME_COUNT: u64 = 256;
@@ -29,8 +29,8 @@ const ETH_BUF_FRAME_COUNT: u64 = 256;
 /// Returns Ok(None) if no matching interface is found,
 /// Returns Err(e) if there is an error.
 pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, anyhow::Error> {
-    const ETH_PATH: &str = "class/ethernet";
-    let eth_dir = IsolatedDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
+    const ETH_PATH: &str = "/dev/class/ethernet";
+    let eth_dir = RealDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
     let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(
         fuchsia_async::Channel::from_channel(fdio::clone_channel(&eth_dir)?)?,
     );
@@ -39,7 +39,7 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
         let vmo = zx::Vmo::create(ETH_BUF_FRAME_COUNT * ethernet::DEFAULT_BUFFER_SIZE as u64)?;
 
         let path = Path::new(ETH_PATH).join(file.name);
-        let dev = IsolatedDeviceEnv::open_file(path)?;
+        let dev = File::open(path)?;
         if let Ok(client) =
             ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "wlan-hw-sim")
                 .await

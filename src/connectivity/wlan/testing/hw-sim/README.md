@@ -55,18 +55,18 @@ The most convenient way to run this test locally is to run it in a QEMU instance
 1. From another terminal on the **host**,
 
     ```
-    fx test wlan-hw-sim-test
+    fx test //src/connectivity/wlan/testing/hw-sim/test
     ```
 
 1. To force `stdout` display, pass `--nocapture` with additional `--` so that it does not get parsed by `run-test`
     ````
-    fx test wlan-hw-sim-test -- --nocapture
+    fx test //src/connectivity/wlan/testing/hw-sim/test -- --nocapture
     ````
 
-1. Individual tests can be run with
+1. Individual tests can be run with the name of their component as defined in BUILD.gn:
 
     ```
-    fx test wlan-hw-sim-test -t simulate_scan
+    fx test configure-legacy-privacy-on
     ```
 
 ## Special notes for debugging flakiness in CQ

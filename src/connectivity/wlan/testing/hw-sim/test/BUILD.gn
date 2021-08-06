@@ -7,192 +7,243 @@ import("//build/testing/environments.gni")
 
 fuchsia_component("configure-legacy-privacy-off") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_off.cmx"
-  deps = [
-    "configure_legacy_privacy_off",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/configure_legacy_privacy_off.cml"
+}
+
+fuchsia_component("configure-legacy-privacy-off-driver") {
+  testonly = true
+  manifest = "meta/configure_legacy_privacy_off_driver.cml"
+  deps = [ "configure_legacy_privacy_off" ]
 }
 
 fuchsia_component("configure-legacy-privacy-on") {
   testonly = true
-  manifest = "meta/configure_legacy_privacy_on.cmx"
-  deps = [
-    "configure_legacy_privacy_on",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/configure_legacy_privacy_on.cml"
+}
+
+fuchsia_component("configure-legacy-privacy-on-driver") {
+  testonly = true
+  manifest = "meta/configure_legacy_privacy_on_driver.cml"
+  deps = [ "configure_legacy_privacy_on" ]
 }
 
 fuchsia_component("connect-to-open-network") {
   testonly = true
-  manifest = "meta/connect_to_open_network.cmx"
-  deps = [
-    "connect_to_open_network",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_to_open_network.cml"
+}
+
+fuchsia_component("connect-to-open-network-driver") {
+  testonly = true
+  manifest = "meta/connect_to_open_network_driver.cml"
+  deps = [ "connect_to_open_network" ]
 }
 
 fuchsia_component("connect-to-wpa1-network") {
   testonly = true
-  manifest = "meta/connect_to_wpa1_network.cmx"
-  deps = [
-    "connect_to_wpa1_network",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_to_wpa1_network.cml"
+}
+
+fuchsia_component("connect-to-wpa1-network-driver") {
+  testonly = true
+  manifest = "meta/connect_to_wpa1_network_driver.cml"
+  deps = [ "connect_to_wpa1_network" ]
 }
 
 fuchsia_component("connect-to-wpa2-network") {
   testonly = true
-  manifest = "meta/connect_to_wpa2_network.cmx"
-  deps = [
-    "connect_to_wpa2_network",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_to_wpa2_network.cml"
+}
+
+fuchsia_component("connect-to-wpa2-network-driver") {
+  testonly = true
+  manifest = "meta/connect_to_wpa2_network_driver.cml"
+  deps = [ "connect_to_wpa2_network" ]
 }
 
 fuchsia_component("connect-to-wpa3-network") {
   testonly = true
-  manifest = "meta/connect_to_wpa3_network.cmx"
-  deps = [
-    "connect_to_wpa3_network",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_to_wpa3_network.cml"
+}
+
+fuchsia_component("connect-to-wpa3-network-driver") {
+  testonly = true
+  manifest = "meta/connect_to_wpa3_network_driver.cml"
+  deps = [ "connect_to_wpa3_network" ]
 }
 
 fuchsia_component("connect-with-bad-password") {
   testonly = true
-  manifest = "meta/connect_with_bad_password.cmx"
-  deps = [
-    "connect_with_bad_password",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_with_bad_password.cml"
+}
+
+fuchsia_component("connect-with-bad-password-driver") {
+  testonly = true
+  manifest = "meta/connect_with_bad_password_driver.cml"
+  deps = [ "connect_with_bad_password" ]
 }
 
 fuchsia_component("connect-with-failed-association") {
   testonly = true
-  manifest = "meta/connect_with_failed_association.cmx"
-  deps = [
-    "connect_with_failed_association",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_with_failed_association.cml"
+}
+
+fuchsia_component("connect-with-failed-association-driver") {
+  testonly = true
+  manifest = "meta/connect_with_failed_association_driver.cml"
+  deps = [ "connect_with_failed_association" ]
 }
 
 fuchsia_component("connect-with-wrong-credential-type") {
   testonly = true
-  manifest = "meta/connect_with_wrong_credential_type.cmx"
-  deps = [
-    "connect_with_wrong_credential_type",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/connect_with_wrong_credential_type.cml"
+}
+
+fuchsia_component("connect-with-wrong-credential-type-driver") {
+  testonly = true
+  manifest = "meta/connect_with_wrong_credential_type_driver.cml"
+  deps = [ "connect_with_wrong_credential_type" ]
 }
 
 fuchsia_component("ethernet-tx-rx") {
   testonly = true
-  manifest = "meta/ethernet_tx_rx.cmx"
-  deps = [
-    "ethernet_tx_rx",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/ethernet_tx_rx.cml"
+}
+
+fuchsia_component("ethernet-tx-rx-driver") {
+  testonly = true
+  manifest = "meta/ethernet_tx_rx_driver.cml"
+  deps = [ "ethernet_tx_rx" ]
 }
 
 fuchsia_component("handle-tx-event-hooks") {
   testonly = true
-  manifest = "meta/handle-tx-event-hooks.cmx"
-  deps = [
-    "handle_tx_event_hooks",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/handle-tx-event-hooks.cml"
+}
+
+fuchsia_component("handle-tx-event-hooks-driver") {
+  testonly = true
+  manifest = "meta/handle-tx-event-hooks_driver.cml"
+  deps = [ "handle_tx_event_hooks" ]
 }
 
 fuchsia_component("multi-ifaces") {
   testonly = true
-  manifest = "meta/multi_ifaces.cmx"
-  deps = [
-    "multi_ifaces",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/multi_ifaces.cml"
+}
+
+fuchsia_component("multi-ifaces-driver") {
+  testonly = true
+  manifest = "meta/multi_ifaces_driver.cml"
+  deps = [ "multi_ifaces" ]
 }
 
 fuchsia_component("multiple-clients-ap") {
   testonly = true
-  manifest = "meta/multiple_clients_ap.cmx"
-  deps = [
-    "multiple_clients_ap",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/multiple_clients_ap.cml"
+}
+
+fuchsia_component("multiple-clients-ap-driver") {
+  testonly = true
+  manifest = "meta/multiple_clients_ap_driver.cml"
+  deps = [ "multiple_clients_ap" ]
 }
 
 fuchsia_component("open-ap-connect") {
   testonly = true
-  manifest = "meta/open_ap_connect.cmx"
-  deps = [
-    "open_ap_connect",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/open_ap_connect.cml"
+}
+
+fuchsia_component("open-ap-connect-driver") {
+  testonly = true
+  manifest = "meta/open_ap_connect_driver.cml"
+  deps = [ "open_ap_connect" ]
 }
 
 fuchsia_component("reconnect-to-wpa2-network") {
   testonly = true
-  manifest = "meta/reconnect_to_wpa2_network.cmx"
-  deps = [
-    "reconnect_to_wpa2_network",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/reconnect_to_wpa2_network.cml"
+}
+
+fuchsia_component("reconnect-to-wpa2-network-driver") {
+  testonly = true
+  manifest = "meta/reconnect_to_wpa2_network_driver.cml"
+  deps = [ "reconnect_to_wpa2_network" ]
 }
 
 fuchsia_component("set-country") {
   testonly = true
-  manifest = "meta/set_country.cmx"
-  deps = [
-    "set_country",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/set_country.cml"
+}
+
+fuchsia_component("set-country-driver") {
+  testonly = true
+  manifest = "meta/set_country_driver.cml"
+  deps = [ "set_country" ]
 }
 
 fuchsia_component("sim-client-vs-sim-ap") {
   testonly = true
-  manifest = "meta/sim_client_vs_sim_ap.cmx"
-  deps = [
-    "sim_client_vs_sim_ap",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/sim_client_vs_sim_ap.cml"
+}
+
+fuchsia_component("sim-client-vs-sim-ap-driver") {
+  testonly = true
+  manifest = "meta/sim_client_vs_sim_ap_driver.cml"
+  deps = [ "sim_client_vs_sim_ap" ]
 }
 
 fuchsia_component("simulate-scan") {
   testonly = true
-  manifest = "meta/simulate_scan.cmx"
-  deps = [
-    "simulate_scan",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/simulate_scan.cml"
+}
+
+fuchsia_component("simulate-scan-driver") {
+  testonly = true
+  manifest = "meta/simulate_scan_driver.cml"
+  deps = [ "simulate_scan" ]
 }
 
 fuchsia_component("verify-ethernet") {
   testonly = true
-  manifest = "meta/verify_ethernet.cmx"
-  deps = [
-    "verify_ethernet",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/verify_ethernet.cml"
+}
+
+fuchsia_component("verify-ethernet-driver") {
+  testonly = true
+  manifest = "meta/verify_ethernet_driver.cml"
+  deps = [ "verify_ethernet" ]
 }
 
 fuchsia_component("verify-wlan-inspect") {
   testonly = true
-  manifest = "meta/verify_wlan_inspect.cmx"
-  deps = [
-    "verify_wlan_inspect",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/verify_wlan_inspect.cml"
+}
+
+fuchsia_component("verify-wlan-inspect-driver") {
+  testonly = true
+  manifest = "meta/verify_wlan_inspect_driver.cml"
+  deps = [ "verify_wlan_inspect" ]
 }
 
 fuchsia_component("run-without-regulatory-manager") {
   testonly = true
-  manifest = "meta/run_without_regulatory_manager.cmx"
-  deps = [
-    "run_without_regulatory_manager",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/run_without_regulatory_manager.cml"
 }
+
+fuchsia_component("run-without-regulatory-manager-driver") {
+  testonly = true
+  manifest = "meta/run_without_regulatory_manager_driver.cml"
+  deps = [ "run_without_regulatory_manager" ]
+}
+
+shared_deps = [
+  "//src/connectivity/location/regulatory_region",
+  "//src/connectivity/wlan/testing/wlan-devmgr:wlan-devmgr-v2",
+  "//src/connectivity/wlan/wlancfg:wlancfg",
+  "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor",
+  "//src/connectivity/wlan/wlanstack:wlanstack",
+  "//src/sys/stash:stash_secure_v2",
+]
 
 fuchsia_test_package("wlan-hw-sim-test") {
   test_specs = {
@@ -202,12 +253,8 @@ fuchsia_test_package("wlan-hw-sim-test") {
   }
   test_components = [
     ":configure-legacy-privacy-off",
-    ":configure-legacy-privacy-on",
-    ":connect-to-open-network",
-    ":connect-to-wpa1-network",
     ":connect-to-wpa2-network",
     ":connect-to-wpa3-network",
-    ":connect-with-bad-password",
     ":connect-with-failed-association",
     ":connect-with-wrong-credential-type",
     ":ethernet-tx-rx",
@@ -222,21 +269,50 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":simulate-scan",
     ":verify-ethernet",
     ":verify-wlan-inspect",
+    ":configure-legacy-privacy-on",
+    ":connect-to-open-network",
+    ":connect-to-wpa1-network",
+    ":connect-with-bad-password",
   ]
+  deps = [
+    ":configure-legacy-privacy-off-driver",
+    ":configure-legacy-privacy-on-driver",
+    ":connect-to-open-network-driver",
+    ":connect-to-wpa1-network-driver",
+    ":connect-to-wpa2-network-driver",
+    ":connect-to-wpa3-network-driver",
+    ":connect-with-bad-password-driver",
+    ":connect-with-failed-association-driver",
+    ":connect-with-wrong-credential-type-driver",
+    ":ethernet-tx-rx-driver",
+    ":handle-tx-event-hooks-driver",
+    ":multi-ifaces-driver",
+    ":multiple-clients-ap-driver",
+    ":open-ap-connect-driver",
+    ":reconnect-to-wpa2-network-driver",
+    ":run-without-regulatory-manager-driver",
+    ":set-country-driver",
+    ":sim-client-vs-sim-ap-driver",
+    ":simulate-scan-driver",
+    ":verify-ethernet-driver",
+    ":verify-wlan-inspect-driver",
+  ]
+  deps += shared_deps
 }
 
 fuchsia_component("rate-selection") {
   testonly = true
-  manifest = "meta/rate_selection.cmx"
-  deps = [
-    "rate_selection",
-    "//src/connectivity/wlan/testing/wlan-devmgr",
-  ]
+  manifest = "meta/rate_selection.cml"
+}
+
+fuchsia_component("rate-selection-driver") {
+  testonly = true
+  manifest = "meta/rate_selection_driver.cml"
+  deps = [ "rate_selection" ]
 }
 
 fuchsia_test_package("rate-selection-package") {
   package_name = "rate-selection"
-  test_components = [ ":rate-selection" ]
 
   test_specs = {
     environments = [ nuc_env ]
@@ -244,4 +320,16 @@ fuchsia_test_package("rate-selection-package") {
       max_severity = "ERROR"
     }
   }
+
+  test_components = [ ":rate-selection" ]
+  deps = [ ":rate-selection-driver" ]
+  deps += shared_deps
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":rate-selection-package",
+    ":wlan-hw-sim-test",
+  ]
 }

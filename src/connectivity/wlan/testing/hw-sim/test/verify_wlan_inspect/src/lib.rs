@@ -56,8 +56,11 @@ const WSC_IE_BODY: &'static [u8] = &[
     0x10, 0x49, 0x00, 0x06, 0x00, 0x37, 0x2a, 0x00, 0x01, 0x20,
 ];
 
+// The moniker must match the component name as defined in the manifest
+const DEVICEMONITOR_MONIKER: &'static str = "wlandevicemonitor";
+const WLANSTACK_MONIKER: &'static str = "wlanstack";
 const DISCONNECT_CTX_SELECTOR: &'static str =
-    "wlanstack.cmx:root/iface-0/state_events/*/disconnect_ctx";
+    "core/wlanstack:root/iface-0/state_events/*/disconnect_ctx";
 
 fn build_event_handler(
     ssid: Vec<u8>,
@@ -143,7 +146,7 @@ async fn verify_wlan_inspect() {
             .await;
     }
 
-    let hierarchy = get_inspect_hierarchy("wlanstack.cmx").await.expect("expect Inspect data");
+    let hierarchy = get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
@@ -181,9 +184,8 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-    let monitor_hierarchy = get_inspect_hierarchy("isolated_dev_mgr_wlandevicemonitor.cmx")
-        .await
-        .expect("expect Inspect data");
+    let monitor_hierarchy =
+        get_inspect_hierarchy(DEVICEMONITOR_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(monitor_hierarchy, root: contains {
         device_events: contains {
             "0": contains {},
@@ -199,7 +201,7 @@ async fn verify_wlan_inspect() {
     })
     .await;
 
-    let hierarchy = get_inspect_hierarchy("wlanstack.cmx").await.expect("expect Inspect data");
+    let hierarchy = get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
@@ -263,9 +265,8 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-    let monitor_hierarchy = get_inspect_hierarchy("isolated_dev_mgr_wlandevicemonitor.cmx")
-        .await
-        .expect("expect Inspect data");
+    let monitor_hierarchy =
+        get_inspect_hierarchy(DEVICEMONITOR_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(monitor_hierarchy, root: contains {
         device_events: contains {
             "0": contains {},
