@@ -21,23 +21,26 @@
   },
   {
     "type": "TemperatureHandler",
-    "name": "temperature",
+    "name": "soc_pll_thermal",
     "config": {
-      "driver_path": "/dev/class/thermal/000",
+      "driver_path": "/dev/aml-thermal-pll/thermal",
       "cache_duration_ms": 50
     }
   },
   {
-    "type": "ThermalShutdown",
-    "name": "thermal_shutdown",
-    "dependencies": {
-      "system_shutdown_node": "sys_shutdown",
-      "temperature_handler_node": "temperature"
-    },
+    "type": "TemperatureHandler",
+    "name": "thermistor_thread",
     "config": {
-      "thermal_shutdown_temperature_c": 97.0,
-      "poll_interval_s": 1,
-      "filter_time_constant_s": 1
+      "driver_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-thread",
+      "cache_duration_ms": 50
+    }
+  },
+  {
+    "type": "TemperatureHandler",
+    "name": "thermistor_audio",
+    "config": {
+      "driver_path": "/dev/sys/platform/03:0a:27/thermistor-device/therm-audio",
+      "cache_duration_ms": 50
     }
   },
   {
@@ -56,6 +59,46 @@
     "name": "input_settings_handler",
     "dependencies": {
       "system_profile_handler_node": "system_profile_handler"
+    }
+  },
+  {
+    "type": "ThermalLimiter",
+    "name": "thermal_limiter"
+  },
+  {
+    "type": "ThermalLoadDriver",
+    "name": "thermal_load_driver",
+    "config": {
+      "poll_interval_s": 1,
+      "filter_time_constant_s": 5,
+      "temperature_configs": [
+        {
+          "temperature_handler_node_name": "soc_pll_thermal",
+          "onset_temperature_c": 92.0,
+          "reboot_temperature_c": 97.0
+        },
+        {
+          "temperature_handler_node_name": "thermistor_thread",
+          "onset_temperature_c": 65.0,
+          "reboot_temperature_c": 75.0
+        },
+        {
+          "temperature_handler_node_name": "thermistor_audio",
+          "onset_temperature_c": 73.0,
+          "reboot_temperature_c": 80.0
+        }
+      ]
+    },
+    "dependencies": {
+      "system_shutdown_node": "sys_shutdown",
+      "thermal_load_notify_nodes": [
+        "thermal_limiter"
+      ],
+      "temperature_handler_node_names": [
+        "soc_pll_thermal",
+        "thermistor_thread",
+        "thermistor_audio"
+      ]
     }
   }
 ]
