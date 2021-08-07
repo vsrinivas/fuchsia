@@ -99,4 +99,9 @@ fuchsia_test_package("netemul-v2-tests") {
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
     "//src/connectivity/network/tun/network-tun:component-v2",
   ]
+  test_specs = {
+    # TODO(https://fxbug.dev/82295): run tests in parallel when this doesn't
+    # cause embedded archivist to crash.
+    parallel = 1
+  }
 }
