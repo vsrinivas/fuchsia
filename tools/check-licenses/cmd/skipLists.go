@@ -90,6 +90,10 @@ var additionalSkipDirs = []string{
 	"prebuilt/touch", // b/178714414
 	"prebuilt/audio", // b/178712044
 
+	// Skip generated protocol buffers. These trip the checker because third_party is in the path.
+	"third_party/grpc/src/core/ext/upb-generated/third_party",
+	"third_party/grpc/src/core/ext/upbdefs-generated/third_party",
+
 	// TODO(fxb/57392): zircon build unification
 	"third_party/zstd",
 	"third_party/lz4/programs",
