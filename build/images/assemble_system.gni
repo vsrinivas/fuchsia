@@ -30,6 +30,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 # Parameters:
 #
+#   image_name (optional; default: target_name)
+#     [string] A name to use for naming all outputs and generated files, instead
+#     of $target_name.
+#
 #   sysmgr_golden, sysmgr_golden_warn (optional, default: false)
 #     [path, boolean] Passed directly to the config_package template, see //build/config.gni.
 #
@@ -182,6 +186,9 @@ template("assemble_system") {
   assert(defined(invoker.board_name), "Need to define board_name")
 
   image_name = target_name
+  if (defined(invoker.image_name)) {
+    image_name = invoker.image_name
+  }
 
   # Internal labels used for Image Assembly.
   labels = {
@@ -286,7 +293,7 @@ template("assemble_system") {
   # Generate the base driver manifest file that lists all available drivers
   # collected from _base_driver_packages dependency tree. This manifest file
   # will be included in the driver-manager-base-config package.
-  base_driver_manifest_label = "${target_name}_base-driver-manifest"
+  base_driver_manifest_label = "${image_name}_base-driver-manifest"
   combined_driver_manifest(base_driver_manifest_label) {
     forward_variables_from(invoker, [ "testonly" ])
     manifest_name = "base-driver-manifest.json"
@@ -295,7 +302,7 @@ template("assemble_system") {
 
   # The driver-manager-base-config package is read by Driver Manager to
   # discover where the base drivers are located.
-  driver_manager_base_config_label = "${target_name}_driver-manager-base-config"
+  driver_manager_base_config_label = "${image_name}_driver-manager-base-config"
   fuchsia_package(driver_manager_base_config_label) {
     forward_variables_from(invoker, [ "testonly" ])
     package_name = "driver-manager-base-config"
@@ -663,7 +670,7 @@ template("assemble_system") {
     }
   }
 
-  group(image_name) {
+  group(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     # public_deps is used, so that the outputs of these dependencies are

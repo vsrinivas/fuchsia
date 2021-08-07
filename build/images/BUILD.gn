@@ -688,10 +688,7 @@ action("flash_script") {
       "--fvm-image=" + rebase_path(files.fvm_fastboot, root_build_dir),
       "--fvm=${fvm_partition}",
     ]
-    deps += [
-      "fuchsia:copy_blobfs",
-      labels.images,
-    ]
+    deps += [ labels.images ]
 
     parts += [
       {
@@ -1448,7 +1445,6 @@ compiled_action("uefi-disk") {
       files.blobfs,
     ]
     deps += [
-      "fuchsia:copy_blobfs",
       "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
       labels.images,
       labels.minfs,

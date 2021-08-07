@@ -125,7 +125,7 @@ if (!bootfs_only) {
     testonly = fuchsia_zbi_testonly
     sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
     outputs = [ old_blobfs_path ]
-    deps = [ ":fuchsia" ]
+    deps = [ ":fuchsia_assembly" ]
 
     metadata = {
       # Declare all the generated images.
@@ -142,8 +142,17 @@ if (!bootfs_only) {
   }
 }
 
-assemble_system("fuchsia") {
+group("fuchsia") {
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ ":fuchsia_assembly" ]
+  if (!bootfs_only) {
+    public_deps += [ ":copy_blobfs" ]
+  }
+}
+
+assemble_system("fuchsia_assembly") {
   forward_variables_from(fuchsia_base, "*")
+  image_name = "fuchsia"
   bootfs_labels = [ "//build/input:bootfs" ]
 
   if (fuchsia_zbi_kernel_cmdline_goldens != []) {
@@ -158,7 +167,7 @@ assemble_system("fuchsia") {
 
   # Calculate the paths of the generated images.
   files = {
-    outdir = get_label_info(":$target_name", "target_out_dir") + "/$target_name"
+    outdir = target_out_dir + "/" + image_name
 
     base_package_manifest = "${outdir}/base_package_manifest.json"
     update_package_manifest = "${outdir}/update_package_manifest.json"
