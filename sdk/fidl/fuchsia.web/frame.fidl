@@ -372,11 +372,10 @@ protocol Frame {
 
     /// Specifies the color theme reported to web content via the `prefers-color-scheme` media
     /// query.
-    /// Specifying `AUTO` requires that the [`Context`] have the [`fuchsia.settings.Display`]
-    /// service. If the service is not available, the [`Frame`] will disconnect with
-    /// `ZX_ERR_INVALID_ARGS`.
-    /// Valid themes are `LIGHT`, `DARK`, and `AUTO`. The default color scheme is `LIGHT`.
-    /// If `DEFAULT` is specified, the [`Frame`] will disconnect with `ZX_ERR_INVALID_ARGS`.
+    /// Valid inputs are `LIGHT`, `DARK`, and `DEFAULT`. Each Frame starts with LIGHT theme.
+    /// Specifying `DEFAULT` means using the system settings, and requires that the [`Context`] have
+    /// the [`fuchsia.settings.Display`] service. If the service is not available, the [`Frame`]
+    /// will disconnect with `ZX_ERR_INVALID_ARGS`.
     SetPreferredTheme(struct {
         theme fuchsia.settings.ThemeType;
     });
