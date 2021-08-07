@@ -39,7 +39,7 @@ T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
 }
 
 uint64_t GetRegisterValue(const std::vector<debug_ipc::Register>& general_registers,
-                          const debug_ipc::RegisterID register_id) {
+                          const debug::RegisterID register_id) {
   for (const auto& reg : general_registers) {
     if (reg.id == register_id) {
       return GetValueFromBytes<uint64_t>(reg.data, 0);
@@ -172,27 +172,25 @@ void SyscallDecoder::DoDecode() {
 
   // The order of parameters in the System V AMD64 ABI we use, according to
   // Wikipedia:
-  static std::vector<debug_ipc::RegisterID> amd64_abi = {
-      debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
-      debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
-      debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
+  static std::vector<debug::RegisterID> amd64_abi = {
+      debug::RegisterID::kX64_rdi, debug::RegisterID::kX64_rsi, debug::RegisterID::kX64_rdx,
+      debug::RegisterID::kX64_rcx, debug::RegisterID::kX64_r8,  debug::RegisterID::kX64_r9};
 
   // The order of parameters in the System V AArch64 ABI we use, according to
   // Wikipedia:
-  static std::vector<debug_ipc::RegisterID> aarch64_abi = {
-      debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
-      debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
-      debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
-      debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
+  static std::vector<debug::RegisterID> aarch64_abi = {
+      debug::RegisterID::kARMv8_x0, debug::RegisterID::kARMv8_x1, debug::RegisterID::kARMv8_x2,
+      debug::RegisterID::kARMv8_x3, debug::RegisterID::kARMv8_x4, debug::RegisterID::kARMv8_x5,
+      debug::RegisterID::kARMv8_x6, debug::RegisterID::kARMv8_x7};
 
-  const std::vector<debug_ipc::RegisterID>* abi;
+  const std::vector<debug::RegisterID>* abi;
   if (arch_ == debug::Arch::kX64) {
     abi = &amd64_abi;
-    entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kX64_rsp);
+    entry_sp_ = GetRegisterValue(*general_registers, debug::RegisterID::kX64_rsp);
   } else if (arch_ == debug::Arch::kArm64) {
     abi = &aarch64_abi;
-    entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_sp);
-    return_address_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_lr);
+    entry_sp_ = GetRegisterValue(*general_registers, debug::RegisterID::kARMv8_sp);
+    return_address_ = GetRegisterValue(*general_registers, debug::RegisterID::kARMv8_lr);
   } else {
     Error(DecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
     if (pending_request_count_ == 0) {
@@ -361,9 +359,8 @@ void SyscallDecoder::LoadSyscallReturnValue() {
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
-  debug_ipc::RegisterID result_register = (arch_ == debug::Arch::kX64)
-                                              ? debug_ipc::RegisterID::kX64_rax
-                                              : debug_ipc::RegisterID::kARMv8_x0;
+  debug::RegisterID result_register =
+      (arch_ == debug::Arch::kX64) ? debug::RegisterID::kX64_rax : debug::RegisterID::kARMv8_x0;
   syscall_return_value_ = GetRegisterValue(*general_registers, result_register);
 
   LoadOutputs();

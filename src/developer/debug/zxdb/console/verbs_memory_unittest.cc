@@ -81,13 +81,12 @@ TEST_F(VerbsMemoryTest, Stack) {
   std::vector<std::unique_ptr<Frame>> frames;
   frames.push_back(std::make_unique<MockFrame>(
       &session(), thread, Location(Location::State::kSymbolized, kIP0), kSP0, 0,
-      std::vector<debug_ipc::Register>{
-          debug_ipc::Register(debug_ipc::RegisterID::kX64_rsp, kSP0)}));
+      std::vector<debug_ipc::Register>{debug_ipc::Register(debug::RegisterID::kX64_rsp, kSP0)}));
   frames.push_back(std::make_unique<MockFrame>(
       &session(), thread, Location(Location::State::kSymbolized, kIP1), kSP1, 0,
       std::vector<debug_ipc::Register>{
-          debug_ipc::Register(debug_ipc::RegisterID::kX64_rsp, kSP1),
-          debug_ipc::Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));
+          debug_ipc::Register(debug::RegisterID::kX64_rsp, kSP1),
+          debug_ipc::Register(debug::RegisterID::kX64_rax, kSP0 + 0x20)}));
   InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::ExceptionType::kSingleStep,
                            std::move(frames), true);
 

@@ -10,6 +10,7 @@
 #include <map>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
@@ -237,7 +238,7 @@ void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Reg
 
     if (frame_no == 0) {
       // Frame 0 always gets added with no frame annotation.
-      reg_desc = RegisterIDToString(r.id);
+      reg_desc = debug_ipc::RegisterIDToString(r.id);
       frame_0_regs_[r.id] = value;
     } else {
       // Later frames get an annotation and only get added if they're different than frame 0.
@@ -246,7 +247,7 @@ void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Reg
       if (found_frame_0 != frame_0_regs_.end() && found_frame_0->second == value)
         continue;  // Matches frame 0, don't add a record.
 
-      reg_desc = fxl::StringPrintf("frame %d %s", frame_no, RegisterIDToString(r.id));
+      reg_desc = fxl::StringPrintf("frame %d %s", frame_no, debug_ipc::RegisterIDToString(r.id));
     }
 
     AddAnnotation(value, reg_desc);

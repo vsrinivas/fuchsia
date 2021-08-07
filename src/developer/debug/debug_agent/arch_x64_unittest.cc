@@ -18,10 +18,10 @@ namespace arch {
 
 TEST(ArchX64, WriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_rax, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_rbx, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_r14, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_rflags, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rbx, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_r14, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rflags, 8));
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
@@ -47,9 +47,9 @@ TEST(ArchX64, WriteGeneralRegs) {
   EXPECT_EQ(out.rflags, 0x0102030405060708u);
 
   regs.clear();
-  regs.emplace_back(debug_ipc::RegisterID::kX64_rax, static_cast<uint64_t>(0xaabb));
-  regs.emplace_back(debug_ipc::RegisterID::kX64_rdx, static_cast<uint64_t>(0xdead));
-  regs.emplace_back(debug_ipc::RegisterID::kX64_r10, static_cast<uint64_t>(0xbeef));
+  regs.emplace_back(debug::RegisterID::kX64_rax, static_cast<uint64_t>(0xaabb));
+  regs.emplace_back(debug::RegisterID::kX64_rdx, static_cast<uint64_t>(0xdead));
+  regs.emplace_back(debug::RegisterID::kX64_r10, static_cast<uint64_t>(0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
   ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
@@ -79,23 +79,22 @@ TEST(ArchX64, InvalidWriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
 
   // Invalid length.
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_rax, 4));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 4));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 
   // Invalid (non-canonical) register.
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kX64_ymm2, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_ymm2, 8));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(ArchX64, WriteFPRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.emplace_back(debug_ipc::RegisterID::kX64_fcw, std::vector<uint8_t>{1, 2});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_fsw, std::vector<uint8_t>{3, 4});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_ftw, std::vector<uint8_t>{6});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_fop, std::vector<uint8_t>{7, 8});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_fip, std::vector<uint8_t>{9, 0, 0, 0, 10, 0, 0, 0});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_fdp,
-                    std::vector<uint8_t>{11, 0, 0, 0, 12, 0, 0, 0});
+  regs.emplace_back(debug::RegisterID::kX64_fcw, std::vector<uint8_t>{1, 2});
+  regs.emplace_back(debug::RegisterID::kX64_fsw, std::vector<uint8_t>{3, 4});
+  regs.emplace_back(debug::RegisterID::kX64_ftw, std::vector<uint8_t>{6});
+  regs.emplace_back(debug::RegisterID::kX64_fop, std::vector<uint8_t>{7, 8});
+  regs.emplace_back(debug::RegisterID::kX64_fip, std::vector<uint8_t>{9, 0, 0, 0, 10, 0, 0, 0});
+  regs.emplace_back(debug::RegisterID::kX64_fdp, std::vector<uint8_t>{11, 0, 0, 0, 12, 0, 0, 0});
 
   zx_thread_state_fp_regs_t out = {};
   zx_status_t res = WriteFloatingPointRegisters(regs, &out);
@@ -116,14 +115,14 @@ TEST(ArchX64, WriteVectorRegs) {
   zmm0_value.resize(64);
   zmm0_value.front() = 0x42;
   zmm0_value.back() = 0x12;
-  regs.emplace_back(debug_ipc::RegisterID::kX64_zmm0, zmm0_value);
+  regs.emplace_back(debug::RegisterID::kX64_zmm0, zmm0_value);
 
   std::vector<uint8_t> zmm31_value = zmm0_value;
   zmm31_value.front()++;
   zmm31_value.back()++;
-  regs.emplace_back(debug_ipc::RegisterID::kX64_zmm31, zmm31_value);
+  regs.emplace_back(debug::RegisterID::kX64_zmm31, zmm31_value);
 
-  regs.emplace_back(debug_ipc::RegisterID::kX64_mxcsr, std::vector<uint8_t>{5, 6, 7, 8});
+  regs.emplace_back(debug::RegisterID::kX64_mxcsr, std::vector<uint8_t>{5, 6, 7, 8});
 
   zx_thread_state_vector_regs_t out = {};
   zx_status_t res = WriteVectorRegisters(regs, &out);
@@ -152,12 +151,12 @@ TEST(ArchX64, WriteVectorRegs) {
 
 TEST(ArchX64, WriteDebugRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr0, std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr1, std::vector<uint8_t>{2, 3, 4, 5, 6, 7, 8, 9});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr2, std::vector<uint8_t>{3, 4, 5, 6, 7, 8, 9, 0});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr3, std::vector<uint8_t>{4, 5, 6, 7, 8, 9, 0, 1});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr6, std::vector<uint8_t>{5, 6, 7, 8, 9, 0, 1, 2});
-  regs.emplace_back(debug_ipc::RegisterID::kX64_dr7, std::vector<uint8_t>{6, 7, 8, 9, 0, 1, 2, 3});
+  regs.emplace_back(debug::RegisterID::kX64_dr0, std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8});
+  regs.emplace_back(debug::RegisterID::kX64_dr1, std::vector<uint8_t>{2, 3, 4, 5, 6, 7, 8, 9});
+  regs.emplace_back(debug::RegisterID::kX64_dr2, std::vector<uint8_t>{3, 4, 5, 6, 7, 8, 9, 0});
+  regs.emplace_back(debug::RegisterID::kX64_dr3, std::vector<uint8_t>{4, 5, 6, 7, 8, 9, 0, 1});
+  regs.emplace_back(debug::RegisterID::kX64_dr6, std::vector<uint8_t>{5, 6, 7, 8, 9, 0, 1, 2});
+  regs.emplace_back(debug::RegisterID::kX64_dr7, std::vector<uint8_t>{6, 7, 8, 9, 0, 1, 2, 3});
 
   zx_thread_state_debug_regs_t out = {};
   zx_status_t res = WriteDebugRegisters(regs, &out);
@@ -181,11 +180,11 @@ TEST(ArchX64, ReadSegmentRegs) {
   const debug_ipc::Register* fs = nullptr;
   const debug_ipc::Register* gs = nullptr;
   for (const auto& reg : regs_out) {
-    if (reg.id == debug_ipc::RegisterID::kX64_fsbase) {
+    if (reg.id == debug::RegisterID::kX64_fsbase) {
       fs = &reg;
     }
 
-    if (reg.id == debug_ipc::RegisterID::kX64_gsbase) {
+    if (reg.id == debug::RegisterID::kX64_gsbase) {
       gs = &reg;
     }
   }

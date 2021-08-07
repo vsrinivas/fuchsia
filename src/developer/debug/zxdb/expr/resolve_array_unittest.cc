@@ -85,7 +85,7 @@ TEST_F(ResolveArrayTest, ResolveVectorRegister) {
                                       1, 0, 0, 0,   // array[1] = 1
                                       2, 0, 0, 0,   // array[2] = 2
                                       3, 0, 0, 0};  // array[3] = 3
-  constexpr debug_ipc::RegisterID register_id = debug_ipc::RegisterID::kX64_xmm3;
+  constexpr debug::RegisterID register_id = debug::RegisterID::kX64_xmm3;
   ExprValue value(array_type, array_bytes, ExprValueSource(register_id));
 
   // Ask for all 4 values.

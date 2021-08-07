@@ -27,16 +27,14 @@ constexpr int kFrame3Sp = 0x346712;
 
 constexpr uint64_t kTestTimestampDefault = 0x74657374l;  // hexadecimal for "test" in ascii
 
-static std::vector<debug_ipc::RegisterID> aarch64_regs = {
-    debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
-    debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
-    debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
-    debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
+static std::vector<debug::RegisterID> aarch64_regs = {
+    debug::RegisterID::kARMv8_x0, debug::RegisterID::kARMv8_x1, debug::RegisterID::kARMv8_x2,
+    debug::RegisterID::kARMv8_x3, debug::RegisterID::kARMv8_x4, debug::RegisterID::kARMv8_x5,
+    debug::RegisterID::kARMv8_x6, debug::RegisterID::kARMv8_x7};
 
-static std::vector<debug_ipc::RegisterID> amd64_regs = {
-    debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
-    debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
-    debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
+static std::vector<debug::RegisterID> amd64_regs = {
+    debug::RegisterID::kX64_rdi, debug::RegisterID::kX64_rsi, debug::RegisterID::kX64_rdx,
+    debug::RegisterID::kX64_rcx, debug::RegisterID::kX64_r8,  debug::RegisterID::kX64_r9};
 
 SyscallDecoderDispatcher* global_dispatcher = nullptr;
 

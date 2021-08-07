@@ -12,7 +12,7 @@ void GeneralRegisters::CopyTo(std::vector<debug_ipc::Register>& dest) const {
   arch::SaveGeneralRegs(regs_, dest);
 }
 
-std::optional<uint64_t> GeneralRegisters::GetRegister(const debug_ipc::RegisterID reg_id) const {
+std::optional<uint64_t> GeneralRegisters::GetRegister(const debug::RegisterID reg_id) const {
   std::vector<debug_ipc::Register> reg_vect;
   CopyTo(reg_vect);
   for (const auto& reg : reg_vect) {

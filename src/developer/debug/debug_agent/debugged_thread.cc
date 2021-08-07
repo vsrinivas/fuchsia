@@ -482,7 +482,7 @@ std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
   // This is necessary to avoid the single-stepping logic that the thread does when resuming from
   // a breakpoint.
   bool rip_change = false;
-  debug_ipc::RegisterID rip_id =
+  debug::RegisterID rip_id =
       GetSpecialRegisterID(arch::GetCurrentArch(), debug_ipc::SpecialRegisterType::kIP);
   for (const debug_ipc::Register& reg : regs) {
     if (reg.id == rip_id) {

@@ -11,7 +11,7 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 const char kVectorRegisterFormatStr_Signed8[] = "i8";
 const char kVectorRegisterFormatStr_Unsigned8[] = "u8";

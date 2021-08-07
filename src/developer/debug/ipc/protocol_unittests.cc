@@ -17,6 +17,8 @@ namespace debug_ipc {
 
 namespace {
 
+using debug::RegisterID;
+
 template <typename RequestType>
 bool SerializeDeserializeRequest(const RequestType& in, RequestType* out) {
   MessageWriter writer;
@@ -892,8 +894,6 @@ TEST(Protocol, UpdateGlobalSettingsReply) {
 }
 
 // Registers ---------------------------------------------------------------------------------------
-
-using debug_ipc::RegisterID;
 
 TEST(Protocol, ReadRegistersRequest) {
   ReadRegistersRequest initial;

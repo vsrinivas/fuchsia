@@ -151,7 +151,7 @@ class DataForSyscallTest {
         << "expected size: " << size << " and actual size: " << block.data.size();
   }
 
-  void PopulateRegister(debug_ipc::RegisterID register_id, uint64_t value,
+  void PopulateRegister(debug::RegisterID register_id, uint64_t value,
                         std::vector<debug_ipc::Register>* registers) {
     debug_ipc::Register& reg = registers->emplace_back();
     reg.id = register_id;
@@ -169,22 +169,21 @@ class DataForSyscallTest {
         }
       } else {
         if (arch_ == debug::Arch::kArm64) {
-          PopulateRegister(debug_ipc::RegisterID::kARMv8_x0, syscall_->result(), registers);
+          PopulateRegister(debug::RegisterID::kARMv8_x0, syscall_->result(), registers);
         } else {
-          PopulateRegister(debug_ipc::RegisterID::kX64_rax, syscall_->result(), registers);
+          PopulateRegister(debug::RegisterID::kX64_rax, syscall_->result(), registers);
         }
       }
     }
 
     if (arch_ == debug::Arch::kArm64) {
       // stack pointer
-      PopulateRegister(debug_ipc::RegisterID::kARMv8_sp, reinterpret_cast<uint64_t>(sp_),
-                       registers);
+      PopulateRegister(debug::RegisterID::kARMv8_sp, reinterpret_cast<uint64_t>(sp_), registers);
       // link register
-      PopulateRegister(debug_ipc::RegisterID::kARMv8_lr, kReturnAddress, registers);
+      PopulateRegister(debug::RegisterID::kARMv8_lr, kReturnAddress, registers);
     } else if (arch_ == debug::Arch::kX64) {
       // stack pointer
-      PopulateRegister(debug_ipc::RegisterID::kX64_rsp, reinterpret_cast<uint64_t>(sp_), registers);
+      PopulateRegister(debug::RegisterID::kX64_rsp, reinterpret_cast<uint64_t>(sp_), registers);
     }
   }
 
@@ -218,7 +217,7 @@ class DataForSyscallTest {
   static constexpr char kElfSymbolBuildID[] = "123412341234";
 
  private:
-  const std::vector<debug_ipc::RegisterID>* param_regs_;
+  const std::vector<debug::RegisterID>* param_regs_;
   std::unique_ptr<SystemCallTest> syscall_;
   bool use_alternate_data_ = false;
   uint64_t stack_[kMaxStackSizeInWords];

@@ -105,8 +105,8 @@ namespace arch {
 
 namespace {
 
+using debug::RegisterID;
 using debug_ipc::Register;
-using debug_ipc::RegisterID;
 
 // Implements a case statement for calling WriteRegisterValue assuming the Zircon register
 // field matches the enum name. This avoids implementation typos where the names don't match.

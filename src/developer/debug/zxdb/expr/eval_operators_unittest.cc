@@ -18,7 +18,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 class EvalOperators : public TestWithLoop {
  public:

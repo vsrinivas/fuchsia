@@ -472,7 +472,7 @@ class SyscallArgumentBaseTyped : public SyscallArgumentBase {
   }
 
   virtual debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const {
+      const std::vector<debug::RegisterID>& argument_indexes) const {
     return debug_ipc::AutomationOperand();
   }
 };
@@ -499,7 +499,7 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
   }
 
   debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const override {
+      const std::vector<debug::RegisterID>& argument_indexes) const override {
     debug_ipc::AutomationOperand operand;
     if (static_cast<uint64_t>(index()) < argument_indexes.size()) {
       operand.InitRegister(argument_indexes[index()]);
@@ -557,7 +557,7 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
   }
 
   debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const override {
+      const std::vector<debug::RegisterID>& argument_indexes) const override {
     debug_ipc::AutomationOperand operand;
     if (static_cast<uint64_t>(index()) < argument_indexes.size()) {
       operand.InitRegister(argument_indexes[index()]);
@@ -595,7 +595,7 @@ class AccessBase {
 
   // Returns the automation operand that will load the value of this access.
   virtual debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const = 0;
+      const std::vector<debug::RegisterID>& argument_indexes) const = 0;
 };
 
 // Use to access data for an input or an output.
@@ -672,7 +672,7 @@ class ArgumentAccess : public Access<Type> {
   }
 
   debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const override {
+      const std::vector<debug::RegisterID>& argument_indexes) const override {
     return argument_->ComputeAutomationOperand(argument_indexes);
   }
 
@@ -718,7 +718,7 @@ class FieldAccess : public Access<Type> {
   }
 
   debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const override {
+      const std::vector<debug::RegisterID>& argument_indexes) const override {
     return argument_->ComputeAutomationOperand(argument_indexes);
   }
 
@@ -771,7 +771,7 @@ class PointerFieldAccess : public Access<Type> {
   }
 
   debug_ipc::AutomationOperand ComputeAutomationOperand(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes) const override {
+      const std::vector<debug::RegisterID>& argument_indexes) const override {
     return argument_->ComputeAutomationOperand(argument_indexes);
   }
 
@@ -797,7 +797,7 @@ class SyscallInputOutputConditionBase {
   virtual bool True(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   virtual bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
       Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const = 0;
 };
 
@@ -821,7 +821,7 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   }
 
   bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
       Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const override;
 
  private:
@@ -847,7 +847,7 @@ class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
   }
 
   bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
       Syscall& syscall,
       std::vector<debug_ipc::AutomationCondition>& condition_vect) const override {
     return arch_ == arch;
@@ -929,7 +929,7 @@ class SyscallInputOutputBase {
 
   // Returns true if everything which needs memory has generated automation instructions.
   virtual bool GetAutomationInstructions(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+      const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
       const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall);
 
  private:
@@ -964,7 +964,7 @@ class SyscallInputOutput : public SyscallInputOutputBase {
     return access_->GenerateValue(decoder, stage);
   }
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override {
@@ -985,7 +985,7 @@ class SyscallInputOutputPointer : public SyscallInputOutput<Type> {
                             std::unique_ptr<Access<Type>> access)
       : SyscallInputOutput<Type>(error_code, name, std::move(access)) {}
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override;
@@ -1061,7 +1061,7 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override;
@@ -1119,7 +1119,7 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
     }
   }
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override;
@@ -1222,7 +1222,7 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
     }
   }
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override;
@@ -1434,7 +1434,7 @@ class SyscallFidlMessage : public SyscallFidlMessageBase {
     }
   }
 
-  bool GetAutomationInstructions(const std::vector<debug_ipc::RegisterID>& argument_indexes,
+  bool GetAutomationInstructions(const std::vector<debug::RegisterID>& argument_indexes,
                                  bool is_invoked,
                                  const std::vector<debug_ipc::AutomationCondition>& conditions,
                                  Syscall& syscall) override;
@@ -2525,7 +2525,7 @@ std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoderInt
 
 template <typename Type>
 bool SyscallInputOutputCondition<Type>::ComputeAutomationCondition(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
     Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const {
   debug_ipc::AutomationCondition condition;
   debug_ipc::AutomationOperand operand = access_->ComputeAutomationOperand(argument_indexes);
@@ -2539,7 +2539,7 @@ bool SyscallInputOutputCondition<Type>::ComputeAutomationCondition(
 
 template <typename Type>
 bool SyscallInputOutputPointer<Type>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   debug_ipc::AutomationOperand access_value =
       SyscallInputOutput<Type>::access_ptr()->ComputeAutomationOperand(argument_indexes);
@@ -2567,7 +2567,7 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputIndirect<Type, FromType>::G
 
 template <typename Type, typename FromType>
 bool SyscallInputOutputIndirect<Type, FromType>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   debug_ipc::AutomationOperand buff_id = buffer_->ComputeAutomationOperand(argument_indexes);
   if (buff_id.kind() == debug_ipc::AutomationOperandKind::kZero) {
@@ -2612,7 +2612,7 @@ SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder
 
 template <typename Type, typename FromType, typename SizeType>
 bool SyscallInputOutputBuffer<Type, FromType, SizeType>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   debug_ipc::AutomationOperand buff_id = buffer_->ComputeAutomationOperand(argument_indexes);
   if (buff_id.kind() == debug_ipc::AutomationOperandKind::kZero) {
@@ -2646,7 +2646,7 @@ bool SyscallInputOutputBuffer<Type, FromType, SizeType>::GetAutomationInstructio
 
 template <typename FromType>
 bool SyscallInputOutputString<FromType>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   debug_ipc::AutomationOperand string_id = string_->ComputeAutomationOperand(argument_indexes);
   debug_ipc::AutomationOperand size = string_size_->ComputeAutomationOperand(argument_indexes);
@@ -2683,7 +2683,7 @@ SyscallInputOutputObjectArray<ClassType, SizeType>::GenerateValue(SyscallDecoder
 
 template <typename HandleType>
 bool SyscallFidlMessage<HandleType>::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   debug_ipc::AutomationOperand data_id = bytes()->ComputeAutomationOperand(argument_indexes);
   if (data_id.kind() == debug_ipc::AutomationOperandKind::kZero) {

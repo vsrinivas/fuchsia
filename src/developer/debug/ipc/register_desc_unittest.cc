@@ -11,12 +11,13 @@
 namespace debug_ipc {
 
 using debug::Arch;
+using debug::RegisterID;
 
 TEST(RegisterDesc, DWARFToRegisterInfo_Arm) {
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x0, DWARFToRegisterInfo(Arch::kArm64, 0)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x29, DWARFToRegisterInfo(Arch::kArm64, 29)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_lr, DWARFToRegisterInfo(Arch::kArm64, 30)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_sp, DWARFToRegisterInfo(Arch::kArm64, 31)->id);
+  EXPECT_EQ(debug::RegisterID::kARMv8_x0, DWARFToRegisterInfo(Arch::kArm64, 0)->id);
+  EXPECT_EQ(debug::RegisterID::kARMv8_x29, DWARFToRegisterInfo(Arch::kArm64, 29)->id);
+  EXPECT_EQ(debug::RegisterID::kARMv8_lr, DWARFToRegisterInfo(Arch::kArm64, 30)->id);
+  EXPECT_EQ(debug::RegisterID::kARMv8_sp, DWARFToRegisterInfo(Arch::kArm64, 31)->id);
 
   // DWARF ID 32 is "reserved".
   EXPECT_FALSE(DWARFToRegisterInfo(Arch::kArm64, 32));
@@ -24,16 +25,16 @@ TEST(RegisterDesc, DWARFToRegisterInfo_Arm) {
 
 TEST(RegisterDesc, DWARFToRegisterInfo_x64) {
   // General registers.
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rax, DWARFToRegisterInfo(Arch::kX64, 0)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rsp, DWARFToRegisterInfo(Arch::kX64, 7)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_r8, DWARFToRegisterInfo(Arch::kX64, 8)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rflags, DWARFToRegisterInfo(Arch::kX64, 49)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_rax, DWARFToRegisterInfo(Arch::kX64, 0)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_rsp, DWARFToRegisterInfo(Arch::kX64, 7)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_r8, DWARFToRegisterInfo(Arch::kX64, 8)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_rflags, DWARFToRegisterInfo(Arch::kX64, 49)->id);
 
   // xmm registers.
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm0, DWARFToRegisterInfo(Arch::kX64, 17)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm15, DWARFToRegisterInfo(Arch::kX64, 32)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm16, DWARFToRegisterInfo(Arch::kX64, 67)->id);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_xmm31, DWARFToRegisterInfo(Arch::kX64, 82)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_xmm0, DWARFToRegisterInfo(Arch::kX64, 17)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_xmm15, DWARFToRegisterInfo(Arch::kX64, 32)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_xmm16, DWARFToRegisterInfo(Arch::kX64, 67)->id);
+  EXPECT_EQ(debug::RegisterID::kX64_xmm31, DWARFToRegisterInfo(Arch::kX64, 82)->id);
 }
 
 TEST(RegisterIDToCategory, Border) {

@@ -16,7 +16,7 @@ namespace zxdb {
 
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
-void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
+void MockSymbolDataProvider::AddRegisterValue(debug::RegisterID id, bool synchronous,
                                               uint64_t value) {
   std::vector<uint8_t> data;
   data.resize(sizeof(value));
@@ -24,7 +24,7 @@ void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool syn
   regs_[id] = RegData(synchronous, std::move(data));
 }
 
-void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
+void MockSymbolDataProvider::AddRegisterValue(debug::RegisterID id, bool synchronous,
                                               std::vector<uint8_t> value) {
   regs_[id] = RegData(synchronous, std::move(value));
 }
@@ -38,8 +38,8 @@ fxl::RefPtr<SymbolDataProvider> MockSymbolDataProvider::GetEntryDataProvider() c
 }
 
 std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
-  if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
+    debug::RegisterID id) {
+  if (debug_ipc::GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
     const uint8_t* ip_as_char = reinterpret_cast<const uint8_t*>(&ip_);
     return containers::array_view(ip_as_char, ip_as_char + sizeof(ip_));
   }
@@ -54,8 +54,7 @@ std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegist
   return found->second.value;
 }
 
-void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
-                                              GetRegisterCallback callback) {
+void MockSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback callback) {
   debug::MessageLoop::Current()->PostTask(
       FROM_HERE,
       [callback = std::move(callback), weak_provider = weak_factory_.GetWeakPtr(), id]() mutable {
@@ -73,7 +72,7 @@ void MockSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
       });
 }
 
-void MockSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void MockSymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                                            WriteCallback cb) {
   register_writes_.emplace_back(id, std::move(data));
 

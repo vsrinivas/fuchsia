@@ -21,7 +21,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 // Base address of the imaginary module. Relative addresses will be relative to this number.
 constexpr TargetPointer kModuleBase = 0x78000000;
@@ -113,13 +113,13 @@ void DwarfExprEvalTest::DoEvalTest(DwarfExpr expr, bool expected_success,
   EXPECT_TRUE(callback_issued);
 }
 
-const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
-const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
-const debug_ipc::RegisterID kDWARFReg3ID = debug_ipc::RegisterID::kARMv8_x3;
-const debug_ipc::RegisterID kDWARFReg4ID = debug_ipc::RegisterID::kARMv8_x4;
-const debug_ipc::RegisterID kDWARFReg5ID = debug_ipc::RegisterID::kARMv8_x5;
-const debug_ipc::RegisterID kDWARFReg6ID = debug_ipc::RegisterID::kARMv8_x6;
-const debug_ipc::RegisterID kDWARFReg9ID = debug_ipc::RegisterID::kARMv8_x9;
+const debug::RegisterID kDWARFReg0ID = debug::RegisterID::kARMv8_x0;
+const debug::RegisterID kDWARFReg1ID = debug::RegisterID::kARMv8_x1;
+const debug::RegisterID kDWARFReg3ID = debug::RegisterID::kARMv8_x3;
+const debug::RegisterID kDWARFReg4ID = debug::RegisterID::kARMv8_x4;
+const debug::RegisterID kDWARFReg5ID = debug::RegisterID::kARMv8_x5;
+const debug::RegisterID kDWARFReg6ID = debug::RegisterID::kARMv8_x6;
+const debug::RegisterID kDWARFReg9ID = debug::RegisterID::kARMv8_x9;
 
 }  // namespace
 

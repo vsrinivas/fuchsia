@@ -14,12 +14,11 @@ class Type;
 class AbiX64 : public Abi {
  public:
   // Abi implementation.
-  bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const final;
-  debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
-    return debug_ipc::RegisterID::kX64_rax;
+  bool IsRegisterCalleeSaved(debug::RegisterID reg) const final;
+  debug::RegisterID GetReturnRegisterForMachineInt() const final {
+    return debug::RegisterID::kX64_rax;
   }
-  std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
-      const BaseType* base_type) final;
+  std::optional<debug::RegisterID> GetReturnRegisterForBaseType(const BaseType* base_type) final;
   std::optional<CollectionReturn> GetCollectionReturnByRefLocation(
       const Collection* collection) final;
   std::optional<CollectionByValueReturn> GetCollectionReturnByValueLocation(

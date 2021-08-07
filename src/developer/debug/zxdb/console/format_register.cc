@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <map>
 
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/regex.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -28,9 +30,9 @@
 
 namespace zxdb {
 
+using debug::RegisterID;
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterID;
 
 namespace {
 
@@ -66,7 +68,7 @@ OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
   // Group register by category.
   std::map<RegisterCategory, std::vector<Register>> categorized;
   for (const Register& reg : registers)
-    categorized[RegisterIDToCategory(reg.id)].push_back(reg);
+    categorized[debug_ipc::RegisterIDToCategory(reg.id)].push_back(reg);
 
   for (auto& [category, cat_regs] : categorized) {
     // Ensure the registers appear in a consistent order.
@@ -119,7 +121,8 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
   for (const auto& r : registers) {
     // Use the expression formatter to format the vector members.
     ExprValue vector_value = VectorRegisterToValue(r.id, options.vector_format, r.data);
-    auto node = std::make_unique<FormatNode>(RegisterIDToString(r.id), std::move(vector_value));
+    auto node =
+        std::make_unique<FormatNode>(debug_ipc::RegisterIDToString(r.id), std::move(vector_value));
 
     // In general formatting is asynchronous but a vector of numbers should always be completable
     // synchronously.
@@ -171,7 +174,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
 
 std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(reg.id), color);
+  result.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
 
   if (reg.data.size() <= 8) {
     // Treat <= 64 bit registers as numbers.

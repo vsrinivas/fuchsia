@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
@@ -184,7 +185,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   FX_DCHECK(!data_extractor_.done());
 
   // Clear any current register information. See current_register_id_ declaration for more.
-  current_register_id_ = debug_ipc::RegisterID::kUnknown;
+  current_register_id_ = debug::RegisterID::kUnknown;
 
   // Opcode is next byte in the data buffer. Consume it (we already checked there's data).
   uint8_t op = *data_extractor_.Read<uint8_t>();

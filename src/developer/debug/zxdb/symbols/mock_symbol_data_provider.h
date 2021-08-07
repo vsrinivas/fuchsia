@@ -17,7 +17,7 @@ namespace zxdb {
 class MockSymbolDataProvider : public SymbolDataProvider {
  public:
   // An insertion-time ordered list of (register, data) pairs of writes.
-  using RegisterWrites = std::vector<std::pair<debug_ipc::RegisterID, std::vector<uint8_t>>>;
+  using RegisterWrites = std::vector<std::pair<debug::RegisterID, std::vector<uint8_t>>>;
 
   // Holds a list of time-ordered (address, data) pairs of memory writes.
   using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
@@ -36,8 +36,8 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // uint64_t version is called, the register is assumed to be 64 bits.
   //
   // Any registers not set will be synchronously reported as unknown.
-  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint64_t value);
-  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, std::vector<uint8_t> value);
+  void AddRegisterValue(debug::RegisterID id, bool synchronous, uint64_t value);
+  void AddRegisterValue(debug::RegisterID id, bool synchronous, std::vector<uint8_t> value);
 
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
@@ -50,10 +50,9 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // SymbolDataProvider implementation.
   debug::Arch GetArch() override { return arch_; }
   fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const override;
-  std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
-  void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
-  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
-                     WriteCallback cb) override;
+  std::optional<containers::array_view<uint8_t>> GetRegister(debug::RegisterID id) override;
+  void GetRegisterAsync(debug::RegisterID id, GetRegisterCallback callback) override;
+  void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data, WriteCallback cb) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   std::optional<uint64_t> GetDebugAddressForContext(const SymbolContext&) const override;
@@ -84,7 +83,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   uint64_t cfa_ = 0;
   uint64_t tls_segment_;
   std::optional<std::tuple<uint8_t*, uint8_t*, uint8_t*>> tls_helpers_;
-  std::map<debug_ipc::RegisterID, RegData> regs_;
+  std::map<debug::RegisterID, RegData> regs_;
 
   debug::MockMemory memory_;
 

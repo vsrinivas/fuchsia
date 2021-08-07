@@ -7,7 +7,7 @@
 
 #include <optional>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 
 namespace zxdb {
@@ -37,13 +37,13 @@ class Abi {
   struct CollectionReturn {
     // The register which, upon return, points to the place where the called function placed the
     // collection.
-    debug_ipc::RegisterID addr_return_reg = debug_ipc::RegisterID::kUnknown;
+    debug::RegisterID addr_return_reg = debug::RegisterID::kUnknown;
   };
 
   // Represents a component of a register that contributes to a by-value returned item. The register
   // bytes are copied from the low end.
   struct RegisterComponent {
-    debug_ipc::RegisterID reg = debug_ipc::RegisterID::kUnknown;
+    debug::RegisterID reg = debug::RegisterID::kUnknown;
     uint32_t bytes = 0;  // The number of bytes of the register that is actually used.
   };
 
@@ -57,10 +57,10 @@ class Abi {
   // Returns true if the register is one of the callee-saved registers that is supposed to be
   // preserved across function calls. These registers should generally be valid in non-topmost
   // stack frames as the unwind information should be able to reconstitute them.
-  virtual bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const = 0;
+  virtual bool IsRegisterCalleeSaved(debug::RegisterID reg) const = 0;
 
   // Returns the register used to return a machine word like a pointer or a "regular"-sized integer.
-  virtual debug_ipc::RegisterID GetReturnRegisterForMachineInt() const = 0;
+  virtual debug::RegisterID GetReturnRegisterForMachineInt() const = 0;
 
   // Returns the register information for returning the given base type from a function call.
   //
@@ -69,7 +69,7 @@ class Abi {
   //
   // The returned register might be larger than the base_type. In this case, the low bytes of the
   // register up to the size of the base type are used.
-  virtual std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
+  virtual std::optional<debug::RegisterID> GetReturnRegisterForBaseType(
       const BaseType* base_type) = 0;
 
   // Returns the information about how the given collection is returned. The collection must be

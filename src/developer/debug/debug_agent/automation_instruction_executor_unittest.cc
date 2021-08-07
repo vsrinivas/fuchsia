@@ -40,13 +40,13 @@ TEST(AutomationInstructionExecutorTest, OperandEvaluation) {
 #if defined(__x86_64__)
   regs.GetNativeRegisters().rdi = kDynamicMemoryAddress;
   regs.GetNativeRegisters().rsi = kRegisterValue;
-  constexpr debug_ipc::RegisterID register_id_1 = debug_ipc::RegisterID::kX64_rdi;
-  constexpr debug_ipc::RegisterID register_id_2 = debug_ipc::RegisterID::kX64_rsi;
+  constexpr debug::RegisterID register_id_1 = debug::RegisterID::kX64_rdi;
+  constexpr debug::RegisterID register_id_2 = debug::RegisterID::kX64_rsi;
 #elif defined(__aarch64__)
   regs.GetNativeRegisters().r[0] = kDynamicMemoryAddress;
   regs.GetNativeRegisters().r[1] = kRegisterValue;
-  constexpr debug_ipc::RegisterID register_id_1 = debug_ipc::RegisterID::kARMv8_x0;
-  constexpr debug_ipc::RegisterID register_id_2 = debug_ipc::RegisterID::kARMv8_x1;
+  constexpr debug::RegisterID register_id_1 = debug::RegisterID::kARMv8_x0;
+  constexpr debug::RegisterID register_id_2 = debug::RegisterID::kARMv8_x1;
 #endif
 
   debug_ipc::AutomationOperand operand;

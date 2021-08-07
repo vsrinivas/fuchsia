@@ -79,7 +79,7 @@ std::unique_ptr<SuspendHandle> SyncSuspendThread(ThreadHandle& thread) {
   return suspend_handle;
 }
 
-bool FrameHasRegister(const debug_ipc::StackFrame& frame, debug_ipc::RegisterID id) {
+bool FrameHasRegister(const debug_ipc::StackFrame& frame, debug::RegisterID id) {
   for (const auto& reg : frame.regs) {
     if (reg.id == id)
       return true;
@@ -91,10 +91,10 @@ bool FrameHasRegister(const debug_ipc::StackFrame& frame, debug_ipc::RegisterID 
 // current platform. This does not validate the actual values.
 bool FrameHasThreadRegisters(const debug_ipc::StackFrame& frame) {
 #if defined(__x86_64__)
-  return FrameHasRegister(frame, debug_ipc::RegisterID::kX64_fsbase) &&
-         FrameHasRegister(frame, debug_ipc::RegisterID::kX64_gsbase);
+  return FrameHasRegister(frame, debug::RegisterID::kX64_fsbase) &&
+         FrameHasRegister(frame, debug::RegisterID::kX64_gsbase);
 #elif defined(__aarch64__)
-  return FrameHasRegister(frame, debug_ipc::RegisterID::kARMv8_tpidr);
+  return FrameHasRegister(frame, debug::RegisterID::kARMv8_tpidr);
 #else
 #error Write for your platform
 #endif

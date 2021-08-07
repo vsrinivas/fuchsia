@@ -13,7 +13,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 // Returns true if the expr value type matches the parameters.
 bool IsTypeArrayOf(const ExprValue& value, const char* expected_type, uint32_t expected_bytes,

@@ -9,6 +9,7 @@
 #include <optional>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -38,7 +39,7 @@ class FrameImpl final : public Frame {
   void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category, bool always_request,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
-  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+  void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
   void GetBasePointerAsync(fit::callback<void(uint64_t bp)> cb) override;

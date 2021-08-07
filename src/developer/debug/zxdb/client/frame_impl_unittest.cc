@@ -19,7 +19,7 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 class FrameImplTest : public RemoteAPITest {};
 
@@ -57,9 +57,9 @@ class MockRemoteAPIForRegister : public MockRemoteAPI {
     // Respond with the two registers we know.
     debug_ipc::WriteRegistersReply reply;
     reply.status = debug::Status();
-    reply.registers.emplace_back(debug_ipc::RegisterID::kX64_rbx,
+    reply.registers.emplace_back(debug::RegisterID::kX64_rbx,
                                  std::vector<uint8_t>(std::begin(kRbxValue), std::end(kRbxValue)));
-    reply.registers.emplace_back(debug_ipc::RegisterID::kX64_rcx,
+    reply.registers.emplace_back(debug::RegisterID::kX64_rcx,
                                  std::vector<uint8_t>(std::begin(kRcxValue), std::end(kRcxValue)));
 
     debug::MessageLoop::Current()->PostTask(
@@ -172,7 +172,7 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
                                  std::end(MockRemoteAPIForRegister::kRcxValue));
 
   bool called = false;
-  frame->WriteRegister(debug_ipc::RegisterID::kX64_rbx, rbx_value, [&called](const Err& err) {
+  frame->WriteRegister(debug::RegisterID::kX64_rbx, rbx_value, [&called](const Err& err) {
     EXPECT_TRUE(err.ok());
     called = true;
   });
@@ -186,9 +186,9 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
   ASSERT_TRUE(out_regs);
 
   // The two values the mock RemoteAPI put there should be returned.
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rbx, (*out_regs)[0].id);
+  EXPECT_EQ(debug::RegisterID::kX64_rbx, (*out_regs)[0].id);
   EXPECT_EQ(rbx_value, (*out_regs)[0].data);
-  EXPECT_EQ(debug_ipc::RegisterID::kX64_rcx, (*out_regs)[1].id);
+  EXPECT_EQ(debug::RegisterID::kX64_rcx, (*out_regs)[1].id);
   EXPECT_EQ(rcx_value, (*out_regs)[1].data);
 }
 

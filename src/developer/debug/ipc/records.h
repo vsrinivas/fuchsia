@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/automation_instruction.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/address_range.h"
+#include "src/developer/debug/shared/register_id.h"
 
 namespace debug_ipc {
 
@@ -147,28 +147,28 @@ struct ProcessTreeRecord {
 // Value representing a particular register.
 struct Register {
   Register() = default;
-  Register(RegisterID rid, std::vector<uint8_t> d) : id(rid), data(std::move(d)) {}
+  Register(debug::RegisterID rid, std::vector<uint8_t> d) : id(rid), data(std::move(d)) {}
 
   // Constructs from a size and a pointed-to data buffer in machine-endianness.
-  Register(RegisterID rid, size_t byte_size, const void* bytes) : id(rid) {
+  Register(debug::RegisterID rid, size_t byte_size, const void* bytes) : id(rid) {
     data.resize(byte_size);
     memcpy(data.data(), bytes, byte_size);
   }
 
   // Constructs a sized value for the current platform.
-  Register(RegisterID rid, uint64_t val) : id(rid) {
+  Register(debug::RegisterID rid, uint64_t val) : id(rid) {
     data.resize(sizeof(val));
     memcpy(data.data(), &val, sizeof(val));
   }
-  Register(RegisterID rid, uint32_t val) : id(rid) {
+  Register(debug::RegisterID rid, uint32_t val) : id(rid) {
     data.resize(sizeof(val));
     memcpy(data.data(), &val, sizeof(val));
   }
-  Register(RegisterID rid, uint16_t val) : id(rid) {
+  Register(debug::RegisterID rid, uint16_t val) : id(rid) {
     data.resize(sizeof(val));
     memcpy(data.data(), &val, sizeof(val));
   }
-  Register(RegisterID rid, uint8_t val) : id(rid) {
+  Register(debug::RegisterID rid, uint8_t val) : id(rid) {
     data.resize(sizeof(val));
     memcpy(data.data(), &val, sizeof(val));
   }
@@ -180,7 +180,7 @@ struct Register {
   bool operator==(const Register& other) const { return id == other.id && data == other.data; }
   bool operator!=(const Register& other) const { return !operator==(other); }
 
-  RegisterID id = RegisterID::kUnknown;
+  debug::RegisterID id = debug::RegisterID::kUnknown;
 
   // This data is stored in the architecture's native endianness
   // (eg. the result of running memcpy over the data).

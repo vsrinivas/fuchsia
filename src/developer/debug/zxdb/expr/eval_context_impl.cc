@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -36,7 +37,7 @@
 namespace zxdb {
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   // Check for explicit register identifier annotation.
@@ -48,7 +49,7 @@ RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   // Try to convert the identifier string to a register name.
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
-    return debug_ipc::RegisterID::kUnknown;
+    return debug::RegisterID::kUnknown;
   return debug_ipc::StringToRegisterID(*str);
 }
 
@@ -175,7 +176,8 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCall
   }
 
   auto reg = GetRegisterID(identifier);
-  if (reg == RegisterID::kUnknown || GetArchForRegisterID(reg) != data_provider_->GetArch())
+  if (reg == RegisterID::kUnknown ||
+      debug_ipc::GetArchForRegisterID(reg) != data_provider_->GetArch())
     return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()));
 
   // Fall back to matching registers when no symbol is found. The data_provider is in charge

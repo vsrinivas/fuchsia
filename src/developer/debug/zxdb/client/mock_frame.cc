@@ -97,7 +97,7 @@ void MockFrame::GetRegisterCategoryAsync(
       FROM_HERE, [err, regs, cb = std::move(cb)]() mutable { cb(err, regs); });
 }
 
-void MockFrame::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void MockFrame::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                               fit::callback<void(const Err&)> cb) {
   debug::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
     cb(Err("Writing registers not (yet) supported by the mock."));

@@ -17,7 +17,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 // Notes on returning collections by value
 // ---------------------------------------
@@ -179,10 +179,10 @@ Abi::CollectionByValueReturn AllocateRegistersForByValueReturning(
   FX_DCHECK(classes.size() <= kMaxRegs);
 
   // These are the registers to use for each class.
-  static const debug_ipc::RegisterID kGeneralRegs[kMaxRegs] = {debug_ipc::RegisterID::kX64_rax,
-                                                               debug_ipc::RegisterID::kX64_rdx};
-  static const debug_ipc::RegisterID kSseRegs[kMaxRegs] = {debug_ipc::RegisterID::kX64_xmm0,
-                                                           debug_ipc::RegisterID::kX64_xmm1};
+  static const debug::RegisterID kGeneralRegs[kMaxRegs] = {debug::RegisterID::kX64_rax,
+                                                           debug::RegisterID::kX64_rdx};
+  static const debug::RegisterID kSseRegs[kMaxRegs] = {debug::RegisterID::kX64_xmm0,
+                                                       debug::RegisterID::kX64_xmm1};
 
   // The next register of each category to use.
   int next_general = 0;
@@ -215,28 +215,27 @@ Abi::CollectionByValueReturn AllocateRegistersForByValueReturning(
 
 }  // namespace
 
-bool AbiX64::IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const {
+bool AbiX64::IsRegisterCalleeSaved(debug::RegisterID reg) const {
   switch (reg) {
-    case debug_ipc::RegisterID::kX64_rbx:
-    case debug_ipc::RegisterID::kX64_bh:  // All variants of "rbx".
-    case debug_ipc::RegisterID::kX64_bl:
-    case debug_ipc::RegisterID::kX64_bx:
-    case debug_ipc::RegisterID::kX64_ebx:
-    case debug_ipc::RegisterID::kX64_rsp:
-    case debug_ipc::RegisterID::kX64_rbp:
-    case debug_ipc::RegisterID::kX64_r12:
-    case debug_ipc::RegisterID::kX64_r13:
-    case debug_ipc::RegisterID::kX64_r14:
-    case debug_ipc::RegisterID::kX64_r15:
-    case debug_ipc::RegisterID::kX64_rip:
+    case debug::RegisterID::kX64_rbx:
+    case debug::RegisterID::kX64_bh:  // All variants of "rbx".
+    case debug::RegisterID::kX64_bl:
+    case debug::RegisterID::kX64_bx:
+    case debug::RegisterID::kX64_ebx:
+    case debug::RegisterID::kX64_rsp:
+    case debug::RegisterID::kX64_rbp:
+    case debug::RegisterID::kX64_r12:
+    case debug::RegisterID::kX64_r13:
+    case debug::RegisterID::kX64_r14:
+    case debug::RegisterID::kX64_r15:
+    case debug::RegisterID::kX64_rip:
       return true;
     default:
       return false;
   }
 }
 
-std::optional<debug_ipc::RegisterID> AbiX64::GetReturnRegisterForBaseType(
-    const BaseType* base_type) {
+std::optional<debug::RegisterID> AbiX64::GetReturnRegisterForBaseType(const BaseType* base_type) {
   switch (base_type->base_type()) {
     case BaseType::kBaseTypeFloat:
       if (base_type->byte_size() <= 8)

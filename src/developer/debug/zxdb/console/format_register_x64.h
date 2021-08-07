@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_REGISTER_X64_H_
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/ipc/register_desc.h"
 
 namespace debug_ipc {
 struct Register;

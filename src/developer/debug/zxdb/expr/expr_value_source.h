@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 
 namespace zxdb {
@@ -57,7 +57,7 @@ class ExprValueSource {
 
   // Initializes indicating a register and optional bitfield information. The register does not have
   // to be a canonical register.
-  explicit ExprValueSource(debug_ipc::RegisterID id, uint32_t bit_size = 0, uint32_t bit_shift = 0)
+  explicit ExprValueSource(debug::RegisterID id, uint32_t bit_size = 0, uint32_t bit_shift = 0)
       : type_(Type::kRegister), register_id_(id), bit_size_(bit_size), bit_shift_(bit_shift) {}
 
   Type type() const { return type_; }
@@ -68,7 +68,7 @@ class ExprValueSource {
   uint64_t address() const { return address_; }
 
   // Valid when type_ == kRegister.
-  debug_ipc::RegisterID register_id() const { return register_id_; }
+  debug::RegisterID register_id() const { return register_id_; }
 
   // Number of bits used for bitfields. 0 means it is not a bitfield and all bits are used.
   uint32_t bit_size() const { return bit_size_; }
@@ -120,7 +120,7 @@ class ExprValueSource {
  private:
   Type type_ = Type::kTemporary;
   uint64_t address_ = 0;
-  debug_ipc::RegisterID register_id_ = debug_ipc::RegisterID::kUnknown;
+  debug::RegisterID register_id_ = debug::RegisterID::kUnknown;
 
   uint32_t bit_size_ = 0;
   uint32_t bit_shift_ = 0;

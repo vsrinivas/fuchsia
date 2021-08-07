@@ -10,6 +10,7 @@
 #include <set>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
@@ -18,18 +19,16 @@
 #include "src/developer/debug/zxdb/console/string_formatters.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterID;
-
 namespace zxdb {
 
 namespace {
 
+using debug::RegisterID;
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 
 void PushName(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
-  row->emplace_back(RegisterIDToString(reg.id), color);
+  row->emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
 }
 
 // A nonzero length will case that number of bytes to be printed.
@@ -54,7 +53,7 @@ TextForegroundColor GetRowColor(size_t table_len) {
 
 std::vector<OutputBuffer> DescribeRflags(const Register& rflags, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(rflags.id), color);
+  result.emplace_back(debug_ipc::RegisterIDToString(rflags.id), color);
 
   uint32_t value = static_cast<uint32_t>(rflags.GetValue());
 
@@ -146,7 +145,7 @@ void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out
     } else if (value_set.find(reg.id) != value_set.end()) {
       value_registers.push_back(&reg);
     } else {
-      FX_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << RegisterIDToString(reg.id);
+      FX_NOTREACHED() << "UNCATEGORIZED FP REGISTER: " << debug_ipc::RegisterIDToString(reg.id);
     }
   }
 
@@ -264,7 +263,7 @@ void FormatVectorRegistersX64(const FormatRegisterOptions& options,
 
 std::vector<OutputBuffer> FormatDr6(const Register& dr6, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(RegisterIDToString(dr6.id), color);
+  result.emplace_back(debug_ipc::RegisterIDToString(dr6.id), color);
 
   // Write as padded 32-bit value.
   uint32_t value = static_cast<uint32_t>(dr6.GetValue());
@@ -287,7 +286,7 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
   auto& first_row = rows->back();
 
   // First row gets the name and raw value (padded 32 bits).
-  first_row.emplace_back(RegisterIDToString(dr7.id), color);
+  first_row.emplace_back(debug_ipc::RegisterIDToString(dr7.id), color);
   uint32_t value = static_cast<uint32_t>(dr7.GetValue());
   first_row.emplace_back(fxl::StringPrintf("0x%08x", value), color);
 

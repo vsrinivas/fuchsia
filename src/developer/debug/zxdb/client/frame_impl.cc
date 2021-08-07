@@ -106,9 +106,9 @@ void FrameImpl::GetRegisterCategoryAsync(
   return;
 }
 
-void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void FrameImpl::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                               fit::callback<void(const Err&)> cb) {
-  const debug_ipc::RegisterInfo* info = InfoForRegister(id);
+  const debug_ipc::RegisterInfo* info = debug_ipc::InfoForRegister(id);
   FX_DCHECK(info);                      // Should always be a valid register.
   FX_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
 
@@ -286,7 +286,7 @@ bool FrameImpl::EnsureBasePointer() {
 void FrameImpl::SaveRegisterUpdates(std::vector<Register> regs) {
   std::map<RegisterCategory, std::vector<Register>> categorized;
   for (auto& reg : regs) {
-    RegisterCategory cat = RegisterIDToCategory(reg.id);
+    RegisterCategory cat = debug_ipc::RegisterIDToCategory(reg.id);
     FX_DCHECK(cat != RegisterCategory::kNone);
     categorized[cat].push_back(std::move(reg));
   }

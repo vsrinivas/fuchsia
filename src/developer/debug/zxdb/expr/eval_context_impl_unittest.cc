@@ -106,8 +106,8 @@ void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context, fxl::RefPtr<
   });
 }
 
-const debug_ipc::RegisterID kDWARFReg0ID = debug_ipc::RegisterID::kARMv8_x0;
-const debug_ipc::RegisterID kDWARFReg1ID = debug_ipc::RegisterID::kARMv8_x1;
+const debug::RegisterID kDWARFReg0ID = debug::RegisterID::kARMv8_x0;
+const debug::RegisterID kDWARFReg1ID = debug::RegisterID::kARMv8_x1;
 
 }  // namespace
 
@@ -435,11 +435,11 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   // The value source should map back to the input register.
   const ExprValueSource& source = reg.value.value().source();
   EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x0, source.register_id());
+  EXPECT_EQ(debug::RegisterID::kARMv8_x0, source.register_id());
   EXPECT_FALSE(source.is_bitfield());
 
   // This register is synchronously known unavailable.
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x2, true, std::vector<uint8_t>{});
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_x2, true, std::vector<uint8_t>{});
   reg.called = false;
   GetNamedValue(c_context, "x2", &reg);
   ASSERT_TRUE(reg.called);
@@ -447,7 +447,7 @@ TEST_F(EvalContextImplTest, RegisterByName) {
   EXPECT_EQ("Register x2 unavailable in this context.", reg.value.err().msg());
 
   // This register is synchronously unavailable.
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x3, false, std::vector<uint8_t>{});
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_x3, false, std::vector<uint8_t>{});
   reg.called = false;
   GetNamedValue(c_context, "x3", &reg);
   ASSERT_FALSE(reg.called);
@@ -507,7 +507,7 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   // Value for the "w0" register. The mock data provider doesn't extract sub-registers (unlike the
   // real one) so we need to provide the exact enum the caller will request.
   constexpr uint64_t kRegValue = 0x44332211;
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_w0, true, {0x11, 0x22, 0x33, 0x44});
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_w0, true, {0x11, 0x22, 0x33, 0x44});
   auto context = MakeEvalContext();
 
   // "w0" is the ARM64 way to refer to the low 32-bits of the "x0" register we set above.
@@ -523,7 +523,7 @@ TEST_F(EvalContextImplTest, RegisterShort) {
   // Check source mapping.
   const ExprValueSource& source = reg.value.value().source();
   EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_w0, source.register_id());
+  EXPECT_EQ(debug::RegisterID::kARMv8_w0, source.register_id());
   EXPECT_FALSE(source.is_bitfield());
 }
 
@@ -536,13 +536,13 @@ TEST_F(EvalContextImplTest, FloatRegisterByName) {
   constexpr double kDoubleValue = 3.14;
   std::vector<uint8_t> double_data(sizeof(double));
   memcpy(double_data.data(), &kDoubleValue, sizeof(double));
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_d0, false, double_data);
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_d0, false, double_data);
 
   // Same for the "s1" register.
   constexpr float kFloatValue = 2.99;
   std::vector<uint8_t> float_data(sizeof(float));
   memcpy(float_data.data(), &kFloatValue, sizeof(float));
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_s1, false, float_data);
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_s1, false, float_data);
 
   auto c_context = MakeEvalContext(ExprLanguage::kC);
   ValueResult reg;
@@ -571,7 +571,7 @@ TEST_F(EvalContextImplTest, VectorRegister) {
   // 128-bit vector register.
   std::vector<uint8_t> data{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
                             0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_v0, true, data);
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_v0, true, data);
   auto context = MakeEvalContext();
 
   ValueResult reg;
@@ -588,7 +588,7 @@ TEST_F(EvalContextImplTest, VectorRegister) {
   // Check source mapping.
   const ExprValueSource& source = reg.value.value().source();
   EXPECT_EQ(ExprValueSource::Type::kRegister, source.type());
-  EXPECT_EQ(debug_ipc::RegisterID::kARMv8_v0, source.register_id());
+  EXPECT_EQ(debug::RegisterID::kARMv8_v0, source.register_id());
   EXPECT_FALSE(source.is_bitfield());
 }
 
@@ -601,8 +601,8 @@ TEST_F(EvalContextImplTest, DataResult) {
                                   llvm::dwarf::DW_OP_piece, 0x04,      // Pick low 4 bytes of reg0.
                                   llvm::dwarf::DW_OP_reg1,             // High bytes in reg1.
                                   llvm::dwarf::DW_OP_piece, 0x04})));  // Pick low 4 of reg1.
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x0, true, 1);
-  provider()->AddRegisterValue(debug_ipc::RegisterID::kARMv8_x1, true, 2);
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_x0, true, 1);
+  provider()->AddRegisterValue(debug::RegisterID::kARMv8_x1, true, 2);
 
   auto block = MakeCodeBlock();
   block->set_variables({LazySymbol(variable)});

@@ -15,13 +15,13 @@ namespace {
 class GatherRegisters {
  public:
   GatherRegisters(SymbolDataProvider::GetRegistersCallback cb,
-                  std::map<debug_ipc::RegisterID, std::vector<uint8_t>> initial_values,
+                  std::map<debug::RegisterID, std::vector<uint8_t>> initial_values,
                   int remaining_values)
       : cb_(std::move(cb)),
         values_(std::move(initial_values)),
         remaining_values_(remaining_values) {}
 
-  void SupplyReply(const Err& err, debug_ipc::RegisterID reg, std::vector<uint8_t> value) {
+  void SupplyReply(const Err& err, debug::RegisterID reg, std::vector<uint8_t> value) {
     if (failed_)
       return;  // Already issued failure, ignore other data.
     if (err.has_error()) {
@@ -41,7 +41,7 @@ class GatherRegisters {
  private:
   SymbolDataProvider::GetRegistersCallback cb_;
   bool failed_ = false;
-  std::map<debug_ipc::RegisterID, std::vector<uint8_t>> values_;
+  std::map<debug::RegisterID, std::vector<uint8_t>> values_;
   int remaining_values_;
 };
 
@@ -58,27 +58,27 @@ fxl::RefPtr<SymbolDataProvider> SymbolDataProvider::GetEntryDataProvider() const
 }
 
 std::optional<containers::array_view<uint8_t>> SymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
+    debug::RegisterID id) {
   return containers::array_view<uint8_t>();  // Known to be unknown.
 }
 
-void SymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback cb) {
+void SymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {
   debug::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(NoFrameErr(), std::vector<uint8_t>()); });
 }
 
-void SymbolDataProvider::GetRegisters(const std::vector<debug_ipc::RegisterID>& regs,
+void SymbolDataProvider::GetRegisters(const std::vector<debug::RegisterID>& regs,
                                       GetRegistersCallback cb) {
   // This currently assumes we're only requesting a couple of registers. So for simplicity this just
   // does asynchronous requests for each if they're not available synchronously. If we start
   // requesting many registers, the registers in the same register category could be processed at
   // the same time with many fewer callbacks.
 
-  std::map<debug_ipc::RegisterID, std::vector<uint8_t>> sync_values;  // Data read synchronosly.
-  std::vector<debug_ipc::RegisterID> async_requests;                  // Values to collect later.
+  std::map<debug::RegisterID, std::vector<uint8_t>> sync_values;  // Data read synchronosly.
+  std::vector<debug::RegisterID> async_requests;                  // Values to collect later.
 
   // Fill in all synchronously known registers and schedule callbacks for the rest.
-  for (debug_ipc::RegisterID reg : regs) {
+  for (debug::RegisterID reg : regs) {
     if (std::optional<containers::array_view<uint8_t>> view_or = GetRegister(reg)) {
       sync_values[reg] = std::vector<uint8_t>(view_or->begin(), view_or->end());
     } else {
@@ -94,14 +94,14 @@ void SymbolDataProvider::GetRegisters(const std::vector<debug_ipc::RegisterID>& 
   // Schedule the async requests.
   auto gather = std::make_shared<GatherRegisters>(std::move(cb), std::move(sync_values),
                                                   async_requests.size());
-  for (debug_ipc::RegisterID reg : async_requests) {
+  for (debug::RegisterID reg : async_requests) {
     GetRegisterAsync(reg, [gather, reg](const Err& err, std::vector<uint8_t> value) mutable {
       gather->SupplyReply(err, reg, std::move(value));
     });
   }
 }
 
-void SymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void SymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                                        WriteCallback cb) {
   debug::MessageLoop::Current()->PostTask(FROM_HERE,
                                           [cb = std::move(cb)]() mutable { cb(NoFrameErr()); });

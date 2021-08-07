@@ -211,7 +211,7 @@ TEST_F(MinidumpTest, Registers) {
   debug_ipc::ReadRegistersReply reply;
 
   using C = debug_ipc::RegisterCategory;
-  using R = debug_ipc::RegisterID;
+  using R = debug::RegisterID;
 
   request.id.process = kTestExampleMinidumpKOID;
   request.id.thread = kTestExampleMinidumpThreadKOID;

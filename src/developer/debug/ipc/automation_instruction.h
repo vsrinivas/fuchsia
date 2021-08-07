@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 
 namespace debug_ipc {
 
@@ -59,7 +59,7 @@ enum AutomationOperandKind : uint32_t {
 
 struct AutomationOperand {
  public:
-  void InitRegister(debug_ipc::RegisterID index) {
+  void InitRegister(debug::RegisterID index) {
     kind_ = AutomationOperandKind::kRegister;
     index_ = static_cast<uint32_t>(index);
   }
@@ -71,17 +71,17 @@ struct AutomationOperand {
     kind_ = AutomationOperandKind::kStackSlot;
     index_ = slot_offset;
   }
-  void InitRegisterTimesConstant(debug_ipc::RegisterID index, uint32_t value) {
+  void InitRegisterTimesConstant(debug::RegisterID index, uint32_t value) {
     kind_ = AutomationOperandKind::kRegisterTimesConstant;
     index_ = static_cast<uint32_t>(index);
     value_ = value;
   }
-  void InitIndirectUInt32(debug_ipc::RegisterID index, uint32_t value) {
+  void InitIndirectUInt32(debug::RegisterID index, uint32_t value) {
     kind_ = AutomationOperandKind::kIndirectUInt32;
     index_ = static_cast<uint32_t>(index);
     value_ = value;
   }
-  void InitIndirectUInt64(debug_ipc::RegisterID index, uint32_t value) {
+  void InitIndirectUInt64(debug::RegisterID index, uint32_t value) {
     kind_ = AutomationOperandKind::kIndirectUInt64;
     index_ = static_cast<uint32_t>(index);
     value_ = value;
@@ -131,9 +131,7 @@ struct AutomationOperand {
     }
   }
 
-  debug_ipc::RegisterID register_index() const {
-    return static_cast<debug_ipc::RegisterID>(index_);
-  }
+  debug::RegisterID register_index() const { return static_cast<debug::RegisterID>(index_); }
   uint32_t slot_offset() const { return index_; }
   uint32_t index() const { return index_; }
 

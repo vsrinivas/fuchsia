@@ -12,7 +12,7 @@ TEST(AutomationInstruction, OperandToString) {
   AutomationOperand operand;
   EXPECT_EQ(operand.ToString(), "zero");
 
-  operand.InitRegister(debug_ipc::RegisterID::kX64_rax);
+  operand.InitRegister(debug::RegisterID::kX64_rax);
   EXPECT_EQ(operand.ToString(), "rax");
 
   operand.InitConstant(12345);
@@ -21,13 +21,13 @@ TEST(AutomationInstruction, OperandToString) {
   operand.InitStackSlot(0x10);
   EXPECT_EQ(operand.ToString(), "[xsp + 0x10]/64");
 
-  operand.InitRegisterTimesConstant(debug_ipc::RegisterID::kARMv8_x0, 32);
+  operand.InitRegisterTimesConstant(debug::RegisterID::kARMv8_x0, 32);
   EXPECT_EQ(operand.ToString(), "x0 * 32");
 
-  operand.InitIndirectUInt32(debug_ipc::RegisterID::kARMv8_x1, 0x40);
+  operand.InitIndirectUInt32(debug::RegisterID::kARMv8_x1, 0x40);
   EXPECT_EQ(operand.ToString(), "[x1 + 0x40]/32");
 
-  operand.InitIndirectUInt64(debug_ipc::RegisterID::kARMv8_x2, 0x80);
+  operand.InitIndirectUInt64(debug::RegisterID::kARMv8_x2, 0x80);
   EXPECT_EQ(operand.ToString(), "[x2 + 0x80]/64");
 
   operand.InitIndirectUInt32Loop(0x100);
@@ -42,7 +42,7 @@ TEST(AutomationInstruction, OperandToString) {
 
 TEST(AutomationInstruction, ConditionToString) {
   AutomationOperand operand;
-  operand.InitRegister(debug_ipc::RegisterID::kX64_rcx);
+  operand.InitRegister(debug::RegisterID::kX64_rcx);
   AutomationCondition condition;
   EXPECT_EQ(condition.ToString(), "false");
 
@@ -69,7 +69,7 @@ TEST(AutomationInstruction, InstructionToString) {
   operand_2.InitConstant(67890);
   operand_3.InitIndirectUInt32Loop(128);
   operand_4.InitIndirectUInt64Loop(256);
-  operand_5.InitRegister(debug_ipc::RegisterID::kX64_rdx);
+  operand_5.InitRegister(debug::RegisterID::kX64_rdx);
   std::vector<AutomationCondition> condition_vect;
   AutomationInstruction instruction;
   EXPECT_EQ(instruction.ToString(), "nop\n");

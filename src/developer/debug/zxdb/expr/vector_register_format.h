@@ -10,7 +10,7 @@
 #include <optional>
 #include <vector>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 namespace zxdb {
@@ -50,7 +50,7 @@ const char* VectorRegisterFormatToString(VectorRegisterFormat fmt);
 std::optional<VectorRegisterFormat> StringToVectorRegisterFormat(const std::string& str);
 
 // Converts the given vector register data to an array of the given format.
-ExprValue VectorRegisterToValue(debug_ipc::RegisterID id, VectorRegisterFormat fmt,
+ExprValue VectorRegisterToValue(debug::RegisterID id, VectorRegisterFormat fmt,
                                 std::vector<uint8_t> data);
 
 }  // namespace zxdb

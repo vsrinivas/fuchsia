@@ -10,7 +10,7 @@
 namespace debug_ipc {
 
 // Creates a register with a data pattern within it. The pattern will 0x010203 ... (little-endian).
-Register CreateRegisterWithTestData(RegisterID id, size_t length);
+Register CreateRegisterWithTestData(debug::RegisterID id, size_t length);
 
 }  // namespace debug_ipc
 

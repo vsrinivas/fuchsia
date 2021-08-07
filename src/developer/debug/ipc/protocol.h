@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/shared/status.h"
 

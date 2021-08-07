@@ -52,7 +52,7 @@ class InlineFrame final : public Frame {
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override {
     return physical_frame_->GetRegisterCategoryAsync(category, always_request, std::move(cb));
   }
-  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+  void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override {
     return physical_frame_->WriteRegister(id, std::move(data), std::move(cb));
   }

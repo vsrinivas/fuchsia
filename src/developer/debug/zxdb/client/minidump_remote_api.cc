@@ -18,9 +18,9 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 
+using debug::RegisterID;
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterID;
 
 namespace zxdb {
 
@@ -89,7 +89,7 @@ void Succeed(fit::callback<void(const Err&, ReplyType)> cb, ReplyType r) {
 }
 
 template <typename ValueType>
-void AddReg(debug_ipc::RegisterID id, const ValueType& value, std::vector<Register>* output) {
+void AddReg(debug::RegisterID id, const ValueType& value, std::vector<Register>* output) {
   auto& reg = output->emplace_back();
   reg.id = id;
   reg.data.resize(sizeof(ValueType));

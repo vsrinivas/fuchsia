@@ -59,7 +59,7 @@ TEST_F(VerbFinishTest, ReturnValue) {
   EXPECT_EQ(debug::Arch::kX64, GetArch());
   auto return_frame = std::make_unique<MockFrame>(&session(), thread(), return_location, kReturnSP);
   MockSymbolDataProvider* provider = return_frame->GetMockSymbolDataProvider();
-  provider->AddRegisterValue(debug_ipc::RegisterID::kX64_rax, true, kReturnValuePtr);
+  provider->AddRegisterValue(debug::RegisterID::kX64_rax, true, kReturnValuePtr);
   provider->AddMemory(kReturnValuePtr, kPointedToData);
 
   // Tell the debugger to finish this frame.

@@ -18,6 +18,7 @@ namespace zxdb {
 
 namespace {
 
+using debug::RegisterID;
 using ::zxdb::internal::MemoryAnalysis;
 using namespace debug_ipc;
 

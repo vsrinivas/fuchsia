@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"

@@ -10,6 +10,8 @@
 #include <optional>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
@@ -87,7 +89,7 @@ class Frame : public ClientObject {
   //
   // This will fail if the current frame is not the top physical frame (otherwise it will clobber
   // the register for the top frame).
-  virtual void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+  virtual void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                              fit::callback<void(const Err&)> cb) = 0;
 
   // The frame base pointer.

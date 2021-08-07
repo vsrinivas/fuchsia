@@ -15,10 +15,10 @@ namespace arch {
 
 TEST(ArchArm64, WriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_x0, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_x3, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_lr, 8));
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_pc, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_x0, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_x3, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_lr, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_pc, 8));
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
@@ -34,9 +34,9 @@ TEST(ArchArm64, WriteGeneralRegs) {
   EXPECT_EQ(out.pc, 0x0102030405060708u);
 
   regs.clear();
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_x0, static_cast<uint64_t>(0xaabb));
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_x15, static_cast<uint64_t>(0xdead));
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_pc, static_cast<uint64_t>(0xbeef));
+  regs.emplace_back(debug::RegisterID::kARMv8_x0, static_cast<uint64_t>(0xaabb));
+  regs.emplace_back(debug::RegisterID::kARMv8_x15, static_cast<uint64_t>(0xdead));
+  regs.emplace_back(debug::RegisterID::kARMv8_pc, static_cast<uint64_t>(0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
   ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug::ZxStatusToString(res);
@@ -54,11 +54,11 @@ TEST(ArchArm64, InvalidWriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
 
   // Invalid length.
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_v0, 4));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_v0, 4));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 
   // Invalid (non-canonical) register.
-  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_w3, 8));
+  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_w3, 8));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 
@@ -69,15 +69,15 @@ TEST(ArchArm64, WriteVectorRegs) {
   v0_value.resize(16);
   v0_value.front() = 0x42;
   v0_value.back() = 0x12;
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_v0, v0_value);
+  regs.emplace_back(debug::RegisterID::kARMv8_v0, v0_value);
 
   std::vector<uint8_t> v31_value = v0_value;
   v31_value.front()++;
   v31_value.back()++;
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_v31, v31_value);
+  regs.emplace_back(debug::RegisterID::kARMv8_v31, v31_value);
 
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_fpcr, std::vector<uint8_t>{5, 6, 7, 8});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_fpsr, std::vector<uint8_t>{9, 0, 1, 2});
+  regs.emplace_back(debug::RegisterID::kARMv8_fpcr, std::vector<uint8_t>{5, 6, 7, 8});
+  regs.emplace_back(debug::RegisterID::kARMv8_fpsr, std::vector<uint8_t>{9, 0, 1, 2});
 
   zx_thread_state_vector_regs_t out = {};
   zx_status_t res = WriteVectorRegisters(regs, &out);
@@ -94,15 +94,15 @@ TEST(ArchArm64, WriteVectorRegs) {
 
 TEST(ArchArm64, WriteDebugRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr0_el1, std::vector<uint8_t>{1, 2, 3, 4});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr1_el1, std::vector<uint8_t>{2, 3, 4, 5});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr15_el1, std::vector<uint8_t>{3, 4, 5, 6});
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr0_el1, std::vector<uint8_t>{1, 2, 3, 4});
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr1_el1, std::vector<uint8_t>{2, 3, 4, 5});
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr15_el1, std::vector<uint8_t>{3, 4, 5, 6});
 
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbvr0_el1,
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbvr0_el1,
                     std::vector<uint8_t>{4, 5, 6, 7, 8, 9, 0, 1});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbvr1_el1,
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbvr1_el1,
                     std::vector<uint8_t>{5, 6, 7, 8, 9, 0, 1, 2});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbvr15_el1,
+  regs.emplace_back(debug::RegisterID::kARMv8_dbgbvr15_el1,
                     std::vector<uint8_t>{6, 7, 8, 9, 0, 1, 2, 3});
 
   // TODO(bug 40992) Add ARM64 hardware watchpoint registers here.
@@ -128,7 +128,7 @@ TEST(ArchArm64, ReadTPIDR) {
 
   const debug_ipc::Register* found = nullptr;
   for (const auto& reg : regs_out) {
-    if (reg.id == debug_ipc::RegisterID::kARMv8_tpidr) {
+    if (reg.id == debug::RegisterID::kARMv8_tpidr) {
       found = &reg;
       break;
     }

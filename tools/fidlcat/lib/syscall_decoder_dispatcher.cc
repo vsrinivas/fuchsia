@@ -207,7 +207,7 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(
 }
 
 bool SyscallInputOutputBase::GetAutomationInstructions(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
+    const std::vector<debug::RegisterID>& argument_indexes, bool is_invoked,
     const std::vector<debug_ipc::AutomationCondition>& conditions, Syscall& syscall) {
   return false;
 }
@@ -487,7 +487,7 @@ void Syscall::ComputeStatistics(const OutputEvent* event) const {
   }
 }
 
-bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes, debug::Arch arch,
+bool ComputeAutomation(const std::vector<debug::RegisterID>& argument_indexes, debug::Arch arch,
                        const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,
                        bool is_invoked, Syscall& syscall) {
   bool fully_automated = true;
@@ -512,17 +512,15 @@ void Syscall::ComputeAutomation(debug::Arch arch) {
     return;
   }
 
-  static const std::vector<debug_ipc::RegisterID> amd64_argument_indexes = {
-      debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
-      debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
-      debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
+  static const std::vector<debug::RegisterID> amd64_argument_indexes = {
+      debug::RegisterID::kX64_rdi, debug::RegisterID::kX64_rsi, debug::RegisterID::kX64_rdx,
+      debug::RegisterID::kX64_rcx, debug::RegisterID::kX64_r8,  debug::RegisterID::kX64_r9};
 
-  static const std::vector<debug_ipc::RegisterID> arm64_argument_indexes = {
-      debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
-      debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
-      debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
-      debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
-  const std::vector<debug_ipc::RegisterID>* arg_index;
+  static const std::vector<debug::RegisterID> arm64_argument_indexes = {
+      debug::RegisterID::kARMv8_x0, debug::RegisterID::kARMv8_x1, debug::RegisterID::kARMv8_x2,
+      debug::RegisterID::kARMv8_x3, debug::RegisterID::kARMv8_x4, debug::RegisterID::kARMv8_x5,
+      debug::RegisterID::kARMv8_x6, debug::RegisterID::kARMv8_x7};
+  const std::vector<debug::RegisterID>* arg_index;
   if (arch == debug::Arch::kX64) {
     arg_index = &amd64_argument_indexes;
   } else if (arch == debug::Arch::kArm64) {

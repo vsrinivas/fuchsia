@@ -101,7 +101,7 @@ TEST_F(VerbPrint, VectorRegisterFormat) {
   mock_remote_api()->SetRegisterCategory(
       debug_ipc::RegisterCategory::kVector,
       {debug_ipc::Register(
-          debug_ipc::RegisterID::kX64_xmm0,
+          debug::RegisterID::kX64_xmm0,
           std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf})});
 
   console().ProcessInputLine("set vector-format i64");

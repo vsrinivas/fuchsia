@@ -9,44 +9,43 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
-bool AbiArm64::IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const {
+bool AbiArm64::IsRegisterCalleeSaved(debug::RegisterID reg) const {
   switch (reg) {
-    case debug_ipc::RegisterID::kARMv8_x19:
-    case debug_ipc::RegisterID::kARMv8_w19:  // Include the word versions as well.
-    case debug_ipc::RegisterID::kARMv8_x20:
-    case debug_ipc::RegisterID::kARMv8_w20:
-    case debug_ipc::RegisterID::kARMv8_x21:
-    case debug_ipc::RegisterID::kARMv8_w21:
-    case debug_ipc::RegisterID::kARMv8_x22:
-    case debug_ipc::RegisterID::kARMv8_w22:
-    case debug_ipc::RegisterID::kARMv8_x23:
-    case debug_ipc::RegisterID::kARMv8_w23:
-    case debug_ipc::RegisterID::kARMv8_x24:
-    case debug_ipc::RegisterID::kARMv8_w24:
-    case debug_ipc::RegisterID::kARMv8_x25:
-    case debug_ipc::RegisterID::kARMv8_w25:
-    case debug_ipc::RegisterID::kARMv8_x26:
-    case debug_ipc::RegisterID::kARMv8_w26:
-    case debug_ipc::RegisterID::kARMv8_x27:
-    case debug_ipc::RegisterID::kARMv8_w27:
-    case debug_ipc::RegisterID::kARMv8_x28:
-    case debug_ipc::RegisterID::kARMv8_w28:
-    case debug_ipc::RegisterID::kARMv8_x29:
-    case debug_ipc::RegisterID::kARMv8_lr:
-    case debug_ipc::RegisterID::kARMv8_w30:
-    case debug_ipc::RegisterID::kARMv8_x30:  // Alias for LR.
-    case debug_ipc::RegisterID::kARMv8_sp:
-    case debug_ipc::RegisterID::kARMv8_pc:
+    case debug::RegisterID::kARMv8_x19:
+    case debug::RegisterID::kARMv8_w19:  // Include the word versions as well.
+    case debug::RegisterID::kARMv8_x20:
+    case debug::RegisterID::kARMv8_w20:
+    case debug::RegisterID::kARMv8_x21:
+    case debug::RegisterID::kARMv8_w21:
+    case debug::RegisterID::kARMv8_x22:
+    case debug::RegisterID::kARMv8_w22:
+    case debug::RegisterID::kARMv8_x23:
+    case debug::RegisterID::kARMv8_w23:
+    case debug::RegisterID::kARMv8_x24:
+    case debug::RegisterID::kARMv8_w24:
+    case debug::RegisterID::kARMv8_x25:
+    case debug::RegisterID::kARMv8_w25:
+    case debug::RegisterID::kARMv8_x26:
+    case debug::RegisterID::kARMv8_w26:
+    case debug::RegisterID::kARMv8_x27:
+    case debug::RegisterID::kARMv8_w27:
+    case debug::RegisterID::kARMv8_x28:
+    case debug::RegisterID::kARMv8_w28:
+    case debug::RegisterID::kARMv8_x29:
+    case debug::RegisterID::kARMv8_lr:
+    case debug::RegisterID::kARMv8_w30:
+    case debug::RegisterID::kARMv8_x30:  // Alias for LR.
+    case debug::RegisterID::kARMv8_sp:
+    case debug::RegisterID::kARMv8_pc:
       return true;
     default:
       return false;
   }
 }
 
-std::optional<debug_ipc::RegisterID> AbiArm64::GetReturnRegisterForBaseType(
-    const BaseType* base_type) {
+std::optional<debug::RegisterID> AbiArm64::GetReturnRegisterForBaseType(const BaseType* base_type) {
   switch (base_type->base_type()) {
     case BaseType::kBaseTypeFloat:
       // Floats are returned as the low bits of the "v0" register. The caller can extract the

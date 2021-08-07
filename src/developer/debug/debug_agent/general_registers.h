@@ -10,7 +10,8 @@
 #include <optional>
 #include <vector>
 
-#include <src/developer/debug/ipc/register_desc.h>
+#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 
 namespace debug_ipc {
 struct Register;
@@ -51,7 +52,7 @@ class GeneralRegisters {
   // TODO: Maintain a better id <-> platform register mapping and use here and in the arch files to
   // avoid this unnecessary std::vector creation and unify with the arch::SaveGeneralRegisters()
   // implementation.
-  std::optional<uint64_t> GetRegister(debug_ipc::RegisterID reg_id) const;
+  std::optional<uint64_t> GetRegister(debug::RegisterID reg_id) const;
 
  private:
   zx_thread_state_general_regs regs_;

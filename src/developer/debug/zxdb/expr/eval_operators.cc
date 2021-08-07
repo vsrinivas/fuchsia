@@ -8,6 +8,7 @@
 
 #include <type_traits>
 
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
@@ -44,8 +45,8 @@ namespace zxdb {
 
 namespace {
 
+using debug::RegisterID;
 using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterID;
 using debug_ipc::RegisterInfo;
 
 // Backend for register assignment that takes the known current value of the destination register

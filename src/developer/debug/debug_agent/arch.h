@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/register_desc.h"
 
 namespace debug_agent {
 

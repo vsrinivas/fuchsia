@@ -16,6 +16,7 @@ namespace debug_ipc {
 namespace {
 
 using debug::Arch;
+using debug::RegisterID;
 
 // clang-format off
 

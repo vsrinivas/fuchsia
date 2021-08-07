@@ -38,7 +38,7 @@ void DwarfExprEvalToValue(const fxl::RefPtr<EvalContext>& context, DwarfExprEval
     // When the result was read directly from a register or is known to be constant, preserve that
     // so the user can potentially write to it (or give a good error message about writing to it).
     ExprValueSource source(ExprValueSource::Type::kTemporary);
-    if (eval.current_register_id() != debug_ipc::RegisterID::kUnknown)
+    if (eval.current_register_id() != debug::RegisterID::kUnknown)
       source = ExprValueSource(eval.current_register_id());
     else if (eval.result_is_constant())
       source = ExprValueSource(ExprValueSource::Type::kConstant);

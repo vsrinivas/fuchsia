@@ -13,12 +13,11 @@ namespace zxdb {
 class AbiNull : public Abi {
  public:
   // Abi implementation.
-  bool IsRegisterCalleeSaved(debug_ipc::RegisterID reg) const final { return false; }
-  debug_ipc::RegisterID GetReturnRegisterForMachineInt() const final {
-    return debug_ipc::RegisterID::kUnknown;
+  bool IsRegisterCalleeSaved(debug::RegisterID reg) const final { return false; }
+  debug::RegisterID GetReturnRegisterForMachineInt() const final {
+    return debug::RegisterID::kUnknown;
   }
-  std::optional<debug_ipc::RegisterID> GetReturnRegisterForBaseType(
-      const BaseType* base_type) final {
+  std::optional<debug::RegisterID> GetReturnRegisterForBaseType(const BaseType* base_type) final {
     return std::nullopt;
   }
   std::optional<CollectionReturn> GetCollectionReturnByRefLocation(

@@ -28,7 +28,7 @@ namespace debug_agent {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 using ModuleVector = std::vector<debug_ipc::Module>;
 

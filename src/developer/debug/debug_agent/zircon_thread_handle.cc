@@ -198,7 +198,7 @@ std::vector<debug_ipc::Register> ZirconThreadHandle::WriteRegisters(
     auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
     if (cat_type == debug_ipc::RegisterCategory::kNone) {
       FX_LOGS(WARNING) << "Attempting to change register without category: "
-                       << RegisterIDToString(reg.id);
+                       << debug_ipc::RegisterIDToString(reg.id);
       continue;
     }
 

@@ -21,7 +21,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 // Returns a new vector consisting of the first |len| bytes of the given vector.
 std::vector<uint8_t> DataPrefix(const std::vector<uint8_t>& source, size_t len) {

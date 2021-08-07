@@ -44,7 +44,7 @@ fxl::RefPtr<SymbolDataProvider> CallSiteSymbolDataProvider::GetEntryDataProvider
 }
 
 std::optional<containers::array_view<uint8_t>> CallSiteSymbolDataProvider::GetRegister(
-    debug_ipc::RegisterID id) {
+    debug::RegisterID id) {
   // The previous frame's data provider should have all the callee-saved registers. Any additional
   // registers provided by the CallSiteParameters can't always be evaluated synchronously, so we
   // don't try. Therefore, anything synchronous comes from the saved registers in the caller.
@@ -60,8 +60,7 @@ std::optional<containers::array_view<uint8_t>> CallSiteSymbolDataProvider::GetRe
   return containers::array_view<uint8_t>();
 }
 
-void CallSiteSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
-                                                  GetRegisterCallback cb) {
+void CallSiteSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {
   fxl::RefPtr<CallSiteParameter> param = ParameterForRegister(id);
   if (!param || param->value_expr().empty()) {
     // No CallSiteParameter. If this is a caller-saved register, we can use the ones we have.
@@ -104,7 +103,7 @@ void CallSiteSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
        expr = param->value_expr()]() { evaluator->Eval(provider, symbol_context, expr); });
 }
 
-void CallSiteSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void CallSiteSymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                                                WriteCallback cb) {
   // We don't support writing registers into previous stack frames.
   cb(Err("Writing registers is not supported in non-topmost stack frames."));
@@ -122,12 +121,12 @@ uint64_t CallSiteSymbolDataProvider::GetCanonicalFrameAddress() const {
   return frame_provider_->GetCanonicalFrameAddress();
 }
 
-bool CallSiteSymbolDataProvider::IsRegisterCalleeSaved(debug_ipc::RegisterID id) {
+bool CallSiteSymbolDataProvider::IsRegisterCalleeSaved(debug::RegisterID id) {
   return process() && process()->session()->arch_info().abi()->IsRegisterCalleeSaved(id);
 }
 
 fxl::RefPtr<CallSiteParameter> CallSiteSymbolDataProvider::ParameterForRegister(
-    debug_ipc::RegisterID id) {
+    debug::RegisterID id) {
   if (!call_site_)
     return nullptr;
 

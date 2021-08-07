@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CALL_SITE_SYMBOL_DATA_PROVIDER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_CALL_SITE_SYMBOL_DATA_PROVIDER_H_
 
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 
 namespace zxdb {
@@ -28,10 +29,9 @@ class CallSiteSymbolDataProvider : public ProcessSymbolDataProvider {
  public:
   // SymbolDataProvider implementation:
   fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const override;
-  std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
-  void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
-  void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
-                     WriteCallback cb) override;
+  std::optional<containers::array_view<uint8_t>> GetRegister(debug::RegisterID id) override;
+  void GetRegisterAsync(debug::RegisterID id, GetRegisterCallback callback) override;
+  void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data, WriteCallback cb) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetFrameBaseCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
@@ -58,11 +58,11 @@ class CallSiteSymbolDataProvider : public ProcessSymbolDataProvider {
   // the frame_provider_.
   //
   // TODO(fxbug.dev/74320) remove this when the unwinder only reports registers it knows about.
-  bool IsRegisterCalleeSaved(debug_ipc::RegisterID id);
+  bool IsRegisterCalleeSaved(debug::RegisterID id);
 
   // Looks up to see if there's a matching call site parameter for the given register. Returns if
   // if so, or nullptr if no match.
-  fxl::RefPtr<CallSiteParameter> ParameterForRegister(debug_ipc::RegisterID id);
+  fxl::RefPtr<CallSiteParameter> ParameterForRegister(debug::RegisterID id);
 
   // Possibly null if no match.
   fxl::RefPtr<CallSite> call_site_;

@@ -12,6 +12,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -138,7 +139,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   bool have_aspace_ = false;
 
   // The register values from frame 0. See AddRegisters().
-  std::map<debug_ipc::RegisterID, uint64_t> frame_0_regs_;
+  std::map<debug::RegisterID, uint64_t> frame_0_regs_;
 };
 
 }  // namespace internal

@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "lib/fit/function.h"
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/data_extractor.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
@@ -114,7 +114,7 @@ class DwarfExprEval {
   // When the result is computed, this will indicate if the result is directly from a register,
   // and if it is, which one. If the current result was the result of some computation and has no
   // direct register source, it will be RegisterID::kUnknown.
-  debug_ipc::RegisterID current_register_id() const { return current_register_id_; }
+  debug::RegisterID current_register_id() const { return current_register_id_; }
 
   // When the result is computed, this will indicate whether it's from a constant source (encoded in
   // the DWARF expression) or is the result of reading some memory or registers.
@@ -310,7 +310,7 @@ class DwarfExprEval {
   // Set when a register value is pushed on the stack and cleared when anything else happens. This
   // allows the user of the expression to determine if the result of the expression is directly from
   // a register (say, to support writing to that value in the future).
-  debug_ipc::RegisterID current_register_id_ = debug_ipc::RegisterID::kUnknown;
+  debug::RegisterID current_register_id_ = debug::RegisterID::kUnknown;
 
   // Tracks whether the current expression uses only constant data. Any operations that read memory
   // or registers should clear this.

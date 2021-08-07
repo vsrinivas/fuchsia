@@ -23,7 +23,7 @@ Err GetUnsupportedReturnErr() {
 }
 
 // Maps a register ID to its value.
-using RegisterValueMap = std::map<debug_ipc::RegisterID, std::vector<uint8_t>>;
+using RegisterValueMap = std::map<debug::RegisterID, std::vector<uint8_t>>;
 
 void GetCollectionReturnByRefValue(const fxl::RefPtr<EvalContext>& context, const Collection* coll,
                                    fxl::RefPtr<Type> return_type, EvalCallback cb) {
@@ -90,7 +90,7 @@ void GetCollectionReturnByValueValue(const fxl::RefPtr<EvalContext>& context,
   FX_DCHECK(!ret.regs.empty());
 
   // Collect the required register values.
-  std::vector<debug_ipc::RegisterID> required_regs;
+  std::vector<debug::RegisterID> required_regs;
   for (const auto& component : ret_or->regs)
     required_regs.push_back(component.reg);
 
@@ -139,7 +139,7 @@ void GetReturnValue(const fxl::RefPtr<EvalContext>& context, const Function* fun
   }
 
   // Everything else should be some normal value that goes in a register.
-  std::optional<debug_ipc::RegisterID> reg_or;
+  std::optional<debug::RegisterID> reg_or;
 
   if (const BaseType* base_type = concrete->As<BaseType>()) {
     if (base_type->base_type() == BaseType::kBaseTypeNone) {

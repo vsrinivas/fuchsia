@@ -305,7 +305,7 @@ Err PopulateRegisters(Frame* frame, const dap::VariablesRequest& req, DebugAdapt
   dap::VariablesResponse response;
   for (auto& reg : *regs) {
     dap::Variable var;
-    var.name = RegisterIDToString(reg.id);
+    var.name = debug_ipc::RegisterIDToString(reg.id);
     uint64_t value = static_cast<uint64_t>(reg.GetValue());
     var.value = to_hex_string(value);
     response.variables.push_back(var);

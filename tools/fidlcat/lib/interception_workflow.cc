@@ -10,7 +10,6 @@
 #include <string>
 #include <thread>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"

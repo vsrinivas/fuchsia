@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "lib/fit/function.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch.h"
+#include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
@@ -51,7 +51,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // CAllback for multiple register values. The map will contain the requested register values when
   // the error is not set.
   using GetRegistersCallback =
-      fit::callback<void(const Err&, std::map<debug_ipc::RegisterID, std::vector<uint8_t>>)>;
+      fit::callback<void(const Err&, std::map<debug::RegisterID, std::vector<uint8_t>>)>;
 
   using GetFrameBaseCallback = fit::callback<void(const Err&, uint64_t value)>;
 
@@ -76,22 +76,22 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // know the value. An example is an unsaved register in a non-topmost stack frame.
   //
   // On successful data return, the data is owned by the implementor and should not be saved.
-  virtual std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id);
+  virtual std::optional<containers::array_view<uint8_t>> GetRegister(debug::RegisterID id);
 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.
-  virtual void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback);
+  virtual void GetRegisterAsync(debug::RegisterID id, GetRegisterCallback callback);
 
   // A wrapper around GetRegister and GetRegisterAsync that collects all the requested register
   // values. The callback will be issued with all collected values. If all values are known
   // synchronously, the callback will be called reentrantly.
-  void GetRegisters(const std::vector<debug_ipc::RegisterID>& regs, GetRegistersCallback cb);
+  void GetRegisters(const std::vector<debug::RegisterID>& regs, GetRegistersCallback cb);
 
   // Writes the given canonical register ID.
   //
   // This must be a canonical register as identified by debug_ipc::RegisterInfo::canonical_id, which
   // means that it's a whole hardware register and needs no shifting nor masking.
-  virtual void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data, WriteCallback cb);
+  virtual void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data, WriteCallback cb);
 
   // Synchronously returns the frame base pointer if possible. As with GetRegister, if this is not
   // available the implementation should call GetFrameBaseAsync().

@@ -11,7 +11,7 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterID;
+using debug::RegisterID;
 
 using SymbolDataProviderTest = TestWithLoop;
 

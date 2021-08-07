@@ -15,7 +15,6 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/largest_less_or_equal.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -61,7 +60,7 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug::Arch GetArch() override { return debug::Arch::kUnknown; }
-  void GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback callback) override {
+  void GetRegisterAsync(debug::RegisterID, GetRegisterCallback callback) override {
     debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() mutable { cb(GetContextError(), {}); });
   }

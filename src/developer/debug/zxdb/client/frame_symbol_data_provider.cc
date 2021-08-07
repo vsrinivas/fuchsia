@@ -21,14 +21,14 @@ namespace zxdb {
 
 namespace {
 
+using debug::RegisterID;
 using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterID;
 using debug_ipc::RegisterInfo;
 
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
-Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
+Err RegisterUnavailableErr(debug::RegisterID id) {
   return Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id)));
 }
 
@@ -100,7 +100,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
       });
 }
 
-void FrameSymbolDataProvider::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
+void FrameSymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                                             WriteCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
