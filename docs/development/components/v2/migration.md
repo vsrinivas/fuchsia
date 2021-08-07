@@ -1042,6 +1042,22 @@ protocol directly in your test. Therefore you'll need to do the following:
     }
     ```
 
+1. Route the protocol capability from the parent realm:
+
+    ```json5
+    // test_root.cml (capability provider)
+    {
+        offer: [
+            {
+                protocol: "fuchsia.diagnostics.ArchiveAccessor",
+                from: "parent",
+                to: "#test_driver",
+            },
+        ]
+
+    }
+    ```
+
 1.  Update your program to use the `ArchiveReader` library, which is available
     in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
 
