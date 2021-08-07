@@ -194,15 +194,36 @@ where
     callback(parent, basename)
 }
 
+/// Options for lookup_node_at.
+struct LookupNodeOptions {
+    /// Whether AT_EMPTY_PATH was supplied.
+    allow_empty_path: bool,
+
+    /// Used to implement AT_SYMLINK_NOFOLLOW.
+    symlink_mode: SymlinkMode,
+}
+
+impl Default for LookupNodeOptions {
+    fn default() -> Self {
+        LookupNodeOptions { allow_empty_path: false, symlink_mode: SymlinkMode::max_follow() }
+    }
+}
+
 fn lookup_node_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    symlink_follow_mode: SymlinkMode,
+    options: LookupNodeOptions,
 ) -> Result<FsNodeHandle, Errno> {
-    lookup_parent_at(task, dir_fd, user_path, |parent, basename| {
-        Ok(parent.lookup(&task.fs, basename, symlink_follow_mode)?.node)
-    })
+    let mut buf = [0u8; PATH_MAX as usize];
+    let path = task.mm.read_c_string(user_path, &mut buf)?;
+    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    if options.allow_empty_path && path.is_empty() {
+        assert!(basename.is_empty());
+        return Ok(parent.node);
+    }
+    let child = parent.lookup(&task.fs, basename, options.symlink_mode)?;
+    Ok(child.node)
 }
 
 pub fn sys_openat(
@@ -232,7 +253,12 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?;
+    let node = lookup_node_at(
+        &ctx.task,
+        dir_fd,
+        user_path,
+        LookupNodeOptions { allow_empty_path: false, symlink_mode: SymlinkMode::NoFollow },
+    )?;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -326,15 +352,19 @@ pub fn sys_newfstatat(
     buffer: UserRef<stat_t>,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    if flags & !AT_SYMLINK_NOFOLLOW != 0 {
+    if flags & !(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH) != 0 {
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let node = if flags & AT_SYMLINK_NOFOLLOW != 0 {
-        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::NoFollow)?
-    } else {
-        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkMode::max_follow())?
+    let options = LookupNodeOptions {
+        allow_empty_path: flags & AT_EMPTY_PATH != 0,
+        symlink_mode: if flags & AT_SYMLINK_NOFOLLOW != 0 {
+            SymlinkMode::NoFollow
+        } else {
+            SymlinkMode::max_follow()
+        },
     };
+    let node = lookup_node_at(ctx.task, dir_fd, user_path, options)?;
     let result = node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -380,7 +410,8 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, SymlinkMode::max_follow())?;
+    let node =
+        lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupNodeOptions::default())?;
     // TODO: Check for writability.
     node.truncate(length)?;
     Ok(SUCCESS)
@@ -474,7 +505,7 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return Err(EINVAL);
     }
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkMode::max_follow())?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path, LookupNodeOptions::default())?;
     node.info_write().mode = mode;
     Ok(SUCCESS)
 }
