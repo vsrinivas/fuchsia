@@ -1034,6 +1034,13 @@ remove this option when the issues are addressed.
 
 From //build/config/BUILD.gn:24
 
+### enable_grpc_ares
+Compiles with ares.
+
+**Current value (from the default):** `false`
+
+From [//third_party/grpc/BUILD.gn:13](https://fuchsia.googlesource.com/third_party/grpc/+/124d9ef7c20b2c2ab84b48addd0cf4eb456075fd/BUILD.gn#13)
+
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
 
@@ -1591,6 +1598,15 @@ attributing code generation bugs.
 **Current value (from the default):** `true`
 
 From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:38
+
+### grpc_use_static_linking
+TODO(169395837): Somehow gRPC symbols cannot be found on Android.
+Keep using static linking for now.
+In windows use static linking.
+
+**Current value (from the default):** `false`
+
+From [//third_party/grpc/BUILD.gn:18](https://fuchsia.googlesource.com/third_party/grpc/+/124d9ef7c20b2c2ab84b48addd0cf4eb456075fd/BUILD.gn#18)
 
 ### hangcheck_timeout_ms
 Set this to accommodate long running tests
@@ -3229,7 +3245,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"wI3P1Exr1msLvdxSDMxXzH7B0K8HlCT1Ta16QfOtm8AC"`
+**Current value (from the default):** `"lI21GVTfJHyGu0lXrlaRRqdAghE5TJO-Wwf0uo5OqakC"`
 
 From //build/rust/config.gni:30
 
@@ -3500,12 +3516,6 @@ Platform portability header for spinel.
 **Current value (from the default):** `"\"spinel_platform.h\""`
 
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/9546a44f0aac90466547989afdaf9428e4d5da21/src/lib/spinel/BUILD.gn#32)
-
-### starnix_syscalls_test_label
-
-**Current value (from the default):** `"//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls"`
-
-From //src/proc/tests/android/BUILD.gn:12
 
 ### start_oobe
 Whether or not to launch OOBE workflow on startup.
