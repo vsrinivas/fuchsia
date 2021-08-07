@@ -54,6 +54,13 @@ foreach(target_name, test_list) {
       nuc_env,
     ]
 
+    # Enable all but garnet_input_latency_benchmarks_test on Vim3.
+    # That test requires a display, which Vim3 currently does not
+    # support (TODO(fxbug.dev/75581)).
+    if (target_name != "garnet_input_latency_benchmarks_test") {
+      environments += [ vim3_env ]
+    }
+
     # TODO(fxbug.dev/51799): Enable for all tests.
     if (target_name == "kernel_boot_stats_test") {
       environments += [
