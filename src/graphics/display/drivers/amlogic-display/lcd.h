@@ -22,8 +22,13 @@ class Lcd {
   zx_status_t Enable();
   zx_status_t Disable();
 
+  // Fetch the panel ID, storing it in the lower 24 bits of id_out. Assumes that
+  // dsiimpl is in DSI_COMMAND_MODE.
+  static zx_status_t GetDisplayId(ddk::DsiImplProtocolClient dsiimpl, uint32_t* id_out);
+
  private:
   zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
+  // Print the display ID to the console.
   zx_status_t GetDisplayId();
 
   uint32_t panel_type_;

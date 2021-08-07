@@ -22,7 +22,8 @@ namespace {
 #include "initcodes-inl.h"
 }  // namespace
 
-zx_status_t Lcd::GetDisplayId() {
+zx_status_t Lcd::GetDisplayId(ddk::DsiImplProtocolClient dsiimpl, uint32_t* out) {
+  ZX_ASSERT(out != nullptr);
   uint8_t txcmd = READ_DISPLAY_ID_CMD;
   uint8_t rsp[READ_DISPLAY_ID_LEN];
   zx_status_t status = ZX_OK;
@@ -30,15 +31,24 @@ zx_status_t Lcd::GetDisplayId() {
   mipi_dsi_cmd_t cmd;
   status = mipi_dsi::MipiDsi::CreateCommand(&txcmd, 1, rsp, READ_DISPLAY_ID_LEN, COMMAND_GEN, &cmd);
   if (status == ZX_OK) {
-    if ((status = dsiimpl_.SendCmd(&cmd, 1)) != ZX_OK) {
+    if ((status = dsiimpl.SendCmd(&cmd, 1)) != ZX_OK) {
       DISP_ERROR("Could not read out Display ID\n");
       return status;
     }
-    DISP_INFO("Display ID: 0x%x, 0x%x, 0x%x\n", rsp[0], rsp[1], rsp[2]);
+    *out = rsp[0] << 16 | rsp[1] << 8 | rsp[2];
   } else {
     DISP_ERROR("Invalid command (%d)\n", status);
   }
 
+  return status;
+}
+
+zx_status_t Lcd::GetDisplayId() {
+  uint32_t id;
+  auto status = Lcd::GetDisplayId(dsiimpl_, &id);
+  if (status == ZX_OK) {
+    DISP_INFO("Display ID: 0x%x\n", id);
+  }
   return status;
 }
 
@@ -128,8 +138,7 @@ zx_status_t Lcd::Enable() {
   } else if (panel_type_ == PANEL_TV070WSM_FT_9365) {
     status = LoadInitTable(lcd_init_sequence_TV070WSM_FT_9365,
                            sizeof(lcd_init_sequence_TV070WSM_FT_9365));
-  } else if (panel_type_ == PANEL_KD070D82_FT ||
-             panel_type_ == PANEL_KD070D82_FT_9365) {
+  } else if (panel_type_ == PANEL_KD070D82_FT || panel_type_ == PANEL_KD070D82_FT_9365) {
     status = LoadInitTable(lcd_init_sequence_KD070D82_FT_9365,
                            sizeof(lcd_init_sequence_KD070D82_FT_9365));
   } else if (panel_type_ == PANEL_TV070WSM_ST7703I) {

@@ -49,6 +49,9 @@ class AmlDsiHost {
   void PhyEnable();
   void PhyDisable();
   zx_status_t HostModeInit(const display_setting_t& disp_setting);
+  // Rewrites panel_type_ if the display_id_ indicates that the GPIO-based
+  // identification was wrong.
+  void FixupPanelType();
 
   std::optional<ddk::MmioBuffer> mipi_dsi_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
@@ -61,6 +64,10 @@ class AmlDsiHost {
 
   uint32_t bitrate_;
   uint32_t panel_type_;
+
+  // Cached 3-byte ID read from MIPI regs. This is used on products where the
+  // board does not provide enough GPIO pins to distinguish all of the DDICs.
+  uint32_t display_id_ = 0;
 
   bool initialized_ = false;
   bool host_on_ = false;

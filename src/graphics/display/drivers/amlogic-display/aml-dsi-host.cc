@@ -5,6 +5,7 @@
 #include "aml-dsi-host.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/device-protocol/display-panel.h>
 
 #include <fbl/alloc_checker.h>
 
@@ -15,6 +16,25 @@ namespace amlogic_display {
 
 #define READ32_HHI_REG(a) hhi_mmio_->Read32(a)
 #define WRITE32_HHI_REG(a, v) hhi_mmio_->Write32(v, a)
+
+constexpr uint32_t kFitiDisplayId = 0x00936504;
+
+void AmlDsiHost::FixupPanelType() {
+  if (panel_type_ != PANEL_TV070WSM_FT_9365 || display_id_ != 0) {
+    // This fixup is either unnecessary or has been done before.
+    return;
+  }
+  if (Lcd::GetDisplayId(dsiimpl_, &display_id_) != ZX_OK) {
+    DISP_ERROR("Failed to read display ID, assuming the board driver panel type is correct");
+    display_id_ = 0;
+    return;
+  }
+  if (display_id_ != kFitiDisplayId) {
+    DISP_INFO("Display ID is not 0x%x, rather 0x%x\nAssuming Sitronix\n", kFitiDisplayId,
+              display_id_);
+    panel_type_ = PANEL_TV070WSM_ST7703I;
+  }
+}
 
 zx_status_t AmlDsiHost::HostModeInit(const display_setting_t& disp_setting) {
   // Setup relevant TOP_CNTL register -- Undocumented --
@@ -137,6 +157,10 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
     DISP_ERROR("Error during MIPI D-PHY Initialization! %d\n", status);
     return status;
   }
+
+  // TODO(fxbug.dev/12345): remove this hack when we have a solution for the
+  // bootloader to inform the board driver of the correct panel type.
+  FixupPanelType();
 
   // Load LCD Init values while in command mode
   lcd_ = fbl::make_unique_checked<amlogic_display::Lcd>(&ac, panel_type_);
