@@ -139,6 +139,7 @@ executable("realm_builder_test_bin") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

@@ -17,13 +17,14 @@ fuchsia::sys2::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context)
   return realm;
 }
 
-ServiceDirectory BindChild(fuchsia::sys2::Realm_Sync* realm,
-                           const fuchsia::sys2::ChildRef& child_ref) {
+ServiceDirectory OpenExposedDir(fuchsia::sys2::Realm_Sync* realm,
+                                const fuchsia::sys2::ChildRef& child_ref) {
   ASSERT_NOT_NULL(realm);
   fuchsia::io::DirectorySyncPtr exposed_dir;
-  fuchsia::sys2::Realm_BindChild_Result result;
-  ASSERT_STATUS_AND_RESULT_OK(
-      "Realm/BindChild", realm->BindChild(child_ref, exposed_dir.NewRequest(), &result), result);
+  fuchsia::sys2::Realm_OpenExposedDir_Result result;
+  ASSERT_STATUS_AND_RESULT_OK("Realm/OpenExposedDir",
+                              realm->OpenExposedDir(child_ref, exposed_dir.NewRequest(), &result),
+                              result);
   return ServiceDirectory(std::move(exposed_dir));
 }
 

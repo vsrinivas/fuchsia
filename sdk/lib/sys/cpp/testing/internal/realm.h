@@ -14,8 +14,8 @@
 namespace sys::testing::internal {
 
 fuchsia::sys2::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context);
-ServiceDirectory BindChild(fuchsia::sys2::Realm_Sync* realm,
-                           const fuchsia::sys2::ChildRef& child_ref);
+ServiceDirectory OpenExposedDir(fuchsia::sys2::Realm_Sync* realm,
+                                const fuchsia::sys2::ChildRef& child_ref);
 
 void CreateChild(fuchsia::sys2::Realm_Sync* realm, std::string collection, std::string name,
                  std::string url);

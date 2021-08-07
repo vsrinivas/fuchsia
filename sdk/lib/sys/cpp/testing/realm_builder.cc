@@ -218,7 +218,7 @@ Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
   fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy;
   auto realm_proxy = internal::CreateRealmPtr(context);
   auto child_ref = fuchsia::sys2::ChildRef{.name = kFrameworkIntermediaryChildName};
-  auto exposed_dir = internal::BindChild(realm_proxy.get(), child_ref);
+  auto exposed_dir = internal::OpenExposedDir(realm_proxy.get(), child_ref);
   exposed_dir.Connect(framework_intermediary_proxy.NewRequest());
   fuchsia::realm::builder::FrameworkIntermediary_Init_Result result;
   ASSERT_STATUS_AND_RESULT_OK("FrameworkIntermediary/Init",

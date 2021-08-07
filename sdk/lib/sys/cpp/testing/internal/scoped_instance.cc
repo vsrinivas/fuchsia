@@ -73,8 +73,8 @@ ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std:
 ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
                                    std::string name, std::string url) {
   CreateChild(realm_proxy.get(), collection, name, std::move(url));
-  auto exposed_dir =
-      BindChild(realm_proxy.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
+  auto exposed_dir = OpenExposedDir(
+      realm_proxy.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
   return ScopedInstance(std::move(realm_proxy),
                         fuchsia::sys2::ChildRef{.name = name, .collection = collection},
                         std::move(exposed_dir));

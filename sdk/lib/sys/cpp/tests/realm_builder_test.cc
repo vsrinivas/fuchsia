@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
@@ -196,6 +197,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolToMockComponent) {
                                          .source = kEchoServer,
                                          .targets = {kEchoClient}});
   auto realm = realm_builder.Build(dispatcher());
+  auto _binder = realm.ConnectSync<fuchsia::component::Binder>();
   loop().Run();
   EXPECT_TRUE(mock_echo_client.WasCalled());
 }
