@@ -25,7 +25,7 @@ using CallSiteSymbolDataProviderTest = RemoteAPITest;
 // non-callee-saved ones should not be available.
 TEST_F(CallSiteSymbolDataProviderTest, CalleeSaved) {
   // Expect the MockRemoteAPITest to default to x64 (we depend on the registers below).
-  ASSERT_EQ(debug_ipc::Arch::kX64, session().arch());
+  ASSERT_EQ(debug::Arch::kX64, session().arch());
 
   SymbolContext symbol_context(0x1200000000);
   Process* process = InjectProcess(1234);
@@ -74,7 +74,7 @@ TEST_F(CallSiteSymbolDataProviderTest, CalleeSaved) {
 
 TEST_F(CallSiteSymbolDataProviderTest, GetRegisterAsync) {
   // Expect the MockRemoteAPITest to default to x64 (we depend on the registers below).
-  ASSERT_EQ(debug_ipc::Arch::kX64, session().arch());
+  ASSERT_EQ(debug::Arch::kX64, session().arch());
 
   constexpr uint64_t kModuleLoad = 0x1000000;
   SymbolContext symbol_context(kModuleLoad);

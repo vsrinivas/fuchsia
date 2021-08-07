@@ -95,7 +95,7 @@ class RemoteAPITest : public TestWithLoop {
   virtual std::unique_ptr<RemoteAPI> GetRemoteAPIImpl();
 
   // Allows tests to override the architecture for the test to run in. Defaults to x64.
-  virtual debug_ipc::Arch GetArch() const { return debug_ipc::Arch::kX64; }
+  virtual debug::Arch GetArch() const { return debug::Arch::kX64; }
 
  private:
   std::unique_ptr<Session> session_;

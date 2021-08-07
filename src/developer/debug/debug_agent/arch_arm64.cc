@@ -219,7 +219,7 @@ const BreakInstructionType kBreakInstruction = 0xd4200000;
 // ARM reports the exception for the exception instruction itself.
 const int64_t kExceptionOffsetForSoftwareBreakpoint = 0;
 
-::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kArm64; }
+::debug::Arch GetCurrentArch() { return ::debug::Arch::kArm64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {

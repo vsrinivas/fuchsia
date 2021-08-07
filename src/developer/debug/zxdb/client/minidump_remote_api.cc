@@ -385,10 +385,10 @@ void MinidumpRemoteAPI::Hello(const debug_ipc::HelloRequest& request,
 
   switch (context.architecture) {
     case crashpad::CPUArchitecture::kCPUArchitectureARM64:
-      reply.arch = debug_ipc::Arch::kArm64;
+      reply.arch = debug::Arch::kArm64;
       break;
     case crashpad::CPUArchitecture::kCPUArchitectureX86_64:
-      reply.arch = debug_ipc::Arch::kX64;
+      reply.arch = debug::Arch::kX64;
       break;
     default:
       break;

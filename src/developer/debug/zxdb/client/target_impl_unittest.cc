@@ -93,7 +93,7 @@ class TargetImplTest : public TestWithLoop {
  public:
   TargetImplTest() {
     sink_ = new TargetSink;
-    session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_), debug_ipc::Arch::kX64);
+    session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_), debug::Arch::kX64);
   }
   ~TargetImplTest() { session_.reset(); }
 

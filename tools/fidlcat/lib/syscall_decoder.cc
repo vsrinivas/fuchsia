@@ -186,10 +186,10 @@ void SyscallDecoder::DoDecode() {
       debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
 
   const std::vector<debug_ipc::RegisterID>* abi;
-  if (arch_ == debug_ipc::Arch::kX64) {
+  if (arch_ == debug::Arch::kX64) {
     abi = &amd64_abi;
     entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kX64_rsp);
-  } else if (arch_ == debug_ipc::Arch::kArm64) {
+  } else if (arch_ == debug::Arch::kArm64) {
     abi = &aarch64_abi;
     entry_sp_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_sp);
     return_address_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_lr);
@@ -219,7 +219,7 @@ void SyscallDecoder::LoadStack() {
     return;
   }
   size_t stack_size = (syscall_->arguments().size() - decoded_arguments_.size()) * sizeof(uint64_t);
-  if (arch_ == debug_ipc::Arch::kX64) {
+  if (arch_ == debug::Arch::kX64) {
     stack_size += sizeof(uint64_t);
   }
   if (stack_size == 0) {
@@ -245,7 +245,7 @@ void SyscallDecoder::LoadStack() {
             std::vector<uint8_t> data;
             MemoryDumpToVector(dump, &data);
             size_t offset = 0;
-            if (arch_ == debug_ipc::Arch::kX64) {
+            if (arch_ == debug::Arch::kX64) {
               return_address_ = GetValueFromBytes<uint64_t>(data, 0);
               offset += sizeof(uint64_t);
             }
@@ -361,7 +361,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
-  debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)
+  debug_ipc::RegisterID result_register = (arch_ == debug::Arch::kX64)
                                               ? debug_ipc::RegisterID::kX64_rax
                                               : debug_ipc::RegisterID::kARMv8_x0;
   syscall_return_value_ = GetRegisterValue(*general_registers, result_register);

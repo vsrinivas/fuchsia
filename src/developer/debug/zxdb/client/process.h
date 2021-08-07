@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/common/err_or.h"

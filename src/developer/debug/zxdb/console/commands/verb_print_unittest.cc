@@ -97,7 +97,7 @@ TEST_F(VerbPrint, VectorRegisterFormat) {
 
   // Provide a frame with a value for register xmm0 (the default architecture of the test harness is
   // X64 so use it's vector registers).
-  ASSERT_EQ(debug_ipc::Arch::kX64, session().arch());
+  ASSERT_EQ(debug::Arch::kX64, session().arch());
   mock_remote_api()->SetRegisterCategory(
       debug_ipc::RegisterCategory::kVector,
       {debug_ipc::Register(

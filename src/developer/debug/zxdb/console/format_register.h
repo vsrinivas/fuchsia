@@ -9,8 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/debug/ipc/protocol.h"
-#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/vector_register_format.h"
 
@@ -24,7 +23,7 @@ namespace zxdb {
 // behave.
 struct FormatRegisterOptions {
   // What arch this FormatRegisters call belongs to.
-  debug_ipc::Arch arch = debug_ipc::Arch::kUnknown;
+  debug::Arch arch = debug::Arch::kUnknown;
 
   // Whether to print extra information about the registers.
   bool extended = false;

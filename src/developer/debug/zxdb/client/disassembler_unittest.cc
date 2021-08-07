@@ -18,7 +18,7 @@ using Row = Disassembler::Row;
 
 TEST(Disassembler, X64Individual) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -49,7 +49,7 @@ TEST(Disassembler, X64Individual) {
 
 TEST(Disassembler, X64Undecodable) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -81,7 +81,7 @@ TEST(Disassembler, X64Undecodable) {
 
 TEST(Disassembler, X64Many) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -127,7 +127,7 @@ TEST(Disassembler, X64Many) {
 
 TEST(Disassembler, Dump) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -214,7 +214,7 @@ TEST(Disassembler, Dump) {
 
 TEST(Disassembler, Arm64Many) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kArm64);
+  Err err = arch.Init(debug::Arch::kArm64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -252,7 +252,7 @@ TEST(Disassembler, Arm64Many) {
 
 TEST(Disassembler, CallX64) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
@@ -294,7 +294,7 @@ TEST(Disassembler, CallX64) {
 
 TEST(Disassembler, CallArm64) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kArm64);
+  Err err = arch.Init(debug::Arch::kArm64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;

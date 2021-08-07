@@ -45,10 +45,10 @@ void FormatCategory(const FormatRegisterOptions& options, RegisterCategory categ
   }
 
   // Check for architecture-specific printing.
-  if (options.arch == debug_ipc::Arch::kX64) {
+  if (options.arch == debug::Arch::kX64) {
     if (FormatCategoryX64(options, category, registers, out))
       return;
-  } else if (options.arch == debug_ipc::Arch::kArm64) {
+  } else if (options.arch == debug::Arch::kArm64) {
     if (FormatCategoryARM64(options, category, registers, out))
       return;
   }

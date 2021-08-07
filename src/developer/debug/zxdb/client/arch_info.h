@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/macros.h"
 
@@ -29,9 +29,9 @@ class ArchInfo {
   ArchInfo();
   ~ArchInfo();
 
-  Err Init(debug_ipc::Arch arch);
+  Err Init(debug::Arch arch);
 
-  debug_ipc::Arch arch() const { return arch_; }
+  debug::Arch arch() const { return arch_; }
 
   const std::shared_ptr<Abi>& abi() const { return abi_; }
 
@@ -61,7 +61,7 @@ class ArchInfo {
   const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
 
  private:
-  debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+  debug::Arch arch_ = debug::Arch::kUnknown;
   std::shared_ptr<Abi> abi_;
 
   bool is_fixed_instr_ = false;

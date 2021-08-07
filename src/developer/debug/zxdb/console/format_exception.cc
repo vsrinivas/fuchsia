@@ -239,19 +239,18 @@ OutputBuffer FormatException(const ConsoleContext* context, const Thread* thread
   return out;
 }
 
-std::string ExceptionRecordToString(debug_ipc::Arch arch,
-                                    const debug_ipc::ExceptionRecord& record) {
+std::string ExceptionRecordToString(debug::Arch arch, const debug_ipc::ExceptionRecord& record) {
   if (!record.valid)
     return "No exception information";
 
   std::string suffix =
       (record.strategy == debug_ipc::ExceptionStrategy::kSecondChance) ? " (second chance)" : "";
   switch (arch) {
-    case debug_ipc::Arch::kUnknown:
+    case debug::Arch::kUnknown:
       return "Unknown architecture";
-    case debug_ipc::Arch::kX64:
+    case debug::Arch::kX64:
       return X64ExceptionRecordToString(record) + suffix;
-    case debug_ipc::Arch::kArm64:
+    case debug::Arch::kArm64:
       return Arm64ExceptionRecordToString(record) + suffix;
   }
   FX_NOTREACHED();

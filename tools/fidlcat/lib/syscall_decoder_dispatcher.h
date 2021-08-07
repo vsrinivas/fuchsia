@@ -57,7 +57,7 @@ class ClassFieldConditionBase {
   virtual ~ClassFieldConditionBase() = default;
 
   // Returns true if the condition is true.
-  virtual bool True(const ClassType* object, debug_ipc::Arch /*arch*/) = 0;
+  virtual bool True(const ClassType* object, debug::Arch /*arch*/) = 0;
 };
 
 // Condition which checks that the field has an expected value.
@@ -67,7 +67,7 @@ class ClassFieldCondition : public ClassFieldConditionBase<ClassType> {
   ClassFieldCondition(const ClassField<ClassType, Type>* field, Type value)
       : field_(field), value_(value) {}
 
-  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
+  bool True(const ClassType* object, debug::Arch /*arch*/) override;
 
  private:
   // The field we check.
@@ -83,7 +83,7 @@ class ClassFieldMaskedCondition : public ClassFieldConditionBase<ClassType> {
   ClassFieldMaskedCondition(const ClassField<ClassType, Type>* field, Type mask, Type value)
       : field_(field), mask_(mask), value_(value) {}
 
-  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
+  bool True(const ClassType* object, debug::Arch /*arch*/) override;
 
  private:
   // The field we check.
@@ -98,13 +98,13 @@ class ClassFieldMaskedCondition : public ClassFieldConditionBase<ClassType> {
 template <typename ClassType, typename Type>
 class ArchCondition : public ClassFieldConditionBase<ClassType> {
  public:
-  explicit ArchCondition(debug_ipc::Arch arch) : arch_(arch) {}
+  explicit ArchCondition(debug::Arch arch) : arch_(arch) {}
 
-  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
+  bool True(const ClassType* object, debug::Arch /*arch*/) override;
 
  private:
   // The architecture we check.
-  const debug_ipc::Arch arch_;
+  const debug::Arch arch_;
 };
 
 // Base class for all class fields.
@@ -135,12 +135,12 @@ class ClassFieldBase {
   }
 
   // Define the architecture needed to display the input/output.
-  ClassFieldBase<ClassType>* DisplayIfArch(debug_ipc::Arch arch) {
+  ClassFieldBase<ClassType>* DisplayIfArch(debug::Arch arch) {
     conditions_.push_back(std::make_unique<ArchCondition<ClassType, uint8_t>>(arch));
     return this;
   }
 
-  bool ConditionsAreTrue(const ClassType* object, debug_ipc::Arch arch) {
+  bool ConditionsAreTrue(const ClassType* object, debug::Arch arch) {
     for (const auto& condition : conditions_) {
       if (!condition->True(object, arch)) {
         return false;
@@ -154,7 +154,7 @@ class ClassFieldBase {
   }
 
   virtual std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                           debug_ipc::Arch arch) const = 0;
+                                                           debug::Arch arch) const = 0;
 
   uint8_t id() const { return id_; }
 
@@ -182,7 +182,7 @@ class ClassField : public ClassFieldBase<ClassType> {
   std::unique_ptr<fidl_codec::Type> ComputeType() const override;
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override;
+                                                   debug::Arch arch) const override;
 
  private:
   // Function which can extract the value of the field for a given object.
@@ -206,7 +206,7 @@ class ArrayField : public ClassFieldBase<ClassType> {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override;
+                                                   debug::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -227,7 +227,7 @@ class DynamicArrayField : public ClassFieldBase<ClassType> {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override;
+                                                   debug::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -249,7 +249,7 @@ class ClassClassField : public ClassFieldBase<ClassType> {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override {
+                                                   debug::Arch arch) const override {
     return field_class_->GenerateValue(get_(object), arch);
   }
 
@@ -277,7 +277,7 @@ class ArrayClassField : public ClassFieldBase<ClassType> {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override;
+                                                   debug::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -303,7 +303,7 @@ class DynamicArrayClassField : public ClassFieldBase<ClassType> {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const override;
+                                                   debug::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -327,7 +327,7 @@ class Class {
   }
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                   debug_ipc::Arch arch) const {
+                                                   debug::Arch arch) const {
     if (object == nullptr) {
       return std::make_unique<fidl_codec::NullValue>();
     }
@@ -797,9 +797,8 @@ class SyscallInputOutputConditionBase {
   virtual bool True(SyscallDecoderInterface* decoder, Stage stage) const = 0;
 
   virtual bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
-      debug_ipc::Arch arch, Syscall& syscall,
-      std::vector<debug_ipc::AutomationCondition>& condition_vect) const = 0;
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const = 0;
 };
 
 // Condition that a syscall argument must meet.
@@ -822,9 +821,8 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   }
 
   bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
-      debug_ipc::Arch arch, Syscall& syscall,
-      std::vector<debug_ipc::AutomationCondition>& condition_vect) const override;
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const override;
 
  private:
   // Access to the syscall argument.
@@ -836,7 +834,7 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
 // Condition which checks that the architecture has an expected value.
 class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
  public:
-  explicit SyscallInputOutputArchCondition(debug_ipc::Arch arch) : arch_(arch) {}
+  explicit SyscallInputOutputArchCondition(debug::Arch arch) : arch_(arch) {}
 
   void Load(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/) const override {}
 
@@ -849,15 +847,15 @@ class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
   }
 
   bool ComputeAutomationCondition(
-      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
-      debug_ipc::Arch arch, Syscall& syscall,
+      const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+      Syscall& syscall,
       std::vector<debug_ipc::AutomationCondition>& condition_vect) const override {
     return arch_ == arch;
   }
 
  private:
   // The architecture we check.
-  const debug_ipc::Arch arch_;
+  const debug::Arch arch_;
 };
 
 // Base class for the inputs/outputs we want to display for a system call.
@@ -903,7 +901,7 @@ class SyscallInputOutputBase {
   }
 
   // Defines the architecture needed to display the input/output.
-  SyscallInputOutputBase* DisplayIfArch(debug_ipc::Arch arch) {
+  SyscallInputOutputBase* DisplayIfArch(debug::Arch arch) {
     conditions_.push_back(std::make_unique<SyscallInputOutputArchCondition>(arch));
     return this;
   }
@@ -1871,7 +1869,7 @@ class Syscall {
 
   void ComputeStatistics(const OutputEvent* event) const;
 
-  void ComputeAutomation(debug_ipc::Arch arch);
+  void ComputeAutomation(debug::Arch arch);
 
   // This function stores the value of the operand passed to it when the invoked breakpoint is hit.
   // Then it modifies the operand so that when the exit breakpoint is hit it will load the stored
@@ -2411,24 +2409,24 @@ inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle
 }
 
 template <typename ClassType, typename Type>
-bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object, debug_ipc::Arch /*arch*/) {
+bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object, debug::Arch /*arch*/) {
   return field_->get()(object) == value_;
 }
 
 template <typename ClassType, typename Type>
 bool ClassFieldMaskedCondition<ClassType, Type>::True(const ClassType* object,
-                                                      debug_ipc::Arch /*arch*/) {
+                                                      debug::Arch /*arch*/) {
   return (field_->get()(object) & mask_) == value_;
 }
 
 template <typename ClassType, typename Type>
-bool ArchCondition<ClassType, Type>::True(const ClassType* /*object*/, debug_ipc::Arch arch) {
+bool ArchCondition<ClassType, Type>::True(const ClassType* /*object*/, debug::Arch arch) {
   return arch_ == arch;
 }
 
 template <typename ClassType, typename Type>
 std::unique_ptr<fidl_codec::Value> ClassField<ClassType, Type>::GenerateValue(
-    const ClassType* object, debug_ipc::Arch arch) const {
+    const ClassType* object, debug::Arch arch) const {
   if (ClassFieldBase<ClassType>::syscall_type() == SyscallType::kHandle) {
     return fidlcat::GenerateHandleValue<Type>(get_(object));
   } else {
@@ -2447,7 +2445,7 @@ std::unique_ptr<fidl_codec::Type> ClassField<ClassType, Type>::ComputeType() con
 
 template <typename ClassType, typename Type>
 std::unique_ptr<fidl_codec::Value> ArrayField<ClassType, Type>::GenerateValue(
-    const ClassType* object, debug_ipc::Arch arch) const {
+    const ClassType* object, debug::Arch arch) const {
   auto vector_value = std::make_unique<fidl_codec::VectorValue>();
   std::pair<const Type*, int> array = get_(object);
   auto syscall_type_ = this->syscall_type();
@@ -2465,7 +2463,7 @@ std::unique_ptr<fidl_codec::Value> ArrayField<ClassType, Type>::GenerateValue(
 
 template <typename ClassType, typename Type, typename SizeType>
 std::unique_ptr<fidl_codec::Value> DynamicArrayField<ClassType, Type, SizeType>::GenerateValue(
-    const ClassType* object, debug_ipc::Arch arch) const {
+    const ClassType* object, debug::Arch arch) const {
   std::pair<const Type*, SizeType> vector = get_(object);
   auto syscall_type_ = this->syscall_type();
   if (syscall_type_ == SyscallType::kChar) {
@@ -2488,7 +2486,7 @@ std::unique_ptr<fidl_codec::Value> DynamicArrayField<ClassType, Type, SizeType>:
 
 template <typename ClassType, typename Type>
 std::unique_ptr<fidl_codec::Value> ArrayClassField<ClassType, Type>::GenerateValue(
-    const ClassType* object, debug_ipc::Arch arch) const {
+    const ClassType* object, debug::Arch arch) const {
   auto vector_value = std::make_unique<fidl_codec::VectorValue>();
   std::pair<const Type*, int> array = get_(object);
 
@@ -2501,7 +2499,7 @@ std::unique_ptr<fidl_codec::Value> ArrayClassField<ClassType, Type>::GenerateVal
 
 template <typename ClassType, typename Type>
 std::unique_ptr<fidl_codec::Value> DynamicArrayClassField<ClassType, Type>::GenerateValue(
-    const ClassType* object, debug_ipc::Arch arch) const {
+    const ClassType* object, debug::Arch arch) const {
   auto vector_value = std::make_unique<fidl_codec::VectorValue>();
   const Type* array = get_(object);
   uint32_t size = get_size_(object);
@@ -2527,9 +2525,8 @@ std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoderInt
 
 template <typename Type>
 bool SyscallInputOutputCondition<Type>::ComputeAutomationCondition(
-    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked,
-    debug_ipc::Arch arch, Syscall& syscall,
-    std::vector<debug_ipc::AutomationCondition>& condition_vect) const {
+    const std::vector<debug_ipc::RegisterID>& argument_indexes, bool is_invoked, debug::Arch arch,
+    Syscall& syscall, std::vector<debug_ipc::AutomationCondition>& condition_vect) const {
   debug_ipc::AutomationCondition condition;
   debug_ipc::AutomationOperand operand = access_->ComputeAutomationOperand(argument_indexes);
   if (!is_invoked) {

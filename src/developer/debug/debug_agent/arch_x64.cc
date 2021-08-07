@@ -186,7 +186,7 @@ const BreakInstructionType kBreakInstruction = 0xCC;
 // following instruction.
 const int64_t kExceptionOffsetForSoftwareBreakpoint = 1;
 
-::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kX64; }
+::debug::Arch GetCurrentArch() { return ::debug::Arch::kX64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {

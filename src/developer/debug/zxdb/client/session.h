@@ -65,7 +65,7 @@ class Session : public SettingStoreObserver {
 
   // Creates a session using a custom RemoteAPI implementation. Use for tests to mock out sending
   // IPC messages.
-  Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch);
+  Session(std::unique_ptr<RemoteAPI> remote_api, debug::Arch arch);
 
   // Creates with a previously-allocated connection. The pointer must outlive this class. In this
   // mode, the stream can not be disconnected.
@@ -129,7 +129,7 @@ class Session : public SettingStoreObserver {
   System& system() { return system_; }
 
   // Architecture of the attached system. Will be "kUnknown" when not connected.
-  debug_ipc::Arch arch() const { return arch_; }
+  debug::Arch arch() const { return arch_; }
 
   // Architecture information of the attached system.
   const ArchInfo& arch_info() const { return *arch_info_; }
@@ -185,7 +185,7 @@ class Session : public SettingStoreObserver {
   using Callback = fit::callback<void(const Err&, std::vector<char>)>;
 
   // Set the arch_ and arch_info_ fields.
-  Err SetArch(debug_ipc::Arch arch);
+  Err SetArch(debug::Arch arch);
 
   // Checks whether it's safe to begin establishing a connection. If not, the callback is invoked
   // with details. The opening_dump argument indicates whether we are trying to open a dump file
@@ -264,7 +264,7 @@ class Session : public SettingStoreObserver {
 
   System system_;
 
-  debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+  debug::Arch arch_ = debug::Arch::kUnknown;
   std::unique_ptr<ArchInfo> arch_info_;  // Guaranteed non-null.
 
   // The last connection that was made by the session. Will have an empty host and a 0 port

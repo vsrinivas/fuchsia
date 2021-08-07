@@ -8,6 +8,7 @@
 #include <string>
 
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
 namespace zxdb {
@@ -20,7 +21,7 @@ OutputBuffer FormatException(const ConsoleContext* context, const Thread* thread
                              const debug_ipc::ExceptionRecord& record);
 
 // Converts the exception record to a single string describing the exception that occurred.
-std::string ExceptionRecordToString(debug_ipc::Arch arch, const debug_ipc::ExceptionRecord& record);
+std::string ExceptionRecordToString(debug::Arch arch, const debug_ipc::ExceptionRecord& record);
 
 }  // namespace zxdb
 

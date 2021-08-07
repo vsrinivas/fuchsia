@@ -33,7 +33,7 @@ TEST(FormatSymbol, Variable) {
                                            VariableLocation(loc_entries));
 
   FormatSymbolOptions opts;
-  opts.arch = debug_ipc::Arch::kX64;
+  opts.arch = debug::Arch::kX64;
 
   // Format expressions as bytes.
   opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kBytes;

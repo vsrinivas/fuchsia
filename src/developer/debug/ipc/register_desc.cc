@@ -15,6 +15,8 @@
 namespace debug_ipc {
 namespace {
 
+using debug::Arch;
+
 // clang-format off
 
 // Canonical registers, these all have a 1:1 mapping between "id" and "name".

@@ -394,7 +394,7 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
 }
 
 TEST_F(EvalContextImplTest, RegisterByName) {
-  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+  ASSERT_EQ(debug::Arch::kArm64, provider()->GetArch());
 
   // Integer value.
   constexpr uint64_t kRegValue = 0xdeadb33f;
@@ -502,7 +502,7 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
 // Tests that a < 64-bit register is read into a value of the correct size, and that the
 // pseudoregisters referring to a sub-part of a canonical register are working properly.
 TEST_F(EvalContextImplTest, RegisterShort) {
-  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+  ASSERT_EQ(debug::Arch::kArm64, provider()->GetArch());
 
   // Value for the "w0" register. The mock data provider doesn't extract sub-registers (unlike the
   // real one) so we need to provide the exact enum the caller will request.
@@ -529,7 +529,7 @@ TEST_F(EvalContextImplTest, RegisterShort) {
 
 // Extracts the "s" (low 32-bits) and "d" (low 64-bits) of the ARM vector registers.
 TEST_F(EvalContextImplTest, FloatRegisterByName) {
-  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+  ASSERT_EQ(debug::Arch::kArm64, provider()->GetArch());
 
   // Value for the "d0" register. The mock data provider doesn't extract sub-registers (unlike the
   // real one) so we need to provide the exact enum the caller will request.
@@ -566,7 +566,7 @@ TEST_F(EvalContextImplTest, VectorRegister) {
   // rather than trying to test all of the various formats. The EvalContextImpl formats all
   // vector registers as doubles (in real life the client overrides this to integrate with the
   // settings system).
-  ASSERT_EQ(debug_ipc::Arch::kArm64, provider()->GetArch());
+  ASSERT_EQ(debug::Arch::kArm64, provider()->GetArch());
 
   // 128-bit vector register.
   std::vector<uint8_t> data{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,

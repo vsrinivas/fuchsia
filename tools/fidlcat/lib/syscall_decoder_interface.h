@@ -8,7 +8,7 @@
 #include <cinttypes>
 #include <cstddef>
 
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fidl_codec/wire_types.h"
 #include "tools/fidlcat/lib/event.h"
@@ -29,7 +29,7 @@ class SyscallDecoderInterface {
   virtual ~SyscallDecoderInterface() = default;
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
-  debug_ipc::Arch arch() const { return arch_; }
+  debug::Arch arch() const { return arch_; }
   fidlcat::Thread* fidlcat_thread() const { return fidlcat_thread_; }
   const fidl_codec::semantic::MethodSemantic* semantic() const { return semantic_; }
   void set_semantic(const fidl_codec::semantic::MethodSemantic* semantic) { semantic_ = semantic; }
@@ -62,7 +62,7 @@ class SyscallDecoderInterface {
   SyscallDecoderInterface(SyscallDecoderDispatcher* dispatcher, zxdb::Thread* thread);
 
   SyscallDecoderDispatcher* const dispatcher_;
-  const debug_ipc::Arch arch_;
+  const debug::Arch arch_;
   fidlcat::Thread* fidlcat_thread_;
   const fidl_codec::semantic::MethodSemantic* semantic_ = nullptr;
   const fidl_codec::StructValue* decoded_request_ = nullptr;

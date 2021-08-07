@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/debug/shared/arch.h"
 #include "src/lib/containers/cpp/array_view.h"
 
 // Holds constant description values for all the register data for all the
@@ -19,7 +20,6 @@
 
 namespace debug_ipc {
 
-enum class Arch : uint32_t;        // Forward declaration
 enum class RegisterID : uint32_t;  // Forward declaration.
 
 struct Register;
@@ -45,7 +45,7 @@ enum class RegisterFormat {
 struct RegisterInfo {
   RegisterID id;
   std::string name;
-  Arch arch;
+  debug::Arch arch;
 
   // Some registers refer to a subset of another register, e.g. "al" (low byte of "rax") on X86 or
   // "w0" (low 32-bits of "x0") on ARM. This ID will be the larger canonical ID. For registers that
@@ -68,22 +68,22 @@ struct RegisterInfo {
 };
 
 const RegisterInfo* InfoForRegister(RegisterID id);
-const RegisterInfo* InfoForRegister(Arch arch, const std::string& name);
+const RegisterInfo* InfoForRegister(debug::Arch arch, const std::string& name);
 
 const char* RegisterIDToString(debug_ipc::RegisterID);
 debug_ipc::RegisterID StringToRegisterID(const std::string&);
 
 // Returns the register ID for the given special register.
-debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch, SpecialRegisterType);
+debug_ipc::RegisterID GetSpecialRegisterID(debug::Arch, SpecialRegisterType);
 
 // Returns the special register type for a register ID.
 SpecialRegisterType GetSpecialRegisterType(RegisterID id);
 
 // Converts the ID number used by DWARF to our register info. Returns null if not found.
-const RegisterInfo* DWARFToRegisterInfo(Arch, uint32_t dwarf_reg_id);
+const RegisterInfo* DWARFToRegisterInfo(debug::Arch, uint32_t dwarf_reg_id);
 
 // Find out what arch a register ID belongs to
-Arch GetArchForRegisterID(RegisterID);
+debug::Arch GetArchForRegisterID(RegisterID);
 
 // Returns true if the given register is a "general" register. General
 // registers are sent as part of the unwind frame data. Other registers must

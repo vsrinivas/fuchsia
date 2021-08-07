@@ -40,8 +40,8 @@ static std::vector<debug_ipc::RegisterID> amd64_regs = {
 
 SyscallDecoderDispatcher* global_dispatcher = nullptr;
 
-DataForSyscallTest::DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
-  param_regs_ = (arch_ == debug_ipc::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
+DataForSyscallTest::DataForSyscallTest(debug::Arch arch) : arch_(arch) {
+  param_regs_ = (arch_ == debug::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
   header_.txid = kTxId;
   header_.magic_number = kFidlWireFormatMagicNumberInitial;
   header_.flags[0] = 0;

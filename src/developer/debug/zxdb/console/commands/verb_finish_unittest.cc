@@ -56,7 +56,7 @@ TEST_F(VerbFinishTest, ReturnValue) {
   const std::vector<uint8_t> kPointedToData{42, 0, 0, 0, 0, 0, 0, 0};  // 42 little-endian.
 
   // The returned pointer is set in rax. Make a frame and populate that.
-  EXPECT_EQ(debug_ipc::Arch::kX64, GetArch());
+  EXPECT_EQ(debug::Arch::kX64, GetArch());
   auto return_frame = std::make_unique<MockFrame>(&session(), thread(), return_location, kReturnSP);
   MockSymbolDataProvider* provider = return_frame->GetMockSymbolDataProvider();
   provider->AddRegisterValue(debug_ipc::RegisterID::kX64_rax, true, kReturnValuePtr);

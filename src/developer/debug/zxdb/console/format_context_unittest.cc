@@ -100,7 +100,7 @@ TEST(FormatContext, FormatSourceContext_LineOffEnd) {
 
 TEST(FormatContext, FormatAsmContext) {
   ArchInfo arch;
-  Err err = arch.Init(debug_ipc::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64);
   ASSERT_FALSE(err.has_error());
 
   // Make a little memory dump.

@@ -92,7 +92,7 @@ TEST(FormatRegisters, GeneralRegisters) {
   FillGeneralRegisters(&registers);
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
 
   // Force rcx to -2 to test negative integer formatting.
   Register& rcx = registers[1];
@@ -119,7 +119,7 @@ TEST(FormatRegisters, VectorRegistersARM) {
     registers[0].data.push_back(0);
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kArm64;
+  options.arch = debug::Arch::kArm64;
 
   // Format as 32-bit floats.
   options.vector_format = VectorRegisterFormat::kFloat;
@@ -181,7 +181,7 @@ TEST(FormatRegisters, VectorRegistersX64) {
     registers[0].data.push_back(0);
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
   options.vector_format = VectorRegisterFormat::kFloat;
 
   EXPECT_EQ(
@@ -215,7 +215,7 @@ TEST(FormatRegisters, AllRegisters) {
   registers.emplace_back(RegisterID::kX64_mxcsr, static_cast<uint64_t>(0x1f80));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
   options.vector_format = VectorRegisterFormat::kUnsigned32;
 
   EXPECT_EQ(
@@ -251,7 +251,7 @@ TEST(FormatRegisters, WithRflags) {
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -273,7 +273,7 @@ TEST(FormatRegisters, RFlagsValues) {
                                           X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -295,7 +295,7 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
                                           X86_FLAG_MASK(RflagsID));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
   options.extended = true;
 
   EXPECT_EQ(
@@ -314,7 +314,7 @@ TEST(FormatRegisters, CPSRValues) {
   SetRegisterValue(&registers.back(), ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kArm64;
+  options.arch = debug::Arch::kArm64;
 
   EXPECT_EQ(
       "General Purpose Registers\n"
@@ -349,7 +349,7 @@ TEST(FormatRegisters, DebugRegisters_x86) {
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr7, 0xaaaa26aa));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kX64;
+  options.arch = debug::Arch::kX64;
 
   EXPECT_EQ(
       "Debug Registers\n"
@@ -406,7 +406,7 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
   registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgwvr14_el1, 0x1133557799aaccee));
 
   FormatRegisterOptions options;
-  options.arch = debug_ipc::Arch::kArm64;
+  options.arch = debug::Arch::kArm64;
 
   // clang-format off
   EXPECT_EQ(

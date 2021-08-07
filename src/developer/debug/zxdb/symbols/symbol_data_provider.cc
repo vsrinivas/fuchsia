@@ -50,7 +50,7 @@ Err NoFrameErr() { return Err("No stack frame to evaluate."); }
 
 }  // namespace
 
-debug_ipc::Arch SymbolDataProvider::GetArch() { return debug_ipc::Arch::kUnknown; }
+debug::Arch SymbolDataProvider::GetArch() { return debug::Arch::kUnknown; }
 
 fxl::RefPtr<SymbolDataProvider> SymbolDataProvider::GetEntryDataProvider() const {
   // Default to not known.

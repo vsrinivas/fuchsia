@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 

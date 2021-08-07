@@ -75,7 +75,7 @@ std::optional<BreakpointSettings::Type> BreakpointSettings::StringToType(std::st
 bool BreakpointSettings::TypeHasSize(Type t) { return t == Type::kReadWrite || t == Type::kWrite; }
 
 // static
-Err BreakpointSettings::ValidateSize(debug_ipc::Arch arch, Type type, uint32_t byte_size) {
+Err BreakpointSettings::ValidateSize(debug::Arch arch, Type type, uint32_t byte_size) {
   // Note that "arch" may be kUnknown at this point if the user is making a breakpoint before
   // connecting. That should be OK and weaker validation should be done.
   if (!TypeHasSize(type)) {
@@ -87,7 +87,7 @@ Err BreakpointSettings::ValidateSize(debug_ipc::Arch arch, Type type, uint32_t b
   }
 
   // All hardware breakpoints have a size.
-  if (arch == debug_ipc::Arch::kX64 && type == Type::kHardware) {
+  if (arch == debug::Arch::kX64 && type == Type::kHardware) {
     // x64 only supports 1-byte hardware execution breakpoints.
     if (byte_size != 1)
       return Err("Intel CPUs only support hardware execution breakpoints of 1 byte.");

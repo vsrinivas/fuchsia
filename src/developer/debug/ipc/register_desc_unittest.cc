@@ -10,6 +10,8 @@
 
 namespace debug_ipc {
 
+using debug::Arch;
+
 TEST(RegisterDesc, DWARFToRegisterInfo_Arm) {
   EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x0, DWARFToRegisterInfo(Arch::kArm64, 0)->id);
   EXPECT_EQ(debug_ipc::RegisterID::kARMv8_x29, DWARFToRegisterInfo(Arch::kArm64, 29)->id);

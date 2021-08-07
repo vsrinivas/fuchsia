@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-using debug_ipc::Arch;
+using debug::Arch;
 using debug_ipc::ExceptionRecord;
 
 TEST(FormatException, X64ExceptionToString) {

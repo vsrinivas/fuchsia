@@ -15,7 +15,9 @@
 #include <utility>
 #include <vector>
 
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
@@ -74,7 +76,7 @@ class SystemCallTest {
 // Data for syscall tests.
 class DataForSyscallTest {
  public:
-  DataForSyscallTest(debug_ipc::Arch arch);
+  explicit DataForSyscallTest(debug::Arch arch);
 
   const SystemCallTest* syscall() const { return syscall_.get(); }
 
@@ -94,7 +96,7 @@ class DataForSyscallTest {
         *(--sp_) = *input;
       }
     }
-    if (arch_ == debug_ipc::Arch::kX64) {
+    if (arch_ == debug::Arch::kX64) {
       *(--sp_) = kReturnAddress;
     }
     stepped_processes_.clear();
@@ -166,7 +168,7 @@ class DataForSyscallTest {
           PopulateRegister((*param_regs_)[i], syscall_->inputs()[i], registers);
         }
       } else {
-        if (arch_ == debug_ipc::Arch::kArm64) {
+        if (arch_ == debug::Arch::kArm64) {
           PopulateRegister(debug_ipc::RegisterID::kARMv8_x0, syscall_->result(), registers);
         } else {
           PopulateRegister(debug_ipc::RegisterID::kX64_rax, syscall_->result(), registers);
@@ -174,13 +176,13 @@ class DataForSyscallTest {
       }
     }
 
-    if (arch_ == debug_ipc::Arch::kArm64) {
+    if (arch_ == debug::Arch::kArm64) {
       // stack pointer
       PopulateRegister(debug_ipc::RegisterID::kARMv8_sp, reinterpret_cast<uint64_t>(sp_),
                        registers);
       // link register
       PopulateRegister(debug_ipc::RegisterID::kARMv8_lr, kReturnAddress, registers);
-    } else if (arch_ == debug_ipc::Arch::kX64) {
+    } else if (arch_ == debug::Arch::kX64) {
       // stack pointer
       PopulateRegister(debug_ipc::RegisterID::kX64_rsp, reinterpret_cast<uint64_t>(sp_), registers);
     }
@@ -237,7 +239,7 @@ class DataForSyscallTest {
            ZX_RIGHT_INSPECT,
        0}};
   zx_handle_t handles2_[2] = {0x76543210, 0xfedcba98};
-  debug_ipc::Arch arch_;
+  debug::Arch arch_;
   std::set<uint64_t> stepped_processes_;
 };
 
@@ -348,7 +350,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
  public:
-  InterceptionWorkflowTest(debug_ipc::Arch arch, bool aborted) : data_(arch), aborted_(aborted) {
+  InterceptionWorkflowTest(debug::Arch arch, bool aborted) : data_(arch), aborted_(aborted) {
     decode_options_.output_mode = OutputMode::kStandard;
     display_options_.pretty_print = true;
     display_options_.columns = 132;
@@ -433,7 +435,7 @@ class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
   InterceptionWorkflowTestX64() : InterceptionWorkflowTest(GetArch(), false) {}
   ~InterceptionWorkflowTestX64() override = default;
 
-  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kX64; }
+  debug::Arch GetArch() const override { return debug::Arch::kX64; }
 };
 
 class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
@@ -441,7 +443,7 @@ class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
   InterceptionWorkflowTestArm() : InterceptionWorkflowTest(GetArch(), false) {}
   ~InterceptionWorkflowTestArm() override = default;
 
-  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kArm64; }
+  debug::Arch GetArch() const override { return debug::Arch::kArm64; }
 };
 
 class InterceptionWorkflowTestX64Aborted : public InterceptionWorkflowTest {
@@ -449,7 +451,7 @@ class InterceptionWorkflowTestX64Aborted : public InterceptionWorkflowTest {
   InterceptionWorkflowTestX64Aborted() : InterceptionWorkflowTest(GetArch(), true) {}
   ~InterceptionWorkflowTestX64Aborted() override = default;
 
-  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kX64; }
+  debug::Arch GetArch() const override { return debug::Arch::kX64; }
 };
 
 class InterceptionWorkflowTestArmAborted : public InterceptionWorkflowTest {
@@ -457,7 +459,7 @@ class InterceptionWorkflowTestArmAborted : public InterceptionWorkflowTest {
   InterceptionWorkflowTestArmAborted() : InterceptionWorkflowTest(GetArch(), true) {}
   ~InterceptionWorkflowTestArmAborted() override = default;
 
-  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kArm64; }
+  debug::Arch GetArch() const override { return debug::Arch::kArm64; }
 };
 
 // This does process setup for the test.  It creates fake processes, injects

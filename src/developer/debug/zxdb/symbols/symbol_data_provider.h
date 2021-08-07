@@ -12,7 +12,8 @@
 #include <vector>
 
 #include "lib/fit/function.h"
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
@@ -56,7 +57,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   using WriteCallback = fit::callback<void(const Err&)>;
 
-  virtual debug_ipc::Arch GetArch();
+  virtual debug::Arch GetArch();
 
   // Returns a SymbolDataProvider that will retrieve register values from the entrypoint of the
   // current function.

@@ -22,7 +22,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // Holds a list of time-ordered (address, data) pairs of memory writes.
   using MemoryWrites = std::vector<std::pair<uint64_t, std::vector<uint8_t>>>;
 
-  void set_arch(debug_ipc::Arch arch) { arch_ = arch; }
+  void set_arch(debug::Arch arch) { arch_ = arch; }
   void set_entry_provider(fxl::RefPtr<SymbolDataProvider> ep) {
     entry_data_provider_ = std::move(ep);
   }
@@ -48,7 +48,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   MemoryWrites GetMemoryWrites() { return std::move(memory_writes_); }
 
   // SymbolDataProvider implementation.
-  debug_ipc::Arch GetArch() override { return arch_; }
+  debug::Arch GetArch() override { return arch_; }
   fxl::RefPtr<SymbolDataProvider> GetEntryDataProvider() const override;
   std::optional<containers::array_view<uint8_t>> GetRegister(debug_ipc::RegisterID id) override;
   void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
@@ -76,7 +76,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   MockSymbolDataProvider();
 
-  debug_ipc::Arch arch_ = debug_ipc::Arch::kArm64;
+  debug::Arch arch_ = debug::Arch::kArm64;
   fxl::RefPtr<SymbolDataProvider> entry_data_provider_;
 
   uint64_t ip_ = 0;

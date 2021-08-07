@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_SYMBOL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_SYMBOL_H_
 
-#include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
@@ -25,7 +25,7 @@ struct FormatSymbolOptions {
   };
 
   // For decoding architecture-specific symbols. "Unknown" disables.
-  debug_ipc::Arch arch = debug_ipc::Arch::kUnknown;
+  debug::Arch arch = debug::Arch::kUnknown;
 
   DwarfExpr dwarf_expr = DwarfExpr::kPretty;
 };

@@ -1812,12 +1812,12 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
                  "guest_mem", guest_mem_aarch64, ZxPacketGuestMemAArch64::GetClass()),
              kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_Arm64)
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
-        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+        ->DisplayIfArch(debug::Arch::kArm64);
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_mem_x86_t>>(
                  "guest_mem", guest_mem_x86, ZxPacketGuestMemX86::GetClass()),
              kZxPortPacket_ZX_PKT_TYPE_GUEST_MEM_X64)
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
-        ->DisplayIfArch(debug_ipc::Arch::kX64);
+        ->DisplayIfArch(debug::Arch::kX64);
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_io_t>>(
                  "guest_io", guest_io, ZxPacketGuestIo::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_IO));
@@ -3938,7 +3938,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_general_regs_x86_t>(
@@ -3946,7 +3946,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_GENERAL_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_fp_regs_x86_t>(
@@ -3954,7 +3954,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateFpRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_FP_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_FP_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_vector_regs_aarch64_t>(
@@ -3962,7 +3962,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateVectorRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_vector_regs_x86_t>(
@@ -3970,7 +3970,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateVectorRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_VECTOR_REGS_X64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_debug_regs_aarch64_t>(
@@ -3978,7 +3978,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateDebugRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_Arm64);
     zx_thread_read_state
         ->OutputObject<zx_thread_state_debug_regs_x86_t>(
@@ -3986,7 +3986,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateDebugRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadReadState_ZX_THREAD_STATE_DEBUG_REGS_X64);
     zx_thread_read_state
         ->OutputIndirect<zx_thread_state_single_step_t, uint8_t>(
@@ -4024,7 +4024,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_general_regs_x86_t>(
@@ -4032,7 +4032,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateGeneralRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_GENERAL_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_GENERAL_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_fp_regs_x86_t>(
@@ -4040,7 +4040,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateFpRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_FP_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_FP_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_vector_regs_aarch64_t>(
@@ -4048,7 +4048,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateVectorRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_vector_regs_x86_t>(
@@ -4056,7 +4056,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateVectorRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_VECTOR_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_VECTOR_REGS_X64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_debug_regs_aarch64_t>(
@@ -4064,7 +4064,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateDebugRegsAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_Arm64);
     zx_thread_write_state
         ->InputObject<zx_thread_state_debug_regs_x86_t>(
@@ -4072,7 +4072,7 @@ void SyscallDecoderDispatcher::Populate() {
             ZxThreadStateDebugRegsX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
                                    ZX_THREAD_STATE_DEBUG_REGS)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxThreadWriteState_ZX_THREAD_STATE_DEBUG_REGS_X64);
     zx_thread_write_state
         ->InputIndirect<zx_thread_state_single_step_t, uint8_t>(
@@ -5907,14 +5907,14 @@ void SyscallDecoderDispatcher::Populate() {
                                                 std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                 ZxVcpuStateAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxVcpuReadState_ZX_VCPU_STATE_Arm64);
     zx_vcpu_read_state
         ->OutputObject<zx_vcpu_state_x86_t>(ZX_OK, "buffer",
                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                             ZxVcpuStateX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxVcpuReadState_ZX_VCPU_STATE_X64);
   }
 
@@ -5938,13 +5938,13 @@ void SyscallDecoderDispatcher::Populate() {
                                                std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                                ZxVcpuStateAArch64::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kArm64)
+        ->DisplayIfArch(debug::Arch::kArm64)
         ->SetId(kZxVcpuWriteState_ZX_VCPU_STATE_Arm64);
     zx_vcpu_write_state
         ->InputObject<zx_vcpu_state_x86_t>(
             "buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxVcpuStateX86::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind), ZX_VCPU_STATE)
-        ->DisplayIfArch(debug_ipc::Arch::kX64)
+        ->DisplayIfArch(debug::Arch::kX64)
         ->SetId(kZxVcpuWriteState_ZX_VCPU_STATE_X64);
     zx_vcpu_write_state
         ->InputObject<zx_vcpu_io_t>("buffer", std::make_unique<ArgumentAccess<uint8_t>>(buffer),

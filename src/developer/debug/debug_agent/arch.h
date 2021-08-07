@@ -45,7 +45,7 @@ constexpr size_t kBreakInstructionSize = sizeof(BreakInstructionType);
 //  * To convert from an exception address to the breakpoint instruction address, subtract this.
 extern const int64_t kExceptionOffsetForSoftwareBreakpoint;
 
-debug_ipc::Arch GetCurrentArch();
+debug::Arch GetCurrentArch();
 
 // Returns the number of hardware breakpoints and watchpoints on the current system.
 uint32_t GetHardwareBreakpointCount();

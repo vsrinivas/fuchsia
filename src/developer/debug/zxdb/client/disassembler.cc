@@ -288,7 +288,7 @@ void Disassembler::FillInstructionInfo(uint64_t address, const uint8_t* data, ui
     return;  // All instructions we care about have one operand.
   const llvm::MCOperand& operand = inst.getOperand(0);
 
-  if (arch_->arch() == debug_ipc::Arch::kX64) {
+  if (arch_->arch() == debug::Arch::kX64) {
     // On x64, almost all of our calls use the 32-bit instruction-relative variant. Most of the
     // other variants are indirect so can't be decoded statically. Therefore this is the only
     // variant we're worrying about here.
@@ -316,7 +316,7 @@ void Disassembler::FillInstructionInfo(uint64_t address, const uint8_t* data, ui
       row->type = InstructionType::kCallIndirect;
       return;
     }
-  } else if (arch_->arch() == debug_ipc::Arch::kArm64 && data_len == sizeof(uint32_t)) {
+  } else if (arch_->arch() == debug::Arch::kArm64 && data_len == sizeof(uint32_t)) {
     // The BL instruction has the high 6 bits 0b100101 (in data[3] for little-endian).
     if ((data[3] & 0b11111100) == 0b10010100) {
       // Opcode has one operand which is a 24-bit signed offset from the address of this

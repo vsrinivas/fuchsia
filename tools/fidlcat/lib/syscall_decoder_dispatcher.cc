@@ -487,8 +487,7 @@ void Syscall::ComputeStatistics(const OutputEvent* event) const {
   }
 }
 
-bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes,
-                       debug_ipc::Arch arch,
+bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexes, debug::Arch arch,
                        const std::vector<std::unique_ptr<SyscallInputOutputBase>>& fields,
                        bool is_invoked, Syscall& syscall) {
   bool fully_automated = true;
@@ -508,7 +507,7 @@ bool ComputeAutomation(const std::vector<debug_ipc::RegisterID>& argument_indexe
   return fully_automated;
 }
 
-void Syscall::ComputeAutomation(debug_ipc::Arch arch) {
+void Syscall::ComputeAutomation(debug::Arch arch) {
   if (invoked_bp_instructions_.size() + exit_bp_instructions_.size() > 0) {
     return;
   }
@@ -524,9 +523,9 @@ void Syscall::ComputeAutomation(debug_ipc::Arch arch) {
       debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
       debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
   const std::vector<debug_ipc::RegisterID>* arg_index;
-  if (arch == debug_ipc::Arch::kX64) {
+  if (arch == debug::Arch::kX64) {
     arg_index = &amd64_argument_indexes;
-  } else if (arch == debug_ipc::Arch::kArm64) {
+  } else if (arch == debug::Arch::kArm64) {
     arg_index = &arm64_argument_indexes;
   } else {
     FX_LOGS(ERROR) << "Unknown architecture";

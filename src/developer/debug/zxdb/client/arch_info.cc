@@ -40,15 +40,15 @@ ArchInfo::ArchInfo() {
 
 ArchInfo::~ArchInfo() = default;
 
-Err ArchInfo::Init(debug_ipc::Arch arch) {
+Err ArchInfo::Init(debug::Arch arch) {
   arch_ = arch;
 
   switch (arch) {
-    case debug_ipc::Arch::kUnknown:
+    case debug::Arch::kUnknown:
       // This is used for some tests and default values. LLVM will not be initialized.
       return Err();
 
-    case debug_ipc::Arch::kX64:
+    case debug::Arch::kX64:
       abi_ = std::make_shared<AbiX64>();
       is_fixed_instr_ = false;
       max_instr_len_ = 15;
@@ -56,7 +56,7 @@ Err ArchInfo::Init(debug_ipc::Arch arch) {
       triple_name_ = "x86_64";
       processor_name_ = "x86-64";
       break;
-    case debug_ipc::Arch::kArm64:
+    case debug::Arch::kArm64:
       abi_ = std::make_shared<AbiArm64>();
       is_fixed_instr_ = true;
       max_instr_len_ = 4;

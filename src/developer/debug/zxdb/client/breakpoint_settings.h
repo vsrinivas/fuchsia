@@ -48,7 +48,7 @@ struct BreakpointSettings {
   static bool TypeHasSize(Type);
 
   // This function will validate the size and return a error if it's invalid.
-  static Err ValidateSize(debug_ipc::Arch arch, Type type, uint32_t byte_size);
+  static Err ValidateSize(debug::Arch arch, Type type, uint32_t byte_size);
 
   // What kind of breakpoint implementation to use.
   Type type = Type::kSoftware;

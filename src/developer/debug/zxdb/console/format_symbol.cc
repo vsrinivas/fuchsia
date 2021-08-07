@@ -213,16 +213,16 @@ OutputBuffer FormatCompilationUnitAndModule(int indent, const Symbol* symbol) {
 // Implements SymbolDataProvider just enough for the DwarfExprEval to pretty-print register names.
 class ArchDataProvider : public SymbolDataProvider {
  public:
-  ArchDataProvider(debug_ipc::Arch a) : arch_(a) {}
+  ArchDataProvider(debug::Arch a) : arch_(a) {}
 
-  debug_ipc::Arch GetArch() override { return arch_; }
+  debug::Arch GetArch() override { return arch_; }
 
  private:
-  debug_ipc::Arch arch_;
+  debug::Arch arch_;
 };
 
 // Format the given DwarfExpr, does not include a newline at the end.
-OutputBuffer FormatDwarfExpr(debug_ipc::Arch arch, FormatSymbolOptions::DwarfExpr what,
+OutputBuffer FormatDwarfExpr(debug::Arch arch, FormatSymbolOptions::DwarfExpr what,
                              const SymbolContext& symbol_context, const DwarfExpr& expr) {
   if (what == FormatSymbolOptions::DwarfExpr::kBytes) {
     // Dump the raw DWARF expression bytes.

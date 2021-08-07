@@ -8,6 +8,7 @@ static_library("shared") {
   sources = [
     "address_range.cc",
     "address_range.h",
+    "arch.h",
     "arch_arm64.h",
     "arch_x86.cc",
     "arch_x86.h",

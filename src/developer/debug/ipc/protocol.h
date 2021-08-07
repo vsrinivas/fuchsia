@@ -6,18 +6,22 @@
 #define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/shared/status.h"
 
 namespace debug_ipc {
 
 constexpr uint32_t kProtocolVersion = 37;
 
-enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
-
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
 // forward.
 const uint64_t kTimestampDefault = 0x0fefffffffffffff;
+
+// The arch values are encoded in the protocol, if these change the protocol version above needs to
+// be updated.
+static_assert(static_cast<int>(debug::Arch::kX64) == 1);
+static_assert(static_cast<int>(debug::Arch::kArm64) == 2);
 
 #pragma pack(push, 8)
 
@@ -93,7 +97,7 @@ struct HelloReply {
 
   uint64_t signature = kStreamSignature;
   uint32_t version = kProtocolVersion;
-  Arch arch = Arch::kUnknown;
+  debug::Arch arch = debug::Arch::kUnknown;
 };
 
 enum class InferiorType : uint32_t {
