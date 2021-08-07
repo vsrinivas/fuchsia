@@ -5,40 +5,34 @@
 use {
     crate::{
         meta_file::{MetaFile, MetaFileLocation},
+        meta_subdir::MetaSubdir,
         Error,
     },
     anyhow::{anyhow, Context as _},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileProxy, NodeAttributes, NodeMarker, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_READ,
+        FileProxy, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
     },
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
-    std::{
-        collections::{HashMap, HashSet},
-        convert::TryInto,
-        sync::Arc,
-    },
+    std::{collections::HashMap, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
-            dirents_sink::AppendResult,
             entry::EntryInfo,
             entry_container::AsyncGetEntry,
             immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
-            test_utils::reexport::Status as vfs_status,
             traversal_position::TraversalPosition,
         },
         execution_scope::ExecutionScope,
         path::Path as VfsPath,
-        test_utils::assertions::reexport::{DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN},
     },
 };
 
@@ -47,7 +41,9 @@ pub(crate) struct RootDir {
     blobfs: blobfs::Client,
     hash: fuchsia_hash::Hash,
     pub(crate) meta_far: FileProxy,
+    // The keys are object relative path expressions.
     pub(crate) meta_files: HashMap<String, MetaFileLocation>,
+    // The keys are object relative path expressions.
     pub(crate) non_meta_files: HashMap<String, fuchsia_hash::Hash>,
     pub(crate) filesystem: Arc<dyn vfs::filesystem::Filesystem>,
     meta_far_vmo: OnceCell<zx::Vmo>,
@@ -88,37 +84,6 @@ impl RootDir {
         let meta_far_vmo = OnceCell::new();
 
         Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, filesystem, meta_far_vmo })
-    }
-
-    fn get_entries(&self) -> Vec<(EntryInfo, String)> {
-        let mut non_meta_keys = HashSet::new();
-        let mut res = vec![];
-
-        res.push((EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), "meta".to_string()));
-
-        for key in self.non_meta_files.keys() {
-            match key.split_once("/") {
-                None => {
-                    // TODO(fxbug.dev/81370) Replace .contains/.insert with .get_or_insert_owned when non-experimental.
-                    if !non_meta_keys.contains(key) {
-                        res.push((EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE), key.to_string()));
-                        non_meta_keys.insert(key.to_string());
-                    }
-                }
-                Some((first, _)) => {
-                    if !non_meta_keys.contains(first) {
-                        res.push((
-                            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                            first.to_string(),
-                        ));
-                        non_meta_keys.insert(first.to_string());
-                    }
-                }
-            }
-        }
-
-        res.sort_by(|a, b| a.1.cmp(&b.1));
-        res
     }
 
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
@@ -201,7 +166,7 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
             let subdir_prefix = canonical_path.to_string() + "/";
             for k in self.meta_files.keys() {
                 if k.starts_with(&subdir_prefix) {
-                    let () = Arc::new(MetaSubdir::new(self, canonical_path.to_string())).open(
+                    let () = Arc::new(MetaSubdir::new(self, subdir_prefix)).open(
                         scope,
                         flags,
                         mode,
@@ -253,55 +218,27 @@ impl vfs::directory::entry::DirectoryEntry for RootDir {
 impl vfs::directory::entry_container::Directory for RootDir {
     // Used for linking which is not supported.
     fn get_entry<'a>(self: Arc<Self>, _: &'a str) -> AsyncGetEntry<'a> {
-        AsyncGetEntry::from(vfs_status::NOT_SUPPORTED)
+        AsyncGetEntry::from(zx::Status::NOT_SUPPORTED)
     }
 
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
-        mut sink: Box<(dyn vfs::directory::dirents_sink::Sink + 'static)>,
+        sink: Box<(dyn vfs::directory::dirents_sink::Sink + 'static)>,
     ) -> Result<
         (TraversalPosition, Box<(dyn vfs::directory::dirents_sink::Sealed + 'static)>),
-        vfs_status,
+        zx::Status,
     > {
-        fn u64_to_usize_safe(u: u64) -> usize {
-            let ret: usize = u.try_into().unwrap();
-            static_assertions::assert_eq_size_val!(u, ret);
-            ret
-        }
-
-        let starting_position = match pos {
-            TraversalPosition::End => {
-                return Ok((TraversalPosition::End, sink.seal()));
-            }
-            TraversalPosition::Name(_) => {
-                // The VFS should never send this to us, since we never return it here.
-                unreachable!();
-            }
-            TraversalPosition::Start => {
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
-                    AppendResult::Ok(new_sink) => sink = new_sink,
-                    AppendResult::Sealed(sealed) => {
-                        return Ok((TraversalPosition::Start, sealed));
-                    }
-                };
-                0 as usize
-            }
-            TraversalPosition::Index(i) => u64_to_usize_safe(*i),
-        };
-
-        let entries = self.get_entries();
-
-        for i in starting_position..entries.len() {
-            let (info, name) = &entries[i];
-            match sink.append(info, name) {
-                AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => {
-                    return Ok((TraversalPosition::Index(crate::usize_to_u64_safe(i)), sealed));
-                }
-            }
-        }
-        Ok((TraversalPosition::End, sink.seal()))
+        crate::read_dirents(
+            // Add "meta/placeholder" file so the "meta" dir is included in the results
+            &crate::get_dir_children(
+                self.non_meta_files.keys().map(|s| s.as_str()).chain(["meta/placeholder"]),
+                "",
+            ),
+            pos,
+            sink,
+        )
+        .await
     }
 
     fn register_watcher(
@@ -309,14 +246,14 @@ impl vfs::directory::entry_container::Directory for RootDir {
         _: ExecutionScope,
         _: u32,
         _: fidl::AsyncChannel,
-    ) -> Result<(), vfs_status> {
-        Err(vfs_status::NOT_SUPPORTED)
+    ) -> Result<(), zx::Status> {
+        Err(zx::Status::NOT_SUPPORTED)
     }
 
     // `register_watcher` is unsupported so no need to do anything here.
     fn unregister_watcher(self: Arc<Self>, _: usize) {}
 
-    async fn get_attrs(&self) -> Result<NodeAttributes, vfs_status> {
+    async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
             mode: 0, /* Populated by the VFS connection */
             id: 1,
@@ -328,7 +265,7 @@ impl vfs::directory::entry_container::Directory for RootDir {
         })
     }
 
-    fn close(&self) -> Result<(), vfs_status> {
+    fn close(&self) -> Result<(), zx::Status> {
         Ok(())
     }
 }
@@ -346,38 +283,6 @@ impl Meta {
 
 // TODO(fxbug.dev/75599)
 impl vfs::directory::entry::DirectoryEntry for Meta {
-    fn open(
-        self: Arc<Self>,
-        _: ExecutionScope,
-        _: u32,
-        _: u32,
-        _: VfsPath,
-        _: ServerEnd<NodeMarker>,
-    ) {
-        todo!()
-    }
-    fn entry_info(&self) -> vfs::directory::entry::EntryInfo {
-        EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-    }
-    fn can_hardlink(&self) -> bool {
-        false
-    }
-}
-
-#[allow(dead_code)]
-struct MetaSubdir {
-    root_dir: Arc<RootDir>,
-    path: String,
-}
-
-impl MetaSubdir {
-    pub fn new(root_dir: Arc<RootDir>, path: String) -> Self {
-        MetaSubdir { root_dir, path }
-    }
-}
-
-// TODO(fxbug.dev/75600)
-impl vfs::directory::entry::DirectoryEntry for MetaSubdir {
     fn open(
         self: Arc<Self>,
         _: ExecutionScope,
@@ -435,67 +340,60 @@ mod tests {
         crate::Filesystem,
         fidl::endpoints::{create_proxy, Proxy as _},
         fidl::{AsyncChannel, Channel},
-        fidl_fuchsia_io::{DirectoryMarker, FileMarker, OPEN_RIGHT_READABLE},
-        fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        std::any::Any,
-        vfs::directory::{
-            dirents_sink::{self, Sealed, Sink},
-            entry::DirectoryEntry,
-            entry_container::Directory,
+        fidl_fuchsia_io::{
+            DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
+        fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
+        futures::stream::StreamExt as _,
+        matches::assert_matches,
+        vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn check_fields_meta_far_only() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
+    struct TestEnv {
+        _blobfs_fake: FakeBlobfs,
+    }
 
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+    impl TestEnv {
+        async fn new() -> (Self, RootDir) {
+            let pkg = PackageBuilder::new("base-package-0")
+                .add_resource_at("resource", "blob-contents".as_bytes())
+                .add_resource_at("meta/file", "meta-contents0".as_bytes())
+                .add_resource_at("meta/dir/file", "meta-contents1".as_bytes())
+                .build()
+                .await
+                .unwrap();
+            let (metafar_blob, content_blobs) = pkg.contents();
+            let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+            blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
+            for content in content_blobs {
+                blobfs_fake.add_blob(content.merkle, content.contents);
+            }
+            let filesystem = Arc::new(Filesystem::new(4 * 4096));
 
-        let meta_files: HashMap<String, MetaFileLocation> = [
-            (String::from("meta/contents"), MetaFileLocation { offset: 4096, length: 0 }),
-            (String::from("meta/package"), MetaFileLocation { offset: 4096, length: 38 }),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-        assert_eq!(root_dir.meta_files, meta_files);
-        assert_eq!(root_dir.non_meta_files, HashMap::new());
+            let root_dir =
+                RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+            (Self { _blobfs_fake: blobfs_fake }, root_dir)
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn check_fields() {
-        let pkg = PackageBuilder::new("base-package-0")
-            .add_resource_at("resource", &[][..])
-            .add_resource_at("meta/file", "meta/file".as_bytes())
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
-        }
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+    async fn new_initializes_maps() {
+        let (_env, root_dir) = TestEnv::new().await;
 
         let meta_files: HashMap<String, MetaFileLocation> = [
             (String::from("meta/contents"), MetaFileLocation { offset: 4096, length: 74 }),
-            (String::from("meta/package"), MetaFileLocation { offset: 12288, length: 39 }),
-            (String::from("meta/file"), MetaFileLocation { offset: 8192, length: 9 }),
+            (String::from("meta/package"), MetaFileLocation { offset: 16384, length: 39 }),
+            (String::from("meta/file"), MetaFileLocation { offset: 12288, length: 14 }),
+            (String::from("meta/dir/file"), MetaFileLocation { offset: 8192, length: 14 }),
         ]
         .iter()
         .cloned()
         .collect();
         assert_eq!(root_dir.meta_files, meta_files);
+
         let non_meta_files: HashMap<String, fuchsia_hash::Hash> = [(
             String::from("resource"),
-            "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
+            "bd905f783ceae4c5ba8319703d7505ab363733c2db04c52c8405603a02922b15"
                 .parse::<fuchsia_hash::Hash>()
                 .unwrap(),
         )]
@@ -506,30 +404,18 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn hardlink() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
+    async fn directory_entry_can_hardlink() {
+        let (_env, root_dir) = TestEnv::new().await;
 
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-
-        assert_eq!(root_dir.can_hardlink(), false);
+        assert_eq!(DirectoryEntry::can_hardlink(&root_dir), false);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn get_attrs() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+    async fn directory_get_attrs() {
+        let (_env, root_dir) = TestEnv::new().await;
 
         assert_eq!(
-            root_dir.get_attrs().await.unwrap(),
+            Directory::get_attrs(&root_dir).await.unwrap(),
             NodeAttributes {
                 mode: 0,
                 id: 1,
@@ -543,234 +429,111 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn entry_info() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-
-        assert_eq!(root_dir.entry_info(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn get_entry_not_supported() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir =
-            Arc::new(RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap());
-
-        match root_dir.get_entry("") {
-            AsyncGetEntry::Future(_) => panic!("RootDir::get_entry should immediately fail"),
-            AsyncGetEntry::Immediate(res) => {
-                assert_eq!(res.err().unwrap(), vfs_status::NOT_SUPPORTED)
-            }
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn register_watcher_not_supported() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir =
-            Arc::new(RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap());
+    async fn directory_entry_entry_info() {
+        let (_env, root_dir) = TestEnv::new().await;
 
         assert_eq!(
-            root_dir.register_watcher(
-                ExecutionScope::new(),
-                0,
-                AsyncChannel::from_channel(Channel::create().unwrap().0).unwrap()
-            ),
-            Err(vfs_status::NOT_SUPPORTED)
+            DirectoryEntry::entry_info(&root_dir),
+            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn close() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
+    async fn directory_get_entry() {
+        let (_env, root_dir) = TestEnv::new().await;
 
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-
-        assert_eq!(root_dir.close(), Ok(()));
-    }
-
-    #[derive(Clone)]
-    struct DummySink {
-        max_size: usize,
-        entries: Vec<(String, EntryInfo)>,
-        sealed: bool,
-    }
-
-    impl DummySink {
-        pub fn new(max_size: usize) -> Self {
-            DummySink { max_size, entries: Vec::with_capacity(max_size), sealed: false }
-        }
-
-        fn from_sealed(sealed: Box<dyn dirents_sink::Sealed>) -> Box<DummySink> {
-            sealed.into()
-        }
-    }
-
-    impl From<Box<dyn dirents_sink::Sealed>> for Box<DummySink> {
-        fn from(sealed: Box<dyn dirents_sink::Sealed>) -> Self {
-            sealed.open().downcast::<DummySink>().unwrap()
-        }
-    }
-
-    impl Sink for DummySink {
-        fn append(mut self: Box<Self>, entry: &EntryInfo, name: &str) -> AppendResult {
-            assert!(!self.sealed);
-            if self.entries.len() == self.max_size {
-                AppendResult::Sealed(self.seal())
-            } else {
-                self.entries.push((name.to_owned(), entry.clone()));
-                AppendResult::Ok(self)
+        match Directory::get_entry(Arc::new(root_dir), "") {
+            AsyncGetEntry::Future(_) => panic!("RootDir::get_entry should immediately fail"),
+            AsyncGetEntry::Immediate(res) => {
+                assert_eq!(res.err().unwrap(), zx::Status::NOT_SUPPORTED)
             }
-        }
-
-        fn seal(mut self: Box<Self>) -> Box<dyn Sealed> {
-            self.sealed = true;
-            self
-        }
-    }
-
-    impl Sealed for DummySink {
-        fn open(self: Box<Self>) -> Box<dyn Any> {
-            self
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_start() {
-        let pkg = PackageBuilder::new("base-package-0")
-            .add_resource_at("resource", &[][..])
-            .add_resource_at("meta/file", "meta/file".as_bytes())
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
-        }
-        let filesystem = Arc::new(Filesystem::new(8196));
+    async fn directory_read_dirents() {
+        let (_env, root_dir) = TestEnv::new().await;
 
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+        let (pos, sealed) = Directory::read_dirents(
+            &root_dir,
+            &TraversalPosition::Start,
+            Box::new(crate::tests::FakeSink::new(3)),
+        )
+        .await
+        .expect("read_dirents failed");
 
-        let (start_pos, sealed) = root_dir
-            .read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(0)))
-            .await
-            .expect("read_dirents failed");
-        assert_eq!(DummySink::from_sealed(sealed).entries, vec![]);
-        assert_eq!(start_pos, TraversalPosition::Start);
-
-        let (end_pos, sealed) = root_dir
-            .read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(3)))
-            .await
-            .expect("read_dirents failed");
         assert_eq!(
-            DummySink::from_sealed(sealed).entries,
+            crate::tests::FakeSink::from_sealed(sealed).entries,
             vec![
                 (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                 ("meta".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                 ("resource".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))
             ]
         );
-        assert_eq!(end_pos, TraversalPosition::End);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_end() {
-        let pkg = PackageBuilder::new("base-package-0")
-            .add_resource_at("resource", &[][..])
-            .add_resource_at("meta/file", "meta/file".as_bytes())
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
-        }
-        let filesystem = Arc::new(Filesystem::new(8196));
-
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-        let (pos, sealed) = root_dir
-            .read_dirents(&TraversalPosition::End, Box::new(DummySink::new(3)))
-            .await
-            .expect("read_dirents failed");
-        assert_eq!(DummySink::from_sealed(sealed).entries, vec![]);
         assert_eq!(pos, TraversalPosition::End);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn read_dirents_index() {
-        let pkg = PackageBuilder::new("base-package-0")
-            .add_resource_at("resource", &[][..])
-            .add_resource_at("meta/file", "meta/file".as_bytes())
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
-        }
-        let filesystem = Arc::new(Filesystem::new(8196));
+    async fn directory_register_watcher_not_supported() {
+        let (_env, root_dir) = TestEnv::new().await;
 
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-        let (pos, sealed) = root_dir
-            .read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(2)))
-            .await
-            .expect("read_dirents failed");
         assert_eq!(
-            DummySink::from_sealed(sealed).entries,
-            vec![
-                (".".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("meta".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-            ]
+            Directory::register_watcher(
+                Arc::new(root_dir),
+                ExecutionScope::new(),
+                0,
+                AsyncChannel::from_channel(Channel::create().unwrap().0).unwrap()
+            ),
+            Err(zx::Status::NOT_SUPPORTED)
         );
-        assert_eq!(pos, TraversalPosition::Index(1));
-
-        let (end_pos, sealed) = root_dir
-            .read_dirents(&pos, Box::new(DummySink::new(2)))
-            .await
-            .expect("read_dirents failed");
-        assert_eq!(
-            DummySink::from_sealed(sealed).entries,
-            vec![("resource".to_string(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))]
-        );
-        assert_eq!(end_pos, TraversalPosition::End);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn open_self() {
-        let pkg = PackageBuilder::new("pkg").build().await.unwrap();
-        let (metafar_blob, _) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+    async fn directory_close() {
+        let (_env, root_dir) = TestEnv::new().await;
+
+        assert_eq!(Directory::close(&root_dir), Ok(()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_rejects_invalid_flags() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for forbidden_flag in [
+            OPEN_RIGHT_WRITABLE,
+            OPEN_RIGHT_ADMIN,
+            OPEN_FLAG_CREATE,
+            OPEN_FLAG_CREATE_IF_ABSENT,
+            OPEN_FLAG_TRUNCATE,
+            OPEN_FLAG_APPEND,
+        ] {
+            let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_FLAG_DESCRIBE | forbidden_flag,
+                0,
+                VfsPath::dot(),
+                server_end.into_channel().into(),
+            );
+
+            assert_matches!(
+                proxy.take_event_stream().next().await,
+                Some(Ok(fidl_fuchsia_io::DirectoryEvent::OnOpen_{ s, info: None}))
+                    if s == zx::Status::NOT_SUPPORTED.into_raw()
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_self() {
+        let (_env, root_dir) = TestEnv::new().await;
         let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
-        Arc::new(root_dir).open(
+        DirectoryEntry::open(
+            Arc::new(root_dir),
             ExecutionScope::new(),
             OPEN_RIGHT_READABLE,
             0,
@@ -780,79 +543,96 @@ mod tests {
 
         assert_eq!(
             files_async::readdir(&proxy).await.unwrap(),
-            vec![files_async::DirEntry {
-                name: "meta".to_string(),
-                kind: files_async::DirentKind::Directory
-            }]
+            vec![
+                files_async::DirEntry {
+                    name: "meta".to_string(),
+                    kind: files_async::DirentKind::Directory
+                },
+                files_async::DirEntry {
+                    name: "resource".to_string(),
+                    kind: files_async::DirentKind::File
+                }
+            ]
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn open_content_blob() {
-        let pkg = PackageBuilder::new("pkg")
-            .add_resource_at("content-blob", &b"content-blob-contents"[..])
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, content_blobs) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        for content in content_blobs {
-            blobfs_fake.add_blob(content.merkle, content.contents);
+    async fn directory_entry_open_non_meta_file() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for path in ["resource", "resource/"] {
+            let (proxy, server_end) = create_proxy().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                0,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end,
+            );
+
+            assert_eq!(
+                io_util::file::read(&FileProxy::from_channel(proxy.into_channel().unwrap()))
+                    .await
+                    .unwrap(),
+                b"blob-contents".to_vec()
+            );
         }
-        let filesystem = Arc::new(Filesystem::new(8196));
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-        let (proxy, server_end) = create_proxy().unwrap();
-
-        Arc::new(root_dir).open(
-            ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
-            0,
-            VfsPath::validate_and_split("content-blob").unwrap(),
-            server_end,
-        );
-
-        assert_eq!(
-            io_util::file::read(&FileProxy::from_channel(proxy.into_channel().unwrap()))
-                .await
-                .unwrap(),
-            b"content-blob-contents".to_vec()
-        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn open_meta_file() {
-        let pkg = PackageBuilder::new("pkg")
-            .add_resource_at("meta/file", &b"meta-file-contents"[..])
-            .build()
-            .await
-            .unwrap();
-        let (metafar_blob, _) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(4 * 4096));
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
-        let (proxy, server_end) = create_proxy::<FileMarker>().unwrap();
+    async fn directory_entry_open_meta_file() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
 
-        Arc::new(root_dir).open(
-            ExecutionScope::new(),
-            OPEN_RIGHT_READABLE,
-            0,
-            VfsPath::validate_and_split("meta/file").unwrap(),
-            server_end.into_channel().into(),
-        );
+        for path in ["meta/file", "meta/file/"] {
+            let (proxy, server_end) = create_proxy::<FileMarker>().unwrap();
 
-        assert_eq!(io_util::file::read(&proxy).await.unwrap(), b"meta-file-contents".to_vec());
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                0,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end.into_channel().into(),
+            );
+
+            assert_eq!(io_util::file::read(&proxy).await.unwrap(), b"meta-contents0".to_vec());
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn directory_entry_open_meta_subdir() {
+        let (_env, root_dir) = TestEnv::new().await;
+        let root_dir = Arc::new(root_dir);
+
+        for path in ["meta/dir", "meta/dir/"] {
+            let (proxy, server_end) = create_proxy::<DirectoryMarker>().unwrap();
+
+            DirectoryEntry::open(
+                Arc::clone(&root_dir),
+                ExecutionScope::new(),
+                OPEN_RIGHT_READABLE,
+                0,
+                VfsPath::validate_and_split(path).unwrap(),
+                server_end.into_channel().into(),
+            );
+
+            assert_eq!(
+                files_async::readdir(&proxy).await.unwrap(),
+                vec![files_async::DirEntry {
+                    name: "file".to_string(),
+                    kind: files_async::DirentKind::File
+                }]
+            );
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn meta_far_vmo() {
-        let pkg = PackageBuilder::new("pkg").build().await.unwrap();
-        let (metafar_blob, _) = pkg.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-        let filesystem = Arc::new(Filesystem::new(8196));
-        let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle, filesystem).await.unwrap();
+        let (_env, root_dir) = TestEnv::new().await;
 
         // VMO is readable
         let vmo = root_dir.meta_far_vmo().await.unwrap();

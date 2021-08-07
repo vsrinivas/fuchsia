@@ -8,20 +8,18 @@ use {
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_APPEND,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
+        VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
     std::sync::Arc,
     vfs::{
-        common::send_on_open_with_error,
-        directory::entry::EntryInfo,
-        execution_scope::ExecutionScope,
-        path::Path as VfsPath,
-        test_utils::assertions::reexport::{DIRENT_TYPE_FILE, INO_UNKNOWN},
+        common::send_on_open_with_error, directory::entry::EntryInfo,
+        execution_scope::ExecutionScope, path::Path as VfsPath,
     },
 };
 
@@ -364,7 +362,7 @@ mod tests {
                 ExecutionScope::new(),
                 OPEN_FLAG_DESCRIBE | forbidden_flag,
                 0,
-                VfsPath::validate_and_split(".").unwrap(),
+                VfsPath::dot(),
                 server_end,
             );
 
@@ -386,7 +384,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_FLAG_DESCRIBE,
             0,
-            VfsPath::validate_and_split(".").unwrap(),
+            VfsPath::dot(),
             server_end,
         );
 
