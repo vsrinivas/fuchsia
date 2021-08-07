@@ -14,7 +14,6 @@
 // clang-format on
 
 #include <fuchsia/factory/cpp/fidl_test_base.h>
-#include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/outgoing_directory.h>
@@ -26,7 +25,9 @@
 #include <net/ethernet.h>
 
 #include "configuration_manager_delegate_impl.h"
-#include "fake_build_info.h"
+#include "fake_buildinfo_provider.h"
+#include "fake_hwinfo_device.h"
+#include "fake_hwinfo_product.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -36,7 +37,9 @@
 namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {
 
-using weave::adaptation::testing::FakeBuildInfo;
+using weave::adaptation::testing::FakeBuildInfoProvider;
+using weave::adaptation::testing::FakeHwinfoDevice;
+using weave::adaptation::testing::FakeHwinfoProduct;
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
@@ -54,13 +57,8 @@ constexpr uint16_t kExpectedProductId = 60209;
 constexpr char kExpectedProductIdDescription[] = "Fuchsia Product";
 constexpr uint64_t kExpectedDeviceId = 65535;
 constexpr char kExpectedFirmwareRevisionLocal[] = "prerelease-1";
-constexpr char kExpectedSerialNumber[] = "dummy_serial_number";
 constexpr char kExpectedSerialNumberLocal[] = "ABCD1234";
 constexpr char kExpectedPairingCode[] = "ABC123";
-constexpr char kExpectedManufacturingDateString[] = "1998-09-04T12:34:56";
-constexpr uint16_t kExpectedManufacturingYear = 1998;
-constexpr uint8_t kExpectedManufacturingMonth = 9;
-constexpr uint8_t kExpectedManufacturingDay = 4;
 constexpr uint16_t kMaxFirmwareRevisionSize = ConfigurationManager::kMaxFirmwareRevisionLength + 1;
 constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
 constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
@@ -92,62 +90,6 @@ WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
 }
 
 }  // namespace
-
-class FakeHwinfoDevice : public fuchsia::hwinfo::testing::Device_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void GetInfo(fuchsia::hwinfo::Device::GetInfoCallback callback) override {
-    fuchsia::hwinfo::DeviceInfo device_info;
-    if (enable_serial) {
-      device_info.set_serial_number(kExpectedSerialNumber);
-    }
-    callback(std::move(device_info));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::hwinfo::Device> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::hwinfo::Device> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
-  void EnableSerialNum(bool enable) { enable_serial = enable; }
-
- private:
-  fidl::Binding<fuchsia::hwinfo::Device> binding_{this};
-  async_dispatcher_t* dispatcher_;
-  bool enable_serial = true;
-};
-
-class FakeHwinfoProduct : public fuchsia::hwinfo::testing::Product_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void GetInfo(fuchsia::hwinfo::Product::GetInfoCallback callback) override {
-    fuchsia::hwinfo::ProductInfo product_info;
-    if (enable_build_date_) {
-      product_info.set_build_date(kExpectedManufacturingDateString);
-    }
-    callback(std::move(product_info));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::hwinfo::Product> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::hwinfo::Product> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
-  void EnableBuildDate(bool enabled) { enable_build_date_ = enabled; }
-
- private:
-  fidl::Binding<fuchsia::hwinfo::Product> binding_{this};
-  async_dispatcher_t* dispatcher_{nullptr};
-  bool enable_build_date_{true};
-};
 
 class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
  public:
@@ -302,7 +244,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
  public:
   ConfigurationManagerTest() {
     context_provider_.service_directory_provider()->AddService(
-        fake_buildinfo_.GetHandler(dispatcher()));
+        fake_buildinfo_provider_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_hwinfo_device_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
@@ -370,7 +312,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     return *resource().fake_dirs.back();
   }
 
-  FakeBuildInfo& fake_buildinfo() { return fake_buildinfo_; }
+  FakeBuildInfoProvider& fake_buildinfo_provider() { return fake_buildinfo_provider_; }
   FakeHwinfoDevice& fake_hwinfo_device() { return fake_hwinfo_device_; }
   FakeHwinfoProduct& fake_hwinfo_product() { return fake_hwinfo_product_; }
   FakeWeaveFactoryDataManager& fake_weave_factory_data_manager() {
@@ -382,7 +324,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
   ThreadStackManagerTestDelegateImpl* thread_mgr() { return thread_mgr_; }
 
  private:
-  FakeBuildInfo fake_buildinfo_;
+  FakeBuildInfoProvider fake_buildinfo_provider_;
   FakeHwinfoDevice fake_hwinfo_device_;
   FakeHwinfoProduct fake_hwinfo_product_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
@@ -390,7 +332,6 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
   ThreadStackManagerTestDelegateImpl* thread_mgr_;
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<sys::ComponentContext> context_;
 };
 
 TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
@@ -443,7 +384,7 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevision) {
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
-  EXPECT_STREQ(firmware_revision, FakeBuildInfo::kVersion);
+  EXPECT_STREQ(firmware_revision, FakeBuildInfoProvider::kVersion);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevisionLocal) {
@@ -452,7 +393,7 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevisionLocal) {
 
   // An empty firmware revision will result in falling back to the revision
   // provided in the config-data.
-  fake_buildinfo().set_version("");
+  fake_buildinfo_provider().set_version("");
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
@@ -467,7 +408,7 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
   size_t serial_num_len;
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(serial_num, kExpectedSerialNumber);
+  EXPECT_STREQ(serial_num, FakeHwinfoDevice::kSerialNumber);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
@@ -477,7 +418,7 @@ TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
   EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
 
-  EXPECT_STREQ(device_desc.SerialNumber, kExpectedSerialNumber);
+  EXPECT_STREQ(device_desc.SerialNumber, FakeHwinfoDevice::kSerialNumber);
   EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
   EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
   EXPECT_EQ(
@@ -787,16 +728,16 @@ TEST_F(ConfigurationManagerTest, GetTestCert) {
 }
 
 TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
-  char serial_num[kMaxSerialNumberSize];
-  size_t serial_num_len;
+  char serial_num[kMaxSerialNumberSize] = {};
+  size_t serial_num_len = 0;
 
-  fake_hwinfo_device().EnableSerialNum(false);
+  // A non-existent serial number field will result in falling back to the
+  // serial number provided in config-data, if one is available.
+  fake_hwinfo_device().set_serial_number(std::nullopt);
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
 
-  auto delegate =
-      reinterpret_cast<ConfigurationManagerDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
-  EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
             WEAVE_NO_ERROR);
   EXPECT_STREQ(serial_num, kExpectedSerialNumberLocal);
@@ -872,18 +813,19 @@ TEST_F(ConfigurationManagerTest, SetConfiguration) {
 }
 
 TEST_F(ConfigurationManagerTest, GetManufacturingDate) {
-  uint16_t year;
-  uint8_t month, day;
+  uint16_t year = 0;
+  uint8_t month = 0;
+  uint8_t day = 0;
 
   // Confirm happy path.
   EXPECT_EQ(ConfigurationMgr().GetManufacturingDate(year, month, day), WEAVE_NO_ERROR);
-  EXPECT_EQ(year, kExpectedManufacturingYear);
-  EXPECT_EQ(month, kExpectedManufacturingMonth);
-  EXPECT_EQ(day, kExpectedManufacturingDay);
+  EXPECT_EQ(year, FakeHwinfoProduct::kBuildDateYear);
+  EXPECT_EQ(month, FakeHwinfoProduct::kBuildDateMonth);
+  EXPECT_EQ(day, FakeHwinfoProduct::kBuildDateDay);
   year = month = day = 0;
 
   // Confirm config not found when build data is not supplied.
-  fake_hwinfo_product().EnableBuildDate(false);
+  fake_hwinfo_product().set_build_date(std::nullopt);
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());

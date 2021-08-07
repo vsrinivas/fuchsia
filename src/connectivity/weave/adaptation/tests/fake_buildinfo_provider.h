@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILD_INFO_H_
-#define SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILD_INFO_H_
+#ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILDINFO_PROVIDER_H_
+#define SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILDINFO_PROVIDER_H_
 
 #include <fuchsia/buildinfo/cpp/fidl_test_base.h>
 
@@ -12,7 +12,7 @@
 namespace weave::adaptation::testing {
 
 // Fake implementation of the fuchsia.buildinfo.Provider.
-class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
+class FakeBuildInfoProvider : public fuchsia::buildinfo::testing::Provider_TestBase {
  public:
   static constexpr char kProductConfig[] = "core";
   static constexpr char kBoardConfig[] = "x64";
@@ -22,16 +22,17 @@ class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
   // Replaces all unimplemented functions with a fatal error.
   void NotImplemented_(const std::string& name) override { FAIL() << name; }
 
-  // Constructs a FakeBuildInfo using the provided configuration values.
-  FakeBuildInfo(std::string product_config, std::string board_config, std::string version,
-                std::string latest_commit_date)
+  // Constructs a FakeBuildInfoProvider using the provided configuration values.
+  explicit FakeBuildInfoProvider(std::string product_config, std::string board_config,
+                                 std::string version, std::string latest_commit_date)
       : product_config_(product_config),
         board_config_(board_config),
         version_(version),
         latest_commit_date_(latest_commit_date) {}
 
-  // Constructs a FakeBuildInfo using the default configuration values.
-  FakeBuildInfo() : FakeBuildInfo(kProductConfig, kBoardConfig, kVersion, kLatestCommitDate) {}
+  // Constructs a FakeBuildInfoProvider using the default configuration values.
+  FakeBuildInfoProvider()
+      : FakeBuildInfoProvider(kProductConfig, kBoardConfig, kVersion, kLatestCommitDate) {}
 
   // Returns the current BuildInfo table.
   void GetBuildInfo(GetBuildInfoCallback callback) override {
@@ -56,25 +57,25 @@ class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
   void Close(zx_status_t epitaph_value = ZX_OK) { binding_.Close(epitaph_value); }
 
   // Update the product configuration.
-  FakeBuildInfo& set_product_config(std::string product_config) {
+  FakeBuildInfoProvider& set_product_config(std::string product_config) {
     product_config_ = product_config;
     return *this;
   }
 
   // Update the board configuration.
-  FakeBuildInfo& set_board_config(std::string board_config) {
+  FakeBuildInfoProvider& set_board_config(std::string board_config) {
     board_config_ = board_config;
     return *this;
   }
 
   // Update the version.
-  FakeBuildInfo& set_version(std::string version) {
+  FakeBuildInfoProvider& set_version(std::string version) {
     version_ = version;
     return *this;
   }
 
   // Update the latest commit date.
-  FakeBuildInfo& set_latest_commit_date(std::string latest_commit_date) {
+  FakeBuildInfoProvider& set_latest_commit_date(std::string latest_commit_date) {
     latest_commit_date_ = latest_commit_date;
     return *this;
   }
@@ -89,4 +90,4 @@ class FakeBuildInfo : public fuchsia::buildinfo::testing::Provider_TestBase {
 
 }  // namespace weave::adaptation::testing
 
-#endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILD_INFO_H_
+#endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_TESTS_FAKE_BUILDINFO_PROVIDER_H_
