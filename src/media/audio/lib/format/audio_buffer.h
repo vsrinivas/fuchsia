@@ -13,11 +13,12 @@
 #include <cmath>
 #include <memory>
 
+#include <fbl/algorithm.h>
+
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/format/traits.h"
-#include "zircon/system/ulib/fbl/include/fbl/algorithm.h"
 
 namespace media::audio {
 

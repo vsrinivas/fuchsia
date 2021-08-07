@@ -16,8 +16,8 @@
 #include <iomanip>
 
 #include <audio-proto-utils/format-utils.h>
+#include <fbl/algorithm.h>
 
-#include "fbl/algorithm.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
