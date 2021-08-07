@@ -334,7 +334,7 @@ func (r *RunCommand) setupSSHEnvironment(ctx context.Context, t target.Target, s
 	cleanups = append(cleanups, client.Close)
 
 	if r.syslogFile != "" {
-		stopStreaming, err := r.startSyslogStream(ctx, client)
+		stopStreaming, err := r.startSyslogStream(ctx, client, t)
 		if err != nil {
 			if err := r.dumpSyslogOverSerial(ctx, socketPath); err != nil {
 				logger.Errorf(ctx, err.Error())
@@ -493,7 +493,7 @@ func (r *RunCommand) resolveTargetIP(ctx context.Context, t target.Target, socke
 // startSyslogStream uses the SSH client to start streaming syslogs from the
 // fuchsia target to a file, in a background goroutine. It returns a function
 // that cancels the streaming, which should be deferred by the caller.
-func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Client) (stopStreaming func(), err error) {
+func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Client, t target.Target) (stopStreaming func(), err error) {
 	syslogger := syslog.NewSyslogger(client)
 
 	f, err := os.Create(r.syslogFile)
@@ -508,7 +508,17 @@ func (r *RunCommand) startSyslogStream(ctx context.Context, client *sshutil.Clie
 	go func() {
 		defer f.Close()
 		defer wg.Done()
-		syslogger.Stream(ctx, f)
+		errs := syslogger.Stream(ctx, f)
+		// Check for errors in the stream to signify the device may have been rebooted.
+		// In that case, we should re-add the package repo which may have been removed
+		// by the reboot. The channel will be closed by the syslogger when it stops
+		// streaming.
+		for range errs {
+			if !syslogger.IsRunning() {
+				return
+			}
+			r.addPackageRepo(ctx, t)
+		}
 	}()
 
 	// The caller should call this function when they want to stop streaming syslogs.

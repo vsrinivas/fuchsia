@@ -95,13 +95,10 @@ func startStream(ctx context.Context) (*fakeSSHClient, io.Reader, <-chan error) 
 		client: client,
 	}
 	pipeReader, pipeWriter := io.Pipe()
-	streamErrs := make(chan error, 1)
 
-	// Start streaming in a background goroutine that should run for the
-	// duration of the test that uses this function.
-	go func() {
-		streamErrs <- syslogger.Stream(ctx, pipeWriter)
-	}()
+	// syslogger.Stream() will start streaming in a background goroutine
+	// that should run for the duration of the test that uses this function.
+	streamErrs := syslogger.Stream(ctx, pipeWriter)
 
 	// Don't return until we've started running the SSH command, to ensure that
 	// we always return a client in a deterministic state.
