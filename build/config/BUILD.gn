@@ -743,7 +743,6 @@ config("Wno-conversion") {
     "//src/ui/tools/tiles_ctl/*",
     "//src/virtualization/buildtools/*",
     "//src/virtualization/lib/guest_config/*",
-    "//src/virtualization/lib/guest_interaction/*",
     "//src/virtualization/lib/vsh/*",
     "//src/virtualization/tests/*",
     "//src/virtualization/third_party/fdt/*",

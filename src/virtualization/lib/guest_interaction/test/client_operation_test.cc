@@ -635,12 +635,12 @@ TEST_F(AsyncEndToEndTest, Client_ExecWrite_Test) {
   ASSERT_GRPC_CQ_NEXT(server_cq_, &exec_request, true);
 
   // Client should get the finish message and delete itself.
-  int32_t initial_use_count = cli_rw.use_count();
+  size_t initial_use_count = cli_rw.use_count();
 
   ASSERT_GRPC_CQ_NEXT(client_cq_, client_call_data, true);
   client_call_data->Proceed(true);
 
-  int32_t final_use_count = cli_rw.use_count();
+  size_t final_use_count = cli_rw.use_count();
 
   // The component that writes stdin silently deletes itself.  The read
   // component is responsible for reporting final status.  Check the shared_ptr

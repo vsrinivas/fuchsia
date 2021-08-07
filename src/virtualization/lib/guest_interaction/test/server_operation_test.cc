@@ -752,10 +752,10 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_StdinEof) {
   // The server will get the request, attempt to write to the subprocess stdin,
   // fail, and delete itself.  The only indication of the failure will be that
   // the reference count to the ServerAsyncReaderWriter decrements.
-  uint32_t initial_use_count = srv_rw.use_count();
+  size_t initial_use_count = srv_rw.use_count();
   ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
   server_call_data->Proceed(true);
-  uint32_t final_use_count = srv_rw.use_count();
+  size_t final_use_count = srv_rw.use_count();
 
   ASSERT_LT(final_use_count, initial_use_count);
 }
@@ -805,14 +805,14 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_ClientDone) {
   // The server will get a false status from the completion queue and delete
   // itself.  The only indication of the failure will be that the reference
   // count to the ServerAsyncReaderWriter decrements.
-  uint32_t initial_use_count = srv_rw.use_count();
+  size_t initial_use_count = srv_rw.use_count();
 
   ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, false);
   server_call_data->Proceed(false);
 
   ASSERT_GRPC_CQ_NEXT(client_cq_, &exec_request, true);
 
-  uint32_t final_use_count = srv_rw.use_count();
+  size_t final_use_count = srv_rw.use_count();
 
   ASSERT_LT(final_use_count, initial_use_count);
 }
@@ -853,10 +853,10 @@ TEST_F(AsyncEndToEndTest, Server_ExecRead_SubprocessExits) {
   // The server will get the request, realize the subprocess has exited, and
   // delete itself.  The only indication of the failure will be that the
   // reference count to the ServerAsyncReaderWriter decrements.
-  uint32_t initial_use_count = srv_rw.use_count();
+  size_t initial_use_count = srv_rw.use_count();
   ASSERT_GRPC_CQ_NEXT(server_cq_, server_call_data, true);
   server_call_data->Proceed(true);
-  uint32_t final_use_count = srv_rw.use_count();
+  size_t final_use_count = srv_rw.use_count();
 
   ASSERT_LT(final_use_count, initial_use_count);
 
