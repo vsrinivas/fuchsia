@@ -246,6 +246,12 @@ impl FsNode {
     }
 
     pub fn open(self: &FsNodeHandle, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        // If O_PATH is set, there is no need to create a real FileOps because
+        // most file operations are disabled.
+        if flags.contains(OpenFlags::PATH) {
+            return Ok(Box::new(OPathOps::new()));
+        }
+
         let (mode, rdev) = {
             // Don't hold the info lock while calling into open_device or self.ops().
             // TODO: The mode and rdev are immutable and shouldn't require a lock to read.

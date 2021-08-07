@@ -168,7 +168,7 @@ impl NamespaceNode {
         Self { mount: None, node }
     }
 
-    /// Create a FileObject cooresponding to this namespace node.
+    /// Create a FileObject corresponding to this namespace node.
     ///
     /// This function is the primary way of instantiating FileObjects. Each
     /// FileObject records the NamespaceNode that created it in order to

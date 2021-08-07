@@ -138,8 +138,8 @@ pub fn sys_readv(
     iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
-    let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
+    let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     Ok(file.read(&ctx.task, &iovec)?.into())
 }
 

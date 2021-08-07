@@ -506,6 +506,19 @@ impl Task {
         flags: OpenFlags,
         mode: FileMode,
     ) -> Result<FileHandle, Errno> {
+        let mut flags = flags;
+        if flags.contains(OpenFlags::PATH) {
+            // When O_PATH is specified in flags, flag bits other than O_CLOEXEC,
+            // O_DIRECTORY, and O_NOFOLLOW are ignored.
+            const ALLOWED_FLAGS: OpenFlags = OpenFlags::from_bits_truncate(
+                OpenFlags::PATH.bits()
+                    | OpenFlags::CLOEXEC.bits()
+                    | OpenFlags::DIRECTORY.bits()
+                    | OpenFlags::NOFOLLOW.bits(),
+            );
+            flags = flags & ALLOWED_FLAGS;
+        }
+
         let nofollow = flags.contains(OpenFlags::NOFOLLOW);
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
 

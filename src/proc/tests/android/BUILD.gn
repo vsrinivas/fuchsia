@@ -115,6 +115,8 @@ gvisor_test_component("pwrite64_test") {
 
 gvisor_test_component("read_test") {
 }
+gvisor_test_component("readv_test") {
+}
 
 gvisor_test_component("sigaction_test") {
 }
@@ -158,6 +160,7 @@ fuchsia_test_package("test_android_distro") {
     ":pread64_test",
     ":pwrite64_test",
     ":read_test",
+    ":readv_test",
     ":sh_test",
     ":sigaction_test",
     ":sigprocmask_test",

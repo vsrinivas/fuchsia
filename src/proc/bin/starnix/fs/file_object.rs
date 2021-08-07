@@ -260,6 +260,86 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
     Err(ENOTTY)
 }
 
+pub struct OPathOps {}
+
+impl OPathOps {
+    pub fn new() -> OPathOps {
+        OPathOps {}
+    }
+}
+
+impl FileOps for OPathOps {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
+        Err(EBADF)
+    }
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(EBADF)
+    }
+    fn write(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(EBADF)
+    }
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(EBADF)
+    }
+    fn seek(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: off_t,
+        _whence: SeekOrigin,
+    ) -> Result<off_t, Errno> {
+        Err(EBADF)
+    }
+
+    fn readdir(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _sink: &mut dyn DirentSink,
+    ) -> Result<(), Errno> {
+        Err(EBADF)
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _request: u32,
+        _in_addr: UserAddress,
+        _out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        Err(EBADF)
+    }
+
+    fn fcntl(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _cmd: u32,
+        _arg: u64,
+    ) -> Result<SyscallResult, Errno> {
+        // Note: this can be a valid operation for files opened with O_PATH.
+        Err(EINVAL)
+    }
+}
+
 /// A session with a file object.
 ///
 /// Each time a client calls open(), we create a new FileObject from the
