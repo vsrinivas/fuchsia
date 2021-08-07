@@ -25,7 +25,6 @@ libc_source_set("ctype") {
     "toupper.h",
   ]
   sources = [
-    "ctype_utils.h",
     "isalnum.cpp",
     "isalpha.cpp",
     "isascii.cpp",
