@@ -1288,9 +1288,8 @@ TEST_F(AudioRendererTransportTest, CommandsSerializedAfterPause) {
 
 // Thin wrapper around AudioRendererTest for test grouping, to test BindGainControl.
 class AudioRendererGainTest : public AudioRendererTest {
-  // Previously there were more gain tests here, these have been moved to gain_control_test.cc.
-  // Keep this test fixture intact for now, in anticipation of cases that check the interactions
-  // between SetGain and the Play/Pause gain-ramping.
+  // Most gain tests were moved to gain_control_test.cc. Keep this test fixture intact for now, in
+  // anticipation of cases that check interactions between SetGain and Play/Pause gain-ramping.
  protected:
   void SetUp() override {
     AudioRendererTest::SetUp();

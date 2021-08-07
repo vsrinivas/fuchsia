@@ -42,6 +42,11 @@ class UltrasoundCapturer : public BaseCapturer {
         *this, RoutingProfile{.routable = routable,
                               .usage = StreamUsage::WithCaptureUsage(CaptureUsage::ULTRASOUND)});
   }
+
+  // |fuchsia::media::BaseCapturer|
+  void ReportStart() final;
+  void ReportStop() final;
+  // Unsupported by UltrasoundCapturer
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) final;
   void SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) final;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;

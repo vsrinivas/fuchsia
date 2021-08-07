@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/lib/test/null_audio_capturer.h"
 #include "src/media/audio/lib/test/null_audio_renderer.h"
@@ -65,6 +66,34 @@ class MockActivityDispatcher : public AudioAdmin::ActivityDispatcher {
   std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> last_dispatched_capture_activity_;
 };
 
+class MockActiveStreamCountReporter : public AudioAdmin::ActiveStreamCountReporter {
+ public:
+  MockActiveStreamCountReporter() {
+    render_stream_counts_.fill(0);
+    capture_stream_counts_.fill(0);
+  }
+
+  void OnActiveRenderCountChanged(RenderUsage usage, uint32_t active_count) override {
+    auto usage_index = static_cast<std::underlying_type_t<RenderUsage>>(usage);
+    render_stream_counts_[usage_index] = active_count;
+  }
+  void OnActiveCaptureCountChanged(CaptureUsage usage, uint32_t active_count) override {
+    auto usage_index = static_cast<std::underlying_type_t<CaptureUsage>>(usage);
+    capture_stream_counts_[usage_index] = active_count;
+  }
+
+  std::array<uint32_t, kStreamRenderUsageCount>& render_stream_counts() {
+    return render_stream_counts_;
+  }
+  std::array<uint32_t, kStreamCaptureUsageCount>& capture_stream_counts() {
+    return capture_stream_counts_;
+  }
+
+ private:
+  std::array<uint32_t, kStreamRenderUsageCount> render_stream_counts_;
+  std::array<uint32_t, kStreamCaptureUsageCount> capture_stream_counts_;
+};
+
 class MockStreamVolume : public StreamVolume {
  public:
   explicit MockStreamVolume(fuchsia::media::AudioRenderUsage usage)
@@ -93,8 +122,9 @@ TEST_F(AudioAdminTest, OnlyUpdateVolumeOnPolicyChange) {
 
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
   test::NullAudioCapturer c2;
@@ -106,23 +136,23 @@ TEST_F(AudioAdminTest, OnlyUpdateVolumeOnPolicyChange) {
       fuchsia::media::Behavior::MUTE);
 
   // Create active media stream; activation triggers initial policy application (volume update).
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  admin.UpdateRendererState(RenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(stream.volume_update_count(), 1ul);
 
   // Create active comms capturer; media volume should duck.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, true, &c1);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, true, &c1);
   RunLoopUntilIdle();
   EXPECT_EQ(stream.volume_update_count(), 2ul);
 
   // Create second active comms capturer; media volume should remain ducked (no update).
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, true, &c2);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, true, &c2);
   RunLoopUntilIdle();
   EXPECT_EQ(stream.volume_update_count(), 2ul);
 
   // All comms become inactive; media volume should un-duck.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, false, &c1);
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, false, &c2);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, false, &c1);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, false, &c2);
   RunLoopUntilIdle();
   EXPECT_EQ(stream.volume_update_count(), 3ul);
 }
@@ -131,8 +161,9 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
   StreamVolumeManager stream_volume_manager(dispatcher());
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2;
 
   // Set an inintial stream volume.
@@ -144,14 +175,14 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
       kStreamGain);
 
   // Start playing a MEDIA stream and check for 'no gain adjustment'.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  admin.UpdateRendererState(RenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
                 fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
 
   // Now play a COMMUNICATIONS stream and also check for 'no gain adjustment'.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, true, &r2);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
@@ -166,8 +197,9 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2;
 
   // Media should duck when comms is active.
@@ -185,14 +217,14 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
       kStreamGain);
 
   // create media active stream.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  admin.UpdateRendererState(RenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
                 fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
 
   // communications renderer becomes active; media should duck.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, true, &r2);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kDuckGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
@@ -203,7 +235,7 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
           fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
 
   // comms becomes inactive; ducking should stop.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r2);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, false, &r2);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
@@ -218,8 +250,9 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -238,14 +271,14 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
       fuchsia::media::Behavior::DUCK);
 
   // Create active media stream.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::MEDIA, true, &r1);
+  admin.UpdateRendererState(RenderUsage::MEDIA, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
                 fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA)));
 
   // Create active comms capturer; media output should duck.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, true, &c1);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, true, &c1);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kDuckGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
@@ -256,7 +289,7 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
                     fuchsia::media::AudioCaptureUsage::COMMUNICATION)));
 
   // Comms becomes inactive; ducking should stop.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::COMMUNICATION, false, &c1);
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, false, &c1);
   RunLoopUntilIdle();
   EXPECT_EQ(kStreamGain + kNoneGain,
             stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
@@ -271,8 +304,9 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -291,7 +325,7 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
       fuchsia::media::Behavior::DUCK);
 
   // Create active capturer stream.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::FOREGROUND, true, &c1);
+  admin.UpdateCapturerState(CaptureUsage::FOREGROUND, true, &c1);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kNoneGain,
@@ -299,7 +333,7 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
           fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::FOREGROUND)));
 
   // Create active comms renderer; foreground capturer should duck.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r1);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kDuckGain,
@@ -311,7 +345,7 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
           fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
 
   // Comms becomes inactive; ducking should stop.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r1);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, false, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kNoneGain,
@@ -338,8 +372,9 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
 
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockActivityDispatcher mock_activity_dispatcher;
+    MockActiveStreamCountReporter mock_active_stream_count_reporter;
     AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                     dispatcher(), kTestBehaviorGain);
+                     &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
     test::NullAudioRenderer r1;
     test::NullAudioCapturer c1;
 
@@ -358,14 +393,14 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
         expected_action);
 
     // Create active capturer stream.
-    admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::FOREGROUND, true, &c1);
+    admin.UpdateCapturerState(CaptureUsage::FOREGROUND, true, &c1);
     // Create active comms renderer; foreground capturer should receive policy action.
-    admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r1);
+    admin.UpdateRendererState(RenderUsage::COMMUNICATION, true, &r1);
     RunLoopUntilIdle();
     EXPECT_EQ(policy_action_taken, expected_action);
 
     // Comms becomes inactive; action should stop.
-    admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, false, &r1);
+    admin.UpdateRendererState(RenderUsage::COMMUNICATION, false, &r1);
     RunLoopUntilIdle();
     EXPECT_EQ(policy_action_taken, fuchsia::media::Behavior::NONE);
   };
@@ -378,18 +413,19 @@ TEST_F(AudioAdminTest, RenderActivityDispatched) {
   // Test that a change of usage given an initial activity is correctly dispatched.
   auto test_dispatch_action = [this](
                                   std::bitset<fuchsia::media::RENDER_USAGE_COUNT> initial_activity,
-                                  fuchsia::media::AudioRenderUsage changed_usage) {
+                                  RenderUsage changed_usage) {
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
     MockActivityDispatcher mock_activity_dispatcher;
+    MockActiveStreamCountReporter mock_active_stream_count_reporter;
     AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                     dispatcher(), kTestBehaviorGain);
+                     &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
 
     // Trigger the initial activity by registering AudioRenderers.
     std::array<test::NullAudioRenderer, fuchsia::media::RENDER_USAGE_COUNT> rs;
     for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
       if (initial_activity[i]) {
-        admin.UpdateRendererState(static_cast<fuchsia::media::AudioRenderUsage>(i), true, &rs[i]);
+        admin.UpdateRendererState(static_cast<RenderUsage>(i), true, &rs[i]);
       }
     }
 
@@ -413,7 +449,7 @@ TEST_F(AudioAdminTest, RenderActivityDispatched) {
   for (int i = 0; i < possible_activities_count; i++) {
     for (int j = 0; j < fuchsia::media::RENDER_USAGE_COUNT; j++) {
       auto initial_activity = static_cast<std::bitset<fuchsia::media::RENDER_USAGE_COUNT>>(i);
-      auto changed_usage = static_cast<fuchsia::media::AudioRenderUsage>(j);
+      auto changed_usage = static_cast<RenderUsage>(j);
       test_dispatch_action(initial_activity, changed_usage);
     }
   }
@@ -423,18 +459,20 @@ TEST_F(AudioAdminTest, CaptureActivityDispatched) {
   // Test that a change of usage given an initial activity is correctly dispatched.
   auto test_dispatch_action = [this](
                                   std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> initial_activity,
-                                  fuchsia::media::AudioCaptureUsage changed_usage) {
+                                  CaptureUsage changed_usage) {
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
     MockActivityDispatcher mock_activity_dispatcher;
+    MockActiveStreamCountReporter mock_active_stream_count_reporter;
     AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                     dispatcher(), kTestBehaviorGain);
+                     &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
 
     // Trigger the initial activity by registering AudioCapturers.
+    // ActivityReporter covers the FIDL usages, so we test only those
     std::array<test::NullAudioCapturer, fuchsia::media::CAPTURE_USAGE_COUNT> rs;
     for (int i = 0; i < fuchsia::media::CAPTURE_USAGE_COUNT; i++) {
       if (initial_activity[i]) {
-        admin.UpdateCapturerState(static_cast<fuchsia::media::AudioCaptureUsage>(i), true, &rs[i]);
+        admin.UpdateCapturerState(static_cast<CaptureUsage>(i), true, &rs[i]);
       }
     }
 
@@ -458,7 +496,7 @@ TEST_F(AudioAdminTest, CaptureActivityDispatched) {
   for (int i = 0; i < possible_activities_count; i++) {
     for (int j = 0; j < fuchsia::media::CAPTURE_USAGE_COUNT; j++) {
       auto initial_activity = static_cast<std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT>>(i);
-      auto changed_usage = static_cast<fuchsia::media::AudioCaptureUsage>(j);
+      auto changed_usage = static_cast<CaptureUsage>(j);
       test_dispatch_action(initial_activity, changed_usage);
     }
   }
@@ -469,8 +507,9 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
+  MockActiveStreamCountReporter mock_active_stream_count_reporter;
   AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
-                   dispatcher(), kTestBehaviorGain);
+                   &mock_active_stream_count_reporter, dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2, r3;
   test::NullAudioCapturer c1;
 
@@ -502,7 +541,7 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
       kStreamGain);
 
   // Create Interruption active stream.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::INTERRUPTION, true, &r1);
+  admin.UpdateRendererState(RenderUsage::INTERRUPTION, true, &r1);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kNoneGain,
@@ -510,7 +549,7 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
           fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION)));
 
   // Create Communication active stream.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::COMMUNICATION, true, &r2);
+  admin.UpdateRendererState(RenderUsage::COMMUNICATION, true, &r2);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kNoneGain,
@@ -518,7 +557,7 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
           fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
 
   // SystemAgent capturer becomes active; Interruption should not change, Communication should mute.
-  admin.UpdateCapturerState(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT, true, &c1);
+  admin.UpdateCapturerState(CaptureUsage::SYSTEM_AGENT, true, &c1);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kNoneGain,
@@ -531,7 +570,7 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
 
   // SystemAgent renderer becomes active; Interruption should duck, Communication should remain
   // muted.
-  admin.UpdateRendererState(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, true, &r3);
+  admin.UpdateRendererState(RenderUsage::SYSTEM_AGENT, true, &r3);
   RunLoopUntilIdle();
   EXPECT_EQ(
       kStreamGain + kDuckGain,
@@ -541,6 +580,132 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
       kStreamGain + kMuteGain,
       stream_volume_manager.GetUsageGainSettings().GetAdjustedUsageGain(
           fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION)));
+}
+
+class ActiveStreamCountReporterTest : public AudioAdminTest {
+ protected:
+  void SetUp() override {
+    expected_render_counts_.fill(0);
+    expected_capture_counts_.fill(0);
+  }
+
+  void ValidateActiveRenderStreamCounts(
+      std::array<uint32_t, kStreamRenderUsageCount>& expected_counts) {
+    auto render_counts = mock_active_stream_count_reporter_.render_stream_counts();
+    for (auto usage_index = 0u; usage_index < kStreamRenderUsageCount; ++usage_index) {
+      EXPECT_EQ(render_counts[usage_index], expected_counts[usage_index])
+          << "Comparison failed for " << RenderUsageToString(kRenderUsages[usage_index]);
+    }
+  }
+
+  void ValidateActiveCaptureStreamCounts(
+      std::array<uint32_t, kStreamCaptureUsageCount>& expected_counts) {
+    auto capture_counts = mock_active_stream_count_reporter_.capture_stream_counts();
+    for (auto usage_index = 0u; usage_index < kStreamCaptureUsageCount; ++usage_index) {
+      EXPECT_EQ(capture_counts[usage_index], expected_counts[usage_index])
+          << "Comparison failed for " << CaptureUsageToString(kCaptureUsages[usage_index]);
+    }
+  }
+
+  void UpdateExpectedCountsAndVerify(StreamUsage usage, int32_t change_in_count) {
+    if (usage.is_render_usage()) {
+      auto index = static_cast<std::underlying_type_t<RenderUsage>>(usage.render_usage());
+      ASSERT_GE(static_cast<int64_t>(expected_render_counts_[index]) + change_in_count, 0ll)
+          << "Usage count cannot be negative; test logic error";
+      expected_render_counts_[index] += change_in_count;
+    } else {
+      auto index = static_cast<std::underlying_type_t<CaptureUsage>>(usage.capture_usage());
+      ASSERT_GE(static_cast<int64_t>(expected_capture_counts_[index]) + change_in_count, 0ll)
+          << "Usage count cannot be negative; test logic error";
+      expected_capture_counts_[index] += change_in_count;
+    }
+
+    RunLoopUntilIdle();
+    ValidateActiveRenderStreamCounts(expected_render_counts_);
+    ValidateActiveCaptureStreamCounts(expected_capture_counts_);
+  }
+
+  MockActiveStreamCountReporter mock_active_stream_count_reporter_;
+
+  std::array<uint32_t, kStreamRenderUsageCount> expected_render_counts_;
+  std::array<uint32_t, kStreamCaptureUsageCount> expected_capture_counts_;
+};
+
+// Test to verify the ActiveStreamCountReporter interface
+TEST_F(ActiveStreamCountReporterTest, ConcurrentCounts) {
+  StreamVolumeManager stream_volume_manager(dispatcher());
+  MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
+  MockActivityDispatcher mock_activity_dispatcher;
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   &mock_active_stream_count_reporter_, dispatcher(), kTestBehaviorGain);
+
+  test::NullAudioRenderer r1, r2, r3, r4;
+  test::NullAudioCapturer c1, c2, c3, c4;
+
+  // Add a number of renderers and capturers, verifying active stream counts.
+  //
+  // Interruption renderer becomes active.
+  admin.UpdateRendererState(RenderUsage::INTERRUPTION, true, &r1);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION), 1);
+
+  // SystemAgent capturer becomes active.
+  admin.UpdateCapturerState(CaptureUsage::SYSTEM_AGENT, true, &c1);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT), 1);
+
+  // Ultrasound renderer becomes active.
+  admin.UpdateRendererState(RenderUsage::ULTRASOUND, true, &r2);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND), 1);
+
+  // Foreground capturer becomes active.
+  admin.UpdateCapturerState(CaptureUsage::FOREGROUND, true, &c2);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::FOREGROUND), 1);
+
+  // Interruption renderer becomes active.
+  admin.UpdateRendererState(RenderUsage::INTERRUPTION, true, &r3);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION), 1);
+
+  // Loopback capturer becomes active.
+  admin.UpdateCapturerState(CaptureUsage::LOOPBACK, true, &c3);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::LOOPBACK), 1);
+
+  // Media renderer becomes active.
+  admin.UpdateRendererState(RenderUsage::MEDIA, true, &r4);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::MEDIA), 1);
+
+  // Communication capturer becomes active.
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, true, &c4);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::COMMUNICATION), 1);
+
+  // Now unwind those same renderers and capturers, verifying active stream counts.
+  //
+  // SystemAgent capturer becomes inactive.
+  admin.UpdateCapturerState(CaptureUsage::SYSTEM_AGENT, false, &c1);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::SYSTEM_AGENT), -1);
+
+  // Both Interruption renderers become inactive.
+  admin.UpdateRendererState(RenderUsage::INTERRUPTION, false, &r1);
+  admin.UpdateRendererState(RenderUsage::INTERRUPTION, false, &r3);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::INTERRUPTION), -2);
+
+  // Foreground capturer becomes inactive.
+  admin.UpdateCapturerState(CaptureUsage::FOREGROUND, false, &c2);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::FOREGROUND), -1);
+
+  // Ultrasound renderer becomes inactive.
+  admin.UpdateRendererState(RenderUsage::ULTRASOUND, false, &r2);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::ULTRASOUND), -1);
+
+  // Loopback capturer becomes inactive.
+  admin.UpdateCapturerState(CaptureUsage::LOOPBACK, false, &c3);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::LOOPBACK), -1);
+
+  // Media renderer becomes inactive.
+  admin.UpdateRendererState(RenderUsage::MEDIA, false, &r4);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithRenderUsage(RenderUsage::MEDIA), -1);
+
+  // Communication capturer becomes inactive.
+  admin.UpdateCapturerState(CaptureUsage::COMMUNICATION, false, &c4);
+  UpdateExpectedCountsAndVerify(StreamUsage::WithCaptureUsage(CaptureUsage::COMMUNICATION), -1);
 }
 
 }  // namespace

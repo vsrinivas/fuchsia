@@ -85,6 +85,12 @@ constexpr std::array<CaptureUsage, fuchsia::media::CAPTURE_USAGE_COUNT> kFidlCap
 #undef EXPAND_CAPTURE_USAGE
 }};
 
+constexpr std::array<CaptureUsage, kStreamCaptureUsageCount> kCaptureUsages = {{
+#define EXPAND_CAPTURE_USAGE(U) CaptureUsage::U,
+    EXPAND_EACH_CAPTURE_USAGE
+#undef EXPAND_CAPTURE_USAGE
+}};
+
 static constexpr uint32_t kStreamUsageCount = kStreamRenderUsageCount + kStreamCaptureUsageCount;
 
 // Since we define the RenderUsage enum to have the same numeric values for each fidl enum entry,

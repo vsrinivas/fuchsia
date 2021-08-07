@@ -388,7 +388,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
     RunLoopFor(zx::msec(5));
     ++run_loop_count;
   }
-  EXPECT_TRUE(context().audio_admin().IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
+  EXPECT_TRUE(context().audio_admin().IsActive(RenderUsage::SYSTEM_AGENT));
 
   bool received_pause_callback = false;
   fidl_renderer_->Pause(
@@ -401,7 +401,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
     RunLoopFor(zx::msec(5));
     ++run_loop_count;
   }
-  EXPECT_FALSE(context().audio_admin().IsActive(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT));
+  EXPECT_FALSE(context().audio_admin().IsActive(RenderUsage::SYSTEM_AGENT));
 }
 
 // AudioCore should survive, if a renderer is unbound between a Play call and its callback.

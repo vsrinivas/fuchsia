@@ -48,10 +48,19 @@ UltrasoundCapturer::InitializeSourceLink(const AudioObject& source,
 
 void UltrasoundCapturer::CleanupSourceLink(const AudioObject& source,
                                            std::shared_ptr<ReadableStream> stream) {
-  // Ultrasound capturers do not support being re-linked. If we become unlinked then we will just
-  // close the client channel.
+  // Ultrasound capturers cannot be re-linked. If unlinked, we just close the client channel.
   binding().Close(ZX_OK);
   BaseCapturer::CleanupSourceLink(source, std::move(stream));
+}
+
+void UltrasoundCapturer::ReportStart() {
+  BaseCapturer::ReportStart();
+  context().audio_admin().UpdateCapturerState(CaptureUsage::ULTRASOUND, true, this);
+}
+
+void UltrasoundCapturer::ReportStop() {
+  BaseCapturer::ReportStop();
+  context().audio_admin().UpdateCapturerState(CaptureUsage::ULTRASOUND, false, this);
 }
 
 void UltrasoundCapturer::SetUsage(fuchsia::media::AudioCaptureUsage usage) {

@@ -141,10 +141,13 @@ void BaseCapturer::OnStateChanged(State old_state, State new_state) {
   if (was_routable != is_routable) {
     SetRoutingProfile(is_routable);
   }
-  if (new_state == State::SyncOperating || new_state == State::AsyncOperating) {
+
+  bool is_started = new_state == State::SyncOperating || new_state == State::AsyncOperating;
+  bool was_started = old_state == State::SyncOperating || old_state == State::AsyncOperating;
+  if (is_started && !was_started) {
     ReportStart();
   }
-  if (old_state == State::SyncOperating || old_state == State::AsyncOperating) {
+  if (was_started && !is_started) {
     ReportStop();
   }
 }
@@ -530,7 +533,7 @@ zx_status_t BaseCapturer::Process() {
 
     // If there was nothing in our pending capture buffer queue, then one of two things is true:
     //
-    // 1) We are AsyncOperating and our user is not supplying packets fast enough.
+    // 1) We are SyncOperating and our user is not supplying packets fast enough.
     // 2) We are AsyncOperating and our user is not releasing packets fast enough.
     //
     // Either way, this is an overflow. Invalidate the frames_to_ref_clock transformation and make

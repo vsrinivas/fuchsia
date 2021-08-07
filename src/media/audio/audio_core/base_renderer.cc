@@ -10,6 +10,7 @@
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 
@@ -51,8 +52,11 @@ BaseRenderer::BaseRenderer(
 
 BaseRenderer::~BaseRenderer() {
   if (IsPlaying()) {
-    ReportStop();
+    // The child dtor should have already called ReportStopIfStarted() as needed.
+    FX_LOGS(ERROR) << "~BaseRenderer: stream " << static_cast<fuchsia::media::AudioRenderer*>(this)
+                   << " is still playing";
   }
+
   wav_writer_.Close();
   payload_buffers_.clear();
 }
@@ -670,7 +674,7 @@ void BaseRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
     callback(reference_time.get(), media_time.get());
   }
 
-  ReportStart();
+  ReportStartIfStopped();
 
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
@@ -728,25 +732,33 @@ void BaseRenderer::PauseInternal(PauseCallback callback) {
   FX_LOGS(DEBUG) << ". Actual (ref: " << pause_reference_time_->get()
                  << ", media: " << pause_media_time_->get() << ")";
 
-  ReportStop();
+  ReportStopIfStarted();
 
   if (callback != nullptr) {
     callback(pause_reference_time_->get(), pause_media_time_->get());
   }
 }
 
-void BaseRenderer::ReportStart() {
-  if (state_ == State::Paused) {
-    reporter_->StartSession(zx::clock::get_monotonic());
-    state_ = State::Playing;
+void BaseRenderer::ReportStartIfStopped() {
+  if (!IsPlaying()) {
+    ReportStart();
   }
 }
 
-void BaseRenderer::ReportStop() {
-  if (state_ == State::Playing) {
-    reporter_->StopSession(zx::clock::get_monotonic());
-    state_ = State::Paused;
+void BaseRenderer::ReportStopIfStarted() {
+  if (IsPlaying()) {
+    ReportStop();
   }
+}
+
+void BaseRenderer::ReportStart() {
+  reporter_->StartSession(zx::clock::get_monotonic());
+  state_ = State::Playing;
+}
+
+void BaseRenderer::ReportStop() {
+  reporter_->StopSession(zx::clock::get_monotonic());
+  state_ = State::Paused;
 }
 
 void BaseRenderer::OnLinkAdded() { RecomputeMinLeadTime(); }

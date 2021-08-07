@@ -48,7 +48,7 @@ class AudioRenderer : public BaseRenderer,
   // Callers should use the |Create| method instead, this is only public to enable std::make_shared.
   AudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
                 Context* context);
-  ~AudioRenderer();
+  ~AudioRenderer() override;
 
  private:
   // |media::audio::AudioObject|

@@ -35,8 +35,8 @@ class AudioCapturer : public BaseCapturer,
 
  private:
   // |media::audio::BaseCapturer|
-  void ReportStart() override;
-  void ReportStop() override;
+  void ReportStart() final;
+  void ReportStop() final;
   void OnStateChanged(State old_state, State new_state) override;
   void SetRoutingProfile(bool routable) override;
 
