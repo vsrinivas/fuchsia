@@ -234,7 +234,9 @@ impl NamespaceNode {
         name: &FsStr,
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        if name == b"." || name == b"" {
+        if !self.node.info().mode.is_dir() {
+            Err(ENOTDIR)
+        } else if name == b"." || name == b"" {
             Ok(self.clone())
         } else if name == b".." {
             // TODO: make sure this can't escape a chroot
