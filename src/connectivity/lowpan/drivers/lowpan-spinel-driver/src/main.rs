@@ -402,7 +402,7 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&[fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG])
         .context("initialize logging")?;
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
+    fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
 
     #[cfg(test)]
     fuchsia_syslog::LOGGER.set_severity(fuchsia_syslog::levels::TRACE);
