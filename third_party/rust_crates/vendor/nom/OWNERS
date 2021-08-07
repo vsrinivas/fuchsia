@@ -9,4 +9,4 @@ include /src/diagnostics/iquery/OWNERS
 include /src/diagnostics/lib/triage/OWNERS
 include /src/factory/OWNERS
 include /src/lib/diagnostics/OWNERS
-include /third_party/rust_crates/forks/nom_locate/OWNERS
+include /third_party/rust_crates/vendor/nom_locate/OWNERS

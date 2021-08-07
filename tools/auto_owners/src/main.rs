@@ -104,7 +104,10 @@ impl OwnersDb {
         eprintln!("Updating OWNERS files...");
         self.external_crates
             .par_iter()
-            .filter(|metadata| metadata.path.starts_with("third_party"))
+            .filter(|metadata| {
+                metadata.path.starts_with("third_party/rust_crates")
+                    && !metadata.path.starts_with("third_party/rust_crates/mirrors")
+            })
             .map(|metadata| self.update_owners_file(metadata))
             .panic_fuse()
             .collect::<anyhow::Result<()>>()?;

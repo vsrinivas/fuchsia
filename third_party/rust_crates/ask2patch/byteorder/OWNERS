@@ -30,8 +30,8 @@ include /src/sys/OWNERS
 include /src/sys/component_manager/OWNERS
 include /src/sys/lib/fuchsia-bootfs/OWNERS
 include /src/ui/bin/brightness_manager/OWNERS
+include /third_party/rust_crates/ask2patch/regex-automata/OWNERS
 include /third_party/rust_crates/forks/fatfs/OWNERS
-include /third_party/rust_crates/forks/regex-automata/OWNERS
 include /third_party/rust_crates/vendor/base64-0.9.3/OWNERS
 include /third_party/rust_crates/vendor/bincode/OWNERS
 include /third_party/rust_crates/vendor/deflate/OWNERS

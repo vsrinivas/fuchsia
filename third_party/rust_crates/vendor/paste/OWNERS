@@ -10,6 +10,7 @@ include /src/lib/diagnostics/hierarchy/rust/OWNERS
 include /src/lib/diagnostics/inspect/derive/OWNERS
 include /src/lib/diagnostics/inspect/rust/OWNERS
 include /src/lib/intl/OWNERS
+include /src/proc/OWNERS
 include /src/sys/component_manager/OWNERS
 include /src/sys/lib/component-events/OWNERS
 include /src/sys/test_runners/OWNERS

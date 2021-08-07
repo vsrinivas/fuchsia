@@ -3,15 +3,15 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include /src/connectivity/bluetooth/OWNERS
+include /src/developer/ffx/lib/gcs/OWNERS
 include /src/graphics/lib/compute/OWNERS
 include /src/lib/async-utils/OWNERS
 include /src/lib/diagnostics/OWNERS
 include /src/lib/ui/carnelian/OWNERS
+include /src/proc/OWNERS
 include /src/storage/OWNERS
 include /third_party/rust_crates/vendor/async-executor/OWNERS
 include /third_party/rust_crates/vendor/async-io/OWNERS
 include /third_party/rust_crates/vendor/blocking/OWNERS
-include /third_party/rust_crates/vendor/futures-task/OWNERS
-include /third_party/rust_crates/vendor/futures-test/OWNERS
 include /third_party/rust_crates/vendor/pem/OWNERS
 include /tools/auto_owners/OWNERS

@@ -20,7 +20,7 @@ include /src/lib/process_builder/OWNERS
 include /src/power/power-manager/OWNERS
 include /src/testing/sl4f/OWNERS
 include /src/ui/bin/brightness_manager/OWNERS
-include /third_party/rust_crates/forks/streaming-stats/OWNERS
+include /third_party/rust_crates/ask2patch/streaming-stats/OWNERS
 include /third_party/rust_crates/vendor/chrono/OWNERS
 include /third_party/rust_crates/vendor/criterion/OWNERS
 include /third_party/rust_crates/vendor/euclid/OWNERS
