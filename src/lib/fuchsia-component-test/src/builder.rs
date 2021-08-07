@@ -8,7 +8,7 @@ use {
     crate::{error::*, mock, Moniker, Realm},
     anyhow, cm_rust,
     fidl::endpoints::DiscoverableProtocolMarker,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as ffrb, fuchsia_async as fasync,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
     futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
     std::{collections::HashMap, fmt},
@@ -112,10 +112,12 @@ pub enum RouteEndpoint {
 }
 
 impl RouteEndpoint {
-    pub(crate) fn to_ffrb(self) -> ffrb::RouteEndpoint {
+    pub(crate) fn to_frealmbuilder(self) -> frealmbuilder::RouteEndpoint {
         match self {
-            RouteEndpoint::AboveRoot => ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {}),
-            RouteEndpoint::Component(moniker) => ffrb::RouteEndpoint::Component(moniker),
+            RouteEndpoint::AboveRoot => {
+                frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})
+            }
+            RouteEndpoint::Component(moniker) => frealmbuilder::RouteEndpoint::Component(moniker),
         }
     }
 
@@ -698,7 +700,7 @@ mod tests {
                 Ok(_) => panic!("builder commands should have errored"),
                 Err(error::Error::FailedToSetDecl(
                     _,
-                    ffrb::RealmBuilderError::NodeBehindChildDecl,
+                    frealmbuilder::RealmBuilderError::NodeBehindChildDecl,
                 )) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
             }
@@ -771,7 +773,9 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::MissingRouteSource)) => (),
+            Err(error::Error::FailedToRoute(
+                frealmbuilder::RealmBuilderError::MissingRouteSource,
+            )) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -797,7 +801,7 @@ mod tests {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(
                 e,
-                error::Error::FailedToRoute(ffrb::RealmBuilderError::RouteTargetsEmpty)
+                error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::RouteTargetsEmpty)
             ),
         }
     }
@@ -861,7 +865,9 @@ mod tests {
             let res = builder.build().initialize().await;
 
             match res {
-                Err(error::Error::FailedToCommit(ffrb::RealmBuilderError::ValidationError)) => (),
+                Err(error::Error::FailedToCommit(
+                    frealmbuilder::RealmBuilderError::ValidationError,
+                )) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
                 Ok(_) => panic!("builder commands should have errored"),
             }
@@ -919,7 +925,9 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::MissingRouteTarget)) => (),
+            Err(error::Error::FailedToRoute(
+                frealmbuilder::RealmBuilderError::MissingRouteTarget,
+            )) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -942,7 +950,9 @@ mod tests {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(
                 e,
-                error::Error::FailedToRoute(ffrb::RealmBuilderError::RouteSourceAndTargetMatch)
+                error::Error::FailedToRoute(
+                    frealmbuilder::RealmBuilderError::RouteSourceAndTargetMatch
+                )
             ),
         }
     }
@@ -1017,7 +1027,9 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::UnableToExpose)) => (),
+            Err(error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::UnableToExpose)) => {
+                ()
+            }
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
@@ -1044,7 +1056,9 @@ mod tests {
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::UnableToExpose)) => (),
+            Err(error::Error::FailedToRoute(frealmbuilder::RealmBuilderError::UnableToExpose)) => {
+                ()
+            }
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }

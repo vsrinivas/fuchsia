@@ -5,14 +5,16 @@
 use {
     anyhow,
     cm_rust::{FidlIntoNative, NativeIntoFidl},
-    fidl::endpoints::RequestStream,
-    fidl_fuchsia_data as fdata,
+    fidl::endpoints::{ProtocolMarker, RequestStream},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_syslog as syslog,
     futures::{future::BoxFuture, FutureExt, StreamExt, TryStreamExt},
     io_util,
+    lazy_static::lazy_static,
     log::*,
     std::{
         collections::HashMap,
@@ -26,6 +28,14 @@ use {
 
 mod resolver;
 mod runner;
+
+lazy_static! {
+    pub static ref BINDER_PROTOCOL_CAPABILITY: frealmbuilder::Capability =
+        frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+            name: Some(fcomponent::BinderMarker::DEBUG_NAME.to_owned()),
+            ..frealmbuilder::ProtocolCapability::EMPTY
+        });
+}
 
 #[fasync::run_singlethreaded()]
 async fn main() {
@@ -59,7 +69,7 @@ async fn main() {
 }
 
 async fn handle_framework_intermediary_stream(
-    mut stream: ffrb::FrameworkIntermediaryRequestStream,
+    mut stream: frealmbuilder::FrameworkIntermediaryRequestStream,
     registry: Arc<resolver::Registry>,
     runner: Arc<runner::Runner>,
 ) -> Result<(), anyhow::Error> {
@@ -67,7 +77,7 @@ async fn handle_framework_intermediary_stream(
     let mut test_pkg_dir = None;
     while let Some(req) = stream.try_next().await? {
         match req {
-            ffrb::FrameworkIntermediaryRequest::Init { pkg_dir_handle, responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::Init { pkg_dir_handle, responder } => {
                 if test_pkg_dir.is_some() {
                     responder.send(&mut Err(Error::PkgDirAlreadySet.log_and_convert()))?;
                 } else {
@@ -77,7 +87,11 @@ async fn handle_framework_intermediary_stream(
                     responder.send(&mut Ok(()))?;
                 }
             }
-            ffrb::FrameworkIntermediaryRequest::SetComponent { moniker, component, responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::SetComponent {
+                moniker,
+                component,
+                responder,
+            } => {
                 match realm_tree
                     .set_component(moniker.clone().into(), component.clone(), &test_pkg_dir)
                     .await
@@ -92,16 +106,17 @@ async fn handle_framework_intermediary_stream(
                     }
                 }
             }
-            ffrb::FrameworkIntermediaryRequest::GetComponentDecl { moniker, responder } => {
-                match realm_tree.get_component_decl(moniker.clone().into()) {
-                    Ok(decl) => responder.send(&mut Ok(decl.native_into_fidl()))?,
-                    Err(e) => {
-                        warn!("error occurred when getting decl for component {:?}", moniker);
-                        responder.send(&mut Err(e.log_and_convert()))?;
-                    }
+            frealmbuilder::FrameworkIntermediaryRequest::GetComponentDecl {
+                moniker,
+                responder,
+            } => match realm_tree.get_component_decl(moniker.clone().into()) {
+                Ok(decl) => responder.send(&mut Ok(decl.native_into_fidl()))?,
+                Err(e) => {
+                    warn!("error occurred when getting decl for component {:?}", moniker);
+                    responder.send(&mut Err(e.log_and_convert()))?;
                 }
-            }
-            ffrb::FrameworkIntermediaryRequest::RouteCapability { route, responder } => {
+            },
+            frealmbuilder::FrameworkIntermediaryRequest::RouteCapability { route, responder } => {
                 match realm_tree.route_capability(route.clone()) {
                     Ok(()) => responder.send(&mut Ok(()))?,
                     Err(e) => {
@@ -110,7 +125,7 @@ async fn handle_framework_intermediary_stream(
                     }
                 }
             }
-            ffrb::FrameworkIntermediaryRequest::MarkAsEager { moniker, responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::MarkAsEager { moniker, responder } => {
                 match realm_tree.mark_as_eager(moniker.clone().into()) {
                     Ok(()) => responder.send(&mut Ok(()))?,
                     Err(e) => {
@@ -119,10 +134,10 @@ async fn handle_framework_intermediary_stream(
                     }
                 }
             }
-            ffrb::FrameworkIntermediaryRequest::Contains { moniker, responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::Contains { moniker, responder } => {
                 responder.send(realm_tree.contains(moniker.clone().into()))?;
             }
-            ffrb::FrameworkIntermediaryRequest::Commit { responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::Commit { responder } => {
                 match realm_tree
                     .clone()
                     .commit(registry.clone(), vec![], test_pkg_dir.clone())
@@ -135,7 +150,7 @@ async fn handle_framework_intermediary_stream(
                     }
                 }
             }
-            ffrb::FrameworkIntermediaryRequest::NewMockId { responder } => {
+            frealmbuilder::FrameworkIntermediaryRequest::NewMockId { responder } => {
                 let mock_id = runner.register_mock(stream.control_handle()).await;
                 responder.send(mock_id.as_str())?;
             }
@@ -174,7 +189,7 @@ enum Error {
     MissingRouteTarget(Moniker),
 
     #[error("a route's target cannot be equal to its source: {0:?}")]
-    RouteSourceAndTargetMatch(ffrb::RouteEndpoint),
+    RouteSourceAndTargetMatch(frealmbuilder::RouteEndpoint),
 
     #[error("the component decl for {0} failed validation: {1:?}")]
     ValidationError(Moniker, cm_fidl_validator::ErrorList),
@@ -202,30 +217,30 @@ enum Error {
 }
 
 impl Error {
-    fn log_and_convert(self) -> ffrb::RealmBuilderError {
+    fn log_and_convert(self) -> frealmbuilder::RealmBuilderError {
         warn!("sending error to client: {:?}", self);
         match self {
-            Error::NodeBehindChildDecl(_) => ffrb::RealmBuilderError::NodeBehindChildDecl,
-            Error::NoSuchChild(_) => ffrb::RealmBuilderError::NoSuchChild,
-            Error::RootCannotBeSetToUrl => ffrb::RealmBuilderError::RootCannotBeSetToUrl,
-            Error::RootCannotBeEager => ffrb::RealmBuilderError::RootCannotBeEager,
-            Error::BadFidl => ffrb::RealmBuilderError::BadFidl,
-            Error::MissingField(_) => ffrb::RealmBuilderError::MissingField,
-            Error::RouteTargetsEmpty => ffrb::RealmBuilderError::RouteTargetsEmpty,
-            Error::MissingRouteSource(_) => ffrb::RealmBuilderError::MissingRouteSource,
-            Error::MissingRouteTarget(_) => ffrb::RealmBuilderError::MissingRouteTarget,
+            Error::NodeBehindChildDecl(_) => frealmbuilder::RealmBuilderError::NodeBehindChildDecl,
+            Error::NoSuchChild(_) => frealmbuilder::RealmBuilderError::NoSuchChild,
+            Error::RootCannotBeSetToUrl => frealmbuilder::RealmBuilderError::RootCannotBeSetToUrl,
+            Error::RootCannotBeEager => frealmbuilder::RealmBuilderError::RootCannotBeEager,
+            Error::BadFidl => frealmbuilder::RealmBuilderError::BadFidl,
+            Error::MissingField(_) => frealmbuilder::RealmBuilderError::MissingField,
+            Error::RouteTargetsEmpty => frealmbuilder::RealmBuilderError::RouteTargetsEmpty,
+            Error::MissingRouteSource(_) => frealmbuilder::RealmBuilderError::MissingRouteSource,
+            Error::MissingRouteTarget(_) => frealmbuilder::RealmBuilderError::MissingRouteTarget,
             Error::RouteSourceAndTargetMatch(_) => {
-                ffrb::RealmBuilderError::RouteSourceAndTargetMatch
+                frealmbuilder::RealmBuilderError::RouteSourceAndTargetMatch
             }
-            Error::ValidationError(_, _) => ffrb::RealmBuilderError::ValidationError,
-            Error::UnableToExpose(_) => ffrb::RealmBuilderError::UnableToExpose,
-            Error::StorageSourceInvalid => ffrb::RealmBuilderError::StorageSourceInvalid,
-            Error::MonikerNotFound(_) => ffrb::RealmBuilderError::MonikerNotFound,
-            Error::PkgDirAlreadySet => ffrb::RealmBuilderError::PkgDirAlreadySet,
-            Error::PkgDirNotSet => ffrb::RealmBuilderError::PkgDirNotSet,
-            Error::PkgDirIoError(_) => ffrb::RealmBuilderError::PkgDirIoError,
+            Error::ValidationError(_, _) => frealmbuilder::RealmBuilderError::ValidationError,
+            Error::UnableToExpose(_) => frealmbuilder::RealmBuilderError::UnableToExpose,
+            Error::StorageSourceInvalid => frealmbuilder::RealmBuilderError::StorageSourceInvalid,
+            Error::MonikerNotFound(_) => frealmbuilder::RealmBuilderError::MonikerNotFound,
+            Error::PkgDirAlreadySet => frealmbuilder::RealmBuilderError::PkgDirAlreadySet,
+            Error::PkgDirNotSet => frealmbuilder::RealmBuilderError::PkgDirNotSet,
+            Error::PkgDirIoError(_) => frealmbuilder::RealmBuilderError::PkgDirIoError,
             Error::FailedToLoadComponentDecl(_) => {
-                ffrb::RealmBuilderError::FailedToLoadComponentDecl
+                frealmbuilder::RealmBuilderError::FailedToLoadComponentDecl
             }
         }
     }
@@ -344,11 +359,11 @@ impl RealmNode {
     async fn set_component(
         &mut self,
         moniker: Moniker,
-        component: ffrb::Component,
+        component: frealmbuilder::Component,
         test_pkg_dir: &Option<DirectoryProxy>,
     ) -> Result<(), Error> {
         match component {
-            ffrb::Component::Decl(decl) => {
+            frealmbuilder::Component::Decl(decl) => {
                 if let Some(parent_moniker) = moniker.parent() {
                     let parent_node =
                         self.get_node_mut(&parent_moniker, GetBehavior::CreateIfMissing)?;
@@ -365,7 +380,7 @@ impl RealmNode {
                 node.decl = decl.fidl_into_native();
                 node.validate(&moniker)?;
             }
-            ffrb::Component::Url(url) => {
+            frealmbuilder::Component::Url(url) => {
                 if is_relative_url(&url) {
                     return self
                         .load_decl_from_pkg(
@@ -397,7 +412,7 @@ impl RealmNode {
                     on_terminate: None,
                 });
             }
-            ffrb::Component::LegacyUrl(url) => {
+            frealmbuilder::Component::LegacyUrl(url) => {
                 if let Some(parent_moniker) = moniker.parent() {
                     let parent_node =
                         self.get_node_mut(&parent_moniker, GetBehavior::CreateIfMissing)?;
@@ -536,14 +551,14 @@ impl RealmNode {
     /// have the declarations needed for the route to be valid. If an error is
     /// returned some of the components in the route may have been updated while
     /// others were not.
-    fn route_capability(&mut self, route: ffrb::CapabilityRoute) -> Result<(), Error> {
+    fn route_capability(&mut self, route: frealmbuilder::CapabilityRoute) -> Result<(), Error> {
         let capability = route.capability.ok_or(Error::MissingField("capability"))?;
         let source = route.source.ok_or(Error::MissingField("source"))?;
         let targets = route.targets.ok_or(Error::MissingField("targets"))?;
         if targets.is_empty() {
             return Err(Error::RouteTargetsEmpty);
         }
-        if let ffrb::RouteEndpoint::Component(moniker) = &source {
+        if let frealmbuilder::RouteEndpoint::Component(moniker) = &source {
             let moniker: Moniker = moniker.clone().into();
             if !self.contains(moniker.clone()) {
                 return Err(Error::MissingRouteSource(moniker.clone()));
@@ -553,7 +568,7 @@ impl RealmNode {
             if &source == target {
                 return Err(Error::RouteSourceAndTargetMatch(source));
             }
-            if let ffrb::RouteEndpoint::Component(target_moniker) = target {
+            if let frealmbuilder::RouteEndpoint::Component(target_moniker) = target {
                 let target_moniker: Moniker = target_moniker.clone().into();
                 if !self.contains(target_moniker.clone()) {
                     return Err(Error::MissingRouteTarget(target_moniker));
@@ -561,11 +576,11 @@ impl RealmNode {
             }
         }
         for target in targets {
-            if let ffrb::RouteEndpoint::AboveRoot(_) = target {
+            if let frealmbuilder::RouteEndpoint::AboveRoot(_) = target {
                 // We're routing a capability from component within our constructed realm to
                 // somewhere above it
                 self.route_capability_to_above_root(&capability, source.clone().try_into()?)?;
-            } else if let ffrb::RouteEndpoint::AboveRoot(_) = &source {
+            } else if let frealmbuilder::RouteEndpoint::AboveRoot(_) = &source {
                 // We're routing a capability from above our constructed realm to a component
                 // within it
                 self.route_capability_from_above_root(&capability, target.try_into()?)?;
@@ -599,7 +614,7 @@ impl RealmNode {
 
     fn route_capability_to_above_root(
         &mut self,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
     ) -> Result<(), Error> {
         let mut current_ancestor = self.get_node_mut(&Moniker::root(), GetBehavior::ErrorIfMissing);
@@ -633,7 +648,7 @@ impl RealmNode {
 
     fn route_capability_from_above_root(
         &mut self,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         target_moniker: Moniker,
     ) -> Result<(), Error> {
         let mut current_ancestor = self.get_node_mut(&Moniker::root(), GetBehavior::ErrorIfMissing);
@@ -668,7 +683,7 @@ impl RealmNode {
     // This will panic if `target_moniker.is_ancestor_of(source_moniker)` returns false
     fn route_capability_use_from_child(
         &mut self,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
         target_moniker: Moniker,
     ) -> Result<(), Error> {
@@ -710,7 +725,7 @@ impl RealmNode {
 
     fn route_capability_between_components(
         &mut self,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         source_moniker: Moniker,
         target_moniker: Moniker,
     ) -> Result<(), Error> {
@@ -832,6 +847,11 @@ impl RealmNode {
         // futures as the size isn't knowable to rustc at compile time. Put the recursive call
         // into a boxed future, as the redirection makes this possible
         async move {
+            // Expose the fuchsia.component.Binder protocol from root in order to give users the ability to manually
+            // start the realm.
+            let () =
+                self.route_capability_to_above_root(&*BINDER_PROTOCOL_CAPABILITY, Moniker::root())?;
+
             let mut mutable_children = self.mutable_children.into_iter().collect::<Vec<_>>();
             mutable_children.sort_unstable_by_key(|t| t.0.clone());
             for (name, node) in mutable_children {
@@ -864,7 +884,7 @@ impl RealmNode {
     // there aren't any conflicting exposes.
     fn add_expose_for_capability(
         exposes: &mut Vec<cm_rust::ExposeDecl>,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         source: Option<&str>,
     ) -> Result<(), Error> {
         let expose_source = source
@@ -874,7 +894,10 @@ impl RealmNode {
 
         let new_decl = {
             match &capability {
-                ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
+                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                    name,
+                    ..
+                }) => {
                     let name = name.as_ref().unwrap();
                     cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                         source: expose_source,
@@ -883,7 +906,10 @@ impl RealmNode {
                         target_name: name.clone().into(),
                     })
                 }
-                ffrb::Capability::Directory(ffrb::DirectoryCapability { name, .. }) => {
+                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                    name,
+                    ..
+                }) => {
                     let name = name.as_ref().unwrap();
                     cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
                         source: expose_source,
@@ -894,7 +920,7 @@ impl RealmNode {
                         subdir: None,
                     })
                 }
-                ffrb::Capability::Storage(ffrb::StorageCapability { .. }) => {
+                frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability { .. }) => {
                     return Err(Error::UnableToExpose("storage"));
                 }
                 _ => return Err(Error::BadFidl),
@@ -911,24 +937,29 @@ impl RealmNode {
 
     fn add_capability_decl(
         capability_decls: &mut Vec<cm_rust::CapabilityDecl>,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
     ) -> Result<(), Error> {
         let capability_decl = match capability {
-            ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
+            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                name, ..
+            }) => {
                 let name = name.as_ref().unwrap();
                 Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
                     name: name.as_str().try_into().unwrap(),
                     source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
                 }))
             }
-            ffrb::Capability::Directory(ffrb::DirectoryCapability {
-                name, path, rights, ..
+            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                name,
+                path,
+                rights,
+                ..
             }) => Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
                 name: name.as_ref().unwrap().as_str().try_into().unwrap(),
                 source_path: path.as_ref().unwrap().as_str().try_into().unwrap(),
                 rights: rights.as_ref().unwrap().clone(),
             })),
-            ffrb::Capability::Storage(_) => {
+            frealmbuilder::Capability::Storage(_) => {
                 return Err(Error::StorageSourceInvalid);
             }
             _ => return Err(Error::BadFidl),
@@ -945,25 +976,28 @@ impl RealmNode {
 
     fn add_use_for_capability(
         uses: &mut Vec<cm_rust::UseDecl>,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         child_source: Option<String>,
     ) -> Result<(), Error> {
         let source =
             child_source.map(cm_rust::UseSource::Child).unwrap_or(cm_rust::UseSource::Parent);
         let use_decl = match capability {
-            ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
-                cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                    source,
-                    source_name: name.as_ref().unwrap().clone().try_into().unwrap(),
-                    target_path: format!("/svc/{}", name.as_ref().unwrap())
-                        .as_str()
-                        .try_into()
-                        .unwrap(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                })
-            }
-            ffrb::Capability::Directory(ffrb::DirectoryCapability {
-                name, path, rights, ..
+            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                name, ..
+            }) => cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                source,
+                source_name: name.as_ref().unwrap().clone().try_into().unwrap(),
+                target_path: format!("/svc/{}", name.as_ref().unwrap())
+                    .as_str()
+                    .try_into()
+                    .unwrap(),
+                dependency_type: cm_rust::DependencyType::Strong,
+            }),
+            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                name,
+                path,
+                rights,
+                ..
             }) => cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
                 source,
                 source_name: name.as_ref().unwrap().as_str().try_into().unwrap(),
@@ -972,7 +1006,11 @@ impl RealmNode {
                 subdir: None,
                 dependency_type: cm_rust::DependencyType::Strong,
             }),
-            ffrb::Capability::Storage(ffrb::StorageCapability { name, path, .. }) => {
+            frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
+                name,
+                path,
+                ..
+            }) => {
                 if source != cm_rust::UseSource::Parent {
                     // Storage can't be exposed, so we can't use it from a child, because how would
                     // the child expose it?
@@ -993,12 +1031,14 @@ impl RealmNode {
 
     fn add_offer_for_capability(
         offers: &mut Vec<cm_rust::OfferDecl>,
-        capability: &ffrb::Capability,
+        capability: &frealmbuilder::Capability,
         offer_source: OfferSource,
         target_name: &str,
     ) -> Result<(), Error> {
         let offer_decl = match &capability {
-            ffrb::Capability::Protocol(ffrb::ProtocolCapability { name, .. }) => {
+            frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
+                name, ..
+            }) => {
                 let name = name.as_ref().unwrap();
                 let offer_source = match offer_source {
                     OfferSource::Parent => cm_rust::OfferSource::Parent,
@@ -1013,7 +1053,10 @@ impl RealmNode {
                     dependency_type: cm_rust::DependencyType::Strong,
                 })
             }
-            ffrb::Capability::Directory(ffrb::DirectoryCapability { name, .. }) => {
+            frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
+                name,
+                ..
+            }) => {
                 let name = name.as_ref().unwrap();
                 let offer_source = match offer_source {
                     OfferSource::Parent => cm_rust::OfferSource::Parent,
@@ -1030,7 +1073,9 @@ impl RealmNode {
                     dependency_type: cm_rust::DependencyType::Strong,
                 })
             }
-            ffrb::Capability::Storage(ffrb::StorageCapability { name, .. }) => {
+            frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
+                name, ..
+            }) => {
                 let name = name.as_ref().unwrap();
                 let offer_source = match offer_source {
                     OfferSource::Parent => cm_rust::OfferSource::Parent,
@@ -1091,15 +1136,15 @@ impl From<Vec<String>> for Moniker {
     }
 }
 
-impl TryFrom<ffrb::RouteEndpoint> for Moniker {
+impl TryFrom<frealmbuilder::RouteEndpoint> for Moniker {
     type Error = Error;
 
-    fn try_from(route_endpoint: ffrb::RouteEndpoint) -> Result<Self, Error> {
+    fn try_from(route_endpoint: frealmbuilder::RouteEndpoint) -> Result<Self, Error> {
         match route_endpoint {
-            ffrb::RouteEndpoint::AboveRoot(_) => {
+            frealmbuilder::RouteEndpoint::AboveRoot(_) => {
                 panic!("tried to convert RouteEndpoint::AboveRoot into a moniker")
             }
-            ffrb::RouteEndpoint::Component(moniker) => Ok(moniker.into()),
+            frealmbuilder::RouteEndpoint::Component(moniker) => Ok(moniker.into()),
             _ => Err(Error::BadFidl),
         }
     }
@@ -1232,7 +1277,7 @@ mod tests {
         realm
             .set_component(
                 Moniker::default(),
-                ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(root_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1240,13 +1285,17 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(a_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "a/b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
 
@@ -1303,7 +1352,7 @@ mod tests {
         realm
             .set_component(
                 Moniker::default(),
-                ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(root_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1311,7 +1360,7 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(a_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1369,7 +1418,7 @@ mod tests {
         realm
             .set_component(
                 Moniker::default(),
-                ffrb::Component::Decl(root_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(root_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1377,7 +1426,7 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(a_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(a_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1385,7 +1434,7 @@ mod tests {
         realm
             .set_component(
                 "a/b".into(),
-                ffrb::Component::Decl(b_decl.clone().native_into_fidl()),
+                frealmbuilder::Component::Decl(b_decl.clone().native_into_fidl()),
                 &None,
             )
             .await
@@ -1431,17 +1480,23 @@ mod tests {
     async fn missing_route_source_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                ..ffrb::ProtocolCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::Component("b".to_string())),
-            targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
-            ..ffrb::CapabilityRoute::EMPTY
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Protocol(
+                frealmbuilder::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..frealmbuilder::ProtocolCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::Component("b".to_string())),
+            targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a".to_string())]),
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
@@ -1455,17 +1510,23 @@ mod tests {
     async fn empty_route_targets() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                ..ffrb::ProtocolCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Protocol(
+                frealmbuilder::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..frealmbuilder::ProtocolCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
             targets: Some(vec![]),
-            ..ffrb::CapabilityRoute::EMPTY
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
@@ -1486,7 +1547,7 @@ mod tests {
         realm
             .set_component(
                 "1/src".into(),
-                ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
                 &None,
             )
             .await
@@ -1494,7 +1555,7 @@ mod tests {
         realm
             .set_component(
                 "2/target_1".into(),
-                ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
                 &None,
             )
             .await
@@ -1502,23 +1563,25 @@ mod tests {
         realm
             .set_component(
                 "2/target_2".into(),
-                ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                frealmbuilder::Component::Url("fuchsia-pkg://c".to_string()),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("1/src".to_string())),
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("1/src".to_string())),
                 targets: Some(vec![
-                    ffrb::RouteEndpoint::Component("2/target_1".to_string()),
-                    ffrb::RouteEndpoint::Component("2/target_2".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("2/target_1".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("2/target_2".to_string()),
                 ]),
-                ..ffrb::CapabilityRoute::EMPTY
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
     }
@@ -1530,7 +1593,7 @@ mod tests {
             realm
                 .set_component(
                     "1/a".into(),
-                    ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
                     &None,
                 )
                 .await
@@ -1538,7 +1601,7 @@ mod tests {
             realm
                 .set_component(
                     "1/b".into(),
-                    ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
                     &None,
                 )
                 .await
@@ -1546,7 +1609,7 @@ mod tests {
             realm
                 .set_component(
                     "2/c".into(),
-                    ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://c".to_string()),
                     &None,
                 )
                 .await
@@ -1554,36 +1617,41 @@ mod tests {
             realm
                 .set_component(
                     "2/d".into(),
-                    ffrb::Component::Url("fuchsia-pkg://d".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://d".to_string()),
                     &None,
                 )
                 .await
                 .unwrap();
             realm
-                .route_capability(ffrb::CapabilityRoute {
-                    capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                        ..ffrb::ProtocolCapability::EMPTY
-                    })),
-                    source: Some(ffrb::RouteEndpoint::Component("1/a".to_string())),
-                    targets: Some(vec![ffrb::RouteEndpoint::Component("2/c".to_string())]),
-                    ..ffrb::CapabilityRoute::EMPTY
+                .route_capability(frealmbuilder::CapabilityRoute {
+                    capability: Some(frealmbuilder::Capability::Protocol(
+                        frealmbuilder::ProtocolCapability {
+                            name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                            ..frealmbuilder::ProtocolCapability::EMPTY
+                        },
+                    )),
+                    source: Some(frealmbuilder::RouteEndpoint::Component("1/a".to_string())),
+                    targets: Some(vec![frealmbuilder::RouteEndpoint::Component("2/c".to_string())]),
+                    ..frealmbuilder::CapabilityRoute::EMPTY
                 })
                 .unwrap();
             realm
-                .route_capability(ffrb::CapabilityRoute {
-                    capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                        ..ffrb::ProtocolCapability::EMPTY
-                    })),
-                    source: Some(ffrb::RouteEndpoint::Component("1/b".to_string())),
-                    targets: Some(vec![ffrb::RouteEndpoint::Component("2/d".to_string())]),
-                    ..ffrb::CapabilityRoute::EMPTY
+                .route_capability(frealmbuilder::CapabilityRoute {
+                    capability: Some(frealmbuilder::Capability::Protocol(
+                        frealmbuilder::ProtocolCapability {
+                            name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                            ..frealmbuilder::ProtocolCapability::EMPTY
+                        },
+                    )),
+                    source: Some(frealmbuilder::RouteEndpoint::Component("1/b".to_string())),
+                    targets: Some(vec![frealmbuilder::RouteEndpoint::Component("2/d".to_string())]),
+                    ..frealmbuilder::CapabilityRoute::EMPTY
                 })
                 .unwrap();
             // get and set this component, to confirm that `set_component` runs `validate`
             let decl = realm.get_component_decl("1".into()).unwrap().native_into_fidl();
-            let res = realm.set_component("1".into(), ffrb::Component::Decl(decl), &None).await;
+            let res =
+                realm.set_component("1".into(), frealmbuilder::Component::Decl(decl), &None).await;
 
             match res {
                 Err(Error::ValidationError(_, e)) => {
@@ -1610,7 +1678,7 @@ mod tests {
             realm
                 .set_component(
                     "1/a".into(),
-                    ffrb::Component::Url("fuchsia-pkg://a".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
                     &None,
                 )
                 .await
@@ -1618,7 +1686,7 @@ mod tests {
             realm
                 .set_component(
                     "1/b".into(),
-                    ffrb::Component::Url("fuchsia-pkg://b".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
                     &None,
                 )
                 .await
@@ -1626,7 +1694,7 @@ mod tests {
             realm
                 .set_component(
                     "2/c".into(),
-                    ffrb::Component::Url("fuchsia-pkg://c".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://c".to_string()),
                     &None,
                 )
                 .await
@@ -1634,31 +1702,35 @@ mod tests {
             realm
                 .set_component(
                     "2/d".into(),
-                    ffrb::Component::Url("fuchsia-pkg://d".to_string()),
+                    frealmbuilder::Component::Url("fuchsia-pkg://d".to_string()),
                     &None,
                 )
                 .await
                 .unwrap();
             realm
-                .route_capability(ffrb::CapabilityRoute {
-                    capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                        ..ffrb::ProtocolCapability::EMPTY
-                    })),
-                    source: Some(ffrb::RouteEndpoint::Component("1/a".to_string())),
-                    targets: Some(vec![ffrb::RouteEndpoint::Component("1/b".to_string())]),
-                    ..ffrb::CapabilityRoute::EMPTY
+                .route_capability(frealmbuilder::CapabilityRoute {
+                    capability: Some(frealmbuilder::Capability::Protocol(
+                        frealmbuilder::ProtocolCapability {
+                            name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                            ..frealmbuilder::ProtocolCapability::EMPTY
+                        },
+                    )),
+                    source: Some(frealmbuilder::RouteEndpoint::Component("1/a".to_string())),
+                    targets: Some(vec![frealmbuilder::RouteEndpoint::Component("1/b".to_string())]),
+                    ..frealmbuilder::CapabilityRoute::EMPTY
                 })
                 .unwrap();
             realm
-                .route_capability(ffrb::CapabilityRoute {
-                    capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                        ..ffrb::ProtocolCapability::EMPTY
-                    })),
-                    source: Some(ffrb::RouteEndpoint::Component("2/c".to_string())),
-                    targets: Some(vec![ffrb::RouteEndpoint::Component("2/d".to_string())]),
-                    ..ffrb::CapabilityRoute::EMPTY
+                .route_capability(frealmbuilder::CapabilityRoute {
+                    capability: Some(frealmbuilder::Capability::Protocol(
+                        frealmbuilder::ProtocolCapability {
+                            name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                            ..frealmbuilder::ProtocolCapability::EMPTY
+                        },
+                    )),
+                    source: Some(frealmbuilder::RouteEndpoint::Component("2/c".to_string())),
+                    targets: Some(vec![frealmbuilder::RouteEndpoint::Component("2/d".to_string())]),
+                    ..frealmbuilder::CapabilityRoute::EMPTY
                 })
                 .unwrap();
         }
@@ -1668,17 +1740,23 @@ mod tests {
     async fn missing_route_target_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                ..ffrb::ProtocolCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-            targets: Some(vec![ffrb::RouteEndpoint::Component("b".to_string())]),
-            ..ffrb::CapabilityRoute::EMPTY
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Protocol(
+                frealmbuilder::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..frealmbuilder::ProtocolCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+            targets: Some(vec![frealmbuilder::RouteEndpoint::Component("b".to_string())]),
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
@@ -1693,19 +1771,23 @@ mod tests {
     #[test]
     fn route_source_and_target_both_above_root_error() {
         let mut realm = RealmNode::default();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                ..ffrb::ProtocolCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {})),
-            targets: Some(vec![ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {})]),
-            ..ffrb::CapabilityRoute::EMPTY
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Protocol(
+                frealmbuilder::ProtocolCapability {
+                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                    ..frealmbuilder::ProtocolCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})),
+            targets: Some(vec![frealmbuilder::RouteEndpoint::AboveRoot(
+                frealmbuilder::AboveRoot {},
+            )]),
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
-            Err(Error::RouteSourceAndTargetMatch(ffrb::RouteEndpoint::AboveRoot(
-                ffrb::AboveRoot {},
+            Err(Error::RouteSourceAndTargetMatch(frealmbuilder::RouteEndpoint::AboveRoot(
+                frealmbuilder::AboveRoot {},
             ))) => (),
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => panic!("unexpected error: {:?}", e),
@@ -1716,18 +1798,26 @@ mod tests {
     async fn expose_storage_from_child_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Storage(ffrb::StorageCapability {
-                name: Some("foo".to_string()),
-                path: Some("foo".to_string()),
-                ..ffrb::StorageCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-            targets: Some(vec![ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {})]),
-            ..ffrb::CapabilityRoute::EMPTY
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Storage(
+                frealmbuilder::StorageCapability {
+                    name: Some("foo".to_string()),
+                    path: Some("foo".to_string()),
+                    ..frealmbuilder::StorageCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+            targets: Some(vec![frealmbuilder::RouteEndpoint::AboveRoot(
+                frealmbuilder::AboveRoot {},
+            )]),
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
@@ -1741,22 +1831,32 @@ mod tests {
     async fn offer_storage_from_child_error() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
-        let res = realm.route_capability(ffrb::CapabilityRoute {
-            capability: Some(ffrb::Capability::Storage(ffrb::StorageCapability {
-                name: Some("foo".to_string()),
-                path: Some("/foo".to_string()),
-                ..ffrb::StorageCapability::EMPTY
-            })),
-            source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-            targets: Some(vec![ffrb::RouteEndpoint::Component("b".to_string())]),
-            ..ffrb::CapabilityRoute::EMPTY
+        let res = realm.route_capability(frealmbuilder::CapabilityRoute {
+            capability: Some(frealmbuilder::Capability::Storage(
+                frealmbuilder::StorageCapability {
+                    name: Some("foo".to_string()),
+                    path: Some("/foo".to_string()),
+                    ..frealmbuilder::StorageCapability::EMPTY
+                },
+            )),
+            source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+            targets: Some(vec![frealmbuilder::RouteEndpoint::Component("b".to_string())]),
+            ..frealmbuilder::CapabilityRoute::EMPTY
         });
 
         match res {
@@ -1772,21 +1872,25 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Storage(ffrb::StorageCapability {
-                    name: Some("foo".to_string()),
-                    path: Some("/bar".to_string()),
-                    ..ffrb::StorageCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {})),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Storage(
+                    frealmbuilder::StorageCapability {
+                        name: Some("foo".to_string()),
+                        path: Some("/bar".to_string()),
+                        ..frealmbuilder::StorageCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::AboveRoot(frealmbuilder::AboveRoot {})),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -1828,23 +1932,33 @@ mod tests {
     async fn two_sibling_realm_no_mocks() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm.mark_as_eager("b".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("b".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("b".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -1888,7 +2002,9 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
@@ -1896,20 +2012,24 @@ mod tests {
         realm
             .set_component(
                 "b".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("b".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("b".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -1976,24 +2096,32 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "a/b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("a/b".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a/b".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2047,44 +2175,58 @@ mod tests {
     async fn three_sibling_realm_one_mock() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
-            .await
-            .unwrap();
-        realm
             .set_component(
-                "b".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()), &None)
+            .set_component(
+                "b".into(),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .set_component(
+                "c".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://c".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm.mark_as_eager("c".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("b".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("b".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Directory(ffrb::DirectoryCapability {
-                    name: Some("example-dir".to_string()),
-                    path: Some("/example".to_string()),
-                    rights: Some(fio2::RW_STAR_DIR),
-                    ..ffrb::DirectoryCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("b".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("c".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Directory(
+                    frealmbuilder::DirectoryCapability {
+                        name: Some("example-dir".to_string()),
+                        path: Some("/example".to_string()),
+                        rights: Some(fio2::RW_STAR_DIR),
+                        ..frealmbuilder::DirectoryCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("b".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("c".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2171,47 +2313,63 @@ mod tests {
     async fn three_siblings_two_targets() {
         let mut realm = RealmNode::default();
         realm
-            .set_component("a".into(), ffrb::Component::Url("fuchsia-pkg://a".to_string()), &None)
+            .set_component(
+                "a".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://a".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm
-            .set_component("b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm
-            .set_component("c".into(), ffrb::Component::Url("fuchsia-pkg://c".to_string()), &None)
+            .set_component(
+                "c".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://c".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm.mark_as_eager("a".into()).unwrap();
         realm.mark_as_eager("c".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("b".to_string())),
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("b".to_string())),
                 targets: Some(vec![
-                    ffrb::RouteEndpoint::Component("a".to_string()),
-                    ffrb::RouteEndpoint::Component("c".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("a".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("c".to_string()),
                 ]),
-                ..ffrb::CapabilityRoute::EMPTY
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Directory(ffrb::DirectoryCapability {
-                    name: Some("example-dir".to_string()),
-                    path: Some("/example".to_string()),
-                    rights: Some(fio2::RW_STAR_DIR),
-                    ..ffrb::DirectoryCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("b".to_string())),
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Directory(
+                    frealmbuilder::DirectoryCapability {
+                        name: Some("example-dir".to_string()),
+                        path: Some("/example".to_string()),
+                        rights: Some(fio2::RW_STAR_DIR),
+                        ..frealmbuilder::DirectoryCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("b".to_string())),
                 targets: Some(vec![
-                    ffrb::RouteEndpoint::Component("a".to_string()),
-                    ffrb::RouteEndpoint::Component("c".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("a".to_string()),
+                    frealmbuilder::RouteEndpoint::Component("c".to_string()),
                 ]),
-                ..ffrb::CapabilityRoute::EMPTY
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2289,7 +2447,7 @@ mod tests {
         realm
             .set_component(
                 "a/b".into(),
-                ffrb::Component::Url("fuchsia-pkg://a-b".to_string()),
+                frealmbuilder::Component::Url("fuchsia-pkg://a-b".to_string()),
                 &None,
             )
             .await
@@ -2297,33 +2455,39 @@ mod tests {
         realm
             .set_component(
                 "c/d".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("c/d".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("c/d".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Directory(ffrb::DirectoryCapability {
-                    name: Some("example-dir".to_string()),
-                    path: Some("/example".to_string()),
-                    rights: Some(fio2::RW_STAR_DIR),
-                    ..ffrb::DirectoryCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("c/d".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Directory(
+                    frealmbuilder::DirectoryCapability {
+                        name: Some("example-dir".to_string()),
+                        path: Some("/example".to_string()),
+                        rights: Some(fio2::RW_STAR_DIR),
+                        ..frealmbuilder::DirectoryCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("c/d".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2446,25 +2610,33 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm
-            .set_component("a/b".into(), ffrb::Component::Url("fuchsia-pkg://b".to_string()), &None)
+            .set_component(
+                "a/b".into(),
+                frealmbuilder::Component::Url("fuchsia-pkg://b".to_string()),
+                &None,
+            )
             .await
             .unwrap();
         realm.mark_as_eager("a/b".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2511,7 +2683,9 @@ mod tests {
         realm
             .set_component(
                 "a".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
@@ -2519,21 +2693,25 @@ mod tests {
         realm
             .set_component(
                 "a/b".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm.mark_as_eager("a/b".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a/b".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a/b".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 
@@ -2598,21 +2776,25 @@ mod tests {
         realm
             .set_component(
                 "a/b/c".into(),
-                ffrb::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                frealmbuilder::Component::Decl(
+                    cm_rust::ComponentDecl::default().native_into_fidl(),
+                ),
                 &None,
             )
             .await
             .unwrap();
         realm.mark_as_eager("a/b/c".into()).unwrap();
         realm
-            .route_capability(ffrb::CapabilityRoute {
-                capability: Some(ffrb::Capability::Protocol(ffrb::ProtocolCapability {
-                    name: Some("fidl.examples.routing.echo.Echo".to_string()),
-                    ..ffrb::ProtocolCapability::EMPTY
-                })),
-                source: Some(ffrb::RouteEndpoint::Component("a/b/c".to_string())),
-                targets: Some(vec![ffrb::RouteEndpoint::Component("a".to_string())]),
-                ..ffrb::CapabilityRoute::EMPTY
+            .route_capability(frealmbuilder::CapabilityRoute {
+                capability: Some(frealmbuilder::Capability::Protocol(
+                    frealmbuilder::ProtocolCapability {
+                        name: Some("fidl.examples.routing.echo.Echo".to_string()),
+                        ..frealmbuilder::ProtocolCapability::EMPTY
+                    },
+                )),
+                source: Some(frealmbuilder::RouteEndpoint::Component("a/b/c".to_string())),
+                targets: Some(vec![frealmbuilder::RouteEndpoint::Component("a".to_string())]),
+                ..frealmbuilder::CapabilityRoute::EMPTY
             })
             .unwrap();
 

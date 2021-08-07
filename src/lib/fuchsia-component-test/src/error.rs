@@ -4,7 +4,8 @@
 
 use {
     crate::{builder, Moniker},
-    anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_realm_builder as ffrb,
+    anyhow, cm_rust, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_realm_builder as frealmbuilder,
     thiserror::{self, Error},
 };
 
@@ -23,25 +24,25 @@ pub enum Error {
     FidlError(#[from] fidl::Error),
 
     #[error("failed to set component decl for {0}: {1:?}")]
-    FailedToSetDecl(Moniker, ffrb::RealmBuilderError),
+    FailedToSetDecl(Moniker, frealmbuilder::RealmBuilderError),
 
     #[error("failed to retrieve component decl for {0}: {1:?}")]
-    FailedToGetDecl(Moniker, ffrb::RealmBuilderError),
+    FailedToGetDecl(Moniker, frealmbuilder::RealmBuilderError),
 
     #[error("failed to mark component {0} as eager: {1:?}")]
-    FailedToMarkAsEager(Moniker, ffrb::RealmBuilderError),
+    FailedToMarkAsEager(Moniker, frealmbuilder::RealmBuilderError),
 
     #[error("failed to commit realm: {0:?}")]
-    FailedToCommit(ffrb::RealmBuilderError),
+    FailedToCommit(frealmbuilder::RealmBuilderError),
 
     #[error("failed to route capability: {0:?}")]
-    FailedToRoute(ffrb::RealmBuilderError),
+    FailedToRoute(frealmbuilder::RealmBuilderError),
 
     #[error("failed to open \"/pkg\": {0:?}")]
     FailedToOpenPkgDir(anyhow::Error),
 
     #[error("failed to set package directory: {0:?}")]
-    FailedToSetPkgDir(ffrb::RealmBuilderError),
+    FailedToSetPkgDir(frealmbuilder::RealmBuilderError),
 }
 
 #[derive(Debug, Error)]

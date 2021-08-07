@@ -8,7 +8,7 @@ use {
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_realm_builder as ffrb, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{FutureExt, TryFutureExt},
@@ -145,7 +145,7 @@ impl Drop for RealmInstance {
 
 /// A custom built realm, which can be created at runtime in a component collection
 pub struct Realm {
-    framework_intermediary_proxy: ffrb::FrameworkIntermediaryProxy,
+    framework_intermediary_proxy: frealmbuilder::FrameworkIntermediaryProxy,
     mocks_runner: mock::MocksRunner,
     collection_name: String,
 
@@ -175,7 +175,7 @@ impl Realm {
             .map_err(RealmError::FailedToUseRealm)?
             .map_err(RealmError::FailedBindToFrameworkIntermediary)?;
         let framework_intermediary_proxy = fclient::connect_to_protocol_at_dir_root::<
-            ffrb::FrameworkIntermediaryMarker,
+            frealmbuilder::FrameworkIntermediaryMarker,
         >(&exposed_dir_proxy)
         .map_err(RealmError::ConnectToFrameworkIntermediaryService)?;
 
@@ -193,7 +193,7 @@ impl Realm {
     }
 
     fn new_with_framework_intermediary_proxy(
-        framework_intermediary_proxy: ffrb::FrameworkIntermediaryProxy,
+        framework_intermediary_proxy: frealmbuilder::FrameworkIntermediaryProxy,
     ) -> Result<Self, Error> {
         let mocks_runner = mock::MocksRunner::new(framework_intermediary_proxy.take_event_stream());
         Ok(Self {
@@ -244,14 +244,14 @@ impl Realm {
     ) -> Result<(), Error> {
         let decl = decl.native_into_fidl();
         self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut ffrb::Component::Decl(decl))
+            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::Decl(decl))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
 
     pub async fn set_component_url(&self, moniker: &Moniker, url: String) -> Result<(), Error> {
         self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut ffrb::Component::Url(url))
+            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::Url(url))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
@@ -262,7 +262,7 @@ impl Realm {
         url: String,
     ) -> Result<(), Error> {
         self.framework_intermediary_proxy
-            .set_component(&moniker.to_string(), &mut ffrb::Component::LegacyUrl(url))
+            .set_component(&moniker.to_string(), &mut frealmbuilder::Component::LegacyUrl(url))
             .await?
             .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
@@ -322,36 +322,37 @@ impl Realm {
 
         let capability = match route.capability {
             builder::Capability::Protocol(name) => {
-                ffrb::Capability::Protocol(ffrb::ProtocolCapability {
+                frealmbuilder::Capability::Protocol(frealmbuilder::ProtocolCapability {
                     name: Some(name),
-                    ..ffrb::ProtocolCapability::EMPTY
+                    ..frealmbuilder::ProtocolCapability::EMPTY
                 })
             }
             builder::Capability::Directory(name, path, rights) => {
-                ffrb::Capability::Directory(ffrb::DirectoryCapability {
+                frealmbuilder::Capability::Directory(frealmbuilder::DirectoryCapability {
                     name: Some(name),
                     path: Some(path),
                     rights: Some(rights),
-                    ..ffrb::DirectoryCapability::EMPTY
+                    ..frealmbuilder::DirectoryCapability::EMPTY
                 })
             }
             builder::Capability::Storage(name, path) => {
-                ffrb::Capability::Storage(ffrb::StorageCapability {
+                frealmbuilder::Capability::Storage(frealmbuilder::StorageCapability {
                     name: Some(name),
                     path: Some(path),
-                    ..ffrb::StorageCapability::EMPTY
+                    ..frealmbuilder::StorageCapability::EMPTY
                 })
             }
             builder::Capability::Event(_, _) => unreachable!(),
         };
 
-        let source = route.source.to_ffrb();
-        let targets = route.targets.into_iter().map(builder::RouteEndpoint::to_ffrb).collect();
-        let route = ffrb::CapabilityRoute {
+        let source = route.source.to_frealmbuilder();
+        let targets =
+            route.targets.into_iter().map(builder::RouteEndpoint::to_frealmbuilder).collect();
+        let route = frealmbuilder::CapabilityRoute {
             capability: Some(capability),
             source: Some(source),
             targets: Some(targets),
-            ..ffrb::CapabilityRoute::EMPTY
+            ..frealmbuilder::CapabilityRoute::EMPTY
         };
         self.framework_intermediary_proxy
             .route_capability(route)
