@@ -59,7 +59,10 @@ group("tests") {
   # host bots currently lack a proper Vulkan loader + ICD. Thus only add
   # the device-specific Vulkan-based unit-tests for now.
   if (is_fuchsia) {
-    public_deps += [ ":graphics-compute-vk-unittests" ]
+    public_deps += [
+      ":graphics-compute-vk-unittests",
+      "tools:tests",
+    ]
   }
 
   if (_build_host_tests) {

@@ -1,0 +1,81 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+import("//src/graphics/lib/compute/tools/target_archive/gn/target_archive.gni")
+
+#
+#
+#
+config("bench_vk_config") {
+  include_dirs = [ "." ]
+}
+
+#
+# SPIR-V module(s)
+#
+target_archive_linkable("spirv_modules_rodata") {
+  shader_sources = [ "shaders/noop.comp" ]
+}
+
+#
+#
+#
+source_set("bench_vk_sources") {
+  public_configs = [ ":bench_vk_config" ]
+  public = [ "bench_vk.h" ]
+  sources = [
+    "bench_vk.c",
+    "bench_vk.h",
+  ]
+  deps = [
+    ":spirv_modules_rodata",
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
+    graphics_compute_vulkan_loader_target,
+  ]
+}
+
+#
+# Vulkan Bench
+#
+graphics_compute_vulkan_executable("bench-vk") {
+  sources = [ "main.c" ]
+  deps = [ ":bench_vk_sources" ]
+}
+
+#
+# Vulkan Bench unit tests
+#
+graphics_compute_unittests_package("bench-vk-unittests") {
+  needs_vulkan = true
+  sources = [ "tests/bench_vk_unittests.cc" ]
+  deps = [ ":bench_vk_sources" ]
+}
+
+#
+# Build both the bench-vk and its unit tests on host/Linux.
+#
+group("vk") {
+  testonly = true
+  public_deps = [
+    ":bench-vk",
+    ":bench-vk-unittests",
+  ]
+
+  if (is_fuchsia && host_os == "linux") {
+    data_deps = [ ":vk($host_toolchain)" ]
+  }
+}
+
+# NOTE: All dependencies here are run in continuous integration, but
+# our host bots currently lack a proper Vulkan loader + ICD. Thus only
+# add the device-specific Vulkan-based unit-tests for now.
+group("tests") {
+  testonly = true
+  if (is_fuchsia) {
+    public_deps = [ ":bench-vk-unittests" ]
+  }
+}
