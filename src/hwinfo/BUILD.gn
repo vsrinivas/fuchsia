@@ -57,6 +57,7 @@ fuchsia_component("hwinfo_component") {
   deps = [ ":hwinfo_bin" ]
 }
 
+# TODO(fxbug.dev/82330): delete this
 fuchsia_component("legacy_hwinfo_component") {
   component_name = "hwinfo"
   manifest = "meta/hwinfo.cmx"
@@ -73,7 +74,10 @@ fuchsia_package("fake_legacy_hwinfo") {
 }
 
 fuchsia_package("hwinfo") {
-  deps = [ ":hwinfo_component" ]
+  deps = [
+    ":hwinfo_component",
+    ":legacy_hwinfo_component",
+  ]
 }
 
 fuchsia_package("fake_hwinfo") {
