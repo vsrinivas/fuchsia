@@ -16,6 +16,7 @@
         {
             name: "driver_index",
             url: "fuchsia-boot:///#meta/driver-index.cm",
+            on_terminate: "reboot",
         },
         {
             name: "flashmap",

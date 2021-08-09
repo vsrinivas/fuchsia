@@ -347,6 +347,7 @@
         ],
         child_policy: {
             reboot_on_terminate: [
+                "/bootstrap/driver_index",
                 "/core/appmgr",
                 "/core/wlancfg",
                 "/core/wlandevicemonitor",
