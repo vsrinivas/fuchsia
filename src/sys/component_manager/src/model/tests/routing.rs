@@ -283,9 +283,10 @@ async fn capability_requested_event_at_parent() {
     let test = RoutingTest::new("a", components).await;
 
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
-    let mut event_stream = capability_util::subscribe_to_events(
+    let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
-        vec![EventSubscription::new("capability_requested".into(), EventMode::Async)],
+        EventSubscription::new("capability_requested".into(), EventMode::Async),
+        true,
     )
     .await
     .unwrap();
@@ -1045,9 +1046,10 @@ async fn use_runner_from_environment_failed() {
         )])
         .await;
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
-    let mut event_stream = capability_util::subscribe_to_events(
+    let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
-        vec![EventSubscription::new("stopped".into(), EventMode::Async)],
+        EventSubscription::new("stopped".into(), EventMode::Async),
+        true,
     )
     .await
     .unwrap();
@@ -1664,7 +1666,7 @@ async fn resolver_component_decl_is_validated() {
 /// Capability policy denies the route from being allowed for started but
 /// not for capability_requested.
 #[fuchsia::test]
-async fn use_event_from_framework_denied_by_capabiilty_policy() {
+async fn use_event_from_framework_denied_by_capabililty_policy() {
     let components = vec![
         (
             "a",
@@ -1755,7 +1757,8 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            requests: vec![EventSubscription::new("capability_requested".into(), EventMode::Async)],
+            request: EventSubscription::new("capability_requested".into(), EventMode::Async),
+            start_component_tree: false,
             expected_res: ExpectedResult::Ok,
         },
     )
@@ -1764,7 +1767,8 @@ async fn use_event_from_framework_denied_by_capabiilty_policy() {
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Event {
-            requests: vec![EventSubscription::new("started".into(), EventMode::Async)],
+            request: EventSubscription::new("started".into(), EventMode::Async),
+            start_component_tree: true,
             expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
         },
     )

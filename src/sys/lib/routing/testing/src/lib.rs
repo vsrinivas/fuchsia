@@ -114,7 +114,8 @@ pub enum CheckUse {
         expected_res: ExpectedResult,
     },
     Event {
-        requests: Vec<EventSubscription>,
+        request: EventSubscription,
+        start_component_tree: bool,
         expected_res: ExpectedResult,
     },
 }
@@ -2307,10 +2308,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0"].into(),
                 CheckUse::Event {
-                    requests: vec![
-                        EventSubscription::new("capability_requested".into(), EventMode::Sync),
-                        EventSubscription::new("started".into(), EventMode::Sync),
-                    ],
+                    request: EventSubscription::new("capability_requested".into(), EventMode::Sync),
+                    start_component_tree: false,
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["b:0"].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new("started".into(), EventMode::Sync),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2385,10 +2394,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
+                    request: EventSubscription::new(
                         "capability_requested_from_parent".into(),
                         EventMode::Sync,
-                    )],
+                    ),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2464,7 +2474,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new("started".into(), EventMode::Sync)],
+                    request: EventSubscription::new("started".into(), EventMode::Sync),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2601,10 +2612,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![
-                        EventSubscription::new("started".into(), EventMode::Sync),
-                        EventSubscription::new("destroyed".into(), EventMode::Sync),
-                    ],
+                    request: EventSubscription::new("started".into(), EventMode::Sync),
+                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2613,7 +2622,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new("stopped".into(), EventMode::Sync)],
+                    request: EventSubscription::new("destroyed".into(), EventMode::Sync),
+                    start_component_tree: false,
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Event {
+                    request: EventSubscription::new("stopped".into(), EventMode::Sync),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -2814,10 +2834,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
-                        "directory_ready_foo".into(),
-                        EventMode::Sync,
-                    )],
+                    request: EventSubscription::new("directory_ready_foo".into(), EventMode::Sync),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2826,10 +2844,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
+                    request: EventSubscription::new(
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
-                    )],
+                    ),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2838,10 +2857,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "d:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
-                        "directory_ready_baz".into(),
-                        EventMode::Sync,
-                    )],
+                    request: EventSubscription::new("directory_ready_baz".into(), EventMode::Sync),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -2934,10 +2951,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
+                    request: EventSubscription::new(
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
-                    )],
+                    ),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -3037,10 +3055,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
+                    request: EventSubscription::new(
                         "directory_ready_foo_bar".into(),
                         EventMode::Async,
-                    )],
+                    ),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3049,10 +3068,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .check_use(
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
-                    requests: vec![EventSubscription::new(
+                    request: EventSubscription::new(
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
-                    )],
+                    ),
+                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
