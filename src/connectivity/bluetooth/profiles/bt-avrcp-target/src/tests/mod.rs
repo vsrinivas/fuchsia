@@ -277,7 +277,7 @@ async fn setup(
     (session1_id, session2_id, watcher_client, target_proxy, media_sessions)
 }
 
-#[test]
+#[fuchsia::test]
 /// Tests listening to all MediaSessions.
 /// Tests that passthrough commands are routed to the right MediaSession.
 fn test_listen_to_media_sessions() -> Result<(), Error> {
@@ -341,7 +341,7 @@ fn test_listen_to_media_sessions() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
+#[fuchsia::test]
 /// Mock the TargetHandler request stream and send procedures over the proxy.
 /// Mock the MediaSession SessionsWatcher and send `SessionUpdated` over the channel to
 /// ensure state updates are correctly received and updated.
@@ -494,7 +494,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
 
     // Fast forward time by 10 seconds (555555555 + 1e10).
     exec.set_fake_time(fasync::Time::from_nanos(10555555555));
-    exec.wake_expired_timers();
+    let _ = exec.wake_expired_timers();
     let r1 = exec.run_until_stalled(&mut test_fut).map_err(|e| format!("{}", e));
 
     // The current track position is returned.

@@ -17,7 +17,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
-    log::info,
+    tracing::info,
 };
 
 /// HFP Audio Gateway component URL.
@@ -66,7 +66,7 @@ async fn mock_audio_device_provider(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<AudioDeviceEnumeratorMarker, _>(&mut fs, sender.clone());
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -94,12 +94,12 @@ async fn hfp_audio_gateway_v2_capability_routing() {
 
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    builder
+    let _ = builder
         .add_eager_component(HFP_MONIKER, ComponentSource::url(HFP_AG_URL.to_string()))
         .await
         .expect("Failed adding HFP-AG to topology");
     // Mock Profile component to receive `bredr.Profile` requests.
-    builder
+    let _ = builder
         .add_component(
             FAKE_PROFILE_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -112,7 +112,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .await
         .expect("Failed adding profile mock to topology");
     // Mock AudioDeviceEnumerator component to receiver requests.
-    builder
+    let _ = builder
         .add_component(
             FAKE_AUDIO_DEVICE_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -125,7 +125,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .await
         .expect("Failed adding AudioDevice mock to topology");
 
-    builder
+    let _ = builder
         .add_eager_component(
             MOCK_DEV_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -141,7 +141,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .expect("Failed adding mock /dev provider to topology");
     // Mock HFP-AG client that will request the `Hfp` and `HfpTest` services
     // which are provided by `bt-hfp-audio-gateway.cml`.
-    builder
+    let _ = builder
         .add_eager_component(
             HFP_CLIENT_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -155,7 +155,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .expect("Failed adding hfp client mock to topology");
 
     // Set up capabilities.
-    builder
+    let _ = builder
         .add_protocol_route::<HfpMarker>(
             RouteEndpoint::component(HFP_MONIKER),
             vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],

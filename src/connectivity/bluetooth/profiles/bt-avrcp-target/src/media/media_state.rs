@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
     fidl_fuchsia_media::{self as fidl_media_types},
     fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlProxy, SessionInfoDelta},
-    log::{trace, warn},
+    tracing::{trace, warn},
 };
 
 use crate::media::media_types::{
@@ -280,7 +280,7 @@ impl SessionInfo {
         metadata: Option<fidl_media_types::Metadata>,
     ) {
         if let Some(info) = player_info {
-            info.timeline_function.map(|f| self.playback_rate.update_playback_rate(f));
+            let _ = info.timeline_function.map(|f| self.playback_rate.update_playback_rate(f));
             self.play_status.update_play_status(
                 info.duration,
                 info.timeline_function,
@@ -360,7 +360,7 @@ pub(crate) mod tests {
         return Err(format_err!("Did not receive request that matched predicate."));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_is_supported_passthrough_command() {
         let _exec = fasync::TestExecutor::new().expect("executor should build");
         let (session_proxy, _) = create_proxy::<SessionControlMarker>().expect("Should work");
@@ -382,7 +382,7 @@ pub(crate) mod tests {
             .is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Tests updating SessionInfo with Media PlayerStatus and Metadata.
     /// 1) Tests Metadata and no PlayerStatus -> No updates
     /// 2) Tests PlayerStatus and no Metadata -> Partial updates
@@ -468,7 +468,7 @@ pub(crate) mod tests {
         assert_eq!(media_state.session_info().media_info, expected_media_info);
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test that given the current view of the world, getting PlayerApplicationSettings
     /// returns as expected.
     /// 1) Empty view of the world, ask for all settings.
@@ -529,7 +529,7 @@ pub(crate) mod tests {
         assert!(settings.is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test that retrieving a notification value correctly gets the current state.
     /// 1) Query with an unsupported `event_id`.
     /// 2) Query with a supported Event ID, with default state.
@@ -592,8 +592,7 @@ pub(crate) mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests sending an avc passthrough command results in expected behavior.
     /// Creates a fake Player and listens on the request stream.
     /// 1. Tests sending an unsupported AvcPanelCommand results in error.
@@ -621,8 +620,7 @@ pub(crate) mod tests {
         assert!(res1.is_ok());
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     /// Tests handling setting of PlayerApplicationSettings successfully propagates to the MediaSession.
     /// 1. Tests sending an unsupported application setting results in Error.
     /// 2. Tests sending an unsupported application setting among supported settings results

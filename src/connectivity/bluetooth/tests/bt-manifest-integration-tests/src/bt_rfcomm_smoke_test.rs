@@ -14,7 +14,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
-    log::info,
+    tracing::info,
 };
 
 /// RFCOMM component URL.
@@ -59,7 +59,7 @@ async fn mock_profile_component(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -77,12 +77,12 @@ async fn rfcomm_v2_component_topology() {
 
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    builder
+    let _ = builder
         .add_component("rfcomm", ComponentSource::url(RFCOMM_URL.to_string()))
         .await
         .expect("Failed adding rfcomm to topology");
     // Mock Profile component to receive bredr.Profile requests.
-    builder
+    let _ = builder
         .add_component(
             "fake-profile",
             ComponentSource::Mock(Mock::new({
@@ -95,7 +95,7 @@ async fn rfcomm_v2_component_topology() {
         .await
         .expect("Failed adding profile mock to topology");
     // Mock RFCOMM client that will connect to the Profile service and make a request.
-    builder
+    let _ = builder
         .add_eager_component(
             "fake-rfcomm-client",
             ComponentSource::Mock(Mock::new({
@@ -109,7 +109,7 @@ async fn rfcomm_v2_component_topology() {
         .expect("Failed adding rfcomm client mock to topology");
 
     // Set up capabilities.
-    builder
+    let _ = builder
         .add_protocol_route::<ProfileMarker>(
             RouteEndpoint::component("fake-profile"),
             vec![RouteEndpoint::component("rfcomm")],

@@ -29,6 +29,8 @@ rustc_test("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("component") {
