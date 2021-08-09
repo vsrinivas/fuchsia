@@ -50,6 +50,7 @@ pub mod time;
 pub mod traceutil;
 pub mod tracing;
 pub mod update;
+pub mod virtual_camera;
 pub mod weave;
 pub mod webdriver;
 pub mod wlan;

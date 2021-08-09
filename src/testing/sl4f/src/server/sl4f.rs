@@ -160,6 +160,9 @@ use crate::tracing::facade::TracingFacade;
 // Update related includes
 use crate::update::facade::UpdateFacade;
 
+// Virtual Camera Device related includes
+use crate::virtual_camera::facade::VirtualCameraFacade;
+
 // Weave related includes
 use crate::weave::facade::WeaveFacade;
 
@@ -265,6 +268,7 @@ impl Sl4f {
                 "traceutil_facade" => TraceutilFacade::new(),
                 "tracing_facade" => TracingFacade::new(),
                 "update_facade" => UpdateFacade::new(),
+                "virtual_camera_facade" => VirtualCameraFacade::new(),
                 "weave_facade" => WeaveFacade::new(),
                 "webdriver_facade" => WebdriverFacade::new(),
                 "wlan" => WlanFacade::new()?,
