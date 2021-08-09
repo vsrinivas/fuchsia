@@ -50,5 +50,10 @@ void QueueInfo::MarkReportAsThrottledByServer(const uint64_t upload_attempts) {
   context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploadThrottled, upload_attempts);
 }
 
+void QueueInfo::MarkReportAsTimedOut(const uint64_t upload_attempts) {
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kUploadTimedOut);
+  context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploadTimedOut, upload_attempts);
+}
+
 }  // namespace crash_reports
 }  // namespace forensics

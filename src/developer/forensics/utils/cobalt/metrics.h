@@ -23,6 +23,7 @@ enum class CrashState {
   kUploadThrottled = cobalt_registry::CrashMigratedMetricDimensionState::UploadThrottled,
   kOnDeviceQuotaReached = cobalt_registry::CrashMigratedMetricDimensionState::OnDeviceQuotaReached,
   kDeleted = cobalt_registry::CrashMigratedMetricDimensionState::Deleted,
+  kUploadTimedOut = cobalt_registry::CrashMigratedMetricDimensionState::UploadTimedOut,
 };
 
 enum class UploadAttemptState {
@@ -34,6 +35,8 @@ enum class UploadAttemptState {
       cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::GarbageCollected,
   kUploadThrottled =
       cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::UploadThrottled,
+  kUploadTimedOut =
+      cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::UploadTimedOut,
 };
 
 enum class TimedOutData {

@@ -47,6 +47,7 @@ using testing::UnorderedElementsAreArray;
 constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatus::kSuccess;
 constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
 constexpr CrashServer::UploadStatus kUploadThrottled = CrashServer::UploadStatus::kThrottled;
+constexpr CrashServer::UploadStatus kUploadTimedOut = CrashServer::UploadStatus::kTimedOut;
 
 constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
@@ -517,6 +518,35 @@ TEST_F(QueueTest, UploadThrottled) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 2u),
+              }));
+}
+
+TEST_F(QueueTest, kUploadTimedOut) {
+  SetUpQueue({kUploadTimedOut, kUploadFailed, kUploadTimedOut});
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopFor(kUploadResponseDelay * 2);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploadTimedOut),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadTimedOut, 1u),
+                  cobalt::Event(cobalt::CrashState::kUploadTimedOut),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadTimedOut, 2u),
               }));
 }
 
