@@ -17,10 +17,13 @@ use netemul::Endpoint as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{constants, get_inspect_data, Result};
 use netstack_testing_macros::variants_test;
+use packet::ParsablePacket as _;
 use packet::Serializer as _;
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
+use packet_formats::ipv4::Ipv4Header as _;
 use packet_formats::ipv4::Ipv4PacketBuilder;
 use packet_formats::udp::UdpPacketBuilder;
+use packet_formats::udp::UdpParseArgs;
 use std::collections::HashMap;
 use std::num::NonZeroU16;
 use test_case::test_case;
@@ -469,12 +472,64 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     let realm = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}-{}", variants_test_name, test_case_name))
         .expect("failed to create realm");
+    // Create the fake endpoint before installing an endpoint in the netstack to ensure
+    // that we receive all DHCP messages sent by the client.
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
     let eth = realm
         .join_network::<E, _>(&network, "ep1", &netemul::InterfaceConfig::Dhcp)
         .await
         .expect("failed to join network");
 
-    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+    // Wait for a DHCP message here to ensure that the client is ready to receive
+    // incoming packets.
+    loop {
+        let (buf, _dropped_frames): (Vec<u8>, u64) =
+            fake_ep.read().await.expect("failed to read from endpoint");
+        let mut buf = &buf[..];
+        let frame = packet_formats::ethernet::EthernetFrame::parse(
+            &mut buf,
+            packet_formats::ethernet::EthernetFrameLengthCheck::NoCheck,
+        )
+        .expect("failed to parse ethernet frame");
+
+        match frame.ethertype().expect("failed to parse frame ethertype") {
+            packet_formats::ethernet::EtherType::Ipv4 => {
+                let mut frame_body = frame.body();
+                let packet = packet_formats::ipv4::Ipv4Packet::parse(&mut frame_body, ())
+                    .expect("failed to parse IPv4 packet");
+
+                match packet.proto() {
+                    packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp) => {
+                        let mut packet_body = packet.body();
+                        let datagram = packet_formats::udp::UdpPacket::parse(
+                            &mut packet_body,
+                            UdpParseArgs::new(packet.src_ip(), packet.dst_ip()),
+                        )
+                        .expect("failed to parse UDP datagram");
+                        match datagram.dst_port().get() {
+                            dhcp::protocol::SERVER_PORT => {
+                                // Any DHCP message means the client is listening; we don't care
+                                // about the contents.
+                                let _: dhcp::protocol::Message =
+                                    dhcp::protocol::Message::from_buffer(datagram.body())
+                                        .expect("failed to parse DHCP message");
+                                break;
+                            }
+                            port => println!(
+                                "received non-DHCP UDP datagram with destination port: {:?}",
+                                port
+                            ),
+                        }
+                    }
+                    proto => println!(
+                        "received non-UDP IPv4 packet with transport protocol: {:?}",
+                        proto
+                    ),
+                }
+            }
+            ethertype => println!("received non-IPv4 frame with ethertype: {:?}", ethertype),
+        }
+    }
 
     const SRC_IP: net_types_ip::Ipv4Addr = net_types_ip::Ipv4::UNSPECIFIED_ADDRESS;
     const DST_IP: net_types::SpecifiedAddr<net_types_ip::Ipv4Addr> =
