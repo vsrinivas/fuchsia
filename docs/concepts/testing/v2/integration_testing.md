@@ -79,6 +79,18 @@ as required to integrate with the [Test Runner Framework][trf].
 The code for this example can be found under
 [`//examples/components/routing/integration_tests`][driver-pattern-example].
 
+### Determining a component's moniker {#test-component-moniker}
+
+The `ArchiveReader` library allows your test to validate data in Inspect. The
+moniker for a component is always relative to the root realm. For a component
+running in a test, the moniker is therefore the `name` field defined in the
+test root. In the example above, the moniker for the `echo_server` is simply
+`echo_server`.
+
+See the [Inspect Codelab][inspect-codelab] for detailed information on using
+`ArchiveReader`.
+
 [driver-pattern-example]: /examples/components/routing/integration_tests/
+[inspect-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
 [trf]: test_runner_framework.md
 [realm-builder]: /docs/development/components/v2/realm_builder.md

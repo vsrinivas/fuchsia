@@ -1059,10 +1059,18 @@ protocol directly in your test. Therefore you'll need to do the following:
     ```
 
 1.  Update your program to use the `ArchiveReader` library, which is available
-    in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
+    in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart]. See the
+    [Inspect Codelab][archive-codelab] for more details on using these libraries.
 
     Note: For components in other languages, use the `ArchiveAccessor`
     [FIDL protocol][archive-fidl] directly.
+
+1.  Update any monikers used in your test's diagnostic selectors.
+
+    - If you declare a child component in the test CML, check the
+        [Integration Testing docs][integration-test-monikers] to learn more about your moniker.
+    - If you are using `RealmBuilder`, check the [Realm Builder docs][realm-builder-monikers] to
+        learn more about your moniker.
 
 ### Logging {#logging}
 
@@ -1981,6 +1989,7 @@ this protocol, add it [while declaring required services](#required-services).
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [glossary.environment]: /docs/glossary/README.md#environment
 [glossary.runner]: /docs/glossary/README.md#runner
+[archive-codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md
 [archive-cpp]: /sdk/lib/inspect/contrib/cpp
 [archive-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [archive-rust]: /src/lib/diagnostics/reader/rust
@@ -2013,6 +2022,8 @@ this protocol, add it [while declaring required services](#required-services).
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
 [example-services-config]: /src/sys/sysmgr/config/services.config
+[integration-test-monikers]: /docs/concepts/testing/v2/integration_testing.md#test-component-moniker
+[realm-builder-monikers]: /docs/development/components/v2/realm_builder.md#test-component-moniker
 [trf-intro]: /docs/concepts/testing/v2/test_runner_framework.md
 [trf-provided-test-runners]: /src/sys/test_runners
 [trf-roles]: /docs/concepts/testing/v2/test_runner_framework.md#test-roles

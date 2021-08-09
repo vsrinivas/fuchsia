@@ -235,6 +235,20 @@ the **constructed realm** where you obtained the manifest instead of using the
 builder instance. This ensures the routes are properly validated against the
 modified component when the [realm is created](#create-realm).
 
+### Determining a moniker {#test-component-moniker}
+
+The moniker for a `RealmBuilder` child component looks like the following:
+
+```none
+fuchsia_component_test_collection:{{ '<var>' }}child-name{{ '</var>' }}/{{ '<var>' }}component-name{{ '</var>' }}
+```
+
+The moniker consists of the following elements:
+
+*   `child-name`: Obtained by calling the `child_name()` function of the constructed realm.
+*   `component-name`: The "Component name" parameter provided to `add_component()` when
+    [constructing the realm](#construct-realm).
+
 ## Troubleshooting
 
 ### Invalid capability routes
