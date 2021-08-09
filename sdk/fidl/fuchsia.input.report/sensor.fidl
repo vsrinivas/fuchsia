@@ -79,6 +79,8 @@ type SensorFeatureDescriptor = table {
     4: threshold_high vector<SensorAxis>:SENSOR_MAX_VALUES;
     /// Sets the low threshold values for the given `SensorType`.
     5: threshold_low vector<SensorAxis>:SENSOR_MAX_VALUES;
+    /// Describes the minimum and maximum sampling rate this sensor supports.
+    6: sampling_rate Axis;
 };
 
 /// The capabilities of a sensor device.
@@ -112,4 +114,6 @@ type SensorFeatureReport = table {
     /// The low thresholds for various `SensorType`. This vector must be given in
     /// the order of the descriptor's `threshold_low` vector.
     5: threshold_low vector<int64>:SENSOR_MAX_VALUES;
+    /// The rate at which the sensor is sampled.
+    6: sampling_rate int64;
 };

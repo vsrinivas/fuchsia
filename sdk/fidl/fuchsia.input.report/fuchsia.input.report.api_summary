@@ -131,6 +131,7 @@ table/member fuchsia.input.report/SensorDescriptor.feature fuchsia.input.report/
 table/member fuchsia.input.report/SensorDescriptor.input fuchsia.input.report/SensorInputDescriptor
 table fuchsia.input.report/SensorDescriptor
 table/member fuchsia.input.report/SensorFeatureDescriptor.report_interval fuchsia.input.report/Axis
+table/member fuchsia.input.report/SensorFeatureDescriptor.sampling_rate fuchsia.input.report/Axis
 table/member fuchsia.input.report/SensorFeatureDescriptor.sensitivity vector<fuchsia.input.report/SensorAxis>:100
 table/member fuchsia.input.report/SensorFeatureDescriptor.supports_reporting_state bool
 table/member fuchsia.input.report/SensorFeatureDescriptor.threshold_high vector<fuchsia.input.report/SensorAxis>:100
@@ -138,6 +139,7 @@ table/member fuchsia.input.report/SensorFeatureDescriptor.threshold_low vector<f
 table fuchsia.input.report/SensorFeatureDescriptor
 table/member fuchsia.input.report/SensorFeatureReport.report_interval int64
 table/member fuchsia.input.report/SensorFeatureReport.reporting_state fuchsia.input.report/SensorReportingState
+table/member fuchsia.input.report/SensorFeatureReport.sampling_rate int64
 table/member fuchsia.input.report/SensorFeatureReport.sensitivity vector<int64>:100
 table/member fuchsia.input.report/SensorFeatureReport.threshold_high vector<int64>:100
 table/member fuchsia.input.report/SensorFeatureReport.threshold_low vector<int64>:100
