@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/android.shard.cml" ],
     program: {
         binary: "/data/tests/pread64_test",
-        args: [ "--gunit_filter=-*.CantReadSocketPair*:*.Pread64WithOpath" ],
+        args: [ "--gunit_filter=-*.CantReadSocketPair*" ],
     },
 }
