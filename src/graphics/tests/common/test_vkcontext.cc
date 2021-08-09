@@ -177,6 +177,42 @@ TEST(VkContext, UserData) {
                                            .Unique();
 }
 
+TEST(VkContext, DeviceExtension) {
+  const char *app_name = "nobuilder";
+  auto app_info =
+      vk::ApplicationInfo().setPApplicationName(app_name).setApiVersion(VK_API_VERSION_1_1);
+
+  vk::InstanceCreateInfo instance_info;
+  instance_info.pApplicationInfo = &app_info;
+
+  auto context = std::make_unique<VulkanContext>(0);
+  context->set_instance_info(instance_info);
+  ASSERT_TRUE(context->InitInstance());
+
+  ASSERT_TRUE(context->InitQueueFamily());
+
+  bool found_ext = false;
+  {
+    auto result = context->physical_device().enumerateDeviceExtensionProperties();
+
+    for (auto &ext : result.value) {
+      if (strcmp(ext.extensionName, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME) == 0) {
+        found_ext = true;
+        break;
+      }
+    }
+  }
+  EXPECT_TRUE(found_ext);
+
+  std::array<const char *, 1> device_exts{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME};
+
+  vk::DeviceCreateInfo device_create_info = context->device_info();
+  device_create_info.setPEnabledExtensionNames(device_exts);
+  context->set_device_info(device_create_info);
+
+  EXPECT_TRUE(context->InitDevice());
+}
+
 int main(int argc, char **argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
     return EXIT_FAILURE;

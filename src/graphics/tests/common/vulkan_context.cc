@@ -28,7 +28,8 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanContext::default_debug_info_s_(
 VulkanContext::ContextWithUserData VulkanContext::default_debug_callback_user_data_s_;
 
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
-                             uint32_t physical_device_index, const vk::DeviceCreateInfo &device_info,
+                             uint32_t physical_device_index,
+                             const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
                              const vk::QueueFlags &queue_flags,
                              const vk::DebugUtilsMessengerCreateInfoEXT &debug_info,
@@ -56,6 +57,7 @@ VulkanContext::VulkanContext(uint32_t physical_device_index, const vk::QueueFlag
       queue_family_index_(kInvalidQueueFamily),
       queue_info_(vk::DeviceQueueCreateFlags(), queue_family_index_, 1 /* queueCount */,
                   &queue_priority_),
+      device_info_(vk::DeviceCreateFlags(), 1 /* queueCreateInfoCount */, &queue_info_),
       debug_info_(default_debug_info_s_),
       queue_flags_(queue_flags),
       allocator_(allocator) {}
