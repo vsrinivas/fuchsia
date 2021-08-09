@@ -34,8 +34,6 @@ static_library("shared") {
     "stream_buffer.h",
     "test_stream_buffer.cc",
     "test_stream_buffer.h",
-    "worker_pool.cc",
-    "worker_pool.h",
     "zx_status.cc",
     "zx_status.h",
     "zx_status_definitions.h",
@@ -114,7 +112,6 @@ source_set("tests") {
     "message_loop_unittest.cc",
     "regex_unittest.cc",
     "stream_buffer_unittest.cc",
-    "worker_pool_unittest.cc",
   ]
 
   if (is_linux) {
