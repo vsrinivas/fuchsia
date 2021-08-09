@@ -10,11 +10,11 @@ use {
     std::str::FromStr,
 };
 
-pub const MIN_FONT_SIZE: f32 = 15.0;
-pub const MAX_FONT_SIZE: f32 = 150.0;
+pub const MIN_FONT_SIZE: f32 = 14.0;
+pub const MAX_FONT_SIZE: f32 = 140.0;
 
 const DEFAULT_KEYMAP: &'static str = "US_QWERTY";
-const DEFAULT_FONT_SIZE: f32 = 15.0;
+const DEFAULT_FONT_SIZE: f32 = 14.0;
 const DEFAULT_SCROLLBACK_ROWS: u32 = 1024;
 const DEFAULT_BUFFER_COUNT: usize = 1;
 

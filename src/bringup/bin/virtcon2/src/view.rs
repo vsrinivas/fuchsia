@@ -114,7 +114,10 @@ const STATUS_COLOR_ACTIVE: Rgb = Rgb { r: 255, g: 255, b: 85 };
 const STATUS_COLOR_UPDATED: Rgb = Rgb { r: 85, g: 255, b: 85 };
 
 // Padding between text and cell size.
-const CELL_PADDING_FACTOR: f32 = 2.0 / 15.0;
+const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
+
+// Amount of change to font size when zooming.
+const FONT_SIZE_INCREMENT: f32 = 14.0;
 
 struct Animation {
     // Artboard has weak references to data owned by file.
@@ -236,7 +239,7 @@ impl VirtualConsoleViewAssistant {
     fn new_for_test(animation: bool) -> Result<ViewAssistantPtr, Error> {
         let app_context = AppContext::new_for_testing_purposes_only();
         let dpi: BTreeSet<u32> = [160, 320, 480, 640].iter().cloned().collect();
-        Self::new(&app_context, 1, ColorScheme::default(), false, 15.0, dpi, animation)
+        Self::new(&app_context, 1, ColorScheme::default(), false, 14.0, dpi, animation)
     }
 
     // Resize all terminals for 'new_size'.
@@ -515,12 +518,14 @@ impl VirtualConsoleViewAssistant {
 
                         match code_point {
                             PLUS | EQUAL => {
-                                let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
+                                let new_font_size =
+                                    (self.font_size + FONT_SIZE_INCREMENT).min(MAX_FONT_SIZE);
                                 self.set_font_size(new_font_size);
                                 return Ok(true);
                             }
                             MINUS => {
-                                let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
+                                let new_font_size =
+                                    (self.font_size - FONT_SIZE_INCREMENT).max(MIN_FONT_SIZE);
                                 self.set_font_size(new_font_size);
                                 return Ok(true);
                             }

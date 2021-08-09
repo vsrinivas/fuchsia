@@ -26,7 +26,8 @@ pub fn font_to_cell_size(font_size: f32, cell_padding: f32) -> Size {
     let height = font_size + cell_padding;
     let width = height / 2.0;
 
-    Size::new(width, height)
+    // Round to the smallest size equal or greater.
+    Size::new(width, height).ceil()
 }
 
 #[derive(PartialEq)]
