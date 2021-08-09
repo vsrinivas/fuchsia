@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_SHARED_PLATFORM_MESSAGE_LOOP_H_
 
 #if defined(__Fuchsia__)
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 #elif defined(__linux__)
 #include "src/developer/debug/shared/message_loop_linux.h"
 #else
@@ -16,7 +16,7 @@
 namespace debug {
 
 #if defined(__Fuchsia__)
-using PlatformMessageLoop = MessageLoopTarget;
+using PlatformMessageLoop = MessageLoopFuchsia;
 #elif defined(__linux__)
 using PlatformMessageLoop = MessageLoopLinux;
 #else

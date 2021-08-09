@@ -8,7 +8,7 @@
 #include <zircon/status.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug {
@@ -27,8 +27,8 @@ bool BufferedZxSocket::Start() {
 
   // Register for socket updates from the message loop.
   // We assume the socket is writable and look for that event when we get evidence it's not.
-  return MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(),
-                                                   this, &watch_handle_) == ZX_OK;
+  return MessageLoopFuchsia::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(),
+                                                    this, &watch_handle_) == ZX_OK;
 }
 
 bool BufferedZxSocket::Stop() {
@@ -81,7 +81,7 @@ void BufferedZxSocket::OnSocketWritable(zx_handle_t) {
   // Now that the system told us it's ok to write, we go back to assuming it's always writable
   // until proven otherwise.
   watch_handle_ = {};
-  MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(), this,
+  MessageLoopFuchsia::Current()->WatchSocket(MessageLoop::WatchMode::kRead, socket_.get(), this,
                                             &watch_handle_);
   stream().SetWritable();
 }
@@ -105,7 +105,7 @@ size_t BufferedZxSocket::ConsumeStreamBufferData(const char* data, size_t len) {
   // tell us when it's ok to write again.
   if (written < len) {
     watch_handle_ = {};
-    MessageLoopTarget::Current()->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(),
+    MessageLoopFuchsia::Current()->WatchSocket(MessageLoop::WatchMode::kReadWrite, socket_.get(),
                                               this, &watch_handle_);
   }
   return written;

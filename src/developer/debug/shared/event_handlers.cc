@@ -12,7 +12,7 @@
 #include <lib/zx/exception.h>
 
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 #include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -71,7 +71,7 @@ void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait, zx_status_t
     return;
   }
 
-  auto* loop = MessageLoopTarget::Current();
+  auto* loop = MessageLoopFuchsia::Current();
   FX_DCHECK(loop);
 
   // Search for the AsyncHandle that triggered this signal.
@@ -144,7 +144,7 @@ void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher, async_wait
     return;
   }
 
-  auto* loop = MessageLoopTarget::Current();
+  auto* loop = MessageLoopFuchsia::Current();
   FX_DCHECK(loop);
 
   // Search for the AsyncHandle that triggered this signal.

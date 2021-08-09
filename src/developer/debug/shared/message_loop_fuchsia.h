@@ -30,7 +30,7 @@ const char* WatchTypeToString(WatchType);
 
 // MessageLoop is a virtual class to enable tests to intercept watch messages.
 // See debug_agent/debug_agent_unittest.cc for an example.
-class MessageLoopTarget : public MessageLoop {
+class MessageLoopFuchsia : public MessageLoop {
  public:
   // Associated struct to track information about what type of resource a watch handle is following.
   //
@@ -43,14 +43,14 @@ class MessageLoopTarget : public MessageLoop {
   using SignalHandlerMap = std::map<const async_wait_t*, SignalHandler>;
   using ChannelExceptionHandlerMap = std::map<const async_wait_t*, ChannelExceptionHandler>;
 
-  MessageLoopTarget();
-  ~MessageLoopTarget();
+  MessageLoopFuchsia();
+  ~MessageLoopFuchsia();
 
   bool Init(std::string* error_message) override;
   void Cleanup() override;
 
   // Returns the current message loop or null if there isn't one.
-  static MessageLoopTarget* Current();
+  static MessageLoopFuchsia* Current();
 
   // MessageLoop implementation.
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher watcher) override;
@@ -149,14 +149,14 @@ class MessageLoopTarget : public MessageLoop {
                                          WatchInfo* info);
   void RemoveChannelExceptionHandler(WatchInfo*);
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoopTarget);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoopFuchsia);
 
   friend class SignalHandler;
   friend class ChannelExceptionHandler;
 };
 
 // EventHandlers need access to the WatchInfo implementation.
-struct MessageLoopTarget::WatchInfo {
+struct MessageLoopFuchsia::WatchInfo {
   // Name of the resource being watched.
   // Mostly tracked for debugging purposes.
   std::string resource_name;

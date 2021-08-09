@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 
 #include <lib/fdio/io.h>
 #include <lib/syslog/cpp/macros.h>
@@ -22,15 +22,13 @@
 
 namespace debug {
 
-// MessageLoopTarget -----------------------------------------------------------
+MessageLoopFuchsia::MessageLoopFuchsia() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
-MessageLoopTarget::MessageLoopTarget() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
-
-MessageLoopTarget::~MessageLoopTarget() {
+MessageLoopFuchsia::~MessageLoopFuchsia() {
   FX_DCHECK(Current() != this);  // Cleanup should have been called.
 }
 
-bool MessageLoopTarget::Init(std::string* error_message) {
+bool MessageLoopFuchsia::Init(std::string* error_message) {
   FX_DCHECK(error_message);  // Error message out param not optional.
   if (!MessageLoop::Init(error_message))
     return false;
@@ -51,7 +49,7 @@ bool MessageLoopTarget::Init(std::string* error_message) {
   return true;
 }
 
-void MessageLoopTarget::Cleanup() {
+void MessageLoopFuchsia::Cleanup() {
   DEBUG_LOG(MessageLoop) << "Cleaning up the message loop.";
 
   // We need to remove the signal/exception handlers/watches before the message loop
@@ -64,18 +62,18 @@ void MessageLoopTarget::Cleanup() {
 }
 
 // static
-MessageLoopTarget* MessageLoopTarget::Current() {
-  return reinterpret_cast<MessageLoopTarget*>(MessageLoop::Current());
+MessageLoopFuchsia* MessageLoopFuchsia::Current() {
+  return reinterpret_cast<MessageLoopFuchsia*>(MessageLoop::Current());
 }
 
-const MessageLoopTarget::WatchInfo* MessageLoopTarget::FindWatchInfo(int id) const {
+const MessageLoopFuchsia::WatchInfo* MessageLoopFuchsia::FindWatchInfo(int id) const {
   auto it = watches_.find(id);
   if (it == watches_.end())
     return nullptr;
   return &it->second;
 }
 
-zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object, zx_signals_t signals,
+zx_status_t MessageLoopFuchsia::AddSignalHandler(int id, zx_handle_t object, zx_signals_t signals,
                                                 WatchInfo* associated_info) {
   SignalHandler handler;
   zx_status_t status = handler.Init(id, object, signals);
@@ -91,7 +89,7 @@ zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object, zx_s
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id, zx_handle_t object,
+zx_status_t MessageLoopFuchsia::AddChannelExceptionHandler(int id, zx_handle_t object,
                                                           uint32_t options, WatchInfo* info) {
   ChannelExceptionHandler handler;
   zx_status_t status = handler.Init(id, object, options);
@@ -108,7 +106,7 @@ zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id, zx_handle_t ob
   return ZX_OK;
 }
 
-MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWatcher watcher) {
+MessageLoop::WatchHandle MessageLoopFuchsia::WatchFD(WatchMode mode, int fd, FDWatcher watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
   info.mode = mode;
@@ -152,7 +150,7 @@ MessageLoop::WatchHandle MessageLoopTarget::WatchFD(WatchMode mode, int fd, FDWa
   return WatchHandle(this, watch_id);
 }
 
-zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_handle,
+zx_status_t MessageLoopFuchsia::WatchSocket(WatchMode mode, zx_handle_t socket_handle,
                                            SocketWatcher* watcher, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
@@ -184,7 +182,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_ha
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::WatchProcessExceptions(WatchProcessConfig config,
+zx_status_t MessageLoopFuchsia::WatchProcessExceptions(WatchProcessConfig config,
                                                       MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.process_name;
@@ -220,7 +218,7 @@ zx_status_t MessageLoopTarget::WatchProcessExceptions(WatchProcessConfig config,
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::WatchJobExceptions(WatchJobConfig config,
+zx_status_t MessageLoopFuchsia::WatchJobExceptions(WatchJobConfig config,
                                                   MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.job_name;
@@ -250,7 +248,7 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(WatchJobConfig config,
   return ZX_OK;
 }
 
-bool MessageLoopTarget::CheckAndProcessPendingTasks() {
+bool MessageLoopFuchsia::CheckAndProcessPendingTasks() {
   std::lock_guard<std::mutex> guard(mutex_);
 
   // We clear the event, otherwise it will trigger again and again
@@ -264,7 +262,7 @@ bool MessageLoopTarget::CheckAndProcessPendingTasks() {
   return false;
 }
 
-void MessageLoopTarget::HandleChannelException(const ChannelExceptionHandler& handler,
+void MessageLoopFuchsia::HandleChannelException(const ChannelExceptionHandler& handler,
                                                zx::exception exception,
                                                zx_exception_info_t exception_info) {
   WatchInfo* watch_info = nullptr;
@@ -301,26 +299,23 @@ void MessageLoopTarget::HandleChannelException(const ChannelExceptionHandler& ha
   FX_NOTREACHED();
 }
 
-uint64_t MessageLoopTarget::GetMonotonicNowNS() const {
+uint64_t MessageLoopFuchsia::GetMonotonicNowNS() const {
   zx::time ret = zx::clock::get_monotonic();
 
   return ret.get();
 }
 
-// Previously, the approach was to first look for C++ tasks and when handled
-// look for WatchHandle work and finally wait for an event. This worked because
-// handle events didn't post C++ tasks.
+// Previously, the approach was to first look for C++ tasks and when handled look for WatchHandle
+// work and finally wait for an event. This worked because handle events didn't post C++ tasks.
 //
-// But some tests do post tasks on handle events. Because C++ tasks are signaled
-// by explicitly signaling an zx::event, without manually checking, the C++
-// tasks will never be checked and we would get blocked until a watch handled
-// is triggered.
+// But some tests do post tasks on handle events. Because C++ tasks are signaled by explicitly
+// signaling an zx::event, without manually checking, the C++ tasks will never be checked and we
+// would get blocked until a watch handled is triggered.
 //
-// In order to handle the events properly, we need to check for C++ tasks before
-// and *after* handling watch handle events. This way we always process C++
-// tasks before handle events and will get signaled if one of them posted a new
-// task.
-void MessageLoopTarget::RunImpl() {
+// In order to handle the events properly, we need to check for C++ tasks before and *after*
+// handling watch handle events. This way we always process C++ tasks before handle events and will
+// get signaled if one of them posted a new task.
+void MessageLoopFuchsia::RunImpl() {
   // Init should have been called.
   FX_DCHECK(Current() == this);
   zx_status_t status;
@@ -351,14 +346,14 @@ void MessageLoopTarget::RunImpl() {
   }
 }
 
-void MessageLoopTarget::QuitNow() {
+void MessageLoopFuchsia::QuitNow() {
   MessageLoop::QuitNow();
   loop_.Quit();
 }
 
-void MessageLoopTarget::StopWatching(int id) {
-  // The dispatch code for watch callbacks requires this be called on the
-  // same thread as the message loop is.
+void MessageLoopFuchsia::StopWatching(int id) {
+  // The dispatch code for watch callbacks requires this be called on the same thread as the message
+  // loop is.
   FX_DCHECK(Current() == this);
 
   std::lock_guard<std::mutex> guard(mutex_);
@@ -367,8 +362,8 @@ void MessageLoopTarget::StopWatching(int id) {
   FX_DCHECK(found != watches_.end());
 
   WatchInfo& info = found->second;
-  // BufferedFD constantly creates and destroys FD handles, flooding the log
-  // with non-helpful logging statements.
+  // BufferedFD constantly creates and destroys FD handles, flooding the log with non-helpful
+  // logging statements.
   if (info.type != WatchType::kFdio) {
     DEBUG_LOG(MessageLoop) << "Stop watching " << WatchTypeToString(info.type) << " "
                            << info.resource_name;
@@ -395,18 +390,17 @@ void MessageLoopTarget::StopWatching(int id) {
   watches_.erase(found);
 }
 
-void MessageLoopTarget::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
+void MessageLoopFuchsia::SetHasTasks() { task_event_.signal(0, kTaskSignal); }
 
-void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
+void MessageLoopFuchsia::OnFdioSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
   uint32_t events = 0;
   fdio_unsafe_wait_end(info.fdio, observed, &events);
 
   if ((events & POLLERR) || (events & POLLHUP) || (events & POLLNVAL) || (events & POLLRDHUP)) {
     info.fd_watcher(info.fd, false, false, true);
 
-    // Don't dispatch any other notifications when there's an error. Zircon
-    // seems to set readable and writable on error even if there's nothing
-    // there.
+    // Don't dispatch any other notifications when there's an error. Zircon seems to set readable
+    // and writable on error even if there's nothing there.
     return;
   }
 
@@ -418,7 +412,7 @@ void MessageLoopTarget::OnFdioSignal(int watch_id, const WatchInfo& info, zx_sig
   // info might be invalid because fd_watcher could have called StopWatching().
 }
 
-void MessageLoopTarget::RemoveSignalHandler(WatchInfo* info) {
+void MessageLoopFuchsia::RemoveSignalHandler(WatchInfo* info) {
   const async_wait_t* key = info->signal_handler_key;
   FX_DCHECK(key);
 
@@ -428,7 +422,7 @@ void MessageLoopTarget::RemoveSignalHandler(WatchInfo* info) {
   info->signal_handler_key = nullptr;
 }
 
-void MessageLoopTarget::RemoveChannelExceptionHandler(WatchInfo* info) {
+void MessageLoopFuchsia::RemoveChannelExceptionHandler(WatchInfo* info) {
   const async_wait_t* key = info->exception_channel_handler_key;
   FX_DCHECK(key);
 
@@ -438,7 +432,7 @@ void MessageLoopTarget::RemoveChannelExceptionHandler(WatchInfo* info) {
   info->exception_channel_handler_key = nullptr;
 }
 
-void MessageLoopTarget::OnProcessException(const WatchInfo& info, zx::exception exception,
+void MessageLoopFuchsia::OnProcessException(const WatchInfo& info, zx::exception exception,
                                            zx_exception_info_t exception_info) {
   switch (exception_info.type) {
     case ZX_EXCP_THREAD_STARTING:
@@ -461,12 +455,12 @@ void MessageLoopTarget::OnProcessException(const WatchInfo& info, zx::exception 
   }
 }
 
-void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info, zx_signals_t observed) {
+void MessageLoopFuchsia::OnProcessTerminated(const WatchInfo& info, zx_signals_t observed) {
   FX_DCHECK(observed & ZX_PROCESS_TERMINATED);
   info.exception_watcher->OnProcessTerminated(info.task_koid);
 }
 
-void MessageLoopTarget::OnJobException(const WatchInfo& info, zx::exception exception,
+void MessageLoopFuchsia::OnJobException(const WatchInfo& info, zx::exception exception,
                                        zx_exception_info_t exception_info) {
   // Currently job exceptions only track process starting exceptions.
   // TODO(fxbug.dev/34167): Debugger job exception ports should receive all exceptions.
@@ -478,14 +472,14 @@ void MessageLoopTarget::OnJobException(const WatchInfo& info, zx::exception exce
   info.exception_watcher->OnProcessStarting(std::move(exception), exception_info);
 }
 
-void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
+void MessageLoopFuchsia::OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
   if (observed & ZX_SOCKET_PEER_CLOSED) {
     info.socket_watcher->OnSocketError(info.socket_handle);
     return;
   }
 
-  // observed is a bitmap of ALL of the signals asserted on the socket, which could be a
-  // superset of what we expected. Check the watch mode so we don't notify unwanted events.
+  // observed is a bitmap of ALL of the signals asserted on the socket, which could be a superset of
+  // what we expected. Check the watch mode so we don't notify unwanted events.
   bool readable = !!(observed & ZX_SOCKET_READABLE) && (info.mode != WatchMode::kWrite);
   bool writable = !!(observed & ZX_SOCKET_WRITABLE) && (info.mode != WatchMode::kRead);
 
@@ -493,8 +487,8 @@ void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info, zx_s
   if (readable)
     info.socket_watcher->OnSocketReadable(info.socket_handle);
 
-  // When signaling both readable and writable, make sure the readable handler
-  // didn't remove the watch.
+  // When signaling both readable and writable, make sure the readable handler didn't remove the
+  // watch.
   if (readable && writable) {
     std::lock_guard<std::mutex> guard(mutex_);
     if (watches_.find(watch_id) == watches_.end())

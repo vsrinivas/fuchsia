@@ -8,7 +8,7 @@
 
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 
 namespace debug_agent {
 
@@ -48,10 +48,10 @@ debug::Status ZirconJobHandle::WatchJobExceptions(
     job_watch_handle_.StopWatching();
   } else if (!process_callback_) {
     // Registering for the first time.
-    debug::MessageLoopTarget* loop = debug::MessageLoopTarget::Current();
+    debug::MessageLoopFuchsia* loop = debug::MessageLoopFuchsia::Current();
     FX_DCHECK(loop);  // Loop must be created on this thread first.
 
-    debug::MessageLoopTarget::WatchJobConfig config;
+    debug::MessageLoopFuchsia::WatchJobConfig config;
     config.job_name = GetName();
     config.job_handle = job_.get();
     config.job_koid = job_koid_;

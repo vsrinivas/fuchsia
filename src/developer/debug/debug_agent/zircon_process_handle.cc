@@ -10,7 +10,7 @@
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/message_loop_fuchsia.h"
 
 namespace debug_agent {
 
@@ -60,11 +60,11 @@ debug::Status ZirconProcessHandle::Attach(ProcessHandleObserver* observer) {
 
   if (!process_watch_handle_.watching()) {
     // Start watching.
-    debug::MessageLoopTarget* loop = debug::MessageLoopTarget::Current();
+    debug::MessageLoopFuchsia* loop = debug::MessageLoopFuchsia::Current();
     FX_DCHECK(loop);  // Loop must be created on this thread first.
 
     // Register for debug exceptions.
-    debug::MessageLoopTarget::WatchProcessConfig config;
+    debug::MessageLoopFuchsia::WatchProcessConfig config;
     config.process_name = GetName();
     config.process_handle = process_.get();
     config.process_koid = GetKoid();
