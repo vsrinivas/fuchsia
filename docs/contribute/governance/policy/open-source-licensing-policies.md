@@ -103,6 +103,8 @@ The following are the approved licenses for production target devices:
 
   *   MIT license, specifically the text at [/zircon/kernel/LICENSE](/zircon/kernel/LICENSE)
 
+  *   X11 license, specifically the text at [/third_party/github.com/intel/libva/va/x11/va_dri2.c](https://fuchsia.googlesource.com/third_party/github.com/intel/libva/+/6e86b4fb4dafa123b1e31821f61da88f10cfbe91/va/x11/va_dri2.c)
+
   *   Zlib license, specifically the text at [https://fuchsia.googlesource.com/third\_party/zlib/+/main/README#85](https://fuchsia.googlesource.com/third\_party/zlib/+/main/README#85)
 
   *   Libpng license, specifically the text at [https://fuchsia.googlesource.com/third\_party/libpng/+/main/LICENSE](https://fuchsia.googlesource.com/third\_party/libpng/+/main/LICENSE)
