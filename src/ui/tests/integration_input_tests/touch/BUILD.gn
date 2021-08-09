@@ -8,8 +8,14 @@ import("//build/fidl/fidl.gni")
 
 fidl("test.touch") {
   sdk_category = "internal"
-  sources = [ "response_listener.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  sources = [
+    "response_listener.test.fidl",
+    "test_app_launcher.test.fidl",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//zircon/vdso/zx",
+  ]
 }
 
 config_data("touch-input-test-display_rotation") {
@@ -166,6 +172,7 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/ime:ime_service",
+    "//src/ui/tests/integration_input_tests/touch/embedding-flutter",
     "//src/ui/tests/integration_input_tests/touch/one-chromium",
     "//src/ui/tests/integration_input_tests/touch/one-flutter",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client",

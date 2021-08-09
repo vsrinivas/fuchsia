@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/embedding-flutter"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.ui.scenic.Scenic",
+            "test.touch.ResponseListener"
+        ]
+    }
+}

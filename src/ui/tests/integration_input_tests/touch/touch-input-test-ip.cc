@@ -111,6 +111,8 @@ const std::vector<std::string> GlobalServices() {
           "fuchsia.scheduler.ProfileProvider"};
 }
 
+enum class TapLocation { kTopLeft, kTopRight };
+
 class TouchInputBase : public gtest::TestWithEnvironmentFixture,
                        public test::touch::ResponseListener {
  protected:
@@ -242,11 +244,10 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
       fuchsia::sys::LaunchInfo launch_info;
       launch_info.url = url;
       // Create a point-to-point offer-use connection between parent and child.
-      auto child_services =
-          sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+      child_services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
       client_component_ = test_env()->CreateComponent(std::move(launch_info));
 
-      auto view_provider = child_services->Connect<fuchsia::ui::app::ViewProvider>();
+      auto view_provider = child_services_->Connect<fuchsia::ui::app::ViewProvider>();
       view_provider->CreateView(std::move(tokens_tf.view_token.value), /* in */ nullptr,
                                 /* out */ nullptr);
     }
@@ -277,18 +278,11 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   }
 
   // Helper method for checking the test.touch.ResponseListener response from the client app.
-  //
-  // The /config/data/display_rotation (90) specifies how many degrees to rotate the
-  // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
-  // the user observes the child view to rotate *clockwise* by that amount (90).
-  //
-  // Hence, a tap in the center of the display's top-right quadrant is observed by the child
-  // view as a tap in the center of its top-left quadrant.
   void SetResponseExpectations(float expected_x, float expected_y,
                                zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time,
-                               std::string component_name) {
-    respond_callback_ = [this, expected_x, expected_y, component_name,
-                         &input_injection_time](test::touch::PointerData pointer_data) {
+                               std::string component_name, bool& injection_complete) {
+    respond_callback_ = [expected_x, expected_y, component_name, &input_injection_time,
+                         &injection_complete](test::touch::PointerData pointer_data) {
       FX_LOGS(INFO) << "Client received tap at (" << pointer_data.local_x() << ", "
                     << pointer_data.local_y() << ").";
       FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
@@ -306,8 +300,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
       EXPECT_NEAR(pointer_data.local_y(), expected_y, 1);
       EXPECT_EQ(pointer_data.component_name(), component_name);
 
-      FX_LOGS(INFO) << "*** PASS ***";
-      QuitLoop();
+      injection_complete = true;
     };
   }
 
@@ -345,13 +338,36 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
 
   // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
   template <typename TimeT>
-  TimeT InjectInput() {
+  TimeT InjectInput(TapLocation tap_location) {
     // Set InputReports to inject. One contact at the center of the top right quadrant, followed
     // by no contacts.
     fuchsia::input::report::ContactInputReport contact_input_report;
     contact_input_report.set_contact_id(1);
     contact_input_report.set_position_x(500);
     contact_input_report.set_position_y(-500);
+    // Inject one input report, then a conclusion (empty) report.
+    //
+    // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+    // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+    // the user observes the child view to rotate *clockwise* by that amount (90).
+    //
+    // Hence, a tap in the center of the display's top-right quadrant is observed by the child
+    // view as a tap in the center of its top-left quadrant.
+    auto touch = fuchsia::ui::input::TouchscreenReport::New();
+    switch (tap_location) {
+      case TapLocation::kTopLeft:
+        // center of top right quadrant -> ends up as center of top left quadrant
+        contact_input_report.set_position_x(500);
+        contact_input_report.set_position_y(-500);
+        break;
+      case TapLocation::kTopRight:
+        // center of bottom right quadrant -> ends up as center of top right quadrant
+        contact_input_report.set_position_x(500);
+        contact_input_report.set_position_y(500);
+        break;
+      default:
+        FX_NOTREACHED();
+    }
 
     fuchsia::input::report::TouchInputReport touch_input_report;
     auto contacts = touch_input_report.mutable_contacts();
@@ -379,6 +395,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   uint32_t display_height() const { return display_height_; }
 
   fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
+  sys::ServiceDirectory& child_services() { return *child_services_; }
 
   fit::function<void(test::touch::PointerData)> respond_callback_;
 
@@ -428,6 +445,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
   std::unique_ptr<scenic::View> view_;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
+  std::shared_ptr<sys::ServiceDirectory> child_services_;
 };
 
 class TouchInputTest_IP : public TouchInputBase {
@@ -441,13 +459,56 @@ TEST_F(TouchInputTest_IP, FlutterTap) {
 
   LaunchClient("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx", "FlutterTap");
 
+  bool injection_complete = false;
   SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
                           /*expected_y=*/static_cast<float>(display_width()) / 4.f,
                           input_injection_time,
-                          /*component_name=*/"one-flutter");
+                          /*component_name=*/"one-flutter", injection_complete);
 
-  input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
-  RunLoop();  // Go!
+  input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopLeft);
+  RunLoopUntil([&injection_complete] { return injection_complete; });
+}
+
+TEST_F(TouchInputTest_IP, FlutterInFlutterTap) {
+  // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
+  zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
+
+  // Launch the embedding app.
+  LaunchClient("fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter.cmx",
+               "FlutterInFlutterTap");
+
+  // Launch the embedded app.
+  auto test_app_launcher = child_services().Connect<test::touch::TestAppLauncher>();
+  bool child_launched = false;
+  test_app_launcher->Launch("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx",
+                            [&child_launched] { child_launched = true; });
+  RunLoopUntil([&child_launched] { return child_launched; });
+
+  // Embedded app takes up the left half of the screen. Expect response from it when injecting to
+  // the left.
+  {
+    bool injection_complete = false;
+    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                            input_injection_time,
+                            /*component_name=*/"one-flutter", injection_complete);
+
+    input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopLeft);
+    RunLoopUntil([&injection_complete] { return injection_complete; });
+  }
+
+  // Parent app takes up the right half of the screen. Expect response from it when injecting to the
+  // right.
+  {
+    bool injection_complete = false;
+    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
+                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                            input_injection_time,
+                            /*component_name=*/"embedding-flutter", injection_complete);
+
+    input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopRight);
+    RunLoopUntil([&injection_complete] { return injection_complete; });
+  }
 }
 
 TEST_F(TouchInputTest_IP, CppGfxClientTap) {
@@ -457,13 +518,14 @@ TEST_F(TouchInputTest_IP, CppGfxClientTap) {
   LaunchClient("fuchsia-pkg://fuchsia.com/touch-gfx-client#meta/touch-gfx-client.cmx",
                "CppGfxClientTap");
 
+  bool injection_complete = false;
   SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
                           /*expected_y=*/static_cast<float>(display_width()) / 4.f,
                           input_injection_time,
-                          /*component_name=*/"touch-gfx-client");
+                          /*component_name=*/"touch-gfx-client", injection_complete);
 
-  input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
-  RunLoop();  // Go!
+  input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopLeft);
+  RunLoopUntil([&injection_complete] { return injection_complete; });
 }
 
 class WebEngineTest_IP : public TouchInputBase {
@@ -507,24 +569,17 @@ class WebEngineTest_IP : public TouchInputBase {
   //
   // TODO(fxbug.dev/58322): Improve synchronization when we move to Flatland.
   void TryInject(zx::basic_time<ZX_CLOCK_UTC>* input_injection_time) {
-    *input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_UTC>>();
+    *input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_UTC>>(TapLocation::kTopLeft);
     async::PostDelayedTask(
         dispatcher(), [this, input_injection_time] { TryInject(input_injection_time); },
         kTapRetryInterval);
   };
 
   // Helper method for checking the test.touch.ResponseListener response from a web app.
-  //
-  // The /config/data/display_rotation (90) specifies how many degrees to rotate the
-  // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
-  // the user observes the child view to rotate *clockwise* by that amount (90).
-  //
-  // Hence, a tap in the center of the display's top-right quadrant is observed by the child
-  // view as a tap in the center of its top-left quadrant.
   void SetResponseExpectationsWeb(float expected_x, float expected_y,
                                   zx::basic_time<ZX_CLOCK_UTC>& input_injection_time,
-                                  std::string component_name) {
-    respond_callback_ = [this, expected_x, expected_y, component_name,
+                                  std::string component_name, bool& injection_complete) {
+    respond_callback_ = [expected_x, expected_y, component_name, &injection_complete,
                          &input_injection_time](test::touch::PointerData pointer_data) {
       // Convert Chromium's position, which is in logical pixels, to a position in physical
       // pixels. Note that Chromium reports integer values, so this conversion introduces an
@@ -553,7 +608,7 @@ class WebEngineTest_IP : public TouchInputBase {
       EXPECT_NEAR(device_y, expected_y, device_pixel_ratio);
       EXPECT_EQ(pointer_data.component_name(), component_name);
 
-      QuitLoop();
+      injection_complete = true;
     };
   }
 
@@ -603,13 +658,14 @@ TEST_F(WebEngineTest_IP, ChromiumTap) {
     }
   };
 
+  bool injection_complete = false;
   SetResponseExpectationsWeb(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
                              /*expected_y=*/static_cast<float>(display_width()) / 4.f,
                              input_injection_time,
-                             /*component_name=*/"one-chromium");
+                             /*component_name=*/"one-chromium", injection_complete);
 
   TryInject(&input_injection_time);
-  RunLoop();  // Go!
+  RunLoopUntil([&injection_complete] { return injection_complete; });
 }
 
 }  // namespace

@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.touch;
+
+using fuchsia.sys;
+
+/// A test-specific protocol to launch a child test app under a test app.
+@discoverable
+protocol TestAppLauncher {
+    // Takes a component url, launches it and returns once the child app has presented content.
+    Launch(struct{
+        url fuchsia.sys.component_url;
+    }) -> ();
+};
