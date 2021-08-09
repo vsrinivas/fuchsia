@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
@@ -20,13 +23,16 @@ class VnodeMapperTestFixture : public testing::Test {
  public:
   const int kNumBlocks = 1 << 20;
 
+  VnodeMapperTestFixture() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
   void SetUp() override {
     auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kMinfsBlockSize);
     ASSERT_TRUE(device);
     std::unique_ptr<Bcache> bcache;
     ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache), ZX_OK);
     ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
-    ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs_), ZX_OK);
+    ASSERT_EQ(Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache), MountOptions(), &fs_),
+              ZX_OK);
     VnodeMinfs::Allocate(fs_.get(), kMinfsTypeFile, &vnode_);
     EXPECT_EQ(vnode_->Open(vnode_->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
               ZX_OK);
@@ -35,6 +41,7 @@ class VnodeMapperTestFixture : public testing::Test {
   ~VnodeMapperTestFixture() { vnode_->Close(); }
 
  protected:
+  async::Loop vfs_loop_;
   std::unique_ptr<Minfs> fs_;
   fbl::RefPtr<VnodeMinfs> vnode_;
 };

@@ -5,6 +5,9 @@
 #ifndef SRC_STORAGE_MINFS_TEST_UNIT_JOURNAL_INTEGRATION_FIXTURE_H_
 #define SRC_STORAGE_MINFS_TEST_UNIT_JOURNAL_INTEGRATION_FIXTURE_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <cstdint>
 #include <memory>
 
@@ -23,8 +26,12 @@ class JournalIntegrationFixture : public testing::Test {
   static constexpr uint64_t kSliceSize = 512 * 1024;
   static constexpr uint64_t kSliceCount = kBlockCount * kBlockSize / kSliceSize;
 
+  JournalIntegrationFixture();
+
   // Performs the operation with no limits and updates write_count_.
   void SetUp() override;
+
+  async_dispatcher_t* dispatcher() const { return vfs_loop_.dispatcher(); }
 
   // Returns the appropriate write count for the operation under test.
   uint64_t write_count() const { return write_count_; }
@@ -54,6 +61,8 @@ class JournalIntegrationFixture : public testing::Test {
   // See "CountWritesToPerformOperation" for a reasonable |write_count| value to set.
   void PerformOperationWithTransactionLimit(
       uint64_t write_count, std::unique_ptr<block_client::FakeFVMBlockDevice>* in_out_device);
+
+  async::Loop vfs_loop_;
 
   // Disk block writes to perform the operation normally.
   uint64_t write_count_ = 0;

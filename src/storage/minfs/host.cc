@@ -130,7 +130,7 @@ int emu_mkfs(const char* path) {
 }
 
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
-  auto fs_or = minfs::Mount(std::move(bc), minfs::MountOptions(), &fake_fs.fake_root);
+  auto fs_or = minfs::Mount(nullptr, std::move(bc), minfs::MountOptions(), &fake_fs.fake_root);
   if (fs_or.is_error()) {
     return -1;
   }

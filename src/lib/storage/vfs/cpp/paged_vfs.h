@@ -17,12 +17,6 @@ namespace fs {
 class PagedVnode;
 
 // A variant of Vfs that supports paging. A PagedVfs supports PagedVnode objects.
-//
-// UNDER DEVELOPMENT
-// =================
-// Paging in the fs library is currently under active development and not ready to use yet.
-// See http://fxbug.dev/51111. Long-term the paging functionality should be moved into ManagedVfs
-// and all C++ filesystems should use that on Fuchsia.
 class PagedVfs : public ManagedVfs {
  public:
   // The caller must call Init() which must succeed before using this class.

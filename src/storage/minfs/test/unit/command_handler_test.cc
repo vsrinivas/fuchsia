@@ -4,6 +4,9 @@
 
 #include "src/storage/minfs/command_handler.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <iostream>
 
 #include <block-client/cpp/fake-device.h>
@@ -130,6 +133,7 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {
 
 // Make sure commands return OK on a formatted device.
 TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
 
   // Format the device.
@@ -141,7 +145,7 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
   // to finish.
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(minfs::Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
   sync_completion_t completion;
   fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);

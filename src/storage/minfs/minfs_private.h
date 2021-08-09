@@ -76,6 +76,17 @@ using MountState = fuchsia_minfs::wire::MountState;
 constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
 #endif  // __Fuchsia__
 
+// A async_dispatcher_t* is needed for some functions on Fuchsia only. In order to avoid ifdefs on
+// every call that is compiled for host Fuchsia and Host, we define this as a nullptr_t type when
+// compiling on host where callers should pass null and it's ignored.
+//
+// Prefer async_dispatcher_t* for Fuchsia-specific functions since it makes the intent more clear.
+#ifdef __Fuchsia__
+using FuchsiaDispatcher = async_dispatcher_t;
+#else
+using FuchsiaDispatcher = std::nullptr_t;
+#endif  // __Fuchsia__
+
 // SyncVnode flags
 constexpr uint32_t kMxFsSyncDefault = 0;  // default: no implicit time update
 constexpr uint32_t kMxFsSyncMtime = (1 << 0);
@@ -193,8 +204,8 @@ class Minfs :
   // Destroys a "minfs" object, but take back ownership of the bcache object.
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
 
-  [[nodiscard]] static zx_status_t Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
-                                          std::unique_ptr<Minfs>* out);
+  [[nodiscard]] static zx_status_t Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
+                                          const MountOptions& options, std::unique_ptr<Minfs>* out);
 
 #ifdef __Fuchsia__
   // Initializes the Minfs journal and writeback queue and resolves any pending disk state (e.g.,
@@ -426,9 +437,9 @@ class Minfs :
   using HashTable = fbl::HashTable<ino_t, VnodeMinfs*>;
 
 #ifdef __Fuchsia__
-  Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
-        std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-        const MountOptions& mount_options);
+  Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
+        std::unique_ptr<SuperblockManager> sb, std::unique_ptr<Allocator> block_allocator,
+        std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options);
 #else
   Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
         std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
@@ -519,9 +530,11 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
-[[nodiscard]] zx::status<std::unique_ptr<Minfs>> Mount(std::unique_ptr<minfs::Bcache> bc,
+[[nodiscard]] zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
+                                                       std::unique_ptr<minfs::Bcache> bc,
                                                        const MountOptions& options,
                                                        fbl::RefPtr<VnodeMinfs>* root_out);
+
 }  // namespace minfs
 
 #endif  // SRC_STORAGE_MINFS_MINFS_PRIVATE_H_

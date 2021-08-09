@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
@@ -17,6 +20,8 @@ namespace {
 using block_client::FakeBlockDevice;
 
 TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   constexpr uint64_t kBlockCount = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
@@ -26,7 +31,7 @@ TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
   MountOptions options = {};
 
   std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   ino_t ino;
   uint32_t inode_block;
@@ -51,6 +56,8 @@ TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
 }
 
 TEST(UnlinkTest, UnlinkedDirectoryFailure) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   constexpr uint64_t kBlockCount = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
@@ -60,7 +67,7 @@ TEST(UnlinkTest, UnlinkedDirectoryFailure) {
   MountOptions options = {};
 
   std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   {
     fbl::RefPtr<VnodeMinfs> root;

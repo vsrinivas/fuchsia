@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
@@ -20,6 +23,8 @@ using ReadWriteTest = testing::Test;
 // This unit test verifies that minfs, without vfs, behaves as expected
 // when zero-length writes are interleaved with non-zero length writes.
 TEST_F(ReadWriteTest, WriteZeroLength) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   const int kNumBlocks = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kMinfsBlockSize);
   ASSERT_TRUE(device);
@@ -27,7 +32,7 @@ TEST_F(ReadWriteTest, WriteZeroLength) {
   std::unique_ptr<Minfs> fs;
   ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache), ZX_OK);
   ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
-  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions(), &fs), ZX_OK);
   fbl::RefPtr<VnodeMinfs> root;
   ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
   fbl::RefPtr<fs::Vnode> foo;

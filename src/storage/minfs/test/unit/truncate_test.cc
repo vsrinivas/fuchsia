@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 
 #include "src/storage/minfs/test/unit/journal_integration_fixture.h"
@@ -32,12 +34,14 @@ class TruncateTest : public JournalIntegrationFixture {
 };
 
 TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   // See the note in journal_test.cc regarding tuning these numbers.
   auto bcache = CutOffDevice(write_count() - 12 * kDiskBlocksPerFsBlock);
 
   // Since we cut off the transaction, we should see the old length with the old contents.
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions{}, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions{}, &fs), ZX_OK);
 
   // Open the 'foo' file.
   fbl::RefPtr<VnodeMinfs> root;

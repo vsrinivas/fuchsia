@@ -21,6 +21,9 @@
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 #ifdef __Fuchsia__
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <storage/buffer/owned_vmoid.h>
 #else
 #include <storage/buffer/array_buffer.h>
@@ -87,8 +90,8 @@ blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_
 
 class MinfsChecker {
  public:
-  static zx_status_t Create(std::unique_ptr<Bcache> bc, const FsckOptions& options,
-                            std::unique_ptr<MinfsChecker>* out);
+  static zx_status_t Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
+                            const FsckOptions& options, std::unique_ptr<MinfsChecker>* out);
 
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<MinfsChecker> checker) {
     return Minfs::Destroy(std::move(checker->fs_));
@@ -108,7 +111,7 @@ class MinfsChecker {
   bool conforming() const { return conforming_; }
 
  private:
-  MinfsChecker(const FsckOptions& fsck_options) : fsck_options_(fsck_options) {}
+  explicit MinfsChecker(const FsckOptions& fsck_options) : fsck_options_(fsck_options) {}
 
   // Not copyable or movable
   MinfsChecker(const MinfsChecker&) = delete;
@@ -782,11 +785,12 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
 #endif
 }
 
-zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& fsck_options,
+zx_status_t MinfsChecker::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
+                                 const FsckOptions& fsck_options,
                                  std::unique_ptr<MinfsChecker>* out) {
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(
-      std::move(bc),
+      dispatcher, std::move(bc),
       MountOptions{
           .readonly = fsck_options.read_only,
           .repair_filesystem = fsck_options.repair,
@@ -1086,7 +1090,15 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
 zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
                  std::unique_ptr<Bcache>* out_bc) {
   std::unique_ptr<MinfsChecker> chk;
-  zx_status_t status = MinfsChecker::Create(std::move(bc), options, &chk);
+
+#ifdef __Fuchsia__
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+#else
+  std::nullptr_t dispatcher = nullptr;  // Use null for the dispatcher on host.
+#endif
+
+  zx_status_t status = MinfsChecker::Create(dispatcher, std::move(bc), options, &chk);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Fsck: Init failure: " << status;
     return status;

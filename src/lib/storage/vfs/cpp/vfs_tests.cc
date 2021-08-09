@@ -44,11 +44,11 @@ class TestNode : public fs::Vnode {
 
 }  // namespace
 
-TEST(ManagedVfs, CanOnlySetDispatcherOnce) {
-  fs::ManagedVfs vfs;
+// ManagedVfs always sets the dispatcher in its constructor, and trying to change it using
+// Vfs::SetDispatcher should fail.
+TEST(ManagedVfs, CantSetDispatcher) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  vfs.SetDispatcher(loop.dispatcher());
-
+  fs::ManagedVfs vfs(loop.dispatcher());
   ASSERT_DEATH([&]() { vfs.SetDispatcher(loop.dispatcher()); });
 }
 

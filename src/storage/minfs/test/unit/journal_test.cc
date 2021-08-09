@@ -58,7 +58,7 @@ TEST_F(JournalIntegrationTest, CreateWithRepairDoesReplayJournal) {
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  EXPECT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
   bcache = Minfs::Destroy(std::move(fs));
   EXPECT_EQ(Fsck(std::move(bcache), FsckOptions(), &bcache), ZX_OK);
 }
@@ -146,7 +146,7 @@ TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
   auto bcache = CutOffDevice(write_count());
   EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), MountOptions(), &fs), ZX_OK);
   EXPECT_EQ(fs->Info().dat_slices, 2u);  // We expect the increased size.
 }
 
@@ -155,7 +155,7 @@ TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
   auto bcache = CutOffDevice(write_count() - kGrowFvmCutoff - kDiskBlocksPerFsBlock);
   EXPECT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}, &bcache), ZX_OK);
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), MountOptions(), &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), MountOptions(), &fs), ZX_OK);
   EXPECT_EQ(fs->Info().dat_slices, 1u);  // We expect the old, smaller size.
 }
 
@@ -163,7 +163,7 @@ TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
 // committed because data writes do not wait. This test verifies this by pausing writes and then
 // freeing blocks and making sure that block doesn't get reused. This test currently relies on the
 // allocator behaving a certain way, i.e. it allocates the first free block that it can find.
-TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
+TEST_F(JournalIntegrationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   static constexpr int kBlockCount = 1 << 15;
   auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, 512);
   block_client::FakeBlockDevice* device_ptr = device.get();
@@ -172,7 +172,7 @@ TEST(JournalAllocationTest, BlocksAreReservedUntilMetadataIsCommitted) {
   ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   // Create a file and make it allocate 1 block.
   fbl::RefPtr<VnodeMinfs> root;

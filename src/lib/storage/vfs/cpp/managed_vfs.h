@@ -31,7 +31,6 @@ namespace fs {
 // the ManagedVfs object.
 class ManagedVfs : public Vfs {
  public:
-  ManagedVfs();
   explicit ManagedVfs(async_dispatcher_t* dispatcher);
 
   // The ManagedVfs destructor is only safe to execute if no connections are actively registered.
@@ -74,7 +73,7 @@ class ManagedVfs : public Vfs {
   // All live connections. There can be more than one connection per node.
   fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_ __TA_GUARDED(lock_);
 
-  std::atomic_bool is_shutting_down_;
+  std::atomic_bool is_shutting_down_ = false;
   async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_){
       this};
   ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);

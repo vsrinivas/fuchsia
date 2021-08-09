@@ -4,6 +4,8 @@
 
 #include "src/storage/minfs/minfs_inspector.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/device/block.h>
 
 #include <iostream>
@@ -19,6 +21,7 @@
 #include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {
+
 namespace {
 
 using block_client::FakeBlockDevice;
@@ -26,85 +29,87 @@ using block_client::FakeBlockDevice;
 constexpr uint64_t kBlockCount = 1 << 15;
 constexpr uint32_t kBlockSize = 512;
 
-void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
-                          std::unique_ptr<MinfsInspector>* out) {
-  std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
-  ASSERT_EQ(disk_inspector::InspectorTransactionHandler::Create(std::move(device), kMinfsBlockSize,
-                                                                &inspector_handler),
-            ZX_OK);
-  auto buffer_factory =
-      std::make_unique<disk_inspector::VmoBufferFactory>(inspector_handler.get(), kMinfsBlockSize);
-  auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
-  ASSERT_TRUE(result.is_ok());
-  *out = result.take_value();
-}
+class MinfsInspectorTest : public testing::Test {
+ public:
+  MinfsInspectorTest() : vfs_loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
-// Initialize a MinfsInspector from a created fake block device formatted
-// into a fresh minfs partition and journal entries.
-void SetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector) {
-  auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+  std::unique_ptr<MinfsInspector> CreateMinfsInspector(
+      std::unique_ptr<block_client::BlockDevice> device) {
+    std::unique_ptr<disk_inspector::InspectorTransactionHandler> inspector_handler;
+    EXPECT_EQ(disk_inspector::InspectorTransactionHandler::Create(
+                  std::move(device), kMinfsBlockSize, &inspector_handler),
+              ZX_OK);
+    auto buffer_factory = std::make_unique<disk_inspector::VmoBufferFactory>(
+        inspector_handler.get(), kMinfsBlockSize);
 
-  // Format the device.
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(temp), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
-
-  // Write journal info to the device by creating a minfs and waiting for it
-  // to finish.
-  std::unique_ptr<Minfs> fs;
-  MountOptions options = {};
-  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
-  sync_completion_t completion;
-  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
-  ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
-
-  // We only care about the disk format written into the fake block device,
-  // so we destroy the minfs/bcache used to format it.
-  bcache = Minfs::Destroy(std::move(fs));
-  CreateMinfsInspector(Bcache::Destroy(std::move(bcache)), inspector);
-}
-
-// Initialize a MinfsInspector from an zero-ed out block device. This simulates
-// corruption to various metadata. Allows copying |count| bytes of |data| to
-// the start of the fake block device.
-void BadSetupMinfsInspector(std::unique_ptr<MinfsInspector>* inspector, void* data,
-                            uint64_t count) {
-  auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  if (count > 0) {
-    zx::vmo buffer;
-    ASSERT_EQ(zx::vmo::create(count, 0, &buffer), ZX_OK);
-    ASSERT_EQ(buffer.write(data, 0, count), ZX_OK);
-
-    storage::OwnedVmoid vmoid;
-    ASSERT_EQ(temp->BlockAttachVmo(buffer, &vmoid.GetReference(temp.get())), ZX_OK);
-
-    std::vector<block_fifo_request_t> reqs = {{
-        .opcode = BLOCKIO_WRITE,
-        .reqid = 0x0,
-        .group = 0,
-        .vmoid = vmoid.get(),
-        .length = static_cast<uint32_t>(count / kBlockSize),
-        .vmo_offset = 0,
-        .dev_offset = 0,
-    }};
-    ASSERT_EQ(temp->FifoTransaction(reqs.data(), 1), ZX_OK);
+    auto result = MinfsInspector::Create(std::move(inspector_handler), std::move(buffer_factory));
+    EXPECT_TRUE(result.is_ok());
+    return result.take_value();
   }
-  CreateMinfsInspector(std::move(temp), inspector);
+
+  // Initialize a MinfsInspector from a created fake block device formatted into a fresh minfs
+  // partition and journal entries.
+  std::unique_ptr<MinfsInspector> SetupMinfsInspector() {
+    auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+
+    // Format the device.
+    std::unique_ptr<Bcache> bcache;
+    EXPECT_EQ(Bcache::Create(std::move(temp), kBlockCount, &bcache), ZX_OK);
+    EXPECT_EQ(Mkfs(bcache.get()), ZX_OK);
+
+    // Write journal info to the device by creating a minfs and waiting for it to finish.
+    std::unique_ptr<Minfs> fs;
+    MountOptions options = {};
+    EXPECT_EQ(minfs::Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+    sync_completion_t completion;
+    fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+    EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
+
+    // We only care about the disk format written into the fake block device, so we destroy the
+    // minfs/bcache used to format it.
+    bcache = Minfs::Destroy(std::move(fs));
+    return CreateMinfsInspector(Bcache::Destroy(std::move(bcache)));
+  }
+
+  // Initialize a MinfsInspector from an zero-ed out block device. This simulates
+  // corruption to various metadata. Allows copying |count| bytes of |data| to
+  // the start of the fake block device.
+  std::unique_ptr<MinfsInspector> BadSetupMinfsInspector(void* data, uint64_t count) {
+    auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
+    if (count > 0) {
+      zx::vmo buffer;
+      EXPECT_EQ(zx::vmo::create(count, 0, &buffer), ZX_OK);
+      EXPECT_EQ(buffer.write(data, 0, count), ZX_OK);
+
+      storage::OwnedVmoid vmoid;
+      EXPECT_EQ(temp->BlockAttachVmo(buffer, &vmoid.GetReference(temp.get())), ZX_OK);
+
+      std::vector<block_fifo_request_t> reqs = {{
+          .opcode = BLOCKIO_WRITE,
+          .reqid = 0x0,
+          .group = 0,
+          .vmoid = vmoid.get(),
+          .length = static_cast<uint32_t>(count / kBlockSize),
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      }};
+      EXPECT_EQ(temp->FifoTransaction(reqs.data(), 1), ZX_OK);
+    }
+    return CreateMinfsInspector(std::move(temp));
+  }
+
+ private:
+  async::Loop vfs_loop_;
+};
+
+TEST_F(MinfsInspectorTest, CreateWithoutError) { SetupMinfsInspector(); }
+
+TEST_F(MinfsInspectorTest, CreateWithoutErrorOnBadSuperblock) {
+  BadSetupMinfsInspector(nullptr, 0);
 }
 
-TEST(MinfsInspector, CreateWithoutError) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
-}
-
-TEST(MinfsInspector, CreateWithoutErrorOnBadSuperblock) {
-  std::unique_ptr<MinfsInspector> inspector;
-  BadSetupMinfsInspector(&inspector, nullptr, 0);
-}
-
-TEST(MinfsInspector, InspectSuperblock) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, InspectSuperblock) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   Superblock sb = inspector->InspectSuperblock();
 
@@ -118,17 +123,15 @@ TEST(MinfsInspector, InspectSuperblock) {
   EXPECT_EQ(sb.alloc_block_count, 2u);
 }
 
-TEST(MinfsInspector, GetInodeCount) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, GetInodeCount) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   Superblock sb = inspector->InspectSuperblock();
   EXPECT_EQ(inspector->GetInodeCount(), sb.inode_count);
 }
 
-TEST(MinfsInspector, InspectInode) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, InspectInode) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   Superblock sb = inspector->InspectSuperblock();
   // The fresh minfs device should have 2 allocated inodes, empty inode 0 and
@@ -161,9 +164,8 @@ TEST(MinfsInspector, InspectInode) {
   EXPECT_EQ(inode.link_count, 0u);
 }
 
-TEST(MinfsInspector, CheckInodeAllocated) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, CheckInodeAllocated) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   Superblock sb = inspector->InspectSuperblock();
   ASSERT_TRUE(sb.alloc_inode_count < sb.inode_count);
@@ -182,9 +184,8 @@ TEST(MinfsInspector, CheckInodeAllocated) {
   }
 }
 
-TEST(MinfsInspector, InspectJournalSuperblock) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, InspectJournalSuperblock) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   auto result = inspector->InspectJournalSuperblock();
   ASSERT_TRUE(result.is_ok());
@@ -194,9 +195,8 @@ TEST(MinfsInspector, InspectJournalSuperblock) {
   EXPECT_EQ(journal_info.start_block, 8ul);
 }
 
-TEST(MinfsInspector, GetJournalEntryCount) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, GetJournalEntryCount) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
   Superblock sb = inspector->InspectSuperblock();
   uint64_t expected_count = JournalBlocks(sb) - fs::kJournalMetadataBlocks;
   EXPECT_EQ(inspector->GetJournalEntryCount(), expected_count);
@@ -206,12 +206,13 @@ TEST(MinfsInspector, GetJournalEntryCount) {
 // and the journal entries in a single vmo, so we cannot just naively subtract
 // the number of superblocks from the size of the buffer in the case in which
 // the buffer is uninitialized/have capacity of zero.
-TEST(MinfsInspector, GetJournalEntryCountWithNoJournalBlocks) {
-  std::unique_ptr<MinfsInspector> inspector;
+TEST_F(MinfsInspectorTest, GetJournalEntryCountWithNoJournalBlocks) {
   Superblock superblock = {};
   superblock.integrity_start_block = 0;
   superblock.dat_block = superblock.integrity_start_block + kBackupSuperblockBlocks;
-  BadSetupMinfsInspector(&inspector, &superblock, sizeof(superblock));
+
+  std::unique_ptr<MinfsInspector> inspector =
+      BadSetupMinfsInspector(&superblock, sizeof(superblock));
   EXPECT_EQ(inspector->GetJournalEntryCount(), 0ul);
 }
 
@@ -222,9 +223,8 @@ void LoadAndUnwrapJournalEntry(MinfsInspector* inspector, uint64_t index, T* out
   *out_value = result.take_value();
 }
 
-TEST(MinfsInspector, InspectJournalEntryAs) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, InspectJournalEntryAs) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   // First four entry blocks should be header, payload, payload, commit.
   fs::JournalHeaderBlock header;
@@ -248,9 +248,8 @@ TEST(MinfsInspector, InspectJournalEntryAs) {
   EXPECT_EQ(commit.prefix.flags, fs::kJournalPrefixFlagCommit);
 }
 
-TEST(MinfsInspector, InspectBackupSuperblock) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, InspectBackupSuperblock) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
 
   auto result = inspector->InspectBackupSuperblock();
   ASSERT_TRUE(result.is_ok());
@@ -266,9 +265,8 @@ TEST(MinfsInspector, InspectBackupSuperblock) {
   EXPECT_EQ(sb.alloc_block_count, 2u);
 }
 
-TEST(MinfsInspector, WriteSuperblock) {
-  std::unique_ptr<MinfsInspector> inspector;
-  SetupMinfsInspector(&inspector);
+TEST_F(MinfsInspectorTest, WriteSuperblock) {
+  std::unique_ptr<MinfsInspector> inspector = SetupMinfsInspector();
   Superblock sb = inspector->InspectSuperblock();
   // Test original values are correct.
   EXPECT_EQ(sb.magic0, kMinfsMagic0);
@@ -300,8 +298,9 @@ TEST(MinfsInspector, WriteSuperblock) {
 // Currently if we send a read beyond device command, the block device
 // itself will fail some test checks leading to this case being impossible to
 // pass.
-TEST(MinfsInspector, GracefulReadBeyondDevice) {}
-TEST(MinfsInspector, GracefulReadFvmUnmappedData) {}
+//
+// TEST_F(MinfsInspectorTest, GracefulReadBeyondDevice) {}
+// TEST_F(MinfsInspectorTest, GracefulReadFvmUnmappedData) {}
 
 }  // namespace
 }  // namespace minfs

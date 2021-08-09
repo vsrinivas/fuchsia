@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+
 #include <block-client/cpp/fake-device.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
@@ -21,7 +24,9 @@ enum class Operation {
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  static Minfs& fs = []() -> Minfs& {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  static Minfs& fs = [&loop]() -> Minfs& {
     constexpr uint64_t kBlockCount = 1 << 17;
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
     std::unique_ptr<Bcache> bcache;
@@ -29,7 +34,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     ZX_ASSERT(Mkfs(bcache.get()) == ZX_OK);
     MountOptions options = {};
     std::unique_ptr<Minfs> fs;
-    ZX_ASSERT(Minfs::Create(std::move(bcache), options, &fs) == ZX_OK);
+    ZX_ASSERT(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs) == ZX_OK);
     return *fs.release();
   }();
 

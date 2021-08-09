@@ -27,6 +27,9 @@ void TakeDeviceFromMinfs(std::unique_ptr<Minfs> minfs,
 
 }  // namespace
 
+JournalIntegrationFixture::JournalIntegrationFixture()
+    : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
 void JournalIntegrationFixture::SetUp() {
   auto device =
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
@@ -64,7 +67,7 @@ void JournalIntegrationFixture::CountWritesToPerformOperation(
   ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   // Perform the caller-requested operation.
   PerformOperation(fs.get());
@@ -90,7 +93,7 @@ void JournalIntegrationFixture::PerformOperationWithTransactionLimit(
   ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   // Perform the caller-requested operation.
   PerformOperation(fs.get());

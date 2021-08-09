@@ -13,10 +13,7 @@
 
 namespace fs {
 
-ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
-
-ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher)
-    : Vfs(dispatcher), is_shutting_down_(false) {}
+ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher) : Vfs(dispatcher) {}
 
 ManagedVfs::~ManagedVfs() { ZX_DEBUG_ASSERT(connections_.is_empty()); }
 

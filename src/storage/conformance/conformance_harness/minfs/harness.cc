@@ -45,8 +45,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     std::unique_ptr<Bcache> bcache;
     ZX_ASSERT(Bcache::Create(std::move(device), kBlockCount, &bcache) == ZX_OK);
     ZX_ASSERT(Mkfs(bcache.get()) == ZX_OK);
-    ZX_ASSERT(Minfs::Create(std::move(bcache), {}, &minfs_) == ZX_OK);
-    minfs_->SetDispatcher(vfs_loop_.dispatcher());
+    ZX_ASSERT(Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache), {}, &minfs_) == ZX_OK);
   }
 
   ~MinfsHarness() override {

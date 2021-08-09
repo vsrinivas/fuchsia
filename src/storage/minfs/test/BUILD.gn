@@ -212,6 +212,8 @@ fuzzer("minfs-fuzzer") {
     "//src/storage/minfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client:fake-device",
   ]

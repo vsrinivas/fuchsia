@@ -24,7 +24,7 @@ namespace blobfs {
 // functions to return parsed structs.
 class BlobfsInspector {
  public:
-  // Creates a MinfsInspector from a block device. Tries to load the superblock from disk upon
+  // Creates a BlobfsInspector from a block device. Tries to load the superblock from disk upon
   // creation by calling ReloadSuperblock().
   static zx::status<std::unique_ptr<BlobfsInspector>> Create(
       std::unique_ptr<fs::TransactionHandler> handler,
@@ -40,9 +40,9 @@ class BlobfsInspector {
   zx_status_t Initialize();
 
   // Initializes the |superblock_| buffer and tries to load the superblock from disk into the
-  // buffer. The MinfsInspector should be considered invalid and should not be used if this function
-  // fails as either VmoBuffers cannot be created or we cannot read even the first block from the
-  // underlying block device.
+  // buffer. The BlobfsInspector should be considered invalid and should not be used if this
+  // function fails as either VmoBuffers cannot be created or we cannot read even the first block
+  // from the underlying block device.
   zx_status_t ReloadSuperblock();
 
   // Initializes the |inode_bitmap_|, |inode_table_|, and |journal_| buffers based on |superblock_|

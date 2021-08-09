@@ -61,13 +61,15 @@ zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
   MountOptions options = {};
   options.readonly_after_initialization = true;
   options.repair_filesystem = false;
+
   std::unique_ptr<Minfs> fs;
-  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  zx_status_t status = Minfs::Create(dispatcher_, std::move(bc), options, &fs);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << status;
     return status;
   }
-  *out = std::unique_ptr<disk_inspector::DiskObject>(new RootObject(std::move(fs)));
+
+  *out = std::make_unique<RootObject>(std::move(fs));
   return ZX_OK;
 }
 

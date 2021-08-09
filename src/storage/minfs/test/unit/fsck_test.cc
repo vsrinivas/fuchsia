@@ -5,6 +5,8 @@
 #include "src/storage/minfs/fsck.h"
 
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <sys/stat.h>
@@ -29,11 +31,15 @@ constexpr uint32_t kBlockSize = 512;
 
 class ConsistencyCheckerFixture : public testing::Test {
  public:
+  ConsistencyCheckerFixture() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
   void SetUp() override { device_ = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize); }
 
+  async_dispatcher_t* dispatcher() const { return vfs_loop_.dispatcher(); }
   std::unique_ptr<FakeBlockDevice> take_device() { return std::move(device_); }
 
  private:
+  async::Loop vfs_loop_;
   std::unique_ptr<FakeBlockDevice> device_;
 };
 
@@ -63,13 +69,15 @@ TEST_F(ConsistencyCheckerTest, NewlyFormattedFilesystemCheckAfterMount) {
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
   bcache = Minfs::Destroy(std::move(fs));
   ASSERT_EQ(Fsck(std::move(bcache), FsckOptions{.repair = true}), ZX_OK);
 }
 
 class ConsistencyCheckerFixtureVerbose : public testing::Test {
  public:
+  ConsistencyCheckerFixtureVerbose() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
   void SetUp() override {
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
@@ -78,7 +86,7 @@ class ConsistencyCheckerFixtureVerbose : public testing::Test {
     EXPECT_EQ(Mkfs(bcache.get()), ZX_OK);
     MountOptions options = {};
 
-    EXPECT_EQ(Minfs::Create(std::move(bcache), options, &fs_), ZX_OK);
+    EXPECT_EQ(Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache), options, &fs_), ZX_OK);
   }
 
   Minfs* get_fs() const { return fs_.get(); }
@@ -119,6 +127,7 @@ class ConsistencyCheckerFixtureVerbose : public testing::Test {
   void MarkDirectoryEntryMissing(size_t offset, std::unique_ptr<Bcache>* bcache);
 
  private:
+  async::Loop vfs_loop_;
   std::unique_ptr<Minfs> fs_;
 };
 

@@ -23,6 +23,8 @@ constexpr uint64_t kBlockCount = 1 << 15;
 constexpr uint32_t kBlockSize = 512;
 
 TEST(MountTest, OldestRevisionUpdatedOnMount) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   std::unique_ptr<Bcache> bcache;
   ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
@@ -40,7 +42,7 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
 
   MountOptions options = {};
   std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
   bcache = Minfs::Destroy(std::move(fs));
 
   ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
@@ -104,8 +106,10 @@ TEST(MountTest, ReadsExceptForSuperBlockFail) {
     return request.dev_offset == 8 * kMinfsBlockSize / kBlockSize ? ZX_ERR_IO : ZX_OK;
   });
 
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
   std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(std::move(bcache), {}, &fs), ZX_ERR_IO);
+  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), {}, &fs), ZX_ERR_IO);
 }
 
 }  // namespace

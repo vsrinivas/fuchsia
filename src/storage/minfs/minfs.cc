@@ -651,10 +651,11 @@ void Minfs::Sync(SyncCallback closure) {
 #endif
 
 #ifdef __Fuchsia__
-Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
-             std::unique_ptr<Allocator> block_allocator, std::unique_ptr<InodeManager> inodes,
-             const MountOptions& mount_options)
-    : bc_(std::move(bc)),
+Minfs::Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
+             std::unique_ptr<SuperblockManager> sb, std::unique_ptr<Allocator> block_allocator,
+             std::unique_ptr<InodeManager> inodes, const MountOptions& mount_options)
+    : fs::ManagedVfs(dispatcher),
+      bc_(std::move(bc)),
       sb_(std::move(sb)),
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
@@ -1099,8 +1100,8 @@ Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& 
   return zx::ok(std::make_pair(std::move(block_allocator), std::move(inodes)));
 }
 
-zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& options,
-                          std::unique_ptr<Minfs>* out) {
+zx_status_t Minfs::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
+                          const MountOptions& options, std::unique_ptr<Minfs>* out) {
   // Read the superblock before replaying the journal.
   Superblock info;
   zx_status_t status = LoadSuperblockWithRepair(bc.get(), options.repair_filesystem, &info);
@@ -1152,8 +1153,9 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   auto [block_allocator, inodes] = std::move(result).value();
 
 #ifdef __Fuchsia__
-  auto fs = std::unique_ptr<Minfs>(new Minfs(
-      std::move(bc), std::move(sb), std::move(block_allocator), std::move(inodes), options));
+  auto fs =
+      std::unique_ptr<Minfs>(new Minfs(dispatcher, std::move(bc), std::move(sb),
+                                       std::move(block_allocator), std::move(inodes), options));
   if (!options.readonly) {
     status = fs->InitializeJournal(std::move(journal_superblock));
     if (status != ZX_OK) {
@@ -1297,14 +1299,15 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 
 #endif
 
-zx::status<std::unique_ptr<Minfs>> Mount(std::unique_ptr<minfs::Bcache> bc,
+zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
+                                         std::unique_ptr<minfs::Bcache> bc,
                                          const MountOptions& options,
                                          fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
   FX_LOGS(DEBUG) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
 
   std::unique_ptr<Minfs> fs;
-  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  zx_status_t status = Minfs::Create(dispatcher, std::move(bc), options, &fs);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create filesystem object " << status;
     return zx::error(status);
@@ -1333,7 +1336,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   TRACE_DURATION("minfs", "MountAndServe");
 
   fbl::RefPtr<VnodeMinfs> data_root;
-  auto fs_or = Mount(std::move(bcache), mount_options, &data_root);
+  auto fs_or = Mount(dispatcher, std::move(bcache), mount_options, &data_root);
   if (fs_or.is_error()) {
     return std::move(fs_or);
   }
@@ -1341,7 +1344,6 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
 
   fs->SetMetrics(mount_options.metrics);
   fs->SetUnmountCallback(std::move(on_unmount));
-  fs->SetDispatcher(dispatcher);
 
   // At time of writing the Cobalt client has certain requirements around which thread you interact
   // with it on, so we interact with it by positing to the dispatcher.  See fxbug.dev/74396 for more

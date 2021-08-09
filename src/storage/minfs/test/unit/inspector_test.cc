@@ -6,6 +6,8 @@
 
 #include "src/storage/minfs/inspector.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
 
 #include <block-client/cpp/fake-device.h>
@@ -210,6 +212,7 @@ TEST(InspectorTest, TestInode) {
 }
 
 TEST(InspectorTest, CorrectJournalLocation) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
 
   // Format the device.
@@ -219,7 +222,7 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_EQ(minfs::Minfs::Create(std::move(bcache), options, &fs), ZX_OK);
+  ASSERT_EQ(minfs::Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
 
   // Ensure the dirty bit is propagated to the device.
   sync_completion_t completion;
