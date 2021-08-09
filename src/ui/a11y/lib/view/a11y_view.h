@@ -65,9 +65,13 @@ class AccessibilityViewInterface {
 // coordinate transforms to its subtree.
 class AccessibilityView : public AccessibilityViewInterface {
  public:
-  AccessibilityView(fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry,
-                    fuchsia::ui::scenic::ScenicPtr scenic);
+  explicit AccessibilityView(sys::ComponentContext* component_context);
   ~AccessibilityView() override = default;
+
+  // Connects to scenic services, and inserts a11y view into the scene.
+  // This method may be called more than once, so it resets the a11y view object
+  // state.
+  void Initialize();
 
   // |AccessibilityViewInterface|
   std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
@@ -93,12 +97,12 @@ class AccessibilityView : public AccessibilityViewInterface {
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
 
+  // Component context, used to connect to scenic services.
+  sys::ComponentContext* context_;
+
   // Interface between the accessibility view and the scenic service
   // that inserts it into the scene graph.
   fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry_;
-
-  // Connection to scenic.
-  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   // Scenic session interface.
   std::unique_ptr<scenic::Session> session_;

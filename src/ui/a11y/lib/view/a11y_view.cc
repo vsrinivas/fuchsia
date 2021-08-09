@@ -39,11 +39,32 @@ void InvokeSceneReadyCallbacks(std::vector<AccessibilityView::SceneReadyCallback
 
 }  // namespace
 
-AccessibilityView::AccessibilityView(
-    fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry,
-    fuchsia::ui::scenic::ScenicPtr scenic)
-    : accessibility_view_registry_(std::move(accessibility_view_registry)),
-      scenic_(std::move(scenic)) {
+AccessibilityView::AccessibilityView(sys::ComponentContext* context) : context_(context) {
+  FX_DCHECK(context_);
+  Initialize();
+}
+
+void AccessibilityView::Initialize() {
+  // Reset object state. Tests will fail if we try to destroy a session with
+  // live resources, so we need to explicitly destroy all of our views/view
+  // holders.
+  a11y_view_.reset();
+  proxy_view_holder_.reset();
+  a11y_view_properties_.reset();
+  proxy_view_holder_attached_ = false;
+  proxy_view_connected_ = false;
+  proxy_view_holder_properties_set_ = false;
+  view_ref_.reset();
+
+  // Connect to scenic services.
+  auto scenic = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  accessibility_view_registry_ =
+      context_->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  accessibility_view_registry_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::accessibility::view::Registry"
+                   << zx_status_get_string(status);
+  });
+
   // Set up scenic session endpoints.
   fuchsia::ui::scenic::SessionEndpoints endpoints;
   fuchsia::ui::scenic::SessionPtr session;
@@ -64,16 +85,11 @@ AccessibilityView::AccessibilityView(
   endpoints.set_session_listener(session_listener.Bind());
 
   // Create scenic session.
-  scenic_->CreateSessionT(std::move(endpoints), /* unused */ [] {});
+  scenic->CreateSessionT(std::move(endpoints), /* unused */ [] {});
 
   // Set up session listener event handler.
   session_->set_event_handler(
       [this](std::vector<fuchsia::ui::scenic::Event> events) { OnScenicEvent(std::move(events)); });
-
-  accessibility_view_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::accessibility::view::Registry"
-                   << zx_status_get_string(status);
-  });
 
   // Set up focuser error handler.
   focuser_.set_error_handler([](zx_status_t error) {

@@ -141,6 +141,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
   const std::unordered_map<uint32_t, RectangleAttributes>& rectangles() { return rectangles_; }
 
+  void Reset();
+
  private:
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
   fuchsia::ui::scenic::SessionListenerPtr listener_;
@@ -156,7 +158,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
 class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
-  explicit MockScenic(MockSession* mock_session) : mock_session_(mock_session) {}
+  explicit MockScenic(std::unique_ptr<MockSession> mock_session)
+      : mock_session_(std::move(mock_session)) {}
   ~MockScenic() override = default;
 
   void NotImplemented_(const std::string& name) override {
@@ -178,7 +181,7 @@ class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  MockSession* mock_session_;
+  std::unique_ptr<MockSession> mock_session_;
   bool create_session_called_;
 };
 

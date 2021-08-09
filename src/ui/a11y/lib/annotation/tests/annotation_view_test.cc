@@ -57,8 +57,9 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
 
-    mock_session_ = std::make_unique<MockSession>();
-    mock_scenic_ = std::make_unique<MockScenic>(mock_session_.get());
+    auto mock_session = std::make_unique<MockSession>();
+    mock_session_ = mock_session.get();
+    mock_scenic_ = std::make_unique<MockScenic>(std::move(mock_session));
     mock_annotation_registry_ = std::make_unique<MockAnnotationRegistry>();
 
     context_provider_.service_directory_provider()->AddService(mock_scenic_->GetHandler());
@@ -133,7 +134,7 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
 
  protected:
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<MockSession> mock_session_;
+  MockSession* mock_session_;
   std::unique_ptr<MockScenic> mock_scenic_;
   std::unique_ptr<MockAnnotationRegistry> mock_annotation_registry_;
   zx::eventpair eventpair_peer_;

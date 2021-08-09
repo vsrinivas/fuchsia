@@ -94,6 +94,19 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     input_device_registry_ptr_.set_error_handler([](auto...) { FAIL(); });
   }
 
+  // The a11y view attempts to connect via the context's svc directory. Since
+  // root presenter serves the accessibility view registry to its public service
+  // directory, we need to re-route the service through the svc directory.
+  void ConnectAccessibilityViewRegistry() {
+    ASSERT_EQ(
+        ZX_OK,
+        context_provider_.service_directory_provider()
+            ->AddService<fuchsia::ui::accessibility::view::Registry>(
+                [this](fidl::InterfaceRequest<fuchsia::ui::accessibility::view::Registry> request) {
+                  context_provider_.public_service_directory()->Connect(std::move(request));
+                }));
+  }
+
   void SetUpInputTest(bool use_mock_injector_registry = true) {
     ConnectInjectorRegistry(use_mock_injector_registry);
 
@@ -216,6 +229,7 @@ TEST_F(RootPresenterTest, TestSceneSetup) {
 
 TEST_F(RootPresenterTest, TestAttachA11yView) {
   ConnectInjectorRegistry(/* use_fake = */ false);
+  ConnectAccessibilityViewRegistry();
   RunLoopUntilIdle();
 
   // Present a fake view.
@@ -227,15 +241,8 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
   // Run until the view is attached to the scene.
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
 
-  fuchsia::ui::accessibility::view::RegistryPtr registry;
-  context_provider_.ConnectToPublicService(registry.NewRequest());
-  RunLoopUntilIdle();
-  EXPECT_TRUE(registry.is_bound());
-
   // Add an a11y view.
-  scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-
-  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+  a11y::AccessibilityView a11y_view(context_provider_.context());
 
   // Verify that nothing crashes during a11y view setup.
   RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
@@ -281,16 +288,10 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
 
 TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
   ConnectInjectorRegistry(/* use_fake = */ true);
+  ConnectAccessibilityViewRegistry();
   RunLoopUntilIdle();
 
-  fuchsia::ui::accessibility::view::RegistryPtr registry;
-  context_provider_.ConnectToPublicService(registry.NewRequest());
-  RunLoopUntilIdle();
-  EXPECT_TRUE(registry.is_bound());
-
-  fuchsia::ui::scenic::ScenicPtr scenic =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+  a11y::AccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -299,7 +300,7 @@ TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
   EXPECT_FALSE(a11y_view.is_initialized());
 
   // Present a fake view.
-  scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  auto scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
   presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
@@ -672,6 +673,9 @@ TEST_F(RootPresenterTest, InjectorStartupTest) {
 
 // Tests that focus is requested for the client after the client view is connected.
 TEST_F(RootPresenterTest, FocusOnStartup) {
+  ConnectAccessibilityViewRegistry();
+  RunLoopUntilIdle();
+
   // Set up presentation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
@@ -715,13 +719,7 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
     focused_view_koid = ZX_KOID_INVALID;
     keyboard_focus_view_koid = ZX_KOID_INVALID;
 
-    fuchsia::ui::accessibility::view::RegistryPtr registry;
-    context_provider_.ConnectToPublicService(registry.NewRequest());
-    RunLoopUntilIdle();
-    EXPECT_TRUE(registry.is_bound());
-    a11y::AccessibilityView a11y_view(
-        std::move(registry),
-        context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>());
+    a11y::AccessibilityView a11y_view(context_provider_.context());
     RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
 
     RunLoopUntil([&focused_view_koid, &keyboard_focus_view_koid, child_view_koid]() {

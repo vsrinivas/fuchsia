@@ -60,8 +60,9 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
 
-    mock_session_ = std::make_unique<MockSession>();
-    mock_scenic_ = std::make_unique<MockScenic>(mock_session_.get());
+    auto mock_session = std::make_unique<MockSession>();
+    mock_session_ = mock_session.get();
+    mock_scenic_ = std::make_unique<MockScenic>(std::move(mock_session));
 
     auto [client_view_token, client_view_holder_token] = scenic::ViewTokenPair::New();
     fidl::Clone(client_view_holder_token, &client_view_holder_token_);
@@ -77,18 +78,14 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
 
  protected:
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<MockSession> mock_session_;
+  MockSession* mock_session_;
   std::unique_ptr<MockScenic> mock_scenic_;
   std::unique_ptr<FakeAccessibilityViewRegistry> fake_accessibility_view_registry_;
   fuchsia::ui::views::ViewHolderToken client_view_holder_token_;
 };
 
 TEST_F(AccessibilityViewTest, TestConstruction) {
-  fuchsia::ui::scenic::ScenicPtr scenic =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-  fuchsia::ui::accessibility::view::RegistryPtr registry =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
-  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+  a11y::AccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -110,11 +107,7 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
 }
 
 TEST_F(AccessibilityViewTest, TestViewProperties) {
-  fuchsia::ui::scenic::ScenicPtr scenic =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-  fuchsia::ui::accessibility::view::RegistryPtr registry =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
-  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+  a11y::AccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -154,11 +147,7 @@ TEST_F(AccessibilityViewTest, TestViewProperties) {
 }
 
 TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
-  fuchsia::ui::scenic::ScenicPtr scenic =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-  fuchsia::ui::accessibility::view::RegistryPtr registry =
-      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
-  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+  a11y::AccessibilityView a11y_view(context_provider_.context());
 
   RunLoopUntilIdle();
 
@@ -214,6 +203,27 @@ TEST_F(AccessibilityViewTest, InvokesRegisteredCallbacks) {
 
   EXPECT_TRUE(scene_ready);
   EXPECT_TRUE(scene_ready_2);
+}
+
+TEST_F(AccessibilityViewTest, Reinitialize) {
+  a11y::AccessibilityView a11y_view(context_provider_.context());
+
+  RunLoopUntilIdle();
+
+  // Save the a11y view viewref.
+  const auto& views = mock_session_->views();
+  ASSERT_EQ(views.size(), 1u);
+  fuchsia::ui::views::ViewRef first_a11y_view_ref;
+  first_a11y_view_ref = a11y::Clone(views.begin()->second.view_ref);
+
+  // Re-initialize a11y view.
+  a11y_view.Initialize();
+
+  RunLoopUntilIdle();
+
+  // Verify that a11y view was re-initialized with a new viewref.
+  ASSERT_EQ(views.size(), 1u);
+  EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
 }
 
 }  // namespace
