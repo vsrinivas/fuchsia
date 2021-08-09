@@ -515,47 +515,47 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
   std::unique_ptr<raw::Constant> constant;
 
   switch (Peek().combined()) {
-    // TODO(fxbug.dev/77561): by placing this before the kIdentifier check below, we are implicitly
-    //  stating that the tokens "true" and "false" will always be interpreted as their literal
-    //  constants.  Consider the following example:
-    //    const true string = "abc";
-    //    const foo bool = false; // "false" retains its built-in literal value, so no problem
-    //    const bar bool = true;  // "true" has been redefined as a string type - should this fail?
-    //  We could maintain perfect purity by always treating all tokens, even "true" and "false," as
-    //  identifier (rather than literal) constants, meaning that we would never be able to parse a
-    //  Token::Subkind::True|False.  Since letting people overwrite the value of true and false is
-    //  undesirable for usability (and sanity) reasons, we should instead modify the compiler to
-    //  specifically catch `const true|false ...` cases, and show a "don't change the meaning of
-    //  true and false please" error instead.
-    TOKEN_LITERAL_CASES : {
-      auto literal = ParseLiteral();
+  // TODO(fxbug.dev/77561): by placing this before the kIdentifier check below, we are implicitly
+  //  stating that the tokens "true" and "false" will always be interpreted as their literal
+  //  constants.  Consider the following example:
+  //    const true string = "abc";
+  //    const foo bool = false; // "false" retains its built-in literal value, so no problem
+  //    const bar bool = true;  // "true" has been redefined as a string type - should this fail?
+  //  We could maintain perfect purity by always treating all tokens, even "true" and "false," as
+  //  identifier (rather than literal) constants, meaning that we would never be able to parse a
+  //  Token::Subkind::True|False.  Since letting people overwrite the value of true and false is
+  //  undesirable for usability (and sanity) reasons, we should instead modify the compiler to
+  //  specifically catch `const true|false ...` cases, and show a "don't change the meaning of
+  //  true and false please" error instead.
+  TOKEN_LITERAL_CASES : {
+    auto literal = ParseLiteral();
+    if (!Ok())
+      return Fail();
+    constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
+    break;
+  }
+
+  case CASE_TOKEN(Token::Kind::kLeftParen): {
+    ASTScope scope(this);
+    ConsumeToken(OfKind(Token::Kind::kLeftParen));
+    constant = ParseConstant();
+    ConsumeToken(OfKind(Token::Kind::kRightParen));
+    if (!Ok())
+      return Fail();
+    constant->update_span(scope.GetSourceElement());
+    break;
+  }
+
+  default: {
+    if (Peek().kind() == Token::Kind::kIdentifier) {
+      auto identifier = ParseCompoundIdentifier();
       if (!Ok())
         return Fail();
-      constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
-      break;
+      constant = std::make_unique<raw::IdentifierConstant>(std::move(identifier));
+    } else {
+      return Fail();
     }
-
-    case CASE_TOKEN(Token::Kind::kLeftParen): {
-      ASTScope scope(this);
-      ConsumeToken(OfKind(Token::Kind::kLeftParen));
-      constant = ParseConstant();
-      ConsumeToken(OfKind(Token::Kind::kRightParen));
-      if (!Ok())
-        return Fail();
-      constant->update_span(scope.GetSourceElement());
-      break;
-    }
-
-    default: {
-      if (Peek().kind() == Token::Kind::kIdentifier) {
-        auto identifier = ParseCompoundIdentifier();
-        if (!Ok())
-          return Fail();
-        constant = std::make_unique<raw::IdentifierConstant>(std::move(identifier));
-      } else {
-        return Fail();
-      }
-    }
+  }
   }
 
   if (Peek().combined() == Token::Kind::kPipe) {
@@ -2367,19 +2367,19 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       break;
     }
     case Token::Kind::kColon: {
-      std::unique_ptr<raw::Layout> layout;
-      layout_ref = std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                               std::move(identifier));
+      auto pre_colon_source = scope.GetSourceElement();
       raw::ConstraintOrSubtype after_colon = ParseTokenAfterColon();
       std::visit(fidl::utils::matchers{
                      [&](std::unique_ptr<raw::TypeConstraints>& constraint) -> void {
+                       if (modifiers != nullptr)
+                         ValidateModifiersNew</* none */>(modifiers, identifier->start_);
                        constraints = std::move(constraint);
+                       layout_ref = std::make_unique<raw::NamedLayoutReference>(
+                           pre_colon_source, std::move(identifier));
                      },
                      [&](std::unique_ptr<raw::TypeConstructorNew>& type_ctor) -> void {
-                       auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
-                       auto layout =
-                           ParseLayout(scope, std::move(modifiers),
-                                       std::move(named_ref->identifier), std::move(type_ctor));
+                       auto layout = ParseLayout(scope, std::move(modifiers), std::move(identifier),
+                                                 std::move(type_ctor));
                        if (!Ok()) {
                          Fail();
                          return;
@@ -2395,6 +2395,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
       if (!Ok()) {
         return nullptr;
       }
+      assert(layout_ref != nullptr && "must be set in each std::visit branch");
       break;
     }
     default: {

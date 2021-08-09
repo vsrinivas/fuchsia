@@ -1045,4 +1045,36 @@ type Foo = foobar {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLayoutClass);
 }
 
+TEST(ParsingTests, BadIdentifierModifiers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+  data strict uint32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+}
+
+TEST(ParsingTests, BadIdentifierWithConstraintsModifiers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Bar = table {};
+
+type Foo = struct {
+  data strict Bar:optional;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+}
+
 }  // namespace
