@@ -21,6 +21,7 @@ pub type zx_handle_op_t = u32;
 pub type zx_koid_t = u64;
 pub type zx_obj_type_t = u32;
 pub type zx_object_info_topic_t = u32;
+pub type zx_info_maps_type_t = u32;
 pub type zx_off_t = u64;
 pub type zx_paddr_t = usize;
 pub type zx_rights_t = u32;
@@ -1227,6 +1228,48 @@ struct_decl_macro! {
 }
 
 zx_info_task_runtime_t!(zx_info_task_runtime_t);
+
+multiconst!(zx_info_maps_type_t, [
+    ZX_INFO_MAPS_TYPE_NONE    = 0;
+    ZX_INFO_MAPS_TYPE_ASPACE  = 1;
+    ZX_INFO_MAPS_TYPE_VMAR    = 2;
+    ZX_INFO_MAPS_TYPE_MAPPING = 3;
+]);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_maps_mapping_t> {
+        pub mmu_flags: zx_vm_option_t,
+        pub padding1: [PadByte; 4],
+        pub vmo_koid: zx_koid_t,
+        pub vmo_offset: u64,
+        pub committed_pages: usize,
+    }
+}
+
+zx_info_maps_mapping_t!(zx_info_maps_mapping_t);
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union InfoMapsTypeUnion {
+    pub mapping: zx_info_maps_mapping_t,
+}
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Copy, Clone)]
+    pub struct <zx_info_maps_t> {
+        pub name: [u8; ZX_MAX_NAME_LEN],
+        pub base: zx_vaddr_t,
+        pub size: usize,
+        pub depth: usize,
+        pub r#type: zx_info_maps_type_t,
+        pub u: InfoMapsTypeUnion,
+    }
+}
+
+zx_info_maps_t!(zx_info_maps_t);
 
 multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_BELL = 0;

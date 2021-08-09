@@ -8,7 +8,10 @@ use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread};
 use bitflags::bitflags;
-use fuchsia_zircon_sys::{self as sys, zx_time_t};
+use fuchsia_zircon_sys::{
+    self as sys, zx_info_maps_type_t, zx_koid_t, zx_time_t, zx_vaddr_t, zx_vm_option_t,
+    InfoMapsTypeUnion, PadByte, ZX_MAX_NAME_LEN,
+};
 
 bitflags! {
     #[repr(transparent)]
@@ -66,6 +69,54 @@ impl From<sys::zx_info_task_stats_t> for TaskStatsInfo {
 unsafe impl ObjectQuery for TaskStatsInfo {
     const TOPIC: Topic = Topic::TASK_STATS;
     type InfoTy = TaskStatsInfo;
+}
+
+sys::zx_info_maps_mapping_t!(MapsMappingInfo);
+
+impl From<sys::zx_info_maps_mapping_t> for MapsMappingInfo {
+    fn from(
+        sys::zx_info_maps_mapping_t {
+            mmu_flags,
+            padding1,
+            vmo_koid,
+            vmo_offset,
+            committed_pages,
+        }: sys::zx_info_maps_mapping_t,
+    ) -> Self {
+        Self { mmu_flags, padding1, vmo_koid, vmo_offset, committed_pages }
+    }
+}
+
+sys::zx_info_maps_t!(ProcessMapsInfo);
+
+impl ProcessMapsInfo {
+    pub fn into_mapping_info(&self) -> Option<MapsMappingInfo> {
+        if self.r#type != sys::ZX_INFO_MAPS_TYPE_MAPPING {
+            return None;
+        }
+        // All the fields of u.mapping are objects that are well defined for any bit
+        // representation, hence it is always safe to read it.
+        Some(unsafe { self.u.mapping }.into())
+    }
+}
+
+impl Default for ProcessMapsInfo {
+    fn default() -> Self {
+        let mapping = sys::zx_info_maps_mapping_t::default();
+        Self {
+            u: sys::InfoMapsTypeUnion { mapping },
+            name: Default::default(),
+            base: Default::default(),
+            size: Default::default(),
+            depth: Default::default(),
+            r#type: Default::default(),
+        }
+    }
+}
+
+unsafe impl ObjectQuery for ProcessMapsInfo {
+    const TOPIC: Topic = Topic::PROCESS_MAPS;
+    type InfoTy = ProcessMapsInfo;
 }
 
 impl Process {
@@ -162,6 +213,16 @@ impl Process {
             .map(|_| info)
     }
 
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_PROCESS_MAPS topic.
+    ///
+    /// Returns `(num_returned, num_remaining)` on success and writes `num_returned`, entries to
+    /// `info_out`.
+    pub fn info_maps(&self, info_out: &mut [ProcessMapsInfo]) -> Result<(usize, usize), Status> {
+        object_get_info::<ProcessMapsInfo>(self.as_handle_ref(), info_out)
+    }
+
     /// Exit the current process with the given return code.
     ///
     /// Wraps the
@@ -185,7 +246,8 @@ mod tests {
     // The unit tests are built with a different crate name, but fdio and fuchsia_runtime return a
     // "real" fuchsia_zircon::Process that we need to use.
     use fuchsia_zircon::{
-        sys, AsHandleRef, ProcessInfo, ProcessInfoFlags, Signals, Task, TaskStatsInfo, Time,
+        sys, system_get_page_size, AsHandleRef, ProcessInfo, ProcessInfoFlags, ProcessMapsInfo,
+        Signals, Task, TaskStatsInfo, Time, VmarFlags, Vmo,
     };
     use matches::assert_matches;
     use std::ffi::CString;
@@ -299,5 +361,57 @@ mod tests {
                 flags: STARTED_AND_EXITED,
             } if start_time > 0
         );
+    }
+
+    #[test]
+    fn maps_info() {
+        let root_vmar = fuchsia_runtime::vmar_root_self();
+        let process = fuchsia_runtime::process_self();
+
+        // Create two mappings so we know what to expect from our test calls.
+        let vmo = Vmo::create(system_get_page_size() as u64).unwrap();
+        let vmo_koid = vmo.get_koid().unwrap();
+
+        let map1 = root_vmar
+            .map(0, &vmo, 0, system_get_page_size() as usize, VmarFlags::PERM_READ)
+            .unwrap();
+        let map2 = root_vmar
+            .map(0, &vmo, 0, system_get_page_size() as usize, VmarFlags::PERM_READ)
+            .unwrap();
+
+        // Querying a single info. As we know there are at least two mappings this is guaranteed to
+        // not return all of them.
+        let mut info = ProcessMapsInfo::default();
+        let (returned, remaining) = process.info_maps(std::slice::from_mut(&mut info)).unwrap();
+        assert_eq!(returned, 1);
+        assert!(remaining > 0);
+
+        // Add some slack to the total to account for mappings created as a result of the heap
+        // allocation in Vec.
+        let total = returned + remaining + 10;
+
+        // Allocate and retrieve all of the mappings.
+        let mut info = Vec::with_capacity(total);
+        info.resize(total, ProcessMapsInfo::default());
+
+        let (_, remaining) = process.info_maps(info.as_mut_slice()).unwrap();
+        // Don't know exactly how many were returned, but since we are going to search for our
+        // mappings we do need to know that none are remaining.
+        assert_eq!(remaining, 0);
+
+        // We should find our two mappings in the info.
+        let count = info
+            .iter()
+            .filter_map(ProcessMapsInfo::into_mapping_info)
+            .filter(|map| map.vmo_koid == vmo_koid.raw_koid())
+            .count();
+        assert_eq!(count, 2);
+
+        // We created these mappings and are not letting any references to them escape so unmapping
+        // is safe to do.
+        unsafe {
+            root_vmar.unmap(map1, system_get_page_size() as usize).unwrap();
+            root_vmar.unmap(map2, system_get_page_size() as usize).unwrap();
+        }
     }
 }
