@@ -25,7 +25,7 @@
 #include "definitions.h"
 #include "device_interface.h"
 #include "device_port.h"
-#include "locks.h"
+#include "public/locks.h"
 #include "rx_queue.h"
 
 namespace network::internal {

@@ -1,15 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_LOCKS_H_
-#define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_LOCKS_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PUBLIC_LOCKS_H_
+#define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PUBLIC_LOCKS_H_
 
 #include <mutex>
 #include <shared_mutex>
 
 #include <fbl/mutex.h>
 
-namespace network::internal {
+namespace network {
 
 // TODO(https://fxbug.dev/75544): Get rid of these classes and this file once std::shared_mutex and
 // std::shared_lock have thread analysis annotations.
@@ -54,6 +54,6 @@ class __TA_SCOPED_CAPABILITY SharedAutoLock {
  private:
   T* mutex_;
 };
-}  // namespace network::internal
+}  // namespace network
 
-#endif  // SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_LOCKS_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_PUBLIC_LOCKS_H_

@@ -12,8 +12,8 @@
 #include "data_structs.h"
 #include "definitions.h"
 #include "device_port.h"
-#include "locks.h"
 #include "port_watcher.h"
+#include "public/locks.h"
 #include "public/network_device.h"
 
 namespace network::internal {

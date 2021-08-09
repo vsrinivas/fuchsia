@@ -6,6 +6,12 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//src/connectivity/network/drivers/network-device/ddk_source_split.gni")
 
+# TODO(https://fxbug.dev/75544): Get rid of this target once std::shared_mutex
+# and std::shared_lock have thread analysis annotations.
+source_set("shared_lock") {
+  sources = [ "public/locks.h" ]
+}
+
 ddk_source_split("device") {
   sources = [
     "definitions.h",
@@ -28,6 +34,7 @@ ddk_source_split("device") {
   ]
 
   public_deps = [
+    ":shared_lock",
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
