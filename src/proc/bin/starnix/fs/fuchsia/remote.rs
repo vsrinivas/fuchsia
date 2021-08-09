@@ -57,7 +57,7 @@ impl FsNodeOps for RemoteNode {
         Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
-    fn lookup(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+    fn lookup(&self, _parent: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
         let name = std::str::from_utf8(child.local_name()).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
@@ -71,7 +71,7 @@ impl FsNodeOps for RemoteNode {
         update_into_from_attrs(child.info_mut(), attrs);
 
         child.set_ops(RemoteNode { zxio, rights: self.rights });
-        Ok(child.into_handle())
+        Ok(())
     }
 
     fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {

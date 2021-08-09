@@ -21,7 +21,7 @@ use crate::types::*;
 pub struct FileSystem {
     root: OnceCell<FsNodeHandle>,
     next_inode: AtomicU64,
-    _ops: Box<dyn FileSystemOps>,
+    ops: Box<dyn FileSystemOps>,
 }
 
 impl FileSystem {
@@ -42,7 +42,7 @@ impl FileSystem {
         Arc::new(FileSystem {
             root: OnceCell::new(),
             next_inode: AtomicU64::new(0),
-            _ops: Box::new(ops),
+            ops: Box::new(ops),
         })
     }
 
@@ -53,10 +53,21 @@ impl FileSystem {
     pub fn next_inode_num(&self) -> ino_t {
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
+
+    pub fn did_create_node(&self, node: &FsNodeHandle) {
+        self.ops.did_create_node(self, node);
+    }
+
+    pub fn will_destroy_node(&self, node: &FsNodeHandle) {
+        self.ops.will_destroy_node(self, node);
+    }
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
-pub trait FileSystemOps: Send + Sync {}
+pub trait FileSystemOps: Send + Sync {
+    fn did_create_node(&self, _fs: &FileSystem, _node: &FsNodeHandle) {}
+    fn will_destroy_node(&self, _fs: &FileSystem, _node: &FsNodeHandle) {}
+}
 
 pub type FileSystemHandle = Arc<FileSystem>;
 

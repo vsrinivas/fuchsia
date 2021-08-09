@@ -5,7 +5,7 @@
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::ops::Bound;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 use super::*;
 use crate::fd_impl_directory;
@@ -17,45 +17,39 @@ use crate::types::*;
 pub struct TmpFs {
     nodes: Mutex<HashMap<ino_t, FsNodeHandle>>,
 }
-impl FileSystemOps for Arc<TmpFs> {}
-
-impl TmpFs {
-    pub fn new() -> FileSystemHandle {
-        let fs = Arc::new(TmpFs { nodes: Mutex::new(HashMap::new()) });
-        FileSystem::new(fs.clone(), TmpfsDirectory { fs: Arc::downgrade(&fs) })
-    }
-
-    pub fn register(&self, node: &FsNodeHandle) {
+impl FileSystemOps for Arc<TmpFs> {
+    fn did_create_node(&self, _fs: &FileSystem, node: &FsNodeHandle) {
         self.nodes.lock().insert(node.info().inode_num, Arc::clone(node));
     }
 
-    pub fn unregister(&self, node: &FsNodeHandle) {
+    fn will_destroy_node(&self, _fs: &FileSystem, node: &FsNodeHandle) {
         self.nodes.lock().remove(&node.info().inode_num);
     }
 }
 
-struct TmpfsDirectory {
-    /// The file system to which this directory belongs.
-    fs: Weak<TmpFs>,
+impl TmpFs {
+    pub fn new() -> FileSystemHandle {
+        FileSystem::new(Arc::new(TmpFs::default()), TmpfsDirectory)
+    }
 }
+
+struct TmpfsDirectory;
 
 impl FsNodeOps for TmpfsDirectory {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DirectoryFileObject::new()))
     }
 
-    fn lookup(&self, _parent: &FsNode, _child: FsNode) -> Result<FsNodeHandle, Errno> {
+    fn lookup(&self, _parent: &FsNode, _child: &mut FsNode) -> Result<(), Errno> {
         Err(ENOENT)
     }
 
-    fn mkdir(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
-        child.set_ops(TmpfsDirectory { fs: self.fs.clone() });
-        let child = child.into_handle();
-        self.fs.upgrade().unwrap().register(&child);
-        Ok(child)
+    fn mkdir(&self, _parent: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
+        child.set_ops(TmpfsDirectory);
+        Ok(())
     }
 
-    fn mknod(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
+    fn mknod(&self, _parent: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
         match child.info_mut().mode.fmt() {
             FileMode::IFREG => child.set_ops(VmoFileNode::new()?),
             FileMode::IFIFO => child.set_ops(FifoNode::new()),
@@ -63,27 +57,21 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFCHR => child.set_ops(DeviceNode),
             _ => return Err(EACCES),
         }
-        let child = child.into_handle();
-        self.fs.upgrade().unwrap().register(&child);
-        Ok(child)
+        Ok(())
     }
 
-    fn create_symlink(&self, mut child: FsNode, target: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn create_symlink(&self, child: &mut FsNode, target: &FsStr) -> Result<(), Errno> {
         assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
         child.set_ops(SymlinkNode::new(target));
-        let child = child.into_handle();
-        self.fs.upgrade().unwrap().register(&child);
-        Ok(child)
+        Ok(())
     }
 
     fn unlink(
         &self,
-        _parent: &FsNode,
-        child: &FsNodeHandle,
+        _node: &FsNode,
+        _child: &FsNodeHandle,
         _kind: UnlinkKind,
     ) -> Result<(), Errno> {
-        // TODO: When we have hard links, we'll need to check the link count.
-        self.fs.upgrade().unwrap().unregister(child);
         Ok(())
     }
 }
@@ -179,8 +167,8 @@ impl FileOps for DirectoryFileObject {
             *offset += 1;
         }
         let children = file.node().children();
-        for (name, node_cell) in children.range((readdir_position.clone(), Bound::Unbounded)) {
-            if let Some(node) = node_cell.get().and_then(|weak| weak.upgrade()) {
+        for (name, maybe_node) in children.range((readdir_position.clone(), Bound::Unbounded)) {
+            if let Some(node) = maybe_node.upgrade() {
                 let next_offset = *offset + 1;
                 let info = node.info();
                 sink.add(
