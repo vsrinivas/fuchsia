@@ -15,6 +15,7 @@ pub fn open_mem_device(minor: u32) -> Result<Box<dyn FileOps>, Errno> {
         DevFull::MINOR => Ok(Box::new(DevFull)),
         DevRandom::MINOR => Ok(Box::new(DevRandom)),
         DevRandom::URANDOM_MINOR => Ok(Box::new(DevRandom)),
+        DevKmsg::MINOR => Ok(Box::new(DevKmsg)),
         _ => Err(ENODEV),
     }
 }
@@ -183,5 +184,33 @@ impl FileOps for DevRandom {
             Ok(bytes)
         })?;
         Ok(actual)
+    }
+}
+
+struct DevKmsg;
+
+impl DevKmsg {
+    pub const MINOR: u32 = 11;
+}
+
+impl FileOps for DevKmsg {
+    fd_impl_seekless!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Ok(0)
+    }
+
+    fn write_at(&self, _file: &FileObject, task: &Task, _offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
+        let total = UserBuffer::get_total_length(data);
+        let mut bytes = vec![0; total];
+        task.mm.read_all(data, &mut bytes)?;
+        log::info!("received kmsg log: {:?}", String::from_utf8_lossy(&bytes));
+        Ok(total)
     }
 }
