@@ -13,6 +13,7 @@ use {
     },
     anyhow::{Context, Error},
     euclid::{vec2, Transform2D},
+    fuchsia_trace::duration,
     rive_rs::{
         self as rive,
         math::{self, Mat},
@@ -61,12 +62,16 @@ impl RenderCache {
     }
 
     fn reset(&mut self) {
+        duration!("gfx", "render::Rive::RenderCache::reset");
+
         // Retain rasters used last frame and reset `was_used` field.
         self.cached_rasters
             .retain(|_, cached_raster| std::mem::replace(&mut cached_raster.was_used, false));
     }
 
     pub fn with_renderer(&mut self, context: &RenderContext, f: impl FnOnce(&mut Renderer<'_>)) {
+        duration!("gfx", "render::Rive::RenderCache::with_renderer");
+
         self.reset();
         f(&mut Renderer { context, cache: self, clip: None });
     }

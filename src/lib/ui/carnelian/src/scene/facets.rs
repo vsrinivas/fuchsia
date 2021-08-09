@@ -14,6 +14,7 @@ use crate::{
 };
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
+use fuchsia_trace::duration;
 use rive_rs::{self as rive};
 use std::{any::Any, collections::BTreeMap, convert::TryFrom, path::PathBuf};
 
@@ -471,6 +472,8 @@ impl Facet for RiveFacet {
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        duration!("gfx", "render::RiveFacet::update_layers");
+
         let artboard_ref = self.artboard.as_ref();
         let width = self.size.width as f32;
         let height = self.size.height as f32;

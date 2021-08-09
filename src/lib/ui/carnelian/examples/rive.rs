@@ -18,6 +18,7 @@ use {
         App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Size,
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
+    fuchsia_trace::{duration, duration_begin, duration_end},
     fuchsia_trace_provider,
     fuchsia_zircon::{Event, Time},
     rive_rs::{self as rive},
@@ -238,6 +239,7 @@ impl ViewAssistant for RiveViewAssistant {
         let mut request_render = false;
         for (animation_instance, is_animating) in scene_details.animations.iter_mut() {
             if *is_animating {
+                duration!("gfx", "rive::animation::advance");
                 animation_instance.advance(elapsed);
                 animation_instance.apply(scene_details.artboard.clone(), 1.0);
             }
@@ -248,8 +250,10 @@ impl ViewAssistant for RiveViewAssistant {
                 request_render = true;
             }
         }
+        duration_begin!("gfx", "rive::artboard::advance");
         let artboard_ref = scene_details.artboard.as_ref();
         artboard_ref.advance(elapsed);
+        duration_end!("gfx", "rive::artboard::advance");
 
         scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
