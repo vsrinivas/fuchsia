@@ -11,6 +11,21 @@ group("tests") {
   deps = [ ":disk-extractor-unit-test" ]
 }
 
+test("fvm_extractor_unit_test") {
+  testonly = true
+  sources = [ "fvm_extractor_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/fs_management",
+    "//src/storage/extractor/c:disk_extractor",
+    "//src/storage/extractor/cpp:disk_extractor",
+    "//src/storage/gpt",
+    "//src/storage/lib/utils:topological_path",
+    "//src/storage/testing:storage_driver_test_support",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 test("disk_extractor_unit_test") {
   testonly = true
   sources = [
@@ -44,13 +59,21 @@ fuchsia_component("disk-extractor-unit-test-component") {
   ]
 }
 
+storage_isolated_devmgr_unittest_v2_component("fvm-extractor-unit-test") {
+  manifest = "meta/fvm_extractor_tests.cml"
+  deps = [ ":fvm_extractor_unit_test" ]
+}
+
 fuchsia_test_package("disk-extractor-unit-test") {
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
   }
-  test_components = [ ":disk-extractor-unit-test-component" ]
+  test_components = [
+    ":disk-extractor-unit-test-component",
+    ":fvm-extractor-unit-test",
+  ]
 }
 
 static_library("disk_extractor") {
@@ -60,6 +83,7 @@ static_library("disk_extractor") {
   ]
   deps = [
     "//src/lib/storage/vfs/cpp",
+    "//src/storage/gpt",
     "//zircon/public/lib/fbl",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath:safemath",
@@ -67,6 +91,7 @@ static_library("disk_extractor") {
 
   sources = [
     "extractor.cc",
+    "fvm_extractor.cc",
     "hex_dump_generator.cc",
     "minfs_extractor.cc",
   ]

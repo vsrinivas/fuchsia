@@ -105,8 +105,11 @@ zx::status<ExtractOptions> ParseExtractArguments(int argc, char* const argv[]) {
           options.type = DiskType::kMinfs;
         } else if (strncmp(optarg, "blobfs", strlen(optarg)) == 0) {
           options.type = DiskType::kBlobfs;
+        } else if (strncmp(optarg, "fvm", strlen(optarg)) == 0) {
+          options.type = DiskType::kFvm;
         } else {
-          std::cerr << "Type supplied " << optarg << " and needs to be either minfs or blobfs\n";
+          std::cerr << "Type supplied " << optarg
+                    << " and needs to be either minfs, blobfs, or fvm\n";
           return zx::error(ZX_ERR_INVALID_ARGS);
         }
         break;

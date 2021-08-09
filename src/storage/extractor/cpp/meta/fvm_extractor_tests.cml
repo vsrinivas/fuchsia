@@ -1,0 +1,40 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/fvm_extractor_unit_test",
+    },
+    children: [
+        {
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#isolated-devmgr",
+        },
+    ],
+}

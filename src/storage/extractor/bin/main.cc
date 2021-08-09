@@ -21,6 +21,10 @@ int Extract(extractor::ExtractOptions& args) {
   }
   auto extractor = std::move(extractor_or.value());
   zx::status<> status;
+  if (!args.type.has_value()) {
+    std::cerr << "extract options type is none, error:  " << status.error_value() << std::endl;
+    return EXIT_FAILURE;
+  }
   switch (args.type.value()) {
     case extractor::DiskType::kMinfs:
       status = extractor::MinfsExtract(std::move(args.input_fd), *extractor);
@@ -30,8 +34,18 @@ int Extract(extractor::ExtractOptions& args) {
       }
       break;
     case extractor::DiskType::kBlobfs:
-      std::cerr << "blobfs extractor not yet implemented" << std::endl;
-      return EXIT_SUCCESS;
+      status = extractor::BlobfsExtract(std::move(args.input_fd), *extractor);
+      if (status.is_error()) {
+        std::cerr << "blobfs extraction failed with " << status.error_value() << std::endl;
+        return EXIT_FAILURE;
+      }
+      break;
+    case extractor::DiskType::kFvm:
+      status = extractor::FvmExtract(std::move(args.input_fd), *extractor);
+      if (status.is_error()) {
+        std::cerr << "fvm extraction failed with " << status.error_value() << std::endl;
+        return EXIT_FAILURE;
+      }
   }
   status = extractor->Write();
   if (status.is_error()) {
