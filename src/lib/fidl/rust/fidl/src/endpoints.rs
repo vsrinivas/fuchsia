@@ -63,6 +63,14 @@ pub trait ProtocolMarker: Sized + Send + Sync + 'static {
 ///
 /// Discoverable protocols may be referred to by a string name, and can be
 /// conveniently exported in a service directory via an entry of that name.
+///
+/// If you get an error about this trait not being implemented, you probably
+/// need to add the `@discoverable` attribute to the FIDL protocol, like this:
+///
+/// ```fidl
+/// @discoverable
+/// protocol MyProtocol { ... };
+/// ```
 pub trait DiscoverableProtocolMarker: ProtocolMarker {
     /// The name of the protocol (to be used for service lookup and discovery).
     const PROTOCOL_NAME: &'static str = <Self as ProtocolMarker>::DEBUG_NAME;
