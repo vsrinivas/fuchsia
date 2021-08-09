@@ -31,7 +31,6 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::devfs::*;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
@@ -206,11 +205,6 @@ fn files_from_numbered_handles(
     Ok(files)
 }
 
-enum WhatToMount {
-    Fs(FileSystemHandle),
-    Node(FsNodeHandle),
-}
-
 fn create_filesystem_from_spec<'a>(
     kernel: &Kernel,
     pkg: &fio::DirectorySynchronousProxy,
@@ -222,33 +216,20 @@ fn create_filesystem_from_spec<'a>(
     let mount_point =
         iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", spec))?;
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
-    let fs_src = iter.next();
+    let fs_src = iter.next().unwrap_or("");
     let fs = match fs_type {
-        "tmpfs" => Fs(TmpFs::new()),
-        "devfs" => Fs(dev_tmp_fs(kernel).clone()),
         "remotefs" => {
-            let fs_src = fs_src.ok_or_else(|| anyhow!("remotefs requires specifying a path"))?;
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
             let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
                 .map_err(|e| anyhow!("Failed to open root: {}", e))?;
             Fs(RemoteFs::new(root.into_channel(), rights))
         }
         "ext4" => {
-            let fs_src = fs_src.ok_or_else(|| anyhow!("ext4 requires specifying a path"))?;
             let vmo =
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
             Fs(ExtFilesystem::new(vmo)?)
         }
-        "bind" => {
-            let fs_src = fs_src.ok_or_else(|| anyhow!("bind mount requires specifying a path"))?;
-            let fs_ctx = fs_ctx.ok_or_else(|| anyhow!("bind mount cannot be the root"))?;
-            Node(
-                fs_ctx
-                    .lookup_node(fs_ctx.root.clone(), fs_src.as_bytes(), SymlinkMode::max_follow())?
-                    .node,
-            )
-        }
-        _ => anyhow::bail!("invalid fs type {:?}", fs_type),
+        _ => create_filesystem(fs_ctx, kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
 }
@@ -322,10 +303,7 @@ fn start_component(
             create_filesystem_from_spec(&kernel, &pkg, Some(&fs), mount_spec)?;
         let mount_point =
             fs.lookup_node(fs.root.clone(), mount_point, SymlinkMode::max_follow())?;
-        match child_fs {
-            WhatToMount::Fs(fs) => mount_point.mount(fs.root().clone())?,
-            WhatToMount::Node(node) => mount_point.mount(node)?,
-        };
+        mount_point.mount(child_fs)?;
     }
 
     // Hack to allow mounting apexes before apexd is working.
@@ -333,7 +311,7 @@ fn start_component(
     if let Some(apexes) = apex_hack {
         fs.root
             .lookup(&fs, b"apex", SymlinkMode::max_follow())?
-            .mount(TmpFs::new().root().clone())?;
+            .mount(WhatToMount::Fs(TmpFs::new()))?;
         let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkMode::max_follow())?;
         for apex in apexes {
             let apex = apex.as_bytes();
@@ -347,7 +325,7 @@ fn start_component(
                 &[b"/system/apex/", apex].concat(),
                 SymlinkMode::max_follow(),
             )?;
-            apex_subdir.mount(apex_source.node)?;
+            apex_subdir.mount(WhatToMount::Node(apex_source.node))?;
         }
     }
 

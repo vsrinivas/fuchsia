@@ -9,6 +9,7 @@ use crate::fs::memfd::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::not_implemented;
+use crate::strace;
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -649,6 +650,35 @@ pub fn sys_memfd_create(
     }
     let fd = ctx.task.files.add_with_flags(file, fd_flags)?;
     Ok(fd.into())
+}
+
+pub fn sys_mount(
+    ctx: &SyscallContext<'_>,
+    source_addr: UserCString,
+    target_addr: UserCString,
+    filesystemtype_addr: UserCString,
+    _flags: u64,
+    _data_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let fs_ctx = &ctx.task.fs;
+
+    let mut buf = [0u8; PATH_MAX as usize];
+    let source = ctx.task.mm.read_c_string(source_addr, &mut buf)?;
+    let mut buf = [0u8; PATH_MAX as usize];
+    let target = ctx.task.mm.read_c_string(target_addr, &mut buf)?;
+    let mut buf = [0u8; PATH_MAX as usize];
+    let fs_type = ctx.task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
+    strace!(
+        ctx.task,
+        "mount(source={:?}, target={:?}, type={:?})",
+        String::from_utf8_lossy(source),
+        String::from_utf8_lossy(target),
+        String::from_utf8_lossy(fs_type)
+    );
+
+    let fs = create_filesystem(Some(&fs_ctx), ctx.kernel(), source, fs_type, b"")?;
+    fs_ctx.lookup_node(fs_ctx.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
+    Ok(SUCCESS)
 }
 
 #[cfg(test)]

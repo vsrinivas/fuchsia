@@ -12,9 +12,12 @@ use std::sync::{Arc, Weak};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
+use super::devfs::dev_tmp_fs;
+use super::tmpfs::TmpFs;
 use super::{
     FileHandle, FileObject, FsContext, FsNode, FsNodeHandle, FsNodeOps, FsStr, FsString, UnlinkKind,
 };
+use crate::task::Kernel;
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
@@ -129,6 +132,30 @@ impl Mount {
         let (ref mount, ref node) = &self.mountpoint.as_ref()?;
         Some(NamespaceNode { mount: Some(mount.upgrade()?), node: node.clone() })
     }
+}
+
+pub enum WhatToMount {
+    Fs(FileSystemHandle),
+    Node(FsNodeHandle),
+}
+
+pub fn create_filesystem(
+    ctx: Option<&FsContext>,
+    kernel: &Kernel,
+    source: &FsStr,
+    fs_type: &FsStr,
+    _data: &FsStr,
+) -> Result<WhatToMount, Errno> {
+    use WhatToMount::*;
+    Ok(match fs_type {
+        b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
+        b"tmpfs" => Fs(TmpFs::new()),
+        b"bind" => {
+            let ctx = ctx.ok_or(ENOENT)?;
+            Node(ctx.lookup_node(ctx.root.clone(), source, SymlinkMode::max_follow())?.node)
+        }
+        _ => return Err(ENODEV),
+    })
 }
 
 /// The `SymlinkMode` enum encodes how symlinks are followed during path traversal.
@@ -329,7 +356,7 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    pub fn mount(&self, root: FsNodeHandle) -> Result<(), Errno> {
+    pub fn mount(&self, root: WhatToMount) -> Result<(), Errno> {
         if let Some(namespace) = self.namespace() {
             match namespace.mount_points.write().entry(self.clone()) {
                 Entry::Occupied(_) => {
@@ -338,7 +365,13 @@ impl NamespaceNode {
                 }
                 Entry::Vacant(v) => {
                     let mount = self.mount.as_ref().unwrap();
-                    let fs = root.file_system();
+                    let (fs, root) = match root {
+                        WhatToMount::Fs(fs) => {
+                            let root = fs.root().clone();
+                            (fs, root)
+                        }
+                        WhatToMount::Node(node) => (node.file_system(), node),
+                    };
                     v.insert(Arc::new(Mount {
                         namespace: mount.namespace.clone(),
                         mountpoint: Some((Arc::downgrade(&mount), self.node.clone())),
@@ -405,7 +438,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
-        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
@@ -436,7 +469,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
-        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
         let new_dev = ns
             .root()
             .lookup(&context, b"dev", SymlinkMode::max_follow())
@@ -467,7 +500,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
-        dev.mount(dev_fs.root().clone()).expect("failed to mount dev root node");
+        dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let dev = ns
             .root()

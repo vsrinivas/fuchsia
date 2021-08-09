@@ -15,6 +15,120 @@ use crate::syscalls::{SyscallContext, SyscallResult};
 use crate::task::syscalls::*;
 use crate::types::*;
 
+macro_rules! syscall_match {
+    {
+        $ctx:ident; $syscall_number:ident; $args:ident;
+        $($call:ident [$num_args:tt],)*
+    } => {
+        paste! {
+            match $syscall_number as u32 {
+                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
+                _ => sys_unknown($ctx, $syscall_number),
+            }
+        }
+    };
+
+    (@call $ctx:ident; $args:ident; $func:ident [0]) => ($func($ctx));
+    (@call $ctx:ident; $args:ident; $func:ident [1]) => ($func($ctx, $args.0.into_arg()));
+    (@call $ctx:ident; $args:ident; $func:ident [2]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg()));
+    (@call $ctx:ident; $args:ident; $func:ident [3]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg()));
+    (@call $ctx:ident; $args:ident; $func:ident [4]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg()));
+    (@call $ctx:ident; $args:ident; $func:ident [5]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg()));
+    (@call $ctx:ident; $args:ident; $func:ident [6]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg(), $args.5.into_arg()));
+}
+
+pub fn dispatch_syscall(
+    ctx: &mut SyscallContext<'_>,
+    syscall_number: u64,
+    args: (u64, u64, u64, u64, u64, u64),
+) -> Result<SyscallResult, Errno> {
+    syscall_match! {
+        ctx; syscall_number; args;
+        access[2],
+        arch_prctl[2],
+        brk[1],
+        capget[2],
+        chdir[1],
+        clock_gettime[2],
+        clock_getres[2],
+        clone[5],
+        close[1],
+        dup[1],
+        dup3[3],
+        execve[3],
+        exit[1],
+        exit_group[1],
+        faccessat[3],
+        fchdir[1],
+        fchmod[2],
+        fchmodat[3],
+        fchownat[5],
+        fcntl[3],
+        fstat[2],
+        fstatfs[2],
+        ftruncate[2],
+        futex[6],
+        getcwd[2],
+        getdents[3],
+        getdents64[3],
+        getegid[0],
+        geteuid[0],
+        getgid[0],
+        getitimer[2],
+        getpgid[1],
+        getpgrp[0],
+        getpid[0],
+        getppid[0],
+        getrandom[3],
+        getrusage[2],
+        getsid[1],
+        gettid[0],
+        gettimeofday[2],
+        getuid[0],
+        ioctl[4],
+        kill[2],
+        lseek[3],
+        memfd_create[2],
+        mkdirat[3],
+        mknodat[4],
+        mmap[6],
+        mount[5],
+        mprotect[3],
+        msync[3],
+        munmap[2],
+        nanosleep[2],
+        newfstatat[4],
+        openat[4],
+        pipe2[2],
+        prctl[5],
+        pread64[4],
+        pwrite64[4],
+        read[3],
+        readlink[3],
+        readlinkat[4],
+        readv[3],
+        rt_sigaction[4],
+        rt_sigprocmask[4],
+        rt_sigsuspend[2],
+        rt_sigreturn[0],
+        sched_getaffinity[3],
+        sched_getscheduler[1],
+        sched_setaffinity[3],
+        set_tid_address[1],
+        setitimer[3],
+        sigaltstack[2],
+        symlinkat[3],
+        tgkill[3],
+        truncate[2],
+        umask[1],
+        uname[1],
+        unlinkat[3],
+        wait4[4],
+        write[3],
+        writev[3],
+    }
+}
+
 trait FromSyscallArg {
     fn from_arg(arg: u64) -> Self;
 }
@@ -93,118 +207,5 @@ where
 {
     fn into_arg(self) -> T {
         T::from_arg(self)
-    }
-}
-
-macro_rules! syscall_match {
-    {
-        $ctx:ident; $syscall_number:ident; $args:ident;
-        $($call:ident [$num_args:tt],)*
-    } => {
-        paste! {
-            match $syscall_number as u32 {
-                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
-                _ => sys_unknown($ctx, $syscall_number),
-            }
-        }
-    };
-
-    (@call $ctx:ident; $args:ident; $func:ident [0]) => ($func($ctx));
-    (@call $ctx:ident; $args:ident; $func:ident [1]) => ($func($ctx, $args.0.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [2]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [3]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [4]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [5]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg()));
-    (@call $ctx:ident; $args:ident; $func:ident [6]) => ($func($ctx, $args.0.into_arg(), $args.1.into_arg(), $args.2.into_arg(), $args.3.into_arg(), $args.4.into_arg(), $args.5.into_arg()));
-}
-
-pub fn dispatch_syscall(
-    ctx: &mut SyscallContext<'_>,
-    syscall_number: u64,
-    args: (u64, u64, u64, u64, u64, u64),
-) -> Result<SyscallResult, Errno> {
-    syscall_match! {
-        ctx; syscall_number; args;
-        access[2],
-        arch_prctl[2],
-        brk[1],
-        capget[2],
-        chdir[1],
-        clock_gettime[2],
-        clock_getres[2],
-        clone[5],
-        close[1],
-        dup[1],
-        dup3[3],
-        execve[3],
-        exit[1],
-        exit_group[1],
-        faccessat[3],
-        fchdir[1],
-        fchmod[2],
-        fchmodat[3],
-        fchownat[5],
-        fcntl[3],
-        fstat[2],
-        fstatfs[2],
-        ftruncate[2],
-        futex[6],
-        getcwd[2],
-        getdents[3],
-        getdents64[3],
-        getegid[0],
-        geteuid[0],
-        getgid[0],
-        getitimer[2],
-        getpgid[1],
-        getpgrp[0],
-        getpid[0],
-        getppid[0],
-        getrandom[3],
-        getrusage[2],
-        getsid[1],
-        gettid[0],
-        gettimeofday[2],
-        getuid[0],
-        ioctl[4],
-        kill[2],
-        lseek[3],
-        memfd_create[2],
-        mkdirat[3],
-        mknodat[4],
-        mmap[6],
-        mprotect[3],
-        msync[3],
-        munmap[2],
-        nanosleep[2],
-        newfstatat[4],
-        openat[4],
-        pipe2[2],
-        prctl[5],
-        pread64[4],
-        pwrite64[4],
-        read[3],
-        readlink[3],
-        readlinkat[4],
-        readv[3],
-        rt_sigaction[4],
-        rt_sigprocmask[4],
-        rt_sigsuspend[2],
-        rt_sigreturn[0],
-        sched_getaffinity[3],
-        sched_getscheduler[1],
-        sched_setaffinity[3],
-        set_tid_address[1],
-        setitimer[3],
-        sigaltstack[2],
-        symlinkat[3],
-        tgkill[3],
-        truncate[2],
-        umask[1],
-        uname[1],
-        unlinkat[3],
-        wait4[4],
-        write[3],
-        writev[3],
     }
 }
