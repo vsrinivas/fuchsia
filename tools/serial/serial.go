@@ -25,7 +25,7 @@ const (
 	consoleCursor = "\n$"
 
 	// Timeout for reads and writes from a SerialSocket.
-	socketIOTimeout = 2 * time.Minute
+	defaultSocketIOTimeout = 2 * time.Minute
 )
 
 var diagnosticCmds = []Command{
@@ -44,20 +44,21 @@ type SerialSocket struct {
 
 	// It's only safe for one goroutine at a time to read or write from the
 	// socket at a time.
-	mu sync.Mutex
+	mu        sync.Mutex
+	ioTimeout time.Duration
 }
 
 func (s *SerialSocket) Read(p []byte) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.Conn.SetReadDeadline(time.Now().Add(socketIOTimeout))
+	s.Conn.SetReadDeadline(time.Now().Add(s.ioTimeout))
 	return s.Conn.Read(p)
 }
 
 func (s *SerialSocket) Write(p []byte) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.Conn.SetWriteDeadline(time.Now().Add(socketIOTimeout))
+	s.Conn.SetWriteDeadline(time.Now().Add(s.ioTimeout))
 	return s.Conn.Write(p)
 }
 
@@ -87,6 +88,12 @@ func asSerialCmd(cmd []string) string {
 
 // NewSocket opens a connection on the provided `socketPath`.
 func NewSocket(ctx context.Context, socketPath string) (*SerialSocket, error) {
+	return NewSocketWithIOTimeout(ctx, socketPath, defaultSocketIOTimeout)
+}
+
+// NewSocketWithIOTimeout opens a connection on the provided `socketPath` with
+// the provided socket IO timeout for reads and writes.
+func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout time.Duration) (*SerialSocket, error) {
 	if socketPath == "" {
 		return nil, fmt.Errorf("serialSocketPath not set")
 	}
@@ -94,7 +101,10 @@ func NewSocket(ctx context.Context, socketPath string) (*SerialSocket, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open serial socket connection: %v", err)
 	}
-	socket := &SerialSocket{Conn: conn}
+	if ioTimeout <= 0 {
+		ioTimeout = defaultSocketIOTimeout
+	}
+	socket := &SerialSocket{Conn: conn, ioTimeout: ioTimeout}
 	// Trigger a new cursor print by sending a newline. This may do nothing if the
 	// system was not ready to process input, but in that case it will print a
 	// new cursor anyways when it is ready to receive input.

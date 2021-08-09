@@ -483,7 +483,10 @@ type fuchsiaSerialTester struct {
 }
 
 func newFuchsiaSerialTester(ctx context.Context, serialSocketPath string, perTestTimeout time.Duration) (*fuchsiaSerialTester, error) {
-	socket, err := serial.NewSocket(ctx, serialSocketPath)
+	// We set the socket IO timeout to a slightly longer timeout than the test
+	// timeout so that runtests has time to enforce its own timeout. The IO timeout
+	// will then act as a fallback timeout in case the serial socket hangs.
+	socket, err := serial.NewSocketWithIOTimeout(ctx, serialSocketPath, perTestTimeout+30*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -681,17 +684,6 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		return sinks, fatalError{err}
 	}
 
-	// runtests sometimes doesn't respect the --timeout flag, so we impose a
-	// (slightly longer) timeout at a higher level to ensure we stop running the
-	// test after the timeout is exceeded even if runtests doesn't respect
-	// --timeout.
-	// TODO(fxbug.dev/80127): Ensure that runtests respects the --timeout flag,
-	// and remove this timeout.
-	if t.perTestTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, t.perTestTimeout+30*time.Second)
-		defer cancel()
-	}
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
 		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
