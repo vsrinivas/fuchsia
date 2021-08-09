@@ -82,6 +82,7 @@ template("generated_board_config") {
                            [
                              "salt_file",
                              "testonly",
+                             "visibility",
                            ])
     deps = []
     if (defined(invoker.deps)) {

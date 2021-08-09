@@ -304,7 +304,11 @@ template("assemble_system") {
   # discover where the base drivers are located.
   driver_manager_base_config_label = "${image_name}_driver-manager-base-config"
   fuchsia_package(driver_manager_base_config_label) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     package_name = "driver-manager-base-config"
     deps = [ ":${base_driver_manifest_label}" ]
   }
@@ -314,16 +318,23 @@ template("assemble_system") {
   # Assembler.
   if (include_shell_commands) {
     shell_commands(labels.shell_commands) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       package_name = "shell-commands"
-      forward_variables_from(invoker, [ "testonly" ])
-      visibility = [ ":*" ]
       deps = _base_packages + _cache_packages + _universe_packages
     }
   }
 
   # For details, see //docs/development/components/component_id_index.md#system-assembly
   component_id_index_config("${image_name}_component_id_index_config") {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     # collect and merge component ID indices from the base set.
     deps = _base_packages
@@ -339,9 +350,12 @@ template("assemble_system") {
   }
 
   config_package(labels.config_data) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     package_name = "config-data"
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
     deps = _base_packages + _cache_packages + _universe_packages +
            component_id_index_config_data_dep
     if (defined(invoker.sysmgr_golden)) {
@@ -353,8 +367,11 @@ template("assemble_system") {
   }
 
   compiled_action(labels.empty_minfs) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     outputs = [ files.empty_minfs ]
     tool = "//zircon/tools/minfs"
     args = [
@@ -374,6 +391,7 @@ template("assemble_system") {
                              "include_version_and_epoch",
                              "update_package_name",
                              "testonly",
+                             "visibility",
                            ])
 
     output_path = files.product_config
@@ -429,6 +447,7 @@ template("assemble_system") {
     forward_variables_from(invoker,
                            [
                              "testonly",
+                             "visibility",
                              "recovery",
                              "use_esp",
                              "blobfs_layout_format",
@@ -593,14 +612,22 @@ template("assemble_system") {
     }
 
     copy(labels.copy_zbi) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       sources = [ files.zbi ]
       outputs = [ "${invoker.output_dir}/${output_name}.zbi" ]
       deps = [ ":${labels.image_assembler}" ]
     }
 
     copy(labels.copy_zbi_manifest) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       sources = [ files.zbi_manifest ]
       outputs = [ "${invoker.output_dir}/${output_name}.zbi.json" ]
       deps = [ ":${labels.image_assembler}" ]
@@ -608,7 +635,11 @@ template("assemble_system") {
 
     if (defined(invoker.zbi_signing_script)) {
       copy(labels.copy_zbi_signed) {
-        forward_variables_from(invoker, [ "testonly" ])
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
         sources = [ files.zbi_signed ]
         outputs = [ "${invoker.output_dir}/${output_name}.zbi.signed" ]
         deps = [ ":${labels.image_assembler}" ]
@@ -617,7 +648,11 @@ template("assemble_system") {
 
     if (use_vbmeta) {
       copy(labels.copy_vbmeta) {
-        forward_variables_from(invoker, [ "testonly" ])
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
         sources = [ files.vbmeta ]
         outputs = [ "${invoker.output_dir}/${output_name}.vbmeta" ]
         deps = [ ":${labels.image_assembler}" ]
@@ -625,7 +660,11 @@ template("assemble_system") {
     }
 
     group(labels.copy_images) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       public_deps = [
         ":${labels.copy_zbi_manifest}",
         ":${labels.copy_zbi}",
@@ -645,7 +684,11 @@ template("assemble_system") {
 
   if (defined(invoker.cmdline_goldens)) {
     verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       zbi = files.zbi_final
       goldens = invoker.cmdline_goldens
       zbi_target = ":${labels.image_assembler}"
@@ -653,7 +696,11 @@ template("assemble_system") {
   }
   if (defined(invoker.bootfs_goldens)) {
     verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       zbi = files.zbi_final
       goldens = invoker.bootfs_goldens
       zbi_target = ":${labels.image_assembler}"
@@ -661,7 +708,11 @@ template("assemble_system") {
   }
   if (defined(invoker.static_pkgs_goldens)) {
     verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       zbi = files.zbi_final
       zbi_target = ":${labels.image_assembler}"
       blobfs_manifest = files.blobfs_manifest
@@ -671,7 +722,11 @@ template("assemble_system") {
   }
 
   group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     # public_deps is used, so that the outputs of these dependencies are
     # available to external targets.

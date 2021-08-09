@@ -151,27 +151,40 @@ template("generated_product_config") {
                              [
                                "deps",
                                "testonly",
+                               "visibility",
                              ])
     }
   }
 
   # Construct a list of Base packages to add to the product config.
   list_package_manifests(labels.base_package_list) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     filename = files.base_package_list
     deps = base_packages
   }
 
   # Construct a list of Cache packages to add to the product config.
   list_package_manifests(labels.cache_package_list) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     filename = files.cache_package_list
     deps = cache_packages
   }
 
   # Construct a list of extra packages whose files should be added to the Base Package.
   list_package_manifests(labels.extra_base_list) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     filename = files.extra_base_list
     deps = extra_base_deps
   }
@@ -179,7 +192,11 @@ template("generated_product_config") {
   # Find all the extra system dependencies in the Base packages list.
   # This list mentions several extra packages to add to the Base Package.
   generated_file(labels.extra_base_deps_list) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     data_keys = [ "system_image_extra_package_manifest" ]
     walk_keys = [ "system_image_extra_package_manifest_barrier" ]
@@ -190,7 +207,11 @@ template("generated_product_config") {
 
   # Create a list of boot arguments to add to devmgr_config.
   generated_file(labels.boot_args) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     outputs = [ files.boot_args ]
     output_conversion = "json"
@@ -199,7 +220,11 @@ template("generated_product_config") {
 
   # Find the kernel image metadata, which includes the location of the assembled kernel ZBI.
   generated_file(labels.kernel_image_metadata) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     data_keys = [ "images" ]
     outputs = [ files.kernel_image_metadata ]
@@ -223,7 +248,11 @@ template("generated_product_config") {
   }
 
   generated_file(labels.kernel_cmdline_args) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     data_keys = [ "zbi_config_entry" ]
     walk_keys = [ "zbi_input_barrier" ]
@@ -234,14 +263,22 @@ template("generated_product_config") {
 
   # Find all the files to add to BootFS.
   distribution_manifest(labels.bootfs_entries_metadata) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
 
     outputs = [ files.bootfs_entries_metadata ]
     deps = bootfs_labels
   }
 
   action(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     script = "//build/images/assembly/make_assembly_config.py"
 
     outputs = [ invoker.output_path ]
