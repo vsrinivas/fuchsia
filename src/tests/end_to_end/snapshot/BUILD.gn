@@ -24,5 +24,8 @@ dart_test("snapshot_test") {
 group("tests") {
   testonly = true
 
-  deps = [ ":snapshot_test($host_toolchain)" ]
+  deps = [
+    # TODO(fxbug.dev/82041): re-enable
+    # ":snapshot_test($host_toolchain)"
+  ]
 }
