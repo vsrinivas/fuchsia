@@ -135,9 +135,6 @@ executable("client_operation_test") {
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
-
-  # TODO(fxbug.dev/68325): Fix UB within GRPC and re-enable ubsan.
-  exclude_toolchain_tags = [ "ubsan" ]
 }
 
 executable("server_operation_test") {
@@ -153,9 +150,6 @@ executable("server_operation_test") {
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
-
-  # TODO(fxbug.dev/68325): Fix UB within GRPC and re-enable ubsan.
-  exclude_toolchain_tags = [ "ubsan" ]
 }
 
 fuchsia_test_component("client_operation_test_cmp") {
