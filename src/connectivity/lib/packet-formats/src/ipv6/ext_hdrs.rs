@@ -9,7 +9,7 @@ use core::marker::PhantomData;
 
 use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 use packet::records::options::{
-    AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
+    self, AlignedOptionsSerializerImpl, LengthEncoding, OptionsImplLayout, OptionsSerializerImpl,
 };
 use packet::records::{
     ParsedRecord, RecordParseResult, Records, RecordsContext, RecordsImpl, RecordsImplLayout,
@@ -536,6 +536,9 @@ impl<'a> ExtensionHeaderOptionDataImpl<'a> for HopByHopOptionDataImpl {
 
 impl OptionsImplLayout for HopByHopOptionsImpl {
     type Error = ();
+    type KindLenField = u8;
+    const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
+    const NOP: Option<u8> = Some(options::NOP);
     const LENGTH_ENCODING: LengthEncoding = LengthEncoding::ValueOnly;
 }
 

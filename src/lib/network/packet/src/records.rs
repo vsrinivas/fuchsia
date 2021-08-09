@@ -179,6 +179,7 @@ where
 }
 
 /// An iterator over the records contained inside a [`Records`] instance.
+#[derive(Clone)]
 pub struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],
     records_left: usize,
@@ -1406,12 +1407,14 @@ mod test {
 ///
 /// [type-length-value]: https://en.wikipedia.org/wiki/Type-length-value
 pub mod options {
-    use core::num::NonZeroUsize;
+    use core::convert::TryFrom;
+    use core::mem;
+    use core::num::{NonZeroUsize, TryFromIntError};
+
+    use byteorder::ByteOrder;
+    use zerocopy::{AsBytes, FromBytes, Unaligned};
 
     use super::*;
-
-    /// The number of bytes consumed by the kind and length fields combined.
-    const KIND_LEN_BYTES: usize = 2;
 
     /// A parsed sequence of options.
     ///
@@ -1503,33 +1506,40 @@ pub mod options {
         type Record = O::Option;
 
         fn record_length(option: &O::Option) -> usize {
-            O::LENGTH_ENCODING.record_length(O::option_length(option)).unwrap()
+            // TODO(https://fxbug.dev/77981): Remove this `.expect`
+            O::LENGTH_ENCODING
+                .record_length::<O::KindLenField>(O::option_length(option))
+                .expect("integer overflow while computing record length")
         }
 
-        fn serialize(data: &mut [u8], option: &O::Option) {
+        fn serialize(mut data: &mut [u8], option: &O::Option) {
             // NOTE(brunodalbo) we don't currently support serializing the two
             //  single-byte options used in TCP and IP: NOP and END_OF_OPTIONS.
             //  If it is necessary to support those as part of TLV options
             //  serialization, some changes will be required here.
 
+            // So that `data` implements `BufferViewMut`.
+            let mut data = &mut data;
+
             // Data not having enough space is a contract violation, so we panic
             // in that case.
-            data[0] = O::option_kind(option);
+            *BufferView::<&mut [u8]>::take_obj_front::<O::KindLenField>(&mut data)
+                .expect("buffer too short") = O::option_kind(option);
             let body_len = O::option_length(option);
-            let encoded_len = O::LENGTH_ENCODING.encode_length(body_len).unwrap();
-            // Option length not fitting in u8 is a contract violation. Without
-            // debug assertions on, this will cause the packet to be malformed.
-            debug_assert!(encoded_len <= std::u8::MAX.into());
-            data[1] = encoded_len as u8;
-            let body_and_padding = &mut data[KIND_LEN_BYTES..];
+            // TODO(https://fxbug.dev/77981): Remove this `.expect`
+            let length = O::LENGTH_ENCODING
+                .encode_length::<O::KindLenField>(body_len)
+                .expect("integer overflow while encoding length");
+            // Length overflowing `O::KindLenField` is a contract violation, so
+            // we panic in that case.
+            *BufferView::<&mut [u8]>::take_obj_front::<O::KindLenField>(&mut data)
+                .expect("buffer too short") = length;
             // SECURITY: Because padding may have occurred, we zero-fill data
             // before passing it along in order to prevent leaking information
             // from packets previously stored in the buffer.
-            for b in body_and_padding.iter_mut() {
-                *b = 0;
-            }
+            let data = data.into_rest_zero();
             // Pass exactly `body_len` bytes even if there is padding.
-            O::serialize(&mut body_and_padding[..body_len], option)
+            O::serialize(&mut data[..body_len], option);
         }
     }
 
@@ -1568,7 +1578,7 @@ pub mod options {
     pub const NOP: u8 = 1;
 
     /// Whether the length field of an option encodes the length of the entire
-    /// option (including type and length fields) or only of the value field.
+    /// option (including kind and length fields) or only of the value field.
     ///
     /// For the `TypeLengthValue` variant, an `option_len_multiplier` may also
     /// be specified. Some formats (such as NDP) do not directly encode the
@@ -1589,8 +1599,8 @@ pub mod options {
         /// fields and also adds any padding required to reach a multiple of
         /// `option_len_multiplier`, returning `None` if the value cannot be
         /// stored in a `usize`.
-        fn record_length(self, option_body_len: usize) -> Option<usize> {
-            let unpadded_len = option_body_len.checked_add(KIND_LEN_BYTES)?;
+        fn record_length<F: KindLenField>(self, option_body_len: usize) -> Option<usize> {
+            let unpadded_len = option_body_len.checked_add(2 * mem::size_of::<F>())?;
             match self {
                 LengthEncoding::TypeLengthValue { option_len_multiplier } => {
                     round_up(unpadded_len, option_len_multiplier)
@@ -1606,16 +1616,20 @@ pub mod options {
         /// does not include the kind, length, or padding bytes.
         ///
         /// `encode_length` computes the value which should be stored in the
-        /// length field, returning `None` if the value cannot be stored in a
-        /// `usize`.
-        fn encode_length(self, option_body_len: usize) -> Option<usize> {
-            match self {
+        /// length field, returning `None` if the value cannot be stored in an
+        /// `F`.
+        fn encode_length<F: KindLenField>(self, option_body_len: usize) -> Option<F> {
+            let len = match self {
                 LengthEncoding::TypeLengthValue { option_len_multiplier } => {
-                    let unpadded_len = KIND_LEN_BYTES.checked_add(option_body_len)?;
+                    let unpadded_len = (2 * mem::size_of::<F>()).checked_add(option_body_len)?;
                     let padded_len = round_up(unpadded_len, option_len_multiplier)?;
-                    Some(padded_len / option_len_multiplier.get())
+                    padded_len / option_len_multiplier.get()
                 }
-                LengthEncoding::ValueOnly => Some(option_body_len),
+                LengthEncoding::ValueOnly => option_body_len,
+            };
+            match F::try_from(len) {
+                Ok(len) => Some(len),
+                Err(TryFromIntError { .. }) => None,
             }
         }
 
@@ -1623,17 +1637,18 @@ pub mod options {
         ///
         /// `length_field` is the value of the length field. `decode_length`
         /// computes the length of the option's body which this value encodes,
-        /// returning an error if `length_field` is invalid. `length_field` is
-        /// invalid if it encodes a total length smaller than the two-byte
-        /// header (specifically, if `self == LengthEncoding::TypeLengthValue`
-        /// and `length_field * self.option_len_multiplier() < 2`).
-        fn decode_length(self, length_field: usize) -> Result<usize, ()> {
+        /// returning an error if `length_field` is invalid or if integer
+        /// overflow occurs. `length_field` is invalid if it encodes a total
+        /// length smaller than the header (specifically, if `self` is
+        /// LengthEncoding::TypeLengthValue { option_len_multiplier }` and
+        /// `length_field * option_len_multiplier < 2 * size_of::<F>()`).
+        fn decode_length<F: KindLenField>(self, length_field: F) -> Option<usize> {
+            let length_field = length_field.into();
             match self {
                 LengthEncoding::TypeLengthValue { option_len_multiplier } => length_field
                     .checked_mul(option_len_multiplier.get())
-                    .and_then(|product| product.checked_sub(KIND_LEN_BYTES))
-                    .ok_or(()),
-                LengthEncoding::ValueOnly => Ok(length_field),
+                    .and_then(|product| product.checked_sub(2 * mem::size_of::<F>())),
+                LengthEncoding::ValueOnly => Some(length_field),
             }
         }
     }
@@ -1648,10 +1663,31 @@ pub mod options {
         //   `mul` is nonzero)
         // - Multiplying by `mul` can't overflow because division rounds down,
         //   so the result of the multiplication can't be any larger than the
-        //   numerator in `(x.checked_add(mul)? - 1) / mul`, which we already
-        //   know didn't overflow
-        Some(((x.checked_add(mul)? - 1) / mul) * mul)
+        //   numerator in `(x_times_mul - 1) / mul`, which we already know
+        //   didn't overflow
+        x.checked_add(mul).map(|x_times_mul| ((x_times_mul - 1) / mul) * mul)
     }
+
+    /// The type of the "kind" and "length" fields in an option.
+    ///
+    /// See the docs for [`OptionsImplLayout::KindLenField`] for more
+    /// information.
+    pub trait KindLenField:
+        FromBytes
+        + AsBytes
+        + Unaligned
+        + Into<usize>
+        + TryFrom<usize, Error = TryFromIntError>
+        + Eq
+        + Copy
+        + crate::sealed::Sealed
+    {
+    }
+
+    impl crate::sealed::Sealed for u8 {}
+    impl KindLenField for u8 {}
+    impl<O: ByteOrder> crate::sealed::Sealed for zerocopy::U16<O> {}
+    impl<O: ByteOrder> KindLenField for zerocopy::U16<O> {}
 
     /// Basic associated type and constants used by an [`OptionsImpl`].
     ///
@@ -1663,16 +1699,25 @@ pub mod options {
         /// [`OptionsImpl::parse`].
         type Error;
 
+        /// The type of the "kind" and "length" fields in an option.
+        ///
+        /// For most protocols, this is simply `u8`, as the "kind" and "length"
+        /// fields are each a single byte. For protocols which use two bytes for
+        /// these fields, this is [`zerocopy::U16`].
+        // TODO(https://github.com/rust-lang/rust/issues/29661): Have
+        // `KindLenField` default to `u8`.
+        type KindLenField: KindLenField;
+
         /// The End of options type (if one exists).
-        const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
+        const END_OF_OPTIONS: Option<Self::KindLenField>;
 
         /// The No-op type (if one exists).
-        const NOP: Option<u8> = Some(NOP);
+        const NOP: Option<Self::KindLenField>;
 
         /// The encoding of the length byte.
         ///
         /// Some formats (such as IPv4) use the length field to encode the
-        /// length of the entire option, including the type and length bytes.
+        /// length of the entire option, including the kind and length bytes.
         /// Other formats (such as IPv6) use the length field to encode the
         /// length of only the value. This constant specifies which encoding is
         /// used.
@@ -1724,7 +1769,10 @@ pub mod options {
         /// panic).
         ///
         /// [`Options::parse`]: crate::records::Records::parse
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error>;
+        fn parse(
+            kind: Self::KindLenField,
+            data: &'a [u8],
+        ) -> Result<Option<Self::Option>, Self::Error>;
     }
 
     /// An implementation of an options serializer.
@@ -1742,7 +1790,7 @@ pub mod options {
         /// Returns the serialized length, in bytes, of the given `option`.
         ///
         /// Implementers must return the length, in bytes, of the **data***
-        /// portion of the option field (not counting the type and length
+        /// portion of the option field (not counting the kind and length
         /// bytes). The internal machinery of options serialization takes care
         /// of aligning options to their [`option_len_multiplier`] boundaries,
         /// adding padding bytes if necessary.
@@ -1751,13 +1799,13 @@ pub mod options {
         fn option_length(option: &Self::Option) -> usize;
 
         /// Returns the wire value for this option kind.
-        fn option_kind(option: &Self::Option) -> u8;
+        fn option_kind(option: &Self::Option) -> Self::KindLenField;
 
         /// Serializes `option` into `data`.
         ///
         /// `data` will be exactly `Self::option_length(option)` bytes long.
         /// Implementers must write the **data** portion of `option` into `data`
-        /// (not the type or length bytes).
+        /// (not the kind or length fields).
         ///
         /// # Panics
         ///
@@ -1794,28 +1842,28 @@ pub mod options {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
         loop {
-            let kind = match bytes.take_byte_front() {
+            let kind = match bytes.take_obj_front::<O::KindLenField>() {
                 None => return Ok(ParsedRecord::Done),
                 Some(k) => {
                     // Can't do pattern matching with associated constants, so
                     // do it the good-ol' way:
-                    if Some(k) == O::NOP {
+                    if Some(*k) == O::NOP {
                         continue;
-                    } else if Some(k) == O::END_OF_OPTIONS {
+                    } else if Some(*k) == O::END_OF_OPTIONS {
                         return Ok(ParsedRecord::Done);
                     }
                     k
                 }
             };
-            let body_len = match bytes.take_byte_front() {
+            let body_len = match bytes.take_obj_front::<O::KindLenField>() {
                 None => return Err(OptionParseErr::Internal),
                 Some(len) => O::LENGTH_ENCODING
-                    .decode_length(len.into())
-                    .map_err(|_: ()| OptionParseErr::Internal)?,
+                    .decode_length::<O::KindLenField>(*len)
+                    .ok_or(OptionParseErr::Internal)?,
             };
 
             let option_data = bytes.take_front(body_len).ok_or(OptionParseErr::Internal)?;
-            match O::parse(kind, option_data) {
+            match O::parse(*kind, option_data) {
                 Ok(Some(o)) => return Ok(ParsedRecord::Parsed(o)),
                 Ok(None) => {}
                 Err(err) => return Err(OptionParseErr::External(err)),
@@ -1825,14 +1873,21 @@ pub mod options {
 
     #[cfg(test)]
     mod tests {
+        use core::convert::TryInto;
+
         use super::*;
         use crate::Serializer;
+
+        type U16 = zerocopy::U16<byteorder::NetworkEndian>;
 
         #[derive(Debug)]
         struct DummyOptionsImpl;
 
         impl OptionsImplLayout for DummyOptionsImpl {
             type Error = ();
+            type KindLenField = u8;
+            const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
+            const NOP: Option<u8> = Some(NOP);
         }
 
         impl<'a> OptionsImpl<'a> for DummyOptionsImpl {
@@ -1892,6 +1947,9 @@ pub mod options {
 
         impl OptionsImplLayout for AlwaysErrOptionsImpl {
             type Error = ();
+            type KindLenField = u8;
+            const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
+            const NOP: Option<u8> = Some(NOP);
         }
 
         impl<'a> OptionsImpl<'a> for AlwaysErrOptionsImpl {
@@ -1907,6 +1965,7 @@ pub mod options {
 
         impl OptionsImplLayout for DummyNdpOptionsImpl {
             type Error = ();
+            type KindLenField = u8;
 
             const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
                 option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(8) },
@@ -1944,6 +2003,44 @@ pub mod options {
             }
         }
 
+        #[derive(Debug)]
+        struct DummyMultiByteKindOptionsImpl;
+
+        impl OptionsImplLayout for DummyMultiByteKindOptionsImpl {
+            type Error = ();
+            type KindLenField = U16;
+
+            const END_OF_OPTIONS: Option<U16> = None;
+
+            const NOP: Option<U16> = None;
+        }
+
+        impl<'a> OptionsImpl<'a> for DummyMultiByteKindOptionsImpl {
+            type Option = (U16, Vec<u8>);
+
+            fn parse(kind: U16, data: &'a [u8]) -> Result<Option<Self::Option>, Self::Error> {
+                let mut v = Vec::with_capacity(data.len());
+                v.extend_from_slice(data);
+                Ok(Some((kind, v)))
+            }
+        }
+
+        impl<'a> OptionsSerializerImpl<'a> for DummyMultiByteKindOptionsImpl {
+            type Option = (U16, Vec<u8>);
+
+            fn option_length(option: &Self::Option) -> usize {
+                option.1.len()
+            }
+
+            fn option_kind(option: &Self::Option) -> U16 {
+                option.0
+            }
+
+            fn serialize(data: &mut [u8], option: &Self::Option) {
+                data.copy_from_slice(&option.1)
+            }
+        }
+
         #[test]
         fn test_length_encoding() {
             const TLV_1: LengthEncoding = LengthEncoding::TypeLengthValue {
@@ -1955,79 +2052,140 @@ pub mod options {
 
             // Test LengthEncoding::record_length
 
-            // For `ValueOnly`, `record_length` should always add 2 for the kind
+            // For `ValueOnly`, `record_length` should always add 2 or 4 for the kind
             // and length bytes, but never add padding.
-            assert_eq!(LengthEncoding::ValueOnly.record_length(0), Some(2));
-            assert_eq!(LengthEncoding::ValueOnly.record_length(1), Some(3));
-            assert_eq!(LengthEncoding::ValueOnly.record_length(2), Some(4));
-            assert_eq!(LengthEncoding::ValueOnly.record_length(3), Some(5));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<u8>(0), Some(2));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<u8>(1), Some(3));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<u8>(2), Some(4));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<u8>(3), Some(5));
+
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<U16>(0), Some(4));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<U16>(1), Some(5));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<U16>(2), Some(6));
+            assert_eq!(LengthEncoding::ValueOnly.record_length::<U16>(3), Some(7));
 
             // For `TypeLengthValue` with `option_len_multiplier = 1`,
-            // `record_length` should always add 2 for the kind and length
+            // `record_length` should always add 2 or 4 for the kind and length
             // bytes, but never add padding.
-            assert_eq!(TLV_1.record_length(0), Some(2));
-            assert_eq!(TLV_1.record_length(1), Some(3));
-            assert_eq!(TLV_1.record_length(2), Some(4));
-            assert_eq!(TLV_1.record_length(3), Some(5));
+            assert_eq!(TLV_1.record_length::<u8>(0), Some(2));
+            assert_eq!(TLV_1.record_length::<u8>(1), Some(3));
+            assert_eq!(TLV_1.record_length::<u8>(2), Some(4));
+            assert_eq!(TLV_1.record_length::<u8>(3), Some(5));
+
+            assert_eq!(TLV_1.record_length::<U16>(0), Some(4));
+            assert_eq!(TLV_1.record_length::<U16>(1), Some(5));
+            assert_eq!(TLV_1.record_length::<U16>(2), Some(6));
+            assert_eq!(TLV_1.record_length::<U16>(3), Some(7));
 
             // For `TypeLengthValue` with `option_len_multiplier = 2`,
-            // `record_length` should always add 2 for the kind and length
+            // `record_length` should always add 2 or 4 for the kind and length
             // bytes, and add padding if necessary to reach a multiple of 2.
-            assert_eq!(TLV_2.record_length(0), Some(2)); // (0 + 2)
-            assert_eq!(TLV_2.record_length(1), Some(4)); // (1 + 2 + 1)
-            assert_eq!(TLV_2.record_length(2), Some(4)); // (2 + 2)
-            assert_eq!(TLV_2.record_length(3), Some(6)); // (3 + 2 + 1)
+            assert_eq!(TLV_2.record_length::<u8>(0), Some(2)); // (0 + 2)
+            assert_eq!(TLV_2.record_length::<u8>(1), Some(4)); // (1 + 2 + 1)
+            assert_eq!(TLV_2.record_length::<u8>(2), Some(4)); // (2 + 2)
+            assert_eq!(TLV_2.record_length::<u8>(3), Some(6)); // (3 + 2 + 1)
+
+            assert_eq!(TLV_2.record_length::<U16>(0), Some(4)); // (0 + 4)
+            assert_eq!(TLV_2.record_length::<U16>(1), Some(6)); // (1 + 4 + 1)
+            assert_eq!(TLV_2.record_length::<U16>(2), Some(6)); // (2 + 4)
+            assert_eq!(TLV_2.record_length::<U16>(3), Some(8)); // (3 + 4 + 1)
 
             // Test LengthEncoding::encode_length
 
+            fn encode_length<K: KindLenField>(
+                length_encoding: LengthEncoding,
+                option_body_len: usize,
+            ) -> Option<usize> {
+                length_encoding.encode_length::<K>(option_body_len).map(Into::into)
+            }
+
             // For `ValueOnly`, `encode_length` should always return the
             // argument unmodified.
-            assert_eq!(LengthEncoding::ValueOnly.encode_length(0), Some(0));
-            assert_eq!(LengthEncoding::ValueOnly.encode_length(1), Some(1));
-            assert_eq!(LengthEncoding::ValueOnly.encode_length(2), Some(2));
-            assert_eq!(LengthEncoding::ValueOnly.encode_length(3), Some(3));
+            assert_eq!(encode_length::<u8>(LengthEncoding::ValueOnly, 0), Some(0));
+            assert_eq!(encode_length::<u8>(LengthEncoding::ValueOnly, 1), Some(1));
+            assert_eq!(encode_length::<u8>(LengthEncoding::ValueOnly, 2), Some(2));
+            assert_eq!(encode_length::<u8>(LengthEncoding::ValueOnly, 3), Some(3));
+
+            assert_eq!(encode_length::<U16>(LengthEncoding::ValueOnly, 0), Some(0));
+            assert_eq!(encode_length::<U16>(LengthEncoding::ValueOnly, 1), Some(1));
+            assert_eq!(encode_length::<U16>(LengthEncoding::ValueOnly, 2), Some(2));
+            assert_eq!(encode_length::<U16>(LengthEncoding::ValueOnly, 3), Some(3));
 
             // For `TypeLengthValue` with `option_len_multiplier = 1`,
-            // `encode_length` should always add 2 for the kind and length
+            // `encode_length` should always add 2 or 4 for the kind and length
             // bytes.
-            assert_eq!(TLV_1.encode_length(0), Some(2));
-            assert_eq!(TLV_1.encode_length(1), Some(3));
-            assert_eq!(TLV_1.encode_length(2), Some(4));
-            assert_eq!(TLV_1.encode_length(3), Some(5));
+            assert_eq!(encode_length::<u8>(TLV_1, 0), Some(2));
+            assert_eq!(encode_length::<u8>(TLV_1, 1), Some(3));
+            assert_eq!(encode_length::<u8>(TLV_1, 2), Some(4));
+            assert_eq!(encode_length::<u8>(TLV_1, 3), Some(5));
+
+            assert_eq!(encode_length::<U16>(TLV_1, 0), Some(4));
+            assert_eq!(encode_length::<U16>(TLV_1, 1), Some(5));
+            assert_eq!(encode_length::<U16>(TLV_1, 2), Some(6));
+            assert_eq!(encode_length::<U16>(TLV_1, 3), Some(7));
 
             // For `TypeLengthValue` with `option_len_multiplier = 2`,
-            // `encode_length` should always add 2 for the kind and length
+            // `encode_length` should always add 2 or 4 for the kind and length
             // bytes, add padding if necessary to reach a multiple of 2, and
             // then divide by 2.
-            assert_eq!(TLV_2.encode_length(0), Some(1)); // (0 + 2)     / 2
-            assert_eq!(TLV_2.encode_length(1), Some(2)); // (1 + 2 + 1) / 2
-            assert_eq!(TLV_2.encode_length(2), Some(2)); // (2 + 2)     / 2
-            assert_eq!(TLV_2.encode_length(3), Some(3)); // (3 + 2 + 1) / 2
+            assert_eq!(encode_length::<u8>(TLV_2, 0), Some(1)); // (0 + 2)     / 2
+            assert_eq!(encode_length::<u8>(TLV_2, 1), Some(2)); // (1 + 2 + 1) / 2
+            assert_eq!(encode_length::<u8>(TLV_2, 2), Some(2)); // (2 + 2)     / 2
+            assert_eq!(encode_length::<u8>(TLV_2, 3), Some(3)); // (3 + 2 + 1) / 2
+
+            assert_eq!(encode_length::<U16>(TLV_2, 0), Some(2)); // (0 + 4)     / 2
+            assert_eq!(encode_length::<U16>(TLV_2, 1), Some(3)); // (1 + 4 + 1) / 2
+            assert_eq!(encode_length::<U16>(TLV_2, 2), Some(3)); // (2 + 4)     / 2
+            assert_eq!(encode_length::<U16>(TLV_2, 3), Some(4)); // (3 + 4 + 1) / 2
 
             // Test LengthEncoding::decode_length
 
+            fn decode_length<K: KindLenField>(
+                length_encoding: LengthEncoding,
+                length_field: usize,
+            ) -> Option<usize> {
+                length_encoding.decode_length::<K>(length_field.try_into().unwrap())
+            }
+
             // For `ValueOnly`, `decode_length` should always return the
             // argument unmodified.
-            assert_eq!(LengthEncoding::ValueOnly.decode_length(0), Ok(0));
-            assert_eq!(LengthEncoding::ValueOnly.decode_length(1), Ok(1));
-            assert_eq!(LengthEncoding::ValueOnly.decode_length(2), Ok(2));
-            assert_eq!(LengthEncoding::ValueOnly.decode_length(3), Ok(3));
+            assert_eq!(decode_length::<u8>(LengthEncoding::ValueOnly, 0), Some(0));
+            assert_eq!(decode_length::<u8>(LengthEncoding::ValueOnly, 1), Some(1));
+            assert_eq!(decode_length::<u8>(LengthEncoding::ValueOnly, 2), Some(2));
+            assert_eq!(decode_length::<u8>(LengthEncoding::ValueOnly, 3), Some(3));
+
+            assert_eq!(decode_length::<U16>(LengthEncoding::ValueOnly, 0), Some(0));
+            assert_eq!(decode_length::<U16>(LengthEncoding::ValueOnly, 1), Some(1));
+            assert_eq!(decode_length::<U16>(LengthEncoding::ValueOnly, 2), Some(2));
+            assert_eq!(decode_length::<U16>(LengthEncoding::ValueOnly, 3), Some(3));
 
             // For `TypeLengthValue` with `option_len_multiplier = 1`,
-            // `decode_length` should always subtract 2 for the kind and length
-            // bytes.
-            assert_eq!(TLV_1.decode_length(0), Err(()));
-            assert_eq!(TLV_1.decode_length(1), Err(()));
-            assert_eq!(TLV_1.decode_length(2), Ok(0));
-            assert_eq!(TLV_1.decode_length(3), Ok(1));
+            // `decode_length` should always subtract 2 or 4 for the kind and
+            // length bytes.
+            assert_eq!(decode_length::<u8>(TLV_1, 0), None);
+            assert_eq!(decode_length::<u8>(TLV_1, 1), None);
+            assert_eq!(decode_length::<u8>(TLV_1, 2), Some(0));
+            assert_eq!(decode_length::<u8>(TLV_1, 3), Some(1));
+
+            assert_eq!(decode_length::<U16>(TLV_1, 0), None);
+            assert_eq!(decode_length::<U16>(TLV_1, 1), None);
+            assert_eq!(decode_length::<U16>(TLV_1, 2), None);
+            assert_eq!(decode_length::<U16>(TLV_1, 3), None);
+            assert_eq!(decode_length::<U16>(TLV_1, 4), Some(0));
+            assert_eq!(decode_length::<U16>(TLV_1, 5), Some(1));
 
             // For `TypeLengthValue` with `option_len_multiplier = 2`,
-            // `decode_length` should always multiply by 2 and then subtract 2
-            // for the kind and length bytes.
-            assert_eq!(TLV_2.decode_length(0), Err(()));
-            assert_eq!(TLV_2.decode_length(1), Ok(0));
-            assert_eq!(TLV_2.decode_length(2), Ok(2));
-            assert_eq!(TLV_2.decode_length(3), Ok(4));
+            // `decode_length` should always multiply by 2 or 4 and then
+            // subtract 2 for the kind and length bytes.
+            assert_eq!(decode_length::<u8>(TLV_2, 0), None);
+            assert_eq!(decode_length::<u8>(TLV_2, 1), Some(0));
+            assert_eq!(decode_length::<u8>(TLV_2, 2), Some(2));
+            assert_eq!(decode_length::<u8>(TLV_2, 3), Some(4));
+
+            assert_eq!(decode_length::<U16>(TLV_2, 0), None);
+            assert_eq!(decode_length::<U16>(TLV_2, 1), None);
+            assert_eq!(decode_length::<U16>(TLV_2, 2), Some(0));
+            assert_eq!(decode_length::<U16>(TLV_2, 3), Some(2));
 
             // Test end-to-end by creating options implementation with different
             // length encodings.
@@ -2041,6 +2199,9 @@ pub mod options {
                     impl OptionsImplLayout for $name {
                         type Error = ();
                         const LENGTH_ENCODING: LengthEncoding = $encoding;
+                        type KindLenField = u8;
+                        const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
+                        const NOP: Option<u8> = Some(NOP);
                     }
 
                     impl<'a> OptionsImpl<'a> for $name {
@@ -2321,6 +2482,9 @@ pub mod options {
             let collected = options
                 .iter()
                 .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
+            // Pass `collected.iter()` instead of `options.iter()` since we need
+            // an iterator over references, and `options.iter()` produces an
+            // iterator over values.
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
@@ -2344,11 +2508,50 @@ pub mod options {
             let collected = options
                 .iter()
                 .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
+            // Pass `collected.iter()` instead of `options.iter()` since we need
+            // an iterator over references, and `options.iter()` produces an
+            // iterator over values.
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
 
             assert_eq!(serialized, bytes);
+        }
+
+        #[test]
+        fn test_parse_and_serialize_multi_byte_fields() {
+            let mut bytes = Vec::new();
+            for i in 4..16 {
+                // Push kind U16<NetworkEndian>.
+                bytes.push(0);
+                bytes.push(i);
+                // Push length U16<NetworkEndian>.
+                bytes.push(0);
+                bytes.push(i);
+                // Write `i` - 4 bytes.
+                for j in 4..i {
+                    bytes.push(j);
+                }
+            }
+
+            let options =
+                Options::<_, DummyMultiByteKindOptionsImpl>::parse(bytes.as_slice()).unwrap();
+            for (idx, (kind, data)) in options.iter().enumerate() {
+                assert_eq!(usize::from(kind), idx + 4);
+                let idx: u8 = idx.try_into().unwrap();
+                let bytes: Vec<_> = (4..(idx + 4)).collect();
+                assert_eq!(data, bytes);
+            }
+
+            let collected = options.iter().collect::<Vec<_>>();
+            // Pass `collected.iter()` instead of `options.iter()` since we need
+            // an iterator over references, and `options.iter()` produces an
+            // iterator over values.
+            let ser =
+                OptionsSerializer::<DummyMultiByteKindOptionsImpl, _, _>::new(collected.iter());
+            let mut output = vec![0u8; ser.records_bytes_len()];
+            ser.serialize_records(output.as_mut_slice());
+            assert_eq!(output, bytes);
         }
 
         #[test]

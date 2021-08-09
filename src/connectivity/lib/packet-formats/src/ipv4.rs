@@ -735,7 +735,7 @@ pub(crate) fn reassemble_fragmented_packet<
 pub mod options {
     use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
 
-    use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use packet::records::options::{self, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -796,6 +796,9 @@ pub mod options {
 
     impl OptionsImplLayout for Ipv4OptionsImpl {
         type Error = ();
+        type KindLenField = u8;
+        const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
+        const NOP: Option<u8> = Some(options::NOP);
     }
 
     impl<'a> OptionsImpl<'a> for Ipv4OptionsImpl {

@@ -483,7 +483,7 @@ const FIN_MASK: u16 = 0b00001;
 /// Parsing and serialization of TCP options.
 pub mod options {
     use byteorder::{ByteOrder, NetworkEndian};
-    use packet::records::options::{OptionsImpl, OptionsImplLayout};
+    use packet::records::options::{self, OptionsImpl, OptionsImplLayout};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::U32;
@@ -560,6 +560,9 @@ pub mod options {
 
     impl OptionsImplLayout for TcpOptionsImpl {
         type Error = ();
+        type KindLenField = u8;
+        const END_OF_OPTIONS: Option<u8> = Some(options::END_OF_OPTIONS);
+        const NOP: Option<u8> = Some(options::NOP);
     }
 
     impl<'a> OptionsImpl<'a> for TcpOptionsImpl {

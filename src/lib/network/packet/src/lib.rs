@@ -1880,6 +1880,10 @@ fn canonicalize_upper_bound(len: usize, bound: Bound<&usize>) -> Option<usize> {
     Some(bound)
 }
 
+mod sealed {
+    pub trait Sealed {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

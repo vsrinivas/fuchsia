@@ -745,6 +745,7 @@ pub mod options {
     impl OptionsImplLayout for NdpOptionsImpl {
         // TODO(fxbug.dev/52288): Return more verbose logs on parsing errors.
         type Error = ();
+        type KindLenField = u8;
 
         // For NDP options the length should be multiplied by 8.
         const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
