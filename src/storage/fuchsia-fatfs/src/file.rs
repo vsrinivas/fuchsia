@@ -13,10 +13,11 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker, INO_UNKNOWN},
+    fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker, INO_UNKNOWN, MODE_TYPE_FILE},
     fidl_fuchsia_mem::Buffer,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
+    libc::{S_IRUSR, S_IWUSR},
     std::{
         cell::UnsafeCell,
         fmt::Debug,
@@ -278,7 +279,7 @@ impl VfsFile for FatFile {
         let storage_size = ((content_size + cluster_size - 1) / cluster_size) * cluster_size;
 
         Ok(NodeAttributes {
-            mode: 0,
+            mode: MODE_TYPE_FILE | S_IRUSR | S_IWUSR,
             id: INO_UNKNOWN,
             content_size,
             storage_size,
@@ -468,7 +469,7 @@ mod tests {
     async fn test_get_attrs() {
         let file = TestFile::new();
         let attrs = file.get_attrs().await.expect("get_attrs succeeds");
-        assert_eq!(attrs.mode, 0);
+        assert_eq!(attrs.mode, MODE_TYPE_FILE | S_IRUSR | S_IWUSR);
         assert_eq!(attrs.id, INO_UNKNOWN);
         assert_eq!(attrs.content_size, TEST_FILE_CONTENT.len() as u64);
         assert!(attrs.storage_size > TEST_FILE_CONTENT.len() as u64);

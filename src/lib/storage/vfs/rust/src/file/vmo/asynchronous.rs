@@ -383,6 +383,14 @@ where
     fn state(&self) -> MutexLockFuture<AsyncFileState> {
         self.state.lock()
     }
+
+    fn is_readable(&self) -> bool {
+        return self.readable;
+    }
+
+    fn is_writable(&self) -> bool {
+        return self.writable;
+    }
 }
 
 impl<InitVmo, InitVmoFuture, ConsumeVmo, ConsumeVmoFuture> DirectoryEntry
@@ -406,16 +414,7 @@ where
             return;
         }
 
-        let readable = self.readable;
-        let writable = self.writable;
-        connection::io1::FileConnection::create_connection(
-            scope.clone(),
-            self,
-            flags,
-            readable,
-            writable,
-            server_end,
-        );
+        connection::io1::FileConnection::create_connection(scope.clone(), self, flags, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {

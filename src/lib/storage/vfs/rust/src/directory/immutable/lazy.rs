@@ -10,7 +10,7 @@ mod tests;
 mod watchers_task;
 
 use crate::{
-    common::send_on_open_with_error,
+    common::{rights_to_posix_mode_bits, send_on_open_with_error},
     directory::{
         connection::{io1::DerivedConnection, util::OpenDirectory},
         dirents_sink,
@@ -26,7 +26,9 @@ use crate::{
 use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
+    fidl_fuchsia_io::{
+        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+    },
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::{
@@ -263,7 +265,8 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         Ok(NodeAttributes {
-            mode: 0,
+            mode: MODE_TYPE_DIRECTORY
+                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ true),
             id: INO_UNKNOWN,
             content_size: 0,
             storage_size: 0,

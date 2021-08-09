@@ -67,7 +67,6 @@ pub trait File: Sync + Send + DirectoryEntry {
     async fn get_size(&self) -> Result<u64, Status>;
 
     /// Get this file's attributes.
-    /// The "mode" field will be filled in by the connection.
     async fn get_attrs(&self) -> Result<NodeAttributes, Status>;
 
     /// Set the attributes of this file based on the values in `attrs`.

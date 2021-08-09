@@ -7,14 +7,14 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_APPEND,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
+        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
     std::sync::Arc,
     vfs::{
-        common::send_on_open_with_error,
+        common::{rights_to_posix_mode_bits, send_on_open_with_error},
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
             entry::EntryInfo,
@@ -159,7 +159,8 @@ impl vfs::directory::entry_container::Directory for MetaSubdir {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
         Ok(NodeAttributes {
-            mode: 0, /* Populated by the VFS connection */
+            mode: MODE_TYPE_DIRECTORY
+                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
             id: 1,
             content_size: 0,
             storage_size: 0,
@@ -376,7 +377,8 @@ mod tests {
         assert_eq!(
             Directory::get_attrs(&sub_dir).await.unwrap(),
             NodeAttributes {
-                mode: 0,
+                mode: MODE_TYPE_DIRECTORY
+                    | rights_to_posix_mode_bits(/*r*/ true, /*w*/ false, /*x*/ false),
                 id: 1,
                 content_size: 0,
                 storage_size: 0,

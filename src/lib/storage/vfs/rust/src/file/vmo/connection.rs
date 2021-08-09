@@ -32,4 +32,16 @@ pub(in crate::file::vmo) trait FileConnectionApi: Send + Sync {
     fn consume_vmo(self: Arc<Self>, vmo: zx::Vmo) -> AsyncConsumeVmo;
 
     fn state(&self) -> MutexLockFuture<AsyncFileState>;
+
+    fn is_readable(&self) -> bool {
+        false
+    }
+
+    fn is_writable(&self) -> bool {
+        false
+    }
+
+    fn is_executable(&self) -> bool {
+        false
+    }
 }

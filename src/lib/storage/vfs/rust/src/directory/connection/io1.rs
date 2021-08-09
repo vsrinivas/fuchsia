@@ -5,7 +5,7 @@
 use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     directory::{
-        common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
+        common::check_child_connection_flags,
         connection::util::OpenDirectory,
         entry::DirectoryEntry,
         entry_container::{AsyncGetEntry, Directory},
@@ -21,9 +21,9 @@ use {
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
         DirectoryAdminRequest, DirectoryAdminRequestStream, DirectoryObject, NodeAttributes,
-        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
+        NodeInfo, NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -193,7 +193,7 @@ where
                     Ok(attrs) => (attrs, ZX_OK),
                     Err(status) => (
                         NodeAttributes {
-                            mode: MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
+                            mode: 0,
                             id: INO_UNKNOWN,
                             content_size: 0,
                             storage_size: 0,
@@ -204,7 +204,6 @@ where
                         status.into_raw(),
                     ),
                 };
-                attrs.mode = MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES;
                 responder.send(status, &mut attrs)?;
             }
             DirectoryAdminRequest::NodeGetFlags { responder } => {

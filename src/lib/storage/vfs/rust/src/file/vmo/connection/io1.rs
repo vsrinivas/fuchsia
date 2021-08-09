@@ -5,12 +5,12 @@
 //! Implementation of an individual connection to a file.
 
 use crate::{
-    common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
-    execution_scope::ExecutionScope,
-    file::common::{
-        new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
-        POSIX_READ_WRITE_PROTECTION_ATTRIBUTES, POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+    common::{
+        inherit_rights_for_clone, rights_to_posix_mode_bits, send_on_open_with_error,
+        GET_FLAGS_VISIBLE,
     },
+    execution_scope::ExecutionScope,
+    file::common::new_connection_validate_flags,
     file::vmo::{
         asynchronous::{AsyncFileState, NewVmo},
         connection::{AsyncConsumeVmo, FileConnectionApi},
@@ -68,14 +68,6 @@ pub struct FileConnection {
     /// received with [`FileRequest::Clone()`].
     flags: u32,
 
-    /// Flag passed into `create_connection`, that is used to limit read operations on this
-    /// connection.
-    readable: bool,
-
-    /// Flag passed into `create_connection`, that is used to limit write operations on this
-    /// connection.
-    writable: bool,
-
     /// Seek position. Next byte to be read or written within the buffer. This might be beyond the
     /// current size of buffer, matching POSIX:
     ///
@@ -118,18 +110,9 @@ impl FileConnection {
         scope: ExecutionScope,
         file: Arc<dyn FileConnectionApi>,
         flags: u32,
-        readable: bool,
-        writable: bool,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let task = Self::create_connection_task(
-            scope.clone(),
-            file,
-            flags,
-            readable,
-            writable,
-            server_end,
-        );
+        let task = Self::create_connection_task(scope.clone(), file, flags, server_end);
         // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
         // for us to do, but to ignore the open.  `server_end` will be closed when the object will
@@ -141,12 +124,13 @@ impl FileConnection {
         scope: ExecutionScope,
         file: Arc<dyn FileConnectionApi>,
         flags: u32,
-        readable: bool,
-        writable: bool,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let flags = match new_connection_validate_flags(
-            flags, readable, writable, /*append_allowed=*/ false,
+            flags,
+            file.is_readable(),
+            file.is_writable(),
+            /*append_allowed=*/ false,
         ) {
             Ok(updated) => updated,
             Err(status) => {
@@ -197,15 +181,8 @@ impl FileConnection {
             }
         };
 
-        let mut connection = FileConnection {
-            scope: scope.clone(),
-            file,
-            requests,
-            flags,
-            readable,
-            writable,
-            seek: 0,
-        };
+        let mut connection =
+            FileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             match connection.get_node_info().await {
@@ -366,17 +343,6 @@ impl FileConnection {
         let _ = self.handle_close(|_status| Ok(())).await;
     }
 
-    /// POSIX protection attributes are hard coded, as we are expecting them to be removed from the
-    /// io.fidl altogether.
-    fn posix_protection_attributes(&self) -> u32 {
-        match (self.readable, self.writable) {
-            (true, true) => POSIX_READ_WRITE_PROTECTION_ATTRIBUTES,
-            (true, false) => POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
-            (false, true) => POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
-            (false, false) => 0,
-        }
-    }
-
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<NodeInfo, zx::Status> {
         if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
@@ -503,14 +469,7 @@ impl FileConnection {
             }
         };
 
-        Self::create_connection(
-            self.scope.clone(),
-            self.file.clone(),
-            flags,
-            self.readable,
-            self.writable,
-            server_end,
-        );
+        Self::create_connection(self.scope.clone(), self.file.clone(), flags, server_end);
     }
 
     /// Closes the connection, calling the `consume_vmo` callback with an updated buffer if
@@ -575,7 +534,12 @@ impl FileConnection {
         responder(
             status,
             NodeAttributes {
-                mode: MODE_TYPE_FILE | self.posix_protection_attributes(),
+                mode: MODE_TYPE_FILE
+                    | rights_to_posix_mode_bits(
+                        self.file.is_readable(),
+                        self.file.is_writable(),
+                        self.file.is_executable(),
+                    ),
                 id: INO_UNKNOWN,
                 content_size: size,
                 storage_size: capacity,

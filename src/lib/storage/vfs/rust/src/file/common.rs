@@ -13,18 +13,7 @@ use {
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
-    libc::{S_IRUSR, S_IWUSR},
 };
-
-/// POSIX emulation layer access attributes for all files created with read_only().
-pub const POSIX_READ_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
-
-/// POSIX emulation layer access attributes for all files created with write_only().
-pub const POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES: u32 = S_IWUSR;
-
-/// POSIX emulation layer access attributes for all files created with read_write().
-pub const POSIX_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
-    POSIX_READ_ONLY_PROTECTION_ATTRIBUTES | POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES;
 
 /// Validate that the requested flags for a new connection are valid.  This function will make sure
 /// that `flags` only requests read access when `readable` is true, or only write access when

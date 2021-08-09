@@ -13,6 +13,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
+    libc,
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -139,6 +140,14 @@ impl<T: 'static + Send + Sync> IntoAny for T {
     fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync + 'static> {
         self as Arc<dyn std::any::Any + Send + Sync + 'static>
     }
+}
+
+/// Returns equivalent POSIX mode/permission bits based on the specified rights.
+/// Note that these only set the user bits.
+pub fn rights_to_posix_mode_bits(readable: bool, writable: bool, executable: bool) -> u32 {
+    return if readable { libc::S_IRUSR } else { 0 }
+        | if writable { libc::S_IWUSR } else { 0 }
+        | if executable { libc::S_IXUSR } else { 0 };
 }
 
 #[cfg(test)]

@@ -17,13 +17,9 @@ use {
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
-    libc::{S_IRUSR, S_IWUSR, S_IXUSR},
     static_assertions::assert_eq_size,
     std::{io::Write, mem::size_of},
 };
-
-/// POSIX emulation layer access attributes for all directories created with empty().
-pub const POSIX_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR | S_IXUSR;
 
 /// Checks flags provided for a new connection.  Returns adjusted flags (cleaning up some
 /// ambiguities) or a fidl Status error, in case new new connection flags are not permitting the

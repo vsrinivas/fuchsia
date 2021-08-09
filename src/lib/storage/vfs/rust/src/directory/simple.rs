@@ -7,7 +7,7 @@
 //! to construct actual instances.  See [`Simple`] for details.
 
 use crate::{
-    common::send_on_open_with_error,
+    common::{rights_to_posix_mode_bits, send_on_open_with_error},
     directory::{
         connection::{io1::DerivedConnection, util::OpenDirectory},
         dirents_sink,
@@ -32,7 +32,8 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_CREATE_IF_ABSENT,
+        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        OPEN_FLAG_CREATE_IF_ABSENT,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
@@ -337,7 +338,8 @@ where
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         Ok(NodeAttributes {
-            mode: 0,
+            mode: MODE_TYPE_DIRECTORY
+                | rights_to_posix_mode_bits(/*r*/ true, /*w*/ true, /*x*/ true),
             id: INO_UNKNOWN,
             content_size: 0,
             storage_size: 0,

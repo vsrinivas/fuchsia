@@ -22,6 +22,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{AsHandleRef, Status},
+    libc::{S_IRUSR, S_IWUSR},
     std::{
         borrow::Borrow,
         cell::UnsafeCell,
@@ -731,8 +732,7 @@ impl Directory for FatDirectory {
         let creation_time = dos_to_unix_time(dir.created());
         let modification_time = dos_to_unix_time(dir.modified());
         Ok(NodeAttributes {
-            // Mode is filled in by the caller.
-            mode: 0,
+            mode: MODE_TYPE_DIRECTORY | S_IRUSR | S_IWUSR,
             id: INO_UNKNOWN,
             content_size: 0,
             storage_size: 0,

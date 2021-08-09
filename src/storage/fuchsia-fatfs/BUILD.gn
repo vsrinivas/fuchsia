@@ -24,6 +24,7 @@ fatfs_deps = [
   "//third_party/rust_crates:chrono",
   "//third_party/rust_crates:fatfs",
   "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:libc",
   "//third_party/rust_crates:scopeguard",
   "//third_party/rust_crates:static_assertions",
 ]

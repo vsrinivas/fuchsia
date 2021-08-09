@@ -11,12 +11,7 @@ use {
         directory::entry::DirectoryEntry,
         execution_scope::ExecutionScope,
         file::{
-            common::{
-                new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
-                POSIX_READ_WRITE_PROTECTION_ATTRIBUTES, POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
-            },
-            connection::util::OpenFile,
-            File, SharingMode,
+            common::new_connection_validate_flags, connection::util::OpenFile, File, SharingMode,
         },
         path::Path,
     },
@@ -24,7 +19,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        NodeMarker, SeekOrigin, INO_UNKNOWN, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
@@ -59,14 +54,6 @@ pub struct FileConnection<T: 'static + File> {
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
     /// received with [`value@FileRequest::Clone`].
     flags: u32,
-
-    /// Flag passed into `create_connection`, that is used to limit read operations on this
-    /// connection.
-    readable: bool,
-
-    /// Flag passed into `create_connection`, that is used to limit write operations on this
-    /// connection.
-    writable: bool,
 
     /// Seek position. Next byte to be read or written within the buffer. This might be beyond the
     /// current size of buffer, matching POSIX:
@@ -185,16 +172,9 @@ impl<T: 'static + File> FileConnection<T> {
             }
         }
 
-        let handle_requests = FileConnection {
-            scope: scope.clone(),
-            file,
-            requests,
-            flags,
-            readable,
-            writable,
-            seek: 0,
-        }
-        .handle_requests();
+        let handle_requests =
+            FileConnection { scope: scope.clone(), file, requests, flags, seek: 0 }
+                .handle_requests();
         handle_requests.await;
     }
 
@@ -225,17 +205,6 @@ impl<T: 'static + File> FileConnection<T> {
 
         // If the file is still open at this point, it will get closed when the OpenFile is
         // dropped.
-    }
-
-    /// POSIX protection attributes are hard coded, as we are expecting them to be removed from the
-    /// io.fidl altogether.
-    fn posix_protection_attributes(&self) -> u32 {
-        match (self.readable, self.writable) {
-            (true, true) => POSIX_READ_WRITE_PROTECTION_ATTRIBUTES,
-            (true, false) => POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
-            (false, true) => POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
-            (false, false) => 0,
-        }
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
@@ -373,7 +342,7 @@ impl<T: 'static + File> FileConnection<T> {
     }
 
     async fn handle_get_attr(&mut self) -> (zx::Status, NodeAttributes) {
-        let mut attributes = match self.file.get_attrs().await {
+        let attributes = match self.file.get_attrs().await {
             Ok(attr) => attr,
             Err(status) => {
                 return (
@@ -390,8 +359,6 @@ impl<T: 'static + File> FileConnection<T> {
                 )
             }
         };
-
-        attributes.mode = MODE_TYPE_FILE | self.posix_protection_attributes();
         (zx::Status::OK, attributes)
     }
 
@@ -586,7 +553,7 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            FileEvent, FileProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS,
+            FileEvent, FileProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -756,7 +723,7 @@ mod tests {
         async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
             self.handle_operation(FileOperation::GetAttrs)?;
             Ok(NodeAttributes {
-                mode: 0,
+                mode: MODE_TYPE_FILE,
                 id: MOCK_FILE_ID,
                 content_size: self.file_size,
                 storage_size: 2 * self.file_size,
@@ -978,7 +945,7 @@ mod tests {
         assert_eq!(
             attributes,
             NodeAttributes {
-                mode: MODE_TYPE_FILE | POSIX_READ_WRITE_PROTECTION_ATTRIBUTES,
+                mode: MODE_TYPE_FILE,
                 id: MOCK_FILE_ID,
                 content_size: *MOCK_FILE_SIZE,
                 storage_size: 2 * *MOCK_FILE_SIZE,
