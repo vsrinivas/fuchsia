@@ -95,13 +95,16 @@ counted as committed pages.
 The entire VMO should be unlocked at once, so *offset* should be 0 and *size* should be the current
 size of the VMO. Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right.
 
-**ZX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
+**ZX_VMO_OP_CACHE_SYNC** - Synchronize instruction caches with data caches, so previous writes are
+visible to instruction fetches.
 Requires the **ZX_RIGHT_READ** right.
 
-**ZX_VMO_OP_CACHE_INVALIDATE** - Performs a cache invalidation operation.
+**ZX_VMO_OP_CACHE_INVALIDATE** - Performs a cache invalidation operation so that future reads see
+external changes to main memory.
 Requires the **ZX_RIGHT_WRITE** right.
 
-**ZX_VMO_OP_CACHE_CLEAN** - Performs a cache clean operation.
+**ZX_VMO_OP_CACHE_CLEAN** - Clean (write back) data caches, so previous writes are visible in main
+memory.
 Requires the **ZX_RIGHT_READ** right.
 
 **ZX_VMO_OP_CACHE_CLEAN_INVALIDATE** - Performs cache clean and invalidate operations together.
