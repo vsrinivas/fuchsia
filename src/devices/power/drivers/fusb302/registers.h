@@ -37,7 +37,32 @@ constexpr float kCcMeasureVoltageStep = 0.042f;
 
 namespace fusb302 {
 
-class DeviceIdReg : public hwreg::I2cRegisterBase<DeviceIdReg, uint8_t, 1> {
+enum Polarity : bool {
+  CC1 = false,
+  CC2 = true,
+};
+enum PowerRole : bool {
+  sink = false,
+  source = true,
+};
+enum DataRole : uint8_t {
+  DFP,
+  UFP,
+  DRP,
+  ASS,
+};
+
+template <class RegType>
+class Fusb302Reg : public hwreg::I2cRegisterBase<RegType, uint8_t, 1> {
+ public:
+  static RegType ReadFrom(ddk::I2cProtocolClient& i2c) {
+    auto reg = RegType::Get().FromValue(0);
+    ZX_ASSERT(reg.I2cRegisterBase::ReadFrom(i2c) == ZX_OK);
+    return reg;
+  }
+};
+
+class DeviceIdReg : public Fusb302Reg<DeviceIdReg> {
  public:
   DEF_FIELD(7, 4, version_id);
   DEF_FIELD(3, 2, product_id);
@@ -46,7 +71,7 @@ class DeviceIdReg : public hwreg::I2cRegisterBase<DeviceIdReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<DeviceIdReg>(DEVICE_ID_ADDR); }
 };
 
-class Switches0Reg : public hwreg::I2cRegisterBase<Switches0Reg, uint8_t, 1> {
+class Switches0Reg : public Fusb302Reg<Switches0Reg> {
  public:
   DEF_BIT(7, pu_en2);
   DEF_BIT(6, pu_en1);
@@ -60,7 +85,7 @@ class Switches0Reg : public hwreg::I2cRegisterBase<Switches0Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Switches0Reg>(SWITCHES0_ADDR); }
 };
 
-class Switches1Reg : public hwreg::I2cRegisterBase<Switches1Reg, uint8_t, 1> {
+class Switches1Reg : public Fusb302Reg<Switches1Reg> {
  public:
   DEF_BIT(7, power_role);
   DEF_FIELD(6, 5, spec_rev);
@@ -72,7 +97,7 @@ class Switches1Reg : public hwreg::I2cRegisterBase<Switches1Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Switches1Reg>(SWITCHES1_ADDR); }
 };
 
-class MeasureReg : public hwreg::I2cRegisterBase<MeasureReg, uint8_t, 1> {
+class MeasureReg : public Fusb302Reg<MeasureReg> {
  public:
   DEF_BIT(6, meas_vbus);
   DEF_FIELD(5, 0, mdac);
@@ -80,7 +105,7 @@ class MeasureReg : public hwreg::I2cRegisterBase<MeasureReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<MeasureReg>(MEASURE_ADDR); }
 };
 
-class SliceReg : public hwreg::I2cRegisterBase<SliceReg, uint8_t, 1> {
+class SliceReg : public Fusb302Reg<SliceReg> {
  public:
   DEF_FIELD(7, 6, sdac_hys);
   DEF_FIELD(5, 0, sdac);
@@ -88,18 +113,24 @@ class SliceReg : public hwreg::I2cRegisterBase<SliceReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<SliceReg>(SLICE_ADDR); }
 };
 
-class Control0Reg : public hwreg::I2cRegisterBase<Control0Reg, uint8_t, 1> {
+class Control0Reg : public Fusb302Reg<Control0Reg> {
  public:
   DEF_BIT(6, tx_flush);
   DEF_BIT(5, int_mask);
-  DEF_FIELD(3, 2, host_cur);
+  enum HostCur {
+    NO_CURRENT = 0b00,
+    DEFAULT = 0b01,
+    MEDIUM_1A5 = 0b10,
+    HIGH_3A0 = 0b11,
+  };
+  DEF_ENUM_FIELD(HostCur, 3, 2, host_cur);
   DEF_BIT(1, auto_pre);
   DEF_BIT(0, tx_start);
 
   static auto Get() { return hwreg::I2cRegisterAddr<Control0Reg>(CONTROL0_ADDR); }
 };
 
-class Control1Reg : public hwreg::I2cRegisterBase<Control1Reg, uint8_t, 1> {
+class Control1Reg : public Fusb302Reg<Control1Reg> {
  public:
   DEF_BIT(6, ensop2db);
   DEF_BIT(5, ensop1db);
@@ -111,18 +142,23 @@ class Control1Reg : public hwreg::I2cRegisterBase<Control1Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Control1Reg>(CONTROL1_ADDR); }
 };
 
-class Control2Reg : public hwreg::I2cRegisterBase<Control2Reg, uint8_t, 1> {
+class Control2Reg : public Fusb302Reg<Control2Reg> {
  public:
   DEF_FIELD(7, 6, tog_save_pwr);
   DEF_BIT(5, tog_rd_only);
   DEF_BIT(3, wake_en);
-  DEF_FIELD(2, 1, mode);
+  enum ToggleMode {
+    ENABLE_DRP = 0b01,
+    ENABLE_SNK = 0b10,
+    ENABLE_SRC = 0b11,
+  };
+  DEF_ENUM_FIELD(ToggleMode, 2, 1, mode);
   DEF_BIT(0, toggle);
 
   static auto Get() { return hwreg::I2cRegisterAddr<Control2Reg>(CONTROL2_ADDR); }
 };
 
-class Control3Reg : public hwreg::I2cRegisterBase<Control3Reg, uint8_t, 1> {
+class Control3Reg : public Fusb302Reg<Control3Reg> {
  public:
   DEF_BIT(6, send_hard_reset);
   DEF_BIT(5, bist_tmode);
@@ -134,7 +170,7 @@ class Control3Reg : public hwreg::I2cRegisterBase<Control3Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Control3Reg>(CONTROL3_ADDR); }
 };
 
-class MaskReg : public hwreg::I2cRegisterBase<MaskReg, uint8_t, 1> {
+class MaskReg : public Fusb302Reg<MaskReg> {
  public:
   DEF_BIT(7, m_vbusok);
   DEF_BIT(6, m_activity);
@@ -148,7 +184,7 @@ class MaskReg : public hwreg::I2cRegisterBase<MaskReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<MaskReg>(MASK_ADDR); }
 };
 
-class PowerReg : public hwreg::I2cRegisterBase<PowerReg, uint8_t, 1> {
+class PowerReg : public Fusb302Reg<PowerReg> {
  public:
   DEF_BIT(3, pwr3);
   DEF_BIT(2, pwr2);
@@ -158,7 +194,7 @@ class PowerReg : public hwreg::I2cRegisterBase<PowerReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<PowerReg>(POWER_ADDR); }
 };
 
-class ResetReg : public hwreg::I2cRegisterBase<ResetReg, uint8_t, 1> {
+class ResetReg : public Fusb302Reg<ResetReg> {
  public:
   DEF_BIT(1, pd_reset);
   DEF_BIT(0, sw_res);
@@ -166,7 +202,7 @@ class ResetReg : public hwreg::I2cRegisterBase<ResetReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<ResetReg>(RESET_ADDR); }
 };
 
-class OcpReg : public hwreg::I2cRegisterBase<OcpReg, uint8_t, 1> {
+class OcpReg : public Fusb302Reg<OcpReg> {
  public:
   DEF_BIT(3, ocp_range);
   DEF_FIELD(2, 0, ocp_cur);
@@ -174,7 +210,7 @@ class OcpReg : public hwreg::I2cRegisterBase<OcpReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<OcpReg>(OCP_REG_ADDR); }
 };
 
-class MaskAReg : public hwreg::I2cRegisterBase<MaskAReg, uint8_t, 1> {
+class MaskAReg : public Fusb302Reg<MaskAReg> {
  public:
   DEF_BIT(7, m_ocp_temp);
   DEF_BIT(6, m_togdone);
@@ -188,21 +224,21 @@ class MaskAReg : public hwreg::I2cRegisterBase<MaskAReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<MaskAReg>(MASK_A_ADDR); }
 };
 
-class MaskBReg : public hwreg::I2cRegisterBase<MaskBReg, uint8_t, 1> {
+class MaskBReg : public Fusb302Reg<MaskBReg> {
  public:
   DEF_BIT(0, m_gcrcsent);
 
   static auto Get() { return hwreg::I2cRegisterAddr<MaskBReg>(MASK_B_ADDR); }
 };
 
-class Control4Reg : public hwreg::I2cRegisterBase<Control4Reg, uint8_t, 1> {
+class Control4Reg : public Fusb302Reg<Control4Reg> {
  public:
   DEF_BIT(0, tog_exit_aud);
 
   static auto Get() { return hwreg::I2cRegisterAddr<Control4Reg>(CONTROL4_ADDR); }
 };
 
-class Status0AReg : public hwreg::I2cRegisterBase<Status0AReg, uint8_t, 1> {
+class Status0AReg : public Fusb302Reg<Status0AReg> {
  public:
   DEF_BIT(5, softfail);
   DEF_BIT(4, retryfail);
@@ -213,17 +249,27 @@ class Status0AReg : public hwreg::I2cRegisterBase<Status0AReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Status0AReg>(STATUS0_A_ADDR); }
 };
 
-class Status1AReg : public hwreg::I2cRegisterBase<Status1AReg, uint8_t, 1> {
+class Status1AReg : public Fusb302Reg<Status1AReg> {
  public:
-  DEF_FIELD(5, 3, togss);
+  enum TogSS {
+    toggle_running = 0b000,   // TOGGLE = 1
+    stop_src1 = 0b001,        // SRCon CC1 (STOP_SRC1)
+    stop_src2 = 0b010,        // SRCon CC2 (STOP_SRC2)
+    stop_snk1 = 0b101,        // SNKon CC1 (STOP_SNK1)
+    stop_snk2 = 0b110,        // SNKon CC2 (STOP_SNK2)
+    audio_accessory = 0b111,  // AudioAccessory with vRa on both CC1 and CC2 (STOP_SRC1)
+  };
+  DEF_ENUM_FIELD(TogSS, 5, 3, togss);
   DEF_BIT(2, rxsop2db);
   DEF_BIT(1, rxsop1db);
   DEF_BIT(0, rxsop);
 
   static auto Get() { return hwreg::I2cRegisterAddr<Status1AReg>(STATUS1_A_ADDR); }
+  static Polarity GetPolarity(TogSS val) { return (val & 0x01) ? CC1 : CC2; }
+  static PowerRole GetPowerRole(TogSS val) { return (val & 0x04) ? sink : source; }
 };
 
-class InterruptAReg : public hwreg::I2cRegisterBase<InterruptAReg, uint8_t, 1> {
+class InterruptAReg : public Fusb302Reg<InterruptAReg> {
  public:
   DEF_BIT(7, i_ocp_temp);
   DEF_BIT(6, i_togdone);
@@ -237,7 +283,7 @@ class InterruptAReg : public hwreg::I2cRegisterBase<InterruptAReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<InterruptAReg>(INTERRUPT_A_ADDR); }
 };
 
-class InterruptBReg : public hwreg::I2cRegisterBase<InterruptBReg, uint8_t, 1> {
+class InterruptBReg : public Fusb302Reg<InterruptBReg> {
  public:
   DEF_BIT(0, i_gcrcsent);
 
@@ -245,7 +291,7 @@ class InterruptBReg : public hwreg::I2cRegisterBase<InterruptBReg, uint8_t, 1> {
 };
 
 const std::string bc_level[4] = {"< 200 mV", "200 mV - 660 mV", "660 mV - 1.23 V", "> 1.23 V"};
-class Status0Reg : public hwreg::I2cRegisterBase<Status0Reg, uint8_t, 1> {
+class Status0Reg : public Fusb302Reg<Status0Reg> {
  public:
   DEF_BIT(7, vbusok);
   DEF_BIT(6, activity);
@@ -258,7 +304,7 @@ class Status0Reg : public hwreg::I2cRegisterBase<Status0Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Status0Reg>(STATUS0_ADDR); }
 };
 
-class Status1Reg : public hwreg::I2cRegisterBase<Status1Reg, uint8_t, 1> {
+class Status1Reg : public Fusb302Reg<Status1Reg> {
  public:
   DEF_BIT(7, rxsop2);
   DEF_BIT(6, rxsop1);
@@ -272,7 +318,7 @@ class Status1Reg : public hwreg::I2cRegisterBase<Status1Reg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<Status1Reg>(STATUS1_ADDR); }
 };
 
-class InterruptReg : public hwreg::I2cRegisterBase<InterruptReg, uint8_t, 1> {
+class InterruptReg : public Fusb302Reg<InterruptReg> {
  public:
   DEF_BIT(7, i_vbusok);
   DEF_BIT(6, i_activity);
@@ -286,7 +332,7 @@ class InterruptReg : public hwreg::I2cRegisterBase<InterruptReg, uint8_t, 1> {
   static auto Get() { return hwreg::I2cRegisterAddr<InterruptReg>(INTERRUPT_ADDR); }
 };
 
-class FifosReg : public hwreg::I2cRegisterBase<FifosReg, uint8_t, 1> {
+class FifosReg : public Fusb302Reg<FifosReg> {
  public:
   DEF_FIELD(7, 0, tx_rx_token);
 

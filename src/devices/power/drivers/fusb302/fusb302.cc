@@ -23,12 +23,7 @@ auto constexpr kSleep = zx::usec(250);
 
 zx_status_t Fusb302::Init() {
   // Device ID
-  auto device_id = DeviceIdReg::Get().FromValue(0);
-  auto status = device_id.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  auto device_id = DeviceIdReg::ReadFrom(i2c_);
   device_id_ = inspect_.GetRoot().CreateChild("DeviceId");
   device_id_.CreateUint("VersionId", device_id.version_id(), &inspect_);
   zxlogf(INFO, "version id: 0x%x", device_id.version_id());
@@ -38,12 +33,7 @@ zx_status_t Fusb302::Init() {
   zxlogf(INFO, "revision id: 0x%x", device_id.revision_id());
 
   // Power and Data Role
-  auto switches1 = Switches1Reg::Get().FromValue(0);
-  status = switches1.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  auto switches1 = Switches1Reg::ReadFrom(i2c_);
   power_role_ =
       inspect_.GetRoot().CreateString("PowerRole", switches1.power_role() ? "Source" : "Sink");
   zxlogf(INFO, "Currently acting as power %s", switches1.power_role() ? "source" : "sink");
@@ -52,126 +42,66 @@ zx_status_t Fusb302::Init() {
   zxlogf(INFO, "Currently acting as data %s", switches1.data_role() ? "source" : "sink");
 
   // Measure VBUS
-  auto power = PowerReg::Get().FromValue(0);
-  status = power.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = power.set_pwr2(1).WriteTo(i2c_);
+  auto status = PowerReg::ReadFrom(i2c_).set_pwr2(1).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
-  auto switches0 = Switches0Reg::Get().FromValue(0);
-  status = switches0.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = switches0.set_meas_cc2(0).set_meas_cc1(0).WriteTo(i2c_);
+  status = Switches0Reg::ReadFrom(i2c_).set_meas_cc2(0).set_meas_cc1(0).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
-  auto measure = MeasureReg::Get().FromValue(0);
-  status = measure.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = measure.set_meas_vbus(1).WriteTo(i2c_);
+  status = MeasureReg::ReadFrom(i2c_).set_meas_vbus(1).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(kSleep));
-  status = measure.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  auto measure = MeasureReg::ReadFrom(i2c_);
   meas_vbus_ = inspect_.GetRoot().CreateDouble("VBUS Voltage (Volts)",
                                                measure.mdac() * kVbusMeasureVoltageStep);
   zxlogf(INFO, "Measured VBUS voltage is %f V", measure.mdac() * kVbusMeasureVoltageStep);
 
   // Measure CC1
   cc1_ = inspect_.GetRoot().CreateChild("CC1");
-  status = measure.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = measure.set_meas_vbus(0).WriteTo(i2c_);
+  status = MeasureReg::ReadFrom(i2c_).set_meas_vbus(0).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
-  status = switches0.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = switches0.set_meas_cc2(0).set_meas_cc1(1).WriteTo(i2c_);
+  status = Switches0Reg::ReadFrom(i2c_).set_meas_cc2(0).set_meas_cc1(1).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(kSleep));
-  status = measure.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  measure = MeasureReg::ReadFrom(i2c_);
   meas_cc1_ = cc1_.CreateDouble("CC1 Voltage (Volts)", measure.mdac() * kCcMeasureVoltageStep);
   zxlogf(INFO, "Measured CC1 voltage is %f V", measure.mdac() * kCcMeasureVoltageStep);
   // Get BC Level for CC1
-  auto status0 = Status0Reg::Get().FromValue(0);
-  status = status0.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  auto status0 = Status0Reg::ReadFrom(i2c_);
   bc_lvl_cc1_ = cc1_.CreateString("Battery Charging Level", bc_level[status0.bc_lvl()]);
   zxlogf(INFO, "CC1 Battery Charging Level is %s", bc_level[status0.bc_lvl()].c_str());
 
   // Measure CC2
   cc2_ = inspect_.GetRoot().CreateChild("CC2");
-  status = switches0.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = switches0.set_meas_cc2(1).set_meas_cc1(0).WriteTo(i2c_);
+  status = Switches0Reg::ReadFrom(i2c_).set_meas_cc2(1).set_meas_cc1(0).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
   }
   zx::nanosleep(zx::deadline_after(kSleep));
-  status = measure.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  measure = MeasureReg::ReadFrom(i2c_);
   meas_cc2_ = cc2_.CreateDouble("CC2 Voltage (Volts)", measure.mdac() * kCcMeasureVoltageStep);
   zxlogf(INFO, "Measured CC2 voltage is %f V", measure.mdac() * kCcMeasureVoltageStep);
   // Get BC Level for CC2
-  status = status0.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
+  status0 = Status0Reg::ReadFrom(i2c_);
   bc_lvl_cc2_ = cc2_.CreateString("Battery Charging Level", bc_level[status0.bc_lvl()]);
   zxlogf(INFO, "CC2 Battery Charging Level is %s", bc_level[status0.bc_lvl()].c_str());
 
   // Power off Measure Block
-  power = PowerReg::Get().FromValue(0);
-  status = power.ReadFrom(i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to read from power delivery unit. %d", status);
-    return status;
-  }
-  status = power.set_pwr2(0).WriteTo(i2c_);
+  status = PowerReg::ReadFrom(i2c_).set_pwr2(0).WriteTo(i2c_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write to power delivery unit. %d", status);
     return status;
