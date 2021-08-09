@@ -177,6 +177,7 @@ fn open_file_at(
 ) -> Result<FileHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
+    strace!(task, "open_file_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
     task.open_file_at(dir_fd, path, OpenFlags::from_bits_truncate(flags), mode)
 }
 
@@ -192,6 +193,7 @@ where
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    strace!(task, "lookup_parent_at(dir_fd={}, path={:?})", dir_fd, String::from_utf8_lossy(path));
     callback(parent, basename)
 }
 
@@ -451,14 +453,13 @@ pub fn sys_mknodat(
     dev: DeviceType,
 ) -> Result<SyscallResult, Errno> {
     let file_type = match mode & FileMode::IFMT {
-        FileMode::IFREG => FileMode::IFREG,
-        FileMode::IFBLK => FileMode::IFBLK,
-        FileMode::IFIFO => FileMode::IFIFO,
-        FileMode::IFSOCK => FileMode::IFSOCK,
+        FileMode::IFREG
+        | FileMode::IFCHR
+        | FileMode::IFBLK
+        | FileMode::IFIFO
+        | FileMode::IFSOCK => mode & FileMode::IFMT,
         FileMode::EMPTY => FileMode::IFREG,
-        _ => {
-            return Err(EINVAL);
-        }
+        _ => return Err(EINVAL),
     };
     let mode = file_type | ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
