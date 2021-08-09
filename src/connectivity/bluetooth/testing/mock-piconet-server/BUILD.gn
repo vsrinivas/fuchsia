@@ -27,13 +27,15 @@ rustc_library("lib") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [
     "src/lib.rs",
     "src/lib_v2.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("mock-piconet-client-v2-tests") {
@@ -60,9 +62,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
@@ -75,6 +77,8 @@ rustc_binary("bin") {
     "src/profile.rs",
     "src/types.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("component") {

@@ -17,13 +17,13 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt, stream::StreamExt},
-    log::{error, info},
     parking_lot::Mutex,
     std::{
         collections::{hash_map::Entry, HashMap, HashSet},
         convert::TryFrom,
         sync::Arc,
     },
+    tracing::{error, info},
 };
 
 mod peer;
@@ -63,7 +63,7 @@ impl MockPiconetServer {
         // Each registered peer will have its own ServiceFs and NestedEnvironment. This allows
         // for the sandboxed launching of profiles.
         let mut peer_service_fs = ServiceFs::new();
-        peer_service_fs.add_fidl_service(move |stream| {
+        let _ = peer_service_fs.add_fidl_service(move |stream| {
             let mut sender_clone = sender.clone();
             fasync::Task::spawn(async move {
                 sender_clone
@@ -327,7 +327,7 @@ impl MockPiconetServerInner {
         if self.contains_peer(&id) {
             return Err(format_err!("Peer {} already registered", id));
         }
-        self.peers.insert(id, peer);
+        let _ = self.peers.insert(id, peer);
         Ok(())
     }
 
@@ -338,7 +338,7 @@ impl MockPiconetServerInner {
         if !self.contains_peer(id) {
             return Err(format_err!("Peer {} doesn't exist", id));
         }
-        self.peers.remove(id);
+        drop(self.peers.remove(id));
         Ok(())
     }
 
@@ -455,8 +455,7 @@ impl MockPiconetServerInner {
         peer_id: PeerId,
         service_id: bredr::ServiceClassProfileIdentifier,
     ) {
-        let mut requested_service_ids = HashSet::new();
-        requested_service_ids.insert(service_id);
+        let requested_service_ids = vec![service_id].into_iter().collect();
 
         // Get all active service advertisements in the piconet that match `service_id`.
         let matching_services = self
@@ -539,16 +538,15 @@ async fn main() -> Result<(), anyhow::Error> {
     let (test_sender, test_receiver) = mpsc::channel(0);
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |stream| {
+    let _ = fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::spawn(handle_test_client_connection(test_sender.clone(), stream)).detach()
     });
-    fs.take_and_serve_directory_handle()?;
-    let mut drive_service_fs = fs.collect::<()>().fuse();
+    let _ = fs.take_and_serve_directory_handle()?;
+    let drive_service_fs = fs.collect::<()>().fuse();
 
-    select! {
-        _ = server.handle_fidl_requests(test_receiver).fuse() => {}
-        _ = drive_service_fs => {}
-    }
+    let handle_fut = server.handle_fidl_requests(test_receiver);
+    futures::pin_mut!(handle_fut);
+    let _ = futures::future::select(handle_fut, drive_service_fs).await;
 
     Ok(())
 }

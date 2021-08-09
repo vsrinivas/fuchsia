@@ -338,27 +338,27 @@ async fn add_profile_to_topology<'a>(
     //     accessible via the test realm service directory.
     {
         if spec.rfcomm_url.is_some() {
-            builder.add_protocol_route::<bredr::ProfileMarker>(
+            let _ = builder.add_protocol_route::<bredr::ProfileMarker>(
                 RouteEndpoint::component(mock_piconet_member_name.clone()),
                 vec![RouteEndpoint::component(rfcomm_moniker.clone())],
             )?;
-            builder.add_protocol_route::<bredr::ProfileMarker>(
+            let _ = builder.add_protocol_route::<bredr::ProfileMarker>(
                 RouteEndpoint::component(rfcomm_moniker.clone()),
                 vec![RouteEndpoint::component(spec.name.to_string())],
             )?;
         } else {
-            builder.add_protocol_route::<bredr::ProfileMarker>(
+            let _ = builder.add_protocol_route::<bredr::ProfileMarker>(
                 RouteEndpoint::component(mock_piconet_member_name.clone()),
                 vec![RouteEndpoint::component(spec.name.to_string())],
             )?;
         }
 
-        builder.add_protocol_route::<bredr::ProfileTestMarker>(
+        let _ = builder.add_protocol_route::<bredr::ProfileTestMarker>(
             RouteEndpoint::component(&server_moniker),
             vec![RouteEndpoint::component(mock_piconet_member_name.clone())],
         )?;
 
-        builder.add_protocol_route::<LogSinkMarker>(
+        let _ = builder.add_protocol_route::<LogSinkMarker>(
             RouteEndpoint::AboveRoot,
             vec![
                 RouteEndpoint::component(spec.name.to_string()),
@@ -367,7 +367,7 @@ async fn add_profile_to_topology<'a>(
         )?;
 
         for route in additional_capabilities {
-            builder.add_route(route)?;
+            let _ = builder.add_route(route)?;
         }
     }
     Ok(())
@@ -420,13 +420,13 @@ async fn add_mock_piconet_member<'a, 'b>(
         )?;
 
         if mock.rfcomm_url.is_some() {
-            builder.add_route(CapabilityRoute {
+            let _ = builder.add_route(CapabilityRoute {
                 capability: Capability::protocol(profile_path),
                 source: RouteEndpoint::component(mock.name.clone()),
                 targets: vec![RouteEndpoint::component(rfcomm_moniker.clone())],
             })?;
         } else {
-            builder.add_route(CapabilityRoute {
+            let _ = builder.add_route(CapabilityRoute {
                 capability: Capability::protocol(profile_path),
                 source: RouteEndpoint::component(mock.name.to_string()),
                 targets: vec![RouteEndpoint::AboveRoot],
@@ -485,7 +485,7 @@ async fn piconet_member(
     let pro_test = handles.connect_to_service::<bredr::ProfileTestMarker>()?;
     let mut fs = ServiceFs::new();
 
-    fs.dir("svc").add_service_at(profile_svc_path, move |chan: zx::Channel| {
+    let _ = fs.dir("svc").add_service_at(profile_svc_path, move |chan: zx::Channel| {
         let profile_test = pro_test.clone();
         let observer = peer_observer.clone();
 
@@ -501,7 +501,9 @@ async fn piconet_member(
         Some(())
     });
 
-    fs.serve_connection(handles.outgoing_dir.into_channel()).expect("failed to serve service fs");
+    let _ = fs
+        .serve_connection(handles.outgoing_dir.into_channel())
+        .expect("failed to serve service fs");
     fs.collect::<()>().await;
 
     Ok(())
@@ -630,12 +632,12 @@ async fn drain_observer(mut stream: bredr::PeerObserverRequestStream) -> Result<
 async fn add_mock_piconet_server(builder: &mut RealmBuilder) -> String {
     let name = mock_piconet_server_moniker().to_string();
 
-    builder
+    let _ = builder
         .add_component(name.clone(), ComponentSource::url(MOCK_PICONET_SERVER_URL_V2))
         .await
         .expect("failed to add");
 
-    builder
+    let _ = builder
         .add_protocol_route::<LogSinkMarker>(
             RouteEndpoint::AboveRoot,
             vec![RouteEndpoint::Component(name.clone())],
@@ -650,9 +652,9 @@ async fn add_bt_rfcomm_intermediary(
     moniker: String,
     url: String,
 ) -> Result<(), Error> {
-    builder.add_eager_component(moniker.clone(), ComponentSource::url(url)).await?;
+    let _ = builder.add_eager_component(moniker.clone(), ComponentSource::url(url)).await?;
 
-    builder.add_protocol_route::<LogSinkMarker>(
+    let _ = builder.add_protocol_route::<LogSinkMarker>(
         RouteEndpoint::AboveRoot,
         vec![RouteEndpoint::Component(moniker)],
     )?;
@@ -746,7 +748,7 @@ impl PiconetHarness {
     /// piconet members.
     async fn update_routes_and_build(self) -> Result<Realm, Error> {
         let mut topology = self.builder.build();
-        log::info!(
+        tracing::info!(
             "Building test realm with profiles: {:?} and piconet members: {:?}",
             self.profiles,
             self.piconet_members
@@ -874,7 +876,7 @@ mod tests {
             .await
             .expect("failed to check realm contents");
         assert!(mps);
-        topology.create().await.expect("build failed");
+        let _ = topology.create().await.expect("build failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1119,7 +1121,7 @@ mod tests {
             .get_decl(&vec![interposer_name.clone()].into())
             .await
             .expect("interposer not found!");
-        interposer.exposes.contains(&profile_expose);
+        assert!(interposer.exposes.contains(&profile_expose));
 
         // ProfileTest is used by interposer
         let profile_test_name = CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string());

@@ -5,9 +5,9 @@
 use {
     fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier,
     fuchsia_bluetooth::{profile::Psm, types::PeerId},
-    log::warn,
     slab::Slab,
     std::collections::{HashMap, HashSet},
+    tracing::warn,
 };
 
 use crate::types::{RegisteredServiceId, ServiceRecord};
@@ -127,17 +127,17 @@ impl ServiceSet {
             // Update the set of ServiceClassIds, save the assigned handle, and store the
             // ServiceRecord.
             service_class_ids = service_class_ids.union(record.service_ids()).cloned().collect();
-            assigned_handles.insert(next);
-            entry.insert(record);
+            let _ = assigned_handles.insert(next);
+            let _ = entry.insert(record);
         }
 
         // The RegistrationHandle is the smallest handle in the (nonempty) `assigned_handles`.
         let registration_handle = assigned_handles.iter().min().cloned().expect("is nonempty");
         // Save metadata to speed up the matching process.
-        self.reg_to_svc_ids.insert(registration_handle, service_class_ids);
-        self.reg_to_service.insert(registration_handle, assigned_handles);
+        let _ = self.reg_to_svc_ids.insert(registration_handle, service_class_ids);
+        let _ = self.reg_to_service.insert(registration_handle, assigned_handles);
         new_psms.iter().for_each(|psm| {
-            self.psm_to_handle.insert(*psm, registration_handle);
+            let _ = self.psm_to_handle.insert(*psm, registration_handle);
         });
 
         Some(registration_handle)
@@ -155,7 +155,7 @@ impl ServiceSet {
         }
 
         // Update the ServiceClassProfileId cache.
-        self.reg_to_svc_ids.remove(handle);
+        let _ = self.reg_to_svc_ids.remove(handle);
 
         for svc_handle in removed.expect("just checked") {
             if self.records.contains(svc_handle) {
@@ -163,7 +163,7 @@ impl ServiceSet {
                 let removed = self.records.remove(svc_handle);
                 // Update the PSM caches.
                 removed.psms().iter().for_each(|psm| {
-                    self.psm_to_handle.remove(psm);
+                    let _ = self.psm_to_handle.remove(psm);
                 });
                 removed_services.push(removed);
             }
@@ -178,9 +178,12 @@ pub(crate) mod tests {
     use crate::profile::{build_l2cap_descriptor, tests::a2dp_service_definition};
 
     fn avrcp_service_record(psm: Psm) -> ServiceRecord {
-        let mut service_ids = HashSet::new();
-        service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
-        service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
+        let service_ids = vec![
+            ServiceClassProfileIdentifier::AvRemoteControl,
+            ServiceClassProfileIdentifier::AvRemoteControlController,
+        ]
+        .into_iter()
+        .collect();
 
         let protocol = build_l2cap_descriptor(psm).iter().map(Into::into).collect();
 
@@ -200,8 +203,8 @@ pub(crate) mod tests {
         assert_eq!(reg_handle, manager.psm_registered(psm0));
 
         // The relevant ServiceClassProfileIds should be registered for this handle.
-        let mut expected_ids = HashSet::new();
-        expected_ids.insert(ServiceClassProfileIdentifier::AudioSink);
+        let mut expected_ids: HashSet<_> =
+            vec![ServiceClassProfileIdentifier::AudioSink].into_iter().collect();
         let service_ids =
             manager.get_service_ids_for_registration_handle(&reg_handle.unwrap()).unwrap();
         assert_eq!(expected_ids, service_ids.clone());
@@ -225,8 +228,8 @@ pub(crate) mod tests {
         assert_eq!(reg_handle3, manager.psm_registered(psm3));
         assert_eq!(reg_handle3, manager.psm_registered(psm4));
 
-        expected_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
-        expected_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
+        let _ = expected_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
+        let _ = expected_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
         let service_ids = manager.get_service_ids_for_registration_handle(&reg_handle3.unwrap());
         assert!(service_ids.is_some());
         let service_ids = service_ids.unwrap();

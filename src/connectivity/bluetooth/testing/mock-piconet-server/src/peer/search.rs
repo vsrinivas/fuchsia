@@ -7,9 +7,9 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         ProtocolDescriptor, SearchResultsProxy, ServiceClassProfileIdentifier,
     },
-    log::info,
     slab::Slab,
     std::collections::{HashMap, HashSet},
+    tracing::info,
 };
 
 use crate::types::{RegisteredServiceId, ServiceRecord};
@@ -72,7 +72,7 @@ impl SearchInfo {
         );
 
         // This service has now been reported.
-        self.sent_services.insert(service_id);
+        let _ = self.sent_services.insert(service_id);
         Ok(true)
     }
 }
@@ -145,7 +145,7 @@ impl SearchSet {
     ) -> SearchHandle {
         let info = SearchInfo::new(service_uuid, attr_ids, proxy);
         let next = self.search_infos.insert(info);
-        self.search_to_handles.entry(service_uuid).or_insert(HashSet::new()).insert(next);
+        let _ = self.search_to_handles.entry(service_uuid).or_insert(HashSet::new()).insert(next);
         next
     }
 
@@ -154,10 +154,10 @@ impl SearchSet {
         if self.search_infos.contains(handle) {
             let svc_id = self.search_infos.remove(handle).service_uuid();
             if let Some(mut handles) = self.search_to_handles.remove(&svc_id) {
-                handles.remove(&handle);
+                let _ = handles.remove(&handle);
                 // If there are still handles associated with this `svc_id`, re-store them.
                 if !handles.is_empty() {
-                    self.search_to_handles.insert(svc_id, handles);
+                    let _ = self.search_to_handles.insert(svc_id, handles);
                 }
             }
             return true;
@@ -191,7 +191,7 @@ mod tests {
         let attrs = vec![0, 1, 2];
         let (proxy, _server) = create_proxy::<SearchResultsMarker>().unwrap();
         let handle = search_mgr.add(search_id, attrs, proxy);
-        expected_searches.insert(search_id);
+        let _ = expected_searches.insert(search_id);
         assert_eq!(expected_searches, search_mgr.get_active_searches());
 
         // Should be able to remove the search.
@@ -210,7 +210,7 @@ mod tests {
         let attrs1 = vec![0, 1, 2];
         let (proxy1, _server1) = create_proxy::<SearchResultsMarker>().unwrap();
         let handle1 = search_mgr.add(search_id1, attrs1, proxy1);
-        expected_searches.insert(search_id1);
+        let _ = expected_searches.insert(search_id1);
         assert_eq!(expected_searches, search_mgr.get_active_searches());
 
         // Adding another search for the same ServiceClassID is OK.
@@ -225,7 +225,7 @@ mod tests {
         let attrs3 = vec![];
         let (proxy3, _server3) = create_proxy::<SearchResultsMarker>().unwrap();
         let handle3 = search_mgr.add(search_id3, attrs3, proxy3);
-        expected_searches.insert(search_id3);
+        let _ = expected_searches.insert(search_id3);
         assert_eq!(expected_searches, search_mgr.get_active_searches());
 
         // Should be able to remove the search. There should still be one
@@ -261,7 +261,7 @@ mod tests {
         fake_record.register_service_record(handle);
 
         // Notify the search of this service.
-        search_mgr.notify_searches(&search_id1, fake_record.clone());
+        assert_eq!(1, search_mgr.notify_searches(&search_id1, fake_record.clone()));
         match exec.run_until_stalled(&mut server_fut) {
             Poll::Ready(Some(Ok(SearchResultsRequest::ServiceFound { responder, .. }))) => {
                 let _ = responder.send();
@@ -270,7 +270,7 @@ mod tests {
         }
 
         // Notify the search of the same service - shouldn't be notified.
-        search_mgr.notify_searches(&search_id1, fake_record);
+        assert_eq!(0, search_mgr.notify_searches(&search_id1, fake_record));
         assert!(exec.run_until_stalled(&mut server_fut).is_pending());
     }
 }

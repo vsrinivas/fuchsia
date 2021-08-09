@@ -16,13 +16,13 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future, Stream,
     },
-    log::info,
     parking_lot::RwLock,
     std::{
         collections::{HashMap, HashSet},
         convert::TryInto,
         sync::Arc,
     },
+    tracing::{info, warn},
 };
 
 mod search;
@@ -196,7 +196,7 @@ impl MockPeer {
                         peer_id, handle, return_code, termination_reason
                     );
                     detached.detach();
-                    observer_clone.map(|o| Self::relay_terminated(&o, url_clone));
+                    let _ = observer_clone.map(|o| Self::relay_terminated(&o, url_clone));
                     ComponentStatus::Terminated
                 }
                 ComponentControllerEvent::OnDirectoryReady { .. } => {
@@ -249,8 +249,10 @@ impl MockPeer {
         for service in &services {
             let notifs = w_search_mgr.notify_searches(id, service.clone());
             // Relay the number of searches notified to the observer.
-            for _ in 0..notifs {
-                proxy.as_ref().map(|o| Self::relay_service_found(o, service.clone()));
+            if let Some(proxy) = proxy.as_ref() {
+                for _ in 0..notifs {
+                    Self::relay_service_found(proxy, service.clone());
+                }
             }
         }
     }
@@ -276,7 +278,9 @@ impl MockPeer {
 
         let service_event_stream = proxy.take_event_stream();
 
-        self.services.insert(registration_handle, proxy);
+        if let Some(s) = self.services.insert(registration_handle, proxy) {
+            warn!("Replaced a service at {}: {:?}", registration_handle, s);
+        }
         let ids = self
             .service_mgr
             .read()
@@ -322,7 +326,7 @@ impl MockPeer {
         proxy.connected(&mut other.into(), remote.try_into()?, &mut protocol.iter_mut())?;
 
         // Notify observer relay of the connection.
-        self.observer.as_ref().map(|o| Self::relay_connected(o, other, protocol));
+        let _ = self.observer.as_ref().map(|o| Self::relay_connected(o, other, protocol));
 
         local.try_into()
     }
@@ -447,7 +451,7 @@ mod tests {
         let test_env = Arc::new(Mutex::new(TestEnvironment::new()));
         let test_env_clone = test_env.clone();
         let mut service_fs = ServiceFs::new();
-        service_fs
+        let _ = service_fs
             .add_fidl_service(move |stream| handle_profile_requests(stream, test_env.clone()));
         let env_name = format!("peer_{}", id);
         let options = EnvironmentOptions {
@@ -779,8 +783,8 @@ mod tests {
             bredr::ServiceClassProfileIdentifier::AudioSink,
         );
         pin_mut!(search1);
-        let mut expected_searches = HashSet::new();
-        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
+        let mut expected_searches: HashSet<_> =
+            vec![bredr::ServiceClassProfileIdentifier::AudioSink].into_iter().collect();
         assert_eq!(expected_searches, mock_peer.get_active_searches());
 
         // Adding a search for the same Service Class ID is OK.
@@ -797,7 +801,7 @@ mod tests {
             bredr::ServiceClassProfileIdentifier::AvRemoteControl,
         );
         pin_mut!(search3);
-        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControl);
+        let _ = expected_searches.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControl);
         assert_eq!(expected_searches, mock_peer.get_active_searches());
 
         // All three futures that listen for search termination should still be active.
@@ -813,8 +817,8 @@ mod tests {
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, services);
 
         // Only `stream1` and `stream2` correspond to searches for AudioSink.
-        expect_search_service_found(&mut exec, &mut stream1, other_peer);
-        expect_search_service_found(&mut exec, &mut stream2, other_peer);
+        let _ = expect_search_service_found(&mut exec, &mut stream1, other_peer);
+        let _ = expect_search_service_found(&mut exec, &mut stream2, other_peer);
         match exec.run_until_stalled(&mut stream3.next()) {
             Poll::Pending => {}
             x => panic!("Expected Pending but got: {:?}", x),
@@ -844,8 +848,8 @@ mod tests {
         );
         pin_mut!(search1);
 
-        let mut expected_searches = HashSet::new();
-        expected_searches.insert(bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget);
+        let expected_searches: HashSet<_> =
+            vec![bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget].into_iter().collect();
         assert_eq!(expected_searches, mock_peer.get_active_searches());
         assert!(exec.run_until_stalled(&mut search1).is_pending());
 
@@ -883,7 +887,7 @@ mod tests {
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, vec![record]);
 
         // Should be notified on the peer's search stream.
-        expect_search_service_found(&mut exec, &mut stream, remote_peer);
+        let _ = expect_search_service_found(&mut exec, &mut stream, remote_peer);
 
         // The remote peer associated with the A2DP Sink service reconnects with an identical service.
         record_clone.register_service_record(RegisteredServiceId::new(remote_peer, random_handle));
@@ -892,7 +896,7 @@ mod tests {
 
         // Even though it's an identical service, it should still be relayed to the `mock_peer`
         // because the `remote_peer` re-advertised it (e.g re-registered it).
-        expect_search_service_found(&mut exec, &mut stream, remote_peer);
+        let _ = expect_search_service_found(&mut exec, &mut stream, remote_peer);
 
         Ok(())
     }

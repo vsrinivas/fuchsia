@@ -88,7 +88,7 @@ pub struct RegisteredServiceId {
 impl RegisteredServiceId {
     pub fn new(id: PeerId, handle: ServiceHandle) -> Self {
         let mut salt = [0; 4];
-        fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        let _bytes = fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw never fails");
         Self { id, handle, salt }
     }
 
@@ -155,10 +155,10 @@ impl ServiceRecord {
         // For RFCOMM-dependent services, the PSM is typically not supplied in the protocol list
         // of the service definition.
         if is_rfcomm_protocol(&self.primary_protocol) {
-            psms.insert(Psm::RFCOMM);
+            let _ = psms.insert(Psm::RFCOMM);
         } else {
             if let Some(psm) = psm_from_protocol(&self.primary_protocol) {
-                psms.insert(psm);
+                let _ = psms.insert(psm);
             }
         }
         psms
@@ -296,10 +296,8 @@ mod tests {
     fn test_service_record() {
         let primary_psm = Psm::new(20);
         let additional_psm = Psm::new(10);
-        let mut additional = HashSet::new();
-        additional.insert(additional_psm);
-        let mut ids = HashSet::new();
-        ids.insert(bredr::ServiceClassProfileIdentifier::AudioSource);
+        let additional = vec![additional_psm].into_iter().collect();
+        let ids = vec![bredr::ServiceClassProfileIdentifier::AudioSource].into_iter().collect();
         let descs = vec![bredr::ProfileDescriptor {
             profile_id: bredr::ServiceClassProfileIdentifier::AudioSource,
             major_version: 1,
@@ -318,9 +316,7 @@ mod tests {
         assert_eq!(false, service_record.is_registered());
         assert!(service_record
             .contains_service_class_identifier(&bredr::ServiceClassProfileIdentifier::AudioSource));
-        let mut expected_psms = HashSet::new();
-        expected_psms.insert(additional_psm);
-        expected_psms.insert(primary_psm);
+        let expected_psms: HashSet<_> = vec![additional_psm, primary_psm].into_iter().collect();
         assert_eq!(expected_psms, service_record.psms());
 
         // Register the record, as ServiceManager would, by updating the unique handles.
