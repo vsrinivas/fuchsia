@@ -21,11 +21,6 @@ namespace zxdb {
 
 namespace {
 
-using debug::RegisterID;
-using debug_ipc::Register;
-using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterInfo;
-
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
 Err RegisterUnavailableErr(debug::RegisterID id) {
@@ -59,15 +54,16 @@ fxl::RefPtr<SymbolDataProvider> FrameSymbolDataProvider::GetEntryDataProvider() 
       prev_frame->GetSymbolDataProvider());
 }
 
-std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(RegisterID id) {
-  FX_DCHECK(id != RegisterID::kUnknown);
+std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(
+    debug::RegisterID id) {
+  FX_DCHECK(id != debug::RegisterID::kUnknown);
   if (!frame_)
     return containers::array_view<uint8_t>();  // Synchronously know we don't have the value.
 
-  RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FX_DCHECK(category != RegisterCategory::kNone);
+  debug_ipc::RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
+  FX_DCHECK(category != debug_ipc::RegisterCategory::kNone);
 
-  const std::vector<Register>* regs = frame_->GetRegisterCategorySync(category);
+  const std::vector<debug::RegisterValue>* regs = frame_->GetRegisterCategorySync(category);
   if (!regs)
     return std::nullopt;  // Not known synchronously.
 
@@ -75,7 +71,7 @@ std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegis
   return debug_ipc::GetRegisterData(*regs, id);
 }
 
-void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallback cb) {
+void FrameSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {
   if (!frame_) {
     // Frame deleted out from under us.
     debug::MessageLoop::Current()->PostTask(
@@ -83,12 +79,13 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
     return;
   }
 
-  RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FX_DCHECK(category != RegisterCategory::kNone);
+  debug_ipc::RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
+  FX_DCHECK(category != debug_ipc::RegisterCategory::kNone);
 
   frame_->GetRegisterCategoryAsync(
       category, false,
-      [id, cb = std::move(cb)](const Err& err, const std::vector<Register>& regs) mutable {
+      [id, cb = std::move(cb)](const Err& err,
+                               const std::vector<debug::RegisterValue>& regs) mutable {
         if (err.has_error())
           return cb(err, {});
 

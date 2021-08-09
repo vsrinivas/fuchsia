@@ -5,12 +5,13 @@
 #ifndef SRC_DEVELOPER_DEBUG_IPC_REGISTER_TEST_SUPPORT_H_
 #define SRC_DEVELOPER_DEBUG_IPC_REGISTER_TEST_SUPPORT_H_
 
-#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_value.h"
 
 namespace debug_ipc {
 
 // Creates a register with a data pattern within it. The pattern will 0x010203 ... (little-endian).
-Register CreateRegisterWithTestData(debug::RegisterID id, size_t length);
+debug::RegisterValue CreateRegisterWithTestData(debug::RegisterID id, size_t length);
 
 }  // namespace debug_ipc
 

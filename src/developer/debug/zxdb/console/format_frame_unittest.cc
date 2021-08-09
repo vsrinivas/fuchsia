@@ -93,7 +93,7 @@ TEST_F(FormatFrameTest, FormatStack) {
 
 TEST_F(FormatFrameTest, Unsymbolized) {
   MockFrame frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678), 0x567890, 0,
-                  std::vector<debug_ipc::Register>(), 0xdeadbeef);
+                  std::vector<debug::RegisterValue>(), 0xdeadbeef);
 
   // Short format just prints the address.
   FormatFrameOptions simple_opts;
@@ -123,7 +123,7 @@ TEST_F(FormatFrameTest, Inline) {
 
   MockFrame inline_frame(
       nullptr, nullptr, Location(0x12345678, FileLine("file.cc", 22), 0, symbol_context, function),
-      0x567890, 0, std::vector<debug_ipc::Register>(), 0xdeadbeef, &physical_frame);
+      0x567890, 0, std::vector<debug::RegisterValue>(), 0xdeadbeef, &physical_frame);
 
   FormatFrameOptions simple_opts;
   simple_opts.detail = FormatFrameOptions::kSimple;

@@ -376,14 +376,14 @@ struct ReadRegistersRequest {
 };
 
 struct ReadRegistersReply {
-  std::vector<debug_ipc::Register> registers;
+  std::vector<debug::RegisterValue> registers;
 };
 
 // WriteRegisters --------------------------------------------------------------
 
 struct WriteRegistersRequest {
   ProcessThreadId id;
-  std::vector<debug_ipc::Register> registers;
+  std::vector<debug::RegisterValue> registers;
 };
 
 struct WriteRegistersReply {
@@ -393,7 +393,7 @@ struct WriteRegistersReply {
   //
   // This allows clients to validate that the change actually took effect. All known registers
   // from all categories changed by the write request will be sent.
-  std::vector<debug_ipc::Register> registers;
+  std::vector<debug::RegisterValue> registers;
 };
 
 // Agent Config ----------------------------------------------------------------

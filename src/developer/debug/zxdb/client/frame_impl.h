@@ -34,11 +34,11 @@ class FrameImpl final : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+  const std::vector<debug::RegisterValue>* GetRegisterCategorySync(
       debug_ipc::RegisterCategory category) const override;
   void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category, bool always_request,
-      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
+      fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) override;
   void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
@@ -64,7 +64,7 @@ class FrameImpl final : public Frame {
 
   // Updates the given cached registers. If a register category is represented here, the array will
   // contain all known registers from that category so entire categories can be overwritten.
-  void SaveRegisterUpdates(std::vector<debug_ipc::Register> regs);
+  void SaveRegisterUpdates(std::vector<debug::RegisterValue> regs);
 
   Thread* thread_;
 
@@ -72,7 +72,7 @@ class FrameImpl final : public Frame {
   uint64_t cfa_;
 
   // Currently cached registers, indexed by register category.
-  std::optional<std::vector<debug_ipc::Register>>
+  std::optional<std::vector<debug::RegisterValue>>
       registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
 
   mutable Location location_;                                          // Lazily symbolized.

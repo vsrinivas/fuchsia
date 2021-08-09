@@ -61,13 +61,13 @@ bool Deserialize(MessageReader* reader, ProcessThreadId* ids) {
   return reader->ReadUint64(&ids->thread);
 }
 
-void Serialize(const Register& reg, MessageWriter* writer) {
+void Serialize(const debug::RegisterValue& reg, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
   writer->WriteUint32(static_cast<uint32_t>(reg.data.size()));
   writer->WriteBytes(reg.data.data(), static_cast<uint32_t>(reg.data.size()));
 }
 
-bool Deserialize(MessageReader* reader, Register* reg) {
+bool Deserialize(MessageReader* reader, debug::RegisterValue* reg) {
   if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&reg->id)))
     return false;
   uint32_t length;

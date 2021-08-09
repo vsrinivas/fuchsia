@@ -91,7 +91,7 @@ std::vector<debug_ipc::StackFrame> ConvertFrames(const std::vector<unwinder::Fra
   std::vector<debug_ipc::StackFrame> res;
 
   for (const unwinder::Frame& frame : frames) {
-    std::vector<debug_ipc::Register> frame_regs;
+    std::vector<debug::RegisterValue> frame_regs;
     uint64_t ip = 0;
     uint64_t sp = 0;
     frame.regs.GetSP(sp);

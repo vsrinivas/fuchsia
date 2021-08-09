@@ -10,12 +10,8 @@
 #include <optional>
 #include <vector>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/register_id.h"
-
-namespace debug_ipc {
-struct Register;
-}
+#include "src/developer/debug/shared/register_value.h"
 
 namespace debug_agent {
 
@@ -44,7 +40,7 @@ class GeneralRegisters {
 #endif
 
   // Appends the current general registers to the given high-level register record.
-  void CopyTo(std::vector<debug_ipc::Register>& dest) const;
+  void CopyTo(std::vector<debug::RegisterValue>& dest) const;
 
   zx_thread_state_general_regs& GetNativeRegisters() { return regs_; }
   const zx_thread_state_general_regs& GetNativeRegisters() const { return regs_; }

@@ -18,7 +18,6 @@
 #include "src/lib/fxl/strings/string_printf.h"
 
 using debug::RegisterID;
-using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 
 namespace zxdb {
@@ -33,7 +32,8 @@ TextForegroundColor GetRowColor(size_t table_len) {
 
 // General registers -------------------------------------------------------------------------------
 
-std::vector<OutputBuffer> DescribeCPSR(const Register& cpsr, TextForegroundColor color) {
+std::vector<OutputBuffer> DescribeCPSR(const debug::RegisterValue& cpsr,
+                                       TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(debug_ipc::RegisterIDToString(cpsr.id), color);
 
@@ -51,7 +51,8 @@ std::vector<OutputBuffer> DescribeCPSR(const Register& cpsr, TextForegroundColor
   return result;
 }
 
-std::vector<OutputBuffer> DescribeCPSRExtended(const Register& cpsr, TextForegroundColor color) {
+std::vector<OutputBuffer> DescribeCPSRExtended(const debug::RegisterValue& cpsr,
+                                               TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.reserve(3);
   result.emplace_back(OutputBuffer());
@@ -71,10 +72,10 @@ std::vector<OutputBuffer> DescribeCPSRExtended(const Register& cpsr, TextForegro
 }
 
 void FormatGeneralRegisters(const FormatRegisterOptions& options,
-                            const std::vector<Register>& registers, OutputBuffer* out) {
+                            const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
 
-  for (const Register& reg : registers) {
+  for (const debug::RegisterValue& reg : registers) {
     auto color = GetRowColor(rows.size());
     if (reg.id == RegisterID::kARMv8_cpsr) {
       rows.push_back(DescribeCPSR(reg, color));
@@ -95,7 +96,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 
 // DBGBCR ------------------------------------------------------------------------------------------
 
-std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor color) {
+std::vector<OutputBuffer> FormatDBGBCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
   row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
@@ -112,7 +113,7 @@ std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor 
   return row;
 }
 
-std::vector<OutputBuffer> FormatDBGWCR(const Register& reg, TextForegroundColor color) {
+std::vector<OutputBuffer> FormatDBGWCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
   row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
@@ -132,7 +133,8 @@ std::vector<OutputBuffer> FormatDBGWCR(const Register& reg, TextForegroundColor 
 
 // ID_AA64DFR0_EL1 ---------------------------------------------------------------------------------
 
-std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg, TextForegroundColor color) {
+std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const debug::RegisterValue& reg,
+                                               TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
   row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
@@ -155,7 +157,7 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const Register& reg, TextForegrou
 
 // MDSCR -------------------------------------------------------------------------------------------
 
-std::vector<OutputBuffer> FormatMDSCR(const Register& reg, TextForegroundColor color) {
+std::vector<OutputBuffer> FormatMDSCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
   row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
@@ -180,10 +182,10 @@ std::vector<OutputBuffer> FormatMDSCR(const Register& reg, TextForegroundColor c
 }
 
 void FormatDebugRegisters(const FormatRegisterOptions& options,
-                          const std::vector<Register>& registers, OutputBuffer* out) {
+                          const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
 
-  for (const Register& reg : registers) {
+  for (const debug::RegisterValue& reg : registers) {
     auto color = GetRowColor(rows.size() + 1);
     switch (reg.id) {
       case RegisterID::kARMv8_dbgbcr0_el1:
@@ -244,7 +246,7 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 }  // namespace
 
 bool FormatCategoryARM64(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
-                         const std::vector<Register>& registers, OutputBuffer* out) {
+                         const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   switch (category) {
     case RegisterCategory::kGeneral:
       FormatGeneralRegisters(options, registers, out);

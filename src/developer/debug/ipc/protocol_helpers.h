@@ -39,8 +39,8 @@ bool Deserialize(MessageReader* reader, ProcessThreadId* ids);
 
 // Aggregate types that are serialized in both directions (otherwise the
 // implementations would go into the client-/agent-specific file).
-void Serialize(const Register& reg, MessageWriter* writer);
-bool Deserialize(MessageReader* reader, Register* reg);
+void Serialize(const debug::RegisterValue& reg, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, debug::RegisterValue* reg);
 
 void Serialize(RegisterCategory type, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat);

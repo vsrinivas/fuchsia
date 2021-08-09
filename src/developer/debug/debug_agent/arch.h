@@ -54,31 +54,31 @@ uint32_t GetHardwareWatchpointCount();
 
 // Converts the given register structure to a vector of debug_ipc registers.
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                     std::vector<debug_ipc::Register>& out);
+                     std::vector<debug::RegisterValue>& out);
 
 // The registers in the given category are appended to the given output vector.
 zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
-                          std::vector<debug_ipc::Register>& out);
+                          std::vector<debug::RegisterValue>& out);
 
 // The registers must all be in the same category.
 zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& cat,
-                           const std::vector<debug_ipc::Register>& registers);
+                           const std::vector<debug::RegisterValue>& registers);
 
 // Given the current register value in |regs|, applies to it the new updated values for the
 // registers listed in |updates|.
-zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& updates,
+zx_status_t WriteGeneralRegisters(const std::vector<debug::RegisterValue>& updates,
                                   zx_thread_state_general_regs_t* regs);
-zx_status_t WriteFloatingPointRegisters(const std::vector<debug_ipc::Register>& update,
+zx_status_t WriteFloatingPointRegisters(const std::vector<debug::RegisterValue>& update,
                                         zx_thread_state_fp_regs_t* regs);
-zx_status_t WriteVectorRegisters(const std::vector<debug_ipc::Register>& update,
+zx_status_t WriteVectorRegisters(const std::vector<debug::RegisterValue>& update,
                                  zx_thread_state_vector_regs_t* regs);
-zx_status_t WriteDebugRegisters(const std::vector<debug_ipc::Register>& update,
+zx_status_t WriteDebugRegisters(const std::vector<debug::RegisterValue>& update,
                                 zx_thread_state_debug_regs_t* regs);
 
 // Writes the register data to the given output variable, checking that the register data is
 // the same size as the output.
 template <typename RegType>
-zx_status_t WriteRegisterValue(const debug_ipc::Register& reg, RegType* dest) {
+zx_status_t WriteRegisterValue(const debug::RegisterValue& reg, RegType* dest) {
   if (reg.data.size() != sizeof(RegType))
     return ZX_ERR_INVALID_ARGS;
   memcpy(dest, reg.data.data(), sizeof(RegType));

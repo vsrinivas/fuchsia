@@ -34,14 +34,14 @@ std::vector<uint8_t> CreateData(size_t length, size_t val_loop) {
   return data;
 }
 
-debug_ipc::Register CreateRegister(RegisterID id, size_t length, size_t val_loop) {
-  debug_ipc::Register reg;
+debug::RegisterValue CreateRegister(RegisterID id, size_t length, size_t val_loop) {
+  debug::RegisterValue reg;
   reg.id = id;
   reg.data = CreateData(length, val_loop);
   return reg;
 }
 
-void SetRegisterValue(Register* reg, uint64_t value) {
+void SetRegisterValue(debug::RegisterValue* reg, uint64_t value) {
   std::vector<uint8_t> data;
   data.reserve(8);
   uint8_t* ptr = reinterpret_cast<uint8_t*>(&value);
@@ -50,13 +50,13 @@ void SetRegisterValue(Register* reg, uint64_t value) {
   reg->data = data;
 }
 
-Register CreateRegisterWithValue(RegisterID id, uint64_t value) {
-  Register reg(CreateRegister(id, 8, 8));
+debug::RegisterValue CreateRegisterWithValue(RegisterID id, uint64_t value) {
+  debug::RegisterValue reg(CreateRegister(id, 8, 8));
   SetRegisterValue(&reg, value);
   return reg;
 }
 
-void FillGeneralRegisters(std::vector<Register>* out) {
+void FillGeneralRegisters(std::vector<debug::RegisterValue>* out) {
   out->push_back(CreateRegister(RegisterID::kX64_rax, 8, 1));
   out->push_back(CreateRegister(RegisterID::kX64_rcx, 8, 4));
   out->push_back(CreateRegister(RegisterID::kX64_rdx, 8, 8));
@@ -64,7 +64,7 @@ void FillGeneralRegisters(std::vector<Register>* out) {
   out->push_back(CreateRegister(RegisterID::kX64_rbx, 8, 2));
 }
 
-void FillFloatingPointRegisters(std::vector<Register>* out) {
+void FillFloatingPointRegisters(std::vector<debug::RegisterValue>* out) {
   out->push_back(CreateRegister(RegisterID::kX64_st0, 16, 4));
   out->push_back(CreateRegister(RegisterID::kX64_st1, 16, 4));
   // Invalid
@@ -76,7 +76,7 @@ void FillFloatingPointRegisters(std::vector<Register>* out) {
     reg.data[i] = 0;
 }
 
-void FillVectorRegisters(std::vector<Register>* out) {
+void FillVectorRegisters(std::vector<debug::RegisterValue>* out) {
   out->push_back(CreateRegister(RegisterID::kX64_xmm1, 16, 2));
   out->push_back(CreateRegister(RegisterID::kX64_xmm2, 16, 4));
   out->push_back(CreateRegister(RegisterID::kX64_xmm3, 16, 8));
@@ -88,14 +88,14 @@ void FillVectorRegisters(std::vector<Register>* out) {
 }  // namespace
 
 TEST(FormatRegisters, GeneralRegisters) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   FillGeneralRegisters(&registers);
 
   FormatRegisterOptions options;
   options.arch = debug::Arch::kX64;
 
   // Force rcx to -2 to test negative integer formatting.
-  Register& rcx = registers[1];
+  debug::RegisterValue& rcx = registers[1];
   EXPECT_EQ(RegisterID::kX64_rcx, rcx.id);
   SetRegisterValue(&rcx, static_cast<uint64_t>(-2));
 
@@ -110,7 +110,7 @@ TEST(FormatRegisters, GeneralRegisters) {
 }
 
 TEST(FormatRegisters, VectorRegistersARM) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
 
   registers.emplace_back(RegisterID::kARMv8_v5,
                          std::vector<uint8_t>{0xd0, 0x0f, 0x49, 0x40});  // = 3.14159 in float.
@@ -172,7 +172,7 @@ TEST(FormatRegisters, VectorRegistersARM) {
 
 TEST(FormatRegisters, VectorRegistersX64) {
   // Add a zmm register. This should be converted to a ymm register.
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
 
   registers.emplace_back(RegisterID::kX64_zmm0,
                          std::vector<uint8_t>{0xd0, 0x0f, 0x49, 0x40});  // = 3.14159 in float.
@@ -206,7 +206,7 @@ TEST(FormatRegisters, VectorRegistersX64) {
 }
 
 TEST(FormatRegisters, AllRegisters) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   FillGeneralRegisters(&registers);
   FillFloatingPointRegisters(&registers);
   FillVectorRegisters(&registers);
@@ -246,7 +246,7 @@ TEST(FormatRegisters, AllRegisters) {
 }
 
 TEST(FormatRegisters, WithRflags) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   FillGeneralRegisters(&registers);
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
 
@@ -266,7 +266,7 @@ TEST(FormatRegisters, WithRflags) {
 }
 
 TEST(FormatRegisters, RFlagsValues) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
   SetRegisterValue(&registers.back(), X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
                                           X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
@@ -284,7 +284,7 @@ TEST(FormatRegisters, RFlagsValues) {
 }
 
 TEST(FormatRegisters, RFlagsValuesExtended) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_rflags, 0));
   SetRegisterValue(&registers.back(), X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
                                           X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
@@ -309,7 +309,7 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
 }
 
 TEST(FormatRegisters, CPSRValues) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_cpsr, 0));
   SetRegisterValue(&registers.back(), ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N));
 
@@ -339,7 +339,7 @@ TEST(FormatRegisters, CPSRValues) {
 }
 
 TEST(FormatRegisters, DebugRegisters_x86) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr0, 0x1234));
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr1, 0x1234567));
   registers.push_back(CreateRegisterWithValue(RegisterID::kX64_dr2, 0x123456789ab));
@@ -365,7 +365,7 @@ TEST(FormatRegisters, DebugRegisters_x86) {
 }
 
 TEST(FormatRegisters, DebugRegisters_arm64) {
-  std::vector<Register> registers;
+  std::vector<debug::RegisterValue> registers;
   registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_dbgbcr0_el1,
       ARM64_FLAG_MASK(DBGBCR, PMC) | ARM64_FLAG_MASK(DBGBCR, HMC) | ARM64_FLAG_MASK(DBGBCR, LBN)));

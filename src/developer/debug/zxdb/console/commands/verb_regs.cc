@@ -118,7 +118,7 @@ constexpr int kRegsVectorSwitch = 4;
 constexpr int kRegsDebugSwitch = 5;
 constexpr int kRegsExtendedSwitch = 6;
 
-void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& registers,
+void OnRegsComplete(const Err& cmd_err, const std::vector<debug::RegisterValue>& registers,
                     const FormatRegisterOptions& options, bool top_stack_frame) {
   Console* console = Console::get();
   if (cmd_err.has_error()) {
@@ -157,7 +157,7 @@ void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& 
 // of how many callbacks are remaining.
 struct RegisterCollector {
   Err err;  // Most recent error from all callbacks, if any.
-  std::vector<debug_ipc::Register> registers;
+  std::vector<debug::RegisterValue> registers;
   int remaining_callbacks = 0;
 
   // Parameters to OnRegsComplete().
@@ -221,7 +221,7 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
     for (auto category : category_set) {
       cmd.frame()->GetRegisterCategoryAsync(
           category, true,
-          [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
+          [collector](const Err& err, const std::vector<debug::RegisterValue>& new_regs) {
             // Save the new registers.
             collector->registers.insert(collector->registers.end(), new_regs.begin(),
                                         new_regs.end());

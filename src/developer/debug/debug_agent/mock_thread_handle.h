@@ -28,7 +28,7 @@ class MockThreadHandle final : public ThreadHandle {
 
   // Sets the values to be returned for the given register category query.
   void SetRegisterCategory(debug_ipc::RegisterCategory cat,
-                           std::vector<debug_ipc::Register> values);
+                           std::vector<debug::RegisterValue> values);
 
   // Sets the information to return for the next watchpoint set.
   void set_watchpoint_range_to_return(debug::AddressRange r) { watchpoint_range_to_return_ = r; }
@@ -72,10 +72,10 @@ class MockThreadHandle final : public ThreadHandle {
   std::optional<DebugRegisters> GetDebugRegisters() const override;
   bool SetDebugRegisters(const DebugRegisters& regs) override;
   void SetSingleStep(bool single_step) override;
-  std::vector<debug_ipc::Register> ReadRegisters(
+  std::vector<debug::RegisterValue> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
-  std::vector<debug_ipc::Register> WriteRegisters(
-      const std::vector<debug_ipc::Register>& regs) override;
+  std::vector<debug::RegisterValue> WriteRegisters(
+      const std::vector<debug::RegisterValue>& regs) override;
   bool InstallHWBreakpoint(uint64_t address) override;
   bool UninstallHWBreakpoint(uint64_t address) override;
   std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,
@@ -90,7 +90,7 @@ class MockThreadHandle final : public ThreadHandle {
   zx_koid_t thread_koid_;
   std::string name_;
 
-  std::vector<debug_ipc::Register>
+  std::vector<debug::RegisterValue>
       registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
 
   State state_;

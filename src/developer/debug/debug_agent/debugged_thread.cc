@@ -466,14 +466,14 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
   return record;
 }
 
-std::vector<debug_ipc::Register> DebuggedThread::ReadRegisters(
+std::vector<debug::RegisterValue> DebuggedThread::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
   return thread_handle_->ReadRegisters(cats_to_get);
 }
 
-std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
-    const std::vector<debug_ipc::Register>& regs) {
-  std::vector<debug_ipc::Register> written = thread_handle_->WriteRegisters(regs);
+std::vector<debug::RegisterValue> DebuggedThread::WriteRegisters(
+    const std::vector<debug::RegisterValue>& regs) {
+  std::vector<debug::RegisterValue> written = thread_handle_->WriteRegisters(regs);
 
   // If we're updating the instruction pointer directly, current state is no longer valid.
   // Specifically, if we're currently on a breakpoint, we have to now know the fact that we're no
@@ -484,7 +484,7 @@ std::vector<debug_ipc::Register> DebuggedThread::WriteRegisters(
   bool rip_change = false;
   debug::RegisterID rip_id =
       GetSpecialRegisterID(arch::GetCurrentArch(), debug_ipc::SpecialRegisterType::kIP);
-  for (const debug_ipc::Register& reg : regs) {
+  for (const debug::RegisterValue& reg : regs) {
     if (reg.id == rip_id) {
       rip_change = true;
       break;

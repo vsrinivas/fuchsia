@@ -14,6 +14,7 @@
 #include "src/developer/debug/ipc/automation_instruction.h"
 #include "src/developer/debug/shared/address_range.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_value.h"
 
 namespace debug_ipc {
 
@@ -144,52 +145,9 @@ struct ProcessTreeRecord {
   std::vector<ProcessTreeRecord> children;
 };
 
-// Value representing a particular register.
-struct Register {
-  Register() = default;
-  Register(debug::RegisterID rid, std::vector<uint8_t> d) : id(rid), data(std::move(d)) {}
-
-  // Constructs from a size and a pointed-to data buffer in machine-endianness.
-  Register(debug::RegisterID rid, size_t byte_size, const void* bytes) : id(rid) {
-    data.resize(byte_size);
-    memcpy(data.data(), bytes, byte_size);
-  }
-
-  // Constructs a sized value for the current platform.
-  Register(debug::RegisterID rid, uint64_t val) : id(rid) {
-    data.resize(sizeof(val));
-    memcpy(data.data(), &val, sizeof(val));
-  }
-  Register(debug::RegisterID rid, uint32_t val) : id(rid) {
-    data.resize(sizeof(val));
-    memcpy(data.data(), &val, sizeof(val));
-  }
-  Register(debug::RegisterID rid, uint16_t val) : id(rid) {
-    data.resize(sizeof(val));
-    memcpy(data.data(), &val, sizeof(val));
-  }
-  Register(debug::RegisterID rid, uint8_t val) : id(rid) {
-    data.resize(sizeof(val));
-    memcpy(data.data(), &val, sizeof(val));
-  }
-
-  // Retrieves the low up-to-128 bits of the register value as a number.
-  __int128 GetValue() const;
-
-  // Comparisons (primarily for tests).
-  bool operator==(const Register& other) const { return id == other.id && data == other.data; }
-  bool operator!=(const Register& other) const { return !operator==(other); }
-
-  debug::RegisterID id = debug::RegisterID::kUnknown;
-
-  // This data is stored in the architecture's native endianness
-  // (eg. the result of running memcpy over the data).
-  std::vector<uint8_t> data;
-};
-
 struct StackFrame {
   StackFrame() = default;
-  StackFrame(uint64_t ip, uint64_t sp, uint64_t cfa = 0, std::vector<Register> r = {})
+  StackFrame(uint64_t ip, uint64_t sp, uint64_t cfa = 0, std::vector<debug::RegisterValue> r = {})
       : ip(ip), sp(sp), cfa(cfa), regs(std::move(r)) {}
 
   // Comparisons (primarily for tests).
@@ -213,7 +171,7 @@ struct StackFrame {
   //
   // Every frame should contain the register for the IP and SP for the current
   // architecture (duplicating the above two fields).
-  std::vector<Register> regs;
+  std::vector<debug::RegisterValue> regs;
 };
 
 struct ThreadRecord {

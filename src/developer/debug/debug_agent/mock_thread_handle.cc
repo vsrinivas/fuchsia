@@ -20,7 +20,7 @@ MockThreadHandle::MockThreadHandle(zx_koid_t thread_koid, std::string name)
 }
 
 void MockThreadHandle::SetRegisterCategory(debug_ipc::RegisterCategory cat,
-                                           std::vector<debug_ipc::Register> values) {
+                                           std::vector<debug::RegisterValue> values) {
   FX_CHECK(static_cast<size_t>(cat) < std::size(registers_));
   registers_[static_cast<size_t>(cat)] = std::move(values);
 }
@@ -120,9 +120,9 @@ bool MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
 
 void MockThreadHandle::SetSingleStep(bool single_step) { single_step_ = single_step; }
 
-std::vector<debug_ipc::Register> MockThreadHandle::ReadRegisters(
+std::vector<debug::RegisterValue> MockThreadHandle::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
-  std::vector<debug_ipc::Register> result;
+  std::vector<debug::RegisterValue> result;
   for (const auto cat : cats_to_get) {
     FX_CHECK(static_cast<size_t>(cat) < std::size(registers_));
 
@@ -133,8 +133,8 @@ std::vector<debug_ipc::Register> MockThreadHandle::ReadRegisters(
   return result;
 }
 
-std::vector<debug_ipc::Register> MockThreadHandle::WriteRegisters(
-    const std::vector<debug_ipc::Register>& regs) {
+std::vector<debug::RegisterValue> MockThreadHandle::WriteRegisters(
+    const std::vector<debug::RegisterValue>& regs) {
   // Return the same values as the input to pretend the write succeeded.
   return regs;
 }

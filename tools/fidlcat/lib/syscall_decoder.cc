@@ -38,7 +38,7 @@ T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
   return ret;
 }
 
-uint64_t GetRegisterValue(const std::vector<debug_ipc::Register>& general_registers,
+uint64_t GetRegisterValue(const std::vector<debug::RegisterValue>& general_registers,
                           const debug::RegisterID register_id) {
   for (const auto& reg : general_registers) {
     if (reg.id == register_id) {
@@ -166,7 +166,7 @@ void SyscallDecoder::DoDecode() {
     const zxdb::Frame* caller = stack[i];
     caller_locations_.push_back(caller->GetLocation());
   }
-  const std::vector<debug_ipc::Register>* general_registers =
+  const std::vector<debug::RegisterValue>* general_registers =
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
@@ -355,7 +355,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
     Destroy();
     return;
   }
-  const std::vector<debug_ipc::Register>* general_registers =
+  const std::vector<debug::RegisterValue>* general_registers =
       thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 

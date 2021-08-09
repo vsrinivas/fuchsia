@@ -23,7 +23,6 @@
 
 namespace zxdb {
 
-using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 
 FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, Location location)
@@ -51,7 +50,8 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory category) const {
+const std::vector<debug::RegisterValue>* FrameImpl::GetRegisterCategorySync(
+    RegisterCategory category) const {
   FX_DCHECK(category <= RegisterCategory::kLast);
 
   size_t category_index = static_cast<size_t>(category);
@@ -64,7 +64,7 @@ const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory
 
 void FrameImpl::GetRegisterCategoryAsync(
     RegisterCategory category, bool always_request,
-    fit::function<void(const Err&, const std::vector<Register>&)> cb) {
+    fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) {
   FX_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
 
   size_t category_index = static_cast<size_t>(category);
@@ -283,8 +283,8 @@ bool FrameImpl::EnsureBasePointer() {
   return eval_result == DwarfExprEval::Completion::kSync;
 }
 
-void FrameImpl::SaveRegisterUpdates(std::vector<Register> regs) {
-  std::map<RegisterCategory, std::vector<Register>> categorized;
+void FrameImpl::SaveRegisterUpdates(std::vector<debug::RegisterValue> regs) {
+  std::map<RegisterCategory, std::vector<debug::RegisterValue>> categorized;
   for (auto& reg : regs) {
     RegisterCategory cat = debug_ipc::RegisterIDToCategory(reg.id);
     FX_DCHECK(cat != RegisterCategory::kNone);

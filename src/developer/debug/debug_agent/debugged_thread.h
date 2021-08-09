@@ -119,9 +119,9 @@ class DebuggedThread {
 
   // Register reading and writing. The "write" command also returns the contents of the register
   // categories written do.
-  std::vector<debug_ipc::Register> ReadRegisters(
+  std::vector<debug::RegisterValue> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const;
-  std::vector<debug_ipc::Register> WriteRegisters(const std::vector<debug_ipc::Register>& regs);
+  std::vector<debug::RegisterValue> WriteRegisters(const std::vector<debug::RegisterValue>& regs);
 
   // Sends a notification to the client about the state of this thread.
   void SendThreadNotification() const;

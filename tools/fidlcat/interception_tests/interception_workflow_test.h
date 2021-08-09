@@ -152,15 +152,15 @@ class DataForSyscallTest {
   }
 
   void PopulateRegister(debug::RegisterID register_id, uint64_t value,
-                        std::vector<debug_ipc::Register>* registers) {
-    debug_ipc::Register& reg = registers->emplace_back();
+                        std::vector<debug::RegisterValue>* registers) {
+    debug::RegisterValue& reg = registers->emplace_back();
     reg.id = register_id;
     for (int i = 0; i < 64; i += 8) {
       reg.data.push_back((value >> i) & 0xff);
     }
   }
 
-  void PopulateRegisters(uint64_t process_koid, std::vector<debug_ipc::Register>* registers) {
+  void PopulateRegisters(uint64_t process_koid, std::vector<debug::RegisterValue>* registers) {
     if (syscall_ != nullptr) {
       if (stepped_processes_.find(process_koid) == stepped_processes_.end()) {
         size_t count = std::min(param_regs_->size(), syscall_->inputs().size());

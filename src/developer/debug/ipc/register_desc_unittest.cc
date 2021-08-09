@@ -415,7 +415,7 @@ TEST(RegisterIDToString, Registers) {
 
 TEST(RegisterDesc, GetRegisterData) {
   // Searching in empty list.
-  std::vector<Register> register_list;
+  std::vector<debug::RegisterValue> register_list;
   EXPECT_TRUE(GetRegisterData(register_list, RegisterID::kX64_rax).empty());
 
   // Search not found.

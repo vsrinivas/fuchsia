@@ -68,7 +68,7 @@ class MockRemoteAPIForRegister : public MockRemoteAPI {
 
  private:
   std::vector<debug_ipc::ReadRegistersRequest> reads_;
-  std::vector<debug_ipc::Register> registers_to_return_;
+  std::vector<debug::RegisterValue> registers_to_return_;
 };
 
 class FrameImplRegisterTest : public RemoteAPITest {
@@ -98,7 +98,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
 
   // Provide a value for rax (DWARF reg 0) which will be used below.
   constexpr uint64_t kAddress = 0x86124309723;
-  std::vector<debug_ipc::Register> frame_regs;
+  std::vector<debug::RegisterValue> frame_regs;
   frame_regs.emplace_back(RegisterID::kX64_rax, kAddress);
 
   const debug_ipc::StackFrame stack(0x12345678, 0x7890, 0, frame_regs);
@@ -181,7 +181,7 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
   ASSERT_TRUE(called);
 
   // The new values should be available for synchronous calling.
-  const std::vector<debug_ipc::Register>* out_regs =
+  const std::vector<debug::RegisterValue>* out_regs =
       frame->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
   ASSERT_TRUE(out_regs);
 
@@ -215,7 +215,7 @@ TEST_F(FrameImplRegisterTest, AlwaysRequest) {
     bool called = false;
     frame->GetRegisterCategoryAsync(
         debug_ipc::RegisterCategory::kGeneral, false,
-        [&called](const Err& err, const std::vector<debug_ipc::Register>& registers) {
+        [&called](const Err& err, const std::vector<debug::RegisterValue>& registers) {
           called = true;
         });
     loop().RunUntilNoTasks();
@@ -231,10 +231,10 @@ TEST_F(FrameImplRegisterTest, AlwaysRequest) {
 
   {
     bool called = false;
-    std::vector<debug_ipc::Register> registers;
+    std::vector<debug::RegisterValue> registers;
     frame->GetRegisterCategoryAsync(
         debug_ipc::RegisterCategory::kGeneral, true,
-        [&called, &registers](const Err& err, const std::vector<debug_ipc::Register>& regs) {
+        [&called, &registers](const Err& err, const std::vector<debug::RegisterValue>& regs) {
           called = true;
           registers = std::move(regs);
         });

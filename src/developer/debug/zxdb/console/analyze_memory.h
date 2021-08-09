@@ -13,13 +13,10 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_value.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-
-namespace debug_ipc {
-struct Register;
-}
 
 namespace zxdb {
 
@@ -96,7 +93,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   void IssueError(const Err& err);
 
   // Saves the registers for the given frame index.
-  void AddRegisters(int frame_no, const std::vector<debug_ipc::Register>& regs);
+  void AddRegisters(int frame_no, const std::vector<debug::RegisterValue>& regs);
 
   // Adds to the annotations map the given description for the given address. If there is already an
   // annotation at that address, adds to the end.

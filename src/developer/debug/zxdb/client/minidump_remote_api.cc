@@ -19,7 +19,6 @@
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 
 using debug::RegisterID;
-using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 
 namespace zxdb {
@@ -89,7 +88,8 @@ void Succeed(fit::callback<void(const Err&, ReplyType)> cb, ReplyType r) {
 }
 
 template <typename ValueType>
-void AddReg(debug::RegisterID id, const ValueType& value, std::vector<Register>* output) {
+void AddReg(debug::RegisterID id, const ValueType& value,
+            std::vector<debug::RegisterValue>* output) {
   auto& reg = output->emplace_back();
   reg.id = id;
   reg.data.resize(sizeof(ValueType));
@@ -97,7 +97,7 @@ void AddReg(debug::RegisterID id, const ValueType& value, std::vector<Register>*
 }
 
 void PopulateRegistersARM64General(const crashpad::CPUContextARM64& ctx,
-                                   std::vector<Register>* output) {
+                                   std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kARMv8_x0, ctx.regs[0], output);
   AddReg(RegisterID::kARMv8_x1, ctx.regs[1], output);
   AddReg(RegisterID::kARMv8_x2, ctx.regs[2], output);
@@ -135,7 +135,7 @@ void PopulateRegistersARM64General(const crashpad::CPUContextARM64& ctx,
 }
 
 void PopulateRegistersARM64Vector(const crashpad::CPUContextARM64& ctx,
-                                  std::vector<Register>* output) {
+                                  std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kARMv8_fpcr, ctx.fpcr, output);
   AddReg(RegisterID::kARMv8_fpsr, ctx.fpsr, output);
   AddReg(RegisterID::kARMv8_v0, ctx.fpsimd[0], output);
@@ -184,7 +184,7 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
 }
 
 void PopulateRegistersX64General(const crashpad::CPUContextX86_64& ctx,
-                                 std::vector<Register>* output) {
+                                 std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kX64_rax, ctx.rax, output);
   AddReg(RegisterID::kX64_rbx, ctx.rbx, output);
   AddReg(RegisterID::kX64_rcx, ctx.rcx, output);
@@ -206,7 +206,7 @@ void PopulateRegistersX64General(const crashpad::CPUContextX86_64& ctx,
 }
 
 void PopulateRegistersX64Float(const crashpad::CPUContextX86_64& ctx,
-                               std::vector<Register>* output) {
+                               std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kX64_fcw, ctx.fxsave.fcw, output);
   AddReg(RegisterID::kX64_fsw, ctx.fxsave.fsw, output);
   AddReg(RegisterID::kX64_ftw, ctx.fxsave.ftw, output);
@@ -224,7 +224,7 @@ void PopulateRegistersX64Float(const crashpad::CPUContextX86_64& ctx,
 }
 
 void PopulateRegistersX64Vector(const crashpad::CPUContextX86_64& ctx,
-                                std::vector<Register>* output) {
+                                std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kX64_mxcsr, ctx.fxsave.mxcsr, output);
   AddReg(RegisterID::kX64_xmm0, ctx.fxsave.xmm[0], output);
   AddReg(RegisterID::kX64_xmm1, ctx.fxsave.xmm[1], output);
@@ -245,7 +245,7 @@ void PopulateRegistersX64Vector(const crashpad::CPUContextX86_64& ctx,
 }
 
 void PopulateRegistersX64Debug(const crashpad::CPUContextX86_64& ctx,
-                               std::vector<Register>* output) {
+                               std::vector<debug::RegisterValue>* output) {
   AddReg(RegisterID::kX64_dr0, ctx.dr0, output);
   AddReg(RegisterID::kX64_dr1, ctx.dr1, output);
   AddReg(RegisterID::kX64_dr2, ctx.dr2, output);

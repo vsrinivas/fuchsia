@@ -6,8 +6,8 @@
 
 namespace debug_ipc {
 
-Register CreateRegisterWithTestData(debug::RegisterID id, size_t length) {
-  Register reg;
+debug::RegisterValue CreateRegisterWithTestData(debug::RegisterID id, size_t length) {
+  debug::RegisterValue reg;
   reg.id = id;
 
   reg.data.reserve(length);

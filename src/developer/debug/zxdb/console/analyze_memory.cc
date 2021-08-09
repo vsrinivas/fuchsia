@@ -119,7 +119,7 @@ void MemoryAnalysis::SetStack(const Stack& stack) {
     if (i > 0 && stack[i - 1]->IsInline())
       continue;
 
-    const std::vector<debug_ipc::Register>* regs =
+    const std::vector<debug::RegisterValue>* regs =
         stack[i]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
     FX_DCHECK(regs);  // Always expect general registers to be available.
     AddRegisters(i, *regs);
@@ -225,7 +225,7 @@ void MemoryAnalysis::IssueError(const Err& err) {
   callback_ = Callback();
 }
 
-void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug_ipc::Register>& regs) {
+void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<debug::RegisterValue>& regs) {
   // Frames can have saved registers. Sometimes these will be the same as frame 0 (the current CPU
   // state). We want to make them say, e.g. "rax" if the value matches the top frame, but if the
   // current frame's register value is different, we want e.g. "frame 5's rax".

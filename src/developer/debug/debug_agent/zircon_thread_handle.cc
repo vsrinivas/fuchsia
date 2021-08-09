@@ -180,21 +180,21 @@ void ZirconThreadHandle::SetSingleStep(bool single_step) {
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
-std::vector<debug_ipc::Register> ZirconThreadHandle::ReadRegisters(
+std::vector<debug::RegisterValue> ZirconThreadHandle::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   for (const auto& cat_type : cats_to_get)
     arch::ReadRegisters(thread_, cat_type, regs);
   return regs;
 }
 
-std::vector<debug_ipc::Register> ZirconThreadHandle::WriteRegisters(
-    const std::vector<debug_ipc::Register>& regs) {
-  std::vector<debug_ipc::Register> written;
+std::vector<debug::RegisterValue> ZirconThreadHandle::WriteRegisters(
+    const std::vector<debug::RegisterValue>& regs) {
+  std::vector<debug::RegisterValue> written;
 
   // Figure out which registers will change.
-  std::map<debug_ipc::RegisterCategory, std::vector<debug_ipc::Register>> categories;
-  for (const debug_ipc::Register& reg : regs) {
+  std::map<debug_ipc::RegisterCategory, std::vector<debug::RegisterValue>> categories;
+  for (const debug::RegisterValue& reg : regs) {
     auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
     if (cat_type == debug_ipc::RegisterCategory::kNone) {
       FX_LOGS(WARNING) << "Attempting to change register without category: "

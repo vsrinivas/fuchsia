@@ -17,7 +17,7 @@ namespace debug_agent {
 namespace arch {
 
 TEST(ArchX64, WriteGeneralRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 8));
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rbx, 8));
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_r14, 8));
@@ -76,7 +76,7 @@ TEST(ArchX64, WriteGeneralRegs) {
 
 TEST(ArchX64, InvalidWriteGeneralRegs) {
   zx_thread_state_general_regs_t out;
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
 
   // Invalid length.
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 4));
@@ -88,7 +88,7 @@ TEST(ArchX64, InvalidWriteGeneralRegs) {
 }
 
 TEST(ArchX64, WriteFPRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   regs.emplace_back(debug::RegisterID::kX64_fcw, std::vector<uint8_t>{1, 2});
   regs.emplace_back(debug::RegisterID::kX64_fsw, std::vector<uint8_t>{3, 4});
   regs.emplace_back(debug::RegisterID::kX64_ftw, std::vector<uint8_t>{6});
@@ -109,7 +109,7 @@ TEST(ArchX64, WriteFPRegs) {
 }
 
 TEST(ArchX64, WriteVectorRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
 
   std::vector<uint8_t> zmm0_value;
   zmm0_value.resize(64);
@@ -150,7 +150,7 @@ TEST(ArchX64, WriteVectorRegs) {
 }
 
 TEST(ArchX64, WriteDebugRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   regs.emplace_back(debug::RegisterID::kX64_dr0, std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8});
   regs.emplace_back(debug::RegisterID::kX64_dr1, std::vector<uint8_t>{2, 3, 4, 5, 6, 7, 8, 9});
   regs.emplace_back(debug::RegisterID::kX64_dr2, std::vector<uint8_t>{3, 4, 5, 6, 7, 8, 9, 0});
@@ -174,11 +174,11 @@ TEST(ArchX64, ReadSegmentRegs) {
   zx_thread_state_general_regs_t regs_in;
   regs_in.fs_base = 0xdeadbeeff00dbabe;
   regs_in.gs_base = 0xabadd00dbeadfeed;
-  std::vector<debug_ipc::Register> regs_out;
+  std::vector<debug::RegisterValue> regs_out;
   SaveGeneralRegs(regs_in, regs_out);
 
-  const debug_ipc::Register* fs = nullptr;
-  const debug_ipc::Register* gs = nullptr;
+  const debug::RegisterValue* fs = nullptr;
+  const debug::RegisterValue* gs = nullptr;
   for (const auto& reg : regs_out) {
     if (reg.id == debug::RegisterID::kX64_fsbase) {
       fs = &reg;

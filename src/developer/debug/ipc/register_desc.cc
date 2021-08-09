@@ -726,12 +726,13 @@ RegisterCategory RegisterIDToCategory(RegisterID id) {
   return RegisterCategory::kNone;
 }
 
-containers::array_view<uint8_t> GetRegisterData(const std::vector<Register>& regs, RegisterID id) {
+containers::array_view<uint8_t> GetRegisterData(const std::vector<debug::RegisterValue>& regs,
+                                                RegisterID id) {
   const RegisterInfo* info = InfoForRegister(id);
   if (!info)
     return containers::array_view<uint8_t>();
 
-  const Register* found_canonical = nullptr;
+  const debug::RegisterValue* found_canonical = nullptr;
   for (const auto& reg : regs) {
     if (reg.id == id)
       return reg.data;  // Prefer an exact match.

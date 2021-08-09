@@ -30,7 +30,7 @@ Location MakeLocation(TargetPointer ip, const std::string& func_name, FileLine f
 }  // namespace
 
 MockFrame::MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
-                     uint64_t cfa, std::vector<debug_ipc::Register> regs, uint64_t frame_base,
+                     uint64_t cfa, std::vector<debug::RegisterValue> regs, uint64_t frame_base,
                      const Frame* physical_frame, bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
@@ -76,7 +76,7 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
 
-const std::vector<debug_ipc::Register>* MockFrame::GetRegisterCategorySync(
+const std::vector<debug::RegisterValue>* MockFrame::GetRegisterCategorySync(
     debug_ipc::RegisterCategory category) const {
   if (category == debug_ipc::RegisterCategory::kGeneral)
     return &general_registers_;
@@ -85,9 +85,9 @@ const std::vector<debug_ipc::Register>* MockFrame::GetRegisterCategorySync(
 
 void MockFrame::GetRegisterCategoryAsync(
     debug_ipc::RegisterCategory category, bool always_request,
-    fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) {
+    fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) {
   Err err;
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   if (category == debug_ipc::RegisterCategory::kGeneral)
     regs = general_registers_;
   else

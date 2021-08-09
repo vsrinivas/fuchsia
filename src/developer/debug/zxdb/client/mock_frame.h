@@ -27,7 +27,7 @@ class MockFrame : public Frame {
   // outlive this class (normally both are owned by the Stack). A null physical frame indicates that
   // this is not inline.
   MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
-            uint64_t cfa = 0, std::vector<debug_ipc::Register> regs = {}, uint64_t frame_base = 0,
+            uint64_t cfa = 0, std::vector<debug::RegisterValue> regs = {}, uint64_t frame_base = 0,
             const Frame* physical_frame = nullptr, bool is_ambiguous_inline = false);
 
   // This variant makes a location with a mock function object of the given name and the default
@@ -57,11 +57,11 @@ class MockFrame : public Frame {
   const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
-  const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+  const std::vector<debug::RegisterValue>* GetRegisterCategorySync(
       debug_ipc::RegisterCategory category) const override;
   void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category, bool always_request,
-      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
+      fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) override;
   void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override;
   std::optional<uint64_t> GetBasePointer() const override;
@@ -77,7 +77,7 @@ class MockFrame : public Frame {
 
   uint64_t sp_;
   uint64_t cfa_;
-  std::vector<debug_ipc::Register> general_registers_;
+  std::vector<debug::RegisterValue> general_registers_;
   uint64_t frame_base_;
   const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;

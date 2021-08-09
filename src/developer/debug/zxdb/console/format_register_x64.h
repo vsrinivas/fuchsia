@@ -7,10 +7,7 @@
 
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/ipc/register_desc.h"
-
-namespace debug_ipc {
-struct Register;
-}
+#include "src/developer/debug/shared/register_value.h"
 
 namespace zxdb {
 
@@ -20,7 +17,7 @@ class OutputBuffer;
 // Does x64-specific formatting of the registesrs of a given category. Returns true if this catgory
 // was handled. False means ther is no special X64 handling for this category.
 bool FormatCategoryX64(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
-                       const std::vector<debug_ipc::Register>& registers, OutputBuffer* out);
+                       const std::vector<debug::RegisterValue>& registers, OutputBuffer* out);
 
 }  // namespace zxdb
 

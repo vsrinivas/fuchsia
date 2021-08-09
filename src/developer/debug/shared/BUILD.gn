@@ -26,6 +26,8 @@ static_library("shared") {
     "regex.cc",
     "regex.h",
     "register_id.h",
+    "register_value.cc",
+    "register_value.h",
     "status.cc",
     "status.h",
     "stream_buffer.cc",

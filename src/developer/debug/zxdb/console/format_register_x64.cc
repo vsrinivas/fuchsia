@@ -24,15 +24,15 @@ namespace zxdb {
 namespace {
 
 using debug::RegisterID;
-using debug_ipc::Register;
 using debug_ipc::RegisterCategory;
 
-void PushName(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
+void PushName(const debug::RegisterValue& reg, TextForegroundColor color,
+              std::vector<OutputBuffer>* row) {
   row->emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
 }
 
 // A nonzero length will case that number of bytes to be printed.
-void PushHex(const Register& reg, TextForegroundColor color, int length,
+void PushHex(const debug::RegisterValue& reg, TextForegroundColor color, int length,
              std::vector<OutputBuffer>* row) {
   containers::array_view<uint8_t> view = reg.data;
   if (length > 0)
@@ -40,7 +40,8 @@ void PushHex(const Register& reg, TextForegroundColor color, int length,
   row->emplace_back(GetLittleEndianHexOutput(view), color);
 }
 
-void PushFP(const Register& reg, TextForegroundColor color, std::vector<OutputBuffer>* row) {
+void PushFP(const debug::RegisterValue& reg, TextForegroundColor color,
+            std::vector<OutputBuffer>* row) {
   row->emplace_back(GetFPString(reg.data), color);
 }
 
@@ -51,7 +52,8 @@ TextForegroundColor GetRowColor(size_t table_len) {
 
 // Format General Registers ------------------------------------------------------------------------
 
-std::vector<OutputBuffer> DescribeRflags(const Register& rflags, TextForegroundColor color) {
+std::vector<OutputBuffer> DescribeRflags(const debug::RegisterValue& rflags,
+                                         TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(debug_ipc::RegisterIDToString(rflags.id), color);
 
@@ -73,7 +75,7 @@ std::vector<OutputBuffer> DescribeRflags(const Register& rflags, TextForegroundC
   return result;
 }
 
-std::vector<OutputBuffer> DescribeRflagsExtended(const Register& rflags,
+std::vector<OutputBuffer> DescribeRflagsExtended(const debug::RegisterValue& rflags,
                                                  TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.reserve(3);
@@ -95,10 +97,10 @@ std::vector<OutputBuffer> DescribeRflagsExtended(const Register& rflags,
 }
 
 void FormatGeneralRegisters(const FormatRegisterOptions& options,
-                            const std::vector<Register>& registers, OutputBuffer* out) {
+                            const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
 
-  for (const Register& reg : registers) {
+  for (const debug::RegisterValue& reg : registers) {
     auto color = GetRowColor(rows.size());
     if (reg.id == RegisterID::kX64_rflags) {
       rows.push_back(DescribeRflags(reg, color));
@@ -132,14 +134,14 @@ inline const std::set<RegisterID>& GetFPValueRegistersSet() {
   return regs;
 }
 
-void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out) {
+void FormatFPRegisters(const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   // We want to look up the registers in two sets: control & values, and display them differently.
   // There is no memory movement the input, so taking pointers is fine.
   const auto& control_set = GetFPControlRegistersSet();
-  std::vector<const Register*> control_registers;
+  std::vector<const debug::RegisterValue*> control_registers;
   const auto& value_set = GetFPValueRegistersSet();
-  std::vector<const Register*> value_registers;
-  for (const Register& reg : registers) {
+  std::vector<const debug::RegisterValue*> value_registers;
+  for (const debug::RegisterValue& reg : registers) {
     if (control_set.find(reg.id) != control_set.end()) {
       control_registers.push_back(&reg);
     } else if (value_set.find(reg.id) != value_set.end()) {
@@ -210,13 +212,14 @@ void FormatFPRegisters(const std::vector<Register>& registers, OutputBuffer* out
 // Vector Registers --------------------------------------------------------------------------------
 
 void FormatVectorRegistersX64(const FormatRegisterOptions& options,
-                              const std::vector<Register>& registers, OutputBuffer* out) {
+                              const std::vector<debug::RegisterValue>& registers,
+                              OutputBuffer* out) {
   // This uses the standard vector register formatting, but converts from AVX-512 to AVX. Zircon
   // doesn't currently support AVX-512 but our canonical registers use this format. Unnecessarily
   // displaying all those 0's makes things more difficult to follow. If AVX-512 is supported in
   // the future we can show the zmm and xmm/ymm registers >= 16 when the target CPU has them.
-  std::vector<Register> non_vect;  // Control registers.
-  std::vector<Register> filtered;
+  std::vector<debug::RegisterValue> non_vect;  // Control registers.
+  std::vector<debug::RegisterValue> filtered;
   filtered.reserve(registers.size());
 
   for (auto& r : registers) {
@@ -261,7 +264,7 @@ void FormatVectorRegistersX64(const FormatRegisterOptions& options,
 
 // Debug Registers ---------------------------------------------------------------------------------
 
-std::vector<OutputBuffer> FormatDr6(const Register& dr6, TextForegroundColor color) {
+std::vector<OutputBuffer> FormatDr6(const debug::RegisterValue& dr6, TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(debug_ipc::RegisterIDToString(dr6.id), color);
 
@@ -280,7 +283,7 @@ std::vector<OutputBuffer> FormatDr6(const Register& dr6, TextForegroundColor col
 }
 
 // NOTE: This function receives the table because it will append another row.
-void FormatDr7(const Register& dr7, TextForegroundColor color,
+void FormatDr7(const debug::RegisterValue& dr7, TextForegroundColor color,
                std::vector<std::vector<OutputBuffer>>* rows) {
   rows->emplace_back();
   auto& first_row = rows->back();
@@ -317,12 +320,12 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
       color);
 }
 
-void FormatDebugRegisters(const std::vector<Register>& registers, OutputBuffer* out) {
+void FormatDebugRegisters(const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   // dr[0-3] and dr[6-7] have different formats, so get separate tables.
   std::vector<std::vector<OutputBuffer>> rows;
   std::vector<std::vector<OutputBuffer>> dr67_rows;
 
-  for (const Register& reg : registers) {
+  for (const debug::RegisterValue& reg : registers) {
     auto color = GetRowColor(rows.size() + 1);
 
     // We do special formatting for dr6/dr7
@@ -346,7 +349,7 @@ void FormatDebugRegisters(const std::vector<Register>& registers, OutputBuffer* 
 }  // namespace
 
 bool FormatCategoryX64(const FormatRegisterOptions& options, RegisterCategory category,
-                       const std::vector<Register>& registers, OutputBuffer* out) {
+                       const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   switch (category) {
     case RegisterCategory::kGeneral:
       FormatGeneralRegisters(options, registers, out);

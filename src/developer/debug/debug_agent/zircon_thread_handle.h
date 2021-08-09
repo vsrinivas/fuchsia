@@ -33,10 +33,10 @@ class ZirconThreadHandle final : public ThreadHandle {
   std::optional<DebugRegisters> GetDebugRegisters() const override;
   bool SetDebugRegisters(const DebugRegisters& regs) override;
   void SetSingleStep(bool single_step) override;
-  std::vector<debug_ipc::Register> ReadRegisters(
+  std::vector<debug::RegisterValue> ReadRegisters(
       const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const override;
-  std::vector<debug_ipc::Register> WriteRegisters(
-      const std::vector<debug_ipc::Register>& regs) override;
+  std::vector<debug::RegisterValue> WriteRegisters(
+      const std::vector<debug::RegisterValue>& regs) override;
   bool InstallHWBreakpoint(uint64_t address) override;
   bool UninstallHWBreakpoint(uint64_t address) override;
   std::optional<WatchpointInfo> InstallWatchpoint(debug_ipc::BreakpointType type,

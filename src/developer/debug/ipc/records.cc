@@ -29,13 +29,6 @@ bool IsDebug(ExceptionType type) {
   }
 }
 
-__int128 Register::GetValue() const {
-  __int128 result = 0;
-  if (!data.empty())
-    memcpy(&result, data.data(), std::min(sizeof(result), data.size()));
-  return result;
-}
-
 const char* ExceptionTypeToString(ExceptionType type) {
   switch (type) {
     case ExceptionType::kNone:

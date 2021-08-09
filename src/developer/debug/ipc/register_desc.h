@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_value.h"
 #include "src/lib/containers/cpp/array_view.h"
 
 // Holds constant description values for all the register data for all the
@@ -20,8 +21,6 @@
 // for zircon (see zircon/system/public/zircon/syscalls/debug.h).
 
 namespace debug_ipc {
-
-struct Register;
 
 enum class SpecialRegisterType {
   kNone,
@@ -100,7 +99,7 @@ bool IsGeneralRegister(debug::RegisterID);
 // truncated also so it may have less data than expected.
 //
 // If the register is not found, the returned view will be empty.
-containers::array_view<uint8_t> GetRegisterData(const std::vector<Register>& regs,
+containers::array_view<uint8_t> GetRegisterData(const std::vector<debug::RegisterValue>& regs,
                                                 debug::RegisterID id);
 
 // These ranges permit to make transformation from registerID to category and

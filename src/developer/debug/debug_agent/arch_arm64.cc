@@ -106,7 +106,6 @@ namespace arch {
 namespace {
 
 using debug::RegisterID;
-using debug_ipc::Register;
 
 // Implements a case statement for calling WriteRegisterValue assuming the Zircon register
 // field matches the enum name. This avoids implementation typos where the names don't match.
@@ -115,7 +114,7 @@ using debug_ipc::Register;
     status = WriteRegisterValue(reg, &regs->name); \
     break;
 
-zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
+zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug::RegisterValue>& out) {
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs, sizeof(gen_regs));
   if (status != ZX_OK)
@@ -125,7 +124,7 @@ zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Reg
   return ZX_OK;
 }
 
-zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
+zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug::RegisterValue>& out) {
   zx_thread_state_vector_regs vec_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &vec_regs, sizeof(vec_regs));
   if (status != ZX_OK)
@@ -141,7 +140,7 @@ zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Regi
   return ZX_OK;
 }
 
-zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
+zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug::RegisterValue>& out) {
   zx_thread_state_debug_regs_t debug_regs;
   zx_status_t status =
       thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
@@ -222,7 +221,7 @@ const int64_t kExceptionOffsetForSoftwareBreakpoint = 0;
 ::debug::Arch GetCurrentArch() { return ::debug::Arch::kArm64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
-                     std::vector<debug_ipc::Register>& out) {
+                     std::vector<debug::RegisterValue>& out) {
   // Add the X0-X29 registers.
   uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
   for (int i = 0; i < 30; i++)
@@ -237,7 +236,7 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
 }
 
 zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
-                          std::vector<debug_ipc::Register>& out) {
+                          std::vector<debug::RegisterValue>& out) {
   switch (cat) {
     case debug_ipc::RegisterCategory::kGeneral:
       return ReadGeneralRegs(thread, out);
@@ -255,7 +254,7 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCat
 }
 
 zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& category,
-                           const std::vector<debug_ipc::Register>& registers) {
+                           const std::vector<debug::RegisterValue>& registers) {
   switch (category) {
     case debug_ipc::RegisterCategory::kGeneral: {
       zx_thread_state_general_regs_t regs;
@@ -306,12 +305,12 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t WriteGeneralRegisters(const std::vector<Register>& updates,
+zx_status_t WriteGeneralRegisters(const std::vector<debug::RegisterValue>& updates,
                                   zx_thread_state_general_regs_t* regs) {
   uint32_t begin_general = static_cast<uint32_t>(RegisterID::kARMv8_x0);
   uint32_t last_general = static_cast<uint32_t>(RegisterID::kARMv8_x29);
 
-  for (const Register& reg : updates) {
+  for (const debug::RegisterValue& reg : updates) {
     zx_status_t status = ZX_OK;
     if (reg.data.size() != 8)
       return ZX_ERR_INVALID_ARGS;
@@ -339,7 +338,7 @@ zx_status_t WriteGeneralRegisters(const std::vector<Register>& updates,
   return ZX_OK;
 }
 
-zx_status_t WriteVectorRegisters(const std::vector<Register>& updates,
+zx_status_t WriteVectorRegisters(const std::vector<debug::RegisterValue>& updates,
                                  zx_thread_state_vector_regs_t* regs) {
   uint32_t begin_vector = static_cast<uint32_t>(RegisterID::kARMv8_v0);
   uint32_t last_vector = static_cast<uint32_t>(RegisterID::kARMv8_v31);
@@ -366,7 +365,7 @@ zx_status_t WriteVectorRegisters(const std::vector<Register>& updates,
   return ZX_OK;
 }
 
-zx_status_t WriteDebugRegisters(const std::vector<Register>& updates,
+zx_status_t WriteDebugRegisters(const std::vector<debug::RegisterValue>& updates,
                                 zx_thread_state_debug_regs_t* regs) {
   uint32_t begin_bcr = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
   uint32_t last_bcr = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr15_el1);

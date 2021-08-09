@@ -14,7 +14,7 @@ namespace debug_agent {
 namespace arch {
 
 TEST(ArchArm64, WriteGeneralRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_x0, 8));
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_x3, 8));
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_lr, 8));
@@ -51,7 +51,7 @@ TEST(ArchArm64, WriteGeneralRegs) {
 
 TEST(ArchArm64, InvalidWriteGeneralRegs) {
   zx_thread_state_general_regs_t out;
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
 
   // Invalid length.
   regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kARMv8_v0, 4));
@@ -63,7 +63,7 @@ TEST(ArchArm64, InvalidWriteGeneralRegs) {
 }
 
 TEST(ArchArm64, WriteVectorRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
 
   std::vector<uint8_t> v0_value;
   v0_value.resize(16);
@@ -93,7 +93,7 @@ TEST(ArchArm64, WriteVectorRegs) {
 }
 
 TEST(ArchArm64, WriteDebugRegs) {
-  std::vector<debug_ipc::Register> regs;
+  std::vector<debug::RegisterValue> regs;
   regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr0_el1, std::vector<uint8_t>{1, 2, 3, 4});
   regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr1_el1, std::vector<uint8_t>{2, 3, 4, 5});
   regs.emplace_back(debug::RegisterID::kARMv8_dbgbcr15_el1, std::vector<uint8_t>{3, 4, 5, 6});
@@ -123,10 +123,10 @@ TEST(ArchArm64, ReadTPIDR) {
   zx_thread_state_general_regs_t regs_in;
   regs_in.tpidr = 0xdeadbeeff00dbabe;
 
-  std::vector<debug_ipc::Register> regs_out;
+  std::vector<debug::RegisterValue> regs_out;
   arch::SaveGeneralRegs(regs_in, regs_out);
 
-  const debug_ipc::Register* found = nullptr;
+  const debug::RegisterValue* found = nullptr;
   for (const auto& reg : regs_out) {
     if (reg.id == debug::RegisterID::kARMv8_tpidr) {
       found = &reg;

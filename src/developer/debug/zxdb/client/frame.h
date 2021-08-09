@@ -12,14 +12,11 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_value.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-
-namespace debug_ipc {
-struct Register;
-}
 
 namespace zxdb {
 
@@ -68,7 +65,7 @@ class Frame : public ClientObject {
   // architecture-dependant ones). The top stack frame will have all of them.
   //
   // Inline frames will report the registers from the physical frame they're associated with.
-  virtual const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
+  virtual const std::vector<debug::RegisterValue>* GetRegisterCategorySync(
       debug_ipc::RegisterCategory category) const = 0;
 
   // Asynchronous version of GetRegisterCategorySync(). For topmost stack frames, things like vector
@@ -83,7 +80,7 @@ class Frame : public ClientObject {
   // want the most up to date data.
   virtual void GetRegisterCategoryAsync(
       debug_ipc::RegisterCategory category, bool always_request,
-      fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) = 0;
+      fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) = 0;
 
   // Writes to the given register. The register must be a canonical hardware register.
   //

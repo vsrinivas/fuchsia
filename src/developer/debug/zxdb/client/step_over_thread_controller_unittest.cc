@@ -171,7 +171,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   //   Top
   mock_frames = GetStack();
   mock_frames[0] = std::make_unique<MockFrame>(nullptr, nullptr, second_inline_loc, kTopSP, 0,
-                                               std::vector<debug_ipc::Register>(), kTopSP,
+                                               std::vector<debug::RegisterValue>(), kTopSP,
                                                mock_frames[1].get(), true);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSingleStep,
@@ -296,7 +296,7 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
       nullptr, nullptr,
       Location(kReturnAddress, kZeroFileLine, 0, SymbolContext::ForRelativeAddresses(),
                GetMiddleFunction()),
-      kMiddleSP, kBottomSP, std::vector<debug_ipc::Register>(), kMiddleSP));
+      kMiddleSP, kBottomSP, std::vector<debug::RegisterValue>(), kMiddleSP));
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSingleStep,
@@ -308,7 +308,7 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
       nullptr, nullptr,
       Location(kFinalAddress, kFinalFileLine, 0, SymbolContext::ForRelativeAddresses(),
                GetMiddleFunction()),
-      kMiddleSP, kBottomSP, std::vector<debug_ipc::Register>(), kMiddleSP));
+      kMiddleSP, kBottomSP, std::vector<debug::RegisterValue>(), kMiddleSP));
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSingleStep,

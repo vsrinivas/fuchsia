@@ -18,9 +18,7 @@ namespace zxdb {
 
 namespace {
 
-using debug::RegisterID;
 using ::zxdb::internal::MemoryAnalysis;
-using namespace debug_ipc;
 
 class AnalyzeMemoryTest : public TestWithLoop {};
 
@@ -66,15 +64,17 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   const uint64_t kStack1SP = kBegin + 8;
 
   constexpr uint64_t kAway = 0xFF00000000000;  // Points out of the dump.
-  std::vector<Register> frame0_regs = {Register(RegisterID::kX64_rax, kBegin),
-                                       Register(RegisterID::kX64_rcx, kAway),
-                                       Register(RegisterID::kX64_rsp, kStack0SP)};
+  std::vector<debug::RegisterValue> frame0_regs = {
+      debug::RegisterValue(debug::RegisterID::kX64_rax, kBegin),
+      debug::RegisterValue(debug::RegisterID::kX64_rcx, kAway),
+      debug::RegisterValue(debug::RegisterID::kX64_rsp, kStack0SP)};
 
   // Frame 1 duplicates rax (should not have both in the output), but rcx is different and this
   // should be called out in the dump.
-  std::vector<Register> frame1_regs = {Register(RegisterID::kX64_rax, kBegin),
-                                       Register(RegisterID::kX64_rcx, kBegin + 16),
-                                       Register(RegisterID::kX64_rsp, kStack1SP)};
+  std::vector<debug::RegisterValue> frame1_regs = {
+      debug::RegisterValue(debug::RegisterID::kX64_rax, kBegin),
+      debug::RegisterValue(debug::RegisterID::kX64_rcx, kBegin + 16),
+      debug::RegisterValue(debug::RegisterID::kX64_rsp, kStack1SP)};
 
   // Setup frames. This creates a top frame, an intermediate inline frame, and a bottom frame.
   std::vector<std::unique_ptr<Frame>> frames;

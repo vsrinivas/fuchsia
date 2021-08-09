@@ -30,14 +30,10 @@
 
 namespace zxdb {
 
-using debug::RegisterID;
-using debug_ipc::Register;
-using debug_ipc::RegisterCategory;
-
 namespace {
 
-void FormatCategory(const FormatRegisterOptions& options, RegisterCategory category,
-                    const std::vector<Register>& registers, OutputBuffer* out) {
+void FormatCategory(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
+                    const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   auto title = fxl::StringPrintf("%s Registers\n", debug_ipc::RegisterCategoryToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
 
@@ -62,19 +58,20 @@ void FormatCategory(const FormatRegisterOptions& options, RegisterCategory categ
 }  // namespace
 
 OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
-                             const std::vector<Register>& registers) {
+                             const std::vector<debug::RegisterValue>& registers) {
   OutputBuffer out;
 
   // Group register by category.
-  std::map<RegisterCategory, std::vector<Register>> categorized;
-  for (const Register& reg : registers)
+  std::map<debug_ipc::RegisterCategory, std::vector<debug::RegisterValue>> categorized;
+  for (const debug::RegisterValue& reg : registers)
     categorized[debug_ipc::RegisterIDToCategory(reg.id)].push_back(reg);
 
   for (auto& [category, cat_regs] : categorized) {
     // Ensure the registers appear in a consistent order.
-    std::sort(cat_regs.begin(), cat_regs.end(), [](const Register& a, const Register& b) {
-      return static_cast<uint32_t>(a.id) < static_cast<uint32_t>(b.id);
-    });
+    std::sort(cat_regs.begin(), cat_regs.end(),
+              [](const debug::RegisterValue& a, const debug::RegisterValue& b) {
+                return static_cast<uint32_t>(a.id) < static_cast<uint32_t>(b.id);
+              });
 
     FormatCategory(options, category, cat_regs, &out);
     out.Append("\n");
@@ -82,9 +79,9 @@ OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
   return out;
 }
 
-void FormatGeneralRegisters(const std::vector<Register>& registers, OutputBuffer* out) {
+void FormatGeneralRegisters(const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   std::vector<std::vector<OutputBuffer>> rows;
-  for (const Register& reg : registers) {
+  for (const debug::RegisterValue& reg : registers) {
     auto color =
         rows.size() % 2 == 1 ? TextForegroundColor::kDefault : TextForegroundColor::kLightGray;
     rows.push_back(DescribeRegister(reg, color));
@@ -96,7 +93,7 @@ void FormatGeneralRegisters(const std::vector<Register>& registers, OutputBuffer
 }
 
 void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
-                                  const std::vector<debug_ipc::Register>& registers,
+                                  const std::vector<debug::RegisterValue>& registers,
                                   OutputBuffer* out) {
   bool is_float = options.vector_format == VectorRegisterFormat::kFloat ||
                   options.vector_format == VectorRegisterFormat::kDouble;
@@ -144,7 +141,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
 
     auto color =
         rows.size() % 2 == 1 ? TextForegroundColor::kLightGray : TextForegroundColor::kDefault;
-    row[0] = OutputBuffer(node->name(), color);  // Register name.
+    row[0] = OutputBuffer(node->name(), color);  // debug::RegisterValue name.
 
     // Add each child to the row.
     for (size_t i = 0; i < node->children().size(); i++) {
@@ -172,7 +169,8 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
                   VectorRegisterFormatToString(options.vector_format)));
 }
 
-std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundColor color) {
+std::vector<OutputBuffer> DescribeRegister(const debug::RegisterValue& reg,
+                                           TextForegroundColor color) {
   std::vector<OutputBuffer> result;
   result.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
 
