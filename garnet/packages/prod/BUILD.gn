@@ -37,8 +37,6 @@ group("all") {
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
-    "//garnet/packages/prod:magma-arm-mali-config",
-    "//garnet/packages/prod:magma-arm-mali-system",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
@@ -265,15 +263,6 @@ group("insntrace") {
     "//garnet/bin/insntrace",
     "//garnet/bin/insntrace:host_insntrace_print",
   ]
-}
-
-# TODO(fxbug.dev/77102): Remove once consumers are fixed up.
-group("magma-arm-mali-system") {
-  public_deps = [ "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-system" ]
-}
-
-# TODO(fxbug.dev/77102): Remove once consumers are fixed up.
-group("magma-arm-mali-config") {
 }
 
 group("magma-vsi-vip") {
