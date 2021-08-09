@@ -132,12 +132,12 @@ pub fn send_on_open_with_error(flags: u32, server_end: ServerEnd<NodeMarker>, st
 /// Since we provide a generic implementation, the size of each concrete type is known.
 pub trait IntoAny: std::any::Any {
     /// Cast the given object into a `dyn std::any::Any`.
-    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync>;
+    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync + 'static>;
 }
 
 impl<T: 'static + Send + Sync> IntoAny for T {
-    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync> {
-        self as Arc<dyn std::any::Any + Send + Sync>
+    fn into_any(self: Arc<Self>) -> Arc<dyn std::any::Any + Send + Sync + 'static> {
+        self as Arc<dyn std::any::Any + Send + Sync + 'static>
     }
 }
 

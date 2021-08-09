@@ -22,12 +22,9 @@ use {
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::Status,
-    std::{
-        any::Any,
-        sync::{
-            atomic::{AtomicBool, AtomicUsize, Ordering},
-            Arc,
-        },
+    std::sync::{
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc,
     },
     storage_device::buffer::MutableBufferRef,
     vfs::{
@@ -129,10 +126,6 @@ impl FxNode for FxFile {
 
     fn set_parent(&self, _parent: Arc<FxDirectory>) {
         // NOP
-    }
-
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
-        self
     }
 
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {

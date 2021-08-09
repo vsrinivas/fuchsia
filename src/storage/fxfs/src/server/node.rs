@@ -6,21 +6,21 @@ use {
     crate::server::directory::FxDirectory,
     futures::future::poll_fn,
     std::{
-        any::{Any, TypeId},
+        any::TypeId,
         collections::{hash_map::Entry, HashMap},
         sync::{Arc, Mutex, Weak},
         task::{Poll, Waker},
         vec::Vec,
     },
+    vfs::common::IntoAny,
     vfs::directory::entry::DirectoryEntry,
 };
 
 /// FxNode is a node in the filesystem hierarchy (either a file or directory).
-pub trait FxNode: Any + Send + Sync + 'static {
+pub trait FxNode: IntoAny + Send + Sync + 'static {
     fn object_id(&self) -> u64;
     fn parent(&self) -> Option<Arc<FxDirectory>>;
     fn set_parent(&self, parent: Arc<FxDirectory>);
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>>;
     fn open_count_add_one(&self);
     fn open_count_sub_one(&self);
@@ -43,9 +43,6 @@ impl FxNode for Placeholder {
     }
     fn set_parent(&self, _parent: Arc<FxDirectory>) {
         unreachable!();
-    }
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
-        self
     }
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
         None
@@ -224,7 +221,6 @@ mod tests {
         fuchsia_async as fasync,
         futures::future::join_all,
         std::{
-            any::Any,
             sync::{
                 atomic::{AtomicU64, Ordering},
                 Arc, Mutex,
@@ -244,9 +240,6 @@ mod tests {
         }
         fn set_parent(&self, _parent: Arc<FxDirectory>) {
             unreachable!();
-        }
-        fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
-            self
         }
         fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
             None

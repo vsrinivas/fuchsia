@@ -35,10 +35,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
     futures::FutureExt,
-    std::{
-        any::Any,
-        sync::{Arc, Mutex},
-    },
+    std::sync::{Arc, Mutex},
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -305,10 +302,6 @@ impl FxNode for FxDirectory {
             Some(p) => *p.lock().unwrap() = parent,
             None => panic!("Called set_parent on root node"),
         }
-    }
-
-    fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
-        self
     }
 
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
