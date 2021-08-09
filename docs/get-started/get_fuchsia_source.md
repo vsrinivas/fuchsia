@@ -37,8 +37,8 @@ Run the following command:
 
 ## 2. Install prerequisite packages {#install-prerequisite-packages}
 
-Fuchsia requires `curl`, `unzip`, and `git` to be up to date (the version
-of `git` needs to be 2.28 or higher).
+Fuchsia requires `curl`, `unzip`, and `git` to be up to date. The version
+of `git` needs to be 2.28 or higher.
 
 * {Linux}
 
@@ -52,7 +52,7 @@ of `git` needs to be 2.28 or higher).
 
   Install the Xcode command line tools:
 
-  Note: Skip this step if `ffx platform preflight` discovers that Xcode tools
+  Note: Skip this step if `ffx platform preflight` shows that Xcode tools
   are already installed on your machine.
 
   ```posix-terminal
@@ -62,7 +62,8 @@ of `git` needs to be 2.28 or higher).
 ## 3. Download the Fuchsia source code {#download-the-fuchsia-source-code}
 
 Fuchsia provides a [bootstrap script](/scripts/bootstrap) that creates a
-`fuchsia` directory and downloads the Fuchsia source code.
+directory named `fuchsia` and downloads the Fuchsia source code in that
+directory.
 
 Important: Downloading the Fuchsia source code requires about 2 GiB of space
 on your machine. Plus, depending on your build configuration, you need
@@ -72,8 +73,8 @@ To download the Fuchsia source, do the following:
 
 1.  Select a directory for downloading the Fuchsia source code, for example:
 
-    Note: While you can set up Fuchsia in any directory, this guide uses the
-    home directory.
+    Note: You can set up Fuchsia in any directory. This guide selects
+    the `$HOME` directory as an example.
 
     ```posix-terminal
     cd ~
@@ -86,7 +87,7 @@ To download the Fuchsia source, do the following:
     ```posix-terminal
     curl -s "https://fuchsia.googlesource.com/fuchsia/+/HEAD/scripts/bootstrap?format=TEXT" | base64 --decode | bash
     ```
-    This script creates a `fuchsia` directory to download the source code.
+    This script creates the `fuchsia` directory and downloads the source code.
 
     If you see the `Invalid authentication credentials` error during the
     bootstrapping process, see [Authentication error](#authentication-error) for
@@ -100,8 +101,8 @@ actions:
 *   Add the `.jiri_root/bin` directory to your `PATH`.
 
     The `.jiri_root/bin` directory in the Fuchsia source contains the
-    <code>[jiri](https://fuchsia.googlesource.com/jiri){:.external}</code> and
-    <code>[fx](/docs/development/build/fx.md)</code> tools are essential to
+    [`jiri`](https://fuchsia.googlesource.com/jiri){:.external} and
+    [`fx`](/docs/development/build/fx.md) tools that are essential to
     Fuchsia workflows. Fuchsia uses the `jiri` tool to manage repositories in
     the Fuchsia project, and the `fx` tool helps configure, build, run, and
     debug Fuchsia. The Fuchsia toolchain requires that `jiri` is available in
@@ -110,11 +111,11 @@ actions:
 *   Source the `scripts/fx-env.sh` file.
 
     Though it's not required, sourcing the
-    <code>[fx-env.sh](/scripts/fx-env.sh)</code> script enables useful shell
-    functions in your terminal. For instance, it creates a `FUCHSIA_DIR`
-    environment variable and provides the `fd` command for navigating
-    directories with auto-completion. For more information, see comments in
-    `fx-env.sh`.
+    [`fx-env.sh`](/scripts/fx-env.sh) script enables a number of
+    useful shell functions in your terminal. For instance, it creates the
+    `FUCHSIA_DIR` environment variable and provides the `fd` command for
+    navigating directories with auto-completion. For more information, see
+    comments in `fx-env.sh`.
 
 Note: If you don't wish to update your shell profile, see
 [Work on Fuchsia without updating your PATH](#work-on-fuchsia-without-updating-your-path)

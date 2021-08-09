@@ -26,7 +26,7 @@ To get started, you need the following parts:
 *  Ethernet cable
 *  Phillips-head screwdriver with a magnetic tip
 
-For GPU support, get a NUC7 (Kaby Lake) or NUC8 (Coffee Lake). This list shows some example models:
+For GPU support, get a NUC7 (Kaby Lake) or NUC8 (Coffee Lake). The list below shows some example models:
 
  * [Intel® NUC Kit NUC7i5DNKE](https://ark.intel.com/content/www/us/en/ark/products/122486/intel-nuc-kit-nuc7i5dnke.html)
  * [Intel® NUC Kit NUC7i5DNHE](https://ark.intel.com/content/www/us/en/ark/products/122488/intel-nuc-kit-nuc7i5dnhe.html)
@@ -37,9 +37,9 @@ For GPU support, get a NUC7 (Kaby Lake) or NUC8 (Coffee Lake). This list shows s
  * [Intel® NUC Kit NUC8i3BEK](https://ark.intel.com/content/www/us/en/ark/products/126149/intel-nuc-kit-nuc8i3bek.html)
  * [Intel® NUC Kit NUC8i3BEH](https://ark.intel.com/content/www/us/en/ark/products/126150/intel-nuc-kit-nuc8i3beh.html)
 
-This table shows some example parts with links to the manufacturer's product pages:
+The table below shows some example parts with links to the manufacturer's product pages:
 
-| Item | Link | Notes: |
+| Item | Link | Notes |
 | ---- | ---- | ------ |
 | RAM | [Crucial 8GB DDR4-2400 SODIMM](https://www.crucial.com/memory/ddr4/ct8g4sfs824a) | Works fine. |
 | SSD | [Samsung SSD 850 EVO SATA M.2 250GB](https://www.samsung.com/us/computing/memory-storage/solid-state-drives/ssd-850-evo-m-2-250gb-mz-n5e250bw/) | Works fine. |
@@ -49,7 +49,7 @@ This table shows some example parts with links to the manufacturer's product pag
 
 ## 2. Prepare the NUC {#prepare-the-nuc}
 
-NUCs don’t come with RAM or an SSD, so you need to manually install them.
+NUCs do not come with RAM or an SSD, so you need to manually install them.
 
 <img width="40%" src="/docs/images/developing_on_nuc/parts.jpg"/>
 
@@ -78,8 +78,8 @@ To install the RAM and SSD on your NUC, do the following:
 To enable EFI (Extensible Firmware Interface) booting on your NUC,
 do the following:
 
-1. Reboot NUC.
-1. While booting, to enter BIOS, press `F2`.
+1. Reboot your NUC.
+1. To enter BIOS, press `F2` while booting.
 1. In the **Boot Order** window on the left, click the **Legacy** tab.
 1. Uncheck **Legacy Boot**.
 
@@ -106,10 +106,10 @@ If you want to remotely manage the device, see
 ## 4. Build Fuchsia {#build-fuchsia}
 
 To build a Fuchsia system image for your NUC, follow the
-[Get started with Fuchsia][get-started-with-fuchsia] guide,
+[Get started with Fuchsia][get-started-with-fuchsia] guide.
 
-Make sure to use the board configuration `x64` when running
-`fx set` (for example, `fx set workstation.x64`).
+When running `fx set`, make sure to use the `x64` board configuration
+(for example, `fx set workstation.x64`).
 
 ## 5. Prepare a bootstrap USB drive {#prepare-usb}
 
@@ -127,13 +127,13 @@ boot into Zedboot and pave Fuchsia to your device's storage.
 To prepare a bootable USB drive, do the following:
 
 1. Plug your USB key into your build workstation.
-1. To identify the path to your USB key, run the following command:
+1. Identify the path to your USB key:
 
    ```posix-terminl
    fx list-usb-disks
    ```
 
-1. To create a Zedboot USB drive, run the following command:
+1. Create a Zedboot USB drive:
 
    ```posix-terminal
    fx mkzedboot /path/to/usb/disk
@@ -154,8 +154,7 @@ To pave Fuchsia on your NUC, do the following:
    [Keyboard not working after Zedboot](#keyboard-not-working-after-zedboot)
    in Troubleshoot.
 
-1. On the NUC, to view the HDD or SSD's block device path,
-   run the following command:
+1. On the NUC, view the HDD or SSD's block device path:
 
    ```
    lsblk
@@ -164,8 +163,7 @@ To pave Fuchsia on your NUC, do the following:
    Take note of the block device path (for example, the path might look like
    `/dev/sys/platform/pci/00:17.0/ahci/sata0/block`).
 
-1. On the NUC, to wipe and initialize the partition tables on the NUC, run the
-   following command:
+1. On the NUC, clear and initialize the partition tables on the NUC:
 
    ```
    install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>
@@ -173,8 +171,7 @@ To pave Fuchsia on your NUC, do the following:
 
    Use the block device path from Step 3.
 
-1. On your workstation, to install Fuchsia on the NUC, run the following
-   command:
+1. On your workstation, install Fuchsia on the NUC:
 
    ```posix-terminal
    fx pave
@@ -182,10 +179,10 @@ To pave Fuchsia on your NUC, do the following:
 
 1. After paving is completed, disconnect the USB key.
 
-Fuchsia is now installed on your device, when you reboot the device it will load Gigaboot, then
-Zedboot, then Fuchsia all from your device's storage. You no longer need the USB drive. If you need
-to pave a new version of Fuchsia, you can run `fx reboot -r` on your workstation to reboot the
-device into Zedboot.
+Fuchsia is now installed on your NUC. When you reboot the machine, it will load Gigaboot,
+Zedboot, and Fuchsia all from your device's storage. You don't need the USB drive anymore.
+If you need to pave a new version of Fuchsia, you can run `fx reboot -r` on your
+workstation, which reboots the NUC into Zedboot.
 
 ## Troubleshoot
 

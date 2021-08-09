@@ -16,12 +16,12 @@ The steps are:
 Running FEMU requires that you've completed the following guides:
 
  * [Download the Fuchsia source code][get-fuchsia-source]
- * [Configure and built Fuchsia][build-fuchsia]
+ * [Configure and build Fuchsia][build-fuchsia]
 
 ## 2. Build Fuchsia for FEMU {#build-fuchsia-for-femu}
 
 To run FEMU, you first need to build a Fuchsia system image that supports
-the emulator environment. The guide uses `qemu-x64` for the board
+the emulator environment. This guide uses `qemu-x64` for the board
 and `workstation` for the product as an example.
 
 To build a FEMU Fuchsia image, do the following:
