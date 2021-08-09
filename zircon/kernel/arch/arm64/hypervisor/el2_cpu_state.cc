@@ -35,6 +35,27 @@ void UnmapAll(ArchVmAspace& aspace) {
   DEBUG_ASSERT(result == ZX_OK);
 }
 
+// Return true if the given virtual address range is contiguous in physical memory.
+bool IsPhysicallyContiguous(vaddr_t base, size_t size) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(base));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+
+  // Ranges smaller than a page are always physically contiguous.
+  if (size <= PAGE_SIZE) {
+    return true;
+  }
+
+  paddr_t base_addr = vaddr_to_paddr(reinterpret_cast<const void*>(base));
+  for (size_t offset = PAGE_SIZE; offset < size; offset += PAGE_SIZE) {
+    paddr_t page_addr = vaddr_to_paddr(reinterpret_cast<const void*>(base + offset));
+    if (page_addr != base_addr + offset) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace
 
 El2TranslationTable::~El2TranslationTable() { Reset(); }
@@ -63,16 +84,26 @@ zx_status_t El2TranslationTable::Init() {
     pmm_get_arena_info(/*count=*/1, i, &arena, sizeof(arena));
     paddr_t arena_paddr = vaddr_to_paddr(reinterpret_cast<void*>(arena.base));
     size_t page_count = arena.size / PAGE_SIZE;
-    // TODO(fxbug.dev/79743): Only kernel text should be executable.
     status = el2_aspace_->MapContiguous(
         /*vaddr=*/arena_paddr, /*paddr=*/arena_paddr, page_count,
-        ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_READ |
-            ARCH_MMU_FLAG_PERM_EXECUTE,
-        nullptr);
+        ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_READ, nullptr);
     if (status != ZX_OK) {
       Reset();
       return status;
     }
+  }
+
+  // Map the kernel's code in read/execute.
+  vaddr_t code_start = ROUNDDOWN(reinterpret_cast<vaddr_t>(__code_start), PAGE_SIZE);
+  vaddr_t code_end = ROUNDUP(reinterpret_cast<vaddr_t>(__code_end), PAGE_SIZE);
+  size_t code_size = code_end - code_start;
+  DEBUG_ASSERT(IsPhysicallyContiguous(code_start, code_size));
+  paddr_t code_start_paddr = vaddr_to_paddr(reinterpret_cast<const void*>(code_start));
+  status = el2_aspace_->Protect(code_start_paddr, code_size / PAGE_SIZE,
+                                ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE);
+  if (status != ZX_OK) {
+    Reset();
+    return status;
   }
 
   return ZX_OK;
