@@ -21,16 +21,16 @@ use fidl_fuchsia_sys as fsys;
 use fuchsia_async as fasync;
 use fuchsia_component::{client, fuchsia_single_component_package_url};
 use fuchsia_syslog::macros::*;
-use fuchsia_vfs_pseudo_fs::{
-    directory::entry::DirectoryEntry, file::simple::read_only_str, pseudo_directory,
-};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::HandleBased;
 use futures::future;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use glob::glob;
 use serde_json::{from_value, Value};
-use std::iter;
+use vfs::{
+    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_const,
+    pseudo_directory,
+};
 
 /// Legacy component URL for basemgr.
 const BASEMGR_LEGACY_URL: &str = fuchsia_single_component_package_url!("basemgr");
@@ -223,15 +223,18 @@ impl ModularFacade {
             let config_str = config_str.to_string();
             fasync::Task::spawn(
                 async move {
-                    let mut pkg_dir =
-                        pseudo_directory! {"startup.config" => read_only_str(|| Ok(config_str.to_string()))};
+
+                    let scope = ExecutionScope::new();
+                    let pkg_dir =
+                        pseudo_directory! {"startup.config" => read_only_const(config_str.as_ref())};
                     pkg_dir.open(
+                        scope.clone(),
                         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                         fio::MODE_TYPE_DIRECTORY,
-                        &mut iter::empty(),
+                        vfs::path::Path::dot(),
                         ServerEnd::new(dir2_server),
                     );
-                    pkg_dir.await;
+                    scope.wait().await;
                     Ok::<(), Error>(())
                 }
                 .unwrap_or_else(|e: anyhow::Error| {
@@ -365,7 +368,6 @@ mod tests {
         serde_json::json,
         std::sync::{Arc, Mutex},
         test_util::Counter,
-        vfs::execution_scope::ExecutionScope,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
