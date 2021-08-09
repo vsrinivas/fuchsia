@@ -234,10 +234,12 @@ class ErmineDriver {
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
   Future<FlutterDriver> launchSimpleBrowser() async {
     expect(await launch(simpleBrowserUrl), isTrue);
+    print('Launched a browser');
 
     // Initializes the browser's flutter driver connector.
     final browserConnector = FlutterDriverConnector(sl4f);
     await browserConnector.initialize();
+    print('Initialized a flutter driver connector for the browser.');
 
     // Checks if Simple Browser is running.
     // TODO(fxb/66577): Get the last isolate once it's supported by
@@ -247,6 +249,7 @@ class ErmineDriver {
     if (browserIsolate == null) {
       fail('couldn\'t find simple browser.');
     }
+    print('Checked that the browser is running.');
 
     // Connects to the browser.
     // TODO(fxb/66577): Get the driver of the last isolate once it's supported by
@@ -257,6 +260,7 @@ class ErmineDriver {
     if (browserDriver == null) {
       fail('unable to connect to simple browser.');
     }
+    print('Connected the browser to a flutter driver.');
 
     return browserDriver;
   }
@@ -270,7 +274,6 @@ class ErmineDriver {
   /// using [enableTextEntryEmulation], which has false by default.
   Future<FlutterDriver> launchAndWaitForSimpleBrowser({
     bool openNewTab = true,
-    bool fullscreen = false,
     bool enableTextEntryEmulation = false,
   }) async {
     final browserDriver = await launchSimpleBrowser();
@@ -278,12 +281,7 @@ class ErmineDriver {
     // Set the flutter driver's text entry emulation.
     await browserDriver.setTextEntryEmulation(
         enabled: enableTextEntryEmulation);
-    await browserDriver.waitUntilNoTransientCallbacks();
-
-    // Expands the simple browser to be a full-sized screen, if required.
-    if (fullscreen) {
-      await _driver!.requestData('fullscreen');
-    }
+    print('Text entry emulation is enabled for the browser.');
 
     // Opens another tab other than the tab opened on browser's launch,
     // if required.
@@ -300,6 +298,10 @@ class ErmineDriver {
           timeout: Duration(seconds: 10));
       print('The first tab is ready.');
     }
+
+    await browserDriver.waitUntilFirstFrameRasterized();
+    await browserDriver.waitUntilNoTransientCallbacks();
+    print('No further transient callbacks.');
 
     return browserDriver;
   }

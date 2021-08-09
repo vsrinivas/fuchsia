@@ -83,6 +83,17 @@ void main() {
     // running.
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
+    final views = await ermine.launchedViews();
+    if (views.isEmpty) {
+      print('Currently there is no running views');
+    } else {
+      print('Currently running views are...');
+      for (final view in views) {
+        print(view.url);
+      }
+      await ermine.driver.requestData('closeAll');
+    }
+
     if (await ermine.isRunning(testserverUrl, timeout: _timeoutTenSec)) {
       FlutterDriver browser =
           await ermine.launchAndWaitForSimpleBrowser(openNewTab: false);
@@ -139,7 +150,7 @@ void main() {
   /// e.g. [DriverError], thrown in case the driver fails to locate a [Finder].
   /// Returns true if it gets the expected result. Otherwise, returns false.
   Future<bool> _repeatActionUntilGetResult(
-      void action(), Future<void> result()) async {
+      dynamic action(), Future<void> result()) async {
     return await ermine.waitFor(() async {
       action.call();
       try {
@@ -157,7 +168,7 @@ void main() {
   /// if it locates one. Otherwise, returns false.
   Future<bool> _repeatActionWaitingFor(
     FlutterDriver browser,
-    void action(),
+    dynamic action(),
     SerializableFinder finder, {
     Duration waitForTimeout = _timeoutOneSec,
   }) async {
@@ -169,7 +180,7 @@ void main() {
   /// true if it locates one. Otherwise, returns false.
   Future<bool> _repeatActionWaitingForAbsent(
     FlutterDriver browser,
-    void action(),
+    dynamic action(),
     SerializableFinder finder, {
     Duration waitForAbsentTimeout = _timeoutOneSec,
   }) async {
@@ -209,14 +220,17 @@ void main() {
 
     // Access to the website.
     await input.text(indexUrl);
+    print('Typed in $indexUrl to the browser');
     await input.keyPress(kEnterKey);
+    print('Pressed Enter');
+    await browser.waitUntilFirstFrameRasterized();
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(indexTabFinder, timeout: _timeoutTenSec);
 
     final webdriver =
         (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
+    print('Connected a web driver to the localhost');
 
-    expect(await browser.getText(newTabFinder), isNotNull);
     expect(await browser.getText(indexTabFinder), isNotNull);
     print('Opened $indexUrl');
 
