@@ -45,7 +45,7 @@ impl ViewAssistant for IntegrationTestViewAssistant {
         let image = render_context.get_current_image(context);
         let ext =
             RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
-        render_context.render(&self.composition, None, image, &ext);
+        render_context.render(&mut self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         context.request_render();
         Ok(())
