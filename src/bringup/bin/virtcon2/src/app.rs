@@ -92,6 +92,7 @@ pub struct VirtualConsoleAppAssistant {
     args: VirtualConsoleArgs,
     read_only_debuglog: Option<zx::DebugLog>,
     session_manager: SessionManager,
+    pending_sessions: Vec<fasync::Channel>,
 }
 
 impl VirtualConsoleAppAssistant {
@@ -102,6 +103,7 @@ impl VirtualConsoleAppAssistant {
     ) -> Result<VirtualConsoleAppAssistant, Error> {
         let app_context = app_context.clone();
         let session_manager = SessionManager::new(args.keep_log_visible, FIRST_SESSION_ID);
+        let pending_sessions = vec![];
 
         Ok(VirtualConsoleAppAssistant {
             app_context,
@@ -109,6 +111,7 @@ impl VirtualConsoleAppAssistant {
             args,
             read_only_debuglog,
             session_manager,
+            pending_sessions,
         })
     }
 
@@ -122,6 +125,20 @@ impl VirtualConsoleAppAssistant {
         let scrollback_rows = self.args.scrollback_rows;
         let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
         Log::start(read_only_debuglog, &client, DEBUGLOG_ID)
+    }
+
+    fn service_pending_sessions(&mut self) {
+        let app_context = self.app_context.clone();
+        let view_key = self.view_key;
+        if self.view_key == 0 {
+            panic!("Trying to service session manager connection without a view.");
+        }
+        let color_scheme = self.args.color_scheme;
+        let scrollback_rows = self.args.scrollback_rows;
+        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
+        for channel in self.pending_sessions.drain(..) {
+            self.session_manager.bind(&client, channel);
+        }
     }
 
     #[cfg(test)]
@@ -153,6 +170,9 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             self.start_log(read_only_debuglog).expect("failed to start debuglog");
         }
 
+        // Service any pending sessions.
+        self.service_pending_sessions();
+
         Ok(view_assistant)
     }
 
@@ -165,15 +185,11 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         _service_name: &str,
         channel: fasync::Channel,
     ) -> Result<(), Error> {
-        let app_context = self.app_context.clone();
-        let view_key = self.view_key;
-        if self.view_key == 0 {
-            panic!("Trying to service session manager connection without a view.");
+        self.pending_sessions.push(channel);
+        // Service this session immediately if we already have a view.
+        if self.view_key != 0 {
+            self.service_pending_sessions();
         }
-        let color_scheme = self.args.color_scheme;
-        let scrollback_rows = self.args.scrollback_rows;
-        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
-        self.session_manager.bind(&client, channel);
         Ok(())
     }
 
@@ -200,6 +216,15 @@ mod tests {
     async fn can_create_virtual_console_view() -> Result<(), Error> {
         let mut app = VirtualConsoleAppAssistant::new_for_test()?;
         app.create_view_assistant(1)?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn can_handle_service_connection_request_without_view() -> Result<(), Error> {
+        let mut app = VirtualConsoleAppAssistant::new_for_test()?;
+        let (_, server_end) = zx::Channel::create().unwrap();
+        let channel = fasync::Channel::from_channel(server_end).unwrap();
+        app.handle_service_connection_request(SessionManagerMarker::NAME, channel)?;
         Ok(())
     }
 }

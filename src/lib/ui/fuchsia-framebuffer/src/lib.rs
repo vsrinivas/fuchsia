@@ -750,9 +750,13 @@ impl FrameBuffer {
             // display-controller and use the first display that appears.
             let mut first_path = None;
             let dir = OpenOptions::new().read(true).open("/dev/class/display-controller")?;
-            watch_directory(&dir, ZX_TIME_INFINITE, |_event, path| {
-                first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
-                Err(zx::Status::STOP)
+            watch_directory(&dir, ZX_TIME_INFINITE, |event, path| {
+                if event == fdio::WatchEvent::AddFile {
+                    first_path = Some(format!("/dev/class/display-controller/{}", path.display()));
+                    Err(zx::Status::STOP)
+                } else {
+                    Ok(())
+                }
             });
             first_path.unwrap()
         };
