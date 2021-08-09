@@ -50,11 +50,11 @@ func (_ EnumType) I_EnumIsStrict() bool {
 func (x EnumType) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 

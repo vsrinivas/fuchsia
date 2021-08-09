@@ -32,9 +32,9 @@ func (_ ExampleEnum) I_EnumIsStrict() bool {
 func (x ExampleEnum) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	default:
 		return false
+	default:
+		return true
 	}
 }
 

@@ -32,11 +32,11 @@ func (_ SomeProtocolSomeMethodError) I_EnumIsStrict() bool {
 func (x SomeProtocolSomeMethodError) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -78,13 +78,13 @@ func (_ Op) I_EnumIsStrict() bool {
 func (x Op) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	case 3:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	case 3:
+		return false
+	default:
+		return true
 	}
 }
 

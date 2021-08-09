@@ -30,11 +30,11 @@ func (_ ObjType) I_EnumIsStrict() bool {
 func (x ObjType) IsUnknown() bool {
 	switch x {
 	case 0:
-		return true
-	case 14:
-		return true
-	default:
 		return false
+	case 14:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -71,11 +71,11 @@ func (_ ErrorEnum) I_EnumIsStrict() bool {
 func (x ErrorEnum) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 

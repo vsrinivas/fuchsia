@@ -29,11 +29,11 @@ func (_ MyStrictEnum) I_EnumIsStrict() bool {
 func (x MyStrictEnum) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -73,11 +73,11 @@ func (_ MyFlexibleEnum) I_EnumIsStrict() bool {
 func (x MyFlexibleEnum) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -119,11 +119,11 @@ func (_ MyFlexibleEnumWithCustomUnknown) I_EnumIsStrict() bool {
 func (x MyFlexibleEnumWithCustomUnknown) IsUnknown() bool {
 	switch x {
 	case 1:
-		return true
-	case 2:
-		return true
-	default:
 		return false
+	case 2:
+		return false
+	default:
+		return true
 	}
 }
 

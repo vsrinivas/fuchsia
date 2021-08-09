@@ -44,11 +44,11 @@ func (x {{.Name}}) IsUnknown() bool {
 		{{- range .Members }}
 		{{- if not .IsUnknown }}
 		case {{ .Value }}:
-			return true
+			return false
 		{{- end }}
 		{{- end }}
 		default:
-			return false
+			return true
 		}
 }
 
