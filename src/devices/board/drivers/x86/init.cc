@@ -110,7 +110,7 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
   // of the ACPICA developer's reference.
   ACPI_STATUS status = AcpiInitializeSubsystem();
   if (status != AE_OK) {
-    zxlogf(WARNING, "Could not initialize ACPI");
+    zxlogf(WARNING, "Could not initialize ACPI: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -128,19 +128,19 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
 
   status = AcpiLoadTables();
   if (status != AE_OK) {
-    zxlogf(WARNING, "Could not load ACPI tables: %d", status);
+    zxlogf(WARNING, "Could not load ACPI tables: %s", zx_status_get_string(status));
     return status;
   }
 
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARNING, "Could not enable ACPI");
+    zxlogf(WARNING, "Could not enable ACPI: %s", zx_status_get_string(status));
     return status;
   }
 
   status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    zxlogf(WARNING, "Could not initialize ACPI objects");
+    zxlogf(WARNING, "Could not initialize ACPI objects: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -148,7 +148,7 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
   if (status == AE_NOT_FOUND) {
     zxlogf(WARNING, "Could not find ACPI IRQ mode switch");
   } else if (status != AE_OK) {
-    zxlogf(WARNING, "Failed to set APIC IRQ mode");
+    zxlogf(WARNING, "Failed to set APIC IRQ mode: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -159,7 +159,7 @@ ACPI_STATUS acpi_sub_init(acpi::Acpi* acpi) {
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {
-    zxlogf(WARNING, "Could not initialize ACPI GPEs");
+    zxlogf(WARNING, "Could not initialize ACPI GPEs: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -195,7 +195,7 @@ zx_status_t X86::EarlyInit() {
   // not propagate.
   status = iommu_manager_.Init(std::move(root_resource), false /* force_hardware_iommu */);
   if (status != ZX_OK) {
-    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %d", status);
+    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %s", zx_status_get_string(status));
   }
   return ZX_OK;
 }
