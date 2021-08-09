@@ -439,7 +439,28 @@ var1.v = bool(true);
 
 		return ((f1.v == bool(true)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenBoolStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenBoolStruct{};
+var1.v = bool(true);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenBoolStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == bool(true)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -458,7 +479,28 @@ var1.v = int16_t(1ull);
 
 		return ((f1.v == int16_t(1ull)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenIntStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenIntStruct{};
+var1.v = int16_t(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenIntStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == int16_t(1ull)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -477,7 +519,28 @@ var1.v = uint16_t(1ull);
 
 		return ((f1.v == uint16_t(1ull)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenUintStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenUintStruct{};
+var1.v = uint16_t(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenUintStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == uint16_t(1ull)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -496,7 +559,28 @@ var1.v = float(0);
 
 		return ((f1.v == float(0)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenFloatStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenFloatStruct{};
+var1.v = float(0);
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenFloatStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == float(0)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -515,7 +599,28 @@ var1.v = double(0);
 
 		return ((f1.v == double(0)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenDoubleStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenDoubleStruct{};
+var1.v = double(0);
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenDoubleStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == double(0)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -536,7 +641,30 @@ var1.v = "abcd";
 
 		return ((f1.v.size() == 4 && memcmp(f1.v.data(), "abcd", 4) == 0));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenStringStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenStringStruct{};
+var1.v = "abcd";
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenStringStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v.size() == 4 && memcmp(f1.v.data(), "abcd", 4) == 0));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -557,7 +685,30 @@ var1.v = "abcd";
 
 		return ((f1.v.size() == 4 && memcmp(f1.v.data(), "abcd", 4) == 0));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableStringStructNonNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableStringStruct{};
+var1.v = "abcd";
+
+	auto bytes = std::vector<uint8_t>{
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableStringStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v.size() == 4 && memcmp(f1.v.data(), "abcd", 4) == 0));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -577,7 +728,29 @@ var1.v = fidl::StringView();
 
 		return (f1.v.is_null());
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableStringStructNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableStringStruct{};
+var1.v = fidl::StringView();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableStringStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return (f1.v.is_null());
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -596,7 +769,28 @@ var1.v = conformance::wire::GoldenEnum(1ull);
 
 		return ((f1.v == conformance::wire::GoldenEnum(1ull)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenEnumStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenEnumStruct{};
+var1.v = conformance::wire::GoldenEnum(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenEnumStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == conformance::wire::GoldenEnum(1ull)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -615,7 +809,28 @@ var1.v = static_cast<conformance::wire::GoldenBits>(1ull);
 
 		return ((f1.v == static_cast<conformance::wire::GoldenBits>(1ull)));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenBitsStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenBitsStruct{};
+var1.v = static_cast<conformance::wire::GoldenBits>(1ull);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenBitsStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == static_cast<conformance::wire::GoldenBits>(1ull)));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -641,7 +856,33 @@ var1.v = std::move(var2);
 
 		return ((f2.has_v() && (f2.v() == int16_t(1ull))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenTableStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenTableStruct{};
+auto var2 = conformance::wire::GoldenTable(allocator);
+var2.set_v(allocator, int16_t(1ull));
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenTableStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.has_v() && (f2.v() == int16_t(1ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -666,7 +907,32 @@ var1.v = std::move(var2);
 
 		return ((f2.which() == conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenUnionStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenUnionStruct{};
+auto var2 = conformance::wire::GoldenUnion();
+var2.set_v(allocator, int16_t(1ull));
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenUnionStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.which() == conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -691,7 +957,32 @@ var1.v = std::move(var2);
 
 		return ((f2.which() == conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableUnionStruct{};
+auto var2 = conformance::wire::GoldenUnion();
+var2.set_v(allocator, int16_t(1ull));
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableUnionStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.which() == conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -712,7 +1003,29 @@ var1.v = conformance::wire::GoldenUnion();
 
 		return (f1.v.has_invalid_tag());
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableUnionStructNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableUnionStruct{};
+var1.v = conformance::wire::GoldenUnion();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableUnionStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return (f1.v.has_invalid_tag());
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -737,7 +1050,34 @@ var1.v = std::move(var2);
 
 		return (((f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenByteArrayStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenByteArrayStruct{};
+auto var2 = fidl::Array<uint8_t, 4>();
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenByteArrayStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return (((f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -766,7 +1106,38 @@ var1.v = std::move(var2);
 
 		return ((((f3.v == int16_t(1ull))) && ((f4.v == int16_t(2ull)))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenStructArrayStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenStructArrayStruct{};
+auto var2 = fidl::Array<conformance::wire::GoldenIntStruct, 2>();
+auto var3 = conformance::wire::GoldenIntStruct{};
+var3.v = int16_t(1ull);
+var2[0] = std::move(var3);
+auto var4 = conformance::wire::GoldenIntStruct{};
+var4.v = int16_t(2ull);
+var2[1] = std::move(var4);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenStructArrayStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+[[maybe_unused]] auto& f3 = f2[0];
+[[maybe_unused]] auto& f4 = f2[1];
+
+		return ((((f3.v == int16_t(1ull))) && ((f4.v == int16_t(2ull)))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -797,7 +1168,40 @@ var1.v = std::move(var2);
 
 		return ((f2.count() == 12 && (f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull)) && (f2[4] == uint8_t(1ull)) && (f2[5] == uint8_t(2ull)) && (f2[6] == uint8_t(3ull)) && (f2[7] == uint8_t(4ull)) && (f2[8] == uint8_t(1ull)) && (f2[9] == uint8_t(2ull)) && (f2[10] == uint8_t(3ull)) && (f2[11] == uint8_t(4ull))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenByteVectorStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenByteVectorStruct{};
+auto var2 = fidl::VectorView<uint8_t>(allocator, 12);
+var2[0] = uint8_t(1ull);
+var2[1] = uint8_t(2ull);
+var2[2] = uint8_t(3ull);
+var2[3] = uint8_t(4ull);
+for (size_t offset = 0; offset < var2.count(); offset += 4) {
+memcpy(var2.mutable_data() + offset, var2.data(), 4);
+}
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04,
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenByteVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return ((f2.count() == 12 && (f2[0] == uint8_t(1ull)) && (f2[1] == uint8_t(2ull)) && (f2[2] == uint8_t(3ull)) && (f2[3] == uint8_t(4ull)) && (f2[4] == uint8_t(1ull)) && (f2[5] == uint8_t(2ull)) && (f2[6] == uint8_t(3ull)) && (f2[7] == uint8_t(4ull)) && (f2[8] == uint8_t(1ull)) && (f2[9] == uint8_t(2ull)) && (f2[10] == uint8_t(3ull)) && (f2[11] == uint8_t(4ull))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -828,7 +1232,40 @@ var1.v = std::move(var2);
 
 		return ((f2.count() == 2 && ((f3.v == int16_t(1ull))) && ((f4.v == int16_t(2ull)))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenStructVectorStruct_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenStructVectorStruct{};
+auto var2 = fidl::VectorView<conformance::wire::GoldenIntStruct>(allocator, 2);
+auto var3 = conformance::wire::GoldenIntStruct{};
+var3.v = int16_t(1ull);
+var2[0] = std::move(var3);
+auto var4 = conformance::wire::GoldenIntStruct{};
+var4.v = int16_t(2ull);
+var2[1] = std::move(var4);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenStructVectorStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+[[maybe_unused]] auto& f3 = f2[0];
+[[maybe_unused]] auto& f4 = f2[1];
+
+		return ((f2.count() == 2 && ((f3.v == int16_t(1ull))) && ((f4.v == int16_t(2ull)))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -851,7 +1288,32 @@ var1.v = std::move(var2);
 
 		return (((f2->v == bool(true))));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableStructNonNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableStruct{};
+auto var2 = fidl::ObjectView<conformance::wire::GoldenBoolStruct>(allocator, conformance::wire::GoldenBoolStruct{});
+var2->v = bool(true);
+var1.v = std::move(var2);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+		return (((f2->v == bool(true))));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 
@@ -870,7 +1332,28 @@ var1.v = fidl::ObjectView<conformance::wire::GoldenBoolStruct>();
 
 		return ((f1.v == nullptr));
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+
+
+TEST(Conformance, GoldenNullableStructNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableStruct{};
+var1.v = fidl::ObjectView<conformance::wire::GoldenBoolStruct>();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return ((f1.v == nullptr));
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 
 #ifdef __Fuchsia__
@@ -914,7 +1397,54 @@ handle_defs[0],};
 	
 		return (b3);
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Decode) {
+	const std::vector<zx_handle_info_t> handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(53251),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 53251,
+	.unused = 0u,
+},
+};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenHandleBasicRightsStruct{};
+var1.v = zx::event(handle_defs[0].handle);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenHandleBasicRightsStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+	zx_info_handle_basic_t b3_info;
+	ZX_ASSERT(ZX_OK == zx_object_get_info(f2.get(), ZX_INFO_HANDLE_BASIC, &b3_info, sizeof(b3_info), nullptr, nullptr));
+	bool b3 = b3_info.koid == handle_koids[0] &&
+		(b3_info.type == 0 || 0 == ZX_OBJ_TYPE_NONE) &&
+		(b3_info.rights == 49155 || 49155 == ZX_RIGHT_SAME_RIGHTS);
+	
+		return (b3);
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 #endif  // __Fuchsia__
 
@@ -959,7 +1489,54 @@ handle_defs[0],};
 	
 		return (b3);
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Decode) {
+	const std::vector<zx_handle_info_t> handle_defs = std::vector<zx_handle_info_t>{
+
+// #0
+zx_handle_info_t{
+	.handle = fidl::test::util::CreateEvent(2147483648),
+	.type = ZX_OBJ_TYPE_EVENT,
+	.rights = 2147483648,
+	.unused = 0u,
+},
+};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ASSERT_EQ(ZX_OK, zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableHandleStruct{};
+var1.v = zx::handle(handle_defs[0].handle);
+
+	auto bytes = std::vector<uint8_t>{
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{
+handle_defs[0],};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableHandleStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+[[maybe_unused]] auto& f2 = f1.v;
+
+	zx_info_handle_basic_t b3_info;
+	ZX_ASSERT(ZX_OK == zx_object_get_info(f2.get(), ZX_INFO_HANDLE_BASIC, &b3_info, sizeof(b3_info), nullptr, nullptr));
+	bool b3 = b3_info.koid == handle_koids[0] &&
+		(b3_info.type == 0 || 0 == ZX_OBJ_TYPE_NONE) &&
+		(b3_info.rights == 2147483648 || 2147483648 == ZX_RIGHT_SAME_RIGHTS);
+	
+		return (b3);
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 #endif  // __Fuchsia__
 
@@ -980,7 +1557,30 @@ var1.v = zx::handle();
 
 		return (!f1.v.is_valid());
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV1, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+TEST(Conformance, GoldenNullableHandleStructNull_V2_Decode) {
+	[[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
+	auto var1 = conformance::wire::GoldenNullableHandleStruct{};
+var1.v = zx::handle();
+
+	auto bytes = std::vector<uint8_t>{
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	auto obj = std::move(var1);
+	auto equality_check = [&](conformance::wire::GoldenNullableHandleStruct& actual) -> bool {
+		[[maybe_unused]] auto& f1 = actual;
+
+		return (!f1.v.is_valid());
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 #endif  // __Fuchsia__
 
@@ -997,12 +1597,23 @@ var1.s = "abc";
 
 
 
-TEST(Conformance, GoldenStringStructNullBody_Decode_Failure) {
+TEST(Conformance, GoldenStringStructNullBody_V1_Decode_Failure) {
 	auto bytes = std::vector<uint8_t>{
 0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 	auto handles = std::vector<zx_handle_info_t>{};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<conformance::wire::GoldenStringStruct>(std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<conformance::wire::GoldenStringStruct>(
+		::fidl::internal::WireFormatVersion::kV1, std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS));
+}
+
+TEST(Conformance, GoldenStringStructNullBody_V2_Decode_Failure) {
+	auto bytes = std::vector<uint8_t>{
+0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+};
+	auto handles = std::vector<zx_handle_info_t>{};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<conformance::wire::GoldenStringStruct>(
+		::fidl::internal::WireFormatVersion::kV2, std::move(bytes), std::move(handles), ZX_ERR_INVALID_ARGS));
 }
 

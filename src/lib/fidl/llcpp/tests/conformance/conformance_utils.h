@@ -144,10 +144,11 @@ bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
 // EqualityCheck is a callable with the signature |bool EqualityCheck(FidlType& actual)|
 // that performs deep equality and compares handles based on koid, type and rights.
 template <typename FidlType, typename EqualityCheck>
-bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
-                   std::vector<zx_handle_info_t> handle_infos, EqualityCheck equality_check) {
+bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlType* value,
+                   std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
+                   EqualityCheck equality_check) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::DecodedMessage<FidlType> decoded(fidl::internal::WireFormatVersion::kV1, bytes.data(),
+  fidl::DecodedMessage<FidlType> decoded(wire_format_version, bytes.data(),
                                          static_cast<uint32_t>(bytes.size()), handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
@@ -160,10 +161,11 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
 // Verifies that |bytes| fails to decode as |FidlType|, with the expected error
 // code.
 template <typename FidlType>
-bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
+bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
+                   std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> handle_infos,
                    zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  fidl::DecodedMessage<FidlType> decoded(fidl::internal::WireFormatVersion::kV1, bytes.data(),
+  fidl::DecodedMessage<FidlType> decoded(wire_format_version, bytes.data(),
                                          static_cast<uint32_t>(bytes.size()), handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {

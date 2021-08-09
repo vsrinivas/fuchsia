@@ -9,6 +9,10 @@ type Uint32Union = strict union {
 };
 
 protocol TestProtocol {
+    MethodWithRequest(struct {
+        u Uint32Union;
+    });
+
     MethodWithResponse() -> (struct {
         u Uint32Union;
     });

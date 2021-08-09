@@ -280,19 +280,36 @@ void IncomingMessage::CloseHandles() && {
   ReleaseHandles();
 }
 
-void IncomingMessage::Decode(const fidl_type_t* message_type) {
+void IncomingMessage::Decode(const fidl_type_t* message_type,
+                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_ASSERT(is_transactional_);
   internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
   if (bytes() != nullptr &&
       (header()->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
     wire_format_version = internal::WireFormatVersion::kV2;
   }
-  Decode(wire_format_version, message_type);
+  Decode(wire_format_version, message_type, out_transformed_buffer);
 }
 
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
-                             const fidl_type_t* message_type) {
-  ZX_ASSERT(wire_format_version != internal::WireFormatVersion::kV2);  // Not yet supported.
+                             const fidl_type_t* message_type,
+                             std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+  if (wire_format_version == internal::WireFormatVersion::kV2) {
+    *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+
+    uint32_t actual_num_bytes = 0;
+    zx_status_t status = internal__fidl_transform__may_break(
+        FIDL_TRANSFORMATION_V2_TO_V1, message_type, bytes(), byte_actual(),
+        out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
+        error_address());
+    if (status != ZX_OK) {
+      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      return;
+    }
+
+    message_.bytes = out_transformed_buffer->get();
+    message_.num_bytes = actual_num_bytes;
+  }
 
   ZX_DEBUG_ASSERT(status() == ZX_OK);
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());

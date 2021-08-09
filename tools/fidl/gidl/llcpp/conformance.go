@@ -78,7 +78,8 @@ TEST(Conformance, {{ .Name }}_Decode) {
 		{{ .EqualityBuild }}
 		return {{ .EqualityValue }};
 	};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
+		{{ .WireFormatVersion }}, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -118,7 +119,8 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 	{{- end }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(std::move(bytes), std::move(handles), {{ .ErrorCode }}));
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeFailure<{{ .ValueType }}>(
+		{{ .WireFormatVersion }}, std::move(bytes), std::move(handles), {{ .ErrorCode }}));
 	{{- if .HandleDefs }}
 	for (const auto handle_info : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(handle_info.handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
@@ -145,6 +147,7 @@ type encodeSuccessCase struct {
 
 type decodeSuccessCase struct {
 	Name, HandleDefs, HandleKoidVectorName         string
+	WireFormatVersion                              string
 	ValueBuild, ValueVar, ValueType                string
 	EqualityInputVar, EqualityBuild, EqualityValue string
 	Bytes, Handles                                 string
@@ -157,8 +160,8 @@ type encodeFailureCase struct {
 }
 
 type decodeFailureCase struct {
-	Name, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
-	FuchsiaOnly                                            bool
+	Name, WireFormatVersion, HandleDefs, ValueType, Bytes, Handles, ErrorCode string
+	FuchsiaOnly                                                               bool
 }
 
 // Generate generates Low-Level C++ tests.
@@ -204,7 +207,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeSuccess.Value, decl, libllcpp.HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForEncode(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -239,11 +242,12 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		equalityBuild, EqualityValue := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, "handle_koids")
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				Name:                 testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				WireFormatVersion:    wireFormatVersionName(encoding.WireFormat),
 				HandleDefs:           handleDefs,
 				ValueBuild:           valueBuild,
 				ValueVar:             valueVar,
@@ -272,7 +276,7 @@ func encodeFailureCases(gidlEncodeFailurees []gidlir.EncodeFailure, schema gidlm
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", encodeFailure.Value, decl, libllcpp.HandleReprRaw)
 		errorCode := libllcpp.LlcppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range supportedWireFormats {
+		for _, wireFormat := range supportedEncodeWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
 				HandleDefs:  handleDefs,
@@ -298,34 +302,51 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 		errorCode := libllcpp.LlcppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-				Name:        decodeFailure.Name,
-				HandleDefs:  handleDefs,
-				ValueType:   valueType,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandleInfos(encoding.Handles),
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(decodeFailure.Name, encoding.WireFormat),
+				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueType:         valueType,
+				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:           libhlcpp.BuildRawHandleInfos(encoding.Handles),
+				ErrorCode:         errorCode,
+				FuchsiaOnly:       fuchsiaOnly,
 			})
 		}
 	}
 	return decodeFailureCases, nil
 }
 
-var supportedWireFormats = []gidlir.WireFormat{
+var supportedEncodeWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 }
+var supportedDecodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
+}
 
-func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedWireFormats {
+func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedEncodeWireFormats {
 		if wireFormat == wf {
 			return true
 		}
 	}
 	return false
+}
+func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedDecodeWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
+}
+
+func wireFormatVersionName(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("::fidl::internal::WireFormatVersion::k%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {

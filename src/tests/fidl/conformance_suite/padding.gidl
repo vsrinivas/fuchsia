@@ -302,8 +302,8 @@ success("CorrectPaddingEndOfInlineObject1Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject1ByteLowerByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
         v1, v2 = [
@@ -315,8 +315,8 @@ decode_failure("BadPaddingEndOfInlineObject1ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject1ByteUpperByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject1Byte,
     bytes = {
         v1, v2 = [
@@ -342,8 +342,8 @@ success("CorrectPaddingEndOfInlineObject2Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject2ByteLowerByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
         v1, v2 = [
@@ -355,8 +355,8 @@ decode_failure("BadPaddingEndOfInlineObject2ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject2ByteUpperByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject2Byte,
     bytes = {
         v1, v2 = [
@@ -385,8 +385,8 @@ success("CorrectPaddingEndOfInlineObject3Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject3ByteLowerByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject3Byte,
     bytes = {
         v1, v2 = [
@@ -399,8 +399,8 @@ decode_failure("BadPaddingEndOfInlineObject3ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject3ByteUpperByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject3Byte,
     bytes = {
         v1, v2 = [
@@ -427,8 +427,8 @@ success("CorrectPaddingEndOfInlineObject4Byte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject4ByteLowerByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
         v1, v2 = [
@@ -440,8 +440,8 @@ decode_failure("BadPaddingEndOfInlineObject4ByteLowerByte") {
 }
 
 decode_failure("BadPaddingEndOfInlineObject4ByteUpperByte") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingEndOfInlineObject4Byte,
     bytes = {
         v1, v2 = [
@@ -964,8 +964,8 @@ success("CorrectPaddingInBetweenOutOfLineObjects1Byte") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects1ByteLower") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects1Byte,
     bytes = {
         v1, v2 = [
@@ -982,8 +982,8 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects1ByteLower") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects1ByteUpper") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects1Byte,
     bytes = {
         v1, v2 = [
@@ -1023,8 +1023,8 @@ success("CorrectPaddingInBetweenOutOfLineObjects2Byte") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects2ByteLower") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects2Byte,
     bytes = {
         v1, v2 = [
@@ -1041,8 +1041,8 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects2ByteLower") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects2ByteUpper") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects2Byte,
     bytes = {
         v1, v2 = [
@@ -1083,8 +1083,8 @@ success("CorrectPaddingInBetweenOutOfLineObjects3Byte") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects3ByteLower") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects3Byte,
     bytes = {
         v1, v2 = [
@@ -1102,8 +1102,8 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects3ByteLower") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects3ByteUpper") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects3Byte,
     bytes = {
         v1, v2 = [
@@ -1144,8 +1144,8 @@ success("CorrectPaddingInBetweenOutOfLineObjects4Byte") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects4ByteLower") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects4Byte,
     bytes = {
         v1, v2 = [
@@ -1162,8 +1162,8 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects4ByteLower") {
 }
 
 decode_failure("BadPaddingInBetweenOutOfLineObjects4ByteUpper") {
-    // TODO(fxbug.dev/81643) For HLCPP, the transformer clobbers this padding with zeros.
-    bindings_denylist = [go, dart, hlcpp],
+    // TODO(fxbug.dev/81643) For LLCPP and HLCPP, the transformer clobbers this padding with zeros.
+    bindings_denylist = [go, dart, llcpp, hlcpp],
     type = PaddingInBetweenOutOfLineObjects4Byte,
     bytes = {
         v1, v2 = [
