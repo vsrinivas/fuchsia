@@ -1,19 +1,15 @@
-# Mock DDK migration instructions
+# Mock DDK Migration
 
 The fake_ddk driver testing library is being replaced by a new library, mock_ddk.
 The driver framework team needs help to migrate the 100+ driver tests in Fuchsia.
 
-We are tracking the migration in the
-[Mock DDK Migration Table](https://goto.google.com/mock-ddk-migration-table).
-
-## Why is it happening?
-
+## Goal & motivation
 The Fake DDK has a number of ambiguities around what is being tested and made a
 number of assumptions about the driver structure that are increasingly invalid.
 The mock_ddk provides a more straightforward unit testing framework, with clear
-boundaries about what is able to be tested. To find out more about the motivation,
-check out the
-[design](https://docs.google.com/document/d/1HD5lGDOAsZeSAMNvMoRFtwOC0pZyTZkdae6T5BBmuu0).
+boundaries about what is able to be tested.
+
+## Technical background
 
 ## Simple example
 
@@ -49,16 +45,7 @@ but here is how a very simple test might be migrated:
   ```
 
 
-# Migrating a Driver Unit Test
-
-Note: ***The mock-ddk is only for unit testing.***
-The mock_ddk does not test any interfaces for correctness, it is simply a
-framework which helps driver authors load and exercise their code.  Any
-driver tests that use the fake_ddk as an integration testing framework
-should use the isolated devmgr instead.
-
-
-## Overview of the Mock-DDK
+### Overview of the Mock-DDK
 
 The mock ddk exists simply as a set of `zx_device_t`’s that track the
 interactions a device has with the mocked driver host, and allow calls
@@ -68,11 +55,11 @@ their accompanying device.
 
 Here is an interaction model of how the mock-ddk interacts with a driver:
 
-![Figure: Interaction Model](images/interaction_model.png)
+![Figure: Interaction Model](/docs/development/drivers/testing/images/interaction_model.png)
 
-## Major changes from the fake-ddk
+### Major changes from the fake-ddk
 
-### Bookkeeping
+#### Bookkeeping
 
 fake_ddk | mock-ddk
 ---------|------------------------
@@ -83,7 +70,7 @@ Does not hold a reference to the created device | Just like the driver host, eac
 *See the section [Getting the Device Context](#getting-device-context) for how to get device context in mock-ddk.*
 
 
-### Imitating Driverhost behavior {: imitating-driverhost-behavior }
+#### Imitating Driverhost behavior {: imitating-driverhost-behavior }
 
 fake_ddk | mock-ddk
 ---------|------------------------
@@ -94,7 +81,7 @@ Note: Needing to manually call `InitOp()` and `UnbindOp()` is the most common ca
 If your driver has an `Init()` function or does significant work in `Unbind()`, you will need to call those
 ops explicitly. An example of this test is provided below in the section [An example lifecycle test](#lifecycle-test).
 
-### No more `fake_ddk::Bind::Ok()` function {: no-bind-ok-function }
+#### No more `fake_ddk::Bind::Ok()` function {: no-bind-ok-function }
 
 The `Ok()` function was not actually testing correct use of driverhost protocols.
 Although there is no drop in replacement for the `Ok()` function, the test writer
@@ -102,7 +89,7 @@ can start and stop the driver just like the driver host does, to ensure the devi
 state is initialized and shut down properly.  An example of this test is provided
 below in the section [An example lifecycle test](#lifecycle-test).
 
-## Using the Mock DDK
+### Using the Mock DDK
 
 ### Interactions with the Driverhost
 
@@ -113,7 +100,7 @@ Calling into the device <br> (device ops)  | Calling out to the driverhost <br> 
 Call device ops through the MockDevice. Functions are named as op name + `Op` <br> **Example:** <br> Call the `init` function using `InitOp()`  | All calls in the libdriver API are recorded on the appropriate device, but no action is taken. <br> **Example:**<br> To test if `device_init_reply()` has been called, call `InitReplyCalled()`<br> or to wait on the call, `WaitUntilInitReplyCalled()`.
 
 
-#### An example lifecycle test {: #lifecycle-test}
+##### An example lifecycle test {: #lifecycle-test}
 
 * {Fake DDK}
 
@@ -148,7 +135,7 @@ Call device ops through the MockDevice. Functions are named as op name + `Op` <b
     // Mock-ddk will release all the devices on destruction, or you can do it manually.
     ```
 
-#### Automatically Unbind and Release {: #auto-unbind-release }
+##### Automatically Unbind and Release {: #auto-unbind-release }
 The driverhost will always call unbind before releasing a driver, but that
 step must be done manually in the mock-ddk.
 If you have multiple drivers under test, it may be easier to automate the
@@ -191,13 +178,13 @@ the ddktl library, you may want to access corresponding the ddk::Device:
          child->GetDeviceContext<TestDevice>();
 ```
 
-### Interactions with other drivers
+#### Interactions with other drivers
 
 Mocking out parent functionality uses mostly the same calls as the fake ddk, but
 setting mocks only affect the devices involved, instead of loading mocks into a
 global state.
 
-#### Mocking Parent Protocols
+##### Mocking Parent Protocols
 
 Parent protocols are added to the parent before a child device is expected to
 access them with a call to `device_get_protocol()`
@@ -226,7 +213,7 @@ access them with a call to `device_get_protocol()`
      ```
 
 
-#### Fragment protocols
+##### Fragment protocols
 
 Composite devices get protocols from multiple parent “fragments”.  This is manifested
 in protocols being keyed by a name.  Mock-ddk allows binding a name to a protocol,
@@ -265,7 +252,7 @@ to indicate it comes from a fragment.
 
 
 
-#### Mocking FIDL connections
+##### Mocking FIDL connections
 
 If the device serves a FIDL protocol, the test may want to call the fidl
 functions provided.  This can be difficult as the fidl functions take a
@@ -304,7 +291,7 @@ the device class over a fidl channel.
     ```
 
 
-#### Mocking Metadata
+##### Mocking Metadata
 
 Metadata can be added to any ancestor of the device under test.
 Metadata is propagated to be available to all descendants.
@@ -328,7 +315,7 @@ Metadata is propagated to be available to all descendants.
                        kSource, sizeof(kSource));
     ```
 
-#### Load Firmware
+##### Load Firmware
 
 Load firmware is an deprecated function, but is included for
 the drivers that still need it:
@@ -352,7 +339,20 @@ the drivers that still need it:
     ```
 
 
-## Step-by-step Migration
+## How to help
+
+### Picking a task
+
+The drivers that are remaining to be converted are listed on the [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
+
+If you can't acces that sheet, you can find targets that depend on fake_ddk by running:
+```bash
+scripts/gn/trim_visibility.py --target="//src/devices/testing/fake_ddk
+```
+
+Or check the allowlist in `src/devices/testing/fake_ddk/BUILD.gn`.
+
+### Doing a task
 
 1. Assign the test to yourself in the [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
 by putting your name in the “Owner” column.  If the driver test is listed as "Blocked",
@@ -391,12 +391,6 @@ there may be something preventing it from being migrated.
     “improve_driver_unit_tests”.  In the bug, point out a few potential tests
     that could be written.
 12. Add the test target to your build and test it.  The test should not require specific hardware.
-13. Upload the change, and copy the gerrit link to the
-    [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
-14. When the CL is merged, mark the test as “Done” in the migration sheet.
-
-If at any point you need help or have questions, please reach out to garratt@ or tq-df-eng@.
-
 
 ### Common Issues:
 
@@ -407,13 +401,21 @@ If at any point you need help or have questions, please reach out to garratt@ or
     * Solution: release the Device from the current scope after calling `DdkAdd()`
 
 
-### Example CLs:
+### Completing a task
 
-* Test created subclass of fake_ddk::Bind:
-    * [https://fuchsia-review.googlesource.com/c/fuchsia/+/560643](https://fuchsia-review.googlesource.com/c/fuchsia/+/560643)
-* Test used fake_ddk::FidlMessenger
-    * [https://fuchsia-review.googlesource.com/c/fuchsia/+/557553](https://fuchsia-review.googlesource.com/c/fuchsia/+/557553)
-* Test uses SetMetadata and SetProtocol
-    * [https://fuchsia-review.googlesource.com/c/fuchsia/+/560246](https://fuchsia-review.googlesource.com/c/fuchsia/+/560246)
-* Test called fake_ddk::Bind::Ok()
-    * [https://fuchsia-review.googlesource.com/c/fuchsia/+/552027](https://fuchsia-review.googlesource.com/c/fuchsia/+/552027)
+* Upload the change, and copy the gerrit link to the
+    [mock-ddk migration sheet](https://goto.google.com/mock-ddk-migration-table)
+* When the CL is merged, mark the test as “Done” in the migration sheet.
+
+
+## Examples:
+Change List | Example of when a test...
+-------------|--------------
+[fxr/560643](https://fuchsia-review.googlesource.com/c/fuchsia/+/560643) | Created subclass of fake_ddk::Bind
+[fxr/557553](https://fuchsia-review.googlesource.com/c/fuchsia/+/557553) | Used fake_ddk::FidlMessenger
+[fxr/560246](https://fuchsia-review.googlesource.com/c/fuchsia/+/560246) | Uses SetMetadata and SetProtocol
+[fxr/552027](https://fuchsia-review.googlesource.com/c/fuchsia/+/552027) | Called fake_ddk::Bind::Ok()
+
+## Sponsors
+
+If at any point you need help or have questions, please reach out to garratt@ or tq-df-eng@.

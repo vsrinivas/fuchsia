@@ -38,6 +38,10 @@ toc:
   section:
   - title: "Dismantle the global log severity file"
     path: /docs/contribute/open_projects/logging/global_severity.md
+- title: "Testing"
+  section:
+  - title: "Migrate driver unit tests to mock-ddk"
+    path: /docs/contribute/open_projects/testing/mock_ddk_migration.md
 - title: "Graduated projects"
   section:
   - title: "Overview"

@@ -9,4 +9,4 @@ toc:
 - title: "Overview"
   path: /docs/development/drivers/testing/overview.md
 - title: "Mock DDK"
-  path: /docs/development/drivers/testing/fake_ddk_migration.md
+  path: /docs/development/drivers/testing/mock_ddk.md

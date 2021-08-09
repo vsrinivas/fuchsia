@@ -26,10 +26,17 @@ zxtest and handles logging for you.
 
 ## Integration tests
 
-Driver authors can use several means for writing integration tests. For simple
-cases, the [fake-ddk](/src/devices/testing/fake_ddk) library is recommended. For
-more complicated ones,
- [isolated-devmgr](/src/lib/isolated_devmgr) is
-recommended.
+Driver authors should use the [isolated-devmgr](/src/lib/isolated_devmgr)
+for integration tests.
+
+## Unit tests
+Drivers authors should use the [mock-ddk](/docs/development/drivers/testing/mock_ddk.md)
+library for unit tests.
+
+There are a number of helpful mock libraries:
+
+* [fake_pdev](/src/devices/bus/testing/fake-pdev/fake-pdev.h) - Creates info for a fake pdev parent
+* [mock-mmio-reg](/src/devices/testing/mock-mmio-reg/include/mock-mmio-reg/mock-mmio-reg.h) Mocking Mmio registers
+* [fake-object](/src/devices/testing/fake-object/README.md) - fake userspace versions of kernel objects
 
 TODO(fxbug.dev/51320): Fill out more detail here.
