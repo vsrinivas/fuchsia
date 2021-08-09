@@ -1,0 +1,6 @@
+{
+  debug: false,
+  use_builtin_process_launcher: true,
+  num_threads: 2,
+  out_dir_contents: "hub",
+}

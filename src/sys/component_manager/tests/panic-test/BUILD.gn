@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
@@ -26,8 +27,8 @@ fuchsia_component("component_manager") {
   testonly = true
   manifest = "meta/component_manager.cml"
   deps = [
+    ":component_manager_config",
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_appmgr_config",
   ]
 }
 
@@ -40,4 +41,13 @@ fuchsia_component("component_manager_panic_test_cmp") {
 fuchsia_test_package("component_manager_panic_test") {
   test_components = [ ":component_manager_panic_test_cmp" ]
   deps = [ ":component_manager" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+component_config("component_manager_config") {
+  sources = [ "config.json5" ]
 }
