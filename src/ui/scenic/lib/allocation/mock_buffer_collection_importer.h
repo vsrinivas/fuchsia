@@ -14,15 +14,15 @@ namespace allocation {
 // Mock class of BufferCollectionImporter for API testing.
 class MockBufferCollectionImporter : public BufferCollectionImporter {
  public:
-  MOCK_METHOD3(ImportBufferCollection,
-               bool(GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
-                    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
+  MOCK_METHOD(bool, ImportBufferCollection,
+              (GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+               fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>));
 
-  MOCK_METHOD1(ReleaseBufferCollection, void(GlobalBufferCollectionId));
+  MOCK_METHOD(void, ReleaseBufferCollection, (GlobalBufferCollectionId));
 
-  MOCK_METHOD1(ImportBufferImage, bool(const ImageMetadata&));
+  MOCK_METHOD(bool, ImportBufferImage, (const ImageMetadata&));
 
-  MOCK_METHOD1(ReleaseBufferImage, void(GlobalImageId));
+  MOCK_METHOD(void, ReleaseBufferImage, (GlobalImageId));
 };
 
 }  // namespace allocation

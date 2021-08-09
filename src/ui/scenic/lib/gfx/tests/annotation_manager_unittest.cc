@@ -81,7 +81,7 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
     return session_context;
   }
 
-  CommandContext CreateCommandContext() {
+  CommandContext CreateCommandContext() override {
     return {.scene_graph = scene_graph_->GetWeakPtr(), .view_tree_updater = &view_tree_updater_};
   }
 

@@ -50,7 +50,7 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
 
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
-                                     fs::VnodeRepresentation* representation) {
+                                     fs::VnodeRepresentation* representation) override {
     *representation = fs::VnodeRepresentation::File();
     return ZX_OK;
   }

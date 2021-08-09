@@ -25,7 +25,7 @@ class FakeImage : public Image {
   escher::ImageInfo image_info_;
 
  private:
-  bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) {
+  bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) override {
     // Update pixels returns the new dirty state. False will stop additional
     // calls to UpdatePixels() until the image is marked dirty.
     return false;

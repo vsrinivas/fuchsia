@@ -521,10 +521,10 @@ class MockVmaGpuAllocator : public VmaGpuAllocator {
  public:
   MockVmaGpuAllocator(const VulkanContext& context) : VmaGpuAllocator(context) {}
 
-  MOCK_METHOD5(CreateImage,
-               bool(const VkImageCreateInfo& image_create_info,
-                    const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,
-                    VmaAllocation* vma_allocation, VmaAllocationInfo* vma_allocation_info));
+  MOCK_METHOD(bool, CreateImage,
+              (const VkImageCreateInfo& image_create_info,
+               const VmaAllocationCreateInfo& allocation_create_info, VkImage* image,
+               VmaAllocation* vma_allocation, VmaAllocationInfo* vma_allocation_info));
 };
 
 VK_TEST(VmaGpuAllocatorTest, ProtectedMemoryIsDedicated) {

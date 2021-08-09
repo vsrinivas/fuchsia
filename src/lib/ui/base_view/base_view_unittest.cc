@@ -32,8 +32,9 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
     listener_ = std::move(listener);
   }
 
-  MOCK_METHOD4(Present, void(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
-                             std::vector<zx::event> release_fences, PresentCallback callback));
+  MOCK_METHOD(void, Present,
+              (uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+               std::vector<zx::event> release_fences, PresentCallback callback));
 
  private:
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;

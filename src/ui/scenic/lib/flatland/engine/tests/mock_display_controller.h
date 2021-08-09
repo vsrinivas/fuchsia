@@ -23,42 +23,42 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
                   dispatcher);
   }
 
-  MOCK_METHOD3(SetLayerColorConfig, void(uint64_t, uint32_t, std::vector<uint8_t>));
+  MOCK_METHOD(void, SetLayerColorConfig, (uint64_t, uint32_t, std::vector<uint8_t>));
 
-  MOCK_METHOD4(SetLayerImage, void(uint64_t, uint64_t, uint64_t, uint64_t));
+  MOCK_METHOD(void, SetLayerImage, (uint64_t, uint64_t, uint64_t, uint64_t));
 
-  MOCK_METHOD0(ApplyConfig, void());
+  MOCK_METHOD(void, ApplyConfig, ());
 
-  MOCK_METHOD2(CheckConfig, void(bool, CheckConfigCallback));
+  MOCK_METHOD(void, CheckConfig, (bool, CheckConfigCallback));
 
-  MOCK_METHOD3(ImportBufferCollection,
-               void(uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
-                    ImportBufferCollectionCallback));
+  MOCK_METHOD(void, ImportBufferCollection,
+              (uint64_t, fidl::InterfaceHandle<class ::fuchsia::sysmem::BufferCollectionToken>,
+               ImportBufferCollectionCallback));
 
-  MOCK_METHOD3(SetBufferCollectionConstraints,
-               void(uint64_t, fuchsia::hardware::display::ImageConfig,
-                    SetBufferCollectionConstraintsCallback));
+  MOCK_METHOD(void, SetBufferCollectionConstraints,
+              (uint64_t, fuchsia::hardware::display::ImageConfig,
+               SetBufferCollectionConstraintsCallback));
 
-  MOCK_METHOD1(ReleaseBufferCollection, void(uint64_t));
+  MOCK_METHOD(void, ReleaseBufferCollection, (uint64_t));
 
-  MOCK_METHOD4(ImportImage, void(fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t,
-                                 ImportImageCallback));
+  MOCK_METHOD(void, ImportImage,
+              (fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t, ImportImageCallback));
 
-  MOCK_METHOD1(ReleaseImage, void(uint64_t));
+  MOCK_METHOD(void, ReleaseImage, (uint64_t));
 
-  MOCK_METHOD2(SetLayerPrimaryConfig, void(uint64_t, fuchsia::hardware::display::ImageConfig));
+  MOCK_METHOD(void, SetLayerPrimaryConfig, (uint64_t, fuchsia::hardware::display::ImageConfig));
 
-  MOCK_METHOD4(SetLayerPrimaryPosition,
-               void(uint64_t, fuchsia::hardware::display::Transform,
-                    fuchsia::hardware::display::Frame, fuchsia::hardware::display::Frame));
+  MOCK_METHOD(void, SetLayerPrimaryPosition,
+              (uint64_t, fuchsia::hardware::display::Transform, fuchsia::hardware::display::Frame,
+               fuchsia::hardware::display::Frame));
 
-  MOCK_METHOD3(SetLayerPrimaryAlpha, void(uint64_t, fuchsia::hardware::display::AlphaMode, float));
+  MOCK_METHOD(void, SetLayerPrimaryAlpha, (uint64_t, fuchsia::hardware::display::AlphaMode, float));
 
-  MOCK_METHOD1(CreateLayer, void(CreateLayerCallback));
+  MOCK_METHOD(void, CreateLayer, (CreateLayerCallback));
 
-  MOCK_METHOD1(DestroyLayer, void(uint64_t));
+  MOCK_METHOD(void, DestroyLayer, (uint64_t));
 
-  MOCK_METHOD2(SetDisplayLayers, void(uint64_t, ::std::vector<uint64_t>));
+  MOCK_METHOD(void, SetDisplayLayers, (uint64_t, ::std::vector<uint64_t>));
 
  private:
   void NotImplemented_(const std::string& name) final {}

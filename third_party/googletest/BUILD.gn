@@ -216,15 +216,6 @@ config("gmock_private_config") {
 
 config("gmock_config") {
   include_dirs = [ "src/googlemock/include" ]
-
-  cflags_cc = [
-    # The MOCK_METHODn() macros do not specify "override", which triggers this
-    # warning in users: "error: 'Method' overrides a member function but is not
-    # marked 'override' [-Werror,-Winconsistent-missing-override]". Suppress
-    # these warnings until https://github.com/google/googletest/issues/533 is
-    # fixed.
-    "-Wno-inconsistent-missing-override",
-  ]
 }
 
 static_library("gmock") {

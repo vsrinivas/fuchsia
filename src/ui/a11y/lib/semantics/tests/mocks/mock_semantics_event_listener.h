@@ -22,7 +22,7 @@ class MockSemanticsEventListener : public a11y::SemanticsEventListener {
   ~MockSemanticsEventListener() override { listener_factory_->InvalidateWeakPtrs(); }
 
   // |SemanticsEventListener|
-  void OnEvent(a11y::SemanticsEventInfo event_info) {
+  void OnEvent(a11y::SemanticsEventInfo event_info) override {
     events_received_.push_back(std::move(event_info));
   }
 

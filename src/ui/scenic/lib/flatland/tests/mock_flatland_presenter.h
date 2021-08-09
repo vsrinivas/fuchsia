@@ -16,14 +16,14 @@ namespace flatland {
 
 class MockFlatlandPresenter : public FlatlandPresenter {
  public:
-  MOCK_METHOD2(RegisterPresent, scheduling::PresentId(scheduling::SessionId session_id,
-                                                      std::vector<zx::event> release_fences));
-  MOCK_METHOD3(ScheduleUpdateForSession,
-               void(zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
-                    bool squashable));
-  MOCK_METHOD1(GetFuturePresentationInfos,
-               void(scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback));
-  MOCK_METHOD1(RemoveSession, void(scheduling::SessionId session_id));
+  MOCK_METHOD(scheduling::PresentId, RegisterPresent,
+              (scheduling::SessionId session_id, std::vector<zx::event> release_fences));
+  MOCK_METHOD(void, ScheduleUpdateForSession,
+              (zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
+               bool squashable));
+  MOCK_METHOD(void, GetFuturePresentationInfos,
+              (scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback));
+  MOCK_METHOD(void, RemoveSession, (scheduling::SessionId session_id));
 };
 
 }  // namespace flatland

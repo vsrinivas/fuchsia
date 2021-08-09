@@ -153,7 +153,7 @@ class TestAudioOutput : public AudioOutput {
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
   // TestAudioOutput does not implement enough state machine to fully initialize an AudioDriver .
   // It gets far enough for the AudioDriver to establish and expose its reference AudioClock.
-  void OnWakeup() { driver()->GetDriverInfo(); }
+  void OnWakeup() override { driver()->GetDriverInfo(); }
 
  private:
   StartMixDelegate start_mix_delegate_;

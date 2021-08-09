@@ -23,7 +23,7 @@ class CrashReporterForTest : public fuchsia::feedback::testing::CrashReporter_Te
  public:
   CrashReporterForTest() : binding_(this) {}
 
-  void File(fuchsia::feedback::CrashReport report, FileCallback callback) {
+  void File(fuchsia::feedback::CrashReport report, FileCallback callback) override {
     num_crash_reports_++;
     fuchsia::feedback::CrashReporter_File_Result result;
     result.set_response({});
@@ -59,10 +59,9 @@ class PressureNotifierUnitTest : public fuchsia::memory::Debugger, public gtest:
 
  protected:
   void SetUpNewPressureNotifier(bool send_critical_pressure_crash_reports) {
-    notifier_ = std::make_unique<PressureNotifier>(false, send_critical_pressure_crash_reports,
-                                                   context_provider_->context(),
-                                                   async_get_default_dispatcher(),
-                                                   [this](Level l) { last_level_ = l; });
+    notifier_ = std::make_unique<PressureNotifier>(
+        false, send_critical_pressure_crash_reports, context_provider_->context(),
+        async_get_default_dispatcher(), [this](Level l) { last_level_ = l; });
     // Set up initial pressure level.
     notifier_->observer_.WaitOnLevelChange();
   }

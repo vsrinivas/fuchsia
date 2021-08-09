@@ -373,7 +373,7 @@ class RequestorIdCapturingAgent : public modular_testing::FakeComponent,
 
  protected:
   // |modular_testing::FakeComponent|
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) {
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
     component_context()->outgoing()->AddPublicService<fuchsia::modular::Agent>(
         agent_bindings_.GetHandler(this));
     FlushAddServiceCallsIfRunning();

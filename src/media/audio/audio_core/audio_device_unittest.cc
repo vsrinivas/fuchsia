@@ -28,7 +28,7 @@ class FakeAudioDevice : public AudioDevice {
 
   // Needed because AudioDevice is an abstract class
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
-                       fuchsia::media::AudioGainValidFlags set_flags) {}
+                       fuchsia::media::AudioGainValidFlags set_flags) override {}
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override {
     driver()->GetDriverInfo();
   }

@@ -25,7 +25,9 @@ namespace {
 
 class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
  public:
-  void SetActive(bool active, SetActiveCallback cb) { FX_NOTREACHED() << "Not needed for tests."; }
+  void SetActive(bool active, SetActiveCallback cb) override {
+    FX_NOTREACHED() << "Not needed for tests.";
+  }
 
   void WatchActive(WatchActiveCallback callback) override {
     if (!reply_active_)

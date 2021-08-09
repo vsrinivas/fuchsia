@@ -36,7 +36,7 @@ class CompositorTest : public SessionTest {
  public:
   CompositorTest() {}
 
-  void SetUp() {
+  void SetUp() override {
     SessionTest::SetUp();
     display_manager_ = std::make_unique<display::DisplayManager>([]() {});
 
@@ -70,7 +70,7 @@ class CompositorTest : public SessionTest {
     return session_context;
   }
 
-  CommandContext CreateCommandContext() {
+  CommandContext CreateCommandContext() override {
     return {.sysmem = sysmem_.get(),
             .display_manager = display_manager_.get(),
             .warm_pipeline_cache_callback = [](vk::Format) {},
