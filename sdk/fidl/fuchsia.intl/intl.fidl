@@ -95,7 +95,7 @@ type Profile = table {
     3: time_zones vector<TimeZoneId>;
 
     /// Selected temperature unit. The unit is always reported: if there is no
-    /// setting in the current environment, the default value of CELSIUS is
+    /// setting `urrent environment, the default value of CELSIUS is
     /// used.
     4: temperature_unit TemperatureUnit;
 

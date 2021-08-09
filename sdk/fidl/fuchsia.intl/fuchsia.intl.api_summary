@@ -1,8 +1,43 @@
 struct/member fuchsia.intl/CalendarId.id string
 struct fuchsia.intl/CalendarId
+table/member fuchsia.intl/CivilTime.day uint8
+table/member fuchsia.intl/CivilTime.hour uint8
+table/member fuchsia.intl/CivilTime.minute uint8
+table/member fuchsia.intl/CivilTime.month fuchsia.intl/Month
+table/member fuchsia.intl/CivilTime.nanos uint64
+table/member fuchsia.intl/CivilTime.second uint8
+table/member fuchsia.intl/CivilTime.time_zone_id fuchsia.intl/TimeZoneId
+table/member fuchsia.intl/CivilTime.weekday fuchsia.intl/DayOfWeek
+table/member fuchsia.intl/CivilTime.year uint16
+table/member fuchsia.intl/CivilTime.year_day uint16
+table fuchsia.intl/CivilTime
+table/member fuchsia.intl/CivilToAbsoluteTimeOptions.repeated_time_conversion fuchsia.intl/RepeatedTimeConversion
+table/member fuchsia.intl/CivilToAbsoluteTimeOptions.skipped_time_conversion fuchsia.intl/SkippedTimeConversion
+table fuchsia.intl/CivilToAbsoluteTimeOptions
 const fuchsia.intl/DEFAULT_TIME_ZONE_ID string "UTC"
+enum/member fuchsia.intl/DayOfWeek.FRIDAY 6
+enum/member fuchsia.intl/DayOfWeek.MONDAY 2
+enum/member fuchsia.intl/DayOfWeek.SATURDAY 7
+enum/member fuchsia.intl/DayOfWeek.SUNDAY 1
+enum/member fuchsia.intl/DayOfWeek.THURSDAY 5
+enum/member fuchsia.intl/DayOfWeek.TUESDAY 3
+enum/member fuchsia.intl/DayOfWeek.WEDNESDAY 4
+strict enum fuchsia.intl/DayOfWeek uint8
 struct/member fuchsia.intl/LocaleId.id string
 struct fuchsia.intl/LocaleId
+enum/member fuchsia.intl/Month.APRIL 4
+enum/member fuchsia.intl/Month.AUGUST 8
+enum/member fuchsia.intl/Month.DECEMBER 12
+enum/member fuchsia.intl/Month.FEBRUARY 2
+enum/member fuchsia.intl/Month.JANUARY 1
+enum/member fuchsia.intl/Month.JULY 7
+enum/member fuchsia.intl/Month.JUNE 6
+enum/member fuchsia.intl/Month.MARCH 3
+enum/member fuchsia.intl/Month.MAY 5
+enum/member fuchsia.intl/Month.NOVEMBER 11
+enum/member fuchsia.intl/Month.OCTOBER 10
+enum/member fuchsia.intl/Month.SEPTEMBER 9
+strict enum fuchsia.intl/Month uint8
 table/member fuchsia.intl/Profile.calendars vector<fuchsia.intl/CalendarId>
 table/member fuchsia.intl/Profile.locales vector<fuchsia.intl/LocaleId>
 table/member fuchsia.intl/Profile.temperature_unit fuchsia.intl/TemperatureUnit
@@ -13,9 +48,31 @@ protocol/member fuchsia.intl/PropertyProvider.OnChange -> ()
 protocol fuchsia.intl/PropertyProvider
 table/member fuchsia.intl/RegulatoryDomain.country_code string
 table fuchsia.intl/RegulatoryDomain
+enum/member fuchsia.intl/RepeatedTimeConversion.BEFORE_TRANSITION 1
+flexible enum fuchsia.intl/RepeatedTimeConversion int32
+enum/member fuchsia.intl/SkippedTimeConversion.NEXT_VALID_TIME 2
+enum/member fuchsia.intl/SkippedTimeConversion.REJECT 1
+flexible enum fuchsia.intl/SkippedTimeConversion int32
 enum/member fuchsia.intl/TemperatureUnit.CELSIUS 0
 enum/member fuchsia.intl/TemperatureUnit.FAHRENHEIT 1
 strict enum fuchsia.intl/TemperatureUnit uint32
 struct/member fuchsia.intl/TimeZoneId.id string
 struct fuchsia.intl/TimeZoneId
+protocol/member fuchsia.intl/TimeZones.AbsoluteToCivilTime(fuchsia.intl/TimeZoneId time_zone_id,int64 absolute_time) -> (fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result result)
+protocol/member fuchsia.intl/TimeZones.CivilToAbsoluteTime(fuchsia.intl/CivilTime civil_time,fuchsia.intl/CivilToAbsoluteTimeOptions options) -> (fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result result)
+protocol fuchsia.intl/TimeZones
+enum/member fuchsia.intl/TimeZonesError.INTERNAL_ERROR 1
+enum/member fuchsia.intl/TimeZonesError.INVALID_DATE 3
+enum/member fuchsia.intl/TimeZonesError.UNKNOWN_TIME_ZONE 2
+flexible enum fuchsia.intl/TimeZonesError int32
+struct/member fuchsia.intl/TimeZones_AbsoluteToCivilTime_Response.civil_time fuchsia.intl/CivilTime
+struct fuchsia.intl/TimeZones_AbsoluteToCivilTime_Response
+union/member fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result.err fuchsia.intl/TimeZonesError
+union/member fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result.response fuchsia.intl/TimeZones_AbsoluteToCivilTime_Response
+strict union fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result
+struct/member fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response.absolute_time int64
+struct fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response
+union/member fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.err fuchsia.intl/TimeZonesError
+union/member fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.response fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response
+strict union fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result
 library fuchsia.intl
