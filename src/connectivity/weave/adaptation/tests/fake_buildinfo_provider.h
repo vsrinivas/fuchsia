@@ -12,7 +12,7 @@
 namespace weave::adaptation::testing {
 
 // Fake implementation of the fuchsia.buildinfo.Provider.
-class FakeBuildInfoProvider : public fuchsia::buildinfo::testing::Provider_TestBase {
+class FakeBuildInfoProvider final : public fuchsia::buildinfo::testing::Provider_TestBase {
  public:
   static constexpr char kProductConfig[] = "core";
   static constexpr char kBoardConfig[] = "x64";

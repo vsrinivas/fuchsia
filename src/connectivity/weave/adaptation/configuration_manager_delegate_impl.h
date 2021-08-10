@@ -66,7 +66,6 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   WEAVE_ERROR StoreServiceConfig(const uint8_t* service_config, size_t service_config_len) override;
   WEAVE_ERROR StorePairedAccountId(const char* account_id, size_t account_id_len) override;
 
- protected:
   // Read up to |buf_size| bytes from the file |path| in the factory partition
   // into |buf|. If not NULL, the number of bytes read is stored in |out_len|.
   zx_status_t ReadFactoryFile(const char* path, char* buf, size_t buf_size, size_t* out_len);

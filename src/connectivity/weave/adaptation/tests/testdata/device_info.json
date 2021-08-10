@@ -5,7 +5,7 @@
         "test3"
     ],
     "ble-device-name-prefix": "Fuchsia",
-    "device-id-path": "test_device_id",
+    "device-id-path": "testdata_device_id",
     "enable-thread": true,
     "enable-woble": true,
     "firmware-revision": "prerelease-1",

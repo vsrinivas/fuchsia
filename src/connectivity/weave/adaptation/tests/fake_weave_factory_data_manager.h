@@ -14,7 +14,8 @@
 namespace weave::adaptation::testing {
 
 // Fake implementation of the fuchsia.weave.FactoryDataManager interface.
-class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
+class FakeWeaveFactoryDataManager final
+    : public fuchsia::weave::testing::FactoryDataManager_TestBase {
  public:
   // Default values for the fuchsia.weave.FactoryDataManager fields.
   static constexpr char kPairingCode[] = "PAIRCODE123";

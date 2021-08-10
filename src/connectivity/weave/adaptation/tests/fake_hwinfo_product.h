@@ -14,7 +14,7 @@
 namespace weave::adaptation::testing {
 
 // Fake implementation of the fuchsia.hwinfo.Product.
-class FakeHwinfoProduct : public fuchsia::hwinfo::testing::Product_TestBase {
+class FakeHwinfoProduct final : public fuchsia::hwinfo::testing::Product_TestBase {
  public:
   // Default values for fuchsia.hwinfo.Product fields. For brevity, this only
   // includes the fields weavestack processes. No fields in the FIDL table are
