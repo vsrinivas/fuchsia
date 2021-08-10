@@ -44,8 +44,6 @@ fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) 
 
     info.inode_num = attrs.id;
     // TODO - store these in FsNodeState and convert on fstat
-    info.mode =
-        FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
     info.size = attrs.content_size as usize;
     info.storage_size = attrs.storage_size as usize;
     info.blksize = BYTES_PER_BLOCK;
@@ -57,7 +55,7 @@ impl FsNodeOps for RemoteNode {
         Ok(Box::new(RemoteFileObject { zxio: Arc::clone(&self.zxio) }))
     }
 
-    fn lookup(&self, _parent: &FsNode, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
@@ -68,10 +66,13 @@ impl FsNodeOps for RemoteNode {
         // TODO: It's unfortunate to have another round-trip. We should be able
         // to set the mode based on the information we get during open.
         let attrs = zxio.attr_get().map_err(Errno::from_status_like_fdio)?;
-        update_into_from_attrs(child.info_mut(), attrs);
 
-        child.set_ops(RemoteNode { zxio, rights: self.rights });
-        Ok(())
+        let ops = Box::new(RemoteNode { zxio, rights: self.rights });
+        let mode =
+            FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
+        let child = FsNode::new(ops, mode, &node.fs());
+        update_into_from_attrs(&mut child.info_write(), attrs);
+        Ok(child)
     }
 
     fn truncate(&self, _node: &FsNode, length: u64) -> Result<(), Errno> {

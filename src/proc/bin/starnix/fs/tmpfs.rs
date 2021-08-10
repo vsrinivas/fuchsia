@@ -40,36 +40,32 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(Box::new(DirectoryFileObject::new()))
     }
 
-    fn lookup(&self, _parent: &FsNode, _name: &FsStr, _child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         Err(ENOENT)
     }
 
-    fn mkdir(&self, _parent: &FsNode, _name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
-        child.set_ops(TmpfsDirectory);
-        Ok(())
+    fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        Ok(FsNode::new(Box::new(TmpfsDirectory), FileMode::IFDIR, &node.fs()))
     }
 
-    fn mknod(&self, _parent: &FsNode, _name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
-        match child.info_mut().mode.fmt() {
-            FileMode::IFREG => child.set_ops(VmoFileNode::new()?),
-            FileMode::IFIFO => child.set_ops(FifoNode::new()),
-            FileMode::IFBLK => child.set_ops(DeviceNode),
-            FileMode::IFCHR => child.set_ops(DeviceNode),
+    fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
+        let ops: Box<dyn FsNodeOps> = match mode.fmt() {
+            FileMode::IFREG => Box::new(VmoFileNode::new()?),
+            FileMode::IFIFO => Box::new(FifoNode::new()),
+            FileMode::IFBLK => Box::new(DeviceNode),
+            FileMode::IFCHR => Box::new(DeviceNode),
             _ => return Err(EACCES),
-        }
-        Ok(())
+        };
+        Ok(FsNode::new(ops, mode, &node.fs()))
     }
 
     fn create_symlink(
         &self,
-        _parent: &FsNode,
+        node: &FsNode,
         _name: &FsStr,
         target: &FsStr,
-        child: &mut FsNode,
-    ) -> Result<(), Errno> {
-        assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
-        child.set_ops(SymlinkNode::new(target));
-        Ok(())
+    ) -> Result<FsNodeHandle, Errno> {
+        Ok(FsNode::new(Box::new(SymlinkNode::new(target)), FileMode::IFLNK, &node.fs()))
     }
 
     fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {

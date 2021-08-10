@@ -62,32 +62,34 @@ impl FsNodeOps for ExtDirectory {
         Ok(Box::new(ExtDirFileObject { inner: self.inner.clone() }))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
         let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(ENOENT)?;
-        let node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
-
-        let info = child.info_mut();
-        info.inode_num = node.inode_num as u64;
-        info.mode = FileMode::from_bits(node.inode.e2di_mode.into());
-        info.uid = node.inode.e2di_uid.into();
-        info.gid = node.inode.e2di_gid.into();
-        info.size = u32::from(node.inode.e2di_size) as usize;
-        info.link_count = node.inode.e2di_nlink.into();
+        let inner = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
 
         let entry_type = ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?;
-        match entry_type {
-            ext_structs::EntryType::RegularFile => child.set_ops(ExtFile::new(node)),
-            ext_structs::EntryType::Directory => child.set_ops(ExtDirectory { inner: node }),
-            ext_structs::EntryType::SymLink => child.set_ops(ExtSymlink { inner: node }),
+        let ops: Box<dyn FsNodeOps> = match entry_type {
+            ext_structs::EntryType::RegularFile => Box::new(ExtFile::new(inner.clone())),
+            ext_structs::EntryType::Directory => Box::new(ExtDirectory { inner: inner.clone() }),
+            ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: inner.clone() }),
             _ => {
                 log::warn!("unhandled ext entry type {:?}", entry_type);
-                child.set_ops(ExtFile::new(node))
+                Box::new(ExtFile::new(inner.clone()))
             }
         };
+        let mode = FileMode::from_bits(inner.inode.e2di_mode.into());
+        let child = FsNode::new(ops, mode, &node.fs());
 
-        Ok(())
+        let mut info = child.info_write();
+        info.inode_num = inner.inode_num as u64;
+        info.uid = inner.inode.e2di_uid.into();
+        info.gid = inner.inode.e2di_gid.into();
+        info.size = u32::from(inner.inode.e2di_size) as usize;
+        info.link_count = inner.inode.e2di_nlink.into();
+        std::mem::drop(info);
+
+        Ok(child)
     }
 }
 

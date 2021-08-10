@@ -64,7 +64,7 @@ impl DirEntry {
     pub fn new_root<T: FsNodeOps + 'static>(ops: T, fs: &FileSystemHandle) -> DirEntryHandle {
         // TODO: apply_umask
         DirEntry::new(
-            Arc::new(FsNode::new(Some(Box::new(ops)), FileMode::IFDIR | FileMode::ALLOW_ALL, fs)),
+            FsNode::new(Box::new(ops), FileMode::IFDIR | FileMode::ALLOW_ALL, fs),
             None,
             FsString::new(),
         )
@@ -116,36 +116,37 @@ impl DirEntry {
     }
 
     pub fn component_lookup(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
-        let (node, _) = self.get_or_create_child(name, |child| self.node.lookup(name, child))?;
+        let (node, _) = self.get_or_create_child(name, || self.node.lookup(name))?;
         Ok(node)
     }
 
     /// Creates a new DirEntry
     ///
-    /// The create_fn function is called to create the underlying FsNode for
-    /// the DirEntry.
+    /// The create_node_fn function is called to create the underlying FsNode
+    /// for the DirEntry.
     ///
-    /// If the entry already exists, create_fn is not called, and EEXIST is
+    /// If the entry already exists, create_node_fn is not called, and EEXIST is
     /// returned.
     fn create_entry<F>(
         self: &DirEntryHandle,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
-        mk_callback: F,
+        create_node_fn: F,
     ) -> Result<DirEntryHandle, Errno>
     where
-        F: FnOnce(&mut FsNode) -> Result<(), Errno>,
+        F: FnOnce() -> Result<FsNodeHandle, Errno>,
     {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
-        let (entry, exists) = self.get_or_create_child(name, |child| {
-            let info = child.info_mut();
+        let (entry, exists) = self.get_or_create_child(name, || {
+            let node = create_node_fn()?;
+            let mut info = node.info_write();
             info.mode = mode;
             if mode.is_blk() || mode.is_chr() {
                 info.rdev = dev;
             }
             std::mem::drop(info);
-            mk_callback(child)
+            Ok(node)
         })?;
         if exists {
             return Err(EEXIST);
@@ -155,15 +156,15 @@ impl DirEntry {
         info.time_access = now;
         info.time_modify = now;
         std::mem::drop(info);
-        entry.node.file_system().did_create_dir_entry(&entry);
+        entry.node.fs().did_create_dir_entry(&entry);
         Ok(entry)
     }
 
     #[cfg(test)]
     pub fn create_dir(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
         // TODO: apply_umask
-        self.create_entry(name, FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE, |child| {
-            self.node.mkdir(name, child)
+        self.create_entry(name, FileMode::IFDIR | FileMode::ALLOW_ALL, DeviceType::NONE, || {
+            self.node.mkdir(name)
         })
     }
 
@@ -173,11 +174,11 @@ impl DirEntry {
         mode: FileMode,
         dev: DeviceType,
     ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, mode, dev, |child| {
+        self.create_entry(name, mode, dev, || {
             if mode.is_dir() {
-                self.node.mkdir(name, child)
+                self.node.mkdir(name)
             } else {
-                self.node.mknod(name, child)
+                self.node.mknod(name, mode)
             }
         })
     }
@@ -187,8 +188,8 @@ impl DirEntry {
         name: &FsStr,
         target: &FsStr,
     ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, FileMode::IFLNK | FileMode::ALLOW_ALL, DeviceType::NONE, |child| {
-            self.node.create_symlink(name, target, child)
+        self.create_entry(name, FileMode::IFLNK | FileMode::ALLOW_ALL, DeviceType::NONE, || {
+            self.node.create_symlink(name, target)
         })
     }
 
@@ -205,7 +206,7 @@ impl DirEntry {
         std::mem::drop(state);
 
         // TODO: When we have hard links, we'll need to check the link count.
-        self.node.file_system().will_destroy_dir_entry(&child);
+        self.node.fs().will_destroy_dir_entry(&child);
 
         std::mem::drop(child);
         Ok(())
@@ -222,10 +223,10 @@ impl DirEntry {
     fn get_or_create_child<F>(
         self: &DirEntryHandle,
         name: &FsStr,
-        init_fn: F,
+        create_fn: F,
     ) -> Result<(DirEntryHandle, bool), Errno>
     where
-        F: FnOnce(&mut FsNode) -> Result<(), Errno>,
+        F: FnOnce() -> Result<FsNodeHandle, Errno>,
     {
         // Check if the child is already in children. In that case, we can
         // simply return the child and we do not need to call init_fn.
@@ -236,15 +237,11 @@ impl DirEntry {
         std::mem::drop(state);
 
         let create_child = || {
-            let mut node = FsNode::new(None, FileMode::EMPTY, &self.node.file_system());
-
-            init_fn(&mut node)?;
+            let node = create_fn()?;
             assert!(
                 node.info().mode & FileMode::IFMT != FileMode::EMPTY,
                 "FsNode initialization did not populate the FileMode in FsNodeInfo."
             );
-            assert!(node.has_ops(), "FsNodeOps initialization did not populate ops");
-            let node = Arc::new(node);
             Ok(DirEntry::new(node, Some(self.clone()), name.to_vec()))
         };
 

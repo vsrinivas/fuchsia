@@ -15,7 +15,7 @@ pub struct FsNode {
     ///
     /// The FsNodeOps are implemented by the individual file systems to provide
     /// specific behaviors for this FsNode.
-    ops: Option<Box<dyn FsNodeOps>>,
+    ops: Box<dyn FsNodeOps>,
 
     /// The FileSystem that owns this FsNode's tree.
     fs: Weak<FileSystem>,
@@ -75,7 +75,7 @@ pub trait FsNodeOps: Send + Sync {
     ///
     /// The child parameter is an empty node. Operations other than initialize may panic before
     /// initialize is called.
-    fn lookup(&self, _node: &FsNode, _name: &FsStr, _child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
@@ -86,12 +86,12 @@ pub trait FsNodeOps: Send + Sync {
     ///
     /// This function is never called with FileMode::IFDIR. The mkdir function
     /// is used to create directories instead.
-    fn mknod(&self, _node: &FsNode, _name: &FsStr, _child: &mut FsNode) -> Result<(), Errno> {
+    fn mknod(&self, _node: &FsNode, _name: &FsStr, _mode: FileMode) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
     /// Create and return the given child node as a subdirectory.
-    fn mkdir(&self, _node: &FsNode, _name: &FsStr, _child: &mut FsNode) -> Result<(), Errno> {
+    fn mkdir(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
@@ -101,8 +101,7 @@ pub trait FsNodeOps: Send + Sync {
         _node: &FsNode,
         _name: &FsStr,
         _target: &FsStr,
-        _child: &mut FsNode,
-    ) -> Result<(), Errno> {
+    ) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
@@ -140,15 +139,7 @@ pub trait FsNodeOps: Send + Sync {
 }
 
 impl FsNode {
-    pub fn new_orphan<T: FsNodeOps + 'static>(
-        ops: T,
-        mode: FileMode,
-        fs: &FileSystemHandle,
-    ) -> FsNodeHandle {
-        Arc::new(FsNode::new(Some(Box::new(ops)), mode, fs))
-    }
-
-    pub fn new(ops: Option<Box<dyn FsNodeOps>>, mode: FileMode, fs: &FileSystemHandle) -> FsNode {
+    pub fn new(ops: Box<dyn FsNodeOps>, mode: FileMode, fs: &FileSystemHandle) -> FsNodeHandle {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             inode_num: fs.next_inode_num(),
@@ -158,31 +149,21 @@ impl FsNode {
             time_modify: now,
             ..Default::default()
         };
-        Self {
+        Arc::new(Self {
             ops,
             observers: ObserverList::default(),
             fs: Arc::downgrade(&fs),
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
-        }
+        })
     }
 
-    pub fn file_system(&self) -> FileSystemHandle {
+    pub fn fs(&self) -> FileSystemHandle {
         self.fs.upgrade().expect("FileSystem did not live long enough")
     }
 
     fn ops(&self) -> &dyn FsNodeOps {
-        // Empty nodes are never returned to users of the FsNode API, so most uses of the ops field
-        // can assume it is non-empty.
-        &**self.ops.as_ref().unwrap()
-    }
-
-    pub fn set_ops(&mut self, ops: impl FsNodeOps + 'static) {
-        self.ops = Some(Box::new(ops));
-    }
-
-    pub fn has_ops(&self) -> bool {
-        self.ops.is_some()
+        &*self.ops.as_ref()
     }
 
     pub fn open(&self, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
@@ -207,25 +188,20 @@ impl FsNode {
         }
     }
 
-    pub fn lookup(&self, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
-        self.ops().lookup(self, name, child)
+    pub fn lookup(&self, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        self.ops().lookup(self, name)
     }
 
-    pub fn mknod(&self, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
-        self.ops().mknod(self, name, child)
+    pub fn mknod(&self, name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
+        self.ops().mknod(self, name, mode)
     }
 
-    pub fn mkdir(&self, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
-        self.ops().mkdir(self, name, child)
+    pub fn mkdir(&self, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        self.ops().mkdir(self, name)
     }
 
-    pub fn create_symlink(
-        &self,
-        name: &FsStr,
-        target: &FsStr,
-        child: &mut FsNode,
-    ) -> Result<(), Errno> {
-        self.ops().create_symlink(self, name, target, child)
+    pub fn create_symlink(&self, name: &FsStr, target: &FsStr) -> Result<FsNodeHandle, Errno> {
+        self.ops().create_symlink(self, name, target)
     }
 
     pub fn readlink(&self) -> Result<FsString, Errno> {
@@ -267,8 +243,5 @@ impl FsNode {
     }
     pub fn info_write(&self) -> RwLockWriteGuard<'_, FsNodeInfo> {
         self.info.write()
-    }
-    pub fn info_mut(&mut self) -> &mut FsNodeInfo {
-        self.info.get_mut()
     }
 }

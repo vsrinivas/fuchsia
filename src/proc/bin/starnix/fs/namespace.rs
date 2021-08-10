@@ -368,7 +368,7 @@ impl NamespaceNode {
                             let root = fs.root().clone();
                             (fs, root)
                         }
-                        WhatToMount::Dir(entry) => (entry.node.file_system(), entry),
+                        WhatToMount::Dir(entry) => (entry.node.fs(), entry),
                     };
                     v.insert(Arc::new(Mount {
                         namespace: mount.namespace.clone(),

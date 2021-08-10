@@ -382,7 +382,7 @@ impl FileObject {
     /// This function is not typically called directly. Instead, consider
     /// calling NamespaceNode::open.
     pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode, flags: OpenFlags) -> FileHandle {
-        let fs = name.entry.node.file_system();
+        let fs = name.entry.node.fs();
         Arc::new(Self {
             name,
             _fs: fs,

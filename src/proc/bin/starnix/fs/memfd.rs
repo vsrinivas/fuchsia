@@ -7,6 +7,7 @@ use crate::task::*;
 use crate::types::*;
 
 pub fn new_memfd(kernel: &Kernel, flags: OpenFlags) -> Result<FileHandle, Errno> {
-    let node = FsNode::new_orphan(VmoFileNode::new()?, FileMode::from_bits(0o600), anon_fs(kernel));
+    let node =
+        FsNode::new(Box::new(VmoFileNode::new()?), FileMode::from_bits(0o600), anon_fs(kernel));
     Ok(FileObject::new_anonymous(node.open(flags)?, node, flags))
 }

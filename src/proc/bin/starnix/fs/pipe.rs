@@ -254,7 +254,7 @@ impl Pipe {
 /// sys_pipe2().
 pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
     let pipe = Pipe::new();
-    let node = FsNode::new_orphan(Anon, FileMode::from_bits(0o600), pipe_fs(kernel));
+    let node = FsNode::new(Box::new(Anon), FileMode::from_bits(0o600), pipe_fs(kernel));
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
