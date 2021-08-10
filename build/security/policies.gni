@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Declares arguments to describe policies.
+
+declare_args() {
+  # Default policy_labels definition to ease with the transition away from
+  # manually defining SWD policies across different product gni files.
+  # The transition process will be as follows:
+  # 1. Define all SWD policies.
+  # 2. Add dependency on SWD policies in base_package_deps and
+  #    system_image_deps, but do not apply a SWD policy to retain existing
+  #    product behavior.
+  # 3. Apply SWD policies in product definitions alongside the existing
+  #    SWD targets configuration. Assert that product configuration has not
+  #    changed.
+  # 4. Remove manually defined SWD targets in product definitions, rely solely
+  #    on defined SWD policies.
+  # This is initially empty as part of the first step of the transition.
+  policy_labels = {
+  }
+}

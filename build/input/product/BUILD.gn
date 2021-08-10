@@ -4,6 +4,7 @@
 
 import("//build/product.gni")
 import("//build/security.gni")
+import("//build/security/policies.gni")
 import("//build/security/policies_swd.gni")
 import("//src/sys/root/build/root.gni")
 
