@@ -15,6 +15,7 @@
 
 #include "fuchsia/hardware/spiimpl/cpp/banjo.h"
 #include "src/devices/lib/acpi/mock/mock-acpi.h"
+#include "src/devices/spi/drivers/intel-gspi/registers.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 // This is a fairly naive implementation of the MMIO interface offered by the GSPI device. We don't
@@ -54,6 +55,10 @@ class IntelGspiTest : public zxtest::Test {
     tx_fifo_ctrl.SetReadCallback([this]() { return TxFifoCtrlRead(); });
     tx_fifo_ctrl.SetWriteCallback([this](uint64_t val) { TxFifoCtrlWrite(val); });
 
+    auto& con0 = GetReg(gspi::INTEL_GSPI_SSCR0);
+    con0.SetReadCallback([this]() { return con0_reg_.reg_value(); });
+    con0.SetWriteCallback([this](uint64_t val) { con0_reg_.set_reg_value(val); });
+
     auto client = acpi_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
     auto device = std::make_unique<gspi::GspiDevice>(
@@ -61,6 +66,8 @@ class IntelGspiTest : public zxtest::Test {
         zx::duration::infinite());
     ASSERT_OK(device->Bind(&device));
     gspi_ = parent_->GetLatestChild();
+
+    ASSERT_EQ(con0_reg_.sse(), 0);
   }
 
   void TearDown() override {
@@ -71,6 +78,7 @@ class IntelGspiTest : public zxtest::Test {
   }
 
   uint64_t FifoRead() {
+    ZX_ASSERT(con0_reg_.sse() == 1);
     uint64_t val = 0;
     if (fifo_rx_offset_ < rx_data_.size()) {
       val = static_cast<uint64_t>(rx_data_[fifo_rx_offset_]);
@@ -83,6 +91,7 @@ class IntelGspiTest : public zxtest::Test {
   }
 
   void FifoWrite(uint64_t val) {
+    ZX_ASSERT(con0_reg_.sse() == 1);
     tx_data_.emplace_back(val);
     bytes_transmitted_++;
     TriggerIrq();
@@ -125,6 +134,7 @@ class IntelGspiTest : public zxtest::Test {
   MockDevice* gspi_;
   zx::interrupt irq_;
 
+  gspi::Con0Reg con0_reg_;
   gspi::TransmitFifoReg tx_fifo_reg_;
   gspi::ReceiveFifoReg rx_fifo_reg_;
   gspi::StatusReg sts_reg_;

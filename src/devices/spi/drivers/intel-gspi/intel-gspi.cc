@@ -67,7 +67,6 @@ zx_status_t GspiDevice::Bind(std::unique_ptr<GspiDevice>* device_ptr) {
       .WriteTo(&mmio_);
 
   if (irq_.is_valid()) {
-    zxlogf(INFO, "starting thread!");
     irq_thread_ = std::thread(&GspiDevice::IrqThread, this);
   }
 
@@ -98,10 +97,6 @@ void GspiDevice::DdkInit(ddk::InitTxn txn) {
   auto con0 = Con0Reg::Get().ReadFrom(&mmio_);
   con0.set_dss(kWordSizeBits - 1).set_edss(0);
   con0.set_ecs(0).set_frf(0);
-  con0.WriteTo(&mmio_);
-
-  // Enable the controller.
-  con0.set_sse(1);
   con0.WriteTo(&mmio_);
 
   auto result = acpi_.borrow().GetBusId();
@@ -152,6 +147,7 @@ void GspiDevice::IrqThread() {
     }
 
     reg.WriteTo(&mmio_);
+    irq_count_.Add(1);
   }
 }
 
@@ -178,6 +174,11 @@ zx_status_t GspiDevice::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size
       return cs_status;
     }
   }
+
+  // Enable the controller.
+  auto con0 = Con0Reg::Get().ReadFrom(&mmio_);
+  con0.set_sse(1);
+  con0.WriteTo(&mmio_);
 
   unsigned int sirfl = ReceiveFifoReg::Get().ReadFrom(&mmio_).sirfl();
   if (sirfl) {
@@ -276,6 +277,11 @@ zx_status_t GspiDevice::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size
   if (locked_cs_ == std::nullopt) {
     DeassertChipSelect();
   }
+
+  // Disable the controller.
+  con0 = Con0Reg::Get().ReadFrom(&mmio_);
+  con0.set_sse(0);
+  con0.WriteTo(&mmio_);
 
   if (return_value == ZX_OK) {
     *out_rxdata_actual = txdata_size ? txdata_size : rxdata_size;

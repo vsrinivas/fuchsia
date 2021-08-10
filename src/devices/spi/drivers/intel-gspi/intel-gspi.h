@@ -81,6 +81,7 @@ class GspiDevice : public DeviceType, public ddk::SpiImplProtocol<GspiDevice, dd
   acpi::Client acpi_;
   std::thread irq_thread_;
   inspect::Inspector inspect_;
+  inspect::UintProperty irq_count_ = inspect_.GetRoot().CreateUint("irq-count", 0);
   std::optional<uint32_t> locked_cs_ __TA_GUARDED(lock_) = std::nullopt;
 
   // Signalled by IRQ thread to tell main thread that the controller is ready for TX/RX.
