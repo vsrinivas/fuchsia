@@ -1514,7 +1514,7 @@ protocol MyProtocol {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedEmptyPayloadStructs);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 // TODO(fxbug.dev/76349): using empty structs as request/response payloads is
@@ -1531,7 +1531,7 @@ protocol MyProtocol {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedEmptyPayloadStructs);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(NewSyntaxTests, GoodProtocolMethodEmptyStructsWithError) {

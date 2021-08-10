@@ -3139,7 +3139,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     case Decl::Kind::kStruct: {
       auto struct_decl = static_cast<Struct*>(decl);
       if (is_request_or_response && struct_decl->members.empty()) {
-        Fail(ErrNotYetSupportedEmptyPayloadStructs, name);
+        Fail(ErrEmptyPayloadStructs, name);
       }
       break;
     }
