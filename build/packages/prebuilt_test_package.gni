@@ -44,7 +44,10 @@ template("prebuilt_test_package") {
   spec_target_name = "${target_name}_${invoker.component_name}_spec"
   test_spec(spec_target_name) {
     target = get_label_info(":${invoker.target_name}", "label_with_toolchain")
-    package_url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}.cmx"
+    package_url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/${invoker.component_name}"
+    if (get_path_info(invoker.component_name, "extension") == "") {
+      package_url = "${package_url}.cmx"
+    }
 
     forward_variables_from(invoker,
                            [
