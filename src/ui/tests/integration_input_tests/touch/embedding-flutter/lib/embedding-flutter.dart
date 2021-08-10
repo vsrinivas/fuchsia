@@ -57,7 +57,7 @@ class _TestAppState extends State<TestApp> {
       final completer = Completer();
       _connection.value = FuchsiaViewConnection(_launchApp(componentUrl),
           onViewStateChanged: (_, state) {
-        if (state) {
+        if (state && !completer.isCompleted) {
           // Notify test that the child view is ready.
           print('Child view ready');
           completer.complete();

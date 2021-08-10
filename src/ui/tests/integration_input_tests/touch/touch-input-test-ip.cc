@@ -277,6 +277,24 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
     });
   }
 
+  // Calls test.touch.TestAppLauncher::Launch.
+  // Only works if we've already launched a client that serves test.touch.TestAppLauncher.
+  void LaunchEmbeddedClient(std::string component_url) {
+    // Launch the embedded app.
+    auto test_app_launcher = child_services().Connect<test::touch::TestAppLauncher>();
+    bool child_launched = false;
+    test_app_launcher->Launch(component_url, [&child_launched] { child_launched = true; });
+    RunLoopUntil([&child_launched] { return child_launched; });
+
+    // Waits an extra frame to avoid any flakes from the child launching signal firing slightly
+    // early.
+    bool frame_presented = false;
+    session_->set_on_frame_presented_handler([&frame_presented](auto) { frame_presented = true; });
+    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
+    RunLoopUntil([&frame_presented] { return frame_presented; });
+    session_->set_on_frame_presented_handler([](auto) {});
+  }
+
   // Helper method for checking the test.touch.ResponseListener response from the client app.
   void SetResponseExpectations(float expected_x, float expected_y,
                                zx::basic_time<ZX_CLOCK_MONOTONIC>& input_injection_time,
@@ -478,11 +496,7 @@ TEST_F(TouchInputTest_IP, FlutterInFlutterTap) {
                "FlutterInFlutterTap");
 
   // Launch the embedded app.
-  auto test_app_launcher = child_services().Connect<test::touch::TestAppLauncher>();
-  bool child_launched = false;
-  test_app_launcher->Launch("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx",
-                            [&child_launched] { child_launched = true; });
-  RunLoopUntil([&child_launched] { return child_launched; });
+  LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx");
 
   // Embedded app takes up the left half of the screen. Expect response from it when injecting to
   // the left.
@@ -666,6 +680,47 @@ TEST_F(WebEngineTest_IP, ChromiumTap) {
 
   TryInject(&input_injection_time);
   RunLoopUntil([&injection_complete] { return injection_complete; });
+}
+
+TEST_F(WebEngineTest_IP, WebInFlutterTap) {
+  // Launch the embedding app.
+  LaunchClient("fuchsia-pkg://fuchsia.com/embedding-flutter#meta/embedding-flutter.cmx",
+               "WebInFlutterTap");
+
+  // Launch the embedded app.
+  LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx");
+
+  // Parent app takes up the right half of the screen. Expect response from it when injecting to the
+  // right.
+  {
+    // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
+    zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
+
+    bool injection_complete = false;
+    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
+                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                            input_injection_time,
+                            /*component_name=*/"embedding-flutter", injection_complete);
+
+    input_injection_time = InjectInput<zx::basic_time<ZX_CLOCK_MONOTONIC>>(TapLocation::kTopRight);
+    RunLoopUntil([&injection_complete] { return injection_complete; });
+  }
+
+  // Embedded app takes up the left half of the screen. Expect response from it when injecting to
+  // the left.
+  {
+    // Use `ZX_CLOCK_UTC` for compatibility with the time reported by `Date.now()` in web-engine.
+    zx::basic_time<ZX_CLOCK_UTC> input_injection_time(0);
+
+    bool injection_complete = false;
+    SetResponseExpectationsWeb(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                               /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                               input_injection_time,
+                               /*component_name=*/"one-chromium", injection_complete);
+
+    TryInject(&input_injection_time);
+    RunLoopUntil([&injection_complete] { return injection_complete; });
+  }
 }
 
 }  // namespace
