@@ -19,20 +19,27 @@ protocol Counter {
         protocol_name fuchsia.component.name;
         request zx.handle:CHANNEL;
     });
-    /// Connects `request` to a protocol found at `path`.
+    /// Opens the node found at `path` in the component's namespace with
+    /// `flags`, and connects `request`.
     ///
-    /// + request `path` is the absolute path from the server's namespace.
-    /// + request `request` is the server end channel to the protocol.
-    ConnectToProtocolAt(resource struct {
+    /// This is essentially a wrapper around [`fuchsia.io/Directory.Open`],
+    /// which always opens in "connect" mode.
+    ///
+    /// + request `path` the absolute path from the root of the server's
+    ///     namespace.
+    /// + request `flags` the rights with which to open the node.
+    /// + request `request` the server end channel to the node.
+    OpenInNamespace(resource struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
+        flags uint32;
         request zx.handle:CHANNEL;
     });
     /// Opens the directory found at `path`.
     ///
-    /// + request `path` is the absolute path from the server's namespace.
+    /// + request `path` the absolute path from the server's namespace.
     /// * error `ZX_ERR_NOT_FOUND` if the directory at `path` is not in the server's namespace.
     /// * error `ZX_ERR_IO` if there is some other unspecified error during I/O.
-    OpenStorageAt(struct {
+    TryOpenDirectory(struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
     }) -> (struct {}) error zx.status;
 };

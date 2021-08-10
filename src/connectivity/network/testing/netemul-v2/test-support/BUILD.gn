@@ -21,7 +21,6 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     ":fidl-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -41,5 +40,11 @@ rustc_binary("bin") {
 fuchsia_component("counter") {
   testonly = true
   manifest = "meta/counter.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("devfs-subdir-user") {
+  testonly = true
+  manifest = "meta/devfs-subdir-user.cml"
   deps = [ ":bin" ]
 }

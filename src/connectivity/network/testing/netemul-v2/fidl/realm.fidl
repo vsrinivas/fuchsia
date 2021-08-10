@@ -17,6 +17,18 @@ type ExposedCapability = strict union {
     1: protocol fuchsia.component.name;
 };
 
+/// A dependency on the `devfs` instance offered by netemul.
+type DevfsDep = table {
+    /// The name of the capability being offered.
+    ///
+    /// Required.
+    1: name fuchsia.component.name;
+    /// The subdirectory of `/dev` visible to the component.
+    ///
+    /// If not set, the entire contents of `/dev` will be visible to the component.
+    2: subdir string:fuchsia.component.MAX_PATH_LENGTH;
+};
+
 /// A dependency of one child component on a capability exposed by another in
 /// the same realm.
 type ChildDep = table {
@@ -54,7 +66,7 @@ type StorageDep = table {
 type Capability = strict union {
     /// The `devfs` instance offered by netemul, where virtual devices are
     /// mounted.
-    1: netemul_devfs Empty;
+    1: netemul_devfs DevfsDep;
     /// The synchronization manager offered by netemul, shared between all the
     /// managed realms in a given sandbox.
     2: netemul_sync_manager Empty;

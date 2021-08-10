@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_fuchsia_io as fio,
     fidl_fuchsia_netemul_test::{CounterRequest, CounterRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -51,34 +50,26 @@ async fn handle_counter(
                         )
                     });
                 }
-                CounterRequest::ConnectToProtocolAt { path, request, control_handle: _ } => {
-                    info!("connecting to protocol at '{}'", path);
-                    let () = fdio::open(
-                        &path,
-                        // TODO(https://fxbug.dev/77059): remove write
-                        // permissions once they are no longer required to
-                        // connect to protocols.
-                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                        request,
-                    )
-                    .unwrap_or_else(|e| {
-                        error!("error connecting request to protocol at path '{}': {:?}", path, e)
+                CounterRequest::OpenInNamespace { path, flags, request, control_handle: _ } => {
+                    info!("connecting to node at '{}'", path);
+                    let () = fdio::open(&path, flags, request).unwrap_or_else(|e| {
+                        error!("error connecting request to node at path '{}': {}", path, e)
                     });
                 }
-                CounterRequest::OpenStorageAt { path, responder } => {
+                CounterRequest::TryOpenDirectory { path, responder } => {
                     info!("opening directory at '{}'", path);
-                    match std::fs::read_dir("/data") {
+                    match std::fs::read_dir(&path) {
                         Ok(std::fs::ReadDir { .. }) => responder
                             .send(&mut Ok(()))
                             .unwrap_or_else(|e| error!("error sending response: {:?}", e)),
                         Err(e) => {
                             let status = match e.kind() {
                                 std::io::ErrorKind::NotFound | std::io::ErrorKind::BrokenPipe => {
-                                    info!("failed to open directory at '{}': {:?}", path, e);
+                                    info!("failed to open directory at '{}': {}", path, e);
                                     fuchsia_zircon::Status::NOT_FOUND
                                 }
                                 _ => {
-                                    error!("failed to open directory at '{}': {:?}", path, e);
+                                    error!("failed to open directory at '{}': {}", path, e);
                                     fuchsia_zircon::Status::IO
                                 }
                             };

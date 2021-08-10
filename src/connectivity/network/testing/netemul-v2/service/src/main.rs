@@ -68,6 +68,10 @@ enum CreateRealmError {
     StorageCapabilityVariantNotProvided,
     #[error("storage capability path not provided")]
     StorageCapabilityPathNotProvided,
+    #[error("devfs capability name not provided")]
+    DevfsCapabilityNameNotProvided,
+    #[error("invalid devfs subdirectory '{0}'")]
+    InvalidDevfsSubdirectory(String),
 }
 
 impl Into<zx::Status> for CreateRealmError {
@@ -83,7 +87,9 @@ impl Into<zx::Status> for CreateRealmError {
                 frealmbuilder::RealmBuilderError::MissingRouteSource,
             ))
             | CreateRealmError::StorageCapabilityVariantNotProvided
-            | CreateRealmError::StorageCapabilityPathNotProvided => zx::Status::INVALID_ARGS,
+            | CreateRealmError::StorageCapabilityPathNotProvided
+            | CreateRealmError::DevfsCapabilityNameNotProvided
+            | CreateRealmError::InvalidDevfsSubdirectory(_) => zx::Status::INVALID_ARGS,
             CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
         }
     }
@@ -102,7 +108,7 @@ impl std::fmt::Display for StorageVariant {
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 enum UniqueCapability<'a> {
-    DevFs,
+    DevFs { name: Cow<'a, str> },
     Protocol { proto_name: Cow<'a, str> },
     Storage { mount_path: Cow<'a, str> },
 }
@@ -117,7 +123,8 @@ async fn create_realm_instance(
     RealmOptions { name, children, .. }: RealmOptions,
     prefix: &str,
     network_realm: Arc<fcomponent::RealmInstance>,
-    devfs: fio::DirectoryProxy,
+    devfs: Arc<SimpleMutableDir>,
+    devfs_proxy: fio::DirectoryProxy,
 ) -> Result<fcomponent::RealmInstance, CreateRealmError> {
     // Keep track of all the protocols exposed by components in the test realm, as well as
     // components requesting that all available capabilities be routed to them, so that we can wait
@@ -132,19 +139,32 @@ async fn create_realm_instance(
     // Keep track of all components with modified program arguments, so that once the realm is built
     // those components can be extracted and modified.
     let mut modified_program_args = HashMap::new();
+    // Keep track of components that use netemul's devfs, in order to properly route it to those
+    // components after the realm has been built.
+    //
+    // TODO(https://fxbug.dev/78757): RealmBuilder doesn't natively supports routing aliased
+    // subdirectories (e.g. with `RealmBuilder::add_route`), so we have to do this by plumbing the
+    // relevant capabilities manually by editing component declarations once the realm has already
+    // been created. Once subdirectories are natively supported in its API, we should route `devfs`
+    // that way.
+    struct DevfsUsage {
+        component: String,
+        capability_name: String,
+        subdir: Option<String>,
+    }
+    let mut components_using_devfs = Vec::new();
+
     let mut builder = RealmBuilder::new().await?;
     let _: &mut RealmBuilder = builder
         .add_component(
             NETEMUL_SERVICES_COMPONENT_NAME,
-            ComponentSource::Mock(fcomponent::mock::Mock::new(
-                move |mock_handles: fcomponent::mock::MockHandles| {
-                    Box::pin(run_netemul_services(
-                        mock_handles,
-                        network_realm.clone(),
-                        Clone::clone(&devfs),
-                    ))
-                },
-            )),
+            ComponentSource::mock(move |mock_handles: fcomponent::mock::MockHandles| {
+                Box::pin(run_netemul_services(
+                    mock_handles,
+                    network_realm.clone(),
+                    Clone::clone(&devfs_proxy),
+                ))
+            }),
         )
         .await?;
     for ChildDef { url, name, exposes, uses, program_args, eager, .. } in
@@ -192,10 +212,15 @@ async fn create_realm_instance(
         }
         if let Some(uses) = uses {
             match uses {
+                // TODO(https://fxbug.dev/82453): remove `fuchsia.netemul/ChildUses.all`.
                 ChildUses::All(fnetemul::Empty {}) => {
                     // Route all built-in netemul capabilities to the child.
                     // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
-                    let () = route_devfs_to_component(&mut builder, &name)?;
+                    let () = components_using_devfs.push(DevfsUsage {
+                        component: name.clone(),
+                        capability_name: DEVFS.to_string(),
+                        subdir: None,
+                    });
                     let () = route_network_context_to_component(&mut builder, &name)?;
                     let () = route_log_sink_to_component(&mut builder, &name)?;
                     let () = components_using_all.push(name);
@@ -210,9 +235,35 @@ async fn create_realm_instance(
                         // defined here for each of the built-in netemul capabilities, corresponding
                         // to their FIDL representation, routing logic, and capability name.
                         let cap = match cap {
-                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => {
-                                let () = route_devfs_to_component(&mut builder, &name)?;
-                                UniqueCapability::DevFs
+                            fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                                name: capability_name,
+                                subdir,
+                                ..
+                            }) => {
+                                let capability_name = capability_name
+                                    .ok_or(CreateRealmError::DevfsCapabilityNameNotProvided)?;
+                                if let Some(subdir) = subdir.as_ref() {
+                                    let _: Arc<SimpleMutableDir> = open_or_create_dir(
+                                        devfs.clone(),
+                                        &std::path::Path::new(subdir),
+                                    )
+                                    .await
+                                    .map_err(|e| {
+                                        error!(
+                                            "failed to create subdirectory '{}' in devfs: {}",
+                                            subdir, e
+                                        );
+                                        CreateRealmError::InvalidDevfsSubdirectory(
+                                            subdir.to_string(),
+                                        )
+                                    })?;
+                                }
+                                let () = components_using_devfs.push(DevfsUsage {
+                                    component: name.clone(),
+                                    capability_name: capability_name.clone(),
+                                    subdir,
+                                });
+                                UniqueCapability::DevFs { name: capability_name.into() }
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
@@ -349,7 +400,7 @@ async fn create_realm_instance(
     // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
     // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
     // configuration.
-    for offer in offers {
+    for offer in &mut *offers {
         match offer {
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 dependency_type,
@@ -390,7 +441,43 @@ async fn create_realm_instance(
             }
         }
     }
+    for DevfsUsage { component, capability_name, subdir } in components_using_devfs {
+        let () = offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+            source: cm_rust::OfferSource::Child(NETEMUL_SERVICES_COMPONENT_NAME.to_string()),
+            source_name: cm_rust::CapabilityName(DEVFS.to_string()),
+            target: cm_rust::OfferTarget::Child(component),
+            target_name: cm_rust::CapabilityName(capability_name),
+            dependency_type: cm_rust::DependencyType::Strong,
+            // TODO(https://fxbug.dev/77059): remove write permissions once they are no longer
+            // required to connect to services.
+            rights: Some(fio2::RW_STAR_DIR),
+            subdir: subdir.map(std::path::PathBuf::from),
+        }));
+    }
     let () = realm.set_component(&fcomponent::Moniker::root(), decl).await?;
+
+    // Expose `devfs` from the netemul-services component.
+    let netemul_services_moniker = fcomponent::Moniker::from(NETEMUL_SERVICES_COMPONENT_NAME);
+    let mut netemul_services = realm.get_decl(&netemul_services_moniker).await?;
+    let cm_rust::ComponentDecl { exposes, capabilities, .. } = &mut netemul_services;
+    let () = exposes.push(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+        source: cm_rust::ExposeSource::Self_,
+        source_name: cm_rust::CapabilityName(DEVFS.to_string()),
+        target: cm_rust::ExposeTarget::Parent,
+        target_name: cm_rust::CapabilityName(DEVFS.to_string()),
+        rights: None,
+        subdir: None,
+    }));
+    let () = capabilities.push(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+        name: cm_rust::CapabilityName(DEVFS.to_string()),
+        source_path: cm_rust::CapabilityPath {
+            dirname: "/".to_string(),
+            basename: DEVFS.to_string(),
+        },
+        rights: fio2::RW_STAR_DIR,
+    }));
+    let () = realm.set_component(&netemul_services_moniker, netemul_services).await?;
+
     let name =
         name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
     info!("creating new ManagedRealm with name '{}'", name);
@@ -455,13 +542,19 @@ impl ManagedRealm {
                     let device = device.into_proxy().expect("failed to get device proxy");
                     let devfs = devfs.clone();
                     let response = (|| async move {
-                        let (dir, device_name) =
-                            recurse_into_dir(devfs, &std::path::Path::new(&path)).await.map_err(
-                                |e| {
-                                    error!("failed to open or create path '{}': {}", path, e);
+                        let (parent_path, device_name) =
+                            split_path_into_dir_and_file_name(&std::path::Path::new(&path))
+                                .map_err(|e| {
+                                    error!(
+                                        "failed to split path '{}' into directory and filename: {}",
+                                        path, e
+                                    );
                                     zx::Status::INVALID_ARGS
-                                },
-                            )?;
+                                })?;
+                        let dir = open_or_create_dir(devfs, parent_path).await.map_err(|e| {
+                            error!("failed to open or create path '{}': {}", path, e);
+                            zx::Status::INVALID_ARGS
+                        })?;
                         let path_clone = path.clone();
                         let response = dir.add_entry(
                             device_name,
@@ -507,13 +600,19 @@ impl ManagedRealm {
                 ManagedRealmRequest::RemoveDevice { path, responder } => {
                     let devfs = devfs.clone();
                     let response = (|| async move {
-                        let (dir, device_name) =
-                            recurse_into_dir(devfs, &std::path::Path::new(&path)).await.map_err(
-                                |e| {
-                                    error!("failed to open or create path '{}': {}", path, e);
+                        let (parent_path, device_name) =
+                            split_path_into_dir_and_file_name(&std::path::Path::new(&path))
+                                .map_err(|e| {
+                                    error!(
+                                        "failed to split path '{}' into directory and filename: {}",
+                                        path, e
+                                    );
                                     zx::Status::INVALID_ARGS
-                                },
-                            )?;
+                                })?;
+                        let dir = open_or_create_dir(devfs, parent_path).await.map_err(|e| {
+                            error!("failed to open or create path '{}': {}", path, e);
+                            zx::Status::INVALID_ARGS
+                        })?;
                         let response = match dir.remove_entry(device_name, false) {
                             Ok(entry) => {
                                 if let Some(entry) = entry {
@@ -615,10 +714,22 @@ fn moniker(realm: &fuchsia_component_test::RealmInstance) -> String {
     format!("{}:{}", REALM_COLLECTION_NAME, realm.root.child_name())
 }
 
-async fn recurse_into_dir<'a>(
-    root: Arc<SimpleMutableDir>,
+fn split_path_into_dir_and_file_name<'a>(
     path: &'a std::path::Path,
-) -> Result<(Arc<SimpleMutableDir>, &'a str)> {
+) -> Result<(&'a std::path::Path, &'a str)> {
+    let file_name = path
+        .file_name()
+        .context("path does not end in a normal file or directory name")?
+        .to_str()
+        .context("invalid file name")?;
+    let parent = path.parent().context("path terminates in a root")?;
+    Ok((parent, file_name))
+}
+
+async fn open_or_create_dir(
+    root: Arc<SimpleMutableDir>,
+    path: &std::path::Path,
+) -> Result<Arc<SimpleMutableDir>> {
     async fn get_entry(
         dir: Arc<impl Directory>,
         entry: &str,
@@ -629,16 +740,15 @@ async fn recurse_into_dir<'a>(
         }
     }
 
-    let file_name = path
-        .file_name()
-        .context("path does not end in a normal file or directory name")?
-        .to_str()
-        .context("invalid file name")?;
-    let parent = path.parent().context("path terminates in a root")?;
-    let root = futures::stream::iter(parent)
+    let root = futures::stream::iter(path.components())
         .map(Ok)
         .try_fold(root, |root, component| async move {
-            let entry = component.to_str().context("invalid path component")?;
+            let entry = match component {
+                std::path::Component::Prefix(_) | std::path::Component::ParentDir => {
+                    Err(anyhow!("path cannot contain prefix or parent component ('..')"))
+                }
+                component => component.as_os_str().to_str().context("invalid path component"),
+            }?;
             // Get a handle to the entry, and create it if it doesn't already exist.
             let entry = match get_entry(root.clone(), entry).await {
                 Ok(entry) => entry,
@@ -666,21 +776,7 @@ async fn recurse_into_dir<'a>(
                 .expect("could not downcast entry to a directory"))
         })
         .await?;
-    Ok((root, file_name))
-}
-
-fn route_devfs_to_component(
-    builder: &mut RealmBuilder,
-    component: &str,
-) -> Result<(), fcomponent::error::Error> {
-    let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        // TODO(https://fxbug.dev/77059): remove write permissions once they are
-        // no longer required to connect to protocols.
-        capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::RW_STAR_DIR),
-        source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
-        targets: vec![RouteEndpoint::component(component)],
-    })?;
-    Ok(())
+    Ok(root)
 }
 
 fn route_network_context_to_component(
@@ -882,8 +978,14 @@ async fn handle_sandbox(
                     let index = realm_index.fetch_add(1, Ordering::SeqCst);
                     let prefix = format!("{}{}", sandbox_name, index);
                     let (proxy, devfs) = make_devfs().context("creating devfs")?;
-                    match create_realm_instance(options, &prefix, network_realm.clone(), proxy)
-                        .await
+                    match create_realm_instance(
+                        options,
+                        &prefix,
+                        network_realm.clone(),
+                        devfs.clone(),
+                        proxy,
+                    )
+                    .await
                     {
                         Ok(realm) => tx
                             .send(ManagedRealm { server_end, realm, devfs })
@@ -1432,7 +1534,7 @@ mod tests {
         let (devfs, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
         let () = counter
-            .connect_to_protocol_at(DEVFS_PATH, server_end.into_channel())
+            .open_in_namespace(DEVFS_PATH, fio::OPEN_RIGHT_READABLE, server_end.into_channel())
             .expect("failed to connect to devfs through counter");
         let (status, mut buf) =
             devfs.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
@@ -1774,6 +1876,37 @@ mod tests {
                             variant: Some(fnetemul::StorageVariant::Data),
                             path: Some(DATA_PATH.to_string()),
                             ..fnetemul::StorageDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "devfs capability name not provided",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                            name: None,
+                            ..fnetemul::DevfsDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "invalid subdirectory of devfs requested",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                            name: Some(DEVFS.to_string()),
+                            subdir: Some("..".to_string()),
+                            ..fnetemul::DevfsDep::EMPTY
                         }),
                     ])),
                     ..fnetemul::ChildDef::EMPTY
@@ -2128,7 +2261,11 @@ mod tests {
                         exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                            fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}),
+                            fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                                name: Some("dev".to_string()),
+                                subdir: None,
+                                ..fnetemul::DevfsDep::EMPTY
+                            }),
                         ])),
                         ..fnetemul::ChildDef::EMPTY
                     },
@@ -2147,7 +2284,11 @@ mod tests {
             fnetemul_network::EndpointBacking::NetworkDevice,
         ];
         for (i, backing) in backings.iter().enumerate() {
-            let name = format!("test{}", i);
+            let class = match backing {
+                fnetemul_network::EndpointBacking::Ethertap => "ethernet",
+                fnetemul_network::EndpointBacking::NetworkDevice => "network",
+            };
+            let name = format!("class/{}/test{}", class, i);
             let endpoint = create_endpoint(
                 &sandbox,
                 &name,
@@ -2165,7 +2306,13 @@ mod tests {
             // Expect the device to implement `fuchsia.device/Controller.GetTopologicalPath`.
             let (controller, server_end) = zx::Channel::create().expect("failed to create channel");
             let () = counter
-                .connect_to_protocol_at(&format!("{}/{}", DEVFS_PATH, name), server_end)
+                .open_in_namespace(
+                    &format!("{}/{}", DEVFS_PATH, name),
+                    // TODO(https://fxbug.dev/77059): remove write permissions once they are no
+                    // longer required to connect to protocols.
+                    fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+                    server_end,
+                )
                 .expect("failed to connect to device through counter");
             let controller =
                 fidl::endpoints::ClientEnd::<fdevice::ControllerMarker>::new(controller)
@@ -2231,12 +2378,12 @@ mod tests {
         let counter_storage = connect_to_counter(&realm, COUNTER_A_PROTOCOL_NAME);
         let counter_without_storage = connect_to_counter(&realm, COUNTER_B_PROTOCOL_NAME);
         let () = counter_storage
-            .open_storage_at(DATA_PATH)
+            .try_open_directory(DATA_PATH)
             .await
             .expect("calling open storage at")
             .expect("failed to open storage");
         let err = counter_without_storage
-            .open_storage_at(DATA_PATH)
+            .try_open_directory(DATA_PATH)
             .await
             .expect("calling open storage at")
             .map_err(zx::Status::from_raw)
@@ -2401,5 +2548,54 @@ mod tests {
             .map_err(zx::Status::from_raw)
             .expect_err("remove device with invalid path should fail");
         assert_eq!(err, zx::Status::INVALID_ARGS);
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn devfs_subdirs_created_on_request(sandbox: fnetemul::SandboxProxy) {
+        const DEVFS_SUBDIR_USER_URL: &str =
+            "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/devfs-subdir-user.cm";
+        const SUBDIR: &str = "class/ethernet";
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![fnetemul::ChildDef {
+                    url: Some(DEVFS_SUBDIR_USER_URL.to_string()),
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                            name: Some("dev-class-ethernet".to_string()),
+                            subdir: Some(SUBDIR.to_string()),
+                            ..fnetemul::DevfsDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_protocol::<CounterMarker>();
+        let path = format!("{}/{}", DEVFS_PATH, SUBDIR);
+
+        let (ethernet, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .expect("create directory proxy");
+        let () = counter
+            .open_in_namespace(&path, fio::OPEN_RIGHT_READABLE, server_end.into_channel())
+            .expect(&format!("failed to connect to {} through counter", path));
+        let (status, mut buf) =
+            ethernet.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
+        let () = zx::Status::ok(status).expect("failed reading directory entries");
+        assert_eq!(
+            files_async::parse_dir_entries(&mut buf)
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()
+                .expect("failed parsing directory entries"),
+            &[files_async::DirEntry {
+                name: ".".to_string(),
+                kind: files_async::DirentKind::Directory
+            }],
+        );
     }
 }
