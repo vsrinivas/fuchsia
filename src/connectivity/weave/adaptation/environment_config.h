@@ -22,6 +22,10 @@ namespace Internal {
  */
 class EnvironmentConfig {
  public:
+  static constexpr char kConfigDataPath[] = "/config/data/";
+  static constexpr char kDataPath[] = "/data/";
+  static constexpr char kPackageDataPath[] = "/pkg/data/";
+
   using Key = const char*;
   static const Key kConfigKey_SerialNum;
   static const Key kConfigKey_MfrDeviceId;

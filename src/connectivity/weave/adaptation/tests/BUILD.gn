@@ -136,8 +136,8 @@ resource("weavestack-adaptation-resources") {
     "testdata/default_store.json",
     "testdata/default_store_schema.json",
     "testdata/invalid_default_store.json",
-    "testdata/test_mfr_cert",
-    "testdata/test_mfr_private_key",
+    "testdata/testdata_cert",
+    "testdata/testdata_privkey",
   ]
   outputs = [ "data/{{source_file_part}}" ]
 }

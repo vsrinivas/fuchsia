@@ -14,7 +14,9 @@
 // clang-format on
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/macros.h>
+
+#include <src/lib/files/file.h>
+#include <src/lib/files/path.h>
 
 #include "configuration_manager_delegate_impl.h"
 #include "fake_buildinfo_provider.h"
@@ -22,70 +24,30 @@
 #include "fake_hwinfo_device.h"
 #include "fake_hwinfo_product.h"
 #include "fake_weave_factory_data_manager.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
+#include "test_config.h"
 #include "test_configuration_manager.h"
 #include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
-namespace nl::Weave::DeviceLayer::Internal::testing {
+namespace weave::adaptation::testing {
 namespace {
-
-using weave::adaptation::testing::FakeBuildInfoProvider;
-using weave::adaptation::testing::FakeDirectory;
-using weave::adaptation::testing::FakeFactoryWeaveFactoryStoreProvider;
-using weave::adaptation::testing::FakeHwinfoDevice;
-using weave::adaptation::testing::FakeHwinfoProduct;
-using weave::adaptation::testing::FakeWeaveFactoryDataManager;
-using weave::adaptation::testing::TestConfigurationManager;
-using weave::adaptation::testing::TestThreadStackManager;
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
+using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
+using nl::Weave::DeviceLayer::ConfigurationMgr;
+using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::PlatformMgrImpl;
+using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
 using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl;
+using nl::Weave::DeviceLayer::Internal::testing::WeaveTestFixture;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;
 
-// Below expected values are from testdata JSON files and should be
-// consistent with the file for the related tests to pass.
-constexpr uint16_t kExpectedVendorId = 5050;
-constexpr char kExpectedVendorIdDescription[] = "Fuchsia Vendor";
-constexpr uint16_t kExpectedProductId = 60209;
-constexpr char kExpectedProductIdDescription[] = "Fuchsia Product";
-constexpr uint64_t kExpectedDeviceId = 65535;
-constexpr char kExpectedFirmwareRevision_DeviceInfo[] = "prerelease-1";
-constexpr char kExpectedSerialNumberLocal[] = "ABCD1234";
-constexpr char kExpectedPairingCode[] = "ABC123";
-constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumberLength + 1;
-constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
-const std::string kPkgDataPath = "/pkg/data/";
-const std::string kDataPath = "/data/";
-const std::string kConfigDataPath = "/config/data/";
-
-constexpr uint32_t kTestKeyId = WeaveKeyId::kFabricSecret + 1u;
-constexpr uint8_t kWeaveAppGroupKeySize =
-    nl::Weave::Profiles::Security::AppKeys::kWeaveAppGroupKeySize;
-
-// The required size of a buffer supplied to GetPrimaryWiFiMACAddress.
-constexpr size_t kWiFiMacAddressBufSize =
-    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
-// The required size of a buffer supplied to GetPrimary802154MACAddress.
-constexpr size_t k802154MacAddressBufSize =
-    sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
-
-WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
-                             uint8_t key_len = kWeaveAppGroupKeySize, uint32_t start_time = 0) {
-  WeaveGroupKey group_key{
-      .KeyId = key_id,
-      .KeyLen = key_len,
-      .StartTime = start_time,
-  };
-  memset(group_key.Key, 0, sizeof(group_key.Key));
-  memset(group_key.Key, key_byte, key_len);
-  return group_key;
-}
+constexpr size_t kWiFiMACAddressBufSize = sizeof(WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
+constexpr size_t k802154MACAddressBufSize = sizeof(WeaveDeviceDescriptor::Primary802154MACAddress);
 
 }  // namespace
 
@@ -112,9 +74,11 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
     ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
 
-    // Enable thread for all tests, explicitly disabling them on the tests that
-    // need to validate behavior when thread isn't supported.
+    // Simulate the default state for thread by enabling support but disabling
+    // provisioning. Tests will explicitly disable them to validate behavior
+    // when thread is either not supported or not provisioned.
     thread_delegate().set_is_thread_supported(true);
+    thread_delegate().set_is_thread_provisioned(false);
     EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   }
 
@@ -123,37 +87,25 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
     WeaveTestFixture<>::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
-  }
-
-  static bool CopyFile(const std::string& src, const std::string& dst) {
-    std::string data;
-    bool result = files::ReadFileToString(src, &data);
-    int e = errno;
-    if (!result) {
-      FX_LOGS(ERROR) << "ReadFile failed for " << src << ": " << strerror(e);
-      return result;
-    }
-    result = files::WriteFile(dst, data);
-    e = errno;
-    if (!result) {
-      FX_LOGS(ERROR) << "WriteFile failed for  " << dst << ": " << strerror(e);
-      return result;
-    }
-    return result;
+    DeleteFiles();
   }
 
  protected:
-  static bool CopyFileFromPkgToData(const std::string& filename) {
-    return CopyFile(kPkgDataPath + filename, kDataPath + filename);
+  // Copy the file from /pkg/data to /data.
+  void CopyFileFromPkgToData(const std::string filename) {
+    return CopyFile(files::JoinPath(EnvironmentConfig::kPackageDataPath, filename),
+                    files::JoinPath(EnvironmentConfig::kDataPath, filename));
   }
 
-  static bool CopyFileFromConfigToData(const std::string& filename) {
-    return CopyFile(kConfigDataPath + filename, kDataPath + filename);
+  // Copy the file from /config/data to /data.
+  void CopyFileFromConfigToData(const std::string filename) {
+    return CopyFileFromConfigToData(filename, filename);
   }
 
-  static bool CopyFileFromConfigToData(const std::string& src_filename,
-                                       const std::string& dst_filename) {
-    return CopyFile(kConfigDataPath + src_filename, kDataPath + dst_filename);
+  // Copy the file from /config/data to /data, with a new filename.
+  void CopyFileFromConfigToData(const std::string source, const std::string destination) {
+    return CopyFile(files::JoinPath(EnvironmentConfig::kConfigDataPath, source),
+                    files::JoinPath(EnvironmentConfig::kDataPath, destination));
   }
 
   FakeBuildInfoProvider& fake_buildinfo_provider() { return fake_buildinfo_provider_; }
@@ -177,6 +129,21 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
   }
 
  private:
+  // Copy a file from the provided source to the provided destination.
+  void CopyFile(const std::string source, const std::string destination) {
+    std::string file_data;
+    ASSERT_TRUE(files::ReadFileToString(source, &file_data));
+    ASSERT_TRUE(files::WriteFile(destination, file_data));
+    copied_files_.push_back(destination);
+  }
+
+  // Deletes all files that were copied during the test.
+  void DeleteFiles() {
+    for (std::string filename : copied_files_) {
+      ASSERT_TRUE(files::DeletePath(filename, false));
+    }
+  }
+
   FakeBuildInfoProvider fake_buildinfo_provider_;
   FakeHwinfoDevice fake_hwinfo_device_;
   FakeHwinfoProduct fake_hwinfo_product_;
@@ -184,9 +151,10 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
   FakeFactoryWeaveFactoryStoreProvider fake_factory_weave_factory_store_provider_;
 
   sys::testing::ComponentContextProvider context_provider_;
+  std::vector<std::string> copied_files_;
 };
 
-TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
+TEST_F(ConfigurationManagerTest, GetFabricId) {
   const uint64_t fabric_id = 123456789U;
   uint64_t stored_fabric_id = 0;
   EXPECT_EQ(ConfigurationMgr().StoreFabricId(fabric_id), WEAVE_NO_ERROR);
@@ -197,7 +165,7 @@ TEST_F(ConfigurationManagerTest, SetAndGetFabricId) {
 TEST_F(ConfigurationManagerTest, GetDeviceId_DeviceInfo) {
   uint64_t device_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(device_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(device_id, kExpectedDeviceId);
+  EXPECT_EQ(device_id, testdata::kTestDataDeviceId);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceId_Factory) {
@@ -230,7 +198,7 @@ TEST_F(ConfigurationManagerTest, GetDeviceId_Factory) {
 TEST_F(ConfigurationManagerTest, GetVendorId) {
   uint16_t vendor_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetVendorId(vendor_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(vendor_id, kExpectedVendorId);
+  EXPECT_EQ(vendor_id, testdata::kTestDataVendorId);
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorIdDescription) {
@@ -239,13 +207,14 @@ TEST_F(ConfigurationManagerTest, GetVendorIdDescription) {
   EXPECT_EQ(ConfigurationMgr().GetVendorIdDescription(vendor_id_description,
                                                       sizeof(vendor_id_description), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(vendor_id_description, kExpectedVendorIdDescription);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataVendorIdDescription));
+  EXPECT_STREQ(vendor_id_description, testdata::kTestDataVendorIdDescription);
 }
 
 TEST_F(ConfigurationManagerTest, GetProductId) {
   uint16_t product_id = 0;
   EXPECT_EQ(ConfigurationMgr().GetProductId(product_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(product_id, kExpectedProductId);
+  EXPECT_EQ(product_id, testdata::kTestDataProductId);
 }
 
 TEST_F(ConfigurationManagerTest, GetProductIdDescription) {
@@ -254,7 +223,8 @@ TEST_F(ConfigurationManagerTest, GetProductIdDescription) {
   EXPECT_EQ(ConfigurationMgr().GetProductIdDescription(product_id_description,
                                                        sizeof(product_id_description), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(product_id_description, kExpectedProductIdDescription);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataProductIdDescription));
+  EXPECT_STREQ(product_id_description, testdata::kTestDataProductIdDescription);
 }
 
 TEST_F(ConfigurationManagerTest, GetFirmwareRevision_BuildInfo) {
@@ -263,6 +233,7 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevision_BuildInfo) {
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
+  ASSERT_EQ(out_len, strlen(FakeBuildInfoProvider::kVersion));
   EXPECT_STREQ(firmware_revision, FakeBuildInfoProvider::kVersion);
 }
 
@@ -275,44 +246,47 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevision_DeviceInfo) {
   fake_buildinfo_provider().set_version("");
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
       WEAVE_NO_ERROR);
-  EXPECT_STREQ(firmware_revision, kExpectedFirmwareRevision_DeviceInfo);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataFirmwareRevision));
+  EXPECT_STREQ(firmware_revision, testdata::kTestDataFirmwareRevision);
 }
 
 TEST_F(ConfigurationManagerTest, GetSerialNumber) {
-  char serial_num[kMaxSerialNumberSize];
+  char serial_num[ConfigurationManager::kMaxSerialNumberLength] = {};
   size_t out_len = 0;
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), out_len),
             WEAVE_NO_ERROR);
+  ASSERT_EQ(out_len, strlen(FakeHwinfoDevice::kSerialNumber));
   EXPECT_STREQ(serial_num, FakeHwinfoDevice::kSerialNumber);
 }
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
-  constexpr uint8_t expected_wifi_mac[kWiFiMacAddressBufSize] = {0xFF};
-  constexpr uint8_t expected_802154_mac[k802154MacAddressBufSize] = {0xFF};
+  constexpr uint8_t expected_wifi_mac[kWiFiMACAddressBufSize] = {0xFF};
+  constexpr uint8_t expected_802154_mac[k802154MACAddressBufSize] = {0xFF};
 
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
   EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);
 
   EXPECT_STREQ(device_desc.SerialNumber, FakeHwinfoDevice::kSerialNumber);
-  EXPECT_EQ(device_desc.ProductId, kExpectedProductId);
-  EXPECT_EQ(device_desc.VendorId, kExpectedVendorId);
+  EXPECT_EQ(device_desc.ProductId, testdata::kTestDataProductId);
+  EXPECT_EQ(device_desc.VendorId, testdata::kTestDataVendorId);
   EXPECT_EQ(
-      std::memcmp(expected_wifi_mac, device_desc.PrimaryWiFiMACAddress, kWiFiMacAddressBufSize), 0);
+      std::memcmp(expected_wifi_mac, device_desc.PrimaryWiFiMACAddress, kWiFiMACAddressBufSize), 0);
   EXPECT_EQ(std::memcmp(expected_802154_mac, device_desc.Primary802154MACAddress,
-                        k802154MacAddressBufSize),
+                        k802154MACAddressBufSize),
             0);
 }
 
 TEST_F(ConfigurationManagerTest, GetPairingCode) {
-  char pairing_code[kMaxPairingCodeSize] = {};
+  char pairing_code[ConfigurationManager::kMaxPairingCodeLength] = {};
   size_t out_len = 0;
   EXPECT_EQ(ConfigurationMgr().GetPairingCode(pairing_code, sizeof(pairing_code), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(pairing_code, kExpectedPairingCode);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataPairingCode));
+  EXPECT_STREQ(pairing_code, testdata::kTestDataPairingCode);
 }
 
 TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
@@ -329,6 +303,7 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
   EXPECT_EQ(delegate().ReadFactoryFile(kFactoryFileName, factory_file_data,
                                        sizeof(factory_file_data), &out_len),
             ZX_OK);
+  ASSERT_EQ(out_len, strlen(kFactoryFileData));
   EXPECT_STREQ(factory_file_data, kFactoryFileData);
 }
 
@@ -346,11 +321,11 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile_BufferTooSmall) {
   EXPECT_EQ(delegate().ReadFactoryFile(kFactoryFileName, factory_file_data,
                                        strlen(kFactoryFileData) - 1, &out_len),
             ZX_ERR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(out_len, 0u);
 }
 
 TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate_Factory) {
-  constexpr char kFactoryManufacturerDeviceCertificateFileName[] = "test_mfr_cert";
-  constexpr char kFactoryManufacturerDeviceCertificateFileData[] = "fake_certificate";
+  constexpr char kFactoryCertificateFileData[] = "fake_certificate";
   uint8_t manufacturer_certificate[32] = {};
   size_t out_len = 0;
 
@@ -362,25 +337,26 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate_Factory) {
 
   // Add the certificate to the fake directory.
   fake_factory_weave_factory_store_provider().directory().AddFile(
-      kFactoryManufacturerDeviceCertificateFileName, kFactoryManufacturerDeviceCertificateFileData);
+      testdata::kTestDataCertificateFileName, kFactoryCertificateFileData);
 
   // Confirm that we were able to read the file contents back.
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(
                 manufacturer_certificate, sizeof(manufacturer_certificate), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_TRUE(std::memcmp(manufacturer_certificate, kFactoryManufacturerDeviceCertificateFileData,
-                          out_len) == 0);
+  ASSERT_EQ(out_len, strlen(kFactoryCertificateFileData));
+  EXPECT_EQ(std::memcmp(manufacturer_certificate, kFactoryCertificateFileData, out_len), 0);
 
   // Confirm that removing the file results in the cached value being used.
   fake_factory_weave_factory_store_provider().directory().RemoveFile(
-      kFactoryManufacturerDeviceCertificateFileName);
+      testdata::kTestDataCertificateFileName);
 
   // Confirm that we were able to read the file contents back.
+  out_len = 0;
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(
                 manufacturer_certificate, sizeof(manufacturer_certificate), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_TRUE(std::memcmp(manufacturer_certificate, kFactoryManufacturerDeviceCertificateFileData,
-                          out_len) == 0);
+  ASSERT_EQ(out_len, strlen(kFactoryCertificateFileData));
+  EXPECT_EQ(std::memcmp(manufacturer_certificate, kFactoryCertificateFileData, out_len), 0);
 }
 
 TEST_F(ConfigurationManagerTest, CacheFlagsOnInit) {
@@ -411,7 +387,7 @@ TEST_F(ConfigurationManagerTest, CacheFlagsOnInit) {
   EXPECT_FALSE(ConfigurationMgr().IsPairedToAccount());
 
   // Re-initialize the configuration manager and check that the flags are set.
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   EXPECT_TRUE(ConfigurationMgr().IsServiceProvisioned());
   EXPECT_TRUE(ConfigurationMgr().IsMemberOfFabric());
   EXPECT_TRUE(ConfigurationMgr().IsPairedToAccount());
@@ -465,45 +441,36 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   }
 }
 
-TEST_F(ConfigurationManagerTest, GetPrivateKey) {
+TEST_F(ConfigurationManagerTest, GetPrivateKey_Data) {
   std::vector<uint8_t> signing_key;
-  std::string expected("ABC123\n");
-  std::string filename("test_mfr_private_key");
+
+  CopyFileFromPkgToData(testdata::kTestDataPrivateKeyFileName);
 
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
-
-  CopyFileFromPkgToData(filename);
-
   EXPECT_EQ(ConfigurationMgrImpl().GetPrivateKeyForSigning(&signing_key), ZX_OK);
-  EXPECT_TRUE(std::equal(signing_key.begin(), signing_key.end(), expected.begin(), expected.end()));
-
-  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
-
-  files::DeletePath(kDataPath + filename, false);
+  ASSERT_EQ(signing_key.size(), strlen(testdata::kTestDataPrivateKeyFileData));
+  EXPECT_EQ(
+      std::memcmp(signing_key.data(), testdata::kTestDataPrivateKeyFileData, signing_key.size()),
+      0);
 }
 
-TEST_F(ConfigurationManagerTest, GetTestCert) {
-  std::string testdata("FAKECERT\n");
-  uint8_t mfr_cert_buf[testdata.size() + 1];
-  size_t cert_len;
+TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate_Data) {
+  uint8_t certificate[sizeof(testdata::kTestDataCertificateFileData) + 1] = {};
+  size_t out_len = 0;
 
-  memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
+  CopyFileFromPkgToData(testdata::kTestDataCertificateFileName);
+
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
-  std::string filename("test_mfr_cert");
-  CopyFileFromPkgToData(filename);
-
-  EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
-                                                                cert_len),
+  EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(certificate, sizeof(certificate),
+                                                                out_len),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(cert_len, testdata.size());
-  EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
-                         testdata.begin(), testdata.end()));
-  files::DeletePath(kDataPath + filename, false);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataCertificateFileData));
+  EXPECT_EQ(std::memcmp(certificate, testdata::kTestDataCertificateFileData, out_len), 0);
 }
 
-TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
-  char serial_num[kMaxSerialNumberSize] = {};
-  size_t serial_num_len = 0;
+TEST_F(ConfigurationManagerTest, GetSerialNumber_DeviceInfo) {
+  char serial_num[ConfigurationManager::kMaxSerialNumberLength] = {};
+  size_t out_len = 0;
 
   // A non-existent serial number field will result in falling back to the
   // serial number provided in config-data, if one is available.
@@ -511,10 +478,11 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
 
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
-  EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), serial_num_len),
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), out_len),
             WEAVE_NO_ERROR);
-  EXPECT_STREQ(serial_num, kExpectedSerialNumberLocal);
+  ASSERT_EQ(out_len, strlen(testdata::kTestDataSerialNumber));
+  EXPECT_STREQ(serial_num, testdata::kTestDataSerialNumber);
 }
 
 TEST_F(ConfigurationManagerTest, IsThreadEnabled) {
@@ -532,58 +500,66 @@ TEST_F(ConfigurationManagerTest, GetAppletsPathList) {
 }
 
 TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
-  constexpr uint8_t expected[kWiFiMacAddressBufSize] = {0xFF};
-  uint8_t mac_addr[kWiFiMacAddressBufSize];
+  constexpr uint8_t expected[kWiFiMACAddressBufSize] = {0xFF};
+  uint8_t mac_addr[kWiFiMACAddressBufSize] = {};
 
   EXPECT_EQ(ConfigurationMgr().GetPrimaryWiFiMACAddress(mac_addr), WEAVE_NO_ERROR);
-  EXPECT_EQ(0, std::memcmp(expected, mac_addr, kWiFiMacAddressBufSize));
+  EXPECT_EQ(std::memcmp(expected, mac_addr, kWiFiMACAddressBufSize), 0);
 }
 
 TEST_F(ConfigurationManagerTest, GetThreadJoinableDuration) {
-  constexpr uint32_t expected = 1234;
-  uint32_t duration;
+  uint32_t duration = 0;
 
   EXPECT_EQ(ConfigurationMgrImpl().GetThreadJoinableDuration(&duration), WEAVE_NO_ERROR);
-  EXPECT_EQ(duration, expected);
+  EXPECT_EQ(duration, testdata::kTestThreadJoinableDuration);
 }
 
 TEST_F(ConfigurationManagerTest, FactoryResetIfFailSafeArmed) {
-  bool fail_safe_armed = true;
-  WeaveGroupKey retrieved_key;
+  bool fail_safe_armed = false;
   GroupKeyStoreImpl group_key_store;
-  const WeaveGroupKey test_key = CreateGroupKey(kTestKeyId, 0, kWeaveAppGroupKeySize, 0xABCDEF);
+  WeaveGroupKey retrieved_key;
+  WeaveGroupKey test_key = {
+      .KeyId = WeaveKeyId::kFabricSecret + 1u,
+      .KeyLen = nl::Weave::Profiles::Security::AppKeys::kWeaveAppGroupKeySize,
+      .Key = {},
+      .StartTime = 0xFFFF,
+  };
+  std::memset(test_key.Key, 0xA, nl::Weave::Profiles::Security::AppKeys::kWeaveAppGroupKeySize);
 
-  // Store the fabric secret and set fail-safe-armed. Verify that erasing
-  // weave data erases all of them from the environment.
+  // Store the fabric secret and read the key back.
   EXPECT_EQ(group_key_store.StoreGroupKey(test_key), WEAVE_NO_ERROR);
+  EXPECT_EQ(group_key_store.RetrieveGroupKey(test_key.KeyId, retrieved_key), WEAVE_NO_ERROR);
+  EXPECT_EQ(retrieved_key.KeyId, test_key.KeyId);
+  EXPECT_EQ(retrieved_key.StartTime, test_key.StartTime);
+  ASSERT_EQ(retrieved_key.KeyLen, test_key.KeyLen);
+  EXPECT_EQ(std::memcmp(retrieved_key.Key, test_key.Key, retrieved_key.KeyLen), 0);
+
+  // Arm the fail-safe then re-init the stack. This should cause all weave data
+  // to be erased, as this simulates a restart while the fail-safe is armed.
   EXPECT_EQ(EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_FailSafeArmed, true),
             WEAVE_NO_ERROR);
-  ConfigurationMgrImpl().SetDelegate(nullptr);
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
+
+  // Confirm that the fail-safe is not configured and that the group key is no
+  // longer present.
   EXPECT_EQ(EnvironmentConfig::ReadConfigValue(EnvironmentConfig::kConfigKey_FailSafeArmed,
                                                fail_safe_armed),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(group_key_store.RetrieveGroupKey(kTestKeyId, retrieved_key),
+  EXPECT_EQ(group_key_store.RetrieveGroupKey(test_key.KeyId, retrieved_key),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
 
 TEST_F(ConfigurationManagerTest, SetConfiguration) {
-  std::string from_filename("device_info_alt.json");
-  std::string to_filename("device_info.json");
-  uint16_t read_vendor_id, read_product_id;
+  uint16_t vendor_id = 0;
+  uint16_t product_id = 0;
 
-  CopyFileFromConfigToData(from_filename, to_filename);
+  CopyFileFromConfigToData(testdata::kTestAltConfigFileName, testdata::kTestConfigFileName);
 
-  ConfigurationMgrImpl().SetDelegate(nullptr);
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
-  EXPECT_EQ(ConfigurationMgrImpl().GetVendorId(read_vendor_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(read_vendor_id, 1000);
-  EXPECT_EQ(ConfigurationMgrImpl().GetProductId(read_product_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(read_product_id, 2000);
-
-  files::DeletePath(kDataPath + to_filename, false);
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(ConfigurationMgrImpl().GetVendorId(vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(vendor_id, testdata::kTestAltDataVendorId);
+  EXPECT_EQ(ConfigurationMgrImpl().GetProductId(product_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(product_id, testdata::kTestAltDataProductId);
 }
 
 TEST_F(ConfigurationManagerTest, GetManufacturingDate) {
@@ -596,20 +572,19 @@ TEST_F(ConfigurationManagerTest, GetManufacturingDate) {
   EXPECT_EQ(year, FakeHwinfoProduct::kBuildDateYear);
   EXPECT_EQ(month, FakeHwinfoProduct::kBuildDateMonth);
   EXPECT_EQ(day, FakeHwinfoProduct::kBuildDateDay);
-  year = month = day = 0;
 
-  // Confirm config not found when build data is not supplied.
+  // Disable the hwinfo FIDL from returning a build date.
+  year = month = day = 0;
   fake_hwinfo_product().set_build_date(std::nullopt);
   EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
-  ConfigurationMgrImpl().SetDelegate(nullptr);
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
+
+  // Confirm no date is read if the build data is not supplied.
   EXPECT_EQ(ConfigurationMgr().GetManufacturingDate(year, month, day),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-
   EXPECT_EQ(year, 0);
   EXPECT_EQ(month, 0);
   EXPECT_EQ(day, 0);
 }
 
-}  // namespace nl::Weave::DeviceLayer::Internal::testing
+}  // namespace weave::adaptation::testing
