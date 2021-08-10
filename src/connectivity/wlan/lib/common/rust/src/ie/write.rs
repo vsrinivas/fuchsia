@@ -17,7 +17,7 @@ use {
 };
 
 macro_rules! validate {
-    ( $condition:expr, $fmt:expr $(, $args:expr)* ) => {
+    ( $condition:expr, $fmt:expr $(, $args:expr)* $(,)? ) => {
         if !$condition {
             return Err($crate::error::FrameWriteError::new_invalid_data(format!($fmt, $($args,)*)));
         }
@@ -79,6 +79,12 @@ pub fn write_ext_supported_rates<B: Appendable>(
     rates: &[u8],
 ) -> Result<(), FrameWriteError> {
     validate!(!rates.is_empty(), "List of Extended Supported Rates is empty");
+    validate!(
+        rates.len() <= EXTENDED_SUPPORTED_RATES_MAX_LEN,
+        "Too many Extended Supported Rates (max {}, got {})",
+        EXTENDED_SUPPORTED_RATES_MAX_LEN,
+        rates.len(),
+    );
     write_ie!(buf, Id::EXT_SUPPORTED_RATES, rates)
 }
 

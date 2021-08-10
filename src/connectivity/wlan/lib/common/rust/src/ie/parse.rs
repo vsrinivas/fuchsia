@@ -78,6 +78,10 @@ pub fn parse_ext_supported_rates<B: ByteSlice>(
     raw_body: B,
 ) -> FrameParseResult<LayoutVerified<B, [SupportedRate]>> {
     validate!(!raw_body.is_empty(), "Empty Extended Supported Rates element");
+    validate!(
+        raw_body.len() <= EXTENDED_SUPPORTED_RATES_MAX_LEN,
+        "Too many Extended Supported Rates"
+    );
     // unwrap() is OK because sizeof(SupportedRate) is 1, and any slice length is a multiple of 1
     Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
@@ -442,6 +446,12 @@ mod tests {
     pub fn ext_supported_rates_empty() {
         let err = parse_ext_supported_rates(&[][..]).expect_err("expected Err");
         assert_eq!("Empty Extended Supported Rates element", err.debug_message());
+    }
+
+    #[test]
+    pub fn ext_supported_rates_too_long() {
+        let err = parse_ext_supported_rates(&[0u8; 256][..]).expect_err("expected Err");
+        assert_eq!("Too many Extended Supported Rates", err.debug_message());
     }
 
     #[test]
