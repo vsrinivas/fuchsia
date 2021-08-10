@@ -19,9 +19,9 @@ class ChannelSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     return Observer(builder: (_) {
       final channels = state.availableChannels.value;
-      final targetChannel = state.targetChannel.value == ''
-          ? state.currentChannel.value
-          : state.targetChannel.value;
+      final targetMessage = state.targetChannel.value == ''
+          ? Strings.selectAnUpdateChannel
+          : Strings.downloadTargetChannel(state.targetChannel.value);
       return Column(
         children: [
           Expanded(
@@ -36,6 +36,10 @@ class ChannelSettings extends StatelessWidget {
                     title: Text(channel),
                     subtitle: index == 0 ? Text(Strings.currentChannel) : null,
                     onTap: () => onChange(channels[index]),
+                    trailing: ((state.targetChannel.value != '') &&
+                            (state.targetChannel.value == channel))
+                        ? Icon(Icons.check_outlined)
+                        : null,
                   );
                 },
               ),
@@ -44,7 +48,7 @@ class ChannelSettings extends StatelessWidget {
           AppBar(
             elevation: 0,
             title: Text(
-              '${Strings.downloadAndApplyUpdatesOf} $targetChannel ${Strings.channel.toLowerCase()}',
+              targetMessage,
               style: Theme.of(context).textTheme.bodyText2,
             ),
             shape: Border(

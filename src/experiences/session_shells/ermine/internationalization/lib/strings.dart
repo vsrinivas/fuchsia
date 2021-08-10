@@ -767,9 +767,16 @@ class Strings {
         name: 'current channel',
         desc: 'The label for "Current Channel" text field.',
       );
-  static String get downloadAndApplyUpdatesOf => Intl.message(
-        'Download and apply updates of',
-        name: 'download and apply updates of',
-        desc: 'The label for "Download and apply updates of" text field.',
+  static String get selectAnUpdateChannel => Intl.message(
+        'Select an update channel.',
+        name: 'select an update channel',
+        desc: 'The label for "Select an update channel." text field.',
+      );
+  static String downloadTargetChannel(String targetChannel) => Intl.message(
+        'Download and apply updates of $targetChannel channel.',
+        name: 'download target channel text',
+        desc:
+            'The text displayed for downloading and updating to target channel.',
+        args: [targetChannel],
       );
 }
