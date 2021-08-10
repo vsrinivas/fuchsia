@@ -9,21 +9,22 @@ use diagnostics_hierarchy::Property;
 use fuchsia_async as fasync;
 use fuchsia_inspect::testing::TreeAssertion;
 use fuchsia_zircon as zx;
-use futures::StreamExt as _;
 use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
-use net_types::ip::{self as net_types_ip, Ip as _};
+use net_types::ip::Ip as _;
 use netemul::Endpoint as _;
-use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use netstack_testing_common::{constants, get_inspect_data, Result};
+use netstack_testing_common::{
+    constants, get_inspect_data,
+    realms::{Netstack2, TestSandboxExt as _},
+    Result,
+};
 use netstack_testing_macros::variants_test;
-use packet::ParsablePacket as _;
-use packet::Serializer as _;
-use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
-use packet_formats::ipv4::Ipv4Header as _;
-use packet_formats::ipv4::Ipv4PacketBuilder;
-use packet_formats::udp::UdpPacketBuilder;
-use packet_formats::udp::UdpParseArgs;
+use packet::{ParsablePacket as _, Serializer as _};
+use packet_formats::{
+    ethernet::{EtherType, EthernetFrameBuilder},
+    ipv4::{Ipv4Header as _, Ipv4PacketBuilder},
+    udp::{UdpPacketBuilder, UdpParseArgs},
+};
 use std::collections::HashMap;
 use std::num::NonZeroU16;
 use test_case::test_case;
@@ -134,7 +135,7 @@ async fn inspect_nic() -> Result {
     let (loopback_props, netdev_props, eth_props) =
         fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)?,
-            &mut std::collections::HashMap::new(),
+            &mut HashMap::new(),
             |if_map| {
                 let loopback =
                     if_map.values().find_map(|properties| match properties.device_class {
@@ -531,9 +532,9 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
         }
     }
 
-    const SRC_IP: net_types_ip::Ipv4Addr = net_types_ip::Ipv4::UNSPECIFIED_ADDRESS;
-    const DST_IP: net_types::SpecifiedAddr<net_types_ip::Ipv4Addr> =
-        net_types_ip::Ipv4::GLOBAL_BROADCAST_ADDRESS;
+    const SRC_IP: net_types::ip::Ipv4Addr = net_types::ip::Ipv4::UNSPECIFIED_ADDRESS;
+    const DST_IP: net_types::SpecifiedAddr<net_types::ip::Ipv4Addr> =
+        net_types::ip::Ipv4::GLOBAL_BROADCAST_ADDRESS;
 
     for PacketAttributes { ip_proto, port } in &inbound_packets {
         let ser = packet::Buf::new(&mut [], ..)
@@ -598,10 +599,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
         assertion
     });
 
-    let mut interval = fuchsia_async::Interval::new(zx::Duration::from_seconds(1));
-
     loop {
-        assert_eq!(interval.next().await, Some(()));
         let data = get_inspect_data(
             &realm,
             "netstack",
@@ -616,6 +614,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
                 println!("Got mismatched inspect data with err: {:?}", err);
             }
         }
+        let () = fasync::Timer::new(std::time::Duration::from_millis(100)).await;
     }
 }
 
