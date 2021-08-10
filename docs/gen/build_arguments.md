@@ -2994,7 +2994,7 @@ This is initially empty as part of the first step of the transition.
 
 **Current value (from the default):** `{ }`
 
-From //build/security.gni:141
+From //build/security/policies.gni:21
 
 ### pre_erase_flash
 
