@@ -364,9 +364,7 @@ void X86PageTableBase::UpdateEntry(ConsistencyManager* cm, PageTableLevel level,
 
   /* attempt to invalidate the page */
   if (IS_PAGE_PRESENT(olde)) {
-    // TODO(teisenbe): the is_kernel_address should be a check for the
-    // global bit
-    cm->pending_tlb()->enqueue(vaddr, level, is_kernel_address(vaddr), was_terminal);
+    cm->pending_tlb()->enqueue(vaddr, level, /*is_global_page=*/olde & X86_MMU_PG_G, was_terminal);
   }
 }
 
@@ -381,9 +379,7 @@ void X86PageTableBase::UnmapEntry(ConsistencyManager* cm, PageTableLevel level, 
 
   /* attempt to invalidate the page */
   if (IS_PAGE_PRESENT(olde)) {
-    // TODO(teisenbe): the is_kernel_address should be a check for the
-    // global bit
-    cm->pending_tlb()->enqueue(vaddr, level, is_kernel_address(vaddr), was_terminal);
+    cm->pending_tlb()->enqueue(vaddr, level, /*is_global_page=*/olde & X86_MMU_PG_G, was_terminal);
   }
 }
 
