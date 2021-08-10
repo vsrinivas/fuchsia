@@ -122,9 +122,19 @@ bool ProfilesCompatible(const uint8_t* dst, const uint8_t* src, size_t size) {
 
   const __llvm_profile_data* src_data_start =
       reinterpret_cast<const __llvm_profile_data*>(src + sizeof(*src_header));
+#if INSTR_PROF_RAW_VERSION > 5
+  if (src_header->Version > 5)
+    src_data_start = reinterpret_cast<const __llvm_profile_data*>(
+        reinterpret_cast<const uint8_t*>(src_data_start) + src_header->BinaryIdsSize);
+#endif
   const __llvm_profile_data* src_data_end = src_data_start + src_header->DataSize;
   const __llvm_profile_data* dst_data_start =
       reinterpret_cast<const __llvm_profile_data*>(dst + sizeof(*dst_header));
+#if INSTR_PROF_RAW_VERSION > 5
+  if (dst_header->Version > 5)
+    dst_data_start = reinterpret_cast<const __llvm_profile_data*>(
+        reinterpret_cast<const uint8_t*>(dst_data_start) + dst_header->BinaryIdsSize);
+#endif
   const __llvm_profile_data* dst_data_end = dst_data_start + dst_header->DataSize;
 
   for (const __llvm_profile_data *src_data = src_data_start, *dst_data = dst_data_start;
@@ -144,12 +154,22 @@ uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
   const __llvm_profile_header* src_header = reinterpret_cast<const __llvm_profile_header*>(src);
   const __llvm_profile_data* src_data_start =
       reinterpret_cast<const __llvm_profile_data*>(src + sizeof(*src_header));
+#if INSTR_PROF_RAW_VERSION > 5
+  if (src_header->Version > 5)
+    src_data_start = reinterpret_cast<const __llvm_profile_data*>(
+        reinterpret_cast<const uint8_t*>(src_data_start) + src_header->BinaryIdsSize);
+#endif
   const __llvm_profile_data* src_data_end = src_data_start + src_header->DataSize;
   const uint64_t* src_counters_start = reinterpret_cast<const uint64_t*>(src_data_end);
 
   __llvm_profile_header* dst_header = reinterpret_cast<__llvm_profile_header*>(dst);
   __llvm_profile_data* dst_data_start =
       reinterpret_cast<__llvm_profile_data*>(dst + sizeof(*dst_header));
+#if INSTR_PROF_RAW_VERSION > 5
+  if (dst_header->Version > 5)
+    dst_data_start = reinterpret_cast<__llvm_profile_data*>(
+        reinterpret_cast<uint8_t*>(dst_data_start) + dst_header->BinaryIdsSize);
+#endif
   __llvm_profile_data* dst_data_end = dst_data_start + dst_header->DataSize;
   uint64_t* dst_counters_start = reinterpret_cast<uint64_t*>(dst_data_end);
 
