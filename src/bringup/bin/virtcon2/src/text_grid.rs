@@ -53,8 +53,10 @@ struct CellId {
     rgb: Rgb,
 }
 
-// Thickness of cursor lines is determined by multiplying this with the cell height.
-const CURSOR_LINE_THICKNESS_FACTOR: f32 = 1.0 / 15.0;
+// Thickness of cursor lines is determined by multiplying thickness factor
+// with the cell height. 1/16 has been chosen as that results in 1px thick
+// lines for a 16px cell height.
+const CURSOR_LINE_THICKNESS_FACTOR: f32 = 1.0 / 16.0;
 
 fn path_for_block(size: &Size, render_context: &mut RenderContext) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
