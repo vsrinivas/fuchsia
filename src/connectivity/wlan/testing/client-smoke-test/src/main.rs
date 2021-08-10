@@ -17,6 +17,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, DurationNum as _},
+    ieee80211::Ssid,
     net_stack_util::netstack_did_get_dhcp,
     opts::Opt,
     serde::Serialize,
@@ -68,6 +69,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let network_svc = connect_to_protocol::<StackMarker>()?;
     test_results.connect_to_netstack_service = true;
 
+    let target_ssid = Ssid::from(&opt.target_ssid);
+
     let fut = async {
         let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)
             .await
@@ -117,13 +120,13 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             // first check if we are connected to the target network already
             if is_connect_to_target_network_needed(
                 opt.stay_connected,
-                &opt.target_ssid,
+                &target_ssid,
                 &wlan_iface.initial_status,
             ) {
                 fx_log_info!("connecting");
                 let connect_result = wlan_service_util::client::connect(
                     &wlan_iface.sme_proxy,
-                    opt.target_ssid.as_bytes().to_vec(),
+                    target_ssid.clone(),
                     opt.target_pwd.as_bytes().to_vec(),
                     bss_description,
                 )

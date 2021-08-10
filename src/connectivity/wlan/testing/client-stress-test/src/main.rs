@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info},
+    ieee80211::Ssid,
     serde::Serialize,
     std::collections::HashMap,
     std::process,
@@ -63,6 +64,7 @@ fn duration_to_ms(duration: Duration) -> u128 {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
+    let target_ssid = Ssid::from(&opt.target_ssid);
     let mut scan_test_pass = true;
     let mut connect_test_pass = true;
     let mut disconnect_test_pass = true;
@@ -128,7 +130,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .ok_or_else(|| format_err!("no station responding for SSID"))?;
                     let result = wlan_service_util::client::connect(
                         &wlaniface.sme_proxy,
-                        opt.target_ssid.as_bytes().to_vec(),
+                        target_ssid.clone(),
                         opt.target_pwd.as_bytes().to_vec(),
                         bss_description,
                     )

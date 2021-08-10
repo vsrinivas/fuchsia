@@ -12,6 +12,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
+use ieee80211::Ssid;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::process;
@@ -45,7 +46,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
-    let target_ssid = opt.target_ssid.as_bytes();
+    let target_ssid = Ssid::from(opt.target_ssid);
     let target_pwd = opt.target_pwd.as_bytes();
     let target_channel = opt.target_channel;
     let mut test_pass = false;
@@ -167,7 +168,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .context("scan failed")?;
                 let bss_description = networks
                     .into_iter()
-                    .filter(|scan_result| scan_result.ssid.as_slice() == target_ssid)
+                    .filter(|scan_result| scan_result.ssid.as_slice() == &target_ssid)
                     .map(|scan_result| scan_result.bss_description)
                     .next()
                     .ok_or_else(|| format_err!("no station responding for SSID"))?;
@@ -177,7 +178,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 if wlan_client_results.found_ap_in_scan == true {
                     let connect_result = wlan_service_util::client::connect(
                         &wlan_client_iface.sme_proxy,
-                        target_ssid.to_vec(),
+                        target_ssid.clone(),
                         target_pwd.to_vec(),
                         bss_description,
                     )

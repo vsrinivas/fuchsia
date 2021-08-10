@@ -13,6 +13,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
+    "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/wlan-service-util",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

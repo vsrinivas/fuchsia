@@ -11,6 +11,7 @@ use fidl_fuchsia_wlan_device_service::{
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
+use ieee80211::Ssid;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 
@@ -82,7 +83,7 @@ impl WlanFacade {
 
     pub async fn scan_for_bss_info(
         &self,
-    ) -> Result<HashMap<Vec<u8>, Vec<Box<fidl_internal::BssDescription>>>, Error> {
+    ) -> Result<HashMap<Ssid, Vec<Box<fidl_internal::BssDescription>>>, Error> {
         // get the first client interface
         let sme_proxy = wlan_service_util::client::get_first_sme(&self.wlan_svc)
             .await
@@ -95,7 +96,7 @@ impl WlanFacade {
         // send the bss descriptions back to the test
         let mut hashmap = HashMap::new();
         for bss in results.drain(..) {
-            let entry = hashmap.entry(bss.ssid).or_insert(vec![]);
+            let entry = hashmap.entry(Ssid::from(bss.ssid)).or_insert(vec![]);
             entry.push(Box::new(bss.bss_description));
         }
 
@@ -105,7 +106,7 @@ impl WlanFacade {
     // TODO(fxbug.dev/68531): Require a BSS description and remove the optional scan.
     pub async fn connect(
         &self,
-        target_ssid: Vec<u8>,
+        target_ssid: Ssid,
         target_pwd: Vec<u8>,
         target_bss_desc: Option<Box<fidl_internal::BssDescription>>,
     ) -> Result<bool, Error> {
