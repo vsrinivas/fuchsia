@@ -115,7 +115,7 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
     let block = Block::new(&bytes[..16], 0);
     if block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
         && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
-        && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
+        && block.header_version().unwrap() <= constants::HEADER_VERSION_NUMBER
         && !block.header_is_locked().unwrap()
     {
         return block.header_generation_count().ok();
@@ -252,6 +252,26 @@ mod tests {
         assert_eq!(snapshot.get_block(6).unwrap().block_type(), BlockType::Free);
         assert!(snapshot.get_block(4096).is_none());
 
+        Ok(())
+    }
+
+    #[test]
+    fn scan_bad_header() -> Result<(), Error> {
+        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let mapping_ref = Arc::new(mapping);
+
+        // create a header block with an invalid version number
+        mapping_ref.write_bytes(
+            0,
+            &[
+                0x00, /* order/reserved */
+                0x02, /* type */
+                0xff, /* invalid version number */
+                'I' as u8, 'N' as u8, 'S' as u8, 'P' as u8,
+            ],
+        );
+        let snapshot = Snapshot::try_from(&vmo);
+        assert!(snapshot.is_err());
         Ok(())
     }
 

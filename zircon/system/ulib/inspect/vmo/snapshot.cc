@@ -6,6 +6,8 @@
 #include <lib/inspect/cpp/vmo/snapshot.h>
 #include <zircon/assert.h>
 
+#include "lib/inspect/cpp/vmo/limits.h"
+
 using inspect::internal::Block;
 using inspect::internal::BlockIndex;
 using inspect::internal::IndexForOffset;
@@ -135,7 +137,8 @@ zx_status_t Snapshot::Read(const zx::vmo& vmo, size_t size, uint8_t* buffer) {
 
 zx_status_t Snapshot::ParseHeader(uint8_t* buffer, uint64_t* out_generation_count) {
   auto* block = reinterpret_cast<Block*>(buffer);
-  if (memcmp(&block->header_data[4], internal::kMagicNumber, 4) != 0) {
+  if (memcmp(&block->header_data[4], internal::kMagicNumber, 4) != 0 ||
+      internal::HeaderBlockFields::Version::Get<uint64_t>(block->header) > internal::kVersion) {
     return ZX_ERR_INTERNAL;
   }
   *out_generation_count = block->payload.u64;

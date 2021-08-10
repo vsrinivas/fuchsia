@@ -43,6 +43,21 @@ TEST(Snapshot, ValidRead) {
   EXPECT_EQ(0, memcmp(snapshot.data() + sizeof(Block), buf.data(), buf.size()));
 }
 
+TEST(Snapshot, ReadFailsWithBadVersion) {
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(1ul << 15);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+
+  EXPECT_EQ(ZX_ERR_INTERNAL, status);
+}
+
 TEST(Snapshot, InvalidBufferSize) {
   for (size_t i = 0; i < kMinOrderSize; i++) {
     Snapshot snapshot;
