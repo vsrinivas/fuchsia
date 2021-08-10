@@ -582,12 +582,10 @@ impl super::Station for ClientSme {
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         match event {
-            MlmeEvent::OnScanResult { result } => {
-                match self.scan_sched.on_mlme_scan_result(result, &self.context.inspect) {
-                    Ok(()) => {}
-                    Err(e) => error!("scan result error: {:?}", e),
-                }
-            }
+            MlmeEvent::OnScanResult { result } => self
+                .scan_sched
+                .on_mlme_scan_result(result, &self.context.inspect)
+                .unwrap_or_else(|e| error!("scan result error: {:?}", e)),
             MlmeEvent::OnScanEnd { end } => {
                 match self.scan_sched.on_mlme_scan_end(end, &self.context.inspect) {
                     Err(e) => error!("scan end error: {:?}", e),
