@@ -15,7 +15,6 @@
 
 #include <fuchsia/factory/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
-#include <fuchsia/weave/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -28,6 +27,7 @@
 #include "fake_buildinfo_provider.h"
 #include "fake_hwinfo_device.h"
 #include "fake_hwinfo_product.h"
+#include "fake_weave_factory_data_manager.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -40,6 +40,7 @@ namespace {
 using weave::adaptation::testing::FakeBuildInfoProvider;
 using weave::adaptation::testing::FakeHwinfoDevice;
 using weave::adaptation::testing::FakeHwinfoProduct;
+using weave::adaptation::testing::FakeWeaveFactoryDataManager;
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
@@ -90,32 +91,6 @@ WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
 }
 
 }  // namespace
-
-class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataManager_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void GetPairingCode(GetPairingCodeCallback callback) override {
-    constexpr char device_pairing_code[] = "PAIRCODE123";
-    fuchsia::weave::FactoryDataManager_GetPairingCode_Result result;
-    fuchsia::weave::FactoryDataManager_GetPairingCode_Response response((::std::vector<uint8_t>(
-        std::begin(device_pairing_code), std::end(device_pairing_code) - 1)));
-    result.set_response(response);
-    callback(std::move(result));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::weave::FactoryDataManager> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::weave::FactoryDataManager> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
- private:
-  fidl::Binding<fuchsia::weave::FactoryDataManager> binding_{this};
-  async_dispatcher_t* dispatcher_;
-};
 
 class FakeDirectory {
  public:
