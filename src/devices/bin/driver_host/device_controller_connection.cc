@@ -117,8 +117,13 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   // TODO: api lock integration
-  LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
-       driver_path.data());
+  if (driver_path != "/boot/driver/fragment.so") {
+    LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
+         driver_path.data());
+  } else {
+    LOGD(TRACE, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
+         driver_path.data());
+  }
   fbl::RefPtr<zx_driver_t> drv;
   if (dev->flags() & DEV_FLAG_DEAD) {
     LOGD(ERROR, *dev, "Cannot bind to removed device");
