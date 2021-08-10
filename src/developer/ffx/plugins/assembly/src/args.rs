@@ -73,10 +73,6 @@ pub struct SignArgs {
     /// the output file to write the vbmeta image to.
     #[argh(option)]
     pub output: PathBuf,
-
-    /// the output file to write the salt value used to
-    #[argh(option)]
-    pub salt_outfile: Option<PathBuf>,
 }
 
 /// perform the assembly of images

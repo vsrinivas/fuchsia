@@ -138,9 +138,6 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #      [bool] Whether to include the version and epoch files into the Update
 #      Package.
 #
-#   salt_file (optional)
-#     [path] Pre-defined salt to use in VBMeta.
-#
 #   recovery (optional)
 #     [label] Recovery label to include in the update package.
 #
@@ -458,7 +455,6 @@ template("assemble_system") {
                              "minfs_minimum_data_bytes",
                              "minfs_maximum_bytes",
                              "embed_fvm_in_zbi",
-                             "salt_file",
                              "zbi_name",
                              "zbi_signing_script",
                              "zbi_signing_args",

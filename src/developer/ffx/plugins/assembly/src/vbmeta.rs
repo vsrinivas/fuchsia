@@ -15,17 +15,11 @@ pub fn construct_vbmeta(
     vbmeta: &VBMetaConfig,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
-    // Generate the salt, or use one provided by the board.
-    let salt = match &vbmeta.salt {
-        Some(salt_path) => {
-            let salt_str = std::fs::read_to_string(salt_path)?;
-            Salt::decode_hex(&salt_str)?
-        }
-        _ => Salt::random()?,
-    };
+    // Generate the salt.
+    let salt = Salt::random()?;
 
     // Sign the image and construct a VBMeta.
-    let (vbmeta, salt) = crate::vbmeta::sign(
+    let (vbmeta, _salt) = crate::vbmeta::sign(
         &vbmeta.kernel_partition,
         zbi,
         &vbmeta.key,
@@ -34,10 +28,6 @@ pub fn construct_vbmeta(
         salt,
         &RealFilesystemProvider {},
     )?;
-
-    // Write the salt to a file.
-    let salt_path = outdir.as_ref().join(format!("{}.vbmeta.salt", name.as_ref()));
-    std::fs::write(&salt_path, hex::encode(salt.bytes))?;
 
     // Write VBMeta to a file and return the path.
     let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", name.as_ref()));
@@ -106,7 +96,6 @@ mod tests {
             key: key_path,
             key_metadata: metadata_path,
             additional_descriptor_files: vec![],
-            salt: None,
         };
 
         // Create a fake zbi.

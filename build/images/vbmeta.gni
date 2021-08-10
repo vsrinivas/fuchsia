@@ -62,14 +62,12 @@ template("vbmeta") {
     }
 
     output_file += ".vbmeta"
-    salt_file = output_file + ".salt"
 
     zbi = invoker.zbi
     assert([ zbi[0] ] == zbi, "zbi parameter must contain a single entry")
     assert(avb_key != "", "avb_key must be specified")
     assert(avb_atx_metadata != "", "avb metadata must be specified")
     output_file = "$root_out_dir/$output_file"
-    salt_file = "$root_out_dir/$salt_file"
 
     ffx_action(target_name) {
       forward_variables_from(invoker,
@@ -96,8 +94,6 @@ template("vbmeta") {
         rebase_path(zbi[0], root_build_dir),
         "--output",
         rebase_path(output_file, root_build_dir),
-        "--salt-outfile",
-        rebase_path(salt_file, root_build_dir),
       ]
       inputs = [
         avb_key,
@@ -114,10 +110,7 @@ template("vbmeta") {
         inputs += [ descriptor_file ]
       }
 
-      outputs = [
-        output_file,
-        salt_file,
-      ]
+      outputs = [ output_file ]
     }
   } else {
     group(target_name) {

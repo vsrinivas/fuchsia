@@ -20,10 +20,7 @@ import("//build/zbi/zbi.gni")
 #
 #   output_path (required)
 #     [path] Board config output location.
-#
-#   salt_file (optional)
-#     [path] Pre-defined salt to use in VBMeta.
-#
+
 #   recovery (optional)
 #     [label] Recovery label to include in the update package.
 #
@@ -80,7 +77,6 @@ template("generated_board_config") {
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
-                             "salt_file",
                              "testonly",
                              "visibility",
                            ])
@@ -184,11 +180,6 @@ template("generated_board_config") {
           key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
           additional_descriptor_files =
               rebase_path(board_extra_vbmeta_descriptors, root_build_dir)
-
-          # TODO(aaronwood) - Remove when no longer matching against other impl.
-          if (defined(salt_file)) {
-            salt = salt_file
-          }
         }
       }
 

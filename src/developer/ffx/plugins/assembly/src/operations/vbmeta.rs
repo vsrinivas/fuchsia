@@ -9,17 +9,11 @@ use vbmeta::{Salt, VBMeta};
 
 pub fn sign(args: SignArgs) -> Result<()> {
     let outfile = args.output.clone();
-    let salt_outfile = args.salt_outfile.clone();
 
-    let (vbmeta, salt) = sign_impl(args, &RealFilesystemProvider {}, &RealSaltProvider {})?;
+    let (vbmeta, _salt) = sign_impl(args, &RealFilesystemProvider {}, &RealSaltProvider {})?;
 
     // Now write the output.
     std::fs::write(outfile, &vbmeta.as_bytes()).context("Failed to write vbmeta file")?;
-
-    // And the salt, if requested and available.
-    if let Some(salt_outfile) = salt_outfile {
-        std::fs::write(salt_outfile, hex::encode(salt.bytes))?;
-    }
 
     Ok(())
 }
@@ -105,7 +99,6 @@ mod tests {
                 salt_file: Some("salt".into()),
                 additional_descriptor: Vec::new(),
                 output: "output".into(),
-                salt_outfile: None,
             },
             &vfs,
             &salt_provider,
@@ -158,7 +151,6 @@ mod tests {
                 salt_file: None,
                 additional_descriptor: Vec::new(),
                 output: "output".into(),
-                salt_outfile: None,
             },
             &vfs,
             &salt_provider,
