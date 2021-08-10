@@ -19,23 +19,8 @@ zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {
 }
 
 __EXPORT
-zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t request_raw) {
-  auto request = fidl::ServerEnd<fio::Node>(zx::channel(request_raw));
-  auto directory = fidl::UnownedClientEnd<fio::Directory>(dir);
-  if (!directory.is_valid()) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-
-  size_t length = 0u;
-  zx_status_t status = fdio_validate_path(path, &length);
-  if (status != ZX_OK) {
-    return status;
-  }
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable;
-  return fidl::WireCall(directory)
-      .Open(flags, FDIO_CONNECT_MODE, fidl::StringView::FromExternal(path, length),
-            std::move(request))
-      .status();
+zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle_t h) {
+  return fdio_open_at(dir, path, ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, h);
 }
 
 __EXPORT
@@ -78,6 +63,11 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request) {
   return fdio_ns_connect(ns, path, flags, handle.release());
 }
 
+// We need to select some value to pass as the mode when calling Directory.Open. We use this value
+// to match our historical behavior rather than for any more principled reason.
+constexpr uint32_t kArbitraryMode =
+    S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
 __EXPORT
 zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
                          zx_handle_t raw_request) {
@@ -98,22 +88,21 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
   }
 
   return fidl::WireCall(directory)
-      .Open(flags, FDIO_CONNECT_MODE, fidl::StringView::FromExternal(path, length),
-            std::move(request))
+      .Open(flags, kArbitraryMode, fidl::StringView::FromExternal(path, length), std::move(request))
       .status();
 }
 
 namespace {
 
 zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, const char* path, uint32_t flags,
-                                int* out_fd) {
+                                uint32_t mode, int* out_fd) {
   // We're opening a file descriptor rather than just a channel (like fdio_open), so we always want
   // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
   // is valid before returning from here, and mimics how open() and openat() behave
   // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
   flags |= ZX_FS_FLAG_DESCRIBE;
 
-  zx::status io = iodir->open(path, flags, FDIO_CONNECT_MODE);
+  zx::status io = iodir->open(path, flags, mode);
   if (io.is_error()) {
     return io.status_value();
   }
@@ -147,7 +136,7 @@ zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
         fbl::AutoLock lock(&fdio_lock);
         return fdio_root_handle.get();
       }(),
-      path, flags, out_fd);
+      path, flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT
@@ -162,7 +151,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return fdio_open_fd_common(iodir, path, flags, out_fd);
+  return fdio_open_fd_common(iodir, path, flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT

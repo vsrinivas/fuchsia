@@ -61,9 +61,6 @@ struct Errno {
 // Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
-// The |mode| argument used for |fuchsia.io.Directory/Open| calls.
-#define FDIO_CONNECT_MODE ((uint32_t)0755)
-
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.
 // If not NULL, |out_pending| returns a bitmap of all observed events.
