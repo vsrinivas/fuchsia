@@ -2983,6 +2983,51 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
   }
 }
 
+TEST_P(IOMethodTest, UnconnectedSocketIO) {
+  fbl::unique_fd sockfd;
+  ASSERT_TRUE(sockfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  IOMethod ioMethod = GetParam();
+  char buffer[1];
+  bool isWrite = ioMethod.isWrite();
+#if !defined(__Fuchsia__)
+  auto undo = disableSIGPIPE(isWrite);
+#endif
+  ASSERT_EQ(ioMethod.executeIO(sockfd.get(), buffer, sizeof(buffer)), -1);
+  if (isWrite) {
+    ASSERT_EQ(errno, EPIPE) << strerror(errno);
+  } else {
+    ASSERT_EQ(errno, ENOTCONN) << strerror(errno);
+  }
+}
+
+TEST_P(IOMethodTest, ListenerSocketIO) {
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in serveraddr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<sockaddr*>(&serveraddr), sizeof(serveraddr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
+
+  IOMethod ioMethod = GetParam();
+  char buffer[1];
+  bool isWrite = ioMethod.isWrite();
+#if !defined(__Fuchsia__)
+  auto undo = disableSIGPIPE(isWrite);
+#endif
+  ASSERT_EQ(ioMethod.executeIO(listener.get(), buffer, sizeof(buffer)), -1);
+  if (isWrite) {
+    ASSERT_EQ(errno, EPIPE) << strerror(errno);
+  } else {
+    ASSERT_EQ(errno, ENOTCONN) << strerror(errno);
+  }
+}
+
 TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
