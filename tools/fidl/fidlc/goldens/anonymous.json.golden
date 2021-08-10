@@ -8,6 +8,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Response",
         "result",
         "response",
         "bits_member"
@@ -114,6 +115,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Response",
         "result",
         "err"
       ],
@@ -387,6 +389,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Request",
         "table_member",
         "table_data"
       ],
@@ -444,7 +447,8 @@
       "name": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
       "maybe_naming_context": [
         "SomeProtocol",
-        "SomeMethod"
+        "SomeMethod",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -524,6 +528,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Response",
         "result",
         "response"
       ],
@@ -582,7 +587,8 @@
       "name": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
       "maybe_naming_context": [
         "SomeProtocol",
-        "SomeMethod"
+        "SomeMethod",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -743,6 +749,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Request",
         "table_member"
       ],
       "location": {
@@ -910,6 +917,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Request",
         "union_member"
       ],
       "location": {
@@ -971,6 +979,7 @@
       "maybe_naming_context": [
         "SomeProtocol",
         "SomeMethod",
+        "Response",
         "result"
       ],
       "location": {

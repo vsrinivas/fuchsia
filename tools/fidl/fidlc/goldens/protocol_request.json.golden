@@ -299,7 +299,8 @@
       "name": "fidl.test.protocolrequest/ParentGetChildTopResponse",
       "maybe_naming_context": [
         "Parent",
-        "GetChild"
+        "GetChild",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -356,7 +357,8 @@
       "name": "fidl.test.protocolrequest/ParentGetChildRequestTopResponse",
       "maybe_naming_context": [
         "Parent",
-        "GetChildRequest"
+        "GetChildRequest",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -413,7 +415,8 @@
       "name": "fidl.test.protocolrequest/ParentTakeChildRequest",
       "maybe_naming_context": [
         "Parent",
-        "TakeChild"
+        "TakeChild",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -470,7 +473,8 @@
       "name": "fidl.test.protocolrequest/ParentTakeChildRequestRequest",
       "maybe_naming_context": [
         "Parent",
-        "TakeChildRequest"
+        "TakeChildRequest",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",

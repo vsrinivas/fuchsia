@@ -136,7 +136,8 @@
       "name": "bottom/BottomGetFooTopResponse",
       "maybe_naming_context": [
         "Bottom",
-        "GetFoo"
+        "GetFoo",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",

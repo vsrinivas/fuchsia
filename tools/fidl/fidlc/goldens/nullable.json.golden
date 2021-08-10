@@ -225,7 +225,8 @@
       "name": "fidl.test.nullable/SimpleProtocolAddRequest",
       "maybe_naming_context": [
         "SimpleProtocol",
-        "Add"
+        "Add",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
@@ -302,7 +303,8 @@
       "name": "fidl.test.nullable/SimpleProtocolAddTopResponse",
       "maybe_naming_context": [
         "SimpleProtocol",
-        "Add"
+        "Add",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",

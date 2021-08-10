@@ -277,7 +277,8 @@
       "name": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
       "maybe_naming_context": [
         "ExampleProtocol",
-        "Method"
+        "Method",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",

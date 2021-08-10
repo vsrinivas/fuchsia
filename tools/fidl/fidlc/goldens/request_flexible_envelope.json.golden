@@ -224,7 +224,8 @@
       "name": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
       "maybe_naming_context": [
         "Protocol",
-        "RequestStrictResponseFlexible"
+        "RequestStrictResponseFlexible",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
@@ -281,7 +282,8 @@
       "name": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
       "maybe_naming_context": [
         "Protocol",
-        "RequestStrictResponseFlexible"
+        "RequestStrictResponseFlexible",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
@@ -338,7 +340,8 @@
       "name": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
       "maybe_naming_context": [
         "Protocol",
-        "RequestFlexibleResponseStrict"
+        "RequestFlexibleResponseStrict",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
@@ -395,7 +398,8 @@
       "name": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
       "maybe_naming_context": [
         "Protocol",
-        "RequestFlexibleResponseStrict"
+        "RequestFlexibleResponseStrict",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",

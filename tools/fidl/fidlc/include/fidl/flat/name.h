@@ -135,11 +135,21 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
     }
   }
 
-  std::vector<std::string_view> Context() const {
-    std::vector<std::string_view> names;
+  std::vector<std::string> Context() const {
+    std::vector<std::string> names;
     const auto* current = this;
     while (current) {
-      names.push_back(current->name_.data());
+      // Internally, we don't store a separate Element to represent whether a layout is
+      // the request or response, since this bit of information is embedded in
+      // the ElementKind. When collapsing the stack of Elements into a list of
+      // strings, we need to flatten this case out to avoid losing this data.
+      if (current->kind_ == ElementKind::kMethodRequest) {
+        names.push_back("Request");
+      } else if (current->kind_ == ElementKind::kMethodResponse) {
+        names.push_back("Response");
+      }
+
+      names.emplace_back(current->name_.data());
       current = current->parent_.get();
     }
     std::reverse(names.begin(), names.end());

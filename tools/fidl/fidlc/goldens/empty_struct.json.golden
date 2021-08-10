@@ -237,7 +237,8 @@
       "name": "fidl.test.emptystruct/EmptyProtocolSendRequest",
       "maybe_naming_context": [
         "EmptyProtocol",
-        "Send"
+        "Send",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -294,7 +295,8 @@
       "name": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
       "maybe_naming_context": [
         "EmptyProtocol",
-        "Receive"
+        "Receive",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -351,7 +353,8 @@
       "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
       "maybe_naming_context": [
         "EmptyProtocol",
-        "SendAndReceive"
+        "SendAndReceive",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -408,7 +411,8 @@
       "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
       "maybe_naming_context": [
         "EmptyProtocol",
-        "SendAndReceive"
+        "SendAndReceive",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",

@@ -275,7 +275,8 @@
       "name": "fidl.test.inheritance/SuperFooRequest",
       "maybe_naming_context": [
         "super",
-        "foo"
+        "foo",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -331,7 +332,8 @@
       "name": "fidl.test.inheritance/SuperFooTopResponse",
       "maybe_naming_context": [
         "super",
-        "foo"
+        "foo",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -387,7 +389,8 @@
       "name": "fidl.test.inheritance/SuperFooRequest",
       "maybe_naming_context": [
         "super",
-        "foo"
+        "foo",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -443,7 +446,8 @@
       "name": "fidl.test.inheritance/SuperFooTopResponse",
       "maybe_naming_context": [
         "super",
-        "foo"
+        "foo",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",

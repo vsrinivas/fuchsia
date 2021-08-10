@@ -124,7 +124,8 @@
       "name": "fidl.test.error/ExampleFooRequest",
       "maybe_naming_context": [
         "Example",
-        "foo"
+        "foo",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
@@ -181,6 +182,7 @@
       "maybe_naming_context": [
         "Example",
         "foo",
+        "Response",
         "result",
         "response"
       ],
@@ -238,7 +240,8 @@
       "name": "fidl.test.error/ExampleFooTopResponse",
       "maybe_naming_context": [
         "Example",
-        "foo"
+        "foo",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
@@ -299,6 +302,7 @@
       "maybe_naming_context": [
         "Example",
         "foo",
+        "Response",
         "result"
       ],
       "location": {

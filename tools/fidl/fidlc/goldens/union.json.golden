@@ -176,7 +176,8 @@
       "name": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
       "maybe_naming_context": [
         "TestProtocol",
-        "StrictXUnionHenceResponseMayBeStackAllocated"
+        "StrictXUnionHenceResponseMayBeStackAllocated",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
@@ -233,7 +234,8 @@
       "name": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
       "maybe_naming_context": [
         "TestProtocol",
-        "FlexibleXUnionHenceResponseMustBeHeapAllocated"
+        "FlexibleXUnionHenceResponseMustBeHeapAllocated",
+        "Response"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",

@@ -216,7 +216,8 @@
       "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
       "maybe_naming_context": [
         "Parent",
-        "First"
+        "First",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
@@ -273,7 +274,8 @@
       "name": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
       "maybe_naming_context": [
         "Child",
-        "Second"
+        "Second",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
@@ -330,7 +332,8 @@
       "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
       "maybe_naming_context": [
         "Parent",
-        "First"
+        "First",
+        "Request"
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
