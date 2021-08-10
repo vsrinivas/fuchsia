@@ -325,6 +325,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.ExceededMaxOutOfLineDepth:    "ErrExceededMaxOutOfLineDepth",
 	gidlir.ExtraHandles:                 "ErrTooManyHandles",
 	gidlir.IncorrectHandleType:          "ErrIncorrectHandleType",
+	gidlir.InvalidInlineBitInEnvelope:   "ErrInvalidInlineBitValueInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:    "ErrInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "ErrInvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:           "ErrNonZeroPadding",
@@ -338,9 +339,9 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:      "ErrInvalidXUnionTag",
 	gidlir.StringNotUtf8:                "ErrStringNotUTF8",
 	gidlir.StringTooLong:                "ErrStringTooLong",
+	gidlir.TooFewBytes:                  "ErrPayloadTooSmall",
 	gidlir.TooFewHandles:                "ErrNotEnoughHandles",
 	gidlir.UnionFieldNotSet:             "ErrInvalidXUnionTag",
-	gidlir.InvalidInlineBitInEnvelope:   "ErrInvalidInlineBitValueInEnvelope",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

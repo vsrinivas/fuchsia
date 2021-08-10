@@ -22,16 +22,58 @@ decode_failure("NonEmptyStringWithNullPtrBody") {
     err = NON_EMPTY_STRING_WITH_NULL_BODY,
 }
 
-// Test string with count exceeding 32-bit limit (as defined in RFC-0059).
-decode_failure("StringCountExceedsLimit") {
-    // TODO(fxbug.dev/82167) go, rust and dart all panic and don't return proper errors
-    bindings_denylist = [go, rust, dart],
+// Test string with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("StringCountExceedsLimitByALot") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
     type = StringWrapper,
     bytes = {
         v1, v2 = [
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // length of string data
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence marker
+            num(0xffffffffffffffff):8, // length of string data
+            repeat(0xff):8, // presence marker
         ]
     },
     err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test string with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("StringCountExceedsLimitByOne") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            num(0x100000000):8, // length of string data
+            repeat(0xff):8, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test string with count that exceeds the total message size. Bindings should
+// explicitly check for this to avoid allocating huge strings before failing.
+decode_failure("StringCountExceedsTotalMessageSize") {
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            num(25):8, // length of string data (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // string data
+        ]
+    },
+    err = TOO_FEW_BYTES,
+}
+
+// Test string with count that exceeds the remainder of the message size.
+// Bindings should not explicitly check for this, but it should still fail.
+decode_failure("StringCountExceedsRemainingMessageSize") {
+    type = StringWrapper,
+    bytes = {
+        v1, v2 = [
+            num(9):8, // length of string data (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // string data
+        ]
+    },
+    err = TOO_FEW_BYTES,
 }

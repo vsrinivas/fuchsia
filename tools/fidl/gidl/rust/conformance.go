@@ -373,9 +373,11 @@ func encodingContext(wireFormat gidlir.WireFormat) string {
 
 // Rust errors are defined in src/lib/fidl/rust/fidl/src/error.rs.
 var rustErrorCodeNames = map[gidlir.ErrorCode]string{
+	gidlir.CountExceedsLimit:            "OutOfRange",
 	gidlir.ExceededMaxOutOfLineDepth:    "MaxRecursionDepth",
 	gidlir.ExtraHandles:                 "ExtraHandles",
 	gidlir.IncorrectHandleType:          "IncorrectHandleSubtype",
+	gidlir.InvalidInlineBitInEnvelope:   "InvalidInlineBitInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:    "InvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "InvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:           "NonZeroPadding",
@@ -389,8 +391,8 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:      "UnknownUnionTag",
 	gidlir.StringNotUtf8:                "Utf8Error",
 	gidlir.StringTooLong:                "OutOfRange",
+	gidlir.TooFewBytes:                  "OutOfRange",
 	gidlir.UnionFieldNotSet:             "UnknownUnionTag",
-	gidlir.InvalidInlineBitInEnvelope:   "InvalidInlineBitInEnvelope",
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {

@@ -371,9 +371,11 @@ func toDartIntList(handles []gidlir.Handle) string {
 
 // Dart error codes are defined in sdk/dart/fidl/lib/src/error.dart.
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
+	gidlir.CountExceedsLimit:            "unknown",
 	gidlir.ExceededMaxOutOfLineDepth:    "fidlExceededMaxOutOfLineDepth",
 	gidlir.ExtraHandles:                 "fidlTooManyHandles",
 	gidlir.IncorrectHandleType:          "fidlIncorrectHandleType",
+	gidlir.InvalidInlineBitInEnvelope:   "fidlInvalidInlineBitInEnvelope",
 	gidlir.InvalidNumBytesInEnvelope:    "fidlInvalidNumBytesInEnvelope",
 	gidlir.InvalidNumHandlesInEnvelope:  "fidlInvalidNumHandlesInEnvelope",
 	gidlir.InvalidPaddingByte:           "unknown",
@@ -387,9 +389,9 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictUnionUnknownField:      "fidlStrictXUnionUnknownField",
 	gidlir.StringNotUtf8:                "unknown",
 	gidlir.StringTooLong:                "fidlStringTooLong",
+	gidlir.TooFewBytes:                  "unknown",
 	gidlir.TooFewHandles:                "fidlTooFewHandles",
 	gidlir.UnionFieldNotSet:             "unknown",
-	gidlir.InvalidInlineBitInEnvelope:   "fidlInvalidInlineBitInEnvelope",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

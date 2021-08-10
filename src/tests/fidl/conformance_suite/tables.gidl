@@ -190,3 +190,59 @@ decode_failure("TableOutOfLineEnvelopeWhenInlineRequired") {
     },
     err = INVALID_INLINE_BIT_IN_ENVELOPE,
 }
+
+// Test table with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("TableCountExceedsLimitByALot") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(0xffffffffffffffff):8, // table field count
+            repeat(0xff):8, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test table with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("TableCountExceedsLimitByOne") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(0x100000000):8, // table field count
+            repeat(0xff):8, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test table with count that exceeds the total message size. Bindings should
+// explicitly check for this to avoid allocating huge tables before failing.
+decode_failure("TableCountExceedsTotalMessageSize") {
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(25):8, // table field count (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // table data
+        ]
+    },
+    err = TOO_FEW_BYTES,
+}
+
+// Test table with count that exceeds the remainder of the message size.
+// Bindings should not explicitly check for this, but it should still fail.
+decode_failure("TableCountExceedsRemainingMessageSize") {
+    type = StructOfEmptyTable,
+    bytes = {
+        v1, v2 = [
+            num(9):8, // table field count (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // table data
+        ]
+    },
+    err = TOO_FEW_BYTES,
+}

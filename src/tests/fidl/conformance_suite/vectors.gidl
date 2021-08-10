@@ -2,16 +2,58 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Test vector with count exceeding 32-bit limit (as defined in RFC-0059).
-decode_failure("VectorCountExceedsLimit") {
-    // TODO(fxbug.dev/82167) go, rust and dart all panic and don't return proper errors
-    bindings_denylist = [go, rust, dart],
+// Test vector with a 2^64-1 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("VectorCountExceedsLimitByALot") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
     type = VectorWrapper,
     bytes = {
         v1, v2 = [
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // length of vector data
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence marker
+            num(0xffffffffffffffff):8, // length of vector data
+            repeat(0xff):8, // presence marker
         ]
     },
     err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test vector with a 2^32 count, exceeding the 32-bit limit from RFC-0059.
+decode_failure("VectorCountExceedsLimitByOne") {
+    // TODO(fxbug.dev/82167): Go and Dart all panic and don't return proper errors.
+    bindings_denylist = [go, dart],
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            num(0x100000000):8, // length of vector data
+            repeat(0xff):8, // presence marker
+        ]
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+// Test vector with count that exceeds the total message size. Bindings should
+// explicitly check for this to avoid allocating huge vectors before failing.
+decode_failure("VectorCountExceedsTotalMessageSize") {
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            num(25):8, // length of vector data (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // vector data
+        ]
+    },
+    err = TOO_FEW_BYTES,
+}
+
+// Test vector with count that exceeds the remainder of the message size.
+// Bindings should not explicitly check for this, but it should still fail.
+decode_failure("VectorCountExceedsRemainingMessageSize") {
+    type = VectorWrapper,
+    bytes = {
+        v1, v2 = [
+            num(9):8, // length of vector data (invalid, should be 8)
+            repeat(0xff):8, // presence marker
+            repeat(0xab):8, // vector data
+        ]
+    },
+    err = TOO_FEW_BYTES,
 }

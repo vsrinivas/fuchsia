@@ -1462,10 +1462,11 @@ where
     }
 }
 
-/// Attempts to decode a string into `string`, returning a `bool`
-/// indicating whether or not a string was present.
+/// Decodes and validates a 16-byte vector header. Returns `Some(len)` if
+/// the vector is present (including empty vectors), otherwise `None`.
+#[doc(hidden)] // only exported for macro use
 #[inline]
-fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) -> Result<bool> {
+pub fn decode_vector_header(decoder: &mut Decoder<'_>, offset: usize) -> Result<Option<usize>> {
     let mut len: u64 = 0;
     len.decode(decoder, offset)?;
 
@@ -1473,20 +1474,42 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
     present.decode(decoder, offset + 8)?;
 
     match present {
-        ALLOC_PRESENT_U64 => {}
-        ALLOC_ABSENT_U64 => {
-            return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
+        ALLOC_PRESENT_U64 => {
+            let len = len as usize;
+            // Check that the length does not exceed `u32::MAX` (per RFC-0059)
+            // nor the total size of the message (to avoid a huge allocation
+            // when the message cannot possibly be valid).
+            if len <= u32::MAX as usize && len <= decoder.buf.len() {
+                Ok(Some(len))
+            } else {
+                Err(Error::OutOfRange)
+            }
         }
-        _ => return Err(Error::InvalidPresenceIndicator),
-    };
-    let len = len as usize;
-    decoder.read_out_of_line(len, |decoder, offset| {
-        let bytes = &decoder.buf[offset..offset + len];
-        let utf8 = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?;
-        let boxed_utf8: Box<str> = utf8.into();
-        *string = boxed_utf8.into_string();
-        Ok(true)
-    })
+        ALLOC_ABSENT_U64 => {
+            if len == 0 {
+                Ok(None)
+            } else {
+                Err(Error::UnexpectedNullRef)
+            }
+        }
+        _ => Err(Error::InvalidPresenceIndicator),
+    }
+}
+
+/// Attempts to decode a string into `string`, returning a `bool`
+/// indicating whether or not a string was present.
+#[inline]
+fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) -> Result<bool> {
+    match decode_vector_header(decoder, offset)? {
+        None => Ok(false),
+        Some(len) => decoder.read_out_of_line(len, |decoder, offset| {
+            let bytes = &decoder.buf[offset..offset + len];
+            let utf8 = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?;
+            let boxed_utf8: Box<str> = utf8.into();
+            *string = boxed_utf8.into_string();
+            Ok(true)
+        }),
+    }
 }
 
 /// Attempts to decode a FIDL vector into `vec`, returning a `bool` indicating
@@ -1497,36 +1520,26 @@ fn decode_vector<T: Decodable>(
     vec: &mut Vec<T>,
     offset: usize,
 ) -> Result<bool> {
-    let mut len: u64 = 0;
-    len.decode(decoder, offset)?;
-
-    let mut present: u64 = 0;
-    present.decode(decoder, offset + 8)?;
-
-    match present {
-        ALLOC_PRESENT_U64 => {}
-        ALLOC_ABSENT_U64 => {
-            return if len == 0 { Ok(false) } else { Err(Error::UnexpectedNullRef) }
+    match decode_vector_header(decoder, offset)? {
+        None => Ok(false),
+        Some(len) => {
+            let bytes_len = len * decoder.inline_size_of::<T>();
+            decoder.read_out_of_line(bytes_len, |decoder, offset| {
+                if T::supports_simple_copy() {
+                    // Safety: The uninitialized elements are immediately written by
+                    // `decode_array`, which always succeeds in the simple copy case.
+                    unsafe {
+                        resize_vec_no_zeroing(vec, len);
+                    }
+                } else {
+                    vec.resize_with(len, T::new_empty);
+                }
+                // Safety: `vec` has `len` elements based on the above code.
+                decode_array(vec, decoder, offset)?;
+                Ok(true)
+            })
         }
-        _ => return Err(Error::InvalidPresenceIndicator),
     }
-
-    let len = len as usize;
-    let bytes_len = len * decoder.inline_size_of::<T>();
-    decoder.read_out_of_line(bytes_len, |decoder, offset| {
-        if T::supports_simple_copy() {
-            // Safety: The uninitalized elements are immediately written by
-            // `decode_array`, which always succeeds in the simple copy case.
-            unsafe {
-                resize_vec_no_zeroing(vec, len);
-            }
-        } else {
-            vec.resize_with(len, T::new_empty);
-        }
-        // Safety: `vec` has `len` elements based on the above code.
-        decode_array(vec, decoder, offset)?;
-        Ok(true)
-    })
 }
 
 impl_layout!(&str, align: 8, size: 16);
@@ -2978,23 +2991,14 @@ macro_rules! fidl_table {
             }
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
                 decoder.debug_check_bounds::<Self>(offset);
-                // Decode envelope vector header
-                let mut len: u64 = 0;
-                let mut present: u64 = 0;
-                len.decode(decoder, offset)?;
-                present.decode(decoder, offset+8)?;
-
-                match present {
-                    $crate::encoding::ALLOC_PRESENT_U64 => (),
-                    $crate::encoding::ALLOC_ABSENT_U64 => return Err($crate::Error::UnexpectedNullRef),
-                    _ => return Err($crate::Error::InvalidPresenceIndicator),
-                }
-
+                let len = match $crate::encoding::decode_vector_header(decoder, offset)? {
+                    None => return Err($crate::Error::UnexpectedNullRef),
+                    Some(len) => len,
+                };
                 let envelope_size = match decoder.context().wire_format_version {
                     $crate::encoding::WireFormatVersion::V1 => 16,
                     $crate::encoding::WireFormatVersion::V2 => 8,
                 };
-                let len = len as usize;
                 let bytes_len = len * envelope_size;
                 decoder.read_out_of_line(bytes_len, |decoder, offset| {
                     // Decode the envelope for each type.

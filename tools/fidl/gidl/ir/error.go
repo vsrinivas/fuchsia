@@ -7,9 +7,11 @@ package ir
 type ErrorCode string
 
 const (
+	CountExceedsLimit            ErrorCode = "COUNT_EXCEEDS_LIMIT"
 	ExceededMaxOutOfLineDepth    ErrorCode = "EXCEEDED_MAX_OUT_OF_LINE_DEPTH"
 	ExtraHandles                 ErrorCode = "EXTRA_HANDLES"
 	IncorrectHandleType          ErrorCode = "INCORRECT_HANDLE_TYPE"
+	InvalidInlineBitInEnvelope   ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
 	InvalidNumBytesInEnvelope    ErrorCode = "INVALID_NUM_BYTES_IN_ENVELOPE"
 	InvalidNumHandlesInEnvelope  ErrorCode = "INVALID_NUM_HANDLES_IN_ENVELOPE"
 	InvalidPaddingByte           ErrorCode = "INVALID_PADDING_BYTE"
@@ -23,16 +25,17 @@ const (
 	StrictUnionUnknownField      ErrorCode = "STRICT_UNION_UNKNOWN_FIELD"
 	StringNotUtf8                ErrorCode = "STRING_NOT_UTF8"
 	StringTooLong                ErrorCode = "STRING_TOO_LONG"
+	TooFewBytes                  ErrorCode = "TOO_FEW_BYTES"
 	TooFewHandles                ErrorCode = "TOO_FEW_HANDLES"
 	UnionFieldNotSet             ErrorCode = "UNION_FIELD_NOT_SET"
-	InvalidInlineBitInEnvelope   ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
-	CountExceedsLimit            ErrorCode = "COUNT_EXCEEDS_LIMIT"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
+	CountExceedsLimit:            {},
 	ExceededMaxOutOfLineDepth:    {},
 	ExtraHandles:                 {},
 	IncorrectHandleType:          {},
+	InvalidInlineBitInEnvelope:   {},
 	InvalidNumBytesInEnvelope:    {},
 	InvalidNumHandlesInEnvelope:  {},
 	InvalidPaddingByte:           {},
@@ -46,8 +49,7 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StrictUnionUnknownField:      {},
 	StringNotUtf8:                {},
 	StringTooLong:                {},
+	TooFewBytes:                  {},
 	TooFewHandles:                {},
 	UnionFieldNotSet:             {},
-	InvalidInlineBitInEnvelope:   {},
-	CountExceedsLimit:            {},
 }
