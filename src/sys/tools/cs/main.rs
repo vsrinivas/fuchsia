@@ -10,12 +10,10 @@ mod freq;
 mod log_stats;
 
 use {
-    anyhow::{format_err, Error},
-    cs::{io::Directory, v2::V2Component, Only, Subcommand, CS_INFO_HELP, CS_TREE_HELP},
+    anyhow::Error,
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
-    std::path::PathBuf,
     structopt::StructOpt,
 };
 
@@ -25,6 +23,7 @@ use {
     about = "Displays information about components on the system."
 )]
 enum Opt {
+    /// DEPRECATED: Use `ffx component list` instead.
     /// Output the component tree.
     #[structopt(name = "tree")]
     Tree {
@@ -37,6 +36,7 @@ enum Opt {
         verbose: bool,
     },
 
+    /// DEPRECATED: Use `ffx component show` instead.
     /// Output detailed information about components on the system.
     #[structopt(name = "info")]
     Info {
@@ -45,6 +45,7 @@ enum Opt {
         filter: String,
     },
 
+    /// DEPRECATED: Use `ffx component select` instead.
     /// Output all components that expose a capability.
     #[structopt(name = "select")]
     Select {
@@ -66,18 +67,6 @@ enum Opt {
     PageInFrequencies,
 }
 
-fn validate_hub_directory() -> Option<Directory> {
-    let hub_path = PathBuf::from("/hub-v2");
-    match Directory::from_namespace(hub_path.clone()) {
-        Ok(hub_dir) => return Some(hub_dir),
-        Err(e) => {
-            eprintln!("`/hub-v2` could not be opened: {:?}", e);
-            eprintln!("Do not run `cs` from the serial console. Use `fx shell` instead.");
-            return None;
-        }
-    };
-}
-
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Visit the directory /hub and recursively traverse it, outputting information about the
@@ -90,46 +79,14 @@ async fn main() -> Result<(), Error> {
             let log_stats = LogStats::new(min_severity).await?;
             println!("{}", log_stats);
         }
-        Opt::Info { filter } => {
+        Opt::Info { .. } => {
             println!("'cs info' is deprecated. Please use 'ffx component show' instead!");
-            if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir, Subcommand::Show).await;
-                component.print_details(&filter).map_err(|e| {
-                    format_err!(
-                        "'{}' was not found in the component tree: {}\n{}",
-                        filter,
-                        e,
-                        CS_INFO_HELP
-                    )
-                })?
-            }
         }
-        Opt::Select { capability } => {
+        Opt::Select { .. } => {
             println!("'cs select' is deprecated. Please use 'ffx component select' instead!");
-            if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir, Subcommand::Select).await;
-                component.print_components_exposing_capability(&capability);
-            }
         }
-        Opt::Tree { only, verbose } => {
+        Opt::Tree { .. } => {
             println!("'cs tree' is deprecated. Please use 'ffx component list' instead!");
-            if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir, Subcommand::List).await;
-                if let Some(only) = only {
-                    let only = Only::from_string(&only).map_err(|e| {
-                        format_err!(
-                            "Invalid argument '{}' for '--only': {}\n{}",
-                            only,
-                            e,
-                            CS_TREE_HELP
-                        )
-                    })?;
-                    component.print_tree(only, verbose);
-                } else {
-                    // Default option is printing all components
-                    component.print_tree(Only::All, verbose);
-                }
-            }
         }
         Opt::PageInFrequencies => {
             let frequencies = BlobFrequencies::collect().await;

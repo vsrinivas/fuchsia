@@ -19,7 +19,7 @@ use {
 // A convenience wrapper over a FIDL DirectoryProxy.
 pub struct Directory {
     path: PathBuf,
-    proxy: fio::DirectoryProxy,
+    pub proxy: fio::DirectoryProxy,
 }
 
 impl Directory {

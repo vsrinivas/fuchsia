@@ -12,9 +12,9 @@ ffx_plugin("ffx_session_show") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/lib/component_hub",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//src/sys/tools/cs:lib",
   ]
 
   sources = [

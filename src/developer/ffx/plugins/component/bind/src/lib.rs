@@ -4,7 +4,7 @@
 
 use {
     anyhow::{bail, format_err, Context, Result},
-    cs::io::Directory,
+    component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
     ffx_component::{get_lifecycle_controller_proxy, parse_moniker, COMPONENT_BIND_HELP},
     ffx_component_bind_args::ComponentBindCommand,
@@ -41,7 +41,7 @@ async fn bind_impl<W: std::io::Write>(
     })?;
 
     let hub_dir = Directory::from_proxy(root);
-    if !hub_dir.exists("debug").await {
+    if !hub_dir.exists("debug").await? {
         ffx_bail!("Unable to find a 'debug' directory in the hub. This may mean you're using an old Fuchsia image. Please report this issue to the ffx team.")
     }
 

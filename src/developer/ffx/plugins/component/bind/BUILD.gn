@@ -13,8 +13,8 @@ ffx_plugin("ffx_component_bind") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
+    "//src/lib/component_hub",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//src/sys/tools/cs:lib",
   ]
 
   sources = [
