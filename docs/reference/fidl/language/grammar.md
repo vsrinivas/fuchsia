@@ -85,12 +85,12 @@ const-declaration = ( attribute-list ) , "const" , IDENTIFIER , type-constructor
 
 layout-declaration = ( attribute-list ) , "type" , IDENTIFIER , "=" , inline-layout ; [NOTE 1]
 
-inline-layout = ( attribute-list ) , ( declaration-modifiers )* , layout-kind , ( subtype ) ,
+inline-layout = ( attribute-list ) , ( declaration-modifiers )* , layout-kind , ( layout-subtype ) ,
                 layout-body ;
 
 declaration-modifiers = "flexible" | "strict" | "resource" ; [NOTE 2]
 
-subtype = ":" , type-constructor ; [NOTE 3]
+layout-subtype = ":" , type-constructor ; [NOTE 3]
 
 layout-kind = "struct" | "bits" | "enum" | "union" | "table" ;
 
@@ -98,9 +98,7 @@ layout-body = value-layout | struct-layout | ordinal-layout ;
 
 value-layout = "{" , ( value-layout-member , ";" )+ , "}" ;
 
-value-layout-member = ( attribute-list ) , IDENTIFIER , "=" , value-layout-member-value ;
-
-value-layout-member-value = IDENTIFIER | literal ; [NOTE 4]
+value-layout-member = ( attribute-list ) , IDENTIFIER , "=" , constant ; [NOTE 4]
 
 struct-layout =  "{" , ( struct-layout-member, ";" )* , "}" ;
 
@@ -196,20 +194,21 @@ compiler limits this as follows:
 
 ### NOTE 3
 
-The grammar allows `( subtype )` on all declarations, but the compiler limits
+The grammar allows `( layout-subtype )` on all declarations, but the compiler limits
 this to only be allowed when the `layout-kind` is `bits` or `enum`.
 
-Further, `subtype` allows the more liberal `type-constructor` in the
+Further, `layout-subtype` allows the more liberal `type-constructor` in the
 grammar, but the compiler limits this to signed or unsigned integer types
 (see [primitives]) for enums and unsigned integer types for bits.
 
 ### NOTE 4
 
-The `value-layout-member-value` allows the more liberal `literal` in the
-grammar, but the compiler limits this to:
+The `value-layout-member` allows the more liberal `constant` in the grammar, but
+the compiler limits the values the `constant` may take:
 
-* A `NUMERIC-LITERAL` in the context of an `enum`;
-* A `NUMERIC-LITERAL`, which must be a power of two, in the context of a `bits`.
+* Any value that fits the specified `subtype`, in the context of an `enum`.
+* Any value that fits the specified `subtype` and is a power of two, in the
+  context of a `bits`.
 
 ### NOTE 5
 
