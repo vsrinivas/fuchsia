@@ -1,0 +1,80 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/driver_manifest.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-fallback-test-v2-package" ]
+}
+
+driver_bind_rules("test-driver-bind") {
+  header_output = "test-driver-bind.h"
+  bind_output = "test-driver-bind.bindbc"
+  rules = "test-driver.bind"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+driver_module("ddk-fallback-test-driver-module") {
+  sources = [ "test-driver.cc" ]
+  deps = [
+    ":test-driver-bind",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/lib/files",
+    "//zircon/public/lib/sync",
+  ]
+}
+
+fuchsia_driver_component("ddk-fallback-test-driver") {
+  deps = [ ":ddk-fallback-test-driver-module" ]
+}
+
+isolated_devmgr_v2_component("devmgr") {
+  deps = [
+    ":ddk-fallback-test-driver",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
+  ]
+}
+
+test("test") {
+  output_name = "ddk-fallback-test"
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("ddk-fallback-test") {
+  testonly = true
+  manifest = "meta/ddk-fallback-test.cml"
+  deps = [ ":test" ]
+}
+
+fuchsia_test_package("ddk-fallback-test-v2-package") {
+  package_name = "ddk-fallback-test-v2"
+  test_components = [ ":ddk-fallback-test" ]
+  deps = [
+    ":devmgr",
+    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
+  ]
+}

@@ -1454,7 +1454,7 @@ void Coordinator::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfi
 void Coordinator::ScheduleBaseDriverLoading() {
   driver_loader_.WaitForBaseDrivers([this]() {
     DriverLoader::MatchDeviceConfig config;
-    config.ignore_boot_drivers = true;
+    config.only_return_base_and_fallback_drivers = true;
     BindAllDevicesDriverIndex(config);
   });
 }

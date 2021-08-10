@@ -205,7 +205,9 @@ int main(void) {
   svc::Outgoing outgoing(loop.dispatcher());
   zx_status_t status = outgoing.ServeFromStartupInfo();
 
-  mock_boot_arguments::Server boot_arguments;
+  std::map<std::string, std::string> boot_args;
+  boot_args["devmgr.require-system"] = "true";
+  mock_boot_arguments::Server boot_arguments(std::move(boot_args));
   status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
       fbl::MakeRefCounted<fs::Service>(
@@ -244,7 +246,9 @@ int main(void) {
             return ZX_OK;
           }));
 
-  outgoing.root_dir()->AddEntry("system", fbl::MakeRefCounted<fs::PseudoDir>());
+  auto system = fbl::MakeRefCounted<fs::PseudoDir>();
+  system->AddEntry("drivers", fbl::MakeRefCounted<fs::PseudoDir>());
+  outgoing.root_dir()->AddEntry("system", std::move(system));
 
   auto pkgfs = fbl::MakeRefCounted<fs::PseudoDir>();
   // Add the necessary empty base driver manifest.

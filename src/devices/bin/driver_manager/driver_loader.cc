@@ -218,14 +218,18 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
     std::string driver_url(driver.driver_url().get());
-    if (config.ignore_boot_drivers && IsFuchsiaBootScheme(driver_url)) {
-      continue;
-    }
 
     auto loaded_driver = LoadDriverUrl(driver_url);
     if (!loaded_driver) {
       continue;
     }
+
+    if (config.only_return_base_and_fallback_drivers) {
+      if (IsFuchsiaBootScheme(driver_url) && !loaded_driver->fallback) {
+        continue;
+      }
+    }
+
     if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
       if (loaded_driver->fallback) {
         if (include_fallback_drivers_ || !config.libname.empty()) {

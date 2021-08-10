@@ -221,12 +221,14 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   ASSERT_EQ(drivers[0]->libname, name2);
 }
 
-TEST_F(DriverLoaderTest, TestIgnoreBootConfig) {
+TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   std::string name1 = "fuchsia-pkg://fuchsia.com/my-package#driver/#driver1.so";
   std::string name2 = "fuchsia-boot:///#driver/driver2.so";
+  std::string name3 = "fuchsia-boot:///#driver/driver3.so";
 
   driver_index_server.driver_urls.push_back(name1);
   driver_index_server.driver_urls.push_back(name2);
+  driver_index_server.driver_urls.push_back(name3);
 
   auto driver1 = std::make_unique<Driver>();
   driver1->libname = name1;
@@ -236,15 +238,21 @@ TEST_F(DriverLoaderTest, TestIgnoreBootConfig) {
   driver2->libname = name2;
   resolver.map[name2] = std::move(driver2);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  auto driver3 = std::make_unique<Driver>();
+  driver3->libname = name3;
+  driver3->fallback = true;
+  resolver.map[name3] = std::move(driver3);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, false);
   loop.StartThread("fidl-thread");
 
   // We can also match libname by the path that the URL turns into.
   DriverLoader::MatchDeviceConfig config;
-  config.ignore_boot_drivers = true;
+  config.only_return_base_and_fallback_drivers = true;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
-  ASSERT_EQ(drivers.size(), 1);
+  ASSERT_EQ(drivers.size(), 2);
   ASSERT_EQ(drivers[0]->libname, name1);
+  ASSERT_EQ(drivers[1]->libname, name3);
 }

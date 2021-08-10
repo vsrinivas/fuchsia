@@ -44,7 +44,10 @@ class DriverLoader {
 
   struct MatchDeviceConfig {
     std::string_view libname;
-    bool ignore_boot_drivers = false;
+    // This config should only be true after the base drivers are loaded.
+    // We will need to go through all the devices and bind just base drivers
+    // and fallback drivers.
+    bool only_return_base_and_fallback_drivers = false;
   };
 
   std::vector<const Driver*> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,

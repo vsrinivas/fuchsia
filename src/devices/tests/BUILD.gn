@@ -10,6 +10,7 @@ group("tests") {
     "bind-test-v2",
     "ddk-environment-test:tests",
     "ddk-fallback-test:tests",
+    "ddk-fallback-test-v2:tests",
     "ddk-fidl-test:tests",
     "ddk-firmware-test:tests",
     "ddk-instance-lifecycle-test",

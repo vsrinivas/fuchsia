@@ -29,10 +29,10 @@
 //src/connectivity/ethernet/drivers/usb-cdc-function:usb-cdc-function-driver
 //src/connectivity/ethernet/drivers/virtio:virtio_ethernet-driver
 //src/connectivity/network/drivers/network-device:network-device-driver
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-luis-mfg_driver
-//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-luis_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock-mfg_driver
+//src/connectivity/openthread/drivers/ot-radio:ot-radio-sherlock_driver
 //src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver-driver
 //src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver
 //src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver-driver
@@ -185,6 +185,7 @@
 //src/devices/tests/bind-test-v2:bind-test-driver-v2-driver
 //src/devices/tests/bind-test:bind-test-driver-driver
 //src/devices/tests/ddk-environment-test:ddk-environment-test-driver
+//src/devices/tests/ddk-fallback-test-v2:ddk-fallback-test-driver-module
 //src/devices/tests/ddk-fallback-test:ddk-fallback-test-driver
 //src/devices/tests/ddk-fallback-test:ddk-not-fallback-test-driver
 //src/devices/tests/ddk-fidl-test:fidl-async-llcpp-driver-driver
