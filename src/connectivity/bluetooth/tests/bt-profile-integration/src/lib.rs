@@ -197,7 +197,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
     fidl_response
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
-    let _ = access
+    access
         .when_satisfied(
             expectation::peer_connected(connected_peer_id, true),
             integration_timeout_duration(),
@@ -211,7 +211,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
     assert_eq!(connected_peer_id, peer_id.into());
 
     // Peer should be updated with discovered service.
-    let _ = access
+    access
         .when_satisfied(
             expectation::peer_bredr_service_discovered(
                 connected_peer_id,

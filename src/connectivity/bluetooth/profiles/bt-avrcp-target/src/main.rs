@@ -21,12 +21,14 @@ mod tests;
 use crate::avrcp_handler::process_avrcp_requests;
 use crate::media::media_sessions::MediaSessions;
 
-#[fuchsia::component(logging_tags = ["avrcp-tg"])]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["avrcp-tg"]).expect("Unable to initialize logger");
+
     let mut fs = ServiceFs::new();
     let lifecycle = ComponentLifecycleServer::spawn();
-    let _ = fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
-    let _ = fs.take_and_serve_directory_handle().expect("Unable to serve lifecycle requests");
+    fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
+    fs.take_and_serve_directory_handle().expect("Unable to serve lifecycle requests");
     fasync::Task::spawn(fs.collect::<()>()).detach();
 
     // Shared state between AVRCP and MediaSession.
@@ -37,6 +39,6 @@ async fn main() -> Result<(), Error> {
     let avrcp_requests_fut = process_avrcp_requests(media_state.clone(), lifecycle);
 
     let result = try_join!(watch_media_sessions_fut, avrcp_requests_fut).map(|_| ());
-    tracing::info!("AVRCP-TG finished with result: {:?}", result);
+    log::info!("AVRCP-TG finished with result: {:?}", result);
     result
 }

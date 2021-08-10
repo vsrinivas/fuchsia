@@ -149,7 +149,7 @@ async fn register_rfcomm_service_advertisement_is_discovered() {
         .register_service_search(bredr::ServiceClassProfileIdentifier::SerialPort, vec![])
         .unwrap();
     // We expect it to discover `spp_client's` service advertisement.
-    let _ = expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
+    expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
 
     // For some reason, the SPP client disconnects (component termination, error, etc..).
     drop(spp_client);
@@ -158,7 +158,7 @@ async fn register_rfcomm_service_advertisement_is_discovered() {
     let _spp_client2 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
 
     // We expect test driven member to discover `spp_client2s` service advertisement.
-    let _ = expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
+    expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
 }
 
 #[fuchsia::test]
@@ -172,15 +172,15 @@ async fn multiple_rfcomm_clients_can_register_advertisements() {
 
     let _spp_client1 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
     // `spp_client1`'s advertisement should be discovered.
-    let _ = expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
+    expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
 
     let _spp_client2 = setup_spp_client(&test_topology, &rfcomm_under_test).await;
     // Because `bt-rfcomm` manages multiple RFCOMM service advertisements, we expect _2_ search
     // result events. This is because `bt-rfcomm` unregisters `_spp_client1`'s advertisement, groups
     // `_spp_client2`'s advertisement with it, and re-registers them together. As such, the new
     // "unified" advertisement consists of two services.
-    let _ = expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
-    let _ = expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
+    expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
+    expect_peer_advertising(&mut search_results, rfcomm_under_test.peer_id()).await;
 
     // There should be no more search result events.
     assert!(futures::poll!(&mut search_results.next()).is_pending());

@@ -20,7 +20,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::{StreamExt, TryStream, TryStreamExt},
-    tracing::info,
+    log::info,
 };
 
 async fn process_request_stream<S>(mut stream: S, tag: &str)
@@ -41,8 +41,7 @@ async fn main() -> Result<(), Error> {
 
     // Set up the outgoing `svc` directory with the services A2DP provides.
     let mut fs = ServiceFs::new();
-    let _ = fs
-        .dir("svc")
+    fs.dir("svc")
         .add_fidl_service(|stream: AudioModeRequestStream| {
             fasync::Task::local(process_request_stream(stream, AudioModeMarker::PROTOCOL_NAME))
                 .detach();
@@ -58,7 +57,7 @@ async fn main() -> Result<(), Error> {
             fasync::Task::local(process_request_stream(stream, ControllerMarker::PROTOCOL_NAME))
                 .detach();
         });
-    let _ = fs.take_and_serve_directory_handle().expect("Unable to serve ServiceFs requests");
+    fs.take_and_serve_directory_handle().expect("Unable to serve ServiceFs requests");
     let service_fs_task = fasync::Task::spawn(fs.collect::<()>());
 
     // Connect to the services A2DP requires.

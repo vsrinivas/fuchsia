@@ -22,8 +22,6 @@ rustc_test("bt_profile_integration_tests") {
   ]
 
   sources = [ "src/lib.rs" ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-profile-integration-tests-component") {

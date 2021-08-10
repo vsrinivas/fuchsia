@@ -10,8 +10,8 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_component_test::mock::MockHandles,
     futures::{channel::mpsc, SinkExt, StreamExt, TryStream, TryStreamExt},
+    log::info,
     std::sync::Arc,
-    tracing::info,
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
@@ -46,7 +46,7 @@ pub fn add_fidl_service_handler<S, Event: 'static>(
     S: DiscoverableProtocolMarker,
     Event: std::convert::From<S::RequestStream> + std::marker::Send,
 {
-    let _ = fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
+    fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
         let mut s = sender.clone();
         fasync::Task::local(async move {
             info!("Received connection for {}", S::PROTOCOL_NAME);
@@ -69,13 +69,13 @@ where
     <<S as ProtocolMarker>::RequestStream as TryStream>::Ok: std::fmt::Debug,
 {
     let mut fs = ServiceFs::new();
-    let _ = fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
+    fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
         let sender_clone = sender.clone();
         info!("Received connection for {}", S::PROTOCOL_NAME);
         fasync::Task::local(process_request_stream::<S, _>(req_stream, sender_clone)).detach();
     });
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -101,7 +101,7 @@ pub async fn mock_dev(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_remote("dev", spawn_vfs(dev_directory));
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

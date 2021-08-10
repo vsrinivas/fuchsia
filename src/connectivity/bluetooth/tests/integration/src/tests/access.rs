@@ -116,18 +116,14 @@ async fn test_disconnect(
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
 
-    let _ = access
-        .when_satisfied(expectation::peer_connected(peer_id, true), timeout_duration())
-        .await?;
+    access.when_satisfied(expectation::peer_connected(peer_id, true), timeout_duration()).await?;
 
     let fidl_response = access.aux().disconnect(&mut peer_id.into());
     fidl_response
         .await?
         .map_err(|sys_err| format_err!("Error calling Disconnect(): {:?}", sys_err))?;
 
-    let _ = access
-        .when_satisfied(expectation::peer_connected(peer_id, false), timeout_duration())
-        .await?;
+    access.when_satisfied(expectation::peer_connected(peer_id, false), timeout_duration()).await?;
 
     hci.destroy_and_wait().await?;
     Ok(())
@@ -141,14 +137,12 @@ async fn test_set_local_name(
 ) -> Result<(), Error> {
     let (_host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
 
-    let _ = host_watcher
-        .when_satisfied(expectation::host_with_name("fuchsia"), timeout_duration())
-        .await?;
+    host_watcher.when_satisfied(expectation::host_with_name("fuchsia"), timeout_duration()).await?;
 
     let expected_name = "bt-integration-test";
     access.aux().set_local_name(expected_name)?;
 
-    let _ = host_watcher
+    host_watcher
         .when_satisfied(expectation::host_with_name(expected_name), timeout_duration())
         .await?;
 
@@ -166,7 +160,7 @@ async fn test_discovery(
     let discovery_token = start_discovery(&access).await?;
 
     // We should now be discovering
-    let _ = host_watcher
+    host_watcher
         .when_satisfied(expectation::host_discovering(host, true), timeout_duration())
         .await?;
 
@@ -174,7 +168,7 @@ async fn test_discovery(
     std::mem::drop(discovery_token);
 
     // Since no-one else has requested discovery, we should cease discovery
-    let _ = host_watcher
+    host_watcher
         .when_satisfied(expectation::host_discovering(host, false), timeout_duration())
         .await?;
 
@@ -192,7 +186,7 @@ async fn test_discoverable(
     let discoverable_token = make_discoverable(&access).await?;
 
     // We should now be discoverable
-    let _ = host_watcher
+    host_watcher
         .when_satisfied(expectation::host_discoverable(host, true), timeout_duration())
         .await?;
 
@@ -200,7 +194,7 @@ async fn test_discoverable(
     std::mem::drop(discoverable_token);
 
     // Since no-one else has requested discoverable, we should cease discoverable
-    let _ = host_watcher
+    host_watcher
         .when_satisfied(expectation::host_discoverable(host, false), timeout_duration())
         .await?;
 

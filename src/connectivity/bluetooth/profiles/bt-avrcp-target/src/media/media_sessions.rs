@@ -14,9 +14,9 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     futures::{future, Future, TryStreamExt},
+    log::{trace, warn},
     parking_lot::RwLock,
     std::{collections::HashMap, sync::Arc},
-    tracing::{trace, warn},
 };
 
 use crate::media::{
@@ -144,7 +144,7 @@ impl MediaSessions {
                     // recently changed to active status.
                     match (self.get_active_session_id(), delta.is_locally_active) {
                         (None, _) | (_, Some(true)) => {
-                            let _ = sessions_inner
+                            sessions_inner
                                 .write()
                                 .update_target_session_id(Some(MediaSessionId(id)));
                         }
@@ -169,7 +169,7 @@ impl MediaSessions {
                     // Clear any outstanding notifications with a player changed response.
                     // Clear the currently active session, if it equals `session_id`.
                     // Clear entry in state map.
-                    let _ = sessions_inner.write().clear_session(&MediaSessionId(session_id));
+                    sessions_inner.write().clear_session(&MediaSessionId(session_id));
                     trace!(
                         "Removed session [{:?}] from state map: {:?}",
                         session_id,
@@ -239,7 +239,7 @@ impl MediaSessionsInner {
     /// Returns the removed MediaState.
     pub fn clear_session(&mut self, id: &MediaSessionId) -> Option<MediaState> {
         if Some(id) == self.active_session_id.as_ref() {
-            let _ = self.update_target_session_id(None);
+            self.update_target_session_id(None);
         }
         self.map.remove(id)
     }
@@ -490,7 +490,8 @@ pub(crate) mod tests {
         sessions
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Normal case of registering a supported notification.
     /// Notification should should be packaged into a `NotificationData` and inserted
     /// into the HashMap.
@@ -541,7 +542,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Test the insertion of a TrackPosChangedNotification.
     /// It should be successfully inserted, and a timeout duration should be returned.
     async fn test_register_notification_track_pos_changed() -> Result<(), Error> {
@@ -592,7 +594,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Test the insertion of a AddressedPlayerChanged notification.
     /// It should resolve immediately with a RejectedPlayerChanged because we only
     /// have at most one media player at all times.
@@ -628,7 +631,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Test the insertion of a supported notification, but no active session.
     /// Upon insertion, the supported notification should be rejected and sent over
     /// the responder.
@@ -656,7 +660,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Test the insertion of an unsupported notification.
     /// Upon insertion, the unsupported notification should be rejected, and the responder
     /// should immediately be called with a `RejectedInvalidParameter`.
@@ -682,7 +687,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// 1. Test insertion of a new MediaSession update into the map. Creates a control
     /// proxy, and inserts into the state map. No outstanding notifications so no updates.
     /// 2. Test updating of an existing MediaSession in the map. The SessionInfo should change.
@@ -723,7 +729,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Tests updating the active session_id correctly changes the currently
     /// playing active media session, as well as clears any outstanding notifications.
     /// 1. Test updating active_session_id with the same id does nothing.
@@ -778,7 +785,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Tests that updating any outstanding responders behaves as expected.
     /// 1. Makes n calls to `watch_notification` to create n responders.
     /// 2. Inserts these responders into the map.
@@ -907,7 +915,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Tests `clear_notification_responders` correctly sends AddressedPlayerChanged
     /// error to all outstanding notifications.
     async fn test_clear_notification_responders() -> Result<(), Error> {
@@ -996,7 +1005,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// 1. Test clearing a session that doesn't exist in the map does nothing.
     /// 2. Test clearing an existing session that isn't active only removes session from map.
     /// 3. Test clearing an existing and active session updates `active_session_id` and
@@ -1039,7 +1049,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// We only support one player id: `MEDIA_SESSION_ADDRESSED_PLAYER_ID`, so any
     /// calls to `set_addressed_player` with a different ID should result in an error.
     async fn test_set_addressed_player() -> Result<(), Error> {
@@ -1071,7 +1082,8 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded]
+    #[test]
     /// Getting the media items should return the same static response.
     async fn test_get_media_player_items() -> Result<(), Error> {
         let (discovery, _stream) = create_proxy::<DiscoveryMarker>()?;

@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_media_sessions2 as fidl_media,
     fidl_table_validation::ValidFidlTable,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    log::{trace, warn},
     std::convert::TryInto,
-    tracing::{trace, warn},
 };
 
 /// Converts time (i64, in nanoseconds) to milliseconds (u32).
@@ -516,7 +516,7 @@ mod tests {
     use super::*;
     use fidl::encoding::Decodable as FidlDecodable;
 
-    #[fuchsia::test]
+    #[test]
     /// Tests correctness of updating and getting the playback rate from the PlaybackRate.
     fn test_playback_rate() {
         let mut pbr = PlaybackRate::default();
@@ -539,7 +539,7 @@ mod tests {
         assert_eq!(0.4, pbr.rate());
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests correctness of calculating the response deadline given a playback rate.
     fn test_playback_rate_reference_deadline() {
         // Fast forward,
@@ -566,7 +566,7 @@ mod tests {
         assert_eq!(None, deadline);
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests correctness of updating the `playing_time` field in MediaInfo.
     fn test_media_info_update_playing_time() {
         let mut info: MediaInfo = Default::default();
@@ -580,7 +580,7 @@ mod tests {
         assert_eq!(std::u64::MAX, info.get_track_id());
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests correctness of updating media-related metadata.
     fn test_media_info_update_metadata() {
         let mut info: MediaInfo = Default::default();
@@ -606,7 +606,7 @@ mod tests {
         assert_eq!(0, info.get_track_id());
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests updating media_info with `metadata` but no `duration` defaults `duration` = None.
     fn test_media_info_update_metadata_no_duration() {
         let mut info: MediaInfo = Default::default();
@@ -624,7 +624,7 @@ mod tests {
         assert_eq!(0, info.get_track_id());
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests updating media_info with no metadata updates preserves original values, but
     /// overwrites `playing_time` since duration is not a top-level SessionInfoDelta update.
     /// Tests correctness of conversion to `fidl_avrcp::MediaAttributes` type.
@@ -656,7 +656,7 @@ mod tests {
         assert_eq!(None, info_fidl.playing_time);
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Creates ValidPlayerApplicationSettings.
     /// Tests correctness of updating `repeat_status_mode` and `shuffle_mode`.
     /// Tests updating the settings with no updates preserves original values.
@@ -693,7 +693,7 @@ mod tests {
         assert_eq!(None, settings.shuffle_mode);
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Creates PlayStatus.
     /// Tests correctness of updating with duration, timeline_fn, and player_state from Media.
     /// Tests correctness of conversion to fidl_avrcp::PlayStatus.
@@ -738,7 +738,7 @@ mod tests {
         assert_eq!(Some(fidl_avrcp::PlaybackStatus::Stopped), play_status_fidl.playback_status);
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests the timeline function to song_position conversion.
     /// 1. Normal case with media playing.
     /// 2. Normal case with media paused.
@@ -846,7 +846,7 @@ mod tests {
         assert_eq!(song_position, Some(expected_position));
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests conversion from Media RepeatMode to RepeatStatusMode
     fn test_media_repeat_mode_conversion() {
         let mode = fidl_media::RepeatMode::Off;
@@ -863,7 +863,7 @@ mod tests {
         );
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests conversion from Media Shuffle flag to  ShuffleMode
     fn test_media_shuffle_mode_conversion() {
         let mode = true;
@@ -875,7 +875,7 @@ mod tests {
         assert_eq!(media_shuffle_mode_to_avrcp(mode), Some(fidl_avrcp::ShuffleMode::Off));
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests conversion from Media PlayerState to fidl_avrcp::PlaybackStatus
     fn test_media_player_state_conversion() {
         let state = fidl_media::PlayerState::Idle;
@@ -905,7 +905,7 @@ mod tests {
         );
     }
 
-    #[fuchsia::test]
+    #[test]
     /// Tests getting only a specific event_id of a `Notification` success.
     fn test_notification_only_event_encoding() {
         let notif = Notification::new(

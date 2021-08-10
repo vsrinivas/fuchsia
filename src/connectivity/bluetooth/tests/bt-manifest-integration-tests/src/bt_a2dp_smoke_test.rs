@@ -29,8 +29,8 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
+    log::info,
     std::{collections::HashSet, iter::FromIterator},
-    tracing::info,
 };
 
 /// A2DP component URL.
@@ -157,7 +157,7 @@ async fn mock_component(sender: mpsc::Sender<Event>, handles: MockHandles) -> Re
     add_fidl_service_handler::<RegistryMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<DiscoveryMarker, _>(&mut fs, sender);
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
 
     Ok(())
@@ -171,7 +171,7 @@ const A2DP_CLIENT_MONIKER: &str = "fake-a2dp-client";
 const SERVICE_PROVIDER_MONIKER: &str = "fake-service-provider";
 
 fn add_a2dp_dependency_route<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
-    let _ = builder
+    builder
         .add_protocol_route::<S>(
             RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
             vec![RouteEndpoint::component(A2DP_MONIKER)],
@@ -193,13 +193,13 @@ async fn a2dp_v2_component_topology() {
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
 
     // The v2 component under test.
-    let _ = builder
+    builder
         .add_component(A2DP_MONIKER, ComponentSource::url(A2DP_URL.to_string()))
         .await
         .expect("Failed adding a2dp to topology");
 
     // Generic backend component that provides a slew of services that will be requested.
-    let _ = builder
+    builder
         .add_component(
             SERVICE_PROVIDER_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -214,7 +214,7 @@ async fn a2dp_v2_component_topology() {
 
     // Mock A2DP client that will request the PeerManager and AudioMode services
     // which are provided by the A2DP component.
-    let _ = builder
+    builder
         .add_eager_component(
             A2DP_CLIENT_MONIKER,
             ComponentSource::Mock(Mock::new({
@@ -228,7 +228,7 @@ async fn a2dp_v2_component_topology() {
         .expect("Failed adding a2dp client mock to topology");
 
     // Capabilities provided by A2DP.
-    let _ = builder
+    builder
         .add_protocol_route::<fidl_avdtp::PeerManagerMarker>(
             RouteEndpoint::component(A2DP_MONIKER),
             vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
@@ -262,7 +262,7 @@ async fn a2dp_v2_component_topology() {
     add_a2dp_dependency_route::<DiscoveryMarker>(&mut builder);
 
     // Logging service, used by all children in this test.
-    let _ = builder
+    builder
         .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
             RouteEndpoint::AboveRoot,
             vec![

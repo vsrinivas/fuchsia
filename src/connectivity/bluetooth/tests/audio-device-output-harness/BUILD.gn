@@ -18,12 +18,10 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/main.rs" ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("component") {

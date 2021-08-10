@@ -82,7 +82,7 @@ async fn test_default_local_name(harness: HostDriverHarness) -> Result<(), Error
     let _ = harness
         .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
         .await?;
-    let _ = host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
     Ok(())
 }
 
@@ -98,7 +98,7 @@ async fn test_set_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     let _ = harness
         .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
         .await?;
-    let _ = host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
 
     Ok(())
 }
@@ -133,14 +133,12 @@ async fn test_discoverable(harness: HostDriverHarness) -> Result<(), Error> {
     // Enable discoverable mode.
     let result = proxy.set_discoverable(true).await?;
     expect_eq!(Ok(()), result)?;
-    let _ = host_expectation::host_state(&harness, expectation::host_driver::discoverable(true))
-        .await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discoverable(true)).await?;
 
     // Disable discoverable mode
     let result = proxy.set_discoverable(false).await?;
     expect_eq!(Ok(()), result)?;
-    let _ = host_expectation::host_state(&harness, expectation::host_driver::discoverable(false))
-        .await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discoverable(false)).await?;
 
     // Disabling discoverable mode when not discoverable should succeed.
     let result = proxy.set_discoverable(false).await?;
@@ -158,21 +156,18 @@ async fn test_discovery(harness: HostDriverHarness) -> Result<(), Error> {
     // Start discovery. "discovering" should get set to true.
     let result = proxy.start_discovery().await?;
     expect_eq!(Ok(()), result)?;
-    let _ =
-        host_expectation::host_state(&harness, expectation::host_driver::discovering(true)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discovering(true)).await?;
 
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let fut = add_le_peer(harness.aux().as_ref(), default_le_peer(&address));
     let _peer = fut.await?;
 
     // The host should discover a fake peer.
-    let _ =
-        host_expectation::peer(&harness, peer::name("Fake").and(peer::address(address))).await?;
+    host_expectation::peer(&harness, peer::name("Fake").and(peer::address(address))).await?;
 
     // Stop discovery. "discovering" should get set to false.
     let _ = proxy.stop_discovery()?;
-    let _ = host_expectation::host_state(&harness, expectation::host_driver::discovering(false))
-        .await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discovering(false)).await?;
 
     Ok(())
 }
@@ -190,7 +185,7 @@ async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
 
     let active_state = expectation::host_driver::discoverable(true)
         .and(expectation::host_driver::discovering(true));
-    let _ = host_expectation::host_state(&harness, active_state).await?;
+    host_expectation::host_state(&harness, active_state).await?;
 
     // Close should cancel these procedures.
     proxy.close()?;
@@ -198,7 +193,7 @@ async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
     let closed_state_update = expectation::host_driver::discoverable(false)
         .and(expectation::host_driver::discovering(false));
 
-    let _ = host_expectation::host_state(&harness, closed_state_update).await?;
+    host_expectation::host_state(&harness, closed_state_update).await?;
 
     Ok(())
 }
@@ -235,8 +230,8 @@ async fn test_watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
     let expected_bredr =
         peer::address(bredr_peer_address).and(peer::technology(TechnologyType::Classic));
 
-    let _ = host_expectation::peer(&harness, expected_le).await?;
-    let _ = host_expectation::peer(&harness, expected_bredr).await?;
+    host_expectation::peer(&harness, expected_le).await?;
+    host_expectation::peer(&harness, expected_bredr).await?;
     expect_eq!(2, harness.write_state().peers().len())?;
 
     Ok(())
@@ -260,8 +255,8 @@ async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     let result = proxy.start_discovery().await?;
     expect_eq!(Ok(()), result)?;
 
-    let _ = host_expectation::peer(&harness, peer::address(address1)).await?;
-    let _ = host_expectation::peer(&harness, peer::address(address2)).await?;
+    host_expectation::peer(&harness, peer::address(address1)).await?;
+    host_expectation::peer(&harness, peer::address(address2)).await?;
 
     let peers = harness.write_state().peers().clone();
     expect_eq!(2, peers.len())?;
@@ -291,7 +286,7 @@ async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     expect_eq!(Ok(()), status)?;
 
     let connected = peer::identifier(success_id.into()).and(peer::connected(true));
-    let _ = host_expectation::peer(&harness, connected).await?;
+    host_expectation::peer(&harness, connected).await?;
     Ok(())
 }
 
@@ -308,7 +303,7 @@ async fn wait_for_test_peer(
     expect_eq!(Ok(()), result)?;
 
     let le_dev = expectation::peer::address(address.clone());
-    let _ = host_expectation::peer(&harness, le_dev).await?;
+    host_expectation::peer(&harness, le_dev).await?;
 
     let peer_id = harness
         .write_state()
@@ -375,13 +370,12 @@ async fn test_forget(harness: HostDriverHarness) -> Result<(), Error> {
 
     // Wait for fake peer to be discovered (`wait_for_test_peer` starts discovery).
     let expected_peer = expectation::peer::address(address);
-    let _ = host_expectation::peer(&harness, expected_peer.clone()).await?;
+    host_expectation::peer(&harness, expected_peer.clone()).await?;
 
     // Connecting to the peer should return success and the peer should become connected.
     let status = proxy.connect(&mut id).await?;
     expect_eq!(Ok(()), status)?;
-    let _ = host_expectation::peer(&harness, expected_peer.and(expectation::peer::connected(true)))
-        .await?;
+    host_expectation::peer(&harness, expected_peer.and(expectation::peer::connected(true))).await?;
 
     // Forgetting the peer should result in its removal.
     let status = proxy.forget(&mut id).await?;

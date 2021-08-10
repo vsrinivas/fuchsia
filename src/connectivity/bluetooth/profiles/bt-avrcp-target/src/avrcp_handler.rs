@@ -13,8 +13,8 @@ use {
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fuchsia_component::client::connect_to_protocol,
     futures::TryStreamExt,
+    log::{trace, warn},
     std::sync::Arc,
-    tracing::{trace, warn},
 };
 
 use crate::media::media_sessions::MediaSessions;

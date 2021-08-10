@@ -18,7 +18,7 @@ fn main() -> Result<(), Error> {
     // TODO(fxbug.dev/613): Add test cases for GATT client role
     // TODO(fxbug.dev/613): Add test cases for GATT server role
     // TODO(fxbug.dev/613): Add test cases for BR/EDR and dual-mode connections
-    let _ = vec![
+    vec![
         // Tests that trigger bt-gap.cmx.
         tests::inspect::run_all(),
         tests::bootstrap::run_all(),

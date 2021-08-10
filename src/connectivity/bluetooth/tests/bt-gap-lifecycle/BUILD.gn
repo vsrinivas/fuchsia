@@ -11,17 +11,14 @@ rustc_test("bt_gap_lifecycle_tests") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/lib.rs" ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-gap-lifecycle-tests-component") {

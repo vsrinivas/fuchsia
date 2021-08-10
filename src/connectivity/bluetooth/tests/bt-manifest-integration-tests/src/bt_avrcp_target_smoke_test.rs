@@ -15,8 +15,8 @@ use {
     },
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, SinkExt, StreamExt},
+    log::info,
     std::{collections::HashSet, iter::FromIterator},
-    tracing::info,
 };
 
 /// AVRCP-Target component URL.
@@ -100,12 +100,12 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
 
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    let _ = builder
+    builder
         .add_component("avrcp-target", ComponentSource::url(AVRCP_TARGET_URL.to_string()))
         .await
         .expect("Failed adding avrcp-tg to topology");
     // Mock AVRCP component to receive PeerManager requests.
-    let _ = builder
+    builder
         .add_component(
             "fake-avrcp",
             ComponentSource::Mock(Mock::new({
@@ -118,7 +118,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
         .await
         .expect("Failed adding avrcp mock to topology");
     // Mock MediaSession component to receive Discovery requests.
-    let _ = builder
+    builder
         .add_component(
             "fake-media-session",
             ComponentSource::Mock(Mock::new({
@@ -131,7 +131,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
         .await
         .expect("Failed adding media session mock to topology");
     // Mock AVRCP-Target client that will request the Lifecycle service.
-    let _ = builder
+    builder
         .add_eager_component(
             "fake-avrcp-target-client",
             ComponentSource::Mock(Mock::new({
@@ -145,7 +145,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
         .expect("Failed adding avrcp target client mock to topology");
 
     // Set up capabilities.
-    let _ = builder
+    builder
         .add_protocol_route::<PeerManagerMarker>(
             RouteEndpoint::component("fake-avrcp"),
             vec![RouteEndpoint::component("avrcp-target")],

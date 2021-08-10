@@ -210,8 +210,6 @@ rustc_test("bt_hfp_a2dp_controller_bin") {
   ]
 
   sources = [ "src/a2dp.rs" ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("bt-hfp-a2dp-controller-tests") {

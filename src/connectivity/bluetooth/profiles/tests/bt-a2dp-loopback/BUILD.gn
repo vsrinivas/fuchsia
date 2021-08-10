@@ -32,8 +32,6 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_shell_package("bt-a2dp-loopback") {

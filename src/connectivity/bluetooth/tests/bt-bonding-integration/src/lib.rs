@@ -18,7 +18,7 @@ use {
     test_harness,
 };
 
-// TODO(xow): Add tests for BR/EDR and dual mode bond data.
+// TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
 
 fn new_le_bond_data(id: &PeerId, address: &Address, name: &str, has_ltk: bool) -> BondingData {
     BondingData {
@@ -100,8 +100,8 @@ async fn test_restore_bonded_devices_success(harness: HostDriverHarness) -> Resu
         .and(expectation::peer::name(TEST_NAME2))
         .and(expectation::peer::bonded(true));
 
-    let _ = host_driver::expectation::peer(&harness, expected1).await?;
-    let _ = host_driver::expectation::peer(&harness, expected2).await?;
+    host_driver::expectation::peer(&harness, expected1).await?;
+    host_driver::expectation::peer(&harness, expected2).await?;
 
     Ok(())
 }
@@ -136,7 +136,7 @@ async fn test_restore_bonded_devices_duplicate_entry(
     let expected = expectation::peer::address(TEST_ADDR1)
         .and(expectation::peer::technology(fidl_fuchsia_bluetooth_sys::TechnologyType::LowEnergy))
         .and(expectation::peer::bonded(true));
-    let _ = host_driver::expectation::peer(&harness, expected.clone()).await?;
+    host_driver::expectation::peer(&harness, expected.clone()).await?;
 
     // Adding an entry with the existing id should fail.
     let bond_data = new_le_bond_data(&TEST_ID1, &TEST_ADDR2, TEST_NAME2, true /* with LTK */);
@@ -170,7 +170,7 @@ async fn test_restore_bonded_devices_invalid_entry(
     let expected = expectation::peer::address(TEST_ADDR2)
         .and(expectation::peer::technology(fidl_fuchsia_bluetooth_sys::TechnologyType::LowEnergy))
         .and(expectation::peer::bonded(true));
-    let _ = host_driver::expectation::peer(&harness, expected.clone()).await?;
+    host_driver::expectation::peer(&harness, expected.clone()).await?;
 
     Ok(())
 }

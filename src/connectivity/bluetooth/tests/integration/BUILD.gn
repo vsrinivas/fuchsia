@@ -46,8 +46,6 @@ rustc_binary("integration_tests_bin") {
     "src/tests/low_energy_peripheral.rs",
     "src/tests/mod.rs",
   ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-integration-tests-component") {

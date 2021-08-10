@@ -14,7 +14,7 @@ use {
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
-    tracing::info,
+    log::info,
 };
 
 /// AVRCP component URL.
@@ -70,12 +70,12 @@ async fn avrcp_v2_component_topology() {
 
     let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
-    let _ = builder
+    builder
         .add_component("avrcp", ComponentSource::url(AVRCP_URL.to_string()))
         .await
         .expect("Failed adding avrcp to topology");
     // Mock Profile component to receive bredr.Profile requests.
-    let _ = builder
+    builder
         .add_component(
             "fake-profile",
             ComponentSource::Mock(Mock::new({
@@ -89,7 +89,7 @@ async fn avrcp_v2_component_topology() {
         .expect("Failed adding profile mock to topology");
     // Mock AVRCP client that will request the PeerManager and PeerManagerExt services
     // which are provided by `bt-avrcp.cml`.
-    let _ = builder
+    builder
         .add_eager_component(
             "fake-avrcp-client",
             ComponentSource::Mock(Mock::new({
@@ -103,7 +103,7 @@ async fn avrcp_v2_component_topology() {
         .expect("Failed adding avrcp client mock to topology");
 
     // Set up capabilities.
-    let _ = builder
+    builder
         .add_protocol_route::<PeerManagerMarker>(
             RouteEndpoint::component("avrcp"),
             vec![RouteEndpoint::component("fake-avrcp-client")],
