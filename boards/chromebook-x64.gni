@@ -24,6 +24,7 @@ avb_atx_metadata =
 
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:chromebook-x64",
+  "//src/devices/misc/drivers/chromeos-acpi",
   "//src/devices/nand/drivers/intel-spi-flash",
   "//src/devices/tpm/drivers/cr50-spi",
   "//src/storage/flashmap:bootfs",

@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "builtin:tests",
+    "chromeos-acpi:tests",
     "cpu-trace:tests",
     "test:tests",
     "virtio-rng:tests",

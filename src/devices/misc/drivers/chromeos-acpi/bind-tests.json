@@ -1,0 +1,26 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.acpi.hid": "\"GGL0001\""
+        },
+        "expected": "match",
+        "name": "Legacy HID"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.acpi.hid": "\"GOOG0016\""
+        },
+        "expected": "match",
+        "name": "New HID"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
+            "fuchsia.acpi.hid": "\"GOOG0015\""
+        },
+        "expected": "abort",
+        "name": "Wrong HID"
+    }
+]

@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.acpi.chromeos;
+using zx;
+
+/// Maximum length of the HWID.
+const MAX_HWID_LEN uint32 = 256;
+
+/// Maximum length of a firmware version.
+const MAX_FW_VERSION_LEN uint32 = 256;
+
+protocol Device {
+    /// Get the ChromeOS HWID for this device, which identifies a device's model
+    /// and configuration.
+    GetHardwareId() -> (struct {
+        hwid string:MAX_HWID_LEN;
+    }) error zx.status;
+
+    /// Get the version of the active RW firmware.
+    GetRwFirmwareVersion() -> (struct {
+        version string:MAX_FW_VERSION_LEN;
+    }) error zx.status;
+
+    /// Get the version of the RO firmware.
+    GetRoFirmwareVersion() -> (struct {
+        version string:MAX_FW_VERSION_LEN;
+    }) error zx.status;
+
+    /// Get the offset and size of the VBoot configuration in the CMOS nvram.
+    GetNvramMetadataLocation() -> (struct {
+        offset uint32;
+        size uint32;
+    }) error zx.status;
+
+    /// Get the address of the flashmap in physical memory.
+    GetFlashmapAddress() -> (struct {
+        address uint64;
+    }) error zx.status;
+};
