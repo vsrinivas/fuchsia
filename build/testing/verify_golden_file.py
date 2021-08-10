@@ -6,6 +6,7 @@
 import argparse
 import filecmp
 import json
+import os
 import sys
 
 # Verifies that the current golden file matches the provided golden.
@@ -30,7 +31,11 @@ def main():
             type = 'Warning' if args.warn else 'Error'
             print('%s: Golden file mismatch' % type)
             print('Please acknowledge this change by running:')
-            print('  cp ' + args.current + ' ' + args.golden)
+            # Use abspath in cp command so it works regardless of current
+            # working directory.
+            print(
+                '  cp ' + os.path.abspath(args.current) + ' ' +
+                os.path.abspath(args.golden))
             if not args.warn:
                 return 1
 
