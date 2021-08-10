@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use serde::{Deserialize, Serialize};
+use {
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    serde::{Deserialize, Serialize},
+};
 
 /// Enums and structs for wlan client status.
 /// These definitions come from fuchsia.wlan.policy/client_provider.fidl
@@ -102,26 +105,108 @@ impl From<fidl_sme::Protection> for Protection {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum BssType {
+    Unknown,
+    Infrastructure,
+    Independent,
+    Mesh,
+    Personal,
+}
+
+impl From<fidl_internal::BssType> for BssType {
+    fn from(bss_type: fidl_internal::BssType) -> BssType {
+        match bss_type {
+            fidl_internal::BssType::Unknown => BssType::Unknown,
+            fidl_internal::BssType::Infrastructure => BssType::Infrastructure,
+            fidl_internal::BssType::Independent => BssType::Independent,
+            fidl_internal::BssType::Mesh => BssType::Mesh,
+            fidl_internal::BssType::Personal => BssType::Personal,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum ChannelBandwidth {
+    Cbw20,
+    Cbw40,
+    Cbw40Below,
+    Cbw80,
+    Cbw160,
+    Cbw80P80,
+}
+
+impl From<fidl_common::ChannelBandwidth> for ChannelBandwidth {
+    fn from(cbw: fidl_common::ChannelBandwidth) -> Self {
+        match cbw {
+            fidl_common::ChannelBandwidth::Cbw20 => ChannelBandwidth::Cbw20,
+            fidl_common::ChannelBandwidth::Cbw40 => ChannelBandwidth::Cbw40,
+            fidl_common::ChannelBandwidth::Cbw40Below => ChannelBandwidth::Cbw40Below,
+            fidl_common::ChannelBandwidth::Cbw80 => ChannelBandwidth::Cbw80,
+            fidl_common::ChannelBandwidth::Cbw160 => ChannelBandwidth::Cbw160,
+            fidl_common::ChannelBandwidth::Cbw80P80 => ChannelBandwidth::Cbw80P80,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Channel {
+    primary: u8,
+    cbw: ChannelBandwidth,
+    secondary80: u8,
+}
+
+impl From<fidl_common::WlanChannel> for Channel {
+    fn from(channel: fidl_common::WlanChannel) -> Self {
+        Channel {
+            primary: channel.primary,
+            cbw: channel.cbw.into(),
+            secondary80: channel.secondary80,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BssDescription {
+    bssid: [u8; 6],
+    bss_type: BssType,
+    beacon_period: u16,
+    timestamp: u64,
+    local_time: u64,
+    capability_info: u16,
+    ies: Vec<u8>,
+    channel: Channel,
+    rssi_dbm: i8,
+    snr_db: i8,
+}
+
+impl From<fidl_internal::BssDescription> for BssDescription {
+    fn from(bss_description: fidl_internal::BssDescription) -> Self {
+        BssDescription {
+            bssid: bss_description.bssid,
+            bss_type: bss_description.bss_type.into(),
+            beacon_period: bss_description.beacon_period,
+            timestamp: bss_description.timestamp,
+            local_time: bss_description.local_time,
+            capability_info: bss_description.capability_info,
+            ies: bss_description.ies,
+            channel: bss_description.channel.into(),
+            rssi_dbm: bss_description.rssi_dbm,
+            snr_db: bss_description.snr_db,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ScanResult {
-    pub bssid: [u8; 6],
-    pub ssid: Vec<u8>,
-    pub rssi_dbm: i8,
-    pub snr_db: i8,
-    pub channel: u8,
-    pub protection: Protection,
     pub compatible: bool,
+    pub bss_description: BssDescription,
 }
 
 impl From<fidl_sme::ScanResult> for ScanResult {
-    fn from(bss_info: fidl_sme::ScanResult) -> Self {
+    fn from(scan_result: fidl_sme::ScanResult) -> Self {
         ScanResult {
-            bssid: bss_info.bssid,
-            ssid: bss_info.ssid,
-            rssi_dbm: bss_info.rssi_dbm,
-            snr_db: bss_info.snr_db,
-            channel: bss_info.channel.primary,
-            protection: Protection::from(bss_info.protection),
-            compatible: bss_info.compatible,
+            compatible: scan_result.compatible,
+            bss_description: scan_result.bss_description.into(),
         }
     }
 }

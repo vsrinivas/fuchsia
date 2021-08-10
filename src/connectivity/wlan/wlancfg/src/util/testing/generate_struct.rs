@@ -4,8 +4,8 @@
 #![cfg(test)]
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme, rand::Rng as _,
-    std::convert::TryInto as _,
+    crate::client::types, fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_sme as fidl_sme, rand::Rng as _, wlan_common::random_fidl_bss_description,
 };
 
 pub fn generate_random_channel() -> fidl_common::WlanChannel {
@@ -30,42 +30,52 @@ pub fn generate_channel(channel: u8) -> fidl_common::WlanChannel {
     }
 }
 
-pub fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescription {
+pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
     let mut rng = rand::thread_rng();
-    fidl_fuchsia_wlan_internal::BssDescription {
-        bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-        bss_type: fidl_fuchsia_wlan_internal::BssType::Personal,
-        beacon_period: rng.gen::<u16>(),
-        timestamp: rng.gen::<u64>(),
-        local_time: rng.gen::<u64>(),
-        capability_info: rng.gen::<u16>(),
-        ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
-        rssi_dbm: rng.gen::<i8>(),
-        channel: generate_random_channel(),
-        snr_db: rng.gen::<i8>(),
+    fidl_sme::ScanResult {
+        compatible: rng.gen::<bool>(),
+        bss_description: random_fidl_bss_description!(),
     }
 }
 
-pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
+pub fn generate_random_bss() -> types::Bss {
     let mut rng = rand::thread_rng();
-    let bssid = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
-    fidl_sme::ScanResult {
-        bssid: bssid.as_slice().try_into().unwrap(),
-        ssid: format!("rand ssid {}", rng.gen::<i32>()).as_bytes().to_vec(),
-        rssi_dbm: rng.gen_range(-100, 20),
-        channel: generate_random_channel(),
-        snr_db: rng.gen_range(-20, 50),
+    let bssid: types::Bssid = rng.gen();
+    let rssi = rng.gen_range(-100, 20);
+    let channel = generate_random_channel();
+    let timestamp_nanos = 0;
+    let snr_db = rng.gen_range(-20, 50);
+
+    types::Bss {
+        bssid,
+        rssi,
+        channel,
+        timestamp_nanos,
+        snr_db,
+        observed_in_passive_scan: rng.gen::<bool>(),
         compatible: rng.gen::<bool>(),
-        protection: match rng.gen_range(0, 6) {
-            0 => fidl_sme::Protection::Open,
-            1 => fidl_sme::Protection::Wep,
-            2 => fidl_sme::Protection::Wpa1,
-            3 => fidl_sme::Protection::Wpa1Wpa2Personal,
-            4 => fidl_sme::Protection::Wpa2Personal,
-            5 => fidl_sme::Protection::Wpa2Enterprise,
-            6 => fidl_sme::Protection::Wpa3Enterprise,
+        bss_description: random_fidl_bss_description!(
+            bssid: bssid,
+            rssi_dbm: rssi,
+            channel: channel,
+            timestamp: timestamp_nanos as u64,
+            snr_db: snr_db,
+        ),
+    }
+}
+
+pub fn generate_random_scan_result() -> types::ScanResult {
+    let mut rng = rand::thread_rng();
+    let ssid = format!("scan result rand {}", rng.gen::<i32>()).as_bytes().to_vec();
+    types::ScanResult {
+        ssid,
+        security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+        entries: vec![generate_random_bss(), generate_random_bss()],
+        compatibility: match rng.gen_range(0, 2) {
+            0 => types::Compatibility::Supported,
+            1 => types::Compatibility::DisallowedNotSupported,
+            2 => types::Compatibility::DisallowedInsecure,
             _ => panic!(),
         },
-        bss_description: generate_random_bss_description(),
     }
 }

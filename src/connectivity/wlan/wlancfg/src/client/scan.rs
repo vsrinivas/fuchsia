@@ -20,9 +20,9 @@ use {
     ieee80211::{Bssid, Ssid},
     log::{debug, error, info, warn},
     measure_tape_for_scan_result::measure,
-    std::{collections::HashMap, sync::Arc},
+    std::{collections::HashMap, convert::TryFrom, sync::Arc},
     stream::FuturesUnordered,
-    wlan_common::channel::Channel,
+    wlan_common::{self, channel::Channel},
 };
 
 // TODO(fxbug.dev/80422): Remove this.
@@ -47,7 +47,8 @@ pub trait ScanResultUpdate: Sync + Send {
 async fn sme_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
     scan_request: fidl_sme::ScanRequest,
-) -> Result<Vec<fidl_sme::ScanResult>, types::ScanError> {
+) -> Result<Vec<wlan_common::scan::ScanResult>, types::ScanError> {
+    #[derive(PartialEq, Eq)]
     enum SmeScanError {
         ShouldRetryLater,
         Other,
@@ -55,7 +56,7 @@ async fn sme_scan(
     async fn sme_scan_internal(
         sme_proxy: &fidl_sme::ClientSmeProxy,
         mut scan_request: fidl_sme::ScanRequest,
-    ) -> Result<Vec<fidl_sme::ScanResult>, SmeScanError> {
+    ) -> Result<Vec<wlan_common::scan::ScanResult>, SmeScanError> {
         let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
             error!("Failed to create FIDL proxy for scan: {:?}", e);
             SmeScanError::Other
@@ -71,12 +72,25 @@ async fn sme_scan(
         };
         debug!("Sent scan request to SME successfully");
         let mut stream = txn.take_event_stream();
-        let mut scanned_networks = vec![];
+        let mut scanned_networks: Vec<wlan_common::scan::ScanResult> = vec![];
         while let Some(Ok(event)) = stream.next().await {
             match event {
-                fidl_sme::ScanTransactionEvent::OnResult { aps: new_aps } => {
+                fidl_sme::ScanTransactionEvent::OnResult { aps } => {
                     debug!("Received scan results from SME");
-                    scanned_networks.extend(new_aps);
+                    scanned_networks.extend(
+                        aps.iter()
+                            .filter_map(|scan_result| {
+                                wlan_common::scan::ScanResult::try_from(scan_result)
+                                    .map(|scan_result| Some(scan_result))
+                                    .unwrap_or_else(|e| {
+                                        // TODO(fxbug.dev/###): Report details about which
+                                        // scan result failed to convert if possible.
+                                        error!("ScanResult conversion failed: {:?}", e);
+                                        None
+                                    })
+                            })
+                            .collect::<Vec<_>>(),
+                    );
                 }
                 fidl_sme::ScanTransactionEvent::OnFinished {} => {
                     debug!("Finished getting scan results from SME");
@@ -104,15 +118,20 @@ async fn sme_scan(
     }
 
     match sme_scan_internal(sme_proxy, scan_request.clone()).await {
-        Ok(results) => Ok(results),
+        Ok(scan_results) => Ok(scan_results),
+        // TODO(fxbug.dev/###): This can be in an .or_else() once async closures are supported in
+        // stable. See issue #62290 <https://github.com/rust-lang/rust/issues/62290>.
         Err(SmeScanError::ShouldRetryLater) => {
             info!("Driver requested a delay before retrying scan");
             fasync::Timer::new(zx::Duration::from_millis(SCAN_RETRY_DELAY_MS).after_now()).await;
-            match sme_scan_internal(sme_proxy, scan_request.clone()).await {
-                Ok(result) => Ok(result),
-                Err(SmeScanError::ShouldRetryLater) => Err(types::ScanError::Cancelled),
-                Err(_) => Err(types::ScanError::GeneralError),
-            }
+            // Retry once before returning an error.
+            sme_scan_internal(sme_proxy, scan_request.clone()).await.or_else(|e| {
+                if e == SmeScanError::ShouldRetryLater {
+                    Err(types::ScanError::Cancelled)
+                } else {
+                    Err(types::ScanError::GeneralError)
+                }
+            })
         }
         Err(_) => Err(types::ScanError::GeneralError),
     }
@@ -251,14 +270,14 @@ pub(crate) async fn perform_directed_active_scan(
 /// their configs to update the rate at which we would actively scan for these networks.
 async fn record_directed_scan_results(
     target_ids: Vec<types::NetworkIdentifier>,
-    scan_results: &Vec<fidl_sme::ScanResult>,
+    scan_result_list: &Vec<wlan_common::scan::ScanResult>,
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
 ) {
-    let ids = scan_results
+    let ids = scan_result_list
         .iter()
         .map(|result| types::NetworkIdentifierDetailed {
             ssid: Ssid::from(&result.ssid),
-            security_type: result.protection,
+            security_type: scan_result.protection().into(),
         })
         .collect();
     // TODO(fxbug.dev/70965): modify this result to use the detailed security type
@@ -307,24 +326,28 @@ impl ScanResultUpdate for LocationSensorUpdater {
 /// Only keeps the first unique instance of a BSSID
 fn insert_bss_to_network_bss_map(
     bss_by_network: &mut HashMap<SmeNetworkIdentifier, Vec<types::Bss>>,
-    new_bss: Vec<fidl_sme::ScanResult>,
+    scan_result_list: Vec<wlan_common::scan::ScanResult>,
     observed_in_passive_scan: bool,
 ) {
-    for bss in new_bss.into_iter() {
+    for scan_result in scan_result_list.into_iter() {
         let entry = bss_by_network
-            .entry(SmeNetworkIdentifier { ssid: Ssid::from(&bss.ssid), protection: bss.protection })
+            .entry(SmeNetworkIdentifier {
+                ssid: Ssid::from(scan_result.ssid().clone()).into(),
+                protection: scan_result.protection().into(),
+            })
             .or_insert(vec![]);
         // Check if this BSSID is already in the hashmap
-        if !entry.iter().any(|existing_bss| existing_bss.bssid.0 == bss.bssid) {
+        if !entry.iter().any(|existing_bss| existing_bss.bssid == *scan_result.bssid()) {
             entry.push(types::Bss {
-                bssid: Bssid(bss.bssid),
-                rssi: bss.rssi_dbm,
-                snr_db: bss.snr_db,
-                channel: bss.channel,
-                timestamp_nanos: 0, // TODO(mnck): find where this comes from
+                bssid: scan_result.bssid(),
+                rssi: scan_result.rssi_dbm(),
+                snr_db: scan_result.snr_db(),
+                channel: scan_result.channel().into(),
+                // TODO(fxbug.dev/82585): timestamp_nanos should be u64,
+                timestamp_nanos: scan_result.timestamp() as i64,
                 observed_in_passive_scan,
-                compatible: bss.compatible,
-                bss_description: bss.bss_description,
+                compatible: scan_result.compatible,
+                bss_description: scan_result.bss_description.into(),
             });
         };
     }
@@ -527,8 +550,7 @@ mod tests {
                 SavedNetworksManager,
             },
             util::testing::{
-                generate_random_bss_description, generate_random_sme_scan_result,
-                validate_sme_scan_request_and_send_results,
+                generate_random_sme_scan_result, validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,
@@ -536,9 +558,9 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{channel::oneshot, lock::Mutex, task::Poll},
         pin_utils::pin_mut,
-        std::sync::Arc,
+        std::{convert::TryInto, sync::Arc},
         test_case::test_case,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, random_fidl_bss_description},
     };
 
     const CENTER_FREQ_CHAN_1: u32 = 2412;
@@ -685,52 +707,47 @@ mod tests {
         combined_fidl_aps: Vec<fidl_policy::ScanResult>,
     }
     fn create_scan_ap_data() -> MockScanData {
-        let bss_desc1 = generate_random_bss_description();
-        let bss_desc2 = generate_random_bss_description();
-        let bss_desc3 = generate_random_bss_description();
+        let bss_desc1 = random_fidl_bss_description!(
+            Wpa3Enterprise,
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: Ssid::from("duplicated ssid"),
+            rssi_dbm: 0,
+            snr_db: 1,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
+        let bss_desc2 = random_fidl_bss_description!(
+            Wpa2,
+            bssid: [1, 2, 3, 4, 5, 6],
+            ssid: Ssid::from("unique ssid"),
+            rssi_dbm: 7,
+            snr_db: 2,
+            channel: fidl_common::WlanChannel {
+                primary: 8,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
+        let bss_desc3 = random_fidl_bss_description!(
+            Wpa3Enterprise,
+            bssid: [7, 8, 9, 10, 11, 12],
+            ssid: Ssid::from("duplicated ssid"),
+            rssi_dbm: 13,
+            snr_db: 3,
+            channel: fidl_common::WlanChannel {
+                primary: 11,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
+
         let passive_input_aps = vec![
-            fidl_sme::ScanResult {
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 0,
-                snr_db: 1,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
-                compatible: true,
-                bss_description: bss_desc1.clone(),
-            },
-            fidl_sme::ScanResult {
-                bssid: [1, 2, 3, 4, 5, 6],
-                ssid: Ssid::from("unique ssid").into(),
-                rssi_dbm: 7,
-                snr_db: 2,
-                channel: fidl_common::WlanChannel {
-                    primary: 8,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa2Personal,
-                compatible: true,
-                bss_description: bss_desc2.clone(),
-            },
-            fidl_sme::ScanResult {
-                bssid: [7, 8, 9, 10, 11, 12],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 13,
-                snr_db: 3,
-                channel: fidl_common::WlanChannel {
-                    primary: 11,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
-                compatible: false,
-                bss_description: bss_desc3.clone(),
-            },
+            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc1.clone() },
+            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc2.clone() },
+            fidl_sme::ScanResult { compatible: false, bss_description: bss_desc3.clone() },
         ];
         // input_aps contains some duplicate SSIDs, which should be
         // grouped in the output.
@@ -742,7 +759,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
-                        timestamp_nanos: 0,
+                        timestamp_nanos: bss_desc1.timestamp as i64,
                         snr_db: 1,
                         channel: fidl_common::WlanChannel {
                             primary: 1,
@@ -756,7 +773,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
-                        timestamp_nanos: 0,
+                        timestamp_nanos: bss_desc3.timestamp as i64,
                         snr_db: 3,
                         channel: fidl_common::WlanChannel {
                             primary: 11,
@@ -776,7 +793,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
-                    timestamp_nanos: 0,
+                    timestamp_nanos: bss_desc2.timestamp as i64,
                     snr_db: 2,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -801,14 +818,14 @@ mod tests {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
                         frequency: Some(CENTER_FREQ_CHAN_1),
-                        timestamp_nanos: Some(0),
+                        timestamp_nanos: Some(bss_desc1.timestamp as i64),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(CENTER_FREQ_CHAN_11),
-                        timestamp_nanos: Some(0),
+                        timestamp_nanos: Some(bss_desc3.timestamp as i64),
                         ..fidl_policy::Bss::EMPTY
                     },
                 ]),
@@ -824,7 +841,7 @@ mod tests {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(0),
+                    timestamp_nanos: Some(bss_desc2.timestamp as i64),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -832,37 +849,33 @@ mod tests {
             },
         ];
 
-        let bss_desc4 = generate_random_bss_description();
-        let bss_desc5 = generate_random_bss_description();
+        let bss_desc4 = random_fidl_bss_description!(
+            Wpa3Enterprise,
+            bssid: [9, 9, 9, 9, 9, 9],
+            ssid: Ssid::from("foo active ssid"),
+            rssi_dbm: 0,
+            snr_db: 8,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
+        let bss_desc5 = random_fidl_bss_description!(
+            Wpa2,
+            bssid: [8, 8, 8, 8, 8, 8],
+            ssid: Ssid::from("misc ssid"),
+            rssi_dbm: 7,
+            snr_db: 9,
+            channel: fidl_common::WlanChannel {
+                primary: 8,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
         let active_input_aps = vec![
-            fidl_sme::ScanResult {
-                bssid: [9, 9, 9, 9, 9, 9],
-                ssid: Ssid::from("foo active ssid").into(),
-                rssi_dbm: 0,
-                snr_db: 8,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
-                compatible: true,
-                bss_description: bss_desc4.clone(),
-            },
-            fidl_sme::ScanResult {
-                bssid: [8, 8, 8, 8, 8, 8],
-                ssid: Ssid::from("misc ssid").into(),
-                rssi_dbm: 7,
-                snr_db: 9,
-                channel: fidl_common::WlanChannel {
-                    primary: 8,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa2Personal,
-                compatible: true,
-                bss_description: bss_desc5.clone(),
-            },
+            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc4.clone() },
+            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc5.clone() },
         ];
         let combined_internal_aps = vec![
             types::ScanResult {
@@ -872,7 +885,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
-                        timestamp_nanos: 0,
+                        timestamp_nanos: bss_desc1.timestamp as i64,
                         snr_db: 1,
                         channel: fidl_common::WlanChannel {
                             primary: 1,
@@ -886,7 +899,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
-                        timestamp_nanos: 0,
+                        timestamp_nanos: bss_desc3.timestamp as i64,
                         snr_db: 3,
                         channel: fidl_common::WlanChannel {
                             primary: 11,
@@ -906,7 +919,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([9, 9, 9, 9, 9, 9]),
                     rssi: 0,
-                    timestamp_nanos: 0,
+                    timestamp_nanos: bss_desc4.timestamp as i64,
                     snr_db: 8,
                     channel: fidl_common::WlanChannel {
                         primary: 1,
@@ -915,7 +928,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_description: bss_desc4,
+                    bss_description: bss_desc4.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -925,7 +938,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([8, 8, 8, 8, 8, 8]),
                     rssi: 7,
-                    timestamp_nanos: 0,
+                    timestamp_nanos: bss_desc5.timestamp as i64,
                     snr_db: 9,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -934,7 +947,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_description: bss_desc5,
+                    bss_description: bss_desc5.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -944,7 +957,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
-                    timestamp_nanos: 0,
+                    timestamp_nanos: bss_desc2.timestamp as i64,
                     snr_db: 2,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -953,7 +966,7 @@ mod tests {
                     },
                     observed_in_passive_scan: true,
                     compatible: true,
-                    bss_description: bss_desc2,
+                    bss_description: bss_desc2.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -969,14 +982,14 @@ mod tests {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
                         frequency: Some(CENTER_FREQ_CHAN_1),
-                        timestamp_nanos: Some(0),
+                        timestamp_nanos: Some(bss_desc1.timestamp as i64),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(CENTER_FREQ_CHAN_11),
-                        timestamp_nanos: Some(0),
+                        timestamp_nanos: Some(bss_desc3.timestamp as i64),
                         ..fidl_policy::Bss::EMPTY
                     },
                 ]),
@@ -992,7 +1005,7 @@ mod tests {
                     bssid: Some([9, 9, 9, 9, 9, 9]),
                     rssi: Some(0),
                     frequency: Some(CENTER_FREQ_CHAN_1),
-                    timestamp_nanos: Some(0),
+                    timestamp_nanos: Some(bss_desc4.timestamp as i64),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1007,7 +1020,7 @@ mod tests {
                     bssid: Some([8, 8, 8, 8, 8, 8]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(0),
+                    timestamp_nanos: Some(bss_desc5.timestamp as i64),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1022,7 +1035,7 @@ mod tests {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(0),
+                    timestamp_nanos: Some(bss_desc2.timestamp as i64),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1049,7 +1062,7 @@ mod tests {
         // Create a baseline result
         let minimal_scan_result = fidl_policy::ScanResult {
             id: Some(fidl_policy::NetworkIdentifier {
-                ssid: Ssid::from("").into(),
+                ssid: Ssid::empty().into(),
                 type_: fidl_policy::SecurityType::None,
             }),
             entries: Some(vec![]),
@@ -1125,7 +1138,8 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            let results = result.expect("failed to get scan results");
+            let results: Vec<fidl_sme::ScanResult> = result.expect("failed to get scan results")
+                .iter().map(fidl_sme::ScanResult::from).collect();
             assert_eq!(results, input_aps);
         });
 
@@ -1168,7 +1182,8 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            let results = result.expect("failed to get scan results");
+            let results: Vec<fidl_sme::ScanResult> = result.expect("failed to get scan results")
+                .iter().map(fidl_sme::ScanResult::from).collect();
             assert_eq!(results, input_aps);
         });
 
@@ -1561,35 +1576,35 @@ mod tests {
         let mut bss_by_network = HashMap::new();
 
         // Create some input data with duplicated BSSID and Network Identifiers
-        let passive_bss_desc = generate_random_bss_description();
-        let passive_input_aps = vec![
-            fidl_sme::ScanResult {
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 0,
-                snr_db: 1,
-                channel: fidl_common::WlanChannel {
-                    primary: 1,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
-                compatible: true,
-                bss_description: passive_bss_desc.clone(),
+        let passive_bss_desc = random_fidl_bss_description!(
+            Wpa3Enterprise,
+            bssid: [0, 0, 0, 0, 0, 0],
+            ssid: Ssid::from("duplicated ssid"),
+            rssi_dbm: 0,
+            snr_db: 1,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
             },
+        );
+
+        let passive_input_aps = vec![
+            fidl_sme::ScanResult { compatible: true, bss_description: passive_bss_desc.clone() },
             fidl_sme::ScanResult {
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 13,
-                snr_db: 3,
-                channel: fidl_common::WlanChannel {
-                    primary: 14,
-                    cbw: fidl_common::ChannelBandwidth::Cbw20,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_description: generate_random_bss_description(),
+                bss_description: random_fidl_bss_description!(
+                    Wpa3Enterprise,
+                    bssid: [0, 0, 0, 0, 0, 0],
+                    ssid: Ssid::from("duplicated ssid"),
+                        rssi_dbm: 13,
+                        snr_db: 3,
+                        channel: fidl_common::WlanChannel {
+                            primary: 14,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
+                            secondary80: 0,
+                        },
+                ),
             },
         ];
 
@@ -1602,7 +1617,7 @@ mod tests {
         let expected_bss = vec![types::Bss {
             bssid: Bssid([0, 0, 0, 0, 0, 0]),
             rssi: 0,
-            timestamp_nanos: 0,
+            timestamp_nanos: passive_bss_desc.timestamp as i64,
             snr_db: 1,
             channel: fidl_common::WlanChannel {
                 primary: 1,
@@ -1614,41 +1629,47 @@ mod tests {
             bss_description: passive_bss_desc.clone(),
         }];
 
-        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true);
+        insert_bss_to_network_bss_map(
+            &mut bss_by_network,
+            passive_input_aps
+                .iter()
+                .map(|scan_result| scan_result.try_into().expect("Failed to convert ScanResult"))
+                .collect::<Vec<wlan_common::scan::ScanResult>>(),
+            true,
+        );
         assert_eq!(bss_by_network.len(), 1);
         assert_eq!(bss_by_network[&expected_id], expected_bss);
 
         // Create some input data with one duplicate BSSID and one new BSSID
-        let active_bss_desc = generate_random_bss_description();
+        let active_bss_desc = random_fidl_bss_description!(
+            Wpa3Enterprise,
+            ssid: Ssid::from("duplicated ssid"),
+            bssid: [1, 2, 3, 4, 5, 6],
+            rssi_dbm: 101,
+            snr_db: 101,
+            channel: fidl_common::WlanChannel {
+                primary: 101,
+                cbw: fidl_common::ChannelBandwidth::Cbw40,
+                secondary80: 0,
+            },
+        );
         let active_input_aps = vec![
             fidl_sme::ScanResult {
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 100,
-                snr_db: 100,
-                channel: fidl_common::WlanChannel {
-                    primary: 100,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
                 compatible: true,
-                bss_description: generate_random_bss_description(),
+                bss_description: random_fidl_bss_description!(
+                    Wpa3Enterprise,
+                    bssid: [0, 0, 0, 0, 0, 0],
+                    ssid: Ssid::from("duplicated ssid"),
+                    rssi_dbm: 100,
+                    snr_db: 100,
+                    channel: fidl_common::WlanChannel {
+                        primary: 100,
+                        cbw: fidl_common::ChannelBandwidth::Cbw40,
+                        secondary80: 0,
+                    },
+                ),
             },
-            fidl_sme::ScanResult {
-                bssid: [1, 2, 3, 4, 5, 6],
-                ssid: Ssid::from("duplicated ssid").into(),
-                rssi_dbm: 101,
-                snr_db: 101,
-                channel: fidl_common::WlanChannel {
-                    primary: 101,
-                    cbw: fidl_common::ChannelBandwidth::Cbw40,
-                    secondary80: 0,
-                },
-                protection: fidl_sme::Protection::Wpa3Enterprise,
-                compatible: true,
-                bss_description: active_bss_desc.clone(),
-            },
+            fidl_sme::ScanResult { compatible: true, bss_description: active_bss_desc.clone() },
         ];
 
         // After the active scan, there should be a second bss included in the results
@@ -1656,7 +1677,7 @@ mod tests {
             types::Bss {
                 bssid: Bssid([0, 0, 0, 0, 0, 0]),
                 rssi: 0,
-                timestamp_nanos: 0,
+                timestamp_nanos: passive_bss_desc.timestamp as i64,
                 snr_db: 1,
                 channel: fidl_common::WlanChannel {
                     primary: 1,
@@ -1670,7 +1691,7 @@ mod tests {
             types::Bss {
                 bssid: Bssid([1, 2, 3, 4, 5, 6]),
                 rssi: 101,
-                timestamp_nanos: 0,
+                timestamp_nanos: active_bss_desc.timestamp as i64,
                 snr_db: 101,
                 channel: fidl_common::WlanChannel {
                     primary: 101,
@@ -1683,7 +1704,14 @@ mod tests {
             },
         ];
 
-        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false);
+        insert_bss_to_network_bss_map(
+            &mut bss_by_network,
+            active_input_aps
+                .iter()
+                .map(|scan_result| scan_result.try_into().expect("Failed to convert ScanResult"))
+                .collect::<Vec<wlan_common::scan::ScanResult>>(),
+            false,
+        );
         assert_eq!(bss_by_network.len(), 1);
         assert_eq!(bss_by_network[&expected_id], expected_bss);
     }
@@ -2194,18 +2222,22 @@ mod tests {
 
         // Generate scan results
         let ssid = Ssid::from("some_ssid");
-        let scan_result = fidl_sme::ScanResult {
-            ssid: ssid.to_vec(),
-            protection: fidl_sme::Protection::Wpa2Wpa3Personal,
+        let sme_scan_result = fidl_sme::ScanResult {
             compatible: true,
-            channel: fidl_common::WlanChannel {
-                primary: 8,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-            ..generate_random_sme_scan_result()
+            bss_description: random_fidl_bss_description!(
+                Wpa2Wpa3,
+                ssid: ssid.clone(),
+                channel: fidl_common::WlanChannel {
+                    primary: 8,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
         };
-        let scan_result_aps = vec![scan_result.clone()];
+        let common_scan_result: wlan_common::scan::ScanResult = sme_scan_result
+            .clone()
+            .try_into()
+            .expect("Failed to convert fidl_sme::ScanResult into wlan_common::scan::ScanResult");
         let _type_ =
             if wpa3_capable { types::SecurityType::Wpa3 } else { types::SecurityType::Wpa2 };
         let expected_scan_results = vec![fidl_policy::ScanResult {
@@ -2218,29 +2250,29 @@ mod tests {
                 type_: fidl_policy::SecurityType::Wpa2,
             }),
             entries: Some(vec![fidl_policy::Bss {
-                bssid: Some(scan_result.bssid),
-                rssi: Some(scan_result.rssi_dbm),
+                bssid: Some(*common_scan_result.bssid()),
+                rssi: Some(common_scan_result.rssi_dbm()),
                 // For now frequency and timestamp are set to 0 when converting types.
                 frequency: Some(CENTER_FREQ_CHAN_8),
-                timestamp_nanos: Some(0),
+                timestamp_nanos: Some(common_scan_result.timestamp() as i64),
                 ..fidl_policy::Bss::EMPTY
             }]),
             compatibility: Some(types::Compatibility::Supported),
             ..fidl_policy::ScanResult::EMPTY
         }];
         let expected_internal_scans = vec![types::ScanResult {
-            ssid: ssid.clone(),
+            ssid: ssid.to_vec(),
             security_type_detailed: types::SecurityTypeDetailed::Wpa2Wpa3Personal,
             compatibility: fidl_policy::Compatibility::Supported,
             entries: vec![types::Bss {
-                bssid: Bssid(scan_result.bssid),
-                rssi: scan_result.rssi_dbm,
-                snr_db: scan_result.snr_db,
-                channel: scan_result.channel,
-                timestamp_nanos: 0,
+                bssid: *common_scan_result.bssid(),
+                rssi: common_scan_result.rssi_dbm(),
+                snr_db: common_scan_result.snr_db(),
+                channel: common_scan_result.channel().into(),
+                timestamp_nanos: common_scan_result.timestamp() as i64,
                 observed_in_passive_scan: true,
-                compatible: scan_result.compatible,
-                bss_description: scan_result.bss_description,
+                compatible: common_scan_result.compatible,
+                bss_description: common_scan_result.bss_description.into(),
             }],
         }];
         // Create mock scan data and send it via the SME
@@ -2249,7 +2281,7 @@ mod tests {
             &mut exec,
             &mut sme_stream,
             &expected_scan_request,
-            scan_result_aps.clone(),
+            vec![sme_scan_result],
         );
 
         // Process response from SME
@@ -2364,30 +2396,30 @@ mod tests {
         // Issue request to scan.
         let desired_ssid = Ssid::from("test_ssid");
         let desired_channels = vec![1, 36];
-        let scan_fut =
-            perform_directed_active_scan(&sme_proxy, &desired_ssid, Some(desired_channels.clone()));
+        let scan_fut_desired_ssid = desired_ssid.to_vec();
+        let scan_fut = perform_directed_active_scan(
+            &sme_proxy,
+            &scan_fut_desired_ssid,
+            Some(desired_channels.clone()),
+        );
         pin_mut!(scan_fut);
 
         // Generate scan results
         let scan_result_aps = vec![
             fidl_sme::ScanResult {
-                ssid: desired_ssid.to_vec(),
-                protection: fidl_sme::Protection::Wpa3Enterprise,
+                bss_description: random_fidl_bss_description!(Wpa3Enterprise, ssid: desired_ssid.clone()),
                 ..generate_random_sme_scan_result()
             },
             fidl_sme::ScanResult {
-                ssid: desired_ssid.to_vec(),
-                protection: fidl_sme::Protection::Wpa2Wpa3Personal,
+                bss_description: random_fidl_bss_description!(Wpa2Wpa3, ssid: desired_ssid.clone()),
                 ..generate_random_sme_scan_result()
             },
             fidl_sme::ScanResult {
-                ssid: desired_ssid.to_vec(),
-                protection: fidl_sme::Protection::Wpa2Wpa3Personal,
+                bss_description: random_fidl_bss_description!(Wpa2Wpa3, ssid: desired_ssid.clone()),
                 ..generate_random_sme_scan_result()
             },
             fidl_sme::ScanResult {
-                ssid: Ssid::from("other ssid").into(),
-                protection: fidl_sme::Protection::Wpa2Personal,
+                bss_description: random_fidl_bss_description!(Wpa2, ssid: Ssid::from("other ssid")),
                 ..generate_random_sme_scan_result()
             },
         ];

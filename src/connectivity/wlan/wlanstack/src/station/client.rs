@@ -23,7 +23,7 @@ use wlan_sme::{
     self as sme,
     client::{
         self as client_sme, ConnectFailure, ConnectResult, ConnectTransactionEvent,
-        ConnectTransactionStream, InfoEvent, ScanResult, ScanResultList,
+        ConnectTransactionStream, InfoEvent,
     },
     InfoStream,
 };
@@ -174,20 +174,24 @@ async fn scan(
 ) -> Result<(), anyhow::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_request);
-    let receiver_result = receiver.await;
-    let send_result = match receiver_result {
+
+    let receiver_result = match receiver.await {
+        Ok(receiver_result) => receiver_result,
         Err(e) => {
             let mut fidl_err = fidl_sme::ScanError {
                 code: fidl_sme::ScanErrorCode::InternalError,
                 message: format!("Scan receiver error: {:?}", e),
             };
-            handle.send_on_error(&mut fidl_err)
+            return filter_out_peer_closed(handle.send_on_error(&mut fidl_err))
+                .map_err(anyhow::Error::from);
         }
-        Ok(scan_results) => send_scan_results(handle, scan_results),
     };
 
-    filter_out_peer_closed(send_result)?;
-    Ok(())
+    let send_result = match receiver_result {
+        Ok(scan_results) => send_scan_results(handle, scan_results),
+        Err(scan_result_code) => send_scan_error(handle, scan_result_code),
+    };
+    filter_out_peer_closed(send_result).map_err(anyhow::Error::from)
 }
 
 async fn connect(
@@ -286,71 +290,55 @@ async fn handle_info_event(
     }
 }
 
+fn send_scan_error(
+    handle: fidl_sme::ScanTransactionControlHandle,
+    scan_result_code: fidl_mlme::ScanResultCode,
+) -> Result<(), fidl::Error> {
+    let mut fidl_sme_error = match scan_result_code {
+        fidl_mlme::ScanResultCode::Success => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::InternalError,
+            message: "Scanning returned Err with fidl_mlme::ScanResultCode::Success".to_string(),
+        },
+        fidl_mlme::ScanResultCode::NotSupported => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::NotSupported,
+            message: "Scanning not supported by device".to_string(),
+        },
+        fidl_mlme::ScanResultCode::InvalidArgs => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::InternalError,
+            message: "Scanning failed because of invalid arguments passed to MLME".to_string(),
+        },
+        fidl_mlme::ScanResultCode::InternalError => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::InternalMlmeError,
+            message: "Scanning ended with internal MLME error".to_string(),
+        },
+        fidl_mlme::ScanResultCode::ShouldWait => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::ShouldWait,
+            message: "Scanning temporarily unavailable".to_string(),
+        },
+        fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => fidl_sme::ScanError {
+            code: fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
+            message: "Scanning canceled by driver or FW".to_string(),
+        },
+    };
+    handle.send_on_error(&mut fidl_sme_error)
+}
+
 fn send_scan_results(
     handle: fidl_sme::ScanTransactionControlHandle,
-    scan_results: ScanResultList,
+    scan_results: Vec<wlan_common::scan::ScanResult>,
 ) -> Result<(), fidl::Error> {
     // Maximum number of scan results to send at a time so we don't exceed FIDL msg size limit.
     // A scan result may contain all IEs, which is at most 2304 bytes since that's the maximum
     // frame size. Let's be conservative and assume each scan result is 3k bytes.
     // At 15, maximum size is 45k bytes, which is well under the 64k bytes limit.
     const MAX_ON_SCAN_RESULT: usize = 15;
-    match scan_results {
-        Ok(scan_results) => {
-            info!("Sending scan results for {} APs", scan_results.len());
-            for chunk in &scan_results.into_iter().chunks(MAX_ON_SCAN_RESULT) {
-                let mut fidl_scan_results =
-                    chunk.into_iter().map(convert_scan_result).collect::<Vec<_>>();
-                handle.send_on_result(&mut fidl_scan_results.iter_mut())?;
-            }
-            handle.send_on_finished()?;
-        }
-        Err(e) => {
-            let mut fidl_err = match e {
-                fidl_mlme::ScanResultCode::Success => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Scanning returned Err with fidl_mlme::ScanResultCode::Success"
-                        .to_string(),
-                },
-                fidl_mlme::ScanResultCode::NotSupported => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::NotSupported,
-                    message: "Scanning not supported by device".to_string(),
-                },
-                fidl_mlme::ScanResultCode::InvalidArgs => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Scanning failed because of invalid arguments passed to MLME"
-                        .to_string(),
-                },
-                fidl_mlme::ScanResultCode::InternalError => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalMlmeError,
-                    message: "Scanning ended with internal MLME error".to_string(),
-                },
-                fidl_mlme::ScanResultCode::ShouldWait => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::ShouldWait,
-                    message: "Scanning temporarily unavailable".to_string(),
-                },
-                fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
-                    message: "Scanning canceled by driver or FW".to_string(),
-                },
-            };
-            handle.send_on_error(&mut fidl_err)?;
-        }
+    info!("Sending scan results for {} APs", scan_results.len());
+    for chunk in &scan_results.into_iter().chunks(MAX_ON_SCAN_RESULT) {
+        let mut fidl_scan_results =
+            chunk.into_iter().map(fidl_sme::ScanResult::from).collect::<Vec<_>>();
+        handle.send_on_result(&mut fidl_scan_results.iter_mut())?;
     }
-    Ok(())
-}
-
-fn convert_scan_result(s: ScanResult) -> fidl_sme::ScanResult {
-    fidl_sme::ScanResult {
-        bssid: s.bssid.0,
-        ssid: s.ssid.into(),
-        rssi_dbm: s.rssi_dbm,
-        snr_db: s.snr_db,
-        channel: s.channel.into(),
-        protection: s.protection.into(),
-        compatible: s.compatible,
-        bss_description: s.bss_description,
-    }
+    handle.send_on_finished()
 }
 
 fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode {
@@ -373,18 +361,16 @@ mod tests {
         super::*,
         crate::test_helper::fake_inspect_tree,
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
         fidl_fuchsia_wlan_sme::{self as fidl_sme},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync,
         futures::{stream::StreamFuture, task::Poll},
-        ieee80211::{Bssid, Ssid},
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
         telemetry::test_helper::{fake_cobalt_sender, fake_disconnect_info, CobaltExt},
         test_case::test_case,
-        wlan_common::{assert_variant, bss::Protection, channel::Channel},
+        wlan_common::{assert_variant, bss::BssDescription, random_bss_description},
         wlan_rsn::auth,
         wlan_sme::client::{
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
@@ -432,7 +418,7 @@ mod tests {
         let handle = server.into_stream().expect("Failed to create stream").control_handle();
         let mut stream = proxy.take_event_stream();
 
-        send_scan_results(handle, Err(scan_code)).expect("Failed to send scan");
+        send_scan_error(handle, scan_code).expect("Failed to send scan");
         assert_variant!(exec.run_until_stalled(&mut stream.next()), Poll::Ready(Some(Ok(scan_event))) => {
             let scan_error = fidl_sme::ScanError{
                 code: scan_error,
@@ -488,17 +474,20 @@ mod tests {
         let handle = txn.into_stream().expect("expect into_stream to succeed").control_handle();
 
         let mut rng = rand::thread_rng();
-        let scan_results = (0..1000).map(|_| random_scan_result(&mut rng)).collect::<Vec<_>>();
+        let scan_result_list = (0..1000).map(|_| random_scan_result(&mut rng)).collect::<Vec<_>>();
         // If we exceed size limit, it should already fail here
-        send_scan_results(handle, Ok(scan_results.clone()))
+        send_scan_results(handle, scan_result_list.clone())
             .expect("expect send_scan_results to succeed");
 
         // Sanity check that we receive all scan results
         let results_fut = collect_scan(&proxy);
         pin_mut!(results_fut);
-        assert_variant!(exec.run_until_stalled(&mut results_fut), Poll::Ready(results) => {
-            let sent_scan_results = scan_results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
-            let received_scan_results = results.into_iter().map(|bss| bss.bss_description).collect::<Vec<_>>();
+        assert_variant!(exec.run_until_stalled(&mut results_fut), Poll::Ready(received_fidl_scan_result_list) => {
+            let sent_scan_results: Vec<BssDescription> = scan_result_list.into_iter()
+                .map(|scan_result| scan_result.bss_description.into()).collect();
+            let received_scan_results: Vec<BssDescription> = received_fidl_scan_result_list.into_iter()
+                .map(|scan_result| scan_result.bss_description.try_into().expect("Failed to convert BssDescription"))
+                .collect();
             assert_eq!(sent_scan_results, received_scan_results);
         })
     }
@@ -627,53 +616,11 @@ mod tests {
     }
 
     // Create roughly over 2k bytes ScanResult
-    fn random_scan_result(rng: &mut ThreadRng) -> ScanResult {
-        let mut ies = vec![];
-        // SSID
-        let ssid = Ssid::from(
-            (0..fidl_ieee80211::MAX_SSID_BYTE_LEN).map(|_| rng.gen::<u8>()).collect::<Vec<_>>(),
-        );
-        ies.extend_from_slice(&[0, 32]);
-        ies.extend_from_slice(&ssid[..]);
-        // Supported rates
-        ies.extend_from_slice(&[1, 5]);
-        ies.extend_from_slice(&rng.gen::<[u8; 5]>()[..]);
-        // Eight giant vendor IEs
-        for _j in 0..8 {
-            ies.extend_from_slice(&[221, 250]);
-            ies.extend((0..250).map(|_| rng.gen::<u8>()))
-        }
-        let bss_description = fidl_fuchsia_wlan_internal::BssDescription {
-            bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            bss_type: fidl_fuchsia_wlan_internal::BssType::Infrastructure,
-            beacon_period: rng.gen::<u16>(),
-            timestamp: rng.gen::<u64>(),
-            local_time: rng.gen::<u64>(),
-            capability_info: rng.gen::<u16>(),
-            ies,
-            rssi_dbm: rng.gen::<i8>(),
-            channel: fidl_common::WlanChannel {
-                primary: rng.gen_range(1, 255),
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-            snr_db: rng.gen::<i8>(),
-        };
-        let scan_result = ScanResult {
-            bssid: Bssid(bss_description.bssid),
-            ssid,
-            rssi_dbm: bss_description.rssi_dbm,
-            snr_db: bss_description.snr_db,
-            signal_report_time: zx::Time::ZERO,
-            channel: Channel::from(bss_description.channel),
-            protection: Protection::Open,
+    fn random_scan_result(rng: &mut ThreadRng) -> wlan_common::scan::ScanResult {
+        // TODO(fxbug.dev/###): Merge this with a similar function in wlancfg.
+        wlan_common::scan::ScanResult {
             compatible: rng.gen::<bool>(),
-            ht_cap: None,
-            vht_cap: None,
-            probe_resp_wsc: None,
-            wmm_param: None,
-            bss_description: bss_description,
-        };
-        scan_result
+            bss_description: random_bss_description!(),
+        }
     }
 }

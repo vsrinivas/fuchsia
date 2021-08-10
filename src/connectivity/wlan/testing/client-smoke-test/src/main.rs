@@ -21,8 +21,9 @@ use {
     net_stack_util::netstack_did_get_dhcp,
     opts::Opt,
     serde::Serialize,
-    std::{collections::HashMap, process},
+    std::{collections::HashMap, convert::TryFrom, process},
     structopt::StructOpt,
+    wlan_common,
 };
 
 #[allow(dead_code)]
@@ -104,13 +105,19 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         for (iface_id, wlan_iface) in test_results.iface_objects.iter_mut() {
             // first check if we can get scan results
             fx_log_info!("iface {}: scanning", iface_id);
-            let networks = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy)
+            let scan_result_list = wlan_service_util::client::passive_scan(&wlan_iface.sme_proxy)
                 .await
                 .context("scan failed")?;
-            let bss_description = networks
+            let bss_description = scan_result_list
                 .into_iter()
-                .filter(|bss_info| bss_info.ssid.as_slice() == opt.target_ssid.as_bytes())
-                .map(|bss_info| bss_info.bss_description)
+                .filter(|scan_result| match wlan_common::scan::ScanResult::try_from(scan_result) {
+                    Ok(scan_result) => scan_result.ssid() == &target_ssid,
+                    Err(e) => {
+                        fx_log_warn!("failed to convert {:?}: {:?}", scan_result, e);
+                        false
+                    }
+                })
+                .map(|scan_result| scan_result.bss_description)
                 .next()
                 .ok_or_else(|| format_err!("no BSS information found for SSID"))?;
             wlan_iface.scan_success = true;

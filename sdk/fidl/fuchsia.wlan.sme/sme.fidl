@@ -44,12 +44,6 @@ type UserDisconnectReason = strict enum {
 };
 
 type ScanResult = struct {
-    bssid ieee80211.MacAddr;
-    ssid ieee80211.Ssid;
-    rssi_dbm int8;
-    snr_db int8;
-    channel fuchsia.wlan.common.WlanChannel;
-    protection Protection;
     compatible bool;
     bss_description fuchsia.wlan.internal.BssDescription;
 };

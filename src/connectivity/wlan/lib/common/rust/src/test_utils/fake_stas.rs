@@ -340,7 +340,8 @@ pub fn build_random_bss_description_creator__(
         bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
         bss_type,
         beacon_period: rng.gen::<u16>(),
-        timestamp: rng.gen::<u64>(),
+        // TODO(fxbug.dev/82585): wlancfg uses an i64 for timestamp_nanos.
+        timestamp: rng.gen_range(0, i64::MAX) as u64,
         local_time: rng.gen::<u64>(),
         // TODO(fxbug.dev/81978): Purely random valid channel values is not implemented.
         channel: fidl_common::WlanChannel {

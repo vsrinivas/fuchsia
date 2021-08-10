@@ -23,11 +23,13 @@ use futures::prelude::*;
 use hex::{FromHex, ToHex};
 use ieee80211::{Ssid, NULL_MAC_ADDR};
 use itertools::Itertools;
+use std::convert::TryFrom;
 use std::fmt;
 use std::str::FromStr;
 use structopt::StructOpt;
 use wlan_common::{
     channel::{Cbw, Channel, Phy},
+    scan::ScanResult,
     RadioConfig, StationMode,
 };
 use wlan_rsn::psk;
@@ -249,7 +251,7 @@ async fn do_client_connect(
 ) -> Result<(), Error> {
     async fn try_get_bss_desc(
         mut events: ScanTransactionEventStream,
-        ssid: &[u8],
+        ssid: &Ssid,
     ) -> Result<fidl_internal::BssDescription, Error> {
         let mut bss_description = None;
         while let Some(event) = events
@@ -258,13 +260,20 @@ async fn do_client_connect(
             .context("failed to fetch all results before the channel was closed")?
         {
             match event {
-                ScanTransactionEvent::OnResult { mut aps } => {
+                ScanTransactionEvent::OnResult { aps: mut scan_result_list } => {
                     if bss_description.is_none() {
                         // Write the first matching `BssDescription`. Any additional information is
                         // ignored.
-                        if let Some(bss_info) =
-                            aps.drain(0..).find(|bss_info| bss_info.ssid == ssid)
-                        {
+                        if let Some(bss_info) = scan_result_list.drain(0..).find(|scan_result| {
+                            match ScanResult::try_from(scan_result) {
+                                Ok(scan_result) => scan_result.ssid() == ssid,
+                                Err(e) => {
+                                    println!("Failed to convert ScanResult: {:?}", e);
+                                    println!("  {:?}", scan_result);
+                                    false
+                                }
+                            }
+                        }) {
                             bss_description = Some(bss_info.bss_description);
                         }
                     }
@@ -291,7 +300,7 @@ async fn do_client_connect(
             fidl_ieee80211::MAX_SSID_BYTE_LEN
         ));
     }
-    let ssid = ssid.as_bytes().to_vec();
+    let ssid = Ssid::from(ssid);
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
         Err(e) => {
@@ -303,7 +312,7 @@ async fn do_client_connect(
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = match scan_type {
         ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![ssid.clone()],
+            ssids: vec![ssid.to_vec()],
             channels: vec![],
         }),
         ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
@@ -312,7 +321,7 @@ async fn do_client_connect(
     let bss_description = try_get_bss_desc(local.take_event_stream(), &ssid).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
-        ssid,
+        ssid: ssid.to_vec(),
         bss_description,
         credential,
         radio_cfg: fidl_sme::RadioConfig {
@@ -617,14 +626,24 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
         .context("failed to fetch all results before the channel was closed")?
     {
         match evt {
-            ScanTransactionEvent::OnResult { aps } => {
+            ScanTransactionEvent::OnResult { aps: scan_result_list } => {
                 if !printed_header {
                     print_scan_header();
                     printed_header = true;
                 }
-                for ap in aps.iter().sorted_by(|a, b| a.ssid.cmp(&b.ssid)) {
-                    print_scan_result(ap);
-                }
+                scan_result_list
+                    .iter()
+                    .filter_map(|scan_result| match ScanResult::try_from(scan_result) {
+                        Ok(scan_result) => Some(scan_result),
+                        Err(e) => {
+                            eprintln!("Failed to convert ScanResult: {:?}", e);
+                            eprintln!("  {:?}", scan_result);
+                            None
+                        }
+                    })
+                    .sorted_by(|a, b| a.ssid().cmp(&b.ssid()))
+                    .by_ref()
+                    .for_each(|scan_result| print_scan_result(&scan_result))
             }
             ScanTransactionEvent::OnFinished {} => break,
             ScanTransactionEvent::OnError { error } => {
@@ -644,64 +663,21 @@ fn print_scan_line(
     compat: impl fmt::Display,
     ssid: impl fmt::Display,
 ) {
-    println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, channel, protection, compat, ssid)
+    println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, channel, protection, compat, ssid,)
 }
 
 fn print_scan_header() {
     print_scan_line("BSSID", "dBm", "Chan", "Protection", "Compatible", "SSID");
 }
 
-fn is_ascii(v: &Vec<u8>) -> bool {
-    for val in v {
-        if val > &0x7e {
-            return false;
-        }
-    }
-    return true;
-}
-
-fn is_printable_ascii(v: &Vec<u8>) -> bool {
-    for val in v {
-        if val < &0x20 || val > &0x7e {
-            return false;
-        }
-    }
-    return true;
-}
-
-fn print_scan_result(bss: &fidl_sme::ScanResult) {
-    let is_ascii = is_ascii(&bss.ssid);
-    let is_ascii_print = is_printable_ascii(&bss.ssid);
-    let is_utf8 = String::from_utf8(bss.ssid.clone()).is_ok();
-    let is_hex = !is_utf8 || (is_ascii && !is_ascii_print);
-
-    let ssid_str;
-    if is_hex {
-        ssid_str = format!("({:X?})", &*bss.ssid);
-    } else {
-        ssid_str = format!("\"{}\"", String::from_utf8_lossy(&bss.ssid));
-    }
-
+fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
     print_scan_line(
-        MacAddr(bss.bssid),
-        bss.rssi_dbm,
-        Channel::from(bss.channel),
-        match bss.protection {
-            fidl_sme::Protection::Unknown => "Unknown",
-            fidl_sme::Protection::Open => "Open",
-            fidl_sme::Protection::Wep => "WEP",
-            fidl_sme::Protection::Wpa1 => "WPA1",
-            fidl_sme::Protection::Wpa1Wpa2PersonalTkipOnly => "WPA1/2 PSK TKIP",
-            fidl_sme::Protection::Wpa2PersonalTkipOnly => "WPA2 PSK TKIP",
-            fidl_sme::Protection::Wpa1Wpa2Personal => "WPA1/2 PSK",
-            fidl_sme::Protection::Wpa2Personal => "WPA2 PSK",
-            fidl_sme::Protection::Wpa2Wpa3Personal => "WPA2/3 PSK",
-            fidl_sme::Protection::Wpa3Personal => "WPA3 PSK",
-            fidl_sme::Protection::Wpa2Enterprise => "WPA2 802.1X",
-            fidl_sme::Protection::Wpa3Enterprise => "WPA3 802.1X",
-        },
-        if bss.compatible { "Y" } else { "N" },
-        ssid_str,
+        MacAddr(*scan_result.bssid()),
+        scan_result.rssi_dbm(),
+        scan_result.channel(),
+        scan_result.protection(),
+        if scan_result.compatible { "Y" } else { "N" },
+        scan_result.ssid().to_string_not_redactable(),
     );
 }
 

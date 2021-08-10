@@ -757,8 +757,7 @@ mod tests {
                 listener,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_description, generate_random_sme_scan_result, poll_sme_req,
-                    validate_sme_scan_request_and_send_results,
+                    poll_sme_req, validate_sme_scan_request_and_send_results,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,
@@ -775,7 +774,7 @@ mod tests {
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
         test_case::test_case,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, random_fidl_bss_description},
         wlan_metrics_registry::PolicyDisconnectionMetricDimensionReason,
     };
 
@@ -883,7 +882,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1054,12 +1053,12 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!(Wep, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
-                    security_type: types::SecurityType::Wep,
+                    type_: types::SecurityType::Wep,
                 },
                 credential: Credential::Password("12345".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
@@ -1115,11 +1114,8 @@ mod tests {
             channels: vec![],
         });
         let scan_results = vec![fidl_sme::ScanResult {
-            ssid: next_network_ssid.to_vec(),
-            bss_description: bss_description.clone(),
             compatible: true,
-            protection: fidl_sme::Protection::Wep,
-            ..generate_random_sme_scan_result()
+            bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -1257,7 +1253,8 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description =
+            random_fidl_bss_description!(Wpa2Wpa3, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1318,11 +1315,8 @@ mod tests {
             channels: vec![],
         });
         let scan_results = vec![fidl_sme::ScanResult {
-            ssid: next_network_ssid.to_vec(),
-            bss_description: bss_description.clone(),
             compatible: true,
-            protection: fidl_sme::Protection::Wpa2Wpa3Personal,
-            ..generate_random_sme_scan_result()
+            bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -1356,7 +1350,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1522,12 +1516,12 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
-                    security_type: types::SecurityType::Wpa2,
+                    type_: types::SecurityType::Wpa2,
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 observed_in_passive_scan: None,
@@ -1630,12 +1624,14 @@ mod tests {
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::ScanResult {
-            ssid: next_network_ssid.to_vec(),
-            bss_description: bss_description.clone(),
-            compatible: true,
-            protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_sme_scan_result()
-        }];
+        <<<<<<< HEAD
+                    ssid: next_network_ssid.to_vec(),
+                    bss_description: bss_description.clone(),
+        =======
+        >>>>>>> 7aed53e5ccf ([wlan] Reduce ScanResult footprint)
+                    compatible: true,
+                    bss_description: bss_description.clone(),
+                }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan {
@@ -1660,21 +1656,25 @@ mod tests {
 
         // Ensure a connect request is sent to the SME
         assert_variant!(
-            poll_sme_req(&mut exec, &mut sme_fut),
-            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-                assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                assert_eq!(req.bss_description, bss_description);
-                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
-                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-                assert_eq!(req.multiple_bss_candidates, false);
-                 // Send connection response.
-                let (_stream, ctrl) = txn.expect("connect txn unused")
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
-                    .expect("failed to send connection completion");
-            }
-        );
+                    poll_sme_req(&mut exec, &mut sme_fut),
+                    Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+        <<<<<<< HEAD
+                        assert_eq!(req.ssid, next_network_ssid.to_vec());
+        =======
+                        assert_eq!(req.ssid, next_network_ssid);
+        >>>>>>> 7aed53e5ccf ([wlan] Reduce ScanResult footprint)
+                        assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                        assert_eq!(req.bss_description, bss_description);
+                        assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
+                        assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                        assert_eq!(req.multiple_bss_candidates, false);
+                         // Send connection response.
+                        let (_stream, ctrl) = txn.expect("connect txn unused")
+                            .into_stream_and_control_handle().expect("error accessing control handle");
+                        ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+                            .expect("failed to send connection completion");
+                    }
+                );
 
         // Cobalt metrics logged
         validate_cobalt_events!(
@@ -1740,7 +1740,7 @@ mod tests {
         };
         let config_net_id =
             network_config::NetworkIdentifier::from(next_network_identifier.clone());
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         // save network to check that failed connect is recorded
         assert!(exec
             .run_singlethreaded(
@@ -1894,7 +1894,7 @@ mod tests {
             .is_none());
         let before_recording = zx::Time::get_monotonic();
 
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: next_network_identifier,
@@ -1984,7 +1984,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2121,7 +2121,7 @@ mod tests {
 
         let first_network_ssid = Ssid::from("foo");
         let second_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2174,7 +2174,7 @@ mod tests {
         // Send a different connect request
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
-        let bss_desc2 = generate_random_bss_description();
+        let bss_desc2 = random_fidl_bss_description!();
         let connect_request2 = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2317,7 +2317,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = Ssid::from("foo");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2473,7 +2473,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = Ssid::from("test");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2595,7 +2595,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
         // Build the values for the connected state.
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier { ssid: network_ssid, security_type: security },
@@ -2675,7 +2675,7 @@ mod tests {
         // Save the network in order to later record the disconnect to it.
         let save_fut = saved_networks_manager.store(
             network_config::NetworkIdentifier {
-                ssid: network_ssid.clone(),
+                ssid: network_ssid.to_vec(),
                 security_type: security.into(),
             },
             credential.clone(),
@@ -2685,7 +2685,7 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(Ok(None)));
 
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
         // Enter the connecting state without a targeted BSS
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
@@ -2717,11 +2717,8 @@ mod tests {
 
         // Send a scan for the requested network
         let mut scan_results = vec![fidl_sme::ScanResult {
-            ssid: network_ssid.to_vec(),
-            bss_description: bss_description.clone(),
             compatible: true,
-            protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_sme_scan_result()
+            bss_description: bss_description.clone(),
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -2788,7 +2785,7 @@ mod tests {
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = Ssid::from("test");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2848,7 +2845,7 @@ mod tests {
 
         let first_network_ssid = Ssid::from("foo");
         let second_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -2880,7 +2877,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
         // Send a different connect request
-        let second_bss_desc = generate_random_bss_description();
+        let second_bss_desc = random_fidl_bss_description!();
         let mut client = Client::new(test_values.client_req_sender);
         let (connect_sender2, mut connect_receiver2) = oneshot::channel();
         let connect_request2 = types::ConnectRequest {
@@ -3038,7 +3035,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let network_ssid = Ssid::from("foo");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3130,18 +3127,14 @@ mod tests {
         });
 
         // Check for a scan to find a new BSS to reconnect with
-        let new_bss_desc = generate_random_bss_description();
+        let new_bss_desc = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![network_ssid.to_vec()],
             channels: vec![],
         });
-        let mut scan_results = vec![fidl_sme::ScanResult {
-            ssid: network_ssid.to_vec(),
-            bss_description: new_bss_desc.clone(),
-            compatible: true,
-            protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_sme_scan_result()
-        }];
+        let mut scan_results =
+            vec![fidl_sme::ScanResult { compatible: true, bss_description: new_bss_desc.clone() }];
+
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan {
@@ -3216,7 +3209,7 @@ mod tests {
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = Ssid::from("foo");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3296,7 +3289,7 @@ mod tests {
         test_values.common_options.network_selector = network_selector;
 
         let network_ssid = Ssid::from("foo");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3384,17 +3377,14 @@ mod tests {
         });
 
         // Check for a scan to find a new BSS to reconnect with
-        let new_bss_description = generate_random_bss_description();
+        let new_bss_description = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![network_ssid.to_vec()],
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::ScanResult {
-            ssid: network_ssid.to_vec(),
             bss_description: new_bss_description.clone(),
             compatible: true,
-            protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_sme_scan_result()
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3509,7 +3499,7 @@ mod tests {
 
         let previous_network_ssid = Ssid::from("foo");
         let next_network_ssid = Ssid::from("bar");
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -3764,7 +3754,7 @@ mod tests {
         pin_mut!(sme_fut);
 
         // Create a connect request so that the state machine does not immediately exit.
-        let bss_description = generate_random_bss_description();
+        let bss_description = random_fidl_bss_description!();
         let connect_req = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {

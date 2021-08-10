@@ -11,14 +11,16 @@ use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info},
     ieee80211::Ssid,
     serde::Serialize,
     std::collections::HashMap,
+    std::convert::TryFrom,
     std::process,
     std::thread::sleep,
     std::time::{Duration, Instant},
     structopt::StructOpt,
+    wlan_common::scan::ScanResult,
 };
 
 #[allow(dead_code)]
@@ -122,8 +124,13 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .context("scan failed")?;
                     let bss_description = networks
                         .into_iter()
-                        .filter(|scan_result| {
-                            scan_result.ssid.as_slice() == opt.target_ssid.as_bytes()
+                        .filter(|scan_result| match ScanResult::try_from(scan_result) {
+                            Ok(scan_result) => scan_result.ssid() == &target_ssid,
+                            Err(e) => {
+                                fx_log_err!("Failed to convert ScanResult: {:?}", e);
+                                fx_log_err!("  {:?}", scan_result);
+                                false
+                            }
                         })
                         .map(|scan_result| scan_result.bss_description)
                         .next()

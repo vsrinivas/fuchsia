@@ -25,6 +25,7 @@ pub mod ie;
 pub mod mac;
 pub mod mgmt_writer;
 pub mod organization;
+pub mod scan;
 pub mod sequence;
 #[allow(unused)]
 pub mod stats;

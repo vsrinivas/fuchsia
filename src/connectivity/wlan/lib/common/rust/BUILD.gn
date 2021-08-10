@@ -100,6 +100,7 @@ rustc_library("wlan-common") {
     "src/mac/mod.rs",
     "src/mgmt_writer.rs",
     "src/organization.rs",
+    "src/scan.rs",
     "src/sequence.rs",
     "src/stats/mod.rs",
     "src/stats/signal.rs",
