@@ -275,6 +275,7 @@ pub struct Config {
     pub refresh_rate_e2: u32,
     pub horizontal_size_mm: u32,
     pub vertical_size_mm: u32,
+    pub using_fallback_size: bool,
     pub linear_stride_bytes: u32,
     pub format: PixelFormat,
     pub pixel_size_bytes: u32,
@@ -657,6 +658,7 @@ impl FrameBuffer {
         let refresh_rate_e2;
         let horizontal_size_mm;
         let vertical_size_mm;
+        let using_fallback_size;
 
         loop {
             let timeout = 2_i64.seconds().after_now();
@@ -671,6 +673,7 @@ impl FrameBuffer {
                     refresh_rate_e2 = first_added.modes[0].refresh_rate_e2;
                     horizontal_size_mm = first_added.horizontal_size_mm;
                     vertical_size_mm = first_added.vertical_size_mm;
+                    using_fallback_size = first_added.using_fallback_size;
                     break;
                 }
             } else {
@@ -687,6 +690,7 @@ impl FrameBuffer {
             refresh_rate_e2: refresh_rate_e2,
             horizontal_size_mm: horizontal_size_mm,
             vertical_size_mm: vertical_size_mm,
+            using_fallback_size,
             linear_stride_bytes: width * pixel_size_bytes,
             format: pixel_format.into(),
             pixel_size_bytes: pixel_size_bytes,
@@ -855,6 +859,7 @@ impl FrameBuffer {
             refresh_rate_e2: self.config.refresh_rate_e2,
             horizontal_size_mm: self.config.horizontal_size_mm,
             vertical_size_mm: self.config.vertical_size_mm,
+            using_fallback_size: self.config.using_fallback_size,
             linear_stride_bytes: self.config.width * pixel_size_bytes,
             format: format.into(),
             pixel_size_bytes: pixel_size_bytes,

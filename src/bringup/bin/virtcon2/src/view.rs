@@ -565,12 +565,19 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 None
             } else {
                 let scale_factor = if let Some(fb) = context.frame_buffer.as_ref() {
-                    const MM_PER_INCH: f32 = 25.4;
-
                     let config = fb.borrow_mut().get_config();
-                    let dpi = config.height as f32 * MM_PER_INCH / config.vertical_size_mm as f32;
+                    // Use 1.0 scale factor when fallback sizes are used as apposed
+                    // to actual values reported by the display.
+                    if config.using_fallback_size {
+                        1.0
+                    } else {
+                        const MM_PER_INCH: f32 = 25.4;
 
-                    get_scale_factor(&self.dpi, dpi)
+                        let dpi =
+                            config.height as f32 * MM_PER_INCH / config.vertical_size_mm as f32;
+
+                        get_scale_factor(&self.dpi, dpi)
+                    }
                 } else {
                     1.0
                 };
