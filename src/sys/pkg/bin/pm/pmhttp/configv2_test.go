@@ -15,25 +15,27 @@ import (
 	tuf_data "github.com/theupdateframework/go-tuf/data"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+
+	repo_structs "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 )
 
 func TestConfigV2(t *testing.T) {
 	repoDir := t.TempDir()
 
-	repo, err := repo.New(repoDir, t.TempDir())
+	repository, err := repo.New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := repo.Init(); err != nil {
+	if err := repository.Init(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+	if err := repository.AddTargets([]string{}, json.RawMessage{}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := repo.CommitUpdates(false); err != nil {
+	if err := repository.CommitUpdates(false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -52,7 +54,7 @@ func TestConfigV2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewConfigServerV2(func() []byte { return rootBytes })
+		server := NewConfigServerV2(func() []byte { return rootBytes }, false)
 		config, err := server.parseConfig("http://localhost")
 		if err != nil {
 			t.Fatal(err)
@@ -69,6 +71,40 @@ func TestConfigV2(t *testing.T) {
 
 		if rootRole.Threshold != int(config.RootThreshold) {
 			t.Fatalf("expected root version to be %v, not %v", root.Version, config.RootThreshold)
+		}
+	})
+
+	t.Run("parse config with persistency flag set", func(t *testing.T) {
+		var signed tuf_data.Signed
+		var root tuf_data.Root
+		if err := json.Unmarshal(rootBytes, &signed); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(signed.Signed, &root); err != nil {
+			t.Fatal(err)
+		}
+
+		server := NewConfigServerV2(func() []byte { return rootBytes }, true)
+		config, err := server.parseConfig("http://localhost")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if root.Version != int(config.RootVersion) {
+			t.Fatalf("expected root version to be %v, not %v", root.Version, config.RootVersion)
+		}
+
+		rootRole, ok := root.Roles["root"]
+		if !ok {
+			t.Fatalf("root does not have root role")
+		}
+
+		if rootRole.Threshold != int(config.RootThreshold) {
+			t.Fatalf("expected root version to be %v, not %v", root.Version, config.RootThreshold)
+		}
+
+		if config.StorageType != repo_structs.Persistent {
+			t.Fatalf("expected storage type to be %v, not %v", repo_structs.Persistent, config.StorageType)
 		}
 	})
 
@@ -92,7 +128,7 @@ func TestConfigV2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewConfigServerV2(func() []byte { return badRootBytes })
+		server := NewConfigServerV2(func() []byte { return badRootBytes }, false)
 		if _, err := server.parseConfig("http://localhost"); !errors.Is(err, OutOfRangeError) {
 			t.Fatalf("expected error to be out of range, not %v", err)
 		}
@@ -118,7 +154,7 @@ func TestConfigV2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewConfigServerV2(func() []byte { return badRootBytes })
+		server := NewConfigServerV2(func() []byte { return badRootBytes }, false)
 		if _, err := server.parseConfig("http://localhost"); !errors.Is(err, OutOfRangeError) {
 			t.Fatalf("expected error to be out of range, not %v", err)
 		}
@@ -144,7 +180,7 @@ func TestConfigV2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewConfigServerV2(func() []byte { return badRootBytes })
+		server := NewConfigServerV2(func() []byte { return badRootBytes }, false)
 		if _, err := server.parseConfig("http://localhost"); !errors.Is(err, OutOfRangeError) {
 			t.Fatalf("expected error to be out of range, not %v", err)
 		}
@@ -170,7 +206,7 @@ func TestConfigV2(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server := NewConfigServerV2(func() []byte { return badRootBytes })
+		server := NewConfigServerV2(func() []byte { return badRootBytes }, false)
 		if _, err := server.parseConfig("http://localhost"); !errors.Is(err, OutOfRangeError) {
 			t.Fatalf("expected error to be out of range, not %v", err)
 		}

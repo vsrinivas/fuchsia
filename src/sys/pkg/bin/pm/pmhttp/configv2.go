@@ -19,10 +19,15 @@ import (
 
 type ConfigServerV2 struct {
 	rootKeyFetcher func() []byte
+	storageType    repo.RepositoryStorageType
 }
 
-func NewConfigServerV2(rootKeyFetcher func() []byte) *ConfigServerV2 {
-	return &ConfigServerV2{rootKeyFetcher: rootKeyFetcher}
+func NewConfigServerV2(rootKeyFetcher func() []byte, persist bool) *ConfigServerV2 {
+	cfg := &ConfigServerV2{rootKeyFetcher: rootKeyFetcher, storageType: repo.Unset}
+	if persist {
+		cfg.storageType = repo.Persistent
+	}
+	return cfg
 }
 
 func (c *ConfigServerV2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +58,7 @@ func (c *ConfigServerV2) parseConfig(repoUrl string) (repo.Config, error) {
 				Subscribe: true,
 			},
 		},
+		StorageType: c.storageType,
 	}
 
 	root, err := func() (tuf_data.Root, error) {

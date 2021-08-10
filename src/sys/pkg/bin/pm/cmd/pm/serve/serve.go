@@ -37,6 +37,7 @@ var (
 	publishList   = fs.String("p", "", "path to a package list file to be auto-published")
 	portFile      = fs.String("f", "", "path to a file to write the HTTP listen port")
 	configVersion = fs.Int("c", 1, "component framework version for config.json")
+	persist       = fs.Bool("persist", false, "request clients to persist TUF metadata for this repository (supported only with `-c 2`)")
 	config        = &repo.Config{}
 	initOnce      sync.Once
 )
@@ -194,7 +195,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 				log.Printf("%s", err)
 			}
 			return b
-		})
+		}, *persist)
 		mux.Handle("/config.json", cs)
 	default:
 		return fmt.Errorf("[pm auto] invalid component version specified: %v", *configVersion)
