@@ -132,19 +132,19 @@ Routing terminology divides into the following categories:
     parent, and its children:
     -   `offer`: Declares that the capability listed is made available to a
         [child component][doc-children] instance or a [child
-        collection][doc-collection].
+        collection][doc-collections].
     -   `expose`: Declares that the capabilities listed are made available to
         the parent component or to the framework. It is valid to `expose` from
-        self or from a child component.
+        `self` or from a child component.
 1.  Declarations of capabilities consumed or provided by the component:
-    -   `use`: For executable components, declares that this component requires
-        the capability in its [namespace] at runtime. Used capabilities are
-        assumed to be from `parent` unless otherwise specified. Capabilities
-        used from `parent` must be offered the capability from its parent.
-    -   `capabilities`: Declares capabilities that this component. Capabilities
-        that are offered or exposed from `self` must appear here. These
-        capabilities often map to a node in the
-        [outgoing directory][glossary.outgoing directory]
+    -   `use`: For executable components, declares capabilities that this
+        component requires in its [namespace][glossary.namespace] at runtime.
+        Capabilities are routed from the `parent` unless otherwise specified,
+        and each capability must have a valid route from its source.
+    -   `capabilities`: Declares capabilities that this component provides.
+        Capabilities that are offered or exposed from `self` must appear here.
+        These capabilities often map to a node in the
+        [outgoing directory][glossary.outgoing directory].
 
 #### Framework protocols {#framework-protocols}
 
@@ -752,6 +752,7 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
+[doc-capabilities]: /docs/concepts/components/v2/capabilities/README.md
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
