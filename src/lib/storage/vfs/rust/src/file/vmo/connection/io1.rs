@@ -12,8 +12,8 @@ use crate::{
     execution_scope::ExecutionScope,
     file::common::new_connection_validate_flags,
     file::vmo::{
-        asynchronous::{AsyncFileState, NewVmo},
-        connection::{AsyncConsumeVmo, FileConnectionApi},
+        asynchronous::{NewVmo, VmoFileState},
+        connection::{AsyncConsumeVmo, VmoFileInterface},
     },
 };
 
@@ -42,24 +42,24 @@ macro_rules! update_initialized_state {
      error: $method_name:expr => $uninitialized_result:expr ;
      { $( $vars:tt ),* $(,)* } => $body:stmt $(;)*) => {
         match $status {
-            AsyncFileState::Uninitialized => {
+            VmoFileState::Uninitialized => {
                 let name = $method_name;
                 debug_assert!(false, "`{}` called for a file with no connections", name);
                 $uninitialized_result
             }
-            AsyncFileState::Initialized { $( $vars ),* } => loop { break { $body } },
+            VmoFileState::Initialized { $( $vars ),* } => loop { break { $body } },
         }
     }
 }
 
 /// Represents a FIDL connection to a file.
-pub struct FileConnection {
+pub struct VmoFileConnection {
     /// Execution scope this connection and any async operations and connections it creates will
     /// use.
     scope: ExecutionScope,
 
     /// File this connection is associated with.
-    file: Arc<dyn FileConnectionApi>,
+    file: Arc<dyn VmoFileInterface>,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
     requests: FileRequestStream,
@@ -99,7 +99,7 @@ enum SharingMode {
     Private,
 }
 
-impl FileConnection {
+impl VmoFileConnection {
     /// Initialized a file connection, which will be running in the context of the specified
     /// execution `scope`.  This function will also check the flags and will send the `OnOpen`
     /// event if necessary.
@@ -108,7 +108,7 @@ impl FileConnection {
     /// connection initialization.
     pub(in crate::file::vmo) fn create_connection(
         scope: ExecutionScope,
-        file: Arc<dyn FileConnectionApi>,
+        file: Arc<dyn VmoFileInterface>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -122,7 +122,7 @@ impl FileConnection {
 
     async fn create_connection_task(
         scope: ExecutionScope,
-        file: Arc<dyn FileConnectionApi>,
+        file: Arc<dyn VmoFileInterface>,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -159,12 +159,12 @@ impl FileConnection {
             }
 
             match &mut *state {
-                AsyncFileState::Uninitialized => {
+                VmoFileState::Uninitialized => {
                     debug_assert!(false, "`ensure_vmo` did not initialize the state.");
                     send_on_open_with_error(flags, server_end, zx::Status::INTERNAL);
                     return;
                 }
-                AsyncFileState::Initialized { connection_count, .. } => {
+                VmoFileState::Initialized { connection_count, .. } => {
                     *connection_count += 1;
                 }
             }
@@ -182,7 +182,7 @@ impl FileConnection {
         };
 
         let mut connection =
-            FileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
+            VmoFileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             match connection.get_node_info().await {
@@ -205,14 +205,14 @@ impl FileConnection {
     }
 
     async fn ensure_vmo<'state_guard>(
-        file: Arc<dyn FileConnectionApi>,
-        mut state: MutexGuard<'state_guard, AsyncFileState>,
+        file: Arc<dyn VmoFileInterface>,
+        mut state: MutexGuard<'state_guard, VmoFileState>,
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<
-        (MutexGuard<'state_guard, AsyncFileState>, ServerEnd<NodeMarker>),
+        (MutexGuard<'state_guard, VmoFileState>, ServerEnd<NodeMarker>),
         (zx::Status, ServerEnd<NodeMarker>),
     > {
-        if let AsyncFileState::Initialized { .. } = *state {
+        if let VmoFileState::Initialized { .. } = *state {
             return Ok((state, server_end));
         }
 
@@ -254,7 +254,7 @@ impl FileConnection {
             }
         }
 
-        *state = AsyncFileState::Initialized {
+        *state = VmoFileState::Initialized {
             vmo,
             vmo_size,
             size,
@@ -268,7 +268,7 @@ impl FileConnection {
     }
 
     fn truncate_vmo(
-        state: &mut AsyncFileState,
+        state: &mut VmoFileState,
         new_size: u64,
         seek: &mut u64,
     ) -> Result<(), zx::Status> {
@@ -481,19 +481,19 @@ impl FileConnection {
         let (status, async_consume_task) = {
             let state = &mut *self.file.state().await;
             match state {
-                AsyncFileState::Uninitialized => {
+                VmoFileState::Uninitialized => {
                     debug_assert!(false, "`handle_close` called for a file with no connections");
                     (zx::Status::INTERNAL, None)
                 }
-                AsyncFileState::Initialized { connection_count: 1, .. } => {
-                    match mem::replace(state, AsyncFileState::Uninitialized) {
-                        AsyncFileState::Uninitialized => unreachable!(),
-                        AsyncFileState::Initialized { vmo, .. } => {
+                VmoFileState::Initialized { connection_count: 1, .. } => {
+                    match mem::replace(state, VmoFileState::Uninitialized) {
+                        VmoFileState::Uninitialized => unreachable!(),
+                        VmoFileState::Initialized { vmo, .. } => {
                             (zx::Status::OK, Some(self.file.clone().consume_vmo(vmo)))
                         }
                     }
                 }
-                AsyncFileState::Initialized { connection_count, .. } => {
+                VmoFileState::Initialized { connection_count, .. } => {
                     *connection_count -= 1;
 
                     (zx::Status::OK, None)

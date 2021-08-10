@@ -5,8 +5,8 @@
 //! Common utilities used by tests for the VMO backed files.
 
 use super::{
-    read_only, read_write, write_only, AsyncFile, ConsumeVmoResult, InitVmoResult, NewVmo,
-    StubConsumeVmoRes,
+    read_only, read_write, write_only, ConsumeVmoResult, InitVmoResult, NewVmo, StubConsumeVmoRes,
+    VmoFile,
 };
 
 use {
@@ -102,7 +102,7 @@ pub fn simple_init_vmo_resizable_with_capacity(
 pub fn simple_read_only(
     content: &[u8],
 ) -> Arc<
-    AsyncFile<
+    VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
         fn(Vmo) -> StubConsumeVmoRes,
@@ -253,7 +253,7 @@ pub fn consume_vmo_with_counter(
 pub fn simple_write_only(
     expected: &[u8],
 ) -> Arc<
-    AsyncFile<
+    VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
         impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
@@ -269,7 +269,7 @@ pub fn simple_write_only_with_capacity(
     capacity: u64,
     expected: &[u8],
 ) -> Arc<
-    AsyncFile<
+    VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
         impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
@@ -285,7 +285,7 @@ pub fn simple_read_write(
     initial_content: &[u8],
     final_content: &[u8],
 ) -> Arc<
-    AsyncFile<
+    VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
         impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
@@ -301,7 +301,7 @@ pub fn simple_read_write_resizeable(
     initial_content: &[u8],
     final_content: &[u8],
 ) -> Arc<
-    AsyncFile<
+    VmoFile<
         impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
         BoxFuture<'static, InitVmoResult>,
         impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static,
