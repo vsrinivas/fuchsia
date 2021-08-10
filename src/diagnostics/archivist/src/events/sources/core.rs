@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
     std::convert::TryInto,
-    tracing::{error, warn},
+    tracing::{debug, error, warn},
 };
 
 #[async_trait]
@@ -87,7 +87,7 @@ impl EventStreamServer {
                         self.send(event).await;
                     }
                     Err(err) => {
-                        warn!(?err, "Failed to interpret event");
+                        debug!(?err, "Failed to interpret event");
                     }
                 },
             }
