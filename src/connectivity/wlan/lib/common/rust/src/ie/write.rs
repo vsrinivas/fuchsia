@@ -308,6 +308,23 @@ pub fn write_wsc_ie<B: Appendable>(buf: &mut B, wsc: &[u8]) -> Result<(), Buffer
     buf.append_bytes(wsc)
 }
 
+pub fn write_wmm_param_v1<B: Appendable>(
+    buf: &mut B,
+    wmm_param: &WmmParam,
+) -> Result<(), BufferTooSmall> {
+    let len = std::mem::size_of::<Oui>() + 3 + ::std::mem::size_of_val(wmm_param);
+    if !buf.can_append(len + 2) {
+        return Err(BufferTooSmall);
+    }
+    buf.append_value(&Id::VENDOR_SPECIFIC)?;
+    buf.append_byte(len as u8)?;
+    buf.append_value(&Oui::MSFT)?;
+    buf.append_byte(WMM_OUI_TYPE)?;
+    buf.append_byte(WMM_PARAM_OUI_SUBTYPE)?;
+    buf.append_byte(0x1)?; // version 1
+    buf.append_bytes(wmm_param.as_bytes())
+}
+
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
     opt.map_or(&[], T::as_bytes)
 }
@@ -926,6 +943,51 @@ mod tests {
         write_wpa1_ie(&mut writer, &wpa_ie).expect_err("WPA1 write to short buf should fail");
         // The buffer is not long enough, so no bytes should be written.
         assert_eq!(writer.into_written().len(), 0);
+    }
+
+    #[test]
+    fn test_write_wmm_param_v1() {
+        let wmm_param = WmmParam {
+            wmm_info: WmmInfo(0).with_ap_wmm_info(ApWmmInfo(0).with_uapsd(true)),
+            _reserved: 0,
+            ac_be_params: WmmAcParams {
+                aci_aifsn: WmmAciAifsn(0).with_aifsn(3).with_aci(0),
+                ecw_min_max: EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+                txop_limit: 0,
+            },
+            ac_bk_params: WmmAcParams {
+                aci_aifsn: WmmAciAifsn(0).with_aifsn(7).with_aci(1),
+                ecw_min_max: EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+                txop_limit: 0,
+            },
+            ac_vi_params: WmmAcParams {
+                aci_aifsn: WmmAciAifsn(0).with_aifsn(2).with_aci(2),
+                ecw_min_max: EcwMinMax(0).with_ecw_min(3).with_ecw_max(4),
+                txop_limit: 94,
+            },
+            ac_vo_params: WmmAcParams {
+                aci_aifsn: WmmAciAifsn(0).with_aifsn(2).with_aci(3),
+                ecw_min_max: EcwMinMax(0).with_ecw_min(2).with_ecw_max(3),
+                txop_limit: 47,
+            },
+        };
+        let expected: Vec<u8> = vec![
+            // WMM parameters
+            0xdd, 0x18, // Vendor IE header
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x02, 0x01, // WMM OUI and WMM Parameter OUI Subtype
+            0x01, // Version 1
+            0x80, // U-APSD enabled
+            0x00, // reserved
+            0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
+            0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
+            0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
+            0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
+        ];
+        let mut buf = vec![];
+        write_wmm_param_v1(&mut buf, &wmm_param)
+            .expect("WmmParam write to a Vec should never fail");
+        assert_eq!(&expected[..], &buf[..]);
     }
 
     #[test]
