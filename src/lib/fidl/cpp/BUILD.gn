@@ -1,0 +1,19 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia, "Unified C++ bindings only support Fuchsia for now.")
+
+source_set("cpp") {
+  public = [ "include/lib/fidl/cpp/internal/natural_client_messenger.h" ]
+  sources = [ "internal/natural_client_messenger.cc" ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+  public_configs = [ ":cpp.headers" ]
+}
+
+config("cpp.headers") {
+  include_dirs = [ "include" ]
+}
