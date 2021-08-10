@@ -24,6 +24,8 @@ type NandOp = strict enum : uint32 {
     READ = 0x1;
     WRITE = 0x2;
     ERASE = 0x3;
+    READ_BYTES = 0x4;
+    WRITE_BYTES = 0x5;
 };
 
 /// A single operation can read or write an arbitrary number of pages,
@@ -81,6 +83,27 @@ type NandReadWrite = resource struct {
     corrected_bit_flips uint32;
 };
 
+/// This is the same as |NandReadWrite|, except all values are in bytes rather
+/// than pages. This doesn't support reading/writing OOB data.
+/// Not supported by all NAND devices.
+type NandReadWriteBytes = resource struct {
+    /// Command.
+    command NandOp;
+
+    /// vmo of data to read or write.
+    data_vmo zx.handle:VMO;
+
+    /// Number of bytes to read or write.
+    /// 0 is invalid.
+    length uint64;
+
+    /// Offset into nand, in bytes.
+    offset_nand uint64;
+
+    /// Data vmo offset in bytes.
+    offset_data_vmo uint64;
+};
+
 type NandErase = struct {
     /// Command.
     command NandOp;
@@ -101,6 +124,9 @@ type NandOperation = strict resource union {
 
     /// NAND_OP_ERASE.
     3: erase NandErase;
+
+    /// NAND_OP_READ_BYTES, NAND_OP_WRITE_BYTES.
+    4: rw_bytes NandReadWriteBytes;
 };
 
 @transport("Banjo")

@@ -9,6 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/operation/nand.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -20,7 +21,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -45,6 +45,10 @@ void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* nand
   NandPartOp op(nand_op, *static_cast<size_t*>(cookie));
   // Re-translate the offsets.
   switch (op.operation()->command) {
+    case NAND_OP_READ_BYTES:
+    case NAND_OP_WRITE_BYTES:
+      op.operation()->rw_bytes.offset_nand -= op.private_storage()->offset;
+      break;
     case NAND_OP_READ:
     case NAND_OP_WRITE:
       op.operation()->rw.offset_nand -= op.private_storage()->offset;
@@ -215,6 +219,12 @@ void NandPartDevice::NandQueue(nand_operation_t* nand_op, nand_queue_callback co
 
   // Make offset relative to full underlying device
   switch (command) {
+    case NAND_OP_READ_BYTES:
+    case NAND_OP_WRITE_BYTES:
+      op.private_storage()->offset =
+          erase_block_start_ * nand_info_.pages_per_block * nand_info_.page_size;
+      op.operation()->rw_bytes.offset_nand += op.private_storage()->offset;
+      break;
     case NAND_OP_READ:
     case NAND_OP_WRITE:
       op.private_storage()->offset = erase_block_start_ * nand_info_.pages_per_block;

@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <new>
 
 #include <fbl/algorithm.h>
@@ -85,6 +86,8 @@ class NandDevice {
   // and translating the request to the desired block range on the actual device.
   zx_status_t Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
   zx_status_t Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
+  zx_status_t ReadBytes(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestDataBytes& request);
+  zx_status_t WriteBytes(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestDataBytes& request);
   zx_status_t Erase(const fuchsia_nand_BrokerRequestData& request);
 
   // Erases a given block number.
@@ -170,10 +173,12 @@ zx_status_t NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerReques
   return (io_status != ZX_OK) ? io_status : status;
 }
 
-zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
-  fuchsia_nand_BrokerRequestData request_copy = request;
+zx_status_t NandDevice::ReadBytes(const zx::vmo& vmo,
+                                  const fuchsia_nand_BrokerRequestDataBytes& request) {
+  fuchsia_nand_BrokerRequestDataBytes request_copy = request;
   if (!full_device_) {
-    request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    request_copy.offset_nand =
+        request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumPages());
   }
@@ -184,7 +189,47 @@ zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerReque
     return status;
   }
   request_copy.vmo = dup.release();
+  zx_status_t io_status = fuchsia_nand_BrokerReadBytes(channel(), &request_copy, &status);
+  return (io_status != ZX_OK) ? io_status : status;
+}
+
+zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
+  fuchsia_nand_BrokerRequestData request_copy = request;
+  if (!full_device_) {
+    request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
+    ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
+                    static_cast<uint64_t>(NumPages()) * PageSize());
+  }
+
+  zx::vmo dup;
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (status != ZX_OK) {
+    return status;
+  }
+  request_copy.vmo = dup.release();
   zx_status_t io_status = fuchsia_nand_BrokerWrite(channel(), &request_copy, &status);
+  return (io_status != ZX_OK) ? io_status : status;
+}
+
+zx_status_t NandDevice::WriteBytes(const zx::vmo& vmo,
+                                   const fuchsia_nand_BrokerRequestDataBytes& request) {
+  fuchsia_nand_BrokerRequestDataBytes request_copy = request;
+  if (!full_device_) {
+    request_copy.offset_nand =
+        request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
+    ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
+    ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
+                    static_cast<uint64_t>(NumPages()) * PageSize());
+  }
+
+  zx::vmo dup;
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (status != ZX_OK) {
+    return status;
+  }
+  request_copy.vmo = dup.release();
+  zx_status_t io_status = fuchsia_nand_BrokerWriteBytes(channel(), &request_copy, &status);
   return (io_status != ZX_OK) ? io_status : status;
 }
 
@@ -448,6 +493,33 @@ TEST(NandBrokerTest, Erase) {
   request.offset_nand = device.BlockSize();
   ASSERT_OK(device.Read(vmo, request));
   ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, mapper.start()));
+}
+
+TEST(NandBrokerTest, ReadWriteDataBytes) {
+  NandDevice device;
+  ASSERT_TRUE(device.IsValid());
+  ASSERT_OK(device.EraseBlock(0));
+
+  fzl::VmoMapper mapper;
+  zx::vmo vmo;
+  ASSERT_OK(mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                &vmo));
+
+  char* buffer = reinterpret_cast<char*>(mapper.start());
+  memset(buffer, 0x55, 2);
+
+  fuchsia_nand_BrokerRequestDataBytes request = {};
+  request.length = 2;
+  request.offset_nand = 2;
+
+  ASSERT_OK(device.WriteBytes(vmo, request));
+
+  memset(buffer, 0, 4);
+  ASSERT_OK(device.ReadBytes(vmo, request));
+
+  constexpr uint8_t kExpected[] = {0x55, 0x55};
+  // Verify data.
+  ASSERT_BYTES_EQ(buffer, kExpected, 2);
 }
 
 }  // namespace

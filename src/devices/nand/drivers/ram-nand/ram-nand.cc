@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -135,9 +136,9 @@ zx_status_t NandDevice::Bind(fuchsia_hardware_nand::wire::RamNandInfo& info) {
       {BIND_NAND_CLASS, 0, params_.nand_class},
   };
 
-  fail_after_ = info.fail_after;
+  fail_after_ = static_cast<uint64_t>(info.fail_after) * params_.page_size;
   if (fail_after_ > 0) {
-    zxlogf(INFO, "fail-after: %u", fail_after_);
+    zxlogf(INFO, "fail-after: %lu", fail_after_);
   }
 
   return DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
@@ -229,6 +230,18 @@ void NandDevice::NandQueue(nand_operation_t* operation, nand_queue_callback comp
                            void* cookie) {
   uint32_t max_pages = params_.NumPages();
   switch (operation->command) {
+    case NAND_OP_READ_BYTES:
+    case NAND_OP_WRITE_BYTES:
+      if (operation->rw_bytes.offset_nand >= params_.GetSize() || !operation->rw_bytes.length ||
+          (params_.GetSize() - operation->rw_bytes.offset_nand) < operation->rw_bytes.length) {
+        completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, operation);
+        return;
+      }
+      if (operation->rw_bytes.data_vmo == ZX_HANDLE_INVALID) {
+        completion_cb(cookie, ZX_ERR_BAD_HANDLE, operation);
+        return;
+      }
+      break;
     case NAND_OP_READ:
     case NAND_OP_WRITE: {
       if (operation->rw.offset_nand >= max_pages || !operation->rw.length ||
@@ -317,16 +330,43 @@ int NandDevice::WorkerThread() {
     zx_status_t status = ZX_OK;
 
     switch (operation->command) {
+      case NAND_OP_WRITE_BYTES:
+        if (fail_after_ > 0) {
+          if (write_count_ >= fail_after_) {
+            status = ZX_ERR_IO;
+            break;
+          }
+          if (write_count_ + operation->rw_bytes.length > fail_after_) {
+            const uint64_t old_length = operation->rw_bytes.length;
+            operation->rw_bytes.length = fail_after_ - write_count_;
+            status = ReadWriteData(operation, true);
+            if (status == ZX_OK) {
+              write_count_ = fail_after_;
+              status = ZX_ERR_IO;
+            }
+            operation->rw.length = old_length;
+            break;
+          }
+        }
+        __FALLTHROUGH;
+      case NAND_OP_READ_BYTES:
+        status = ReadWriteData(operation, true);
+
+        if (status == ZX_OK && operation->command == NAND_OP_WRITE_BYTES) {
+          write_count_ += operation->rw_bytes.length;
+        }
+        break;
       case NAND_OP_WRITE:
         if (fail_after_ > 0) {
           if (write_count_ >= fail_after_) {
             status = ZX_ERR_IO;
             break;
           }
-          if (write_count_ + operation->rw.length > fail_after_) {
+          if (write_count_ + (static_cast<uint64_t>(operation->rw.length) * params_.page_size) >
+              fail_after_) {
             const uint32_t old_length = operation->rw.length;
-            operation->rw.length = fail_after_ - write_count_;
-            status = ReadWriteData(operation);
+            operation->rw.length = (fail_after_ - write_count_) / params_.page_size;
+            status = ReadWriteData(operation, false);
             if (status == ZX_OK) {
               status = ReadWriteOob(operation);
             }
@@ -340,12 +380,12 @@ int NandDevice::WorkerThread() {
         }
         __FALLTHROUGH;
       case NAND_OP_READ:
-        status = ReadWriteData(operation);
+        status = ReadWriteData(operation, false);
         if (status == ZX_OK) {
           status = ReadWriteOob(operation);
         }
         if (status == ZX_OK && operation->command == NAND_OP_WRITE) {
-          write_count_ += operation->rw.length;
+          write_count_ += static_cast<uint64_t>(operation->rw.length) * params_.page_size;
         }
         break;
 
@@ -367,29 +407,41 @@ int NandDevice::WorkerThreadStub(void* arg) {
   return device->WorkerThread();
 }
 
-zx_status_t NandDevice::ReadWriteData(nand_operation_t* operation) {
+zx_status_t NandDevice::ReadWriteData(nand_operation_t* operation, bool bytes) {
   if (operation->rw.data_vmo == ZX_HANDLE_INVALID) {
     return ZX_OK;
   }
 
-  uint32_t nand_addr = operation->rw.offset_nand * params_.page_size;
-  uint64_t vmo_addr = operation->rw.offset_data_vmo * params_.page_size;
-  uint32_t length = operation->rw.length * params_.page_size;
+  uint32_t nand_addr;
+  uint64_t vmo_addr;
+  uint32_t length;
+  if (bytes) {
+    nand_addr = operation->rw_bytes.offset_nand;
+    vmo_addr = operation->rw_bytes.offset_data_vmo;
+    length = operation->rw_bytes.length;
+  } else {
+    nand_addr = operation->rw.offset_nand * params_.page_size;
+    vmo_addr = operation->rw.offset_data_vmo * params_.page_size;
+    length = operation->rw.length * params_.page_size;
+  }
   void* addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
 
-  if (operation->command == NAND_OP_READ) {
+  if (operation->command == NAND_OP_READ || operation->command == NAND_OP_READ_BYTES) {
     operation->rw.corrected_bit_flips = 0;
     return zx_vmo_write(operation->rw.data_vmo, addr, vmo_addr, length);
   }
 
-  ZX_DEBUG_ASSERT(operation->command == NAND_OP_WRITE);
-
-  // Likely something bad is going on if writing multiple blocks.
-  ZX_DEBUG_ASSERT_MSG(operation->rw.length <= params_.pages_per_block, "Writing multiple blocks");
-  ZX_DEBUG_ASSERT_MSG(
-      operation->rw.offset_nand / params_.pages_per_block ==
-          (operation->rw.offset_nand + operation->rw.length - 1) / params_.pages_per_block,
-      "Writing multiple blocks");
+  if (bytes) {
+    ZX_DEBUG_ASSERT(operation->command == NAND_OP_WRITE_BYTES);
+  } else {
+    ZX_DEBUG_ASSERT(operation->command == NAND_OP_WRITE);
+    // Likely something bad is going on if writing multiple blocks.
+    ZX_DEBUG_ASSERT_MSG(operation->rw.length <= params_.pages_per_block, "Writing multiple blocks");
+    ZX_DEBUG_ASSERT_MSG(
+        operation->rw.offset_nand / params_.pages_per_block ==
+            (operation->rw.offset_nand + operation->rw.length - 1) / params_.pages_per_block,
+        "Writing multiple blocks");
+  }
 
   return zx_vmo_read(operation->rw.data_vmo, addr, vmo_addr, length);
 }

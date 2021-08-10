@@ -306,6 +306,10 @@ bool Operation::SetDataVmo() {
   if (!operation) {
     return false;
   }
+  if (operation->command == NAND_OP_READ_BYTES || operation->command == NAND_OP_WRITE_BYTES) {
+    operation->rw_bytes.data_vmo = GetVmo();
+    return operation->rw_bytes.data_vmo != ZX_HANDLE_INVALID;
+  }
   operation->rw.data_vmo = GetVmo();
   return operation->rw.data_vmo != ZX_HANDLE_INVALID;
 }
@@ -678,6 +682,36 @@ TEST_F(NandTest, ReadWriteDataAndOob) {
   // Verify OOB.
   memset(operation.buffer(), 0xaa, kPageSize);
   ASSERT_BYTES_EQ(operation.buffer() + kPageSize * 2, operation.buffer(), kOobSize * 2);
+}
+
+TEST_F(NandTest, ReadWriteDataBytes) {
+  size_t op_size;
+  std::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+  ASSERT_TRUE(device);
+
+  Operation operation(op_size, this);
+  nand_operation_t* op = operation.GetOperation();
+  op->rw_bytes.command = NAND_OP_WRITE_BYTES;
+  op->rw_bytes.length = 2 * kPageSize;
+  op->rw_bytes.offset_nand = 2 * kPageSize;
+  ASSERT_TRUE(operation.SetDataVmo());
+
+  memset(operation.buffer(), 0x55, kPageSize * 2);
+
+  device->NandQueue(op, &NandTest::CompletionCb, nullptr);
+
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  op->rw_bytes.command = NAND_OP_READ_BYTES;
+  memset(operation.buffer(), 0, kPageSize * 4);
+
+  device->NandQueue(op, &NandTest::CompletionCb, nullptr);
+  ASSERT_TRUE(Wait());
+  ASSERT_OK(operation.status());
+
+  // Verify data.
+  ASSERT_TRUE(CheckPattern(0x55, 0, 2, operation));
 }
 
 TEST_F(NandTest, EraseLimits) {

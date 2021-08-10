@@ -4,6 +4,7 @@
 
 #include "intel-spi-flash.h"
 
+#include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nandinfo/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
@@ -138,6 +139,8 @@ void SpiFlashDevice::IoThread() {
 
 void SpiFlashDevice::HandleOp(IoOp &op) {
   switch (op.op->command) {
+    case NAND_OP_READ_BYTES:
+    case NAND_OP_WRITE_BYTES:
     case NAND_OP_ERASE:
     case NAND_OP_WRITE:
       op.completion_cb(op.cookie, ZX_ERR_NOT_SUPPORTED, op.op);

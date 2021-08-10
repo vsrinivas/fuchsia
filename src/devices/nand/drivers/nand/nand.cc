@@ -198,7 +198,8 @@ void NandDevice::DoIo(Transaction txn) {
       status = EraseOp(txn.operation());
       break;
     default:
-      ZX_DEBUG_ASSERT(false);  // Unexpected.
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
   }
   txn.Complete(status);
 }

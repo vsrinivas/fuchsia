@@ -90,7 +90,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   uint32_t MainDataSize() const { return params_.NumPages() * params_.page_size; }
 
   // Implementation of the actual commands.
-  zx_status_t ReadWriteData(nand_operation_t* operation);
+  zx_status_t ReadWriteData(nand_operation_t* operation, bool bytes);
   zx_status_t ReadWriteOob(nand_operation_t* operation);
   zx_status_t Erase(nand_operation_t* operation);
 
@@ -112,10 +112,10 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   fbl::Array<char> export_partition_map_;
 
   // If non-zero, the driver will fail writes once the write-count reaches this value.
-  uint32_t fail_after_ = 0;
+  uint64_t fail_after_ = 0;
 
-  // The number of pages written.
-  uint32_t write_count_ = 0;
+  // The number of bytes written.
+  uint64_t write_count_ = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };

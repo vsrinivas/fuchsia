@@ -17,6 +17,14 @@ type BrokerRequestData = resource struct {
     oob_vmo bool; // True to read or write OOB data.
 };
 
+@for_deprecated_c_bindings
+type BrokerRequestDataBytes = resource struct {
+    vmo zx.handle:<VMO>; // Only used for read and write.
+    length uint64; // In bytes.
+    offset_nand uint64; // In bytes.
+    offset_data_vmo uint64; // In bytes.
+};
+
 /// The Broker allows for serialized entry to the raw nand, which ensures only a single client is
 /// ever talking to the nand device, and all higher level clients have disconnected. In addition,
 /// access to raw nand is restricted from the system during production where nand-broker is not
@@ -40,6 +48,20 @@ protocol Broker {
     // Writes to the nand device.
     Write(resource struct {
         request BrokerRequestData;
+    }) -> (struct {
+        status zx.status;
+    });
+
+    // Reads from the nand device.
+    ReadBytes(resource struct {
+        request BrokerRequestDataBytes;
+    }) -> (struct {
+        status zx.status;
+    });
+
+    // Writes to the nand device.
+    WriteBytes(resource struct {
+        request BrokerRequestDataBytes;
     }) -> (struct {
         status zx.status;
     });

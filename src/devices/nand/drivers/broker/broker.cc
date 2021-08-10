@@ -85,11 +85,18 @@ class Broker : public DeviceType {
   void Erase(EraseRequestView request, EraseCompleter::Sync& completer) {
     completer.Reply(Queue(NAND_OP_ERASE, request->request, nullptr));
   }
+  void ReadBytes(ReadBytesRequestView request, ReadBytesCompleter::Sync& completer) {
+    completer.Reply(QueueBytes(NAND_OP_READ_BYTES, request->request));
+  }
+  void WriteBytes(WriteBytesRequestView request, WriteBytesCompleter::Sync& completer) {
+    completer.Reply(QueueBytes(NAND_OP_WRITE_BYTES, request->request));
+  }
 
  private:
   zx_status_t Query(fuchsia_hardware_nand::wire::Info* info);
   zx_status_t Queue(uint32_t command, fuchsia_nand::wire::BrokerRequestData& request,
                     uint32_t* corrected_bits);
+  zx_status_t QueueBytes(uint32_t command, fuchsia_nand::wire::BrokerRequestDataBytes& request);
 
   ddk::NandProtocolClient nand_;
   size_t op_size_ = 0;
@@ -119,6 +126,19 @@ zx_status_t Broker::Query(fuchsia_hardware_nand::wire::Info* info) {
   nand_.Query(&temp_info, &op_size_);
   nand::nand_fidl_from_banjo(temp_info, info);
   return ZX_OK;
+}
+
+zx_status_t Broker::QueueBytes(uint32_t command,
+                               fuchsia_nand::wire::BrokerRequestDataBytes& request) {
+  Operation operation(op_size_);
+  nand_operation_t* op = operation.GetOperation();
+  op->rw_bytes.command = command;
+  op->rw_bytes.offset_nand = request.offset_nand;
+  op->rw_bytes.offset_data_vmo = request.offset_data_vmo;
+  op->rw_bytes.data_vmo = request.vmo.get();
+  op->rw_bytes.length = request.length;
+
+  return operation.Submit(nand_);
 }
 
 zx_status_t Broker::Queue(uint32_t command, fuchsia_nand::wire::BrokerRequestData& request,
