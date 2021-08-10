@@ -18,7 +18,14 @@ use {
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
     ieee80211::{Bssid, Ssid},
     static_assertions::assert_eq_size,
-    std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash, ops::Range},
+    std::{
+        cmp::Ordering,
+        collections::HashMap,
+        convert::{TryFrom, TryInto},
+        fmt,
+        hash::Hash,
+        ops::Range,
+    },
     zerocopy::{AsBytes, LayoutVerified},
 };
 
@@ -491,6 +498,119 @@ impl BssDescription {
             snr_db: self.snr_db,
             ies: self.ies,
         }
+    }
+}
+
+impl From<BssDescription> for fidl_internal::BssDescription {
+    fn from(bss: BssDescription) -> fidl_internal::BssDescription {
+        fidl_internal::BssDescription {
+            bssid: bss.bssid,
+            bss_type: bss.bss_type,
+            beacon_period: bss.beacon_period,
+            timestamp: bss.timestamp,
+            local_time: bss.local_time,
+            capability_info: bss.capability_info,
+            channel: bss.channel,
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            ies: bss.ies,
+        }
+    }
+}
+
+impl From<&BssDescription> for fidl_internal::BssDescription {
+    fn from(bss: &BssDescription) -> fidl_internal::BssDescription {
+        fidl_internal::BssDescription {
+            bssid: bss.bssid,
+            bss_type: bss.bss_type,
+            beacon_period: bss.beacon_period,
+            timestamp: bss.timestamp,
+            local_time: bss.local_time,
+            capability_info: bss.capability_info,
+            channel: bss.channel,
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            ies: bss.ies.clone(),
+        }
+    }
+}
+
+impl TryFrom<fidl_internal::BssDescription> for BssDescription {
+    type Error = anyhow::Error;
+
+    fn try_from(bss: fidl_internal::BssDescription) -> Result<BssDescription, Self::Error> {
+        let mut ssid_range = None;
+        let mut rates = None;
+        let mut tim_range = None;
+        let mut country_range = None;
+        let mut rsne_range = None;
+        let mut ht_cap_range = None;
+        let mut ht_op_range = None;
+        let mut vht_cap_range = None;
+        let mut vht_op_range = None;
+
+        for (ie_type, range) in ie::IeSummaryIter::new(&bss.ies[..]) {
+            let body = &bss.ies[range.clone()];
+            match ie_type {
+                IeType::SSID => {
+                    ie::parse_ssid(body)?;
+                    ssid_range = Some(range);
+                }
+                IeType::SUPPORTED_RATES | IeType::EXT_SUPPORTED_RATES => {
+                    rates.get_or_insert(vec![]).extend_from_slice(body);
+                }
+                IeType::TIM => {
+                    ie::parse_tim(body)?;
+                    tim_range = Some(range);
+                }
+                IeType::COUNTRY => country_range = Some(range),
+                // Decrement start of range by two to include the IE header.
+                IeType::RSNE => rsne_range = Some(range.start - 2..range.end),
+                IeType::HT_CAPABILITIES => {
+                    ie::parse_ht_capabilities(body)?;
+                    ht_cap_range = Some(range);
+                }
+                IeType::HT_OPERATION => {
+                    ie::parse_ht_operation(body)?;
+                    ht_op_range = Some(range);
+                }
+                IeType::VHT_CAPABILITIES => {
+                    ie::parse_vht_capabilities(body)?;
+                    vht_cap_range = Some(range);
+                }
+                IeType::VHT_OPERATION => {
+                    ie::parse_vht_operation(body)?;
+                    vht_op_range = Some(range);
+                }
+                _ => (),
+            }
+        }
+
+        let ssid_range = ssid_range.ok_or_else(|| format_err!("Missing SSID IE"))?;
+        let rates = rates.ok_or_else(|| format_err!("Missing rates IE"))?;
+
+        Ok(Self {
+            ssid: Ssid::from(&bss.ies[ssid_range]),
+            bssid: bss.bssid,
+            bss_type: bss.bss_type,
+            beacon_period: bss.beacon_period,
+            timestamp: bss.timestamp,
+            local_time: bss.local_time,
+            capability_info: bss.capability_info,
+            channel: bss.channel,
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            ies: bss.ies,
+
+            rates,
+            tim_range,
+            country_range,
+            rsne_range,
+            ht_cap_range,
+            ht_op_range,
+            vht_cap_range,
+            vht_op_range,
+        })
     }
 }
 
