@@ -738,7 +738,6 @@ config("Wno-conversion") {
     "//src/ui/scenic/lib/display/*",
     "//src/ui/scenic/lib/gfx/*",
     "//src/ui/scenic/lib/scenic/util/*",
-    "//src/ui/scenic/lib/scheduling/*",
     "//src/ui/tools/simple-touch/*",
     "//src/ui/tools/tiles_ctl/*",
     "//src/virtualization/buildtools/*",
