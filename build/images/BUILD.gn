@@ -1283,18 +1283,7 @@ compiled_action("system_snapshot") {
   visibility = [ ":updates" ]
   testonly = true
 
-  deps = [
-    ":system_index",
-
-    # This is here to cause all of the builders to also include the new assembly
-    # targets, as any `fint` configuration that has images forcibly includes
-    # this action.
-    #
-    # This is a hack until the new assembly code takes over from the existing
-    # targets in this file as the producer of the system images.
-    # TODO(77651)
-    "assembly",
-  ]
+  deps = [ ":system_index" ]
 
   inputs = [ system_index ]
 
