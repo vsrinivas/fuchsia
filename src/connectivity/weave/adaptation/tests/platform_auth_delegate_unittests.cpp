@@ -7,19 +7,18 @@
 #include "configuration_manager_delegate_impl.h"
 // clang-format on
 
-#include <fuchsia/weave/cpp/fidl.h>
-#include <fuchsia/weave/cpp/fidl_test_base.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <Weave/Core/WeaveTLV.h>
 
+#include "fake_weave_signer.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal::testing {
-
 namespace {
+
+using weave::adaptation::testing::FakeWeaveSigner;
 
 using Profiles::kWeaveProfile_Security;
 using Profiles::Security::kKeyPurposeFlag_ServerAuth;
@@ -61,7 +60,7 @@ constexpr uint8_t kTestDeviceCert[] = {
 //
 // weave convert-key --pem weave-dummy.key weave-dummy.key.pem
 // openssl dgst -sha256 -sign weave-dummy.key.pem hash > signed-hash
-constexpr char kTestHash[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456";
+constexpr uint8_t kTestHash[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456";
 constexpr uint8_t kTestSignedHash[] = {
     0x30, 0x3d, 0x02, 0x1d, 0x00, 0xdf, 0x70, 0x31, 0xb3, 0xbe, 0x63, 0x80, 0xc9, 0xd0, 0xd8, 0x67,
     0x70, 0xf5, 0xa6, 0x50, 0xf1, 0x18, 0xb4, 0x42, 0x1a, 0x5a, 0x72, 0x68, 0xd0, 0x13, 0x0c, 0xd6,
@@ -116,53 +115,6 @@ constexpr uint8_t kTestServiceConfig[] = {
     0x6f, 0x72, 0x2e, 0x69, 0x6e, 0x74, 0x65, 0x67, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x6e,
     0x65, 0x73, 0x74, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x18, 0x18, 0x18, 0x18};
 }  // namespace
-
-class FakeWeaveSigner : public fuchsia::weave::testing::Signer_TestBase {
- public:
-  FakeWeaveSigner() : signed_hash_(kTestSignedHash), signed_hash_size_(sizeof(kTestSignedHash)) {}
-
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void SignHash(std::vector<uint8_t> hash, SignHashCallback callback) override {
-    std::vector<uint8_t> signed_hash(signed_hash_, signed_hash_ + signed_hash_size_);
-    fuchsia::weave::Signer_SignHash_Response response(signed_hash);
-    fuchsia::weave::Signer_SignHash_Result result;
-
-    if (send_error_code_) {
-      result.set_err(error_code_);
-    } else {
-      result.set_response(std::move(response));
-    }
-    callback(std::move(result));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::weave::Signer> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::weave::Signer> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
-  void SetSignedHash(const uint8_t* signed_hash, size_t signed_hash_size) {
-    signed_hash_ = signed_hash;
-    signed_hash_size_ = signed_hash_size;
-  }
-
-  void SetErrorCode(fuchsia::weave::ErrorCode error_code) {
-    send_error_code_ = true;
-    error_code_ = error_code;
-  }
-
- private:
-  fidl::Binding<fuchsia::weave::Signer> binding_{this};
-  async_dispatcher_t* dispatcher_;
-
-  bool send_error_code_ = false;
-  fuchsia::weave::ErrorCode error_code_;
-  const uint8_t* signed_hash_;
-  size_t signed_hash_size_;
-};
 
 class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegateImpl {
  public:
@@ -224,7 +176,7 @@ class PlatformAuthDelegateTest : public WeaveTestFixture<> {
   PlatformAuthDelegate& platform_auth_delegate() { return platform_auth_delegate_; }
 
  private:
-  FakeWeaveSigner fake_weave_signer_;
+  FakeWeaveSigner fake_weave_signer_{kTestSignedHash, sizeof(kTestSignedHash)};
   PlatformAuthDelegate platform_auth_delegate_;
   sys::testing::ComponentContextProvider context_provider_;
 };
@@ -385,32 +337,24 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignature) {
   PacketBuffer::Free(buffer);
 }
 
-TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignatureInvalidSignatureOrHash) {
-  constexpr char kInvalidHash[] = "invalid-hash";
-  constexpr char kInvalidSignedHash[] = "invalid-signed-hash";
+TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignatureInvalidSignedHash) {
+  constexpr uint8_t kInvalidSignedHash[] = "invalid-signed-hash";
+  PacketBuffer* buffer = PacketBuffer::New();
   BeginSessionContext context;
   TLVWriter writer;
 
-  PacketBuffer* buffer = PacketBuffer::New();
+  // Set an invalid signed hash.
+  fake_weave_signer().set_signed_hash(kInvalidSignedHash, sizeof(kInvalidSignedHash));
   writer.Init(buffer);
-
-  EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
-                context, (const uint8_t*)kInvalidHash, sizeof(kInvalidHash) - 1, writer,
-                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
-  EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
-
-  writer.Init(buffer);
-  fake_weave_signer().SetSignedHash(reinterpret_cast<const uint8_t*>(kInvalidSignedHash),
-                                    sizeof(kInvalidSignedHash) - 1);
   EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
                 context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
                 TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
             ASN1_ERROR_INVALID_ENCODING);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
+  // Set an error code when signing.
+  fake_weave_signer().set_sign_hash_error(fuchsia::weave::ErrorCode::CRYPTO_ERROR);
   writer.Init(buffer);
-  fake_weave_signer().SetErrorCode(fuchsia::weave::ErrorCode::CRYPTO_ERROR);
   EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
                 context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
                 TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
