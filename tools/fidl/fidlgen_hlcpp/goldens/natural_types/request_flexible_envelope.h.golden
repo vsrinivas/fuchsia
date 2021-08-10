@@ -254,7 +254,13 @@ class Protocol_RequestEncoder {
         _encoder->Alloc(40 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, s, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, s, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, s, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -277,7 +283,13 @@ class Protocol_RequestEncoder {
         _encoder->Alloc(40 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, s, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, s, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, s, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -311,7 +323,13 @@ class Protocol_ResponseEncoder {
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, f, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, f, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, f, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -333,7 +351,13 @@ class Protocol_ResponseEncoder {
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, f, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, f, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, f, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,

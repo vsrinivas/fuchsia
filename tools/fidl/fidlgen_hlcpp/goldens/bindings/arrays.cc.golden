@@ -59,30 +59,60 @@ void UnionSmallArray::Encode(
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
-  size_t envelope_offset = 0;
-
   switch (Which()) {
     case ::fidl::test::arrays::UnionSmallArray::Tag::kA: {
-      envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
-                                                    ::fidl::Encoder>(encoder));
-      ::fidl::Encode(encoder, &a_, envelope_offset);
+      switch (encoder->wire_format()) {
+        case ::fidl::Encoder::WireFormat::V1: {
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
+                                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::Encoder::WireFormat::V2: {
+          if (::fidl::EncodingInlineSize<::std::array<uint32_t, 2>>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &a_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
+                                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
       break;
     }
     default:
       break;
-  }
-
-  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
-
-  if (envelope_offset) {
-    xunion->tag = tag_;
-    xunion->envelope.num_bytes =
-        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-    xunion->envelope.num_handles =
-        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
-    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -209,30 +239,60 @@ void UnionLargeArray::Encode(
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
-  size_t envelope_offset = 0;
-
   switch (Which()) {
     case ::fidl::test::arrays::UnionLargeArray::Tag::kA: {
-      envelope_offset =
-          encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
-                                                    ::fidl::Encoder>(encoder));
-      ::fidl::Encode(encoder, &a_, envelope_offset);
+      switch (encoder->wire_format()) {
+        case ::fidl::Encoder::WireFormat::V1: {
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
+                                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::Encoder::WireFormat::V2: {
+          if (::fidl::EncodingInlineSize<::std::array<uint32_t, 100>>(
+                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &a_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &a_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
+                                             ::fidl::Encoder>(encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
       break;
     }
     default:
       break;
-  }
-
-  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
-
-  if (envelope_offset) {
-    xunion->tag = tag_;
-    xunion->envelope.num_bytes =
-        static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-    xunion->envelope.num_handles =
-        static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
-    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
@@ -356,14 +416,17 @@ void TableSmallArray::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
   auto next_unknown = _unknown_data.begin();
   if (field_presence_.IsSet<0>()) {
     // Encode unknown fields that have an ordinal that should appear before this
     // field.
     while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
       ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
                                  envelope_base);
       std::advance(next_unknown, 1);
@@ -371,23 +434,59 @@ void TableSmallArray::Encode(
 
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
-    ::fidl::Encode(
-        _encoder, &a_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
-                                                   ::fidl::Encoder>(_encoder)));
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t num_bytes_then_num_handles =
-        (_encoder->CurrentLength() - length_before) |
-        ((_encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base +
-                                 offsetof(fidl_envelope_t, presence)) =
-        FIDL_ALLOC_PRESENT;
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1: {
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
+                                           ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::Encoder::WireFormat::V2: {
+        if (::fidl::EncodingInlineSize<::std::array<uint32_t, 2>>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
+                                           ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
   }
   // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
   // the range of known ordinals)
   for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
     ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
   }
 }
@@ -502,14 +601,17 @@ void TableLargeArray::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
   auto next_unknown = _unknown_data.begin();
   if (field_presence_.IsSet<0>()) {
     // Encode unknown fields that have an ordinal that should appear before this
     // field.
     while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base =
-          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
       ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
                                  envelope_base);
       std::advance(next_unknown, 1);
@@ -517,23 +619,59 @@ void TableLargeArray::Encode(
 
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
-    ::fidl::Encode(
-        _encoder, &a_value_.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
-                                                   ::fidl::Encoder>(_encoder)));
-    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
-    uint64_t num_bytes_then_num_handles =
-        (_encoder->CurrentLength() - length_before) |
-        ((_encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base +
-                                 offsetof(fidl_envelope_t, presence)) =
-        FIDL_ALLOC_PRESENT;
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1: {
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
+                                           ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::Encoder::WireFormat::V2: {
+        if (::fidl::EncodingInlineSize<::std::array<uint32_t, 100>>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &a_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &a_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
+                                           ::fidl::Encoder>(_encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
   }
   // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
   // the range of known ordinals)
   for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
     ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
   }
 }
@@ -613,7 +751,12 @@ void StructSmallArray::Encode(
     memcpy(_encoder->template GetPtr<StructSmallArray>(_offset), this,
            sizeof(StructSmallArray));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
   }
 }
 
@@ -644,7 +787,12 @@ void StructLargeArray::Encode(
     memcpy(_encoder->template GetPtr<StructLargeArray>(_offset), this,
            sizeof(StructLargeArray));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
   }
 }
 

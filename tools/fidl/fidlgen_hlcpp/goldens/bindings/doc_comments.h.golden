@@ -549,6 +549,10 @@ class Interface_RequestEncoder {
         break;
     }
 
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
+    }
+
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::doccomments::_internal::
                    fidl_test_doccomments_InterfaceMethodRequestTable,
@@ -574,6 +578,10 @@ class Interface_ResponseEncoder {
       case ::fidl::Encoder::WireFormat::V2:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
     }
 
     fidl_trace(DidHLCPPEncode,

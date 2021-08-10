@@ -211,6 +211,7 @@ template <>
 struct CodingTraits<StringPtr> {
   static constexpr size_t inline_size_old = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
+  static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, StringPtr* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {

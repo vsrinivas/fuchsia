@@ -21,7 +21,12 @@ void DocCommentWithQuotes::Encode(
     memcpy(_encoder->template GetPtr<DocCommentWithQuotes>(_offset), this,
            sizeof(DocCommentWithQuotes));
   } else {
-    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
+    }
   }
 }
 

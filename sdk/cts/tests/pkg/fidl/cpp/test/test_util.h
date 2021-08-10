@@ -132,9 +132,9 @@ Output DecodedBytes(const fidl_message_header_t& header, std::vector<uint8_t> by
 }
 
 template <class Input>
-void ForgetHandles(Input input) {
+void ForgetHandles(fidl::Encoder::WireFormat wire_format, Input input) {
   // Encode purely for the side effect of linearizing the handles.
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, fidl::Encoder::WireFormat::V1);
+  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   input.Encode(&enc, offset);
   enc.GetMessage().ClearHandlesUnsafe();
@@ -150,9 +150,10 @@ bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
 }
 
 template <class Input>
-bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
+bool ValueToBytes(fidl::Encoder::WireFormat wire_format, Input input,
+                  const std::vector<uint8_t>& bytes,
                   const std::vector<zx_handle_disposition_t>& handles, bool check_rights = true) {
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, fidl::Encoder::WireFormat::V1);
+  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   input.Encode(&enc, offset);
   HLCPPOutgoingMessage msg = enc.GetMessage();
@@ -195,8 +196,9 @@ void CheckDecodeFailure(const fidl_message_header_t& header, std::vector<uint8_t
 }
 
 template <class Input>
-void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_code) {
-  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, fidl::Encoder::WireFormat::V1);
+void CheckEncodeFailure(fidl::Encoder::WireFormat wire_format, const Input& input,
+                        const zx_status_t expected_failure_code) {
+  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, wire_format);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();

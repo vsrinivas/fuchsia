@@ -1268,6 +1268,10 @@ class TestProtocol_RequestEncoder {
         break;
     }
 
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
+    }
+
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::union_::_internal::
@@ -1287,6 +1291,10 @@ class TestProtocol_RequestEncoder {
       case ::fidl::Encoder::WireFormat::V2:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
     }
 
     fidl_trace(
@@ -1322,7 +1330,13 @@ class TestProtocol_ResponseEncoder {
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, xu, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, xu, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, xu, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1344,7 +1358,13 @@ class TestProtocol_ResponseEncoder {
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, xu, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, xu, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, xu, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,

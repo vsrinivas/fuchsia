@@ -21,10 +21,18 @@ void ByteAndBytes::Encode(
     memcpy(_encoder->template GetPtr<ByteAndBytes>(_offset), this,
            sizeof(ByteAndBytes));
   } else {
-    ::fidl::Encode(_encoder, &single_byte, _offset + 0);
-    ::fidl::Encode(_encoder, &many_bytes, _offset + 8);
-    ::fidl::Encode(_encoder, &only_one_k_bytes, _offset + 24);
-    ::fidl::Encode(_encoder, &opt_only_one_k_bytes, _offset + 40);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &single_byte, _offset + 0);
+      ::fidl::Encode(_encoder, &many_bytes, _offset + 8);
+      ::fidl::Encode(_encoder, &only_one_k_bytes, _offset + 24);
+      ::fidl::Encode(_encoder, &opt_only_one_k_bytes, _offset + 40);
+
+    } else {
+      ::fidl::Encode(_encoder, &single_byte, _offset + 0);
+      ::fidl::Encode(_encoder, &many_bytes, _offset + 8);
+      ::fidl::Encode(_encoder, &only_one_k_bytes, _offset + 24);
+      ::fidl::Encode(_encoder, &opt_only_one_k_bytes, _offset + 40);
+    }
   }
 }
 

@@ -43,7 +43,8 @@ type StructMember struct {
 	nameVariants
 	Type              Type
 	DefaultValue      ConstantValue
-	Offset            int
+	OffsetV1          int
+	OffsetV2          int
 	HandleInformation *HandleInformation
 }
 
@@ -51,7 +52,8 @@ func (m StructMember) AsParameter() Parameter {
 	return Parameter{
 		nameVariants:      m.nameVariants,
 		Type:              m.Type,
-		Offset:            m.Offset,
+		OffsetV1:          m.OffsetV1,
+		OffsetV2:          m.OffsetV2,
 		HandleInformation: m.HandleInformation,
 	}
 }
@@ -73,7 +75,8 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		nameVariants:      structMemberContext.transform(val.Name),
 		Type:              t,
 		DefaultValue:      defaultValue,
-		Offset:            val.FieldShapeV1.Offset,
+		OffsetV1:          val.FieldShapeV1.Offset,
+		OffsetV2:          val.FieldShapeV2.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
 	}
 }

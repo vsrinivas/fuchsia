@@ -237,6 +237,42 @@ typedef struct {
   };
 } fidl_envelope_t;
 
+typedef struct {
+  union {
+    // The size of the entire envelope contents, including any additional
+    // out-of-line objects that the envelope may contain. For example, a
+    // vector<string>'s num_bytes for ["hello", "world"] would include the
+    // string contents in the size, not just the outer vector. Always a multiple
+    // of 8; must be zero if envelope is null.
+    //
+    // This field is only valid when |num_bytes| > 4. Smaller values are
+    // instead inlined and |inline_value| is set instead.
+    uint32_t num_bytes;
+
+    // In the case in which the size of the value <= 4, |inline_value| will
+    // be assigned the value of the envelope and bit 0 of |flags| will be
+    // set to indicate that inlining is being used.
+    uint8_t inline_value[4];
+  };
+
+  // The number of handles in the envelope, including any additional
+  // out-of-line objects that the envelope contains. Must be zero if envelope is null.
+  uint16_t num_handles;
+
+  // Flags describing the state of the envelope.
+  // A value of 1 indicates that the value of the envelope is inlined.
+  uint16_t flags;
+} fidl_envelope_v2_t;
+
+static_assert(sizeof(fidl_envelope_t) == 16, "");
+static_assert(sizeof(fidl_envelope_v2_t) == 8, "");
+
+// Bit 0 in flags indicates if the object is inlined in the envelope.
+#define FIDL_ENVELOPE_FLAGS_INLINING_MASK 0x01
+
+// Objects <= 4 bytes in size are inlined in envelopes.
+#define FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD 4
+
 // Handle types.
 
 // Handle types are encoded directly. Just like primitive types, there
@@ -353,6 +389,14 @@ typedef struct {
   fidl_xunion_tag_t tag;
   fidl_envelope_t envelope;
 } fidl_xunion_t;
+
+typedef struct {
+  fidl_xunion_tag_t tag;
+  fidl_envelope_v2_t envelope;
+} fidl_xunion_v2_t;
+
+static_assert(sizeof(fidl_xunion_t) == 24, "");
+static_assert(sizeof(fidl_xunion_v2_t) == 16, "");
 
 // Messages.
 

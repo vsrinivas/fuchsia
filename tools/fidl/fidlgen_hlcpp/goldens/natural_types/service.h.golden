@@ -59,6 +59,10 @@ class SecondProtocol_RequestEncoder {
         break;
     }
 
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
+    }
+
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::service::_internal::
                    fidl_test_service_SecondProtocolMethodOnSecondRequestTable,
@@ -92,6 +96,10 @@ class FirstProtocol_RequestEncoder {
       case ::fidl::Encoder::WireFormat::V2:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
     }
 
     fidl_trace(DidHLCPPEncode,

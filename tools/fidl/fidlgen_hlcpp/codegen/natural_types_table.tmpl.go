@@ -194,13 +194,15 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  size_t envelope_size = (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) ?
+    sizeof(fidl_envelope_t) : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
   auto next_unknown = _unknown_data.begin();
   {{- range .Members }}
   if ({{ .FieldPresenceIsSet }}) {
     // Encode unknown fields that have an ordinal that should appear before this field.
     while (next_unknown != _unknown_data.end() && next_unknown->first < {{ .Ordinal }}) {
-      size_t envelope_base = base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
     {{- if $.IsResourceType }}
       ::fidl::EncodeUnknownData(_encoder, &next_unknown->second, envelope_base);
     {{- else }}
@@ -211,29 +213,72 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
 
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
-    ::fidl::Encode(
-        _encoder,
-        &{{ .FieldDataName }}.value,
-        _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(_encoder))
-    {{- if .HandleInformation -}}
-        , ::fidl::HandleInformation{
-          .object_type = {{ .HandleInformation.ObjectType }},
-          .rights = {{ .HandleInformation.Rights }}
+
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::Encoder::WireFormat::V1: {
+        ::fidl::Encode(
+          _encoder,
+          &{{ .FieldDataName }}.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(_encoder))
+      {{- if .HandleInformation -}}
+          , ::fidl::HandleInformation{
+            .object_type = {{ .HandleInformation.ObjectType }},
+            .rights = {{ .HandleInformation.Rights }}
+          }
+      {{- end -}}
+          );
+
+        {{/* Call GetPtr after Encode because the buffer may move. */ -}}
+        fidl_envelope_t* envelope = _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(_encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::Encoder::WireFormat::V2: {
+        if (::fidl::EncodingInlineSize<{{ .Type }}>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &{{ .FieldDataName }}.value, envelope_base
+          {{- if .HandleInformation -}}
+              , ::fidl::HandleInformation{
+                .object_type = {{ .HandleInformation.ObjectType }},
+                .rights = {{ .HandleInformation.Rights }}
+              }
+          {{- end -}});
+
+          {{/* Call GetPtr after Encode because the buffer may move. */ -}}
+          fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
         }
-    {{- end -}}
-        );
-    size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
-    uint64_t num_bytes_then_num_handles =
-        (_encoder->CurrentLength() - length_before) |
-        ((_encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + offsetof(fidl_envelope_t, presence)) = FIDL_ALLOC_PRESENT;
+
+        ::fidl::Encode(
+          _encoder,
+          &{{ .FieldDataName }}.value,
+          _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(_encoder))
+      {{- if .HandleInformation -}}
+          , ::fidl::HandleInformation{
+            .object_type = {{ .HandleInformation.ObjectType }},
+            .rights = {{ .HandleInformation.Rights }}
+          }
+      {{- end -}}
+          );
+
+        {{/* Call GetPtr after Encode because the buffer may move. */ -}}
+        fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(_encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
   }
   {{- end }}
   // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
   // the range of known ordinals)
   for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
   {{- if .IsResourceType }}
     ::fidl::EncodeUnknownData(_encoder, &curr->second, envelope_base);
   {{- else }}

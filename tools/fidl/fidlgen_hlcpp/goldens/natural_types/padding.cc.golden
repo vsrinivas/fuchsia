@@ -21,8 +21,14 @@ void Padding7ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding7ByteMiddle>(_offset), this,
            sizeof(Padding7ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -56,8 +62,14 @@ void Padding7ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding7ByteEnd>(_offset), this,
            sizeof(Padding7ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -91,8 +103,14 @@ void Padding6ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding6ByteMiddle>(_offset), this,
            sizeof(Padding6ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -126,8 +144,14 @@ void Padding6ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding6ByteEnd>(_offset), this,
            sizeof(Padding6ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -161,9 +185,16 @@ void Padding5ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding5ByteMiddle>(_offset), this,
            sizeof(Padding5ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 2);
-    ::fidl::Encode(_encoder, &c, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+      ::fidl::Encode(_encoder, &c, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+      ::fidl::Encode(_encoder, &c, _offset + 8);
+    }
   }
 }
 
@@ -200,9 +231,16 @@ void Padding5ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding5ByteEnd>(_offset), this,
            sizeof(Padding5ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
-    ::fidl::Encode(_encoder, &c, _offset + 10);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+      ::fidl::Encode(_encoder, &c, _offset + 10);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+      ::fidl::Encode(_encoder, &c, _offset + 10);
+    }
   }
 }
 
@@ -239,8 +277,14 @@ void Padding4ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding4ByteMiddle>(_offset), this,
            sizeof(Padding4ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -274,8 +318,14 @@ void Padding4ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding4ByteEnd>(_offset), this,
            sizeof(Padding4ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 8);
+    }
   }
 }
 
@@ -310,10 +360,18 @@ void Padding4ByteAlignmentLength12::Encode(
     memcpy(_encoder->template GetPtr<Padding4ByteAlignmentLength12>(_offset),
            this, sizeof(Padding4ByteAlignmentLength12));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
-    ::fidl::Encode(_encoder, &c, _offset + 6);
-    ::fidl::Encode(_encoder, &d, _offset + 8);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+      ::fidl::Encode(_encoder, &c, _offset + 6);
+      ::fidl::Encode(_encoder, &d, _offset + 8);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+      ::fidl::Encode(_encoder, &c, _offset + 6);
+      ::fidl::Encode(_encoder, &d, _offset + 8);
+    }
   }
 }
 
@@ -356,8 +414,14 @@ void Padding3ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding3ByteMiddle>(_offset), this,
            sizeof(Padding3ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
   }
 }
 
@@ -391,8 +455,14 @@ void Padding3ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding3ByteEnd>(_offset), this,
            sizeof(Padding3ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
   }
 }
 
@@ -426,8 +496,14 @@ void Padding2ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding2ByteMiddle>(_offset), this,
            sizeof(Padding2ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
   }
 }
 
@@ -461,8 +537,14 @@ void Padding2ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding2ByteEnd>(_offset), this,
            sizeof(Padding2ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
   }
 }
 
@@ -497,9 +579,16 @@ void Padding2ByteAlignmentLength6::Encode(
     memcpy(_encoder->template GetPtr<Padding2ByteAlignmentLength6>(_offset),
            this, sizeof(Padding2ByteAlignmentLength6));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 2);
-    ::fidl::Encode(_encoder, &c, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+      ::fidl::Encode(_encoder, &c, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+      ::fidl::Encode(_encoder, &c, _offset + 4);
+    }
   }
 }
 
@@ -539,8 +628,14 @@ void Padding1ByteMiddle::Encode(
     memcpy(_encoder->template GetPtr<Padding1ByteMiddle>(_offset), this,
            sizeof(Padding1ByteMiddle));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 2);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+    }
   }
 }
 
@@ -574,8 +669,14 @@ void Padding1ByteEnd::Encode(
     memcpy(_encoder->template GetPtr<Padding1ByteEnd>(_offset), this,
            sizeof(Padding1ByteEnd));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 2);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+    }
   }
 }
 

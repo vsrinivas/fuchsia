@@ -191,7 +191,7 @@ struct IsStruct<{{ . }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .Offset }});
+static_assert(offsetof({{ $struct }}, {{ .Name }}) == {{ .OffsetV1 }});
 {{- end }}
 static_assert(sizeof({{ . }}) == {{ . }}::PrimarySize);
 {{- if .IsResourceType }}

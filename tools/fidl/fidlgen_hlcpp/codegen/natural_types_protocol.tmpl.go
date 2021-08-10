@@ -48,16 +48,29 @@ class {{ .RequestEncoder.Name }} {
         break;
     }
 
-    {{- range .RequestArgs }}
-    {{- if .HandleInformation }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }}, ::fidl::HandleInformation {
-      .object_type = {{ .HandleInformation.ObjectType }},
-      .rights = {{ .HandleInformation.Rights }},
-    });
-    {{ else }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{ end -}}
-    {{- end }}
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      {{- range .RequestArgs }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      {{ end -}}
+      {{- end }}
+    } else {
+      {{- range .RequestArgs }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }});
+      {{ end -}}
+      {{- end }}
+    }
 
     fidl_trace(DidHLCPPEncode, &{{ .Request.HlCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
@@ -93,16 +106,29 @@ class {{ .ResponseEncoder.Name }} {
     }
 
 
-    {{- range .ResponseArgs }}
-    {{- if .HandleInformation }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }}, ::fidl::HandleInformation {
-      .object_type = {{ .HandleInformation.ObjectType }},
-      .rights = {{ .HandleInformation.Rights }},
-    });
-    {{ else }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{ end -}}
-    {{- end }}
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      {{- range .ResponseArgs }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+      {{ end -}}
+      {{- end }}
+    } else {
+      {{- range .ResponseArgs }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else }}
+      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV2 }});
+      {{ end -}}
+      {{- end }}
+    }
 
     fidl_trace(DidHLCPPEncode, &{{ .Response.HlCodingTable }}, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
     return _encoder->GetMessage();

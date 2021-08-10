@@ -279,50 +279,85 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
 
-  size_t envelope_offset = 0;
-
   switch (Which()) {
     {{- range .Members }}
     case {{ .TagName }}: {
-      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(encoder));      
-      {{- if .HandleInformation }}
-      ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset, ::fidl::HandleInformation {
-        .object_type = {{ .HandleInformation.ObjectType }},
-        .rights = {{ .HandleInformation.Rights }},
-      });
-      {{ else -}}
-      ::fidl::Encode(encoder, &{{ .StorageName }}, envelope_offset);
-      {{ end -}}
+      switch (encoder->wire_format()) {
+        case ::fidl::Encoder::WireFormat::V1: {
+          ::fidl::Encode(
+            encoder,
+            &{{ .StorageName }},
+            encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(encoder))
+        {{- if .HandleInformation -}}
+            , ::fidl::HandleInformation{
+              .object_type = {{ .HandleInformation.ObjectType }},
+              .rights = {{ .HandleInformation.Rights }}
+            }
+        {{- end -}}
+          );
+
+          {{/* Call GetPtr after Encode because the buffer may move. */ -}}
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::Encoder::WireFormat::V2: {
+          if (::fidl::EncodingInlineSize<{{ .Type }}>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &{{ .StorageName }}, offset + offsetof(fidl_xunion_v2_t, envelope)
+            {{- if .HandleInformation -}}
+                , ::fidl::HandleInformation{
+                  .object_type = {{ .HandleInformation.ObjectType }},
+                  .rights = {{ .HandleInformation.Rights }}
+                }
+            {{- end -}});
+
+            {{/* Call GetPtr after Encode because the buffer may move. */ -}}
+            fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+            encoder,
+            &{{ .StorageName }},
+            encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type }}, ::fidl::Encoder>(encoder))
+        {{- if .HandleInformation -}}
+            , ::fidl::HandleInformation{
+              .object_type = {{ .HandleInformation.ObjectType }},
+              .rights = {{ .HandleInformation.Rights }}
+            }
+        {{- end -}}
+          );
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
       break;
     }
     {{- end }}
     {{- if .IsFlexible }}
-    case {{ .TagUnknown }}:
+    case {{ .TagUnknown }}: {
       {{- if .IsResourceType }}
-      envelope_offset = encoder->Alloc(unknown_data_.bytes.size());
-      ::fidl::EncodeUnknownDataContents(encoder, &unknown_data_, envelope_offset);
+      ::fidl::EncodeUnknownData(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       {{- else }}
-      envelope_offset = encoder->Alloc(unknown_data_.size());
-      ::fidl::EncodeUnknownBytesContents(encoder, &unknown_data_, envelope_offset);
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_, offset + offsetof(fidl_xunion_t, envelope));
       {{- end }}
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
       break;
+    }
     {{- end }}
     default:
        break;
-  }
-
-  {{/* Note that encoder->GetPtr() must be called after every call to
-       encoder->Alloc(), since encoder.bytes_ could be re-sized and moved.
-     */ -}}
-
-  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
-
-  if (envelope_offset) {
-    xunion->tag = tag_;
-    xunion->envelope.num_bytes = static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-    xunion->envelope.num_handles = static_cast<uint32_t>(encoder->CurrentHandleCount() - handles_before);
-    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 

@@ -24,30 +24,60 @@ void ExampleOfUseOfAliases::Encode(
     memcpy(_encoder->template GetPtr<ExampleOfUseOfAliases>(_offset), this,
            sizeof(ExampleOfUseOfAliases));
   } else {
-    ::fidl::Encode(_encoder, &field_of_u32, _offset + 0);
-    ::fidl::Encode(_encoder, &field_of_vec_of_strings, _offset + 8);
-    ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_nine,
-                   _offset + 24);
-    ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_5, _offset + 40);
-    ::fidl::Encode(_encoder, &field_of_vec_of_ref_me_at_most_5, _offset + 56);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &field_of_u32, _offset + 0);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings, _offset + 8);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_nine,
+                     _offset + 24);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_5,
+                     _offset + 40);
+      ::fidl::Encode(_encoder, &field_of_vec_of_ref_me_at_most_5, _offset + 56);
 
-    ::fidl::Encode(_encoder, &field_of_channel, _offset + 72,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
+      ::fidl::Encode(_encoder, &field_of_channel, _offset + 72,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
 
-    ::fidl::Encode(_encoder, &field_of_client_end, _offset + 76,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
+      ::fidl::Encode(_encoder, &field_of_client_end, _offset + 76,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
 
-    ::fidl::Encode(_encoder, &field_of_nullable_client_end, _offset + 80,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_CHANNEL,
-                       .rights = 0x80000000,
-                   });
+      ::fidl::Encode(_encoder, &field_of_nullable_client_end, _offset + 80,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &field_of_u32, _offset + 0);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings, _offset + 8);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_nine,
+                     _offset + 24);
+      ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_5,
+                     _offset + 40);
+      ::fidl::Encode(_encoder, &field_of_vec_of_ref_me_at_most_5, _offset + 56);
+
+      ::fidl::Encode(_encoder, &field_of_channel, _offset + 72,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
+
+      ::fidl::Encode(_encoder, &field_of_client_end, _offset + 76,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
+
+      ::fidl::Encode(_encoder, &field_of_nullable_client_end, _offset + 80,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = 0x80000000,
+                     });
+    }
   }
 }
 

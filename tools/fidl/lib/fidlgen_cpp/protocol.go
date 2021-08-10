@@ -502,7 +502,8 @@ func (m *Method) CallbackWrapper() string {
 type Parameter struct {
 	nameVariants
 	Type              Type
-	Offset            int
+	OffsetV1          int
+	OffsetV2          int
 	HandleInformation *HandleInformation
 }
 
@@ -605,7 +606,8 @@ func (c *compiler) compileParameterArray(val []fidlgen.Parameter) []Parameter {
 		params = append(params, Parameter{
 			Type:              c.compileType(v.Type),
 			nameVariants:      structMemberContext.transform(v.Name),
-			Offset:            v.FieldShapeV1.Offset,
+			OffsetV1:          v.FieldShapeV1.Offset,
+			OffsetV2:          v.FieldShapeV2.Offset,
 			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})
 	}

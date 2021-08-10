@@ -881,6 +881,7 @@ type Parameter struct {
 	MaxHandles   int        `json:"max_handles"`
 	MaxOutOfLine int        `json:"max_out_of_line"`
 	FieldShapeV1 FieldShape `json:"field_shape_v1"`
+	FieldShapeV2 FieldShape `json:"field_shape_v2"`
 }
 
 // Enum represents a FIDL declaration of an enum.

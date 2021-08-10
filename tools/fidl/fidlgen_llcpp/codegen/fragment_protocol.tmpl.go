@@ -90,7 +90,7 @@ struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
 static_assert(sizeof({{ .WireRequest }})
     == {{ .WireRequest }}::PrimarySize);
 {{- range $index, $param := .RequestArgs }}
-static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.OffsetV1 }});
 {{- end }}
 {{- if .Request.IsResource }}
 {{- EndifFuchsia -}}
@@ -108,7 +108,7 @@ struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
 static_assert(sizeof({{ .WireResponse }})
     == {{ .WireResponse }}::PrimarySize);
 {{- range $index, $param := .ResponseArgs }}
-static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.OffsetV1 }});
 {{- end }}
 {{- if .Response.IsResource }}
 {{- EndifFuchsia -}}

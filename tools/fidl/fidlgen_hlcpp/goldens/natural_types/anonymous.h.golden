@@ -1128,9 +1128,17 @@ class SomeProtocol_RequestEncoder {
         _encoder->Alloc(56 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, union_member, 16);
 
-    ::fidl::Encode(_encoder, table_member, 40);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, union_member, 16);
+
+      ::fidl::Encode(_encoder, table_member, 40);
+
+    } else {
+      ::fidl::Encode(_encoder, union_member, 16);
+
+      ::fidl::Encode(_encoder, table_member, 32);
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::anonymous::_internal::
@@ -1160,7 +1168,13 @@ class SomeProtocol_ResponseEncoder {
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, result, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, result, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, result, 16);
+    }
 
     fidl_trace(DidHLCPPEncode,
                &::fidl::test::anonymous::_internal::

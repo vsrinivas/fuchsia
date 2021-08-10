@@ -39,6 +39,10 @@ class Top_RequestEncoder {
         break;
     }
 
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    } else {
+    }
+
     fidl_trace(
         DidHLCPPEncode,
         &::fidl::test::transitivedependenciescompose::_internal::
@@ -67,7 +71,13 @@ class Top_ResponseEncoder {
         _encoder->Alloc(24 - sizeof(fidl_message_header_t));
         break;
     }
-    ::fidl::Encode(_encoder, foo, 16);
+
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, foo, 16);
+
+    } else {
+      ::fidl::Encode(_encoder, foo, 16);
+    }
 
     fidl_trace(
         DidHLCPPEncode,

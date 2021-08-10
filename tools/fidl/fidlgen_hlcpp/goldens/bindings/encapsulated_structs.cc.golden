@@ -24,13 +24,24 @@ void NonInlineStructTestStruct::Encode(
     memcpy(_encoder->template GetPtr<NonInlineStructTestStruct>(_offset), this,
            sizeof(NonInlineStructTestStruct));
   } else {
-    ::fidl::Encode(_encoder, &element, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &element, _offset + 0);
 
-    ::fidl::Encode(_encoder, &h, _offset + 8,
-                   ::fidl::HandleInformation{
-                       .object_type = ZX_OBJ_TYPE_NONE,
-                       .rights = 0x80000000,
-                   });
+      ::fidl::Encode(_encoder, &h, _offset + 8,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_NONE,
+                         .rights = 0x80000000,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &element, _offset + 0);
+
+      ::fidl::Encode(_encoder, &h, _offset + 8,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_NONE,
+                         .rights = 0x80000000,
+                     });
+    }
   }
 }
 
@@ -68,8 +79,14 @@ void Int8Int32::Encode(
     memcpy(_encoder->template GetPtr<Int8Int32>(_offset), this,
            sizeof(Int8Int32));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 4);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
   }
 }
 
@@ -103,8 +120,14 @@ void Int16Int8::Encode(
     memcpy(_encoder->template GetPtr<Int16Int8>(_offset), this,
            sizeof(Int16Int8));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 2);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 2);
+    }
   }
 }
 
@@ -138,7 +161,12 @@ void ArrayInt16Int8::Encode(
     memcpy(_encoder->template GetPtr<ArrayInt16Int8>(_offset), this,
            sizeof(ArrayInt16Int8));
   } else {
-    ::fidl::Encode(_encoder, &arr, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &arr, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &arr, _offset + 0);
+    }
   }
 }
 
@@ -170,9 +198,16 @@ void StructPaddingTestStruct::Encode(
     memcpy(_encoder->template GetPtr<StructPaddingTestStruct>(_offset), this,
            sizeof(StructPaddingTestStruct));
   } else {
-    ::fidl::Encode(_encoder, &trailing, _offset + 0);
-    ::fidl::Encode(_encoder, &inner, _offset + 4);
-    ::fidl::Encode(_encoder, &array, _offset + 12);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &trailing, _offset + 0);
+      ::fidl::Encode(_encoder, &inner, _offset + 4);
+      ::fidl::Encode(_encoder, &array, _offset + 12);
+
+    } else {
+      ::fidl::Encode(_encoder, &trailing, _offset + 0);
+      ::fidl::Encode(_encoder, &inner, _offset + 4);
+      ::fidl::Encode(_encoder, &array, _offset + 12);
+    }
   }
 }
 
@@ -213,8 +248,14 @@ void TopLevelStruct::Encode(
     memcpy(_encoder->template GetPtr<TopLevelStruct>(_offset), this,
            sizeof(TopLevelStruct));
   } else {
-    ::fidl::Encode(_encoder, &a, _offset + 0);
-    ::fidl::Encode(_encoder, &b, _offset + 24);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 24);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 24);
+    }
   }
 }
 

@@ -23,7 +23,7 @@ class Encoder final {
   enum WireFormat { V1, V2 };
 
   explicit Encoder(uint64_t ordinal);
-  explicit Encoder(NoHeader marker, WireFormat wire_format) {}
+  explicit Encoder(NoHeader marker, WireFormat wire_format) : wire_format_(wire_format) {}
 
   ~Encoder();
 

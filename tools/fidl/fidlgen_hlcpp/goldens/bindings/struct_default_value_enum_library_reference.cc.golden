@@ -20,7 +20,12 @@ void Foo::Encode(::fidl::Encoder* _encoder, size_t _offset,
   if (::fidl::IsMemcpyCompatible<Foo>::value) {
     memcpy(_encoder->template GetPtr<Foo>(_offset), this, sizeof(Foo));
   } else {
-    ::fidl::Encode(_encoder, &field, _offset + 0);
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      ::fidl::Encode(_encoder, &field, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &field, _offset + 0);
+    }
   }
 }
 

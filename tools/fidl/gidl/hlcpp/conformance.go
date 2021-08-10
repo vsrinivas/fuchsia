@@ -26,6 +26,9 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <zircon/syscalls.h>
 #endif
 
+// TODO(fxbug.dev/82411) Re-enable tests on release builds.
+#ifndef NDEBUG
+
 {{ range .EncodeSuccessCases }}
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
@@ -40,7 +43,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{/* Must use a variable because macros don't understand commas in template args. */}}
 	const auto result =
 		fidl::test::util::ValueToBytes<{{ .ValueType }}>(
-			{{ .ValueVar }}, expected_bytes, expected_handles, {{ .CheckRights }});
+			{{ .EncoderWireFormat }}, {{ .ValueVar }}, expected_bytes, expected_handles, {{ .CheckRights }});
 	EXPECT_TRUE(result);
 	{{- /* The handles are closed by the fidl::Message destructor in ValueToBytes. */}}
 }
@@ -71,7 +74,7 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	    fidl::test::util::DecodedBytes<{{ .ValueType }}>({{ .WireFormatHeader }}, std::move(bytes), std::move(handles));
 	{{ .EqualityCheck }}
 	{{- /* The handles are closed in the destructor of .ValueVar */}}
-	fidl::test::util::ForgetHandles(std::move(value));
+	fidl::test::util::ForgetHandles({{ .EncoderWireFormat }}, std::move(value));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -88,7 +91,7 @@ TEST(Conformance, {{ .Name }}_Encode_Failure) {
 	{{- end }}
 	{{ .ValueBuild }}
 	fidl::test::util::CheckEncodeFailure<{{ .ValueType }}>(
-		{{ .ValueVar }}, {{ .ErrorCode }});
+		{{ .EncoderWireFormat }}, {{ .ValueVar }}, {{ .ErrorCode }});
 	{{- if .HandleDefs }}
 	for (const auto handle_def : handle_defs) {
 		EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_get_info(
@@ -125,6 +128,8 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 #endif  // __Fuchsia__
 {{- end }}
 {{ end }}
+
+#endif // NDEBUG
 `))
 
 type conformanceTmplInput struct {
@@ -135,18 +140,18 @@ type conformanceTmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly, CheckRights                                          bool
+	Name, HandleDefs, ValueType, ValueBuild, ValueVar, Bytes, Handles, EncoderWireFormat string
+	FuchsiaOnly, CheckRights                                                             bool
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, ValueType, ActualValueVar, EqualityCheck, Bytes, Handles, HandleKoidVectorName, WireFormatHeader string
-	FuchsiaOnly                                                                                                        bool
+	Name, HandleDefs, ValueType, ActualValueVar, EqualityCheck, Bytes, Handles, HandleKoidVectorName, WireFormatHeader, EncoderWireFormat string
+	FuchsiaOnly                                                                                                                           bool
 }
 
 type encodeFailureCase struct {
-	Name, HandleDefs, ValueType, ValueBuild, ValueVar, ErrorCode string
-	FuchsiaOnly                                                  bool
+	Name, HandleDefs, ValueType, ValueBuild, ValueVar, ErrorCode, EncoderWireFormat string
+	FuchsiaOnly                                                                     bool
 }
 
 type decodeFailureCase struct {
@@ -197,19 +202,20 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuild := valueBuilder.String()
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupportedForEncode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ValueType:   declName(decl),
-				Bytes:       BuildBytes(encoding.Bytes),
-				Handles:     BuildRawHandleDispositions(encoding.HandleDispositions),
-				FuchsiaOnly: fuchsiaOnly,
-				CheckRights: encodeSuccess.CheckHandleRights,
+				Name:              testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				ValueType:         declName(decl),
+				Bytes:             BuildBytes(encoding.Bytes),
+				Handles:           BuildRawHandleDispositions(encoding.HandleDispositions),
+				FuchsiaOnly:       fuchsiaOnly,
+				CheckRights:       encodeSuccess.CheckHandleRights,
+				EncoderWireFormat: encoderWireFormat(encoding.WireFormat),
 			})
 		}
 	}
@@ -229,7 +235,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		equalityCheck := BuildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -243,6 +249,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				EqualityCheck:        equalityCheck,
 				HandleKoidVectorName: handleKoidVectorName,
 				WireFormatHeader:     wireFormatHeader(encoding.WireFormat),
+				EncoderWireFormat:    encoderWireFormat(encoding.WireFormat),
 			})
 		}
 	}
@@ -262,15 +269,16 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		valueBuild := valueBuilder.String()
 		errorCode := cppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range supportedEncodeWireFormats {
+		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-				Name:        testCaseName(encodeFailure.Name, wireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				ValueType:   declName(decl),
-				ErrorCode:   errorCode,
-				FuchsiaOnly: fuchsiaOnly,
+				Name:              testCaseName(encodeFailure.Name, wireFormat),
+				HandleDefs:        handleDefs,
+				ValueBuild:        valueBuild,
+				ValueVar:          valueVar,
+				ValueType:         declName(decl),
+				ErrorCode:         errorCode,
+				FuchsiaOnly:       fuchsiaOnly,
+				EncoderWireFormat: encoderWireFormat(wireFormat),
 			})
 		}
 	}
@@ -289,7 +297,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		errorCode := cppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -311,24 +319,17 @@ func wireFormatHeader(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("fidl::test::util::k%sHeader", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
-var supportedEncodeWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
+func encoderWireFormat(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("fidl::Encoder::WireFormat::%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
-var supportedDecodeWireFormats = []gidlir.WireFormat{
+
+var supportedWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 
-func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedEncodeWireFormats {
-		if wireFormat == wf {
-			return true
-		}
-	}
-	return false
-}
-func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedDecodeWireFormats {
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedWireFormats {
 		if wireFormat == wf {
 			return true
 		}

@@ -89,16 +89,29 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
     memcpy(_encoder->template GetPtr<{{ .Name }}>(_offset), this, sizeof({{ .Name }}));
   } else {
-    {{- range .Members }}
-    {{- if .HandleInformation }}
-    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }}, ::fidl::HandleInformation {
-      .object_type = {{ .HandleInformation.ObjectType }},
-      .rights = {{ .HandleInformation.Rights }},
-    });
-    {{ else -}}
-    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
-    {{ end -}}
-    {{- end }}
+    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+      {{- range .Members }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else -}}
+      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1 }});
+      {{ end -}}
+      {{- end }}
+    } else {
+      {{- range .Members }}
+      {{- if .HandleInformation }}
+      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }}, ::fidl::HandleInformation {
+        .object_type = {{ .HandleInformation.ObjectType }},
+        .rights = {{ .HandleInformation.Rights }},
+      });
+      {{ else -}}
+      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }});
+      {{ end -}}
+      {{- end }}
+    }
   }
 }
 
@@ -107,7 +120,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
     memcpy(_value, _decoder->template GetPtr<{{ .Name }}>(_offset), sizeof({{ .Name }}));
   } else {
     {{- range .Members }}
-    ::fidl::Decode(_decoder, &_value->{{ .Name }}, _offset + {{ .Offset }});
+    ::fidl::Decode(_decoder, &_value->{{ .Name }}, _offset + {{ .OffsetV1 }});
     {{- end }}
   }
 }
