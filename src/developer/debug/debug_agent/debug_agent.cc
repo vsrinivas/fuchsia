@@ -255,32 +255,34 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
 }
 
 void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) {
-  std::vector<debug_ipc::ProcessThreadId> proc_thread_pairs;
+  std::vector<debug_ipc::ProcessThreadId> paused;
 
-  if (request.id.process) {
-    // Single process.
-    if (DebuggedProcess* proc = GetDebuggedProcess(request.id.process)) {
-      if (request.id.thread) {
-        // Single thread of the process.
-        if (DebuggedThread* thread = proc->GetThread(request.id.thread)) {
-          thread->ClientSuspend(true);
-          proc_thread_pairs.push_back(request.id);
-        }
-      } else {
-        // All threads of that process.
-        auto suspended_thread_koids = proc->ClientSuspendAllThreads();
-        for (zx_koid_t thread_koid : suspended_thread_koids) {
-          proc_thread_pairs.push_back({.process = request.id.process, .thread = thread_koid});
+  if (request.ids.empty()) {
+    // Pause everything.
+    paused = ClientSuspendAll();
+  } else {
+    // Pause specific threads.
+    for (const debug_ipc::ProcessThreadId& id : request.ids) {
+      if (DebuggedProcess* proc = GetDebuggedProcess(id.process)) {
+        if (id.thread) {
+          // Single thread in that process.
+          if (DebuggedThread* thread = proc->GetThread(id.thread)) {
+            thread->ClientSuspend(true);
+            paused.push_back(id);
+          } else {
+            FX_LOGS(WARNING) << "Could not find thread by koid: " << id.thread;
+          }
+        } else {
+          // All threads in the process.
+          std::vector<debug_ipc::ProcessThreadId> proc_threads = proc->ClientSuspendAllThreads();
+          paused.insert(paused.end(), proc_threads.begin(), proc_threads.end());
         }
       }
     }
-  } else {
-    // All debugged processes.
-    proc_thread_pairs = ClientSuspendAll();
   }
 
   // Save the affected thread info.
-  for (const auto& id : proc_thread_pairs) {
+  for (const debug_ipc::ProcessThreadId& id : paused) {
     if (DebuggedThread* thread = GetDebuggedThread(id)) {
       reply->threads.push_back(
           thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
@@ -575,16 +577,14 @@ std::vector<debug_ipc::ProcessThreadId> DebugAgent::ClientSuspendAll(zx_koid_t e
   std::vector<debug_ipc::ProcessThreadId> affected;
 
   for (const auto& [process_koid, process] : procs_) {
-    std::vector<zx_koid_t> affected_threads;
+    std::vector<debug_ipc::ProcessThreadId> proc_threads;
     if (process_koid == except_process) {
-      affected_threads = process->ClientSuspendAllThreads(except_thread);
+      proc_threads = process->ClientSuspendAllThreads(except_thread);
     } else {
-      affected_threads = process->ClientSuspendAllThreads();
+      proc_threads = process->ClientSuspendAllThreads();
     }
 
-    for (zx_koid_t thread_koid : affected_threads) {
-      affected.push_back({.process = process_koid, .thread = thread_koid});
-    }
+    affected.insert(affected.end(), proc_threads.begin(), proc_threads.end());
   }
 
   return affected;

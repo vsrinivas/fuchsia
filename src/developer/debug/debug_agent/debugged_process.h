@@ -92,9 +92,10 @@ class DebuggedProcess : public ProcessHandleObserver {
   // The except_thread can be passed which indicates a thread to ship when suspending. This is for
   // certain operations that want to do something to all other threads.
   //
-  // The affected thread koids are returned. If a thread is already in a client suspend, it will
-  // not be affected and it will not be returned in the result.
-  std::vector<zx_koid_t> ClientSuspendAllThreads(zx_koid_t except_thread = ZX_KOID_INVALID);
+  // The affected threads are returned. If a thread is already in a client suspend, it will not be
+  // affected and it will not be returned in the result.
+  std::vector<debug_ipc::ProcessThreadId> ClientSuspendAllThreads(
+      zx_koid_t except_thread = ZX_KOID_INVALID);
 
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid) const;

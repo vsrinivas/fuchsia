@@ -56,7 +56,8 @@ debug::Status MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_i
 
 void MockDebugAgentHarness::Pause(zx_koid_t process_koid, zx_koid_t thread_koid) {
   debug_ipc::PauseRequest request;
-  request.id = {.process = process_koid, .thread = thread_koid};
+  if (process_koid != 0)
+    request.ids.push_back({.process = process_koid, .thread = thread_koid});
 
   debug_ipc::PauseReply reply;
   debug_agent()->OnPause(request, &reply);

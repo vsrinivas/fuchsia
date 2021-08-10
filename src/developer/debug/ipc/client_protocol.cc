@@ -326,7 +326,7 @@ bool ReadReply(MessageReader* reader, DetachReply* reply, uint32_t* transaction_
 
 void WriteRequest(const PauseRequest& request, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
-  Serialize(request.id, writer);
+  Serialize(request.ids, writer);
 }
 
 bool ReadReply(MessageReader* reader, PauseReply* reply, uint32_t* transaction_id) {

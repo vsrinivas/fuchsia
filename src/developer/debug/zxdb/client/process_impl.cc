@@ -115,7 +115,7 @@ void ProcessImpl::SyncThreads(fit::callback<void()> callback) {
 
 void ProcessImpl::Pause(fit::callback<void()> on_paused) {
   debug_ipc::PauseRequest request;
-  request.id.process = koid_;
+  request.ids.push_back({.process = koid_, .thread = 0});
   session()->remote_api()->Pause(
       request, [weak_process = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {

@@ -646,9 +646,9 @@ void DebuggedProcess::InjectThreadForTest(std::unique_ptr<DebuggedThread> thread
   threads_[koid] = std::move(thread);
 }
 
-std::vector<zx_koid_t> DebuggedProcess::ClientSuspendAllThreads(zx_koid_t except_thread) {
-  std::vector<zx_koid_t> suspended_thread_koids;
-  suspended_thread_koids.reserve(threads_.size());
+std::vector<debug_ipc::ProcessThreadId> DebuggedProcess::ClientSuspendAllThreads(
+    zx_koid_t except_thread) {
+  std::vector<debug_ipc::ProcessThreadId> suspended_thread_ids;
 
   // Issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {
@@ -658,19 +658,19 @@ std::vector<zx_koid_t> DebuggedProcess::ClientSuspendAllThreads(zx_koid_t except
     // Here we explitly check for something already suspended, even if re-suspending it is a no-op,
     // because we don't want to report its state as changed.
     if (thread_koid != except_thread && !thread->is_client_suspended()) {
-      suspended_thread_koids.push_back(thread_koid);
+      suspended_thread_ids.push_back({.process = koid(), .thread = thread_koid});
       thread->ClientSuspend(false);
     }
   }
 
   // Wait on the notification for each thread.
   auto deadline = DebuggedThread::DefaultSuspendDeadline();
-  for (zx_koid_t thread_koid : suspended_thread_koids) {
-    if (DebuggedThread* thread = GetThread(thread_koid))
+  for (const debug_ipc::ProcessThreadId& id : suspended_thread_ids) {
+    if (DebuggedThread* thread = GetThread(id.thread))
       thread->thread_handle().WaitForSuspension(deadline);
   }
 
-  return suspended_thread_koids;
+  return suspended_thread_ids;
 }
 
 void DebuggedProcess::OnStdout(bool close) {

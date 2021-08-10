@@ -324,7 +324,7 @@ bool ReadRequest(MessageReader* reader, PauseRequest* request, uint32_t* transac
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  return Deserialize(reader, &request->id);
+  return Deserialize(reader, &request->ids);
 }
 
 void WriteReply(const PauseReply& reply, uint32_t transaction_id, MessageWriter* writer) {

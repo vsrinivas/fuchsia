@@ -322,11 +322,12 @@ TEST(Protocol, DetachReply) {
 
 TEST(Protocol, PauseRequest) {
   PauseRequest initial;
-  initial.id = {.process = 3746234, .thread = 123523};
+  initial.ids.push_back({.process = 12, .thread = 0});
+  initial.ids.push_back({.process = 3746234, .thread = 123523});
 
   PauseRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.id, second.id);
+  EXPECT_EQ(initial.ids, second.ids);
 }
 
 TEST(Protocol, PauseReply) {

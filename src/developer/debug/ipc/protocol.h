@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 37;
+constexpr uint32_t kProtocolVersion = 38;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -195,12 +195,12 @@ struct DetachReply {
 };
 
 struct PauseRequest {
-  // If the process is 0, all threads of all debugged processes will be paused. If the thread is 0,
-  // all threads in the given process will be paused.
-  ProcessThreadId id;
+  // When empty, pauses all threads in all processes. An entry with a process koid and a 0 thread
+  // koid will resume all threads of the given process.
+  std::vector<ProcessThreadId> ids;
 };
-// The backend should make a best effort to ensure the requested threads are
-// actually stopped before sending the reply.
+// The backend should make a best effort to ensure the requested threads are actually stopped before
+// sending the reply.
 struct PauseReply {
   // The updated thead state for all affected threads.
   std::vector<ThreadRecord> threads;
@@ -220,7 +220,7 @@ struct ResumeRequest {
   };
 
   // Whether a give resume mode steps.
-  static bool MakesStep(const How how) {
+  static bool MakesStep(How how) {
     return (how == How::kStepInstruction || how == How::kStepInRange);
   }
   static const char* HowToString(How);

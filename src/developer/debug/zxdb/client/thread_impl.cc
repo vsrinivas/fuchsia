@@ -54,7 +54,7 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
   ClearFrames();
 
   debug_ipc::PauseRequest request;
-  request.id = {.process = process_->GetKoid(), .thread = koid_};
+  request.ids.push_back({.process = process_->GetKoid(), .thread = koid_});
   session()->remote_api()->Pause(
       request, [weak_thread = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {

@@ -112,12 +112,12 @@ void ProcessBreakpoint::OnHit(DebuggedThread* hitting_thread,
     case debug_ipc::Stop::kProcess: {
       // Suspend each thread in the process except the one that just hit the exception (leave it
       // suspended in the exception).
-      std::vector<zx_koid_t> suspended_koids =
+      std::vector<debug_ipc::ProcessThreadId> suspended_ids =
           process_->ClientSuspendAllThreads(hitting_thread->koid());
 
       // Save the record for each suspended thread.
-      for (zx_koid_t affected_thread : suspended_koids) {
-        if (DebuggedThread* thread = process_->GetThread(affected_thread))
+      for (const debug_ipc::ProcessThreadId& id : suspended_ids) {
+        if (DebuggedThread* thread = process_->GetThread(id.thread))
           other_affected_threads.push_back(thread->GetThreadRecord(kSuspendedStackAmount));
       }
       break;
