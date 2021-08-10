@@ -28,7 +28,6 @@ template("prebuilt_binaries") {
     # TODO(fxbug.dev/41478) Make unconditionally testonly once separated from
     # prebuilt_package() instances.
     forward_variables_from(invoker, [ "testonly" ])
-    hermetic_deps = false
 
     tool = "//tools/debug/unpack_debug_symbols"
     outputs = [ binary_manifest ]
@@ -53,12 +52,12 @@ template("prebuilt_binaries") {
     if (defined(invoker.debug_archive)) {
       args += [
         "-debug-archive",
-        rebase_path(invoker.debug_archive),
+        rebase_path(invoker.debug_archive, root_build_dir),
       ]
     } else {
       args += [
         "-build-id-dir-in",
-        rebase_path(invoker.build_id_dir),
+        rebase_path(invoker.build_id_dir, root_build_dir),
       ]
     }
 

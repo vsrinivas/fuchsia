@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -85,7 +84,7 @@ type binaryRef struct {
 // layout.
 var buildIDFileNoExtRE = regexp.MustCompile("^([0-9a-f][0-9a-f])/([0-9a-f]+)$")
 
-func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool {
+func isBuildIDDir(ctx context.Context, dir string, contents []os.DirEntry) bool {
 	for _, info := range contents {
 		// Some special files are allowed and expected.
 		if info.Name() == "LICENSE" || info.Name()[0] == '.' {
@@ -108,7 +107,7 @@ func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool 
 		// Now that we know the directory name was a 2 digit hex value, it's safe
 		// to assume its most likely a .build-id directory and we can check to see
 		// if it contains the sorts of files we expect
-		files, err := ioutil.ReadDir(filepath.Join(dir, info.Name()))
+		files, err := os.ReadDir(filepath.Join(dir, info.Name()))
 		if err != nil {
 			logger.Tracef(ctx, "%s couldn't read directory: %v", info.Name(), err)
 			return false
@@ -175,7 +174,7 @@ func getStartDir() (string, error) {
 // the first .build-id subdirectory.
 func findBuildIDDir(ctx context.Context, startDir string) (string, error) {
 	logger.Tracef(ctx, "determining if %s is a .build-id directory", startDir)
-	infos, err := ioutil.ReadDir(startDir)
+	infos, err := os.ReadDir(startDir)
 	if err != nil {
 		return "", err
 	}
@@ -303,33 +302,14 @@ func unpack(ctx context.Context, br *BatchRunner) ([]binaryRef, error) {
 	return out, nil
 }
 
-// relIfAbs returns path relative to `base` if input `path` is absolute.
-func relIfAbs(base, path string) (string, error) {
-	if !filepath.IsAbs(path) {
-		return path, nil
-	}
-	return filepath.Rel(base, path)
-}
-
 func writeManifest(bfrs []binaryRef, buildDir string) error {
 	var out []binary
 	for _, bfr := range bfrs {
-		// Even though these files live outside of the build directory,
-		// relativize them as is conventional for build API metadata.
-		relDebug, err := relIfAbs(buildDir, bfr.ref.Filepath)
-		if err != nil {
-			return err
-		}
-		relBreakpad, err := relIfAbs(buildDir, bfr.breakpad)
-		if err != nil {
-			return err
-		}
-
 		out = append(out, binary{
 			CPU:      cpu,
-			Debug:    relDebug,
+			Debug:    bfr.ref.Filepath,
 			BuildID:  bfr.ref.BuildID,
-			Breakpad: relBreakpad,
+			Breakpad: bfr.breakpad,
 			OS:       osName,
 		})
 	}
@@ -372,7 +352,7 @@ func main() {
 	}
 
 	// This action should rerun if the input .build-id directory or debug archive changes.
-	var dep string
+	var deps []string
 	if buildIDDirIn != "" {
 		empty, err := osmisc.DirIsEmpty(buildIDDirIn)
 		if err != nil {
@@ -385,17 +365,9 @@ func main() {
 			log.Tracef("%s does not exist, no work needed", buildIDDirIn)
 			return
 		}
-		dep = buildIDDirIn
+		deps = []string{buildIDDirIn}
 	} else {
-		dep = debugArchive
-	}
-	relDep, err := filepath.Rel(buildDir, dep)
-	if err != nil {
-		log.Fatalf("failed to relativize %s: %v", dep, err)
-	}
-	depfileContents := fmt.Sprintf("%s: %s", outputManifest, relDep)
-	if err := ioutil.WriteFile(depfile, []byte(depfileContents), os.ModePerm); err != nil {
-		log.Fatalf("failed to write depfile: %v", err)
+		deps = []string{debugArchive}
 	}
 
 	// If the input .build-id directory is empty and no debug archive is
@@ -421,7 +393,7 @@ func main() {
 		log.Fatalf("while checking if archive existed: %v", err)
 	}
 
-	bfrs := []binaryRef{}
+	var bfrs []binaryRef
 
 	log.Tracef("checking!")
 	if exists {
@@ -441,6 +413,14 @@ func main() {
 			log.Fatalf("while finding .build-id directory: %v", err)
 		}
 		bfrs, err = produceSymbols(ctx, dir, br)
+	}
+
+	for _, bfr := range bfrs {
+		deps = append(deps, bfr.ref.Filepath)
+	}
+	depfileContents := fmt.Sprintf("%s: %s", outputManifest, strings.Join(deps, " "))
+	if err := os.WriteFile(depfile, []byte(depfileContents), os.ModePerm); err != nil {
+		log.Fatalf("failed to write depfile: %v", err)
 	}
 
 	// TODO: write the manifest to a tmp file and rename it into place.
