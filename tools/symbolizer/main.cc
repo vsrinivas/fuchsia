@@ -101,7 +101,7 @@ int Main(int argc, const char* argv[]) {
   }
 
   Printer printer(std::cout);
-  SymbolizerImpl symbolizer(&printer, options, Analytics::IfEnabledSendGoogleAnalyticsHit);
+  SymbolizerImpl symbolizer(&printer, options);
   LogParser parser(std::cin, &printer, &symbolizer);
 
   while (parser.ProcessNextLine()) {
