@@ -13,10 +13,10 @@ use {
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ComponentDecl,
         DependencyType, DictionaryValue, EventMode, ExposeDecl, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
-        OfferEventDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl,
-        RegistrationSource, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
-        UseProtocolDecl, UseSource,
+        ExposeProtocolDecl, ExposeServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
+        OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl, OfferSource,
+        OfferTarget, ProgramDecl, RegistrationSource, ServiceDecl, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -29,16 +29,20 @@ use {
         RelativeMonikerBase,
     },
     routing::{
+        capability_source::{CapabilitySourceInterface, ComponentCapability},
         component_id_index::ComponentInstanceId,
+        component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},
         event::EventSubscription,
         rights::READ_RIGHTS,
+        route_capability, RouteRequest, RouteSource,
     },
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
         marker::PhantomData,
         path::{Path, PathBuf},
+        sync::Arc,
     },
 };
 
@@ -167,11 +171,19 @@ pub fn generate_storage_path(
 /// and checks the result of the attempt against an expectation.
 #[async_trait]
 pub trait RoutingTestModel {
+    type C: ComponentInstanceInterface + 'static;
+
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse);
 
     /// Checks using a capability from a component's exposed directory.
     async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse);
+
+    /// Looks up a component instance by its absolute moniker.
+    async fn look_up_instance(
+        &self,
+        moniker: &AbsoluteMoniker,
+    ) -> Result<Arc<Self::C>, anyhow::Error>;
 
     /// Checks that a use declaration of `path` at `moniker` can be opened with
     /// Fuchsia file operations.
@@ -273,6 +285,9 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_component_provided_debug_capability_policy_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
+            test_route_service_from_parent,
+            test_route_service_from_child,
+            test_route_service_from_sibling,
         }
 
         // TODO(fxbug.dev/77649): These tests exercise features not currently supported under
@@ -3917,5 +3932,187 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 },
             )
             .await;
+    }
+
+    ///   a
+    ///  /
+    /// b
+    ///
+    /// a: offer to b from self
+    /// b: use from parent
+    pub async fn test_route_service_from_parent(&self) {
+        let use_decl = UseServiceDecl {
+            dependency_type: DependencyType::Strong,
+            source: UseSource::Parent,
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/foo").unwrap(),
+        };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Self_,
+                        source_name: "foo".into(),
+
+                        target_name: "foo".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                    }))
+                    .service(ServiceDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".try_into().unwrap(),
+                    })
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone().into()).build()),
+        ];
+        let model = T::new("a", components).build().await;
+        let b_component = model.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let a_component =
+            model.look_up_instance(&AbsoluteMoniker::root()).await.expect("root instance");
+        let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
+            .await
+            .expect("failed to route service");
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::Component {
+                capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+                component,
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &a_component));
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
+    ///   a
+    ///  /
+    /// b
+    ///
+    /// a: use from #b
+    /// b: expose to parent from self
+    pub async fn test_route_service_from_child(&self) {
+        let use_decl = UseServiceDecl {
+            dependency_type: DependencyType::Strong,
+            source: UseSource::Child("b".to_string()),
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/foo").unwrap(),
+        };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .use_(use_decl.clone().into())
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .service(ServiceDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".try_into().unwrap(),
+                    })
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        let a_component =
+            model.look_up_instance(&AbsoluteMoniker::root()).await.expect("root instance");
+        let b_component = model.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let source = route_capability(RouteRequest::UseService(use_decl), &a_component)
+            .await
+            .expect("failed to route service");
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::Component {
+                capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+                component,
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &b_component));
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
+    ///   a
+    ///  / \
+    /// b   c
+    ///
+    /// a: offer to b from child c
+    /// b: use from parent
+    /// c: expose from self
+    pub async fn test_route_service_from_sibling(&self) {
+        let use_decl = UseServiceDecl {
+            dependency_type: DependencyType::Strong,
+            source: UseSource::Parent,
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/foo").unwrap(),
+        };
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Service(OfferServiceDecl {
+                        source: OfferSource::Child("c".into()),
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            ("b", ComponentDeclBuilder::new().use_(use_decl.clone().into()).build()),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo".into(),
+                        target_name: "foo".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .service(ServiceDecl {
+                        name: "foo".into(),
+                        source_path: "/svc/foo".try_into().unwrap(),
+                    })
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        let b_component = model.look_up_instance(&vec!["b:0"].into()).await.expect("b instance");
+        let c_component = model.look_up_instance(&vec!["c:0"].into()).await.expect("c instance");
+        let source = route_capability(RouteRequest::UseService(use_decl), &b_component)
+            .await
+            .expect("failed to route service");
+
+        // Verify this source comes from `c`.
+        match source {
+            RouteSource::Service(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::Component {
+                capability: ComponentCapability::Service(ServiceDecl { name, source_path }),
+                component,
+            }) => {
+                assert_eq!(name, CapabilityName("foo".into()));
+                assert_eq!(source_path, "/svc/foo".parse::<CapabilityPath>().unwrap());
+                assert!(Arc::ptr_eq(&component.upgrade().unwrap(), &c_component));
+            }
+            _ => panic!("bad capability source"),
+        };
     }
 }

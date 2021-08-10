@@ -20,6 +20,7 @@ use {
         },
     },
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
+    anyhow::anyhow,
     async_trait::async_trait,
     cm_rust::*,
     cm_types::Url,
@@ -620,6 +621,8 @@ impl RoutingTest {
 
 #[async_trait]
 impl RoutingTestModel for RoutingTest {
+    type C = ComponentInstance;
+
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = self
             .bind_instance_and_wait_start(&moniker)
@@ -833,6 +836,13 @@ impl RoutingTestModel for RoutingTest {
                 panic!("event capabilities can't be exposed");
             }
         }
+    }
+
+    async fn look_up_instance(
+        &self,
+        moniker: &AbsoluteMoniker,
+    ) -> Result<Arc<ComponentInstance>, anyhow::Error> {
+        self.model.look_up(moniker).await.map_err(|err| anyhow!(err))
     }
 
     async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {

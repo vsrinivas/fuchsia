@@ -235,6 +235,7 @@ impl ComponentModelForAnalyzer {
         match route_source {
             RouteSource::Directory(source, _) => self.check_directory_source(source).await,
             RouteSource::Protocol(source) => self.check_protocol_source(source).await,
+            RouteSource::Service(source) => self.check_service_source(source).await,
             RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source).await,
             _ => unimplemented![],
         }
@@ -303,6 +304,21 @@ impl ComponentModelForAnalyzer {
                     .source_name()
                     .map_or_else(|| "".to_string(), |name| name.to_string()),
             )),
+        }
+    }
+
+    /// If the source of a service capability is a component instance, checks that that
+    /// instance is executable.
+    async fn check_service_source(
+        &self,
+        source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match source {
+            CapabilitySourceInterface::Component { component: weak, .. } => {
+                self.check_executable(&weak.upgrade()?).await
+            }
+            CapabilitySourceInterface::Namespace { .. } => Ok(()),
+            _ => unimplemented![],
         }
     }
 
