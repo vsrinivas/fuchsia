@@ -132,6 +132,18 @@ protocol Frame {
         view_ref fuchsia.ui.views.ViewRef;
     });
 
+    /// Creates a new Flatland view using the specified `view_creation_token` defined under `args`.
+    /// Caller should pass the other end of the token to
+    /// [`fuchsia.ui.composition/Flatland.CreateViewport`] to attach the new Flatland view to its
+    /// graph.
+    // TODO(fxbug.dev/81959): use "resource table" syntax when it becomes available, thus getting
+    // rid of the need for CreateView2Args.  Hopefully this will be done by the time we want to
+    // rename CreateView2() to CreateView(), once the latter is deleted.
+    @transitional
+    CreateView2(resource struct {
+        args CreateView2Args;
+    });
+
     /// Enables headless rendering of the Frame.
     ///
     /// This is used when content depends on layout and/or animation events firing normally.
@@ -464,4 +476,11 @@ protocol PopupFrameCreationListener {
 type NavigationEventListenerFlags = strict bits : uint64 {
     /// Enables `favicon` field in [`NavigationState`].
     FAVICON = 0x1;
+};
+
+/// Args for Frame.CreateView2(), see above.
+type CreateView2Args = resource table {
+    /// Non-optional. This token is provided to attach the client's Flatland view to the parent's
+    /// viewport.
+    1: view_creation_token fuchsia.ui.views.ViewCreationToken;
 };

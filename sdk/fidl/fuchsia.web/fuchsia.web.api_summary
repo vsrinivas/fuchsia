@@ -69,6 +69,8 @@ table/member fuchsia.web/CreateFrameParams.debug_name string
 table/member fuchsia.web/CreateFrameParams.enable_remote_debugging bool
 table/member fuchsia.web/CreateFrameParams.explicit_sites_filter_error_page fuchsia.mem/Data
 resource table fuchsia.web/CreateFrameParams
+table/member fuchsia.web/CreateView2Args.view_creation_token fuchsia.ui.views/ViewCreationToken
+resource table fuchsia.web/CreateView2Args
 protocol/member fuchsia.web/Debug.EnableDevTools(client_end:fuchsia.web/DevToolsListener listener) -> ()
 protocol fuchsia.web/Debug
 protocol/member fuchsia.web/DevToolsListener.OnContextDevToolsAvailable(server_end:fuchsia.web/DevToolsPerContextListener listener)
@@ -82,6 +84,7 @@ resource table fuchsia.web/Favicon
 protocol/member fuchsia.web/Frame.AddBeforeLoadJavaScript(uint64 id,vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_AddBeforeLoadJavaScript_Result result)
 protocol/member fuchsia.web/Frame.ConfigureInputTypes(fuchsia.web/InputTypes types,fuchsia.web/AllowInputState allow)
 protocol/member fuchsia.web/Frame.CreateView(fuchsia.ui.views/ViewToken view_token)
+protocol/member fuchsia.web/Frame.CreateView2(fuchsia.web/CreateView2Args args)
 protocol/member fuchsia.web/Frame.CreateViewWithViewRef(fuchsia.ui.views/ViewToken view_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)
 protocol/member fuchsia.web/Frame.DisableHeadlessRendering()
 protocol/member fuchsia.web/Frame.EnableHeadlessRendering()
