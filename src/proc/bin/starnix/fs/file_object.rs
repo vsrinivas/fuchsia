@@ -348,10 +348,18 @@ impl FileOps for OPathOps {
 /// the state that is shared between all the sessions.
 pub struct FileObject {
     ops: Box<dyn FileOps>,
-    name: NamespaceNode,
+
+    /// The NamespaceNode associated with this FileObject.
+    ///
+    /// Represents the name the process used to open this file.
+    pub name: NamespaceNode,
+
     _fs: FileSystemHandle,
+
     pub offset: Mutex<off_t>,
+
     flags: Mutex<OpenFlags>,
+
     async_owner: Mutex<pid_t>,
 }
 
@@ -374,7 +382,7 @@ impl FileObject {
     /// This function is not typically called directly. Instead, consider
     /// calling NamespaceNode::open.
     pub fn new(ops: Box<dyn FileOps>, name: NamespaceNode, flags: OpenFlags) -> FileHandle {
-        let fs = name.node.file_system();
+        let fs = name.entry.node.file_system();
         Arc::new(Self {
             name,
             _fs: fs,
@@ -385,16 +393,9 @@ impl FileObject {
         })
     }
 
-    /// The NamespaceNode associated with this FileObject.
-    ///
-    /// Represents the name the process used to open this file.
-    pub fn name(&self) -> &NamespaceNode {
-        &self.name
-    }
-
     /// The FsNode from which this FileObject was created.
     pub fn node(&self) -> &FsNodeHandle {
-        &self.name.node
+        &self.name.entry.node
     }
 
     pub fn can_read(&self) -> bool {

@@ -77,7 +77,7 @@ impl FsContext {
     /// Change the current working directory.
     pub fn chdir(&self, file: &FileHandle) {
         let mut state = self.state.write();
-        state.cwd = file.name().clone();
+        state.cwd = file.name.clone();
     }
 
     /// Lookup the parent of a namespace node.

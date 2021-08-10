@@ -62,11 +62,10 @@ impl FsNodeOps for ExtDirectory {
         Ok(Box::new(ExtDirFileObject { inner: self.inner.clone() }))
     }
 
-    fn lookup(&self, _node: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, _node: &FsNode, name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
-        let entry =
-            dir_entries.iter().find(|e| e.name_bytes() == child.local_name()).ok_or(ENOENT)?;
+        let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(ENOENT)?;
         let node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
 
         let info = child.info_mut();
@@ -176,7 +175,7 @@ impl FileOps for ExtDirFileObject {
         }
         if *offset == 1 {
             sink.add(
-                file.node().parent().unwrap_or_else(|| file.node()).info().inode_num,
+                file.name.entry.parent_or_self().node.info().inode_num,
                 2,
                 DirectoryEntryType::DIR,
                 b"..",

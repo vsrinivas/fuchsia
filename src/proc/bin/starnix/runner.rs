@@ -315,7 +315,7 @@ fn start_component(
         let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkMode::max_follow())?;
         for apex in apexes {
             let apex = apex.as_bytes();
-            let apex_subdir = apex_dir.mknod(
+            let apex_subdir = apex_dir.create_node(
                 apex,
                 FileMode::IFDIR | FileMode::from_bits(0o700),
                 DeviceType::NONE,
@@ -325,7 +325,7 @@ fn start_component(
                 &[b"/system/apex/", apex].concat(),
                 SymlinkMode::max_follow(),
             )?;
-            apex_subdir.mount(WhatToMount::Node(apex_source.node))?;
+            apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
         }
     }
 

@@ -68,6 +68,7 @@ if (target_cpu == "x64") {
       "device/registry.rs",
       "fs/anon_node.rs",
       "fs/devfs.rs",
+      "fs/dir_entry.rs",
       "fs/dirent_sink.rs",
       "fs/ext4.rs",
       "fs/fd_events.rs",

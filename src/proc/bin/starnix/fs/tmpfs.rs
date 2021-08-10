@@ -15,15 +15,15 @@ use crate::types::*;
 
 #[derive(Default)]
 pub struct TmpFs {
-    nodes: Mutex<HashMap<ino_t, FsNodeHandle>>,
+    nodes: Mutex<HashMap<ino_t, DirEntryHandle>>,
 }
 impl FileSystemOps for Arc<TmpFs> {
-    fn did_create_node(&self, _fs: &FileSystem, node: &FsNodeHandle) {
-        self.nodes.lock().insert(node.info().inode_num, Arc::clone(node));
+    fn did_create_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
+        self.nodes.lock().insert(entry.node.info().inode_num, Arc::clone(entry));
     }
 
-    fn will_destroy_node(&self, _fs: &FileSystem, node: &FsNodeHandle) {
-        self.nodes.lock().remove(&node.info().inode_num);
+    fn will_destroy_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
+        self.nodes.lock().remove(&entry.node.info().inode_num);
     }
 }
 
@@ -40,16 +40,16 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(Box::new(DirectoryFileObject::new()))
     }
 
-    fn lookup(&self, _parent: &FsNode, _child: &mut FsNode) -> Result<(), Errno> {
+    fn lookup(&self, _parent: &FsNode, _name: &FsStr, _child: &mut FsNode) -> Result<(), Errno> {
         Err(ENOENT)
     }
 
-    fn mkdir(&self, _parent: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
+    fn mkdir(&self, _parent: &FsNode, _name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
         child.set_ops(TmpfsDirectory);
         Ok(())
     }
 
-    fn mknod(&self, _parent: &FsNode, child: &mut FsNode) -> Result<(), Errno> {
+    fn mknod(&self, _parent: &FsNode, _name: &FsStr, child: &mut FsNode) -> Result<(), Errno> {
         match child.info_mut().mode.fmt() {
             FileMode::IFREG => child.set_ops(VmoFileNode::new()?),
             FileMode::IFIFO => child.set_ops(FifoNode::new()),
@@ -60,18 +60,19 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(())
     }
 
-    fn create_symlink(&self, child: &mut FsNode, target: &FsStr) -> Result<(), Errno> {
+    fn create_symlink(
+        &self,
+        _parent: &FsNode,
+        _name: &FsStr,
+        target: &FsStr,
+        child: &mut FsNode,
+    ) -> Result<(), Errno> {
         assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
         child.set_ops(SymlinkNode::new(target));
         Ok(())
     }
 
-    fn unlink(
-        &self,
-        _node: &FsNode,
-        _child: &FsNodeHandle,
-        _kind: UnlinkKind,
-    ) -> Result<(), Errno> {
+    fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
         Ok(())
     }
 }
@@ -133,13 +134,14 @@ impl FileOps for DirectoryFileObject {
         if new_offset <= 2 {
             *readdir_position = Bound::Unbounded;
         } else {
-            let children = file.node().children();
-            let count = (new_offset - 2) as usize;
-            *readdir_position = children
-                .iter()
-                .take(count)
-                .last()
-                .map_or(Bound::Unbounded, |(name, _)| Bound::Excluded(name.clone()));
+            file.name.entry.get_children(|children| {
+                let count = (new_offset - 2) as usize;
+                *readdir_position = children
+                    .iter()
+                    .take(count)
+                    .last()
+                    .map_or(Bound::Unbounded, |(name, _)| Bound::Excluded(name.clone()));
+            });
         }
 
         Ok(*current_offset)
@@ -159,29 +161,31 @@ impl FileOps for DirectoryFileObject {
         }
         if *offset == 1 {
             sink.add(
-                file.node().parent().unwrap_or_else(|| file.node()).info().inode_num,
+                file.name.entry.parent_or_self().node.info().inode_num,
                 2,
                 DirectoryEntryType::DIR,
                 b"..",
             )?;
             *offset += 1;
         }
-        let children = file.node().children();
-        for (name, maybe_node) in children.range((readdir_position.clone(), Bound::Unbounded)) {
-            if let Some(node) = maybe_node.upgrade() {
-                let next_offset = *offset + 1;
-                let info = node.info();
-                sink.add(
-                    info.inode_num,
-                    next_offset,
-                    DirectoryEntryType::from_mode(info.mode),
-                    &name,
-                )?;
-                *offset = next_offset;
-                *readdir_position = Bound::Excluded(name.to_vec());
+        file.name.entry.get_children(|children| {
+            for (name, maybe_entry) in children.range((readdir_position.clone(), Bound::Unbounded))
+            {
+                if let Some(entry) = maybe_entry.upgrade() {
+                    let next_offset = *offset + 1;
+                    let info = entry.node.info();
+                    sink.add(
+                        info.inode_num,
+                        next_offset,
+                        DirectoryEntryType::from_mode(info.mode),
+                        &name,
+                    )?;
+                    *offset = next_offset;
+                    *readdir_position = Bound::Excluded(name.to_vec());
+                }
             }
-        }
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -226,9 +230,9 @@ mod test {
     fn test_tmpfs() {
         let fs = TmpFs::new();
         let root = fs.root();
-        let usr = root.mkdir(b"usr").unwrap();
-        let _etc = root.mkdir(b"etc").unwrap();
-        let _usr_bin = usr.mkdir(b"bin").unwrap();
+        let usr = root.create_dir(b"usr").unwrap();
+        let _etc = root.create_dir(b"etc").unwrap();
+        let _usr_bin = usr.create_dir(b"bin").unwrap();
         let mut names = root.copy_child_names();
         names.sort();
         assert!(names.iter().eq([b"etc", b"usr"].iter()));
@@ -246,7 +250,7 @@ mod test {
         let _file = task
             .fs
             .root
-            .mknod(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
+            .create_node(path, FileMode::IFREG | FileMode::ALLOW_ALL, DeviceType::NONE)
             .unwrap();
 
         let wr_file = task.open_file(path, OpenFlags::RDWR).unwrap();
@@ -315,9 +319,9 @@ mod test {
         let fs = TmpFs::new();
         {
             let root = fs.root();
-            let usr = root.mkdir(b"usr").expect("failed to create usr");
-            root.mkdir(b"etc").expect("failed to create usr/etc");
-            usr.mkdir(b"bin").expect("failed to create usr/bin");
+            let usr = root.create_dir(b"usr").expect("failed to create usr");
+            root.create_dir(b"etc").expect("failed to create usr/etc");
+            usr.create_dir(b"bin").expect("failed to create usr/bin");
         }
 
         // At this point, all the nodes are dropped.
@@ -341,13 +345,13 @@ mod test {
         let usr_bin =
             task.open_file(b"/usr/bin", OpenFlags::RDONLY).expect("failed to open /usr/bin");
         usr_bin
-            .name()
+            .name
             .unlink(&task.fs, b"test.txt", UnlinkKind::NonDirectory)
             .expect("failed to unlink test.text");
         assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
         assert_eq!(
             ENOENT,
-            usr_bin.name().unlink(&task.fs, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
+            usr_bin.name.unlink(&task.fs, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
         );
 
         assert_eq!(0, txt.read(task, &[]).expect("failed to read"));
@@ -357,7 +361,7 @@ mod test {
 
         let usr = task.open_file(b"/usr", OpenFlags::RDONLY).expect("failed to open /usr");
         assert_eq!(ENOENT, task.open_file(b"/usr/foo", OpenFlags::RDONLY).unwrap_err());
-        usr.name()
+        usr.name
             .unlink(&task.fs, b"bin", UnlinkKind::Directory)
             .expect("failed to unlink /usr/bin");
         assert_eq!(ENOENT, task.open_file(b"/usr/bin", OpenFlags::RDONLY).unwrap_err());

@@ -409,7 +409,7 @@ impl Task {
             self.fs.cwd()
         } else {
             let file = self.files.get(dir_fd)?;
-            file.name().clone()
+            file.name.clone()
         };
         Ok((dir, path))
     }
@@ -454,8 +454,8 @@ impl Task {
         };
 
         match parent.lookup(&self.fs, basename, SymlinkMode::NoFollow) {
-            Ok(node) => {
-                if node.node.info().mode.is_lnk() {
+            Ok(name) => {
+                if name.entry.node.info().mode.is_lnk() {
                     if remaining_follows == 0 && must_create {
                         // Since `must_create` is set, and a node was found, this returns EEXIST
                         // instead of ELOOP.
@@ -466,7 +466,7 @@ impl Task {
                         return Err(ELOOP);
                     }
 
-                    let path = node.node.readlink()?;
+                    let path = name.entry.node.readlink()?;
                     let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
                     self.resolve_open_path(
                         dir,
@@ -479,12 +479,12 @@ impl Task {
                     if must_create {
                         return Err(EEXIST);
                     }
-                    Ok(node)
+                    Ok(name)
                 }
             }
             Err(ENOENT) if flags.contains(OpenFlags::CREAT) => {
                 let access = self.fs.apply_umask(mode & FileMode::ALLOW_ALL);
-                parent.mknod(&basename, FileMode::IFREG | access, DeviceType::NONE)
+                parent.create_node(&basename, FileMode::IFREG | access, DeviceType::NONE)
             }
             error => error,
         }
@@ -526,7 +526,7 @@ impl Task {
             if nofollow || must_create { SymlinkMode::NoFollow } else { SymlinkMode::max_follow() };
 
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        let node = self.resolve_open_path(dir, path.to_vec(), mode, flags, symlink_mode)?;
+        let name = self.resolve_open_path(dir, path.to_vec(), mode, flags, symlink_mode)?;
 
         // Be sure not to reference the mode argument after this point.
         // Below, we shadow the mode argument with the mode of the file we are
@@ -534,7 +534,7 @@ impl Task {
         // refactor this function.
         std::mem::drop(mode);
 
-        let mode = node.node.info().mode;
+        let mode = name.entry.node.info().mode;
         if nofollow && mode.is_lnk() {
             return Err(ELOOP);
         }
@@ -557,7 +557,7 @@ impl Task {
                     // TODO(security): We should really do an access check for whether
                     // this task can write to this file.
                     if mode.contains(FileMode::IWUSR) {
-                        node.node.truncate(0)?;
+                        name.entry.node.truncate(0)?;
                     }
                 }
                 FileMode::IFDIR => return Err(EISDIR),
@@ -565,7 +565,7 @@ impl Task {
             }
         }
 
-        node.open(flags)
+        name.open(flags)
     }
 
     /// A wrapper for FsContext::lookup_parent_at that resolves the given

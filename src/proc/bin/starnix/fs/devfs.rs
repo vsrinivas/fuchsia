@@ -16,7 +16,7 @@ fn init_devfs() -> FileSystemHandle {
     let root = fs.root();
 
     let mkchr = |name, major, minor| {
-        root.mknod(
+        root.create_node(
             name,
             FileMode::IFCHR | FileMode::from_bits(0o666),
             DeviceType::new(major, minor),

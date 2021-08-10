@@ -14,15 +14,13 @@ use parking_lot::RwLock;
 
 use super::devfs::dev_tmp_fs;
 use super::tmpfs::TmpFs;
-use super::{
-    FileHandle, FileObject, FsContext, FsNode, FsNodeHandle, FsNodeOps, FsStr, FsString, UnlinkKind,
-};
+use super::*;
 use crate::task::Kernel;
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
 pub struct FileSystem {
-    root: OnceCell<FsNodeHandle>,
+    root: OnceCell<DirEntryHandle>,
     next_inode: AtomicU64,
     ops: Box<dyn FileSystemOps>,
 }
@@ -34,7 +32,7 @@ impl FileSystem {
     ) -> FileSystemHandle {
         // TODO(tbodt): I would like to use Arc::new_cyclic
         let fs = Self::new_no_root(ops);
-        let root = FsNode::new_root(root_ops, &fs);
+        let root = DirEntry::new_root(root_ops, &fs);
         if fs.root.set(root).is_err() {
             panic!("there's no way fs.root could have been set");
         }
@@ -49,7 +47,7 @@ impl FileSystem {
         })
     }
 
-    pub fn root(&self) -> &FsNodeHandle {
+    pub fn root(&self) -> &DirEntryHandle {
         self.root.get().unwrap()
     }
 
@@ -57,19 +55,19 @@ impl FileSystem {
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 
-    pub fn did_create_node(&self, node: &FsNodeHandle) {
-        self.ops.did_create_node(self, node);
+    pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {
+        self.ops.did_create_dir_entry(self, entry);
     }
 
-    pub fn will_destroy_node(&self, node: &FsNodeHandle) {
-        self.ops.will_destroy_node(self, node);
+    pub fn will_destroy_dir_entry(&self, entry: &DirEntryHandle) {
+        self.ops.will_destroy_dir_entry(self, entry);
     }
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
 pub trait FileSystemOps: Send + Sync {
-    fn did_create_node(&self, _fs: &FileSystem, _node: &FsNodeHandle) {}
-    fn will_destroy_node(&self, _fs: &FileSystem, _node: &FsNodeHandle) {}
+    fn did_create_dir_entry(&self, _fs: &FileSystem, _entry: &DirEntryHandle) {}
+    fn will_destroy_dir_entry(&self, _fs: &FileSystem, _entry: &DirEntryHandle) {}
 }
 
 pub type FileSystemHandle = Arc<FileSystem>;
@@ -117,26 +115,26 @@ impl Namespace {
 /// directories from the underlying FsNodes from those filesystems.
 struct Mount {
     namespace: Weak<Namespace>,
-    mountpoint: Option<(Weak<Mount>, FsNodeHandle)>,
-    root: FsNodeHandle,
+    mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
+    root: DirEntryHandle,
     _fs: FileSystemHandle,
 }
 type MountHandle = Arc<Mount>;
 
 impl Mount {
     pub fn root(self: &MountHandle) -> NamespaceNode {
-        NamespaceNode { mount: Some(Arc::clone(self)), node: Arc::clone(&self.root) }
+        NamespaceNode { mount: Some(Arc::clone(self)), entry: Arc::clone(&self.root) }
     }
 
     fn mountpoint(&self) -> Option<NamespaceNode> {
         let (ref mount, ref node) = &self.mountpoint.as_ref()?;
-        Some(NamespaceNode { mount: Some(mount.upgrade()?), node: node.clone() })
+        Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
     }
 }
 
 pub enum WhatToMount {
     Fs(FileSystemHandle),
-    Node(FsNodeHandle),
+    Dir(DirEntryHandle),
 }
 
 pub fn create_filesystem(
@@ -152,7 +150,7 @@ pub fn create_filesystem(
         b"tmpfs" => Fs(TmpFs::new()),
         b"bind" => {
             let ctx = ctx.ok_or(ENOENT)?;
-            Node(ctx.lookup_node(ctx.root.clone(), source, SymlinkMode::max_follow())?.node)
+            Dir(ctx.lookup_node(ctx.root.clone(), source, SymlinkMode::max_follow())?.entry)
         }
         _ => return Err(ENODEV),
     })
@@ -195,7 +193,7 @@ pub struct NamespaceNode {
     mount: Option<MountHandle>,
 
     /// The FsNode that corresponds to this namespace entry.
-    pub node: FsNodeHandle,
+    pub entry: DirEntryHandle,
 }
 
 impl NamespaceNode {
@@ -203,7 +201,7 @@ impl NamespaceNode {
     ///
     /// The returned node does not have a name.
     pub fn new_anonymous(node: FsNodeHandle) -> Self {
-        Self { mount: None, node }
+        Self { mount: None, entry: DirEntry::new(node, None, FsString::new()) }
     }
 
     /// Create a FileObject corresponding to this namespace node.
@@ -212,32 +210,32 @@ impl NamespaceNode {
     /// FileObject records the NamespaceNode that created it in order to
     /// remember its path in the Namespace.
     pub fn open(&self, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new(self.node.open(flags)?, self.clone(), flags))
+        Ok(FileObject::new(self.entry.node.open(flags)?, self.clone(), flags))
     }
 
-    pub fn create_node<F>(&self, name: &FsStr, mk_callback: F) -> Result<NamespaceNode, Errno>
+    fn create_namespace_node<F>(&self, name: &FsStr, mk_callback: F) -> Result<NamespaceNode, Errno>
     where
-        F: FnOnce() -> Result<FsNodeHandle, Errno>,
+        F: FnOnce() -> Result<DirEntryHandle, Errno>,
     {
         // TODO: Figure out what these errors should be, and if they are consistent across
         // callsites. If so, checks can be removed from, for example, sys_symlinkat.
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EEXIST);
         }
-        Ok(self.with_new_node(mk_callback()?))
+        Ok(self.with_new_entry(mk_callback()?))
     }
 
-    pub fn mknod(
+    pub fn create_node(
         &self,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
     ) -> Result<NamespaceNode, Errno> {
-        self.create_node(name, || self.node.mknod(name, mode, dev))
+        self.create_namespace_node(name, || self.entry.create_node(name, mode, dev))
     }
 
     pub fn symlink(&self, name: &FsStr, target: &FsStr) -> Result<NamespaceNode, Errno> {
-        self.create_node(name, || self.node.create_symlink(name, target))
+        self.create_namespace_node(name, || self.entry.create_symlink(name, target))
     }
 
     pub fn unlink(&self, context: &FsContext, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
@@ -250,7 +248,7 @@ impl NamespaceNode {
             if child.mountpoint().is_some() {
                 return Err(EBUSY);
             }
-            self.node.unlink(name, kind)
+            self.entry.unlink(name, kind)
         };
 
         // If this node is mounted in a namespace, we grab a read lock on the
@@ -272,7 +270,7 @@ impl NamespaceNode {
         name: &FsStr,
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        if !self.node.info().mode.is_dir() {
+        if !self.entry.node.info().mode.is_dir() {
             Err(ENOTDIR)
         } else if name == b"." || name == b"" {
             Ok(self.clone())
@@ -280,11 +278,11 @@ impl NamespaceNode {
             // TODO: make sure this can't escape a chroot
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
-            let mut child = self.with_new_node(self.node.component_lookup(name)?);
-            while child.node.info().mode.is_lnk() {
+            let mut child = self.with_new_entry(self.entry.component_lookup(name)?);
+            while child.entry.node.info().mode.is_lnk() {
                 match symlink_mode {
                     SymlinkMode::Follow(count) if count > 0 => {
-                        let link_target = child.node.readlink()?;
+                        let link_target = child.entry.node.readlink()?;
                         let link_directory = if link_target[0] == b'/' {
                             context.root.clone()
                         } else {
@@ -321,7 +319,7 @@ impl NamespaceNode {
     /// filesystem to another.
     pub fn parent(&self) -> Option<NamespaceNode> {
         let current = self.mountpoint().unwrap_or_else(|| self.clone());
-        Some(current.with_new_node(current.node.parent()?.clone()))
+        Some(current.with_new_entry(current.entry.parent()?.clone()))
     }
 
     /// Returns the mountpoint at this location in the namespace.
@@ -330,7 +328,7 @@ impl NamespaceNode {
     /// at which this node is mounted. Otherwise, returns None.
     fn mountpoint(&self) -> Option<NamespaceNode> {
         if let Some(mount) = &self.mount {
-            if Arc::ptr_eq(&self.node, &mount.root) {
+            if Arc::ptr_eq(&self.entry, &mount.root) {
                 return mount.mountpoint();
             }
         }
@@ -340,12 +338,12 @@ impl NamespaceNode {
     /// The path from the root of the namespace to this node.
     pub fn path(&self) -> FsString {
         if self.mount.is_none() {
-            return self.node.local_name().to_vec();
+            return self.entry.local_name().to_vec();
         }
         let mut components = vec![];
         let mut current = self.mountpoint().unwrap_or_else(|| self.clone());
         while let Some(parent) = current.parent() {
-            components.push(current.node.local_name().to_vec());
+            components.push(current.entry.local_name().to_vec());
             current = parent.mountpoint().unwrap_or(parent);
         }
         if components.is_empty() {
@@ -370,11 +368,11 @@ impl NamespaceNode {
                             let root = fs.root().clone();
                             (fs, root)
                         }
-                        WhatToMount::Node(node) => (node.file_system(), node),
+                        WhatToMount::Dir(entry) => (entry.node.file_system(), entry),
                     };
                     v.insert(Arc::new(Mount {
                         namespace: mount.namespace.clone(),
-                        mountpoint: Some((Arc::downgrade(&mount), self.node.clone())),
+                        mountpoint: Some((Arc::downgrade(&mount), self.entry.clone())),
                         root,
                         _fs: fs,
                     }));
@@ -386,8 +384,8 @@ impl NamespaceNode {
         }
     }
 
-    fn with_new_node(&self, node: FsNodeHandle) -> NamespaceNode {
-        NamespaceNode { mount: self.mount.clone(), node }
+    fn with_new_entry(&self, node: DirEntryHandle) -> NamespaceNode {
+        NamespaceNode { mount: self.mount.clone(), entry: node }
     }
 
     fn namespace(&self) -> Option<Arc<Namespace>> {
@@ -398,7 +396,7 @@ impl NamespaceNode {
 impl fmt::Debug for NamespaceNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NamespaceNode")
-            .field("node.local_name", &String::from_utf8_lossy(self.node.local_name()))
+            .field("entry.local_name", &String::from_utf8_lossy(&self.entry.local_name()))
             .finish()
     }
 }
@@ -407,14 +405,14 @@ impl fmt::Debug for NamespaceNode {
 impl PartialEq for NamespaceNode {
     fn eq(&self, other: &Self) -> bool {
         self.mount.as_ref().map(Arc::as_ptr).eq(&other.mount.as_ref().map(Arc::as_ptr))
-            && Arc::ptr_eq(&self.node, &other.node)
+            && Arc::ptr_eq(&self.entry, &other.entry)
     }
 }
 impl Eq for NamespaceNode {}
 impl Hash for NamespaceNode {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.mount.as_ref().map(Arc::as_ptr).hash(state);
-        Arc::as_ptr(&self.node).hash(state);
+        Arc::as_ptr(&self.entry).hash(state);
     }
 }
 
@@ -427,10 +425,10 @@ mod test {
     fn test_namespace() -> anyhow::Result<()> {
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let context = FsContext::new(root_fs);
@@ -447,10 +445,10 @@ mod test {
         let pts =
             dev.lookup(&context, b"pts", SymlinkMode::max_follow()).expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
-        assert!(Arc::ptr_eq(&pts_parent.node, &dev.node));
+        assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
         let dev_parent = dev.parent().ok_or(ENOENT).expect("failed to get parent of dev");
-        assert!(Arc::ptr_eq(&dev_parent.node, &ns.root().node));
+        assert!(Arc::ptr_eq(&dev_parent.entry, &ns.root().entry));
         Ok(())
     }
 
@@ -458,10 +456,10 @@ mod test {
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let context = FsContext::new(root_fs);
@@ -474,7 +472,7 @@ mod test {
             .root()
             .lookup(&context, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev again");
-        assert!(!Arc::ptr_eq(&dev.node, &new_dev.node));
+        assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
         let _new_pts = new_dev
@@ -489,10 +487,10 @@ mod test {
     fn test_path() -> anyhow::Result<()> {
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let context = FsContext::new(root_fs);

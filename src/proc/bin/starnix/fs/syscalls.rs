@@ -212,21 +212,21 @@ impl Default for LookupNodeOptions {
     }
 }
 
-fn lookup_node_at(
+fn lookup_entry_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
     options: LookupNodeOptions,
-) -> Result<FsNodeHandle, Errno> {
+) -> Result<DirEntryHandle, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
     let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
     if options.allow_empty_path && path.is_empty() {
         assert!(basename.is_empty());
-        return Ok(parent.node);
+        return Ok(parent.entry);
     }
     let child = parent.lookup(&task.fs, basename, options.symlink_mode)?;
-    Ok(child.node)
+    Ok(child.entry)
 }
 
 pub fn sys_openat(
@@ -256,7 +256,7 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = lookup_node_at(
+    let entry = lookup_entry_at(
         &ctx.task,
         dir_fd,
         user_path,
@@ -271,7 +271,7 @@ pub fn sys_faccessat(
     // they don't consider the current uid and they don't consider GRO or
     // OTH bits. Really, these checks should be done by the auth system once
     // that exists.
-    let stat = node.stat()?;
+    let stat = entry.node.stat()?;
     if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
         return Err(EACCES);
     }
@@ -367,8 +367,8 @@ pub fn sys_newfstatat(
             SymlinkMode::max_follow()
         },
     };
-    let node = lookup_node_at(ctx.task, dir_fd, user_path, options)?;
-    let result = node.stat()?;
+    let entry = lookup_entry_at(ctx.task, dir_fd, user_path, options)?;
+    let result = entry.node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -380,16 +380,16 @@ pub fn sys_readlinkat(
     buffer: UserAddress,
     buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let node = lookup_parent_at(ctx.task, dir_fd, user_path, |parent, basename| {
-        let stat = parent.node.stat()?;
+    let entry = lookup_parent_at(ctx.task, dir_fd, user_path, |parent, basename| {
+        let stat = parent.entry.node.stat()?;
         // TODO(security): This check is obviously not correct, and should be updated once
         // we have an auth system.
         if stat.st_mode & S_IRUSR == 0 {
             return Err(EACCES);
         }
-        Ok(parent.lookup(&ctx.task.fs, basename, SymlinkMode::NoFollow)?.node)
+        Ok(parent.lookup(&ctx.task.fs, basename, SymlinkMode::NoFollow)?.entry)
     })?;
-    let link = node.readlink()?;
+    let link = entry.node.readlink()?;
 
     // Cap the returned length at buffer_size.
     let length = std::cmp::min(buffer_size, link.len());
@@ -413,10 +413,10 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node =
-        lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupNodeOptions::default())?;
+    let entry =
+        lookup_entry_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupNodeOptions::default())?;
     // TODO: Check for writability.
-    node.truncate(length)?;
+    entry.node.truncate(length)?;
     Ok(SUCCESS)
 }
 
@@ -440,7 +440,7 @@ pub fn sys_mkdirat(
 ) -> Result<SyscallResult, Errno> {
     let mode = ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.mknod(basename, FileMode::IFDIR | mode, DeviceType::NONE)
+        parent.create_node(basename, FileMode::IFDIR | mode, DeviceType::NONE)
     })?;
     Ok(SUCCESS)
 }
@@ -463,7 +463,7 @@ pub fn sys_mknodat(
     };
     let mode = file_type | ctx.task.fs.apply_umask(mode & FileMode::ALLOW_ALL);
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.mknod(basename, mode, dev)
+        parent.create_node(basename, mode, dev)
     })?;
     Ok(SUCCESS)
 }
@@ -494,7 +494,7 @@ pub fn sys_fchmod(
         return Err(EINVAL);
     }
     let file = ctx.task.files.get(dir_fd)?;
-    file.name().node.info_write().mode = mode;
+    file.name.entry.node.info_write().mode = mode;
     Ok(SUCCESS)
 }
 
@@ -507,8 +507,8 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return Err(EINVAL);
     }
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path, LookupNodeOptions::default())?;
-    node.info_write().mode = mode;
+    let entry = lookup_entry_at(&ctx.task, dir_fd, user_path, LookupNodeOptions::default())?;
+    entry.node.info_write().mode = mode;
     Ok(SUCCESS)
 }
 
@@ -607,7 +607,7 @@ pub fn sys_symlinkat(
     }
 
     lookup_parent_at(ctx.task, new_dir_fd, user_path, |parent, basename| {
-        let stat = parent.node.stat()?;
+        let stat = parent.entry.node.stat()?;
         if stat.st_mode & S_IWUSR == 0 {
             return Err(EACCES);
         }
