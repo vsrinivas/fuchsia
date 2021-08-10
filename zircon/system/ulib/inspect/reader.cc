@@ -123,6 +123,7 @@ struct ParsedNode {
 // The |Reader| supports reading the contents of a |Snapshot|.
 // This class constructs a hierarchy of nodes contained in the snapshot
 // if the snapshot is valid.
+// This |Reader| supports versions 1 and 2 of the Inspect Format.
 class Reader {
  public:
   Reader(Snapshot snapshot) : snapshot_(std::move(snapshot)) {}

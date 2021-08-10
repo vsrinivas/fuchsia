@@ -78,6 +78,13 @@ All bit field diagrams are stored in little-endian ordering.
 Note: For reference on how to read the bit field diagrams, see
 [Bitfield Diagram reference][bitfield-diagram].
 
+## Version
+
+_Current version: 2_
+
+* **Version 2** allows the name of a value to be either a [NAME](#name)
+    or a [STRING_REFERENCE](#stringreference).
+
 # Blocks
 
 Inspect files are split into a number of `Blocks` whose size must be a
@@ -257,12 +264,12 @@ not treated as free).
 O = Order
 R = Reserved, must be 0
 Type = 2
-Version = 1
+Version = 2
 Magic number = "INSP"
 ```
 
 There must be one `HEADER` block at the beginning of the file. It consists
-of a **Magic Number** ("INSP"), a **Version** (currently 1), and the
+of a **Magic Number** ("INSP"), a **Version** (currently 2), and the
 **Generation Count** for concurrency control. The first byte of the header
 must not be a valid ASCII character.
 

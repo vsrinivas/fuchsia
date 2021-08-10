@@ -230,6 +230,7 @@ macro_rules! array_fns {
 
 /// In charge of performing all operations on the VMO as well as managing the lock and unlock
 /// behavior.
+/// `State` writes version 2 of the Inspect Format.
 #[derive(Clone, Debug)]
 pub struct State {
     /// A reference to the header block in the VMO.

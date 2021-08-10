@@ -85,6 +85,7 @@ fn expand(
 }
 
 /// Reads the given `ReadableTree` into a DiagnosticsHierarchy.
+/// This reads versions 1 and 2 of the Inspect Format.
 pub async fn read<T>(tree: &T) -> Result<DiagnosticsHierarchy, ReaderError>
 where
     T: ReadableTree + Send + Sync,

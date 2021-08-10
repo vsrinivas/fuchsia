@@ -30,6 +30,7 @@ namespace internal {
 // those values.
 //
 // This class should not be used directly, prefer to use |Inspector|.
+// |State| writes version 2 of the Inspect Format.
 class State final {
  public:
   // Create a new State wrapping the given Heap.
