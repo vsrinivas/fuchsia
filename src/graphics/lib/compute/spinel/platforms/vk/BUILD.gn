@@ -76,17 +76,18 @@ config("spinel_vk_ext_public_config") {
   defines = []
   if (board_name == "astro") {
     defines += [ "SPN_VK_TARGET_ARM_BIFROST4" ]
-  } else if (board_name == "sherlock") {
+  } else if (board_name == "sherlock" || board_name == "vim3") {
     defines += [ "SPN_VK_TARGET_ARM_BIFROST8" ]
-  } else {
-    # Include all targets by default.
+  } else if (board_name == "qemu-x64" || !is_fuchsia) {
+    # Include amd, intel, and nvidia targets when building for emulator or host.
     defines += [
       "SPN_VK_TARGET_AMD_GCN3",
-      "SPN_VK_TARGET_ARM_BIFROST4",
-      "SPN_VK_TARGET_ARM_BIFROST8",
       "SPN_VK_TARGET_INTEL_GEN8",
       "SPN_VK_TARGET_NVIDIA_SM50",
     ]
+  } else {
+    # Include intel target by default.
+    defines += [ "SPN_VK_TARGET_INTEL_GEN8" ]
   }
 }
 
@@ -113,17 +114,18 @@ static_library("vk_find_target") {
   # Future support for dynamic linking will avoid that.
   if (board_name == "astro") {
     deps += [ "targets/vendors/arm/bifrost4:generate" ]
-  } else if (board_name == "sherlock") {
+  } else if (board_name == "sherlock" || board_name == "vim3") {
     deps += [ "targets/vendors/arm/bifrost8:generate" ]
-  } else {
-    # Include all targets by default.
+  } else if (board_name == "qemu-x64" || !is_fuchsia) {
+    # Include amd, intel, and nvidia targets when building for emulator or host.
     deps += [
       "targets/vendors/amd/gcn3:generate",
-      "targets/vendors/arm/bifrost4:generate",
-      "targets/vendors/arm/bifrost8:generate",
       "targets/vendors/intel/gen8:generate",
       "targets/vendors/nvidia/sm50:generate",
     ]
+  } else {
+    # Include intel target by default.
+    deps += [ "targets/vendors/intel/gen8:generate" ]
   }
 
   public_configs = [ ":spinel_vk_ext_public_config" ]
