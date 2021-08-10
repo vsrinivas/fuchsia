@@ -104,7 +104,7 @@ static bool ieee80211_has_addr4(const struct ieee80211_frame_header* hdr) {
     return (hdr->frame_ctrl & mask) == mask;
 }
 
-static inline size_t ieee80211_is_qos_data(struct ieee80211_frame_header* fh) {
+static inline size_t ieee80211_is_qos_data(const struct ieee80211_frame_header* fh) {
     return ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_DATA
         && (ieee80211_get_frame_subtype(fh) & IEEE80211_FRAME_SUBTYPE_QOS);
 }
@@ -113,7 +113,7 @@ static inline size_t ieee80211_get_qos_ctrl_offset(const struct ieee80211_frame_
     return sizeof(struct ieee80211_frame_header) + (ieee80211_has_addr4(hdr) ? ETH_ALEN : 0);
 }
 
-static inline size_t ieee80211_hdrlen(struct ieee80211_frame_header* fh) {
+static inline size_t ieee80211_hdrlen(const struct ieee80211_frame_header* fh) {
     switch (ieee80211_get_frame_type(fh)) {
     case IEEE80211_FRAME_TYPE_MGMT:
     case IEEE80211_FRAME_TYPE_DATA:
