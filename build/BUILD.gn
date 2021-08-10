@@ -49,11 +49,8 @@ group("non_hermetic_deps") {
     "//build/images/sizes/*",
     "//build/rust/*",
     "//scripts/sdk/gn/*",
-    "//sdk/lib/zxio/*",
-    "//src/graphics/lib/magma/tests/icd_strip/*",
     "//src/lib/assembly/vbmeta/*",
     "//third_party/crashpad/*",
-    "//third_party/mesa/src/intel/vulkan/*",
     "//vendor/google/*",
   ]
 

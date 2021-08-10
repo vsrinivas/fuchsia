@@ -57,13 +57,6 @@ template("extract_imported_symbols") {
   action(target_name) {
     script = "//build/cpp/extract_imported_symbols.sh"
 
-    # TODO(http://fxbug.dev/68780): Remove suppression when fixed.
-    # This is causing crashes on some Mac builders, possibly because the size
-    # of the symbol list is overflowing the fsatrace buffer. We suppress on
-    # all platforms because the problem could spread beyond Macs as the
-    # symbol lists grow.
-    hermetic_deps = false
-
     forward_variables_from(invoker,
                            [
                              "deps",
