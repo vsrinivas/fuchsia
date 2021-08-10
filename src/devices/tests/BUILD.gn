@@ -37,6 +37,7 @@ group("drivers") {
     "ddk-environment-test:ddk-environment-test",
     "ddk-fallback-test:ddk-fallback-test",
     "ddk-fallback-test:ddk-not-fallback-test",
+    "ddk-fallback-test-v2:ddk-fallback-test-driver",
     "ddk-fidl-test:fidl-async-llcpp-driver",
     "ddk-fidl-test:fidl-llcpp-driver",
     "ddk-firmware-test:ddk-firmware-test-driver",
