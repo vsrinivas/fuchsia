@@ -353,6 +353,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // overridden implementations.
   virtual void WillDestroyVfs();
 
+  // Returns true if this is a remote filesystem mount point. This is only relevant on Fuchsia
+  // builds (the remote handling below is all Fuchsia-only) but this can exist and just return false
+  // on host builds to simplify platform handling.
+  virtual bool IsRemote() const;
+
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
   virtual zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out);
@@ -368,7 +373,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // inside Vnodes that wish to act as mount points.
 
   // The vnode is acting as a mount point for a remote filesystem or device.
-  virtual bool IsRemote() const;
   virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
   virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
   virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);

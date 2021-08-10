@@ -145,12 +145,11 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   if ((r = Vfs::Walk(vndir, path, &vndir, &path)) < 0) {
     return r;
   }
-#ifdef __Fuchsia__
+
   if (vndir->IsRemote()) {
     // remote filesystem, return handle and path to caller
     return OpenResult::Remote{.vnode = std::move(vndir), .path = path};
   }
-#endif
 
   {
     bool must_be_dir = false;
@@ -177,12 +176,10 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
     }
   }
 
-#ifdef __Fuchsia__
   if (!options.flags.no_remote && vn->IsRemote()) {
     // Opening a mount point: Traverse across remote.
     return OpenResult::RemoteRoot{.vnode = std::move(vn)};
   }
-#endif
 
   if (ReadonlyLocked() && options.rights.write) {
     return ZX_ERR_ACCESS_DENIED;
@@ -211,12 +208,12 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
     if ((r = OpenVnode(validated_options.value(), &vn)) != ZX_OK) {
       return r;
     }
-#ifdef __Fuchsia__
+
     if (!options.flags.no_remote && vn->IsRemote()) {
       // |OpenVnode| redirected us to a remote vnode; traverse across mount point.
       return OpenResult::RemoteRoot{.vnode = std::move(vn)};
     }
-#endif
+
     if (options.flags.truncate && ((r = vn->Truncate(0)) < 0)) {
       vn->Close();
       return r;
@@ -272,12 +269,12 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
   if (zx_status_t result = Vfs::Walk(vndir, path, &vndir, &path); result != ZX_OK) {
     return result;
   }
-#ifdef __Fuchsia__
+
   if (vndir->IsRemote()) {
     // remote filesystem, return handle and path to caller
     return TraversePathResult::Remote{.vnode = std::move(vndir), .path = path};
   }
-#endif
+
   zx_status_t result;
   {
     bool must_be_dir = false;
@@ -293,12 +290,11 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
     return result;
   }
 
-#ifdef __Fuchsia__
   if (vn->IsRemote()) {
     // Found a mount point: Traverse across remote.
     return TraversePathResult::RemoteRoot{.vnode = std::move(vn)};
   }
-#endif
+
   return TraversePathResult::Ok{.vnode = std::move(vn)};
 }
 
@@ -689,14 +685,12 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<
   }
 
   for (;;) {
-#ifdef __Fuchsia__
     if (vn->IsRemote()) {
       // Remote filesystem mount, caller must resolve.
       *out_vn = std::move(vn);
       *out_path = path;
       return ZX_OK;
     }
-#endif
 
     // Look for the next '/' separated path component.
     size_t slash = path.find('/');

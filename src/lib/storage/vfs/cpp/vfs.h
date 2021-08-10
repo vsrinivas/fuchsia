@@ -317,10 +317,11 @@ class Vfs::OpenResult {
   // When this variant is active, the indicated error occurred.
   using Error = zx_status_t;
 
-#ifdef __Fuchsia__
   // When this variant is active, the path being opened contains a remote node. |path| is the
   // remaining portion of the path yet to be traversed. The caller should forward the remainder of
   // this open request to that vnode.
+  //
+  // Used only on Fuchsia.
   struct Remote {
     fbl::RefPtr<Vnode> vnode;
     std::string_view path;
@@ -328,10 +329,11 @@ class Vfs::OpenResult {
 
   // When this variant is active, the path being opened is a remote node itself. The caller should
   // clone the connection associated with this vnode.
+  //
+  // Used only on Fuchsia.
   struct RemoteRoot {
     fbl::RefPtr<Vnode> vnode;
   };
-#endif  // __Fuchsia__
 
   // When this variant is active, |Open| has successfully reached a vnode under this filesystem.
   // |validated_options| contains options to be used on the new connection, potentially adjusted for
@@ -363,20 +365,14 @@ class Vfs::OpenResult {
   Error& error() { return std::get<Error>(variants_); }
   bool is_error() const { return std::holds_alternative<Error>(variants_); }
 
-#ifdef __Fuchsia__
   Remote& remote() { return std::get<Remote>(variants_); }
   bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
 
   RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
   bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
-#endif  // __Fuchsia__
 
  private:
-#ifdef __Fuchsia__
   using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
-#else
-  using Variants = std::variant<Error, Ok>;
-#endif  // __Fuchsia__
 
   Variants variants_ = {};
 };
@@ -386,20 +382,22 @@ class Vfs::TraversePathResult {
   // When this variant is active, the indicated error occurred.
   using Error = zx_status_t;
 
-#ifdef __Fuchsia__
   // When this variant is active, the path being traversed contains a remote node. |path| is the
   // remaining portion of the path yet to be traversed. The caller should forward the remainder of
   // this request to that vnode.
+  //
+  // Used only on Fuchsia.
   struct Remote {
     fbl::RefPtr<Vnode> vnode;
     std::string_view path;
   };
 
   // When this variant is active, the path being traversed is a remote node itself.
+  //
+  // Used only on Fuchsia.
   struct RemoteRoot {
     fbl::RefPtr<Vnode> vnode;
   };
-#endif  // __Fuchsia__
 
   // When this variant is active, we have successfully traversed and reached a vnode under this
   // filesystem.
@@ -429,20 +427,14 @@ class Vfs::TraversePathResult {
   Error& error() { return std::get<Error>(variants_); }
   bool is_error() const { return std::holds_alternative<Error>(variants_); }
 
-#ifdef __Fuchsia__
   Remote& remote() { return std::get<Remote>(variants_); }
   bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
 
   RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
   bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
-#endif  // __Fuchsia__
 
  private:
-#ifdef __Fuchsia__
   using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
-#else
-  using Variants = std::variant<Error, Ok>;
-#endif  // __Fuchsia__
 
   Variants variants_ = {};
 };
