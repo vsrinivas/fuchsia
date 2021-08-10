@@ -13,12 +13,8 @@
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.ipp>
 // clang-format on
 
-#include <fuchsia/io/cpp/fidl_test_base.h>
-#include <lib/sys/cpp/outgoing_directory.h>
-#include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <net/ethernet.h>
 
 #include "configuration_manager_delegate_impl.h"
 #include "fake_buildinfo_provider.h"
@@ -29,7 +25,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "test_configuration_manager.h"
-#include "thread_stack_manager_delegate_impl.h"
+#include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
 namespace nl::Weave::DeviceLayer::Internal::testing {
@@ -42,6 +38,7 @@ using weave::adaptation::testing::FakeHwinfoDevice;
 using weave::adaptation::testing::FakeHwinfoProduct;
 using weave::adaptation::testing::FakeWeaveFactoryDataManager;
 using weave::adaptation::testing::TestConfigurationManager;
+using weave::adaptation::testing::TestThreadStackManager;
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
@@ -92,22 +89,6 @@ WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
 
 }  // namespace
 
-// ThreadStackManager delegate with overrides for testing
-class ThreadStackManagerTestDelegateImpl : public ThreadStackManagerDelegateImpl {
- public:
-  ThreadStackManagerTestDelegateImpl& SetThreadProvisioned(bool value) {
-    is_thread_provisioned_ = value;
-    return *this;
-  }
-
- private:
-  bool IsThreadProvisioned() override { return is_thread_provisioned_; }
-
-  bool IsThreadSupported() const override { return true; }
-
-  bool is_thread_provisioned_;
-};
-
 class ConfigurationManagerTest : public WeaveTestFixture<> {
  public:
   ConfigurationManagerTest() {
@@ -126,11 +107,14 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
   void SetUp() override {
     WeaveTestFixture<>::SetUp();
     WeaveTestFixture<>::RunFixtureLoop();
+
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
-    auto thread_stack_delegate = std::make_unique<ThreadStackManagerTestDelegateImpl>();
-    thread_mgr_ = thread_stack_delegate.get();
-    ThreadStackMgrImpl().SetDelegate(std::move(thread_stack_delegate));
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
+
+    // Enable thread for all tests, explicitly disabling them on the tests that
+    // need to validate behavior when thread isn't supported.
+    thread_delegate().set_is_thread_supported(true);
     EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   }
 
@@ -175,9 +159,11 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
   FakeBuildInfoProvider& fake_buildinfo_provider() { return fake_buildinfo_provider_; }
   FakeHwinfoDevice& fake_hwinfo_device() { return fake_hwinfo_device_; }
   FakeHwinfoProduct& fake_hwinfo_product() { return fake_hwinfo_product_; }
+
   FakeFactoryWeaveFactoryStoreProvider& fake_factory_weave_factory_store_provider() {
     return fake_factory_weave_factory_store_provider_;
   }
+
   FakeWeaveFactoryDataManager& fake_weave_factory_data_manager() {
     return fake_weave_factory_data_manager_;
   }
@@ -186,7 +172,9 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
     return *reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
   }
 
-  ThreadStackManagerTestDelegateImpl* thread_mgr() { return thread_mgr_; }
+  TestThreadStackManager& thread_delegate() {
+    return *reinterpret_cast<TestThreadStackManager*>(ThreadStackMgrImpl().GetDelegate());
+  }
 
  private:
   FakeBuildInfoProvider fake_buildinfo_provider_;
@@ -194,7 +182,6 @@ class ConfigurationManagerTest : public WeaveTestFixture<> {
   FakeHwinfoProduct fake_hwinfo_product_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeFactoryWeaveFactoryStoreProvider fake_factory_weave_factory_store_provider_;
-  ThreadStackManagerTestDelegateImpl* thread_mgr_;
 
   sys::testing::ComponentContextProvider context_provider_;
 };
@@ -448,7 +435,7 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
         delegate()
             .set_is_paired_to_account(is_paired_to_account)
             .set_is_member_of_fabric(is_member_of_fabric);
-        thread_mgr()->SetThreadProvisioned(is_thread_provisioned);
+        thread_delegate().set_is_thread_provisioned(is_thread_provisioned);
 
         EXPECT_EQ(ConfigurationMgr().IsFullyProvisioned(),
                   is_paired_to_account && is_member_of_fabric && is_thread_provisioned);
@@ -469,7 +456,7 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
         delegate()
             .set_is_paired_to_account(is_paired_to_account)
             .set_is_member_of_fabric(is_member_of_fabric);
-        thread_mgr()->SetThreadProvisioned(is_thread_provisioned);
+        thread_delegate().set_is_thread_provisioned(is_thread_provisioned);
 
         EXPECT_EQ(ConfigurationMgr().IsFullyProvisioned(),
                   is_paired_to_account && is_member_of_fabric);
