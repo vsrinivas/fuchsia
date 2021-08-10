@@ -11,7 +11,7 @@ use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{Stream, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{Stream, StreamExt as _, TryFutureExt as _};
 use net_declare::{fidl_subnet, net_ip_v4, net_ip_v6, net_mac};
 use netstack_testing_common::{
     constants::{ipv4 as ipv4_consts, ipv6 as ipv6_consts},
@@ -495,16 +495,32 @@ async fn test_state<E: netemul::Endpoint>(
 
     // TODO(https://fxbug.dev/65585): Get reachability monitor's reachability state over FIDL rather
     // than the inspect data. Watching for updates to inspect data is currently not supported, so
-    // poll every 100ms (sufficiently frequent to not increase the time it takes for the test to
-    // complete and not too frequent to encounter the "InconsistentSnapshot" inspect get error).
+    // poll instead.
     const INSPECT_COMPONENT: &str = "reachability";
     const INSPECT_TREE_SELECTOR: &str = "root";
-    let inspect_data_stream = fasync::Interval::new(zx::Duration::from_millis(100))
-        .then(|()| {
-            get_inspect_data(&realm, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
+    let realm_ref = &realm;
+    let inspect_data_stream = futures::stream::unfold(None, |duration| async move {
+        let () = match duration {
+            None => {}
+            Some(duration) => fasync::Timer::new(duration).await,
+        };
+        let duration = std::time::Duration::from_millis(100);
+        let yielded = loop {
+            match get_inspect_data(realm_ref, INSPECT_COMPONENT, INSPECT_TREE_SELECTOR, "")
                 .map_ok(|data| extract_reachability_states(&data))
-        })
-        .fuse();
+                .await
+            {
+                Ok(yielded) => break yielded,
+                // Archivist can sometimes return transient `InconsistentSnapshot` errors. Our
+                // wrapper function discards type information so we can't match on the specific
+                // error.
+                Err(err @ anyhow::Error { .. }) => println!("inspect data stream error: {:?}", err),
+            }
+            let () = fasync::Timer::new(duration).await;
+        };
+        Some((yielded, Some(duration)))
+    })
+    .fuse();
     futures::pin_mut!(inspect_data_stream);
 
     // Ensure that at least one echo request has been replied to before polling the inspect data
@@ -523,60 +539,58 @@ async fn test_state<E: netemul::Endpoint>(
         // TODO(https://fxbug.dev/80818): Wait on reachability monitor exiting and fail the test if
         // so.
         futures::select! {
-             o = echo_reply_streams.next() => {
-                 let () = o.expect("interface echo reply stream ended unexpectedly");
-             }
-             r = inspect_data_stream.try_next() => {
-                 let (got_interfaces, IpStates { ipv4: got_system_ipv4, ipv6: got_system_ipv6 }) = r
-                     .expect("inspect data stream error")
-                     .expect("inspect data stream ended unexpectedly");
-
-                 let equal_count = got_interfaces.iter().fold(0, |equal_count, (id, got)| {
-                     let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
-                         want_interfaces.get(&id).expect(
-                             &format!(
-                                 "unknow interface {} with state {:?} found in inspect data",
-                                 id, got
-                             )
-                         );
-                     let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
-                     if got_ipv4 > want_ipv4 {
-                         panic!(
-                             "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
-                             id, got_ipv4, want_ipv4,
-                         );
-                     }
-                     if got_ipv6 > want_ipv6 {
-                         panic!(
-                             "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
-                             id, got_ipv6, want_ipv6,
-                         );
-                     }
-                     if got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6 {
-                         equal_count + 1
-                     } else {
-                         equal_count
-                     }
-                 });
-                 if got_system_ipv4 > want_system_ipv4 {
-                     panic!(
-                         "system IPv4 state exceeded; got: {:?}, want: {:?}",
-                         got_system_ipv4, want_system_ipv4,
-                     )
-                 }
-                 if got_system_ipv6 > want_system_ipv6 {
-                     panic!(
-                         "system IPv6 state exceeded; got: {:?}, want: {:?}",
-                         got_system_ipv6, want_system_ipv6,
-                     )
-                 }
-                 if got_system_ipv4 == want_system_ipv4
-                     && got_system_ipv6 == want_system_ipv6
-                     && equal_count == interfaces.len()
-                 {
-                     return;
-                 }
-             }
+            o = echo_reply_streams.next() => {
+                let () = o.expect("interface echo reply stream ended unexpectedly");
+            }
+            r = inspect_data_stream.next() => {
+                let (got_interfaces, IpStates { ipv4: got_system_ipv4, ipv6: got_system_ipv6 }) = r
+                    .expect("inspect data stream ended unexpectedly");
+                let equal_count = got_interfaces.iter().fold(0, |equal_count, (id, got)| {
+                    let IpStates { ipv4: want_ipv4, ipv6: want_ipv6 } =
+                        want_interfaces.get(&id).expect(
+                            &format!(
+                                "unknown interface {} with state {:?} found in inspect data",
+                                id, got
+                            )
+                        );
+                    let IpStates { ipv4: got_ipv4, ipv6: got_ipv6 } = got;
+                    if got_ipv4 > want_ipv4 {
+                        panic!(
+                            "interface {} IPv4 state exceeded; got: {:?}, want: {:?}",
+                            id, got_ipv4, want_ipv4,
+                        );
+                    }
+                    if got_ipv6 > want_ipv6 {
+                        panic!(
+                            "interface {} IPv6 state exceeded; got: {:?}, want: {:?}",
+                            id, got_ipv6, want_ipv6,
+                        );
+                    }
+                    if got_ipv4 == want_ipv4 && got_ipv6 == want_ipv6 {
+                        equal_count + 1
+                    } else {
+                        equal_count
+                    }
+                });
+                if got_system_ipv4 > want_system_ipv4 {
+                    panic!(
+                        "system IPv4 state exceeded; got: {:?}, want: {:?}",
+                        got_system_ipv4, want_system_ipv4,
+                    )
+                }
+                if got_system_ipv6 > want_system_ipv6 {
+                    panic!(
+                        "system IPv6 state exceeded; got: {:?}, want: {:?}",
+                        got_system_ipv6, want_system_ipv6,
+                    )
+                }
+                if got_system_ipv4 == want_system_ipv4
+                    && got_system_ipv6 == want_system_ipv6
+                    && equal_count == interfaces.len()
+                {
+                    break;
+                }
+            }
         }
     }
 }
