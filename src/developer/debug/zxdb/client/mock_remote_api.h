@@ -49,7 +49,7 @@ class MockRemoteAPI : public RemoteAPI {
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
 
   // Sets the register reply for a given category.
-  void SetRegisterCategory(debug_ipc::RegisterCategory cat, std::vector<debug::RegisterValue> regs);
+  void SetRegisterCategory(debug::RegisterCategory cat, std::vector<debug::RegisterValue> regs);
 
   const debug_ipc::WriteRegistersRequest& last_write_registers() const {
     return last_write_registers_;
@@ -91,7 +91,7 @@ class MockRemoteAPI : public RemoteAPI {
   debug_ipc::ThreadStatusReply thread_status_reply_;
   debug_ipc::PauseReply pause_reply_;
 
-  std::map<debug_ipc::RegisterCategory, std::vector<debug::RegisterValue>> register_replies_;
+  std::map<debug::RegisterCategory, std::vector<debug::RegisterValue>> register_replies_;
 
   bool resume_quits_loop_ = false;
   int resume_count_ = 0;

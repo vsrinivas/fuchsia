@@ -12,8 +12,8 @@
 #include <utility>
 
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
@@ -416,8 +416,8 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
   // Reading register data means the result is not constant.
   result_is_constant_ = false;
 
-  const debug_ipc::RegisterInfo* reg_info =
-      debug_ipc::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
+  const debug::RegisterInfo* reg_info =
+      debug::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
   if (!reg_info) {
     ReportError(fxl::StringPrintf("Register %d not known.", dwarf_register_number));
     return Completion::kSync;
@@ -1361,9 +1361,8 @@ void DwarfExprEval::Skip(SignedStackEntry amount) {
 }
 
 std::string DwarfExprEval::GetRegisterName(int reg_number) const {
-  const debug_ipc::RegisterInfo* reg_info =
-      data_provider_ ? debug_ipc::DWARFToRegisterInfo(data_provider_->GetArch(), reg_number)
-                     : nullptr;
+  const debug::RegisterInfo* reg_info =
+      data_provider_ ? debug::DWARFToRegisterInfo(data_provider_->GetArch(), reg_number) : nullptr;
   if (!reg_info)  // Fall back on reporting the register
     return "dwarf_register(" + std::to_string(reg_number) + ")";
 

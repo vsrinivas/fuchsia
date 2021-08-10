@@ -11,8 +11,8 @@
 #include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/decode_exception.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -235,17 +235,17 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out.emplace_back(RegisterID::kARMv8_tpidr, input.tpidr);
 }
 
-zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+zx_status_t ReadRegisters(const zx::thread& thread, const debug::RegisterCategory& cat,
                           std::vector<debug::RegisterValue>& out) {
   switch (cat) {
-    case debug_ipc::RegisterCategory::kGeneral:
+    case debug::RegisterCategory::kGeneral:
       return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::kFloatingPoint:
+    case debug::RegisterCategory::kFloatingPoint:
       // No FP registers
-      return true;
-    case debug_ipc::RegisterCategory::kVector:
+      return ZX_OK;
+    case debug::RegisterCategory::kVector:
       return ReadVectorRegs(thread, out);
-    case debug_ipc::RegisterCategory::kDebug:
+    case debug::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
     default:
       FX_LOGS(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
@@ -253,10 +253,10 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCat
   }
 }
 
-zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& category,
+zx_status_t WriteRegisters(zx::thread& thread, const debug::RegisterCategory& category,
                            const std::vector<debug::RegisterValue>& registers) {
   switch (category) {
-    case debug_ipc::RegisterCategory::kGeneral: {
+    case debug::RegisterCategory::kGeneral: {
       zx_thread_state_general_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -269,10 +269,10 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kFloatingPoint: {
+    case debug::RegisterCategory::kFloatingPoint: {
       return ZX_ERR_INVALID_ARGS;  // No floating point registers.
     }
-    case debug_ipc::RegisterCategory::kVector: {
+    case debug::RegisterCategory::kVector: {
       zx_thread_state_vector_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -285,7 +285,7 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kDebug: {
+    case debug::RegisterCategory::kDebug: {
       zx_thread_state_debug_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -297,8 +297,8 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kNone:
-    case debug_ipc::RegisterCategory::kLast:
+    case debug::RegisterCategory::kNone:
+    case debug::RegisterCategory::kLast:
       break;
   }
   FX_NOTREACHED();

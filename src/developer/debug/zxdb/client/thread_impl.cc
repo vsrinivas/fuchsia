@@ -157,7 +157,7 @@ void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb
   debug_ipc::WriteRegistersRequest request;
   request.id = {.process = process_->GetKoid(), .thread = koid_};
   request.registers.emplace_back(
-      GetSpecialRegisterID(session()->arch(), debug_ipc::SpecialRegisterType::kIP), new_address);
+      GetSpecialRegisterID(session()->arch(), debug::SpecialRegisterType::kIP), new_address);
 
   // The "jump" command updates the thread's location so we need to recompute the stack. So once the
   // jump is complete we re-request the thread's status.

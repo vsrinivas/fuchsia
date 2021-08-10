@@ -24,7 +24,7 @@ namespace {
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
 Err RegisterUnavailableErr(debug::RegisterID id) {
-  return Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id)));
+  return Err(fxl::StringPrintf("Register %s unavailable.", debug::RegisterIDToString(id)));
 }
 
 }  // namespace
@@ -60,15 +60,15 @@ std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegis
   if (!frame_)
     return containers::array_view<uint8_t>();  // Synchronously know we don't have the value.
 
-  debug_ipc::RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FX_DCHECK(category != debug_ipc::RegisterCategory::kNone);
+  debug::RegisterCategory category = debug::RegisterIDToCategory(id);
+  FX_DCHECK(category != debug::RegisterCategory::kNone);
 
   const std::vector<debug::RegisterValue>* regs = frame_->GetRegisterCategorySync(category);
   if (!regs)
     return std::nullopt;  // Not known synchronously.
 
   // Have this register synchronously (or know we can't have it).
-  return debug_ipc::GetRegisterData(*regs, id);
+  return debug::GetRegisterData(*regs, id);
 }
 
 void FrameSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {
@@ -79,8 +79,8 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegister
     return;
   }
 
-  debug_ipc::RegisterCategory category = debug_ipc::RegisterIDToCategory(id);
-  FX_DCHECK(category != debug_ipc::RegisterCategory::kNone);
+  debug::RegisterCategory category = debug::RegisterIDToCategory(id);
+  FX_DCHECK(category != debug::RegisterCategory::kNone);
 
   frame_->GetRegisterCategoryAsync(
       category, false,
@@ -89,7 +89,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegister
         if (err.has_error())
           return cb(err, {});
 
-        auto found_reg_data = debug_ipc::GetRegisterData(regs, id);
+        auto found_reg_data = debug::GetRegisterData(regs, id);
         if (found_reg_data.empty())
           cb(RegisterUnavailableErr(id), {});
         else
@@ -103,7 +103,7 @@ void FrameSymbolDataProvider::WriteRegister(debug::RegisterID id, std::vector<ui
     // Frame deleted out from under us.
     debug::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
       cb(Err("The register %s can't be written because the frame was deleted.",
-             debug_ipc::RegisterIDToString(id)));
+             debug::RegisterIDToString(id)));
     });
     return;
   }

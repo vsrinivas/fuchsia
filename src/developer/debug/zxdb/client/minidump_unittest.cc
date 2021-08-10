@@ -210,85 +210,82 @@ TEST_F(MinidumpTest, Registers) {
   debug_ipc::ReadRegistersRequest request;
   debug_ipc::ReadRegistersReply reply;
 
-  using C = debug_ipc::RegisterCategory;
-  using R = debug::RegisterID;
-
   request.id.process = kTestExampleMinidumpKOID;
   request.id.thread = kTestExampleMinidumpThreadKOID;
   request.categories = {
-      C::kGeneral,
-      C::kFloatingPoint,
-      C::kVector,
-      C::kDebug,
+      debug::RegisterCategory::kGeneral,
+      debug::RegisterCategory::kFloatingPoint,
+      debug::RegisterCategory::kVector,
+      debug::RegisterCategory::kDebug,
   };
   DoRequest(request, reply, err, &RemoteAPI::ReadRegisters);
   ASSERT_ZXDB_SUCCESS(err);
 
-  std::map<R, std::vector<uint8_t>> got;
+  std::map<debug::RegisterID, std::vector<uint8_t>> got;
   for (const auto& reg : reply.registers)
     got[reg.id] = reg.data;
 
   std::vector<uint8_t> zero_short = {0, 0};
   std::vector<uint8_t> zero_128 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  EXPECT_EQ(AsData(0x83UL), got[R::kX64_rax]);
-  EXPECT_EQ(AsData(0x2FE150062100UL), got[R::kX64_rbx]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_rcx]);
-  EXPECT_EQ(AsData(0x4DC647A67264UL), got[R::kX64_rdx]);
-  EXPECT_EQ(AsData(0x5283B9A79945UL), got[R::kX64_rsi]);
-  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[R::kX64_rdi]);
-  EXPECT_EQ(AsData(0x37F880986D70UL), got[R::kX64_rbp]);
-  EXPECT_EQ(AsData(0x37F880986D48UL), got[R::kX64_rsp]);
-  EXPECT_EQ(AsData(0x1UL), got[R::kX64_r8]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_r9]);
-  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[R::kX64_r10]);
-  EXPECT_EQ(AsData(0x83UL), got[R::kX64_r11]);
-  EXPECT_EQ(AsData(0x2FE150077070UL), got[R::kX64_r12]);
-  EXPECT_EQ(AsData(0x3F4C20970A28UL), got[R::kX64_r13]);
-  EXPECT_EQ(AsData(0xFFFFFFF5UL), got[R::kX64_r14]);
-  EXPECT_EQ(AsData(0x2FE150062138UL), got[R::kX64_r15]);
-  EXPECT_EQ(AsData(0x4DC6479A5B1EUL), got[R::kX64_rip]);
-  EXPECT_EQ(AsData(0x10206UL), got[R::kX64_rflags]);
+  EXPECT_EQ(AsData(0x83UL), got[debug::RegisterID::kX64_rax]);
+  EXPECT_EQ(AsData(0x2FE150062100UL), got[debug::RegisterID::kX64_rbx]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_rcx]);
+  EXPECT_EQ(AsData(0x4DC647A67264UL), got[debug::RegisterID::kX64_rdx]);
+  EXPECT_EQ(AsData(0x5283B9A79945UL), got[debug::RegisterID::kX64_rsi]);
+  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[debug::RegisterID::kX64_rdi]);
+  EXPECT_EQ(AsData(0x37F880986D70UL), got[debug::RegisterID::kX64_rbp]);
+  EXPECT_EQ(AsData(0x37F880986D48UL), got[debug::RegisterID::kX64_rsp]);
+  EXPECT_EQ(AsData(0x1UL), got[debug::RegisterID::kX64_r8]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_r9]);
+  EXPECT_EQ(AsData(0x4DC647A671D8UL), got[debug::RegisterID::kX64_r10]);
+  EXPECT_EQ(AsData(0x83UL), got[debug::RegisterID::kX64_r11]);
+  EXPECT_EQ(AsData(0x2FE150077070UL), got[debug::RegisterID::kX64_r12]);
+  EXPECT_EQ(AsData(0x3F4C20970A28UL), got[debug::RegisterID::kX64_r13]);
+  EXPECT_EQ(AsData(0xFFFFFFF5UL), got[debug::RegisterID::kX64_r14]);
+  EXPECT_EQ(AsData(0x2FE150062138UL), got[debug::RegisterID::kX64_r15]);
+  EXPECT_EQ(AsData(0x4DC6479A5B1EUL), got[debug::RegisterID::kX64_rip]);
+  EXPECT_EQ(AsData(0x10206UL), got[debug::RegisterID::kX64_rflags]);
 
-  EXPECT_EQ(zero_short, got[R::kX64_fcw]);
-  EXPECT_EQ(zero_short, got[R::kX64_fsw]);
-  EXPECT_EQ(AsData('\0'), got[R::kX64_ftw]);
-  EXPECT_EQ(zero_short, got[R::kX64_fop]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_fip]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_fdp]);
-  EXPECT_EQ(zero_128, got[R::kX64_st0]);
-  EXPECT_EQ(zero_128, got[R::kX64_st1]);
-  EXPECT_EQ(zero_128, got[R::kX64_st2]);
-  EXPECT_EQ(zero_128, got[R::kX64_st3]);
-  EXPECT_EQ(zero_128, got[R::kX64_st4]);
-  EXPECT_EQ(zero_128, got[R::kX64_st5]);
-  EXPECT_EQ(zero_128, got[R::kX64_st6]);
-  EXPECT_EQ(zero_128, got[R::kX64_st7]);
+  EXPECT_EQ(zero_short, got[debug::RegisterID::kX64_fcw]);
+  EXPECT_EQ(zero_short, got[debug::RegisterID::kX64_fsw]);
+  EXPECT_EQ(AsData('\0'), got[debug::RegisterID::kX64_ftw]);
+  EXPECT_EQ(zero_short, got[debug::RegisterID::kX64_fop]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_fip]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_fdp]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st0]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st1]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st2]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st3]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st4]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st5]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st6]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_st7]);
 
-  EXPECT_EQ(AsData(0x0U), got[R::kX64_mxcsr]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm0]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm1]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm2]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm3]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm4]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm5]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm6]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm7]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm8]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm9]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm10]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm11]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm12]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm13]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm14]);
-  EXPECT_EQ(zero_128, got[R::kX64_xmm15]);
+  EXPECT_EQ(AsData(0x0U), got[debug::RegisterID::kX64_mxcsr]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm0]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm1]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm2]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm3]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm4]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm5]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm6]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm7]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm8]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm9]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm10]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm11]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm12]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm13]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm14]);
+  EXPECT_EQ(zero_128, got[debug::RegisterID::kX64_xmm15]);
 
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr0]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr1]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr2]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr3]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr6]);
-  EXPECT_EQ(AsData(0x0UL), got[R::kX64_dr7]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr0]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr1]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr2]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr3]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr6]);
+  EXPECT_EQ(AsData(0x0UL), got[debug::RegisterID::kX64_dr7]);
 }
 
 TEST_F(MinidumpTest, Modules) {

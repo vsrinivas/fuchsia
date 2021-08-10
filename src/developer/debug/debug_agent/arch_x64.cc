@@ -10,9 +10,9 @@
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/decode_exception.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/register_info.h"
 
 // Notes on x64 architecture:
 //
@@ -211,28 +211,28 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out.emplace_back(RegisterID::kX64_gsbase, input.gs_base);
 }
 
-zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+zx_status_t ReadRegisters(const zx::thread& thread, const debug::RegisterCategory& cat,
                           std::vector<debug::RegisterValue>& out) {
   switch (cat) {
-    case debug_ipc::RegisterCategory::kGeneral:
+    case debug::RegisterCategory::kGeneral:
       return ReadGeneralRegs(thread, out);
-    case debug_ipc::RegisterCategory::kFloatingPoint:
+    case debug::RegisterCategory::kFloatingPoint:
       return ReadFPRegs(thread, out);
-    case debug_ipc::RegisterCategory::kVector:
+    case debug::RegisterCategory::kVector:
       return ReadVectorRegs(thread, out);
-    case debug_ipc::RegisterCategory::kDebug:
+    case debug::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
-    case debug_ipc::RegisterCategory::kNone:
-    case debug_ipc::RegisterCategory::kLast:
+    case debug::RegisterCategory::kNone:
+    case debug::RegisterCategory::kLast:
       FX_LOGS(ERROR) << "Asking to get none/last category";
       return ZX_ERR_INVALID_ARGS;
   }
 }
 
-zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& category,
+zx_status_t WriteRegisters(zx::thread& thread, const debug::RegisterCategory& category,
                            const std::vector<debug::RegisterValue>& registers) {
   switch (category) {
-    case debug_ipc::RegisterCategory::kGeneral: {
+    case debug::RegisterCategory::kGeneral: {
       zx_thread_state_general_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -245,7 +245,7 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kFloatingPoint: {
+    case debug::RegisterCategory::kFloatingPoint: {
       zx_thread_state_fp_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -258,7 +258,7 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_FP_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kVector: {
+    case debug::RegisterCategory::kVector: {
       zx_thread_state_vector_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -271,7 +271,7 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_VECTOR_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kDebug: {
+    case debug::RegisterCategory::kDebug: {
       zx_thread_state_debug_regs_t regs;
       zx_status_t res = thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
       if (res != ZX_OK)
@@ -283,8 +283,8 @@ zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory
 
       return thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs));
     }
-    case debug_ipc::RegisterCategory::kNone:
-    case debug_ipc::RegisterCategory::kLast:
+    case debug::RegisterCategory::kNone:
+    case debug::RegisterCategory::kLast:
       break;
   }
   FX_NOTREACHED();

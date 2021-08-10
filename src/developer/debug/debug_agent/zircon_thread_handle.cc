@@ -181,7 +181,7 @@ void ZirconThreadHandle::SetSingleStep(bool single_step) {
 }
 
 std::vector<debug::RegisterValue> ZirconThreadHandle::ReadRegisters(
-    const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
+    const std::vector<debug::RegisterCategory>& cats_to_get) const {
   std::vector<debug::RegisterValue> regs;
   for (const auto& cat_type : cats_to_get)
     arch::ReadRegisters(thread_, cat_type, regs);
@@ -193,12 +193,12 @@ std::vector<debug::RegisterValue> ZirconThreadHandle::WriteRegisters(
   std::vector<debug::RegisterValue> written;
 
   // Figure out which registers will change.
-  std::map<debug_ipc::RegisterCategory, std::vector<debug::RegisterValue>> categories;
+  std::map<debug::RegisterCategory, std::vector<debug::RegisterValue>> categories;
   for (const debug::RegisterValue& reg : regs) {
-    auto cat_type = debug_ipc::RegisterIDToCategory(reg.id);
-    if (cat_type == debug_ipc::RegisterCategory::kNone) {
+    auto cat_type = debug::RegisterIDToCategory(reg.id);
+    if (cat_type == debug::RegisterCategory::kNone) {
       FX_LOGS(WARNING) << "Attempting to change register without category: "
-                       << debug_ipc::RegisterIDToString(reg.id);
+                       << debug::RegisterIDToString(reg.id);
       continue;
     }
 
@@ -206,17 +206,15 @@ std::vector<debug::RegisterValue> ZirconThreadHandle::WriteRegisters(
   }
 
   for (const auto& [cat_type, cat_regs] : categories) {
-    FX_DCHECK(cat_type != debug_ipc::RegisterCategory::kNone);
+    FX_DCHECK(cat_type != debug::RegisterCategory::kNone);
     if (auto res = arch::WriteRegisters(thread_, cat_type, cat_regs); res != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not write category "
-                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug::ZxStatusToString(res);
+      FX_LOGS(WARNING) << "Could not write category " << debug::RegisterCategoryToString(cat_type)
+                       << ": " << debug::ZxStatusToString(res);
     }
 
     if (auto res = arch::ReadRegisters(thread_, cat_type, written); res != ZX_OK) {
-      FX_LOGS(WARNING) << "Could not read category "
-                       << debug_ipc::RegisterCategoryToString(cat_type) << ": "
-                       << debug::ZxStatusToString(res);
+      FX_LOGS(WARNING) << "Could not read category " << debug::RegisterCategoryToString(cat_type)
+                       << ": " << debug::ZxStatusToString(res);
     }
   }
 

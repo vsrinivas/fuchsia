@@ -182,7 +182,7 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
 
   // The new values should be available for synchronous calling.
   const std::vector<debug::RegisterValue>* out_regs =
-      frame->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+      frame->GetRegisterCategorySync(debug::RegisterCategory::kGeneral);
   ASSERT_TRUE(out_regs);
 
   // The two values the mock RemoteAPI put there should be returned.
@@ -214,7 +214,7 @@ TEST_F(FrameImplRegisterTest, AlwaysRequest) {
   {
     bool called = false;
     frame->GetRegisterCategoryAsync(
-        debug_ipc::RegisterCategory::kGeneral, false,
+        debug::RegisterCategory::kGeneral, false,
         [&called](const Err& err, const std::vector<debug::RegisterValue>& registers) {
           called = true;
         });
@@ -233,7 +233,7 @@ TEST_F(FrameImplRegisterTest, AlwaysRequest) {
     bool called = false;
     std::vector<debug::RegisterValue> registers;
     frame->GetRegisterCategoryAsync(
-        debug_ipc::RegisterCategory::kGeneral, true,
+        debug::RegisterCategory::kGeneral, true,
         [&called, &registers](const Err& err, const std::vector<debug::RegisterValue>& regs) {
           called = true;
           registers = std::move(regs);

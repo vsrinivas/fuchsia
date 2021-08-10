@@ -7,8 +7,8 @@
 #include <inttypes.h>
 #include <zircon/hw/debug/arm64.h>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch_arm64.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
@@ -17,8 +17,8 @@
 #include "src/developer/debug/zxdb/console/string_formatters.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+using debug::RegisterCategory;
 using debug::RegisterID;
-using debug_ipc::RegisterCategory;
 
 namespace zxdb {
 
@@ -35,7 +35,7 @@ TextForegroundColor GetRowColor(size_t table_len) {
 std::vector<OutputBuffer> DescribeCPSR(const debug::RegisterValue& cpsr,
                                        TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(debug_ipc::RegisterIDToString(cpsr.id), color);
+  result.emplace_back(debug::RegisterIDToString(cpsr.id), color);
 
   uint32_t value = static_cast<uint32_t>(cpsr.GetValue());
 
@@ -99,7 +99,7 @@ void FormatGeneralRegisters(const FormatRegisterOptions& options,
 std::vector<OutputBuffer> FormatDBGBCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
+  row.emplace_back(debug::RegisterIDToString(reg.id), color);
 
   uint64_t value = reg.GetValue();
   row.emplace_back(to_hex_string(value, 8), color);
@@ -116,7 +116,7 @@ std::vector<OutputBuffer> FormatDBGBCR(const debug::RegisterValue& reg, TextFore
 std::vector<OutputBuffer> FormatDBGWCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
+  row.emplace_back(debug::RegisterIDToString(reg.id), color);
 
   uint32_t value = reg.GetValue();
   row.emplace_back(to_hex_string(value, 8), color);
@@ -137,7 +137,7 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const debug::RegisterValue& reg,
                                                TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
+  row.emplace_back(debug::RegisterIDToString(reg.id), color);
 
   uint64_t value = static_cast<uint64_t>(reg.GetValue());
   row.emplace_back(to_hex_string(value, 8), color);
@@ -160,7 +160,7 @@ std::vector<OutputBuffer> FormatID_AA64FR0_EL1(const debug::RegisterValue& reg,
 std::vector<OutputBuffer> FormatMDSCR(const debug::RegisterValue& reg, TextForegroundColor color) {
   std::vector<OutputBuffer> row;
   row.reserve(3);
-  row.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
+  row.emplace_back(debug::RegisterIDToString(reg.id), color);
 
   uint64_t value = static_cast<uint64_t>(reg.GetValue());
   row.emplace_back(to_hex_string(value, 8), color);
@@ -245,7 +245,7 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
 
 }  // namespace
 
-bool FormatCategoryARM64(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
+bool FormatCategoryARM64(const FormatRegisterOptions& options, RegisterCategory category,
                          const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
   switch (category) {
     case RegisterCategory::kGeneral:

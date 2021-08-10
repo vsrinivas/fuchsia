@@ -31,10 +31,6 @@ static_library("shared") {
     "protocol_helpers.h",
     "records.cc",
     "records.h",
-    "register_desc.cc",
-    "register_desc.h",
-    "register_test_support.cc",
-    "register_test_support.h",
     "unwinder_support.cc",
     "unwinder_support.h",
   ]
@@ -77,11 +73,11 @@ source_set("tests") {
     "decode_exception_unittests.cc",
     "message_unittests.cc",
     "protocol_unittests.cc",
-    "register_desc_unittest.cc",
   ]
 
   deps = [
     "//src/developer/debug/shared",
+    "//src/developer/debug/shared:test_support",
     "//third_party/googletest:gtest",
   ]
 

@@ -42,8 +42,8 @@ bool Deserialize(MessageReader* reader, ProcessThreadId* ids);
 void Serialize(const debug::RegisterValue& reg, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, debug::RegisterValue* reg);
 
-void Serialize(RegisterCategory type, MessageWriter* writer);
-bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat);
+void Serialize(debug::RegisterCategory type, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, debug::RegisterCategory* reg_cat);
 
 void Serialize(const debug::AddressRange& range, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, debug::AddressRange* range);

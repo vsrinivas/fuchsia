@@ -23,7 +23,7 @@
 
 namespace zxdb {
 
-using debug_ipc::RegisterCategory;
+using debug::RegisterCategory;
 
 FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, Location location)
     : Frame(thread->session()),
@@ -68,7 +68,7 @@ void FrameImpl::GetRegisterCategoryAsync(
   FX_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
 
   size_t category_index = static_cast<size_t>(category);
-  FX_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
+  FX_DCHECK(category_index < static_cast<size_t>(RegisterCategory::kLast));
 
   if (!always_request && registers_[category_index]) {
     // Registers known already, asynchronously return the result.
@@ -108,14 +108,14 @@ void FrameImpl::GetRegisterCategoryAsync(
 
 void FrameImpl::WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                               fit::callback<void(const Err&)> cb) {
-  const debug_ipc::RegisterInfo* info = debug_ipc::InfoForRegister(id);
+  const debug::RegisterInfo* info = debug::InfoForRegister(id);
   FX_DCHECK(info);                      // Should always be a valid register.
   FX_DCHECK(info->canonical_id == id);  // Should only write full canonical registers.
 
   if (!IsInTopmostPhysicalFrame()) {
     debug::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(cb)]() mutable {
       cb(Err("Register %s can't be written when the frame is not the topmost.",
-             debug_ipc::RegisterIDToString(id)));
+             debug::RegisterIDToString(id)));
     });
     return;
   }
@@ -286,7 +286,7 @@ bool FrameImpl::EnsureBasePointer() {
 void FrameImpl::SaveRegisterUpdates(std::vector<debug::RegisterValue> regs) {
   std::map<RegisterCategory, std::vector<debug::RegisterValue>> categorized;
   for (auto& reg : regs) {
-    RegisterCategory cat = debug_ipc::RegisterIDToCategory(reg.id);
+    RegisterCategory cat = debug::RegisterIDToCategory(reg.id);
     FX_DCHECK(cat != RegisterCategory::kNone);
     categorized[cat].push_back(std::move(reg));
   }

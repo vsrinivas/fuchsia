@@ -467,7 +467,7 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
 }
 
 std::vector<debug::RegisterValue> DebuggedThread::ReadRegisters(
-    const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
+    const std::vector<debug::RegisterCategory>& cats_to_get) const {
   return thread_handle_->ReadRegisters(cats_to_get);
 }
 
@@ -483,7 +483,7 @@ std::vector<debug::RegisterValue> DebuggedThread::WriteRegisters(
   // a breakpoint.
   bool rip_change = false;
   debug::RegisterID rip_id =
-      GetSpecialRegisterID(arch::GetCurrentArch(), debug_ipc::SpecialRegisterType::kIP);
+      GetSpecialRegisterID(arch::GetCurrentArch(), debug::SpecialRegisterType::kIP);
   for (const debug::RegisterValue& reg : regs) {
     if (reg.id == rip_id) {
       rip_change = true;

@@ -99,7 +99,7 @@ TEST_F(VerbPrint, VectorRegisterFormat) {
   // X64 so use it's vector registers).
   ASSERT_EQ(debug::Arch::kX64, session().arch());
   mock_remote_api()->SetRegisterCategory(
-      debug_ipc::RegisterCategory::kVector,
+      debug::RegisterCategory::kVector,
       {debug::RegisterValue(
           debug::RegisterID::kX64_xmm0,
           std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf})});

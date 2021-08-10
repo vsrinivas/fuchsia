@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_
-#define SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_REGISTER_INFO_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_REGISTER_INFO_H_
 
 #include <stdint.h>
 
@@ -20,7 +20,7 @@
 // The enum definitions mirror the structs defined in the debug information
 // for zircon (see zircon/system/public/zircon/syscalls/debug.h).
 
-namespace debug_ipc {
+namespace debug {
 
 enum class SpecialRegisterType {
   kNone,
@@ -41,14 +41,14 @@ enum class RegisterFormat {
 };
 
 struct RegisterInfo {
-  debug::RegisterID id;
+  RegisterID id;
   std::string name;
-  debug::Arch arch;
+  Arch arch;
 
   // Some registers refer to a subset of another register, e.g. "al" (low byte of "rax") on X86 or
   // "w0" (low 32-bits of "x0") on ARM. This ID will be the larger canonical ID. For registers that
   // are themselves canonical, this will be the same as "id".
-  debug::RegisterID canonical_id;
+  RegisterID canonical_id;
 
   // When asking for a name-to-register mapping, sometimes they map to a part of a register. For
   // example "al" on x64 is the low 8 bits of rax. These will both be 0 for the "canonical" register
@@ -65,28 +65,28 @@ struct RegisterInfo {
   RegisterFormat format = RegisterFormat::kGeneral;
 };
 
-const RegisterInfo* InfoForRegister(debug::RegisterID id);
-const RegisterInfo* InfoForRegister(debug::Arch arch, const std::string& name);
+const RegisterInfo* InfoForRegister(RegisterID id);
+const RegisterInfo* InfoForRegister(Arch arch, const std::string& name);
 
-const char* RegisterIDToString(debug::RegisterID);
-debug::RegisterID StringToRegisterID(const std::string&);
+const char* RegisterIDToString(RegisterID);
+RegisterID StringToRegisterID(const std::string&);
 
 // Returns the register ID for the given special register.
-debug::RegisterID GetSpecialRegisterID(debug::Arch, SpecialRegisterType);
+RegisterID GetSpecialRegisterID(Arch, SpecialRegisterType);
 
 // Returns the special register type for a register ID.
-SpecialRegisterType GetSpecialRegisterType(debug::RegisterID id);
+SpecialRegisterType GetSpecialRegisterType(RegisterID id);
 
 // Converts the ID number used by DWARF to our register info. Returns null if not found.
-const RegisterInfo* DWARFToRegisterInfo(debug::Arch, uint32_t dwarf_reg_id);
+const RegisterInfo* DWARFToRegisterInfo(Arch, uint32_t dwarf_reg_id);
 
 // Find out what arch a register ID belongs to
-debug::Arch GetArchForRegisterID(debug::RegisterID);
+Arch GetArchForRegisterID(RegisterID);
 
 // Returns true if the given register is a "general" register. General
 // registers are sent as part of the unwind frame data. Other registers must
 // be requested specially from the target.
-bool IsGeneralRegister(debug::RegisterID);
+bool IsGeneralRegister(RegisterID);
 
 // Gets the data for the given register from the array.
 //
@@ -99,8 +99,8 @@ bool IsGeneralRegister(debug::RegisterID);
 // truncated also so it may have less data than expected.
 //
 // If the register is not found, the returned view will be empty.
-containers::array_view<uint8_t> GetRegisterData(const std::vector<debug::RegisterValue>& regs,
-                                                debug::RegisterID id);
+containers::array_view<uint8_t> GetRegisterData(const std::vector<RegisterValue>& regs,
+                                                RegisterID id);
 
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.
@@ -133,8 +133,8 @@ enum class RegisterCategory : uint32_t {
 };
 
 const char* RegisterCategoryToString(RegisterCategory);
-RegisterCategory RegisterIDToCategory(debug::RegisterID);
+RegisterCategory RegisterIDToCategory(RegisterID);
 
-}  // namespace debug_ipc
+}  // namespace debug
 
-#endif  // SRC_DEVELOPER_DEBUG_IPC_REGISTER_DESC_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_REGISTER_INFO_H_

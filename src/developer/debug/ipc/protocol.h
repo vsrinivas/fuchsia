@@ -6,8 +6,8 @@
 #define SRC_DEVELOPER_DEBUG_IPC_PROTOCOL_H_
 
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/shared/status.h"
 
 namespace debug_ipc {
@@ -372,7 +372,7 @@ struct ReadRegistersRequest {
   ProcessThreadId id;
 
   // What categories do we want to receive data from.
-  std::vector<debug_ipc::RegisterCategory> categories;
+  std::vector<debug::RegisterCategory> categories;
 };
 
 struct ReadRegistersReply {

@@ -22,7 +22,7 @@ namespace zxdb {
 
 namespace {
 
-using debug_ipc::RegisterCategory;
+using debug::RegisterCategory;
 
 const char kRegsShortHelp[] = "regs / rg: Show the current registers for a thread.";
 const char kRegsHelp[] =
@@ -166,8 +166,6 @@ struct RegisterCollector {
 };
 
 Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
-  using debug_ipc::RegisterCategory;
-
   if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs"); err.has_error())
     return err;
 
@@ -209,7 +207,7 @@ Err RunVerbRegs(ConsoleContext* context, const Command& cmd) {
 
   if (category_set.size() == 1 && *category_set.begin() == RegisterCategory::kGeneral) {
     // Any available general registers should be available synchronously.
-    auto* regs = cmd.frame()->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+    auto* regs = cmd.frame()->GetRegisterCategorySync(RegisterCategory::kGeneral);
     FX_DCHECK(regs);
     OnRegsComplete(Err(), *regs, options, top_stack_frame);
   } else {

@@ -8,8 +8,8 @@
 
 #include <algorithm>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
@@ -39,7 +39,7 @@ fxl::RefPtr<SymbolDataProvider> MockSymbolDataProvider::GetEntryDataProvider() c
 
 std::optional<containers::array_view<uint8_t>> MockSymbolDataProvider::GetRegister(
     debug::RegisterID id) {
-  if (debug_ipc::GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
+  if (debug::GetSpecialRegisterType(id) == debug::SpecialRegisterType::kIP) {
     const uint8_t* ip_as_char = reinterpret_cast<const uint8_t*>(&ip_);
     return containers::array_view(ip_as_char, ip_as_char + sizeof(ip_));
   }

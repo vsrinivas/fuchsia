@@ -10,9 +10,9 @@
 #include <algorithm>
 #include <map>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -32,9 +32,9 @@ namespace zxdb {
 
 namespace {
 
-void FormatCategory(const FormatRegisterOptions& options, debug_ipc::RegisterCategory category,
+void FormatCategory(const FormatRegisterOptions& options, debug::RegisterCategory category,
                     const std::vector<debug::RegisterValue>& registers, OutputBuffer* out) {
-  auto title = fxl::StringPrintf("%s Registers\n", debug_ipc::RegisterCategoryToString(category));
+  auto title = fxl::StringPrintf("%s Registers\n", debug::RegisterCategoryToString(category));
   out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
 
   if (registers.empty()) {
@@ -62,9 +62,9 @@ OutputBuffer FormatRegisters(const FormatRegisterOptions& options,
   OutputBuffer out;
 
   // Group register by category.
-  std::map<debug_ipc::RegisterCategory, std::vector<debug::RegisterValue>> categorized;
+  std::map<debug::RegisterCategory, std::vector<debug::RegisterValue>> categorized;
   for (const debug::RegisterValue& reg : registers)
-    categorized[debug_ipc::RegisterIDToCategory(reg.id)].push_back(reg);
+    categorized[debug::RegisterIDToCategory(reg.id)].push_back(reg);
 
   for (auto& [category, cat_regs] : categorized) {
     // Ensure the registers appear in a consistent order.
@@ -119,7 +119,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
     // Use the expression formatter to format the vector members.
     ExprValue vector_value = VectorRegisterToValue(r.id, options.vector_format, r.data);
     auto node =
-        std::make_unique<FormatNode>(debug_ipc::RegisterIDToString(r.id), std::move(vector_value));
+        std::make_unique<FormatNode>(debug::RegisterIDToString(r.id), std::move(vector_value));
 
     // In general formatting is asynchronous but a vector of numbers should always be completable
     // synchronously.
@@ -172,7 +172,7 @@ void FormatGeneralVectorRegisters(const FormatRegisterOptions& options,
 std::vector<OutputBuffer> DescribeRegister(const debug::RegisterValue& reg,
                                            TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(debug_ipc::RegisterIDToString(reg.id), color);
+  result.emplace_back(debug::RegisterIDToString(reg.id), color);
 
   if (reg.data.size() <= 8) {
     // Treat <= 64 bit registers as numbers.

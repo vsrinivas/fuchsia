@@ -77,11 +77,11 @@ bool Deserialize(MessageReader* reader, debug::RegisterValue* reg) {
   return reader->ReadBytes(length, reg->data.data());
 }
 
-void Serialize(RegisterCategory type, MessageWriter* writer) {
+void Serialize(debug::RegisterCategory type, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(type));
 }
 
-bool Deserialize(MessageReader* reader, RegisterCategory* type) {
+bool Deserialize(MessageReader* reader, debug::RegisterCategory* type) {
   return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
 }
 

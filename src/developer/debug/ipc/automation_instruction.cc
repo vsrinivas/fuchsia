@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 
 namespace debug_ipc {
 
@@ -16,7 +16,7 @@ std::string AutomationOperand::ToString() {
     case AutomationOperandKind::kZero:
       return "zero";
     case AutomationOperandKind::kRegister:
-      output_stream << debug_ipc::RegisterIDToString(static_cast<debug::RegisterID>(index_));
+      output_stream << debug::RegisterIDToString(static_cast<debug::RegisterID>(index_));
       return output_stream.str();
     case AutomationOperandKind::kConstant:
       output_stream << value_;
@@ -25,15 +25,15 @@ std::string AutomationOperand::ToString() {
       output_stream << "[xsp + 0x" << std::hex << index_ << std::dec << "]/64";
       return output_stream.str();
     case AutomationOperandKind::kRegisterTimesConstant:
-      output_stream << debug_ipc::RegisterIDToString(static_cast<debug::RegisterID>(index_))
-                    << " * " << value_;
+      output_stream << debug::RegisterIDToString(static_cast<debug::RegisterID>(index_)) << " * "
+                    << value_;
       return output_stream.str();
     case AutomationOperandKind::kIndirectUInt32:
-      output_stream << "[" << debug_ipc::RegisterIDToString(static_cast<debug::RegisterID>(index_))
+      output_stream << "[" << debug::RegisterIDToString(static_cast<debug::RegisterID>(index_))
                     << " + 0x" << std::hex << value_ << std::dec << "]/32";
       return output_stream.str();
     case AutomationOperandKind::kIndirectUInt64:
-      output_stream << "[" << debug_ipc::RegisterIDToString(static_cast<debug::RegisterID>(index_))
+      output_stream << "[" << debug::RegisterIDToString(static_cast<debug::RegisterID>(index_))
                     << " + 0x" << std::hex << value_ << std::dec << "]/64";
       return output_stream.str();
     case AutomationOperandKind::kIndirectUInt32Loop:

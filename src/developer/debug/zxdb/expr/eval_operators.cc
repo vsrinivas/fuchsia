@@ -8,7 +8,7 @@
 
 #include <type_traits>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
@@ -45,9 +45,9 @@ namespace zxdb {
 
 namespace {
 
+using debug::RegisterCategory;
 using debug::RegisterID;
-using debug_ipc::RegisterCategory;
-using debug_ipc::RegisterInfo;
+using debug::RegisterInfo;
 
 // Backend for register assignment that takes the known current value of the destination register
 // as well as the new value (possibly in a subrange) and updates the value. This is updated
@@ -117,7 +117,7 @@ void AssignRegisterWithExistingValue(const fxl::RefPtr<EvalContext>& context,
 
 void DoRegisterAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValueSource& dest,
                           const ExprValue& source, EvalCallback cb) {
-  const RegisterInfo* info = debug_ipc::InfoForRegister(dest.register_id());
+  const RegisterInfo* info = debug::InfoForRegister(dest.register_id());
   if (!info)
     return cb(Err("Assignment to invalid register %u.", dest.register_id()));
 

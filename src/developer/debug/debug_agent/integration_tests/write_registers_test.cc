@@ -12,7 +12,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/ipc/message_reader.h"
-#include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace {

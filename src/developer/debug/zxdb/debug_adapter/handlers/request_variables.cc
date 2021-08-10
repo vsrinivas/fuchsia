@@ -13,7 +13,7 @@
 #include <dap/session.h>
 #include <dap/types.h>
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/debug_adapter/context.h"
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_scopes.h"
@@ -300,12 +300,12 @@ Err PopulateRegisters(Frame* frame, const dap::VariablesRequest& req, DebugAdapt
                       std::function<void(dap::ResponseOrError<dap::VariablesResponse>)> callback) {
   // Get general registers.
   // Note: Other registers like vectors, floating points are not reported for now.
-  auto* regs = frame->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+  auto* regs = frame->GetRegisterCategorySync(debug::RegisterCategory::kGeneral);
   FX_DCHECK(regs);
   dap::VariablesResponse response;
   for (auto& reg : *regs) {
     dap::Variable var;
-    var.name = debug_ipc::RegisterIDToString(reg.id);
+    var.name = debug::RegisterIDToString(reg.id);
     uint64_t value = static_cast<uint64_t>(reg.GetValue());
     var.value = to_hex_string(value);
     response.variables.push_back(var);

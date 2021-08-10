@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -10,13 +10,8 @@
 #include <iterator>
 #include <map>
 
-#include "src/developer/debug/ipc/protocol.h"
-
-namespace debug_ipc {
+namespace debug {
 namespace {
-
-using debug::Arch;
-using debug::RegisterID;
 
 // clang-format off
 
@@ -644,15 +639,15 @@ SpecialRegisterType GetSpecialRegisterType(RegisterID id) {
   switch (id) {
     case RegisterID::kX64_rip:
     case RegisterID::kARMv8_pc:
-      return debug_ipc::SpecialRegisterType::kIP;
+      return SpecialRegisterType::kIP;
     case RegisterID::kX64_rsp:
     case RegisterID::kARMv8_sp:
-      return debug_ipc::SpecialRegisterType::kSP;
+      return SpecialRegisterType::kSP;
     case RegisterID::kX64_fsbase:
     case RegisterID::kARMv8_tpidr:
-      return debug_ipc::SpecialRegisterType::kTP;
+      return SpecialRegisterType::kTP;
     default:
-      return debug_ipc::SpecialRegisterType::kNone;
+      return SpecialRegisterType::kNone;
   }
 }
 
@@ -726,13 +721,13 @@ RegisterCategory RegisterIDToCategory(RegisterID id) {
   return RegisterCategory::kNone;
 }
 
-containers::array_view<uint8_t> GetRegisterData(const std::vector<debug::RegisterValue>& regs,
+containers::array_view<uint8_t> GetRegisterData(const std::vector<RegisterValue>& regs,
                                                 RegisterID id) {
   const RegisterInfo* info = InfoForRegister(id);
   if (!info)
     return containers::array_view<uint8_t>();
 
-  const debug::RegisterValue* found_canonical = nullptr;
+  const RegisterValue* found_canonical = nullptr;
   for (const auto& reg : regs) {
     if (reg.id == id)
       return reg.data;  // Prefer an exact match.
@@ -760,4 +755,4 @@ containers::array_view<uint8_t> GetRegisterData(const std::vector<debug::Registe
   return result.subview(info->shift / 8, info->bits / 8);
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

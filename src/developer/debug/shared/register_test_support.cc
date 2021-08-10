@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/register_test_support.h"
 
-namespace debug_ipc {
+namespace debug {
 
-debug::RegisterValue CreateRegisterWithTestData(debug::RegisterID id, size_t length) {
-  debug::RegisterValue reg;
+RegisterValue CreateRegisterWithTestData(RegisterID id, size_t length) {
+  RegisterValue reg;
   reg.id = id;
 
   reg.data.reserve(length);
@@ -19,4 +19,4 @@ debug::RegisterValue CreateRegisterWithTestData(debug::RegisterID id, size_t len
   return reg;
 }
 
-}  // namespace debug_ipc
+}  // namespace debug

@@ -16,7 +16,7 @@
 #include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/watchpoint_info.h"
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 
 namespace debug_agent {
 
@@ -88,7 +88,7 @@ class ThreadHandle {
 
   // Returns the current values of the given register categories.
   virtual std::vector<debug::RegisterValue> ReadRegisters(
-      const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const = 0;
+      const std::vector<debug::RegisterCategory>& cats_to_get) const = 0;
 
   // Returns the new value of the registers that may have changed which is the result of reading
   // them after the write. This helps the client stay in sync. The may include other registers that

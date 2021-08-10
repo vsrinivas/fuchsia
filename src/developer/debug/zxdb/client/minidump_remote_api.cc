@@ -18,8 +18,8 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 
+using debug::RegisterCategory;
 using debug::RegisterID;
-using debug_ipc::RegisterCategory;
 
 namespace zxdb {
 
@@ -175,7 +175,7 @@ void PopulateRegistersARM64Vector(const crashpad::CPUContextARM64& ctx,
 void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
                             const debug_ipc::ReadRegistersRequest& request,
                             debug_ipc::ReadRegistersReply* reply) {
-  for (const debug_ipc::RegisterCategory cat : request.categories) {
+  for (const RegisterCategory cat : request.categories) {
     if (cat == RegisterCategory::kGeneral)
       PopulateRegistersARM64General(ctx, &reply->registers);
     if (cat == RegisterCategory::kVector)
@@ -257,7 +257,7 @@ void PopulateRegistersX64Debug(const crashpad::CPUContextX86_64& ctx,
 void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
                              const debug_ipc::ReadRegistersRequest& request,
                              debug_ipc::ReadRegistersReply* reply) {
-  for (const debug_ipc::RegisterCategory cat : request.categories) {
+  for (const RegisterCategory cat : request.categories) {
     if (cat == RegisterCategory::kGeneral)
       PopulateRegistersX64General(ctx, &reply->registers);
     if (cat == RegisterCategory::kFloatingPoint)

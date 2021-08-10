@@ -22,7 +22,7 @@ void MockRemoteAPI::AddMemory(uint64_t address, std::vector<uint8_t> data) {
   memory_.AddMemory(address, std::move(data));
 }
 
-void MockRemoteAPI::SetRegisterCategory(debug_ipc::RegisterCategory cat,
+void MockRemoteAPI::SetRegisterCategory(debug::RegisterCategory cat,
                                         std::vector<debug::RegisterValue> regs) {
   register_replies_[cat] = std::move(regs);
 }

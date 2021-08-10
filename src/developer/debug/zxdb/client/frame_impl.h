@@ -35,9 +35,9 @@ class FrameImpl final : public Frame {
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   const std::vector<debug::RegisterValue>* GetRegisterCategorySync(
-      debug_ipc::RegisterCategory category) const override;
+      debug::RegisterCategory category) const override;
   void GetRegisterCategoryAsync(
-      debug_ipc::RegisterCategory category, bool always_request,
+      debug::RegisterCategory category, bool always_request,
       fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) override;
   void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override;
@@ -73,7 +73,7 @@ class FrameImpl final : public Frame {
 
   // Currently cached registers, indexed by register category.
   std::optional<std::vector<debug::RegisterValue>>
-      registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
+      registers_[static_cast<size_t>(debug::RegisterCategory::kLast)];
 
   mutable Location location_;                                          // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.

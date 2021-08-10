@@ -8,9 +8,9 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
-#include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/arch_x86.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
+#include "src/developer/debug/shared/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
@@ -18,10 +18,10 @@ namespace arch {
 
 TEST(ArchX64, WriteGeneralRegs) {
   std::vector<debug::RegisterValue> regs;
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 8));
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rbx, 8));
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_r14, 8));
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rflags, 8));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 8));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_rbx, 8));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_r14, 8));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_rflags, 8));
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
@@ -79,11 +79,11 @@ TEST(ArchX64, InvalidWriteGeneralRegs) {
   std::vector<debug::RegisterValue> regs;
 
   // Invalid length.
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 4));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_rax, 4));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 
   // Invalid (non-canonical) register.
-  regs.push_back(debug_ipc::CreateRegisterWithTestData(debug::RegisterID::kX64_ymm2, 8));
+  regs.push_back(debug::CreateRegisterWithTestData(debug::RegisterID::kX64_ymm2, 8));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 

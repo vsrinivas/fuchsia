@@ -89,7 +89,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
 
   // Writes the given canonical register ID.
   //
-  // This must be a canonical register as identified by debug_ipc::RegisterInfo::canonical_id, which
+  // This must be a canonical register as identified by debug::RegisterInfo::canonical_id, which
   // means that it's a whole hardware register and needs no shifting nor masking.
   virtual void WriteRegister(debug::RegisterID id, std::vector<uint8_t> data, WriteCallback cb);
 

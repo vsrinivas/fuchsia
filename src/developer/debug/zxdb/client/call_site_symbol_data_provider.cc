@@ -4,8 +4,8 @@
 
 #include "src/developer/debug/zxdb/client/call_site_symbol_data_provider.h"
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/expr/eval_dwarf_expr.h"
@@ -131,8 +131,8 @@ fxl::RefPtr<CallSiteParameter> CallSiteSymbolDataProvider::ParameterForRegister(
     return nullptr;
 
   // Map to the DWARF register ID referenced by the call site parameters.
-  const debug_ipc::RegisterInfo* info = debug_ipc::InfoForRegister(id);
-  if (!info || info->dwarf_id == debug_ipc::RegisterInfo::kNoDwarfId)
+  const debug::RegisterInfo* info = debug::InfoForRegister(id);
+  if (!info || info->dwarf_id == debug::RegisterInfo::kNoDwarfId)
     return nullptr;
   uint32_t dwarf_id = info->dwarf_id;
 

@@ -26,6 +26,8 @@ static_library("shared") {
     "regex.cc",
     "regex.h",
     "register_id.h",
+    "register_info.cc",
+    "register_info.h",
     "register_value.cc",
     "register_value.h",
     "status.cc",
@@ -91,6 +93,8 @@ source_set("test_support") {
   sources = [
     "mock_memory.cc",
     "mock_memory.h",
+    "register_test_support.cc",
+    "register_test_support.h",
     "test_with_loop.h",
   ]
 
@@ -111,6 +115,7 @@ source_set("tests") {
     "largest_less_or_equal_unittest.cc",
     "message_loop_unittest.cc",
     "regex_unittest.cc",
+    "register_info_unittest.cc",
     "stream_buffer_unittest.cc",
   ]
 

@@ -12,7 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/ipc/protocol.h"
-#include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/shared/register_info.h"
 
 namespace debug_agent {
 
@@ -57,11 +57,11 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug::RegisterValue>& out);
 
 // The registers in the given category are appended to the given output vector.
-zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+zx_status_t ReadRegisters(const zx::thread& thread, const debug::RegisterCategory& cat,
                           std::vector<debug::RegisterValue>& out);
 
 // The registers must all be in the same category.
-zx_status_t WriteRegisters(zx::thread& thread, const debug_ipc::RegisterCategory& cat,
+zx_status_t WriteRegisters(zx::thread& thread, const debug::RegisterCategory& cat,
                            const std::vector<debug::RegisterValue>& registers);
 
 // Given the current register value in |regs|, applies to it the new updated values for the

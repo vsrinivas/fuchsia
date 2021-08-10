@@ -189,7 +189,7 @@ zx_status_t UnwindStackAndroid(const ProcessHandle& process, const ModuleList& m
       src.regs->IterateRegisters([&dest](const char* name, uint64_t val) {
         // TODO(sadmac): It'd be nice to be using some sort of ID constant instead of a converted
         // string here.
-        auto id = debug_ipc::StringToRegisterID(name);
+        auto id = debug::StringToRegisterID(name);
         if (id != RegisterID::kUnknown) {
           dest->regs.emplace_back(id, val);
         }
@@ -246,8 +246,8 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& 
 
   // Compute the register IDs for this platform's IP/SP.
   auto arch = arch::GetCurrentArch();
-  RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
-  RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
+  RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug::SpecialRegisterType::kIP);
+  RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug::SpecialRegisterType::kSP);
 
   // Top stack frame.
   debug_ipc::StackFrame frame;

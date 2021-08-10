@@ -11,8 +11,8 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/shared/register_value.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/lib/fxl/memory/ref_counted.h"

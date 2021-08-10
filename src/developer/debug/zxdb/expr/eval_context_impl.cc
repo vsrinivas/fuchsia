@@ -6,8 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
@@ -43,51 +43,51 @@ RegisterID GetRegisterID(const ParsedIdentifier& ident) {
   // Check for explicit register identifier annotation.
   if (ident.components().size() == 1 &&
       ident.components()[0].special() == SpecialIdentifier::kRegister) {
-    return debug_ipc::StringToRegisterID(ident.components()[0].name());
+    return debug::StringToRegisterID(ident.components()[0].name());
   }
 
   // Try to convert the identifier string to a register name.
   auto str = GetSingleComponentIdentifierName(ident);
   if (!str)
     return debug::RegisterID::kUnknown;
-  return debug_ipc::StringToRegisterID(*str);
+  return debug::StringToRegisterID(*str);
 }
 
 Err GetUnavailableRegisterErr(RegisterID id) {
-  return Err("Register %s unavailable in this context.", debug_ipc::RegisterIDToString(id));
+  return Err("Register %s unavailable in this context.", debug::RegisterIDToString(id));
 }
 
 ErrOrValue RegisterDataToValue(ExprLanguage lang, RegisterID id, VectorRegisterFormat vector_fmt,
                                containers::array_view<uint8_t> data) {
-  const debug_ipc::RegisterInfo* info = debug_ipc::InfoForRegister(id);
+  const debug::RegisterInfo* info = debug::InfoForRegister(id);
   if (!info)
     return Err("Unknown register");
 
   ExprValueSource source(id);
 
   switch (info->format) {
-    case debug_ipc::RegisterFormat::kGeneral:
-    case debug_ipc::RegisterFormat::kSpecial: {
+    case debug::RegisterFormat::kGeneral:
+    case debug::RegisterFormat::kSpecial: {
       return ExprValue(GetBuiltinUnsignedType(lang, data.size()),
                        std::vector<uint8_t>(data.begin(), data.end()), source);
     }
 
-    case debug_ipc::RegisterFormat::kFloat: {
+    case debug::RegisterFormat::kFloat: {
       return ExprValue(GetBuiltinFloatType(lang, data.size()),
                        std::vector<uint8_t>(data.begin(), data.end()), source);
     }
 
-    case debug_ipc::RegisterFormat::kVector: {
+    case debug::RegisterFormat::kVector: {
       return VectorRegisterToValue(id, vector_fmt, std::vector<uint8_t>(data.begin(), data.end()));
     }
 
-    case debug_ipc::RegisterFormat::kVoidAddress: {
+    case debug::RegisterFormat::kVoidAddress: {
       // A void* is a pointer to no type.
       return ExprValue(fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol()),
                        std::vector<uint8_t>(data.begin(), data.end()), source);
     }
 
-    case debug_ipc::RegisterFormat::kWordAddress: {
+    case debug::RegisterFormat::kWordAddress: {
       auto word_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
                                                              GetBuiltinUnsignedType(lang, 8));
       return ExprValue(word_ptr_type, std::vector<uint8_t>(data.begin(), data.end()), source);
@@ -176,8 +176,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCall
   }
 
   auto reg = GetRegisterID(identifier);
-  if (reg == RegisterID::kUnknown ||
-      debug_ipc::GetArchForRegisterID(reg) != data_provider_->GetArch())
+  if (reg == RegisterID::kUnknown || debug::GetArchForRegisterID(reg) != data_provider_->GetArch())
     return cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()));
 
   // Fall back to matching registers when no symbol is found. The data_provider is in charge
@@ -228,9 +227,8 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   if (!type)
     return cb(Err("Missing type information."));
 
-  std::optional<containers::array_view<uint8_t>> ip_data =
-      data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(
-          data_provider_->GetArch(), debug_ipc::SpecialRegisterType::kIP));
+  std::optional<containers::array_view<uint8_t>> ip_data = data_provider_->GetRegister(
+      debug::GetSpecialRegisterID(data_provider_->GetArch(), debug::SpecialRegisterType::kIP));
   TargetPointer ip;
   if (!ip_data || ip_data->size() != sizeof(ip))  // The IP should never require an async call.
     return cb(Err("No location available."));

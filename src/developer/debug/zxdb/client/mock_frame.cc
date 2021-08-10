@@ -77,18 +77,18 @@ const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
 
 const std::vector<debug::RegisterValue>* MockFrame::GetRegisterCategorySync(
-    debug_ipc::RegisterCategory category) const {
-  if (category == debug_ipc::RegisterCategory::kGeneral)
+    debug::RegisterCategory category) const {
+  if (category == debug::RegisterCategory::kGeneral)
     return &general_registers_;
   return nullptr;
 }
 
 void MockFrame::GetRegisterCategoryAsync(
-    debug_ipc::RegisterCategory category, bool always_request,
+    debug::RegisterCategory category, bool always_request,
     fit::function<void(const Err&, const std::vector<debug::RegisterValue>&)> cb) {
   Err err;
   std::vector<debug::RegisterValue> regs;
-  if (category == debug_ipc::RegisterCategory::kGeneral)
+  if (category == debug::RegisterCategory::kGeneral)
     regs = general_registers_;
   else
     err = Err("Register category unavailable from mock.");

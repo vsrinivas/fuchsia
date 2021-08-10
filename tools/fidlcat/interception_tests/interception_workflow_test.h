@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"

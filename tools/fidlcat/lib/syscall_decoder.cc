@@ -167,7 +167,7 @@ void SyscallDecoder::DoDecode() {
     caller_locations_.push_back(caller->GetLocation());
   }
   const std::vector<debug::RegisterValue>* general_registers =
-      thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+      thread->GetStack()[0]->GetRegisterCategorySync(debug::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   // The order of parameters in the System V AMD64 ABI we use, according to
@@ -356,7 +356,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
     return;
   }
   const std::vector<debug::RegisterValue>* general_registers =
-      thread->GetStack()[0]->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
+      thread->GetStack()[0]->GetRegisterCategorySync(debug::RegisterCategory::kGeneral);
   FX_DCHECK(general_registers);  // General registers should always be available synchronously.
 
   debug::RegisterID result_register =

@@ -9,7 +9,7 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
-#include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -898,8 +898,8 @@ TEST(Protocol, UpdateGlobalSettingsReply) {
 TEST(Protocol, ReadRegistersRequest) {
   ReadRegistersRequest initial;
   initial.id = {.process = 0x1234, .thread = 0x5678};
-  initial.categories.push_back(RegisterCategory::kGeneral);
-  initial.categories.push_back(RegisterCategory::kVector);
+  initial.categories.push_back(debug::RegisterCategory::kGeneral);
+  initial.categories.push_back(debug::RegisterCategory::kVector);
 
   ReadRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));

@@ -19,7 +19,7 @@ MockThreadHandle::MockThreadHandle(zx_koid_t thread_koid, std::string name)
   FX_DCHECK(!null_handle_);
 }
 
-void MockThreadHandle::SetRegisterCategory(debug_ipc::RegisterCategory cat,
+void MockThreadHandle::SetRegisterCategory(debug::RegisterCategory cat,
                                            std::vector<debug::RegisterValue> values) {
   FX_CHECK(static_cast<size_t>(cat) < std::size(registers_));
   registers_[static_cast<size_t>(cat)] = std::move(values);
@@ -121,7 +121,7 @@ bool MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
 void MockThreadHandle::SetSingleStep(bool single_step) { single_step_ = single_step; }
 
 std::vector<debug::RegisterValue> MockThreadHandle::ReadRegisters(
-    const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {
+    const std::vector<debug::RegisterCategory>& cats_to_get) const {
   std::vector<debug::RegisterValue> result;
   for (const auto cat : cats_to_get) {
     FX_CHECK(static_cast<size_t>(cat) < std::size(registers_));
