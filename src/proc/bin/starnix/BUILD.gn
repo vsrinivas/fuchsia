@@ -75,6 +75,7 @@ if (target_cpu == "x64") {
       "fs/fd_number.rs",
       "fs/fd_table.rs",
       "fs/file_object.rs",
+      "fs/file_system.rs",
       "fs/fs_context.rs",
       "fs/fs_node.rs",
       "fs/fuchsia/mod.rs",
