@@ -6,8 +6,9 @@ protocol fuchsia.hardware.network/Device
 enum/member fuchsia.hardware.network/DeviceClass.BRIDGE 4
 enum/member fuchsia.hardware.network/DeviceClass.ETHERNET 1
 enum/member fuchsia.hardware.network/DeviceClass.PPP 3
-enum/member fuchsia.hardware.network/DeviceClass.UNKNOWN 0
+enum/member fuchsia.hardware.network/DeviceClass.VIRTUAL 0
 enum/member fuchsia.hardware.network/DeviceClass.WLAN 2
+enum/member fuchsia.hardware.network/DeviceClass.WLAN_AP 5
 strict enum fuchsia.hardware.network/DeviceClass uint16
 table/member fuchsia.hardware.network/DeviceInfo.buffer_alignment uint32
 table/member fuchsia.hardware.network/DeviceInfo.descriptor_version uint8

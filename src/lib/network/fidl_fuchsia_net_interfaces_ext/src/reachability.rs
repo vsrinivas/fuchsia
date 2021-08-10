@@ -31,9 +31,10 @@ pub fn is_globally_routable(
             return false;
         }
         fnet_interfaces::DeviceClass::Device(device) => match device {
-            fidl_fuchsia_hardware_network::DeviceClass::Unknown
+            fidl_fuchsia_hardware_network::DeviceClass::Virtual
             | fidl_fuchsia_hardware_network::DeviceClass::Ethernet
             | fidl_fuchsia_hardware_network::DeviceClass::Wlan
+            | fidl_fuchsia_hardware_network::DeviceClass::WlanAp
             | fidl_fuchsia_hardware_network::DeviceClass::Ppp
             | fidl_fuchsia_hardware_network::DeviceClass::Bridge => {}
         },

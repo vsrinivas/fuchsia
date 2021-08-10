@@ -1048,7 +1048,7 @@ async fn test_interfaces_watcher() -> Result {
         name: Some(format!("eth{}", id)),
         online: Some(false),
         device_class: Some(fidl_fuchsia_net_interfaces::DeviceClass::Device(
-            fidl_fuchsia_hardware_network::DeviceClass::Unknown,
+            fidl_fuchsia_hardware_network::DeviceClass::Virtual,
         )),
         addresses: Some(vec![]),
         has_default_ipv4_route: Some(false),

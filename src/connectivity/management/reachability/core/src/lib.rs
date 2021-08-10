@@ -122,10 +122,11 @@ impl From<fnet_interfaces::DeviceClass> for PortType {
             fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => PortType::Loopback,
             fnet_interfaces::DeviceClass::Device(device_class) => match device_class {
                 fidl_fuchsia_hardware_network::DeviceClass::Ethernet => PortType::Ethernet,
-                fidl_fuchsia_hardware_network::DeviceClass::Wlan => PortType::WiFi,
+                fidl_fuchsia_hardware_network::DeviceClass::Wlan
+                | fidl_fuchsia_hardware_network::DeviceClass::WlanAp => PortType::WiFi,
                 fidl_fuchsia_hardware_network::DeviceClass::Ppp
                 | fidl_fuchsia_hardware_network::DeviceClass::Bridge
-                | fidl_fuchsia_hardware_network::DeviceClass::Unknown => PortType::Unknown,
+                | fidl_fuchsia_hardware_network::DeviceClass::Virtual => PortType::Unknown,
             },
         }
     }
@@ -707,7 +708,13 @@ mod tests {
         );
         assert_eq!(
             PortType::from(fnet_interfaces::DeviceClass::Device(
-                fidl_fuchsia_hardware_network::DeviceClass::Unknown
+                fidl_fuchsia_hardware_network::DeviceClass::WlanAp
+            )),
+            PortType::WiFi
+        );
+        assert_eq!(
+            PortType::from(fnet_interfaces::DeviceClass::Device(
+                fidl_fuchsia_hardware_network::DeviceClass::Virtual
             )),
             PortType::Unknown
         );
@@ -1030,7 +1037,7 @@ mod tests {
                 id: ID1.into(),
                 name: NON_ETHERNET_INTERFACE_NAME.to_string(),
                 device_class: fnet_interfaces::DeviceClass::Device(
-                    fidl_fuchsia_hardware_network::DeviceClass::Unknown,
+                    fidl_fuchsia_hardware_network::DeviceClass::Virtual,
                 ),
                 online: false,
                 has_default_ipv4_route: false,

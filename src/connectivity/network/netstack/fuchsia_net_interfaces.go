@@ -22,7 +22,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
 
@@ -60,7 +59,7 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 	} else if ifs.controller != nil {
 		p.SetDeviceClass(interfaces.DeviceClassWithDevice(ifs.controller.DeviceClass()))
 	} else {
-		p.SetDeviceClass(interfaces.DeviceClassWithDevice(network.DeviceClassUnknown))
+		panic(fmt.Sprintf("can't extract DeviceClass from non-loopback NIC %d(%s) with nil controller", ifs.nicid, nicInfo.Name))
 	}
 
 	ifs.mu.Lock()
