@@ -60,6 +60,9 @@ class SpiFlashDevice : public DeviceType,
   void IoThread();
   void HandleOp(IoOp& op);
   zx_status_t NandRead(uint32_t address, size_t length, size_t vmo_offset, zx::unowned_vmo dst_vmo);
+  zx_status_t NandErase(uint32_t block, size_t num_blocks);
+  zx_status_t NandWriteBytes(uint64_t address, size_t length, size_t vmo_offset,
+                             zx::unowned_vmo dst_vmo);
 
   ddk::MmioBuffer mmio_;
   inspect::Inspector inspect_;

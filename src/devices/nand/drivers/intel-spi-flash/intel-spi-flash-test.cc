@@ -4,6 +4,7 @@
 
 #include "src/devices/nand/drivers/intel-spi-flash/intel-spi-flash.h"
 
+#include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/clock.h>
@@ -230,4 +231,274 @@ TEST_F(SpiFlashTest, TestCancelledInflightRead) {
 
   UnbindDevice();
   ASSERT_TRUE(ran);
+}
+
+TEST_F(SpiFlashTest, TestSimpleWriteBytes) {
+  ddk::NandProtocolClient nand(device_);
+  static constexpr uint8_t kDataToWrite[] = {0, 1, 2, 3, 4, 5};
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(sizeof(kDataToWrite), 0, &vmo));
+  vmo.write(kDataToWrite, 0, sizeof(kDataToWrite));
+  nand_operation_t write{.rw_bytes = {
+                             .command = NAND_OP_WRITE_BYTES,
+                             .data_vmo = vmo.get(),
+                             .length = sizeof(kDataToWrite),
+                             .offset_nand = 0,
+                             .offset_data_vmo = 0,
+                         }};
+
+  mmio_cmd_handler_ = [](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kWrite);
+    ASSERT_EQ(ctrl.fdbc() + 1, sizeof(kDataToWrite));
+
+    ASSERT_BYTES_EQ(data, kDataToWrite, sizeof(kDataToWrite));
+
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &write,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+}
+
+TEST_F(SpiFlashTest, TestWriteBytesEndsOn3Bytes) {
+  ddk::NandProtocolClient nand(device_);
+  static constexpr uint8_t kDataToWrite[] = {0, 1, 2, 3, 4, 5, 6};
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(sizeof(kDataToWrite), 0, &vmo));
+  vmo.write(kDataToWrite, 0, sizeof(kDataToWrite));
+  nand_operation_t write{.rw_bytes = {
+                             .command = NAND_OP_WRITE_BYTES,
+                             .data_vmo = vmo.get(),
+                             .length = sizeof(kDataToWrite),
+                             .offset_nand = 0,
+                             .offset_data_vmo = 0,
+                         }};
+
+  mmio_cmd_handler_ = [](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kWrite);
+    ASSERT_EQ(ctrl.fdbc() + 1, sizeof(kDataToWrite));
+
+    ASSERT_BYTES_EQ(data, kDataToWrite, sizeof(kDataToWrite));
+
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &write,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+}
+
+TEST_F(SpiFlashTest, TestWriteBytesMultiBurst) {
+  ddk::NandProtocolClient nand(device_);
+  uint8_t to_write[67] = {0};
+  memset(to_write, 0x17, countof(to_write));
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(sizeof(to_write), 0, &vmo));
+  vmo.write(to_write, 0, sizeof(to_write));
+  nand_operation_t write{.rw_bytes = {
+                             .command = NAND_OP_WRITE_BYTES,
+                             .data_vmo = vmo.get(),
+                             .length = sizeof(to_write),
+                             .offset_nand = 0,
+                             .offset_data_vmo = 0,
+                         }};
+
+  bool first = true;
+  mmio_cmd_handler_ = [to_write, &first](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kWrite);
+    if (first) {
+      ASSERT_EQ(ctrl.fdbc(), 63);
+      ASSERT_BYTES_EQ(data, to_write, 64);
+      first = false;
+    } else {
+      ASSERT_EQ(ctrl.fdbc() + 1, countof(to_write) - 64);
+      ASSERT_BYTES_EQ(data, &to_write, countof(to_write) - 64);
+    }
+
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &write,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+}
+
+TEST_F(SpiFlashTest, TestSimpleWritePage) {
+  ddk::NandProtocolClient nand(device_);
+  nand_info_t info;
+  uint64_t op_size;
+
+  nand.Query(&info, &op_size);
+  ASSERT_EQ(info.page_size, 256);
+  ASSERT_EQ(op_size, sizeof(nand_operation_t));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(info.page_size, 0, &vmo));
+  std::vector<uint8_t> buffer(info.page_size);
+  memset(buffer.data(), 0xab, info.page_size);
+  vmo.write(buffer.data(), 0, buffer.size());
+  nand_operation_t read{.rw = {
+                            .command = NAND_OP_WRITE,
+                            .data_vmo = vmo.get(),
+                            .length = 1,
+                            .offset_nand = 0,
+                            .offset_data_vmo = 0,
+                        }};
+  sync_completion_t waiter;
+
+  std::vector<uint8_t> written_data(info.page_size);
+  mmio_cmd_handler_ = [this, &written_data](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kWrite);
+    ASSERT_EQ(ctrl.fdbc(), 63);
+    ASSERT_LE(address_.fla() + ctrl.fdbc() + 1, written_data.size());
+
+    memcpy(written_data.data() + address_.fla(), data, ctrl.fdbc() + 1);
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  nand.Queue(
+      &read,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        ASSERT_OK(result);
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+  ASSERT_BYTES_EQ(written_data.data(), buffer.data(), buffer.size());
+}
+
+TEST_F(SpiFlashTest, TestSimpleErase) {
+  ddk::NandProtocolClient nand(device_);
+  nand_operation_t erase{.erase = {
+                             .command = NAND_OP_ERASE,
+                             .first_block = 1,
+                             .num_blocks = 2,
+                         }};
+
+  std::vector<uint32_t> erased_addresses;
+  mmio_cmd_handler_ = [this, &erased_addresses](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kErase4k);
+    erased_addresses.emplace_back(address_.fla());
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &erase,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+
+  ASSERT_EQ(erased_addresses.size(), 2);
+  ASSERT_EQ(erased_addresses[0], 4096);
+  ASSERT_EQ(erased_addresses[1], 8192);
+}
+
+TEST_F(SpiFlashTest, TestEraseEntireChipAndBeyond) {
+  ddk::NandProtocolClient nand(device_);
+  nand_info_t info;
+  uint64_t op_size;
+  nand.Query(&info, &op_size);
+
+  nand_operation_t erase{.erase = {
+                             .command = NAND_OP_ERASE,
+                             .first_block = 0,
+                             .num_blocks = info.num_blocks,
+                         }};
+  size_t blk_count = 0;
+  uint32_t last_erase = 0;
+  mmio_cmd_handler_ = [this, &blk_count, &last_erase](uint32_t* data,
+                                                      spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kErase4k);
+    ASSERT_GE(address_.fla(), last_erase);
+    last_erase = address_.fla();
+    blk_count++;
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &erase,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        ASSERT_OK(result);
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+
+  erase.erase.num_blocks++;
+  sync_completion_reset(&waiter);
+  nand.Queue(
+      &erase,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        ASSERT_STATUS(result, ZX_ERR_OUT_OF_RANGE);
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+}
+
+TEST_F(SpiFlashTest, TestWriteNearChipEnd) {
+  ddk::NandProtocolClient nand(device_);
+  nand_info_t info;
+  uint64_t op_size;
+  nand.Query(&info, &op_size);
+
+  mmio_cmd_handler_ = [](uint32_t* data, spiflash::FlashControl& ctrl) {
+    ASSERT_EQ(ctrl.fcycle(), spiflash::FlashControl::kWrite);
+    ctrl.set_h_scip(0).set_fdone(1);
+  };
+
+  static constexpr uint8_t kDataToWrite[] = {4, 7};
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(sizeof(kDataToWrite), 0, &vmo));
+  vmo.write(kDataToWrite, 0, sizeof(kDataToWrite));
+
+  uint32_t chip_size = info.page_size * info.pages_per_block * info.num_blocks;
+  nand_operation_t write = {.rw_bytes = {
+                                .command = NAND_OP_WRITE_BYTES,
+                                .data_vmo = vmo.get(),
+                                .length = 1,
+                                .offset_nand = chip_size - 1,
+                                .offset_data_vmo = 0,
+                            }};
+
+  sync_completion_t waiter;
+  nand.Queue(
+      &write,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        ASSERT_OK(result);
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
+
+  write.rw_bytes.length++;
+  sync_completion_reset(&waiter);
+  nand.Queue(
+      &write,
+      [](void* cookie, zx_status_t result, nand_operation_t* op) {
+        ASSERT_STATUS(result, ZX_ERR_OUT_OF_RANGE);
+        sync_completion_signal(static_cast<sync_completion_t*>(cookie));
+      },
+      &waiter);
+  sync_completion_wait(&waiter, ZX_TIME_INFINITE);
 }

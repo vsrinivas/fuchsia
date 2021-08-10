@@ -4,7 +4,6 @@
 
 #include "intel-spi-flash.h"
 
-#include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nandinfo/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
@@ -13,6 +12,8 @@
 #include <zircon/errors.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
+
+#include <cstddef>
 
 #include <ddktl/device.h>
 #include <safemath/checked_math.h>
@@ -28,6 +29,8 @@
 
 namespace spiflash {
 constexpr size_t kKilobyte = 1024;
+constexpr uint32_t kEraseBlockSize = 4 * kKilobyte;
+constexpr size_t kMaxBurstSize = 64;
 
 zx_status_t SpiFlashDevice::Bind() {
   // Make sure that the flash device is valid.
@@ -87,8 +90,8 @@ void SpiFlashDevice::NandQuery(nand_info_t *info_out, size_t *nand_op_size_out) 
       .page_size = flash_chip_->page_size,
       // pages_per_block is used to determine erase size. The controller always supports a 4k erase
       // granularity, so we just figure out how many pages fit in 4KiB.
-      .pages_per_block = static_cast<uint32_t>((4 * kKilobyte) / flash_chip_->page_size),
-      .num_blocks = static_cast<uint32_t>(flash_chip_->size / (4 * kKilobyte)),
+      .pages_per_block = static_cast<uint32_t>(kEraseBlockSize / flash_chip_->page_size),
+      .num_blocks = static_cast<uint32_t>(flash_chip_->size / kEraseBlockSize),
       .nand_class = NAND_CLASS_INTEL_FLASH_DESCRIPTOR,
   };
 }
@@ -139,19 +142,133 @@ void SpiFlashDevice::IoThread() {
 
 void SpiFlashDevice::HandleOp(IoOp &op) {
   switch (op.op->command) {
-    case NAND_OP_READ_BYTES:
-    case NAND_OP_WRITE_BYTES:
-    case NAND_OP_ERASE:
-    case NAND_OP_WRITE:
-      op.completion_cb(op.cookie, ZX_ERR_NOT_SUPPORTED, op.op);
+    case NAND_OP_WRITE_BYTES: {
+      zx_status_t status = NandWriteBytes(op.op->rw_bytes.offset_nand, op.op->rw_bytes.length,
+                                          op.op->rw_bytes.offset_data_vmo,
+                                          zx::unowned_vmo(op.op->rw_bytes.data_vmo));
+      op.completion_cb(op.cookie, status, op.op);
       break;
-    case NAND_OP_READ:
+    }
+    case NAND_OP_ERASE: {
+      zx_status_t status = NandErase(op.op->erase.first_block, op.op->erase.num_blocks);
+      op.completion_cb(op.cookie, status, op.op);
+      break;
+    }
+    case NAND_OP_WRITE: {
+      zx_status_t status = NandWriteBytes(
+          static_cast<uint64_t>(op.op->rw.offset_nand) * flash_chip_->page_size,
+          static_cast<uint64_t>(op.op->rw.length) * flash_chip_->page_size,
+          op.op->rw.offset_data_vmo * flash_chip_->page_size, zx::unowned_vmo(op.op->rw.data_vmo));
+      op.completion_cb(op.cookie, status, op.op);
+      break;
+    }
+    case NAND_OP_READ: {
       op.op->rw.corrected_bit_flips = 0;
       zx_status_t status = NandRead(op.op->rw.offset_nand, op.op->rw.length,
                                     op.op->rw.offset_data_vmo, zx::unowned_vmo(op.op->rw.data_vmo));
       op.completion_cb(op.cookie, status, op.op);
       break;
+    }
+    default: {
+      op.completion_cb(op.cookie, ZX_ERR_NOT_SUPPORTED, op.op);
+      break;
+    }
   }
+}
+
+zx_status_t SpiFlashDevice::NandErase(uint32_t block, size_t num_blocks) {
+  uint32_t flash_num_blocks = flash_chip_->size / kEraseBlockSize;
+  uint32_t max_block;
+  if (!safemath::CheckAdd(block, num_blocks).AssignIfValid(&max_block)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (max_block > flash_num_blocks) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // Calculate the start address of the block.
+  uint32_t first_block_addr;
+  if (!safemath::CheckMul(block, kEraseBlockSize).AssignIfValid(&first_block_addr)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  for (size_t i = 0; i < num_blocks; i++) {
+    FlashAddress::Get().FromValue(first_block_addr + (i * kEraseBlockSize)).WriteTo(&mmio_);
+    auto reg = FlashControl::Get().ReadFrom(&mmio_);
+    // Unset FDONE, FCERR, H_AEL from the last run.
+    // Otherwise PollCommandComplete() would immediately return.
+    reg.WriteTo(&mmio_).ReadFrom(&mmio_);
+
+    reg.set_fdbc(0).set_fcycle(FlashControl::kErase4k).set_fgo(1);
+    reg.WriteTo(&mmio_);
+
+    // The controller hardware handles setting WEL and polling WIP for us.
+    // We just have to wait until it's done.
+    if (!PollCommandComplete()) {
+      return ZX_ERR_IO;
+    }
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SpiFlashDevice::NandWriteBytes(uint64_t address64, size_t length, size_t vmo_offset,
+                                           zx::unowned_vmo src_vmo) {
+  uint64_t max;
+  if (!safemath::CheckAdd(address64, length).AssignIfValid(&max)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (max > flash_chip_->size) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  uint8_t bounce_buffer[kMaxBurstSize] = {0};
+  // The controller only has a 32-bit register for the address.
+  // As a consequence, flash_chip_->size is guaranteed to be <= UINT32_MAX.
+  uint32_t address = static_cast<uint32_t>(address64);
+
+  size_t burst;
+  for (size_t written = 0; written < length; written += burst) {
+    burst = std::min(kMaxBurstSize, length - written);
+    zx_status_t status = src_vmo->read(bounce_buffer, vmo_offset + written, burst);
+    if (status != ZX_OK) {
+      return status;
+    }
+    uint32_t data = 0;
+    size_t i = 0;
+    for (i = 0; i < burst; i++) {
+      if (i % sizeof(uint32_t) == 0) {
+        data = 0;
+      }
+      // The lowest byte to be written goes at bits 7:0 in the register,
+      // the next at bits 15:8, then 23:16, then 31:24. For more information
+      // see section 8.2.5 "Flash Data 0" in the datasheet.
+      data |= (bounce_buffer[i]) << ((i % sizeof(uint32_t)) * 8);
+      if (i % sizeof(uint32_t) == 3) {
+        FlashData::Get(i / sizeof(uint32_t)).FromValue(data).WriteTo(&mmio_);
+      }
+    }
+
+    // Write whatever is left.
+    if (i % sizeof(uint32_t) != 0) {
+      FlashData::Get(i / sizeof(uint32_t)).FromValue(data).WriteTo(&mmio_);
+    }
+
+    FlashAddress::Get().FromValue(address + written).WriteTo(&mmio_);
+    auto reg = FlashControl::Get().ReadFrom(&mmio_);
+    // Unset FDONE, FCERR, H_AEL from the last run.
+    // Otherwise PollCommandComplete() would immediately return.
+    reg.WriteTo(&mmio_).ReadFrom(&mmio_);
+
+    reg.set_fdbc(burst - 1).set_fcycle(FlashControl::kWrite).set_fgo(1);
+    reg.WriteTo(&mmio_);
+
+    if (!PollCommandComplete()) {
+      return ZX_ERR_IO;
+    }
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t SpiFlashDevice::NandRead(uint32_t address, size_t length, size_t vmo_offset,
@@ -172,7 +289,6 @@ zx_status_t SpiFlashDevice::NandRead(uint32_t address, size_t length, size_t vmo
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  static constexpr size_t kMaxBurstSize = 64;
   uint32_t bounce_buffer[kMaxBurstSize / sizeof(uint32_t)];
 
   size_t read = 0;
