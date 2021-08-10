@@ -7,6 +7,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
@@ -74,6 +75,9 @@ zx::status<fdio_ptr> fdio_datagram_socket_create(
 
 zx::status<fdio_ptr> fdio_stream_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
+
+zx::status<fdio_ptr> fdio_raw_socket_create(
+    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);

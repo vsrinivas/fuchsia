@@ -119,6 +119,7 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.posix($go_toolchain)",
     "//sdk/fidl/fuchsia.posix.socket($go_toolchain)",
+    "//sdk/fidl/fuchsia.posix.socket.raw($go_toolchain)",
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",

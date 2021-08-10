@@ -173,10 +173,8 @@ TEST(LocalhostTest, BindToDevice) {
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
-// Raw sockets are typically used for implementing custom protocols. We intend to support custom
-// protocols through structured FIDL APIs in the future, so this test ensures that raw sockets are
-// disabled to prevent them from accidentally becoming load-bearing.
-TEST(LocalhostTest, RawSocketsNotSupported) {
+// Test the error when a client's sandbox does not have access raw/packet sockets.
+TEST(LocalhostTest, RawSocketsNotAvailable) {
   // No raw INET sockets.
   ASSERT_EQ(socket(AF_INET, SOCK_RAW, 0), -1);
   ASSERT_EQ(errno, EPROTONOSUPPORT) << strerror(errno);

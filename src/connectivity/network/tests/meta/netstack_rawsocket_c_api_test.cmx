@@ -1,0 +1,22 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
+                "fuchsia.posix.socket.raw.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/netstack_rawsocket_c_api_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.posix.socket.raw.Provider"
+        ]
+    }
+}

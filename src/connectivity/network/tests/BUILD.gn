@@ -20,6 +20,7 @@ group("tests") {
       ":netstack_bsdsocket_c_api_test($host_toolchain)",
       ":netstack_external_network_test_client($host_toolchain)",
       ":netstack_if_nameindex_test($host_toolchain)",
+      ":netstack_rawsocket_c_api_test($host_toolchain)",
     ]
   }
 }
@@ -28,6 +29,15 @@ fuchsia_component("device_name_provider") {
   testonly = true
   manifest = "meta/device_name_provider.cmx"
   deps = [ "//src/bringup/bin/device-name-provider" ]
+}
+
+test("netstack_rawsocket_c_api_test") {
+  sources = [ "rawsocket_test.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
 }
 
 test("netstack_bsdsocket_c_api_test") {
@@ -137,6 +147,7 @@ fuchsia_unittest_component("netstack_external_network_test") {
 tests = [
   "name_provider_service_not_present",
   "netstack_bsdsocket_c_api",
+  "netstack_rawsocket_c_api",
   "netstack_fuchsia_c_api",
   "netstack_if_nameindex",
   "netstack_no_network",

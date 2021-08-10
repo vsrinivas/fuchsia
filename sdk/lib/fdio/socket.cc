@@ -23,6 +23,7 @@
 
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
+namespace frawsocket = fuchsia_posix_socket_raw;
 namespace fnet = fuchsia_net;
 
 namespace {
@@ -581,10 +582,12 @@ int16_t SetSockOptProcessor::Get(IntOrChar* out) {
 template <typename T,
           typename =
               std::enable_if_t<std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-                               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>>>
+                               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+                               std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>>>
 struct BaseSocket {
   static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-                std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>);
+                std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+                std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>);
 
  public:
   explicit BaseSocket(T& client) : client_(client) {}
@@ -690,6 +693,9 @@ struct BaseSocket {
             if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>>) {
               return proc.StoreOption<int32_t>(SOCK_STREAM);
             }
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>) {
+              return proc.StoreOption<int32_t>(SOCK_RAW);
+            }
           case SO_DOMAIN:
             return proc.Process(client().GetInfo(),
                                 [](const auto& response) { return response.domain; });
@@ -720,7 +726,16 @@ struct BaseSocket {
                 }
               });
             }
-
+            if constexpr (std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>>) {
+              return proc.Process(client().GetInfo(), [](const auto& response) {
+                switch (response.proto.which()) {
+                  case frawsocket::wire::ProtocolAssociation::Tag::kUnassociated:
+                    return IPPROTO_RAW;
+                  case frawsocket::wire::ProtocolAssociation::Tag::kAssociated:
+                    return static_cast<int>(response.proto.associated());
+                }
+              });
+            }
           case SO_ERROR: {
             auto response = client().GetError();
             if (response.status() != ZX_OK) {
@@ -1376,13 +1391,27 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
 
 }  // namespace
 
-static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
-  return *reinterpret_cast<zxio_datagram_socket_t*>(io);
-}
-
 namespace fdio_internal {
 
-struct datagram_socket : public zxio {
+struct DatagramSocket {
+  using zxio_type = zxio_datagram_socket_t;
+
+  static fsocket::wire::SendControlData empty_control_data() {
+    return fsocket::wire::SendControlData();
+  }
+};
+
+struct RawSocket {
+  using zxio_type = zxio_raw_socket_t;
+
+  static frawsocket::wire::SendControlData empty_control_data() {
+    return frawsocket::wire::SendControlData();
+  }
+};
+
+template <typename T, typename = std::enable_if_t<std::is_same_v<T, DatagramSocket> ||
+                                                  std::is_same_v<T, RawSocket>>>
+struct socket_with_event : public zxio {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalOutgoing = ZX_USER_SIGNAL_1;
   static constexpr zx_signals_t kSignalError = ZX_USER_SIGNAL_2;
@@ -1390,7 +1419,7 @@ struct datagram_socket : public zxio {
   static constexpr zx_signals_t kSignalShutdownWrite = ZX_USER_SIGNAL_5;
 
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
-    *handle = zxio_datagram_socket().event.get();
+    *handle = zxio_socket_with_event().event.get();
 
     zx_signals_t signals = ZX_EVENTPAIR_PEER_CLOSED | kSignalError;
     if (events & POLLIN) {
@@ -1428,11 +1457,11 @@ struct datagram_socket : public zxio {
   }
 
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client).bind(addr, addrlen, out_code);
+    return BaseSocket(zxio_socket_with_event().client).bind(addr, addrlen, out_code);
   }
 
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client).connect(addr, addrlen, out_code);
+    return BaseSocket(zxio_socket_with_event().client).connect(addr, addrlen, out_code);
   }
 
   zx_status_t listen(int backlog, int16_t* out_code) override { return ZX_ERR_WRONG_TYPE; }
@@ -1443,17 +1472,17 @@ struct datagram_socket : public zxio {
   }
 
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client).getsockname(addr, addrlen, out_code);
+    return BaseSocket(zxio_socket_with_event().client).getsockname(addr, addrlen, out_code);
   }
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client).getpeername(addr, addrlen, out_code);
+    return BaseSocket(zxio_socket_with_event().client).getpeername(addr, addrlen, out_code);
   }
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
     SockOptResult result =
-        BaseSocket(zxio_datagram_socket().client).getsockopt_fidl(level, optname, optval, optlen);
+        BaseSocket(zxio_socket_with_event().client).getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   }
@@ -1461,23 +1490,21 @@ struct datagram_socket : public zxio {
   zx_status_t setsockopt(int level, int optname, const void* optval, socklen_t optlen,
                          int16_t* out_code) override {
     SockOptResult result =
-        BaseSocket(zxio_datagram_socket().client).setsockopt_fidl(level, optname, optval, optlen);
+        BaseSocket(zxio_socket_with_event().client).setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   }
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    auto& client = zxio_datagram_socket().client;
-
     size_t datalen = 0;
     for (int i = 0; i < msg->msg_iovlen; ++i) {
       datalen += msg->msg_iov[i].iov_len;
     }
 
     bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
-    auto response =
-        client.RecvMsg(want_addr, static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
+    auto response = zxio_socket_with_event().client.RecvMsg(
+        want_addr, static_cast<uint32_t>(datalen), false, to_recvmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -1493,7 +1520,7 @@ struct datagram_socket : public zxio {
       auto const& out = result.response().addr;
       // Result address has invalid tag when it's not provided by the server (when want_addr
       // is false).
-      // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
+      // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
       if (want_addr && !out.has_invalid_tag()) {
         msg->msg_namelen = static_cast<socklen_t>(
             fidl_to_sockaddr(out, static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
@@ -1528,7 +1555,7 @@ struct datagram_socket : public zxio {
       }
       *out_actual = actual;
     }
-    // TODO(fxbug.dev/21106): Support control messages.
+    // TODO(https://fxbug.dev/21106): Support control messages.
     msg->msg_controllen = 0;
 
     return ZX_OK;
@@ -1536,8 +1563,6 @@ struct datagram_socket : public zxio {
 
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    auto& client = zxio_datagram_socket().client;
-
     SocketAddress addr;
     // Attempt to load socket address if either name or namelen is set.
     // If only one is set, it'll result in INVALID_ARGS.
@@ -1572,7 +1597,7 @@ struct datagram_socket : public zxio {
         break;
       }
       default: {
-        // TODO(abarth): avoid this copy.
+        // TODO(https://fxbug.dev/67928): avoid this copy.
         data.reserve(total);
         for (int i = 0; i < msg->msg_iovlen; ++i) {
           auto const& iov = msg->msg_iov[i];
@@ -1582,11 +1607,12 @@ struct datagram_socket : public zxio {
         vec = fidl::VectorView<uint8_t>::FromExternal(data);
       }
     }
-    // TODO(fxbug.dev/21106): Support control messages.
-    // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
-    // Currently just using a default-initialized union with an invalid tag.
-    auto response = client.SendMsg(addr.address, vec, fsocket::wire::SendControlData(),
-                                   to_sendmsg_flags(flags));
+
+    // TODO(https://fxbug.dev/21106): Support control messages.
+    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when
+    // available. Currently just using a default-initialized union with an invalid tag.
+    auto response = zxio_socket_with_event().client.SendMsg(
+        addr.address, vec, T::empty_control_data(), to_sendmsg_flags(flags));
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -1602,21 +1628,24 @@ struct datagram_socket : public zxio {
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
-    return BaseSocket(zxio_datagram_socket().client).shutdown(how, out_code);
+    return BaseSocket(zxio_socket_with_event().client).shutdown(how, out_code);
   }
 
  protected:
-  friend class fbl::internal::MakeRefCountedHelper<datagram_socket>;
-  friend class fbl::RefPtr<datagram_socket>;
+  friend class fbl::internal::MakeRefCountedHelper<socket_with_event<T>>;
+  friend class fbl::RefPtr<socket_with_event<T>>;
 
-  datagram_socket() = default;
-  ~datagram_socket() override = default;
+  socket_with_event<T>() = default;
+  ~socket_with_event<T>() override = default;
 
  private:
-  zxio_datagram_socket_t& zxio_datagram_socket() {
-    return ::zxio_datagram_socket(&zxio_storage().io);
+  typename T::zxio_type& zxio_socket_with_event() {
+    return *reinterpret_cast<typename T::zxio_type*>(&zxio_storage().io);
   }
 };
+
+using datagram_socket = socket_with_event<DatagramSocket>;
+using raw_socket = socket_with_event<RawSocket>;
 
 }  // namespace fdio_internal
 
@@ -1628,6 +1657,20 @@ zx::status<fdio_ptr> fdio_datagram_socket_create(zx::eventpair event,
   }
   zx_status_t status =
       zxio_datagram_socket_init(&io->zxio_storage(), std::move(event), std::move(client));
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(io);
+}
+
+zx::status<fdio_ptr> fdio_raw_socket_create(zx::eventpair event,
+                                            fidl::ClientEnd<frawsocket::Socket> client) {
+  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::raw_socket>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_status_t status =
+      zxio_raw_socket_init(&io->zxio_storage(), std::move(event), std::move(client));
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -1810,7 +1853,7 @@ struct stream_socket : public zxio {
     auto const& out = result.response().addr;
     // Result address has invalid tag when it's not provided by the server (when want_addr
     // is false).
-    // TODO(fxbug.dev/58503): Use better representation of nullable union when available.
+    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
     if (want_addr && !out.has_invalid_tag()) {
       *addrlen = static_cast<socklen_t>(fidl_to_sockaddr(out, addr, *addrlen));
     }

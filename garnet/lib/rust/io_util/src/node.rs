@@ -81,6 +81,7 @@ pub enum Kind {
     Tty,
     DatagramSocket,
     StreamSocket,
+    RawSocket,
 }
 
 impl Kind {
@@ -95,6 +96,7 @@ impl Kind {
             NodeInfo::Tty(_) => Kind::Tty,
             NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
             NodeInfo::StreamSocket(_) => Kind::StreamSocket,
+            NodeInfo::RawSocket(_) => Kind::RawSocket,
         }
     }
 

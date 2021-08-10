@@ -27,6 +27,8 @@ type NodeInfo = strict resource union {
     9: datagram_socket DatagramSocket;
     /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
    10: stream_socket StreamSocket;
+    /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
+   11: raw_socket RawSocket;
 };
 
 /// A [`NodeInfo`] variant.
@@ -113,6 +115,13 @@ type DatagramSocket = resource struct {
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
 type StreamSocket = resource struct {
     socket zx.handle:SOCKET;
+};
+
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
+type RawSocket = resource struct {
+    /// See [`fuchsia.posix.socket.raw.Socket`] for details.
+    event zx.handle:EVENTPAIR;
 };
 
 /// Can read from target object.

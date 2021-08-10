@@ -12,16 +12,19 @@
 
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
+namespace frawsocket = fuchsia_posix_socket_raw;
 
 namespace {
 
 template <typename Client,
           typename = std::enable_if_t<
               std::is_same_v<Client, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-              std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>>>>
+              std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+              std::is_same_v<Client, fidl::WireSyncClient<frawsocket::Socket>>>>
 class BaseSocket {
   static_assert(std::is_same_v<Client, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
-                std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>>);
+                std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+                std::is_same_v<Client, fidl::WireSyncClient<frawsocket::Socket>>);
 
  public:
   explicit BaseSocket(Client& client) : client_(client) {}
@@ -221,10 +224,59 @@ zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
   return zxio_pipe_init(reinterpret_cast<zxio_storage_t*>(&zs->pipe), std::move(socket), info);
 }
 
+static zxio_raw_socket_t& zxio_raw_socket(zxio_t* io) {
+  return *reinterpret_cast<zxio_raw_socket_t*>(io);
+}
+
+static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
+  zxio_ops_t ops = zxio_default_ops;
+  ops.close = [](zxio_t* io) {
+    zxio_raw_socket_t& zs = zxio_raw_socket(io);
+    zx_status_t status = ZX_OK;
+    if (zs.client.channel().is_valid()) {
+      status = BaseSocket(zs.client).CloseSocket();
+    }
+    zs.~zxio_raw_socket_t();
+    return status;
+  };
+  ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
+    if (out_handle == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    *out_handle = zxio_raw_socket(io).client.mutable_channel()->release();
+    return ZX_OK;
+  };
+  ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
+    *out_handle = zxio_raw_socket(io).client.channel().get();
+    return ZX_OK;
+  };
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
+    if (out_handle == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    zxio_raw_socket_t& zs = zxio_raw_socket(io);
+    zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
+    return status;
+  };
+  return ops;
+}();
+
+zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                 fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client) {
+  auto zs = new (storage) zxio_raw_socket_t{
+      .io = storage->io,
+      .event = std::move(event),
+      .client = fidl::BindSyncClient(std::move(client)),
+  };
+  zxio_init(&zs->io, &zxio_raw_socket_ops);
+  return ZX_OK;
+}
+
 zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket) {
   if (io == nullptr || out_is_socket == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   const zxio_ops_t* ops = zxio_get_ops(io);
-  return ops == &zxio_datagram_socket_ops || ops == &zxio_stream_socket_ops;
+  return ops == &zxio_datagram_socket_ops || ops == &zxio_stream_socket_ops ||
+         ops == &zxio_raw_socket_ops;
 }

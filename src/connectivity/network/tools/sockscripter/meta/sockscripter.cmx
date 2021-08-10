@@ -7,7 +7,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.posix.socket.Provider"
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.posix.socket.raw.Provider"
         ]
     }
 }

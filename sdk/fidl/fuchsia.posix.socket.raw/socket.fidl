@@ -1,0 +1,115 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.posix.socket.raw;
+
+using fuchsia.net;
+using fuchsia.posix;
+using fuchsia.posix.socket;
+
+type Empty = struct {};
+
+/// The protocol a raw socket may be associated with.
+alias Protocol = uint8;
+
+/// The protocol a raw socket is associated with.
+type ProtocolAssociation = strict union {
+    /// Indicates no association with any protocol.
+    ///
+    /// The socket will not receive packets. Sent packets must include the
+    /// network header.
+    1: unassociated Empty;
+
+    /// The associated protocol.
+    ///
+    /// The socket may only send and receive network packets for the associated
+    /// protocol.
+    2: associated Protocol;
+};
+
+/// A raw network socket provider.
+@discoverable
+protocol Provider {
+    /// Requests a raw socket.
+    Socket(struct {
+        domain fuchsia.posix.socket.Domain;
+        proto ProtocolAssociation;
+    }) -> (resource struct {
+        s client_end:Socket;
+    }) error fuchsia.posix.Errno;
+};
+
+/// Ancillary data for sending raw packets.
+// Separate from `fuchsia.posix.socket/SendControlData` as raw sockets support
+// different control data.
+//
+// E.g. The `SOL_UDP` -> `UDP_SEGMENT` control message will never be supported
+// on raw sockets as raw sockets are never UDP sockets.
+// https://github.com/torvalds/linux/commit/2e8de8576343ab540856082916bfb84d17288b08
+type SendControlData = table {};
+
+/// Ancillary data for received raw packets.
+// Separate from `fuchsia.posix.socket/RecvControlData` as raw sockets support
+// different control data.
+//
+// E.g. The `SOL_UDP` -> `UDP_GRO` control message will never be supported on
+// raw sockets as raw sockets are never UDP sockets.
+// https://github.com/torvalds/linux/commit/bcd1665e3569b0a6f569514f023a41fc7df0b4a3
+type RecvControlData = table {};
+
+/// A raw network socket.
+protocol Socket {
+    compose fuchsia.posix.socket.BaseSocket;
+
+    /// Receives a message from the socket.
+    ///
+    /// + request `want_addr` request message's source address information to be
+    ///   returned.
+    /// + request `data_len` the maximum allowed length of the response data
+    ///   buffer.
+    /// + request `want_control` request ancillary data to be returned.
+    /// + request `flags` flags for the receive request.
+    /// - response `addr` the message's source address information, if requested.
+    /// - response `data` the message.
+    /// - response `control` control messages, if requested.
+    /// - response `truncated` indicates whether or not the returned message was
+    ///   truncated.
+    RecvMsg(struct {
+        want_addr bool;
+        data_len uint32;
+        want_control bool;
+        flags fuchsia.posix.socket.RecvMsgFlags;
+    }) -> (struct {
+        addr fuchsia.net.SocketAddress:optional;
+        data bytes;
+        control RecvControlData;
+        truncated uint32;
+    }) error fuchsia.posix.Errno;
+
+    /// Sends a message on the socket.
+    ///
+    /// + request `addr` the address to send the message to. If unset, will send
+    ///   to the connected peer.
+    /// + request `data` the message.
+    /// + request `control` ancillary data.
+    /// + request `flags` flags for the send request.
+    /// - response `len` the number of bytes sent.
+    // TODO(https://fxbug.dev/82346): Drop `len`.
+    SendMsg(struct {
+        addr fuchsia.net.SocketAddress:optional;
+        data bytes:MAX;
+        control SendControlData;
+        flags fuchsia.posix.socket.SendMsgFlags;
+    }) -> (struct {
+        len int64;
+    }) error fuchsia.posix.Errno;
+
+    /// Retrieves creation information from the socket.
+    ///
+    /// - response `domain` the socket's associated domain.
+    /// - response `proto` the socket's associated protocol.
+    GetInfo() -> (struct {
+        domain fuchsia.posix.socket.Domain;
+        proto ProtocolAssociation;
+    }) error fuchsia.posix.Errno;
+};

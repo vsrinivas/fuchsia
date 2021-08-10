@@ -7,6 +7,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <threads.h>
@@ -79,7 +80,7 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
 zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                       fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
-// stream socket (channel backed) --------------------------------------------
+// stream socket (channel backed) ----------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
 using zxio_stream_socket_t = struct zxio_stream_socket {
@@ -93,6 +94,18 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
                                     fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
                                     zx_info_socket_t& info);
+
+// raw socket (channel backed) -------------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.raw.Socket object.
+using zxio_raw_socket_t = struct zxio_raw_socket {
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<fuchsia_posix_socket_raw::Socket> client;
+};
+
+zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                 fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
 
 zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket);
 
@@ -113,6 +126,7 @@ using zxio_object_type_t = uint32_t;
 #define ZXIO_OBJECT_TYPE_PIPE            ((zxio_object_type_t) 9)
 #define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET ((zxio_object_type_t)10)
 #define ZXIO_OBJECT_TYPE_STREAM_SOCKET   ((zxio_object_type_t)11)
+#define ZXIO_OBJECT_TYPE_RAW_SOCKET      ((zxio_object_type_t)12)
 // clang-format on
 
 // Allocates storage for a zxio_t object of a given type.

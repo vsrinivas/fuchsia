@@ -389,6 +389,18 @@ protocol DatagramSocket {
     compose BaseSocket;
 
     /// Receives a message from the socket.
+    ///
+    /// + request `want_addr` request message's source address information to be
+    ///   returned.
+    /// + request `data_len` the maximum allowed length of the response data
+    ///   buffer.
+    /// + request `want_control` request ancillary data to be returned.
+    /// + request `flags` flags for the receive request.
+    /// - response `addr` the message's source address information, if requested.
+    /// - response `data` the message.
+    /// - response `control` control messages, if requested.
+    /// - response `truncated` indicates whether or not the returned message was
+    ///   truncated.
     RecvMsg(struct {
         want_addr bool;
         data_len uint32;
@@ -400,7 +412,16 @@ protocol DatagramSocket {
         control RecvControlData;
         truncated uint32;
     }) error fuchsia.posix.Errno;
+
     /// Sends a message on the socket.
+    ///
+    /// + request `addr` the address to send the message to. If unset, will send
+    ///   to the connected peer.
+    /// + request `data` the message.
+    /// + request `control` ancillary data.
+    /// + request `flags` flags for the send request.
+    /// - response `len` the number of bytes sent.
+    // TODO(https://fxbug.dev/82346): Drop `len`.
     SendMsg(struct {
         addr fuchsia.net.SocketAddress:optional;
         data bytes:MAX;
@@ -411,6 +432,9 @@ protocol DatagramSocket {
     }) error fuchsia.posix.Errno;
 
     /// Retrieves creation information from the socket.
+    ///
+    /// - response `domain` the socket's associated domain.
+    /// - response `proto` the socket's associated protocol.
     GetInfo() -> (struct {
         domain Domain;
         proto DatagramSocketProtocol;

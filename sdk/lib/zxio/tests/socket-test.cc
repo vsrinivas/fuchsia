@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/posix/socket/llcpp/fidl_test_base.h>
+#include <fuchsia/posix/socket/raw/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/eventpair.h>
@@ -39,8 +40,8 @@ class DatagramSocketTest : public zxtest::Test {
   DatagramSocketTest() : control_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() final {
-    zx::eventpair event0;
-    ASSERT_OK(zx::eventpair::create(0u, &event0, &event1_));
+    zx::eventpair event_client;
+    ASSERT_OK(zx::eventpair::create(0u, &event_client, &event_server_));
 
     auto node_ends = fidl::CreateEndpoints<fuchsia_posix_socket::DatagramSocket>();
     ASSERT_OK(node_ends.status_value());
@@ -49,7 +50,7 @@ class DatagramSocketTest : public zxtest::Test {
     fidl::BindServer(control_loop_.dispatcher(), std::move(node_ends->server), &server_);
     control_loop_.StartThread("control");
 
-    ASSERT_OK(zxio_datagram_socket_init(&storage_, std::move(event0), std::move(client)));
+    ASSERT_OK(zxio_datagram_socket_init(&storage_, std::move(event_client), std::move(client)));
     zxio_ = &storage_.io;
   }
 
@@ -58,12 +59,13 @@ class DatagramSocketTest : public zxtest::Test {
     control_loop_.Shutdown();
   }
 
+ protected:
   zxio_t* zxio() { return zxio_; }
 
  private:
   zxio_storage_t storage_;
   zxio_t* zxio_;
-  zx::eventpair event1_;
+  zx::eventpair event_server_;
   DatagramSocketServer server_;
   async::Loop control_loop_;
 };
@@ -130,6 +132,7 @@ class StreamSocketTest : public zxtest::Test {
     control_loop_.Shutdown();
   }
 
+ protected:
   zxio_t* zxio() { return zxio_; }
 
  private:
@@ -153,6 +156,80 @@ TEST_F(StreamSocketTest, Release) {
 }
 
 TEST_F(StreamSocketTest, Borrow) {
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_borrow(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+}
+
+namespace {
+
+class RawSocketServer final : public fuchsia_posix_socket_raw::testing::Socket_TestBase {
+ public:
+  RawSocketServer() = default;
+
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+    completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
+  }
+};
+
+class RawSocketTest : public zxtest::Test {
+ public:
+  RawSocketTest() : control_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+  void SetUp() final {
+    zx::eventpair event_client;
+    ASSERT_OK(zx::eventpair::create(0u, &event_client, &event_server_));
+
+    auto node_ends = fidl::CreateEndpoints<fuchsia_posix_socket_raw::Socket>();
+    ASSERT_OK(node_ends.status_value());
+    fidl::ClientEnd client = std::move(node_ends->client);
+
+    fidl::BindServer(control_loop_.dispatcher(), std::move(node_ends->server), &server_);
+    control_loop_.StartThread("control");
+
+    ASSERT_OK(zxio_raw_socket_init(&storage_, std::move(event_client), std::move(client)));
+    zxio_ = &storage_.io;
+  }
+
+  void TearDown() final {
+    ASSERT_OK(zxio_close(zxio_));
+    control_loop_.Shutdown();
+  }
+
+ protected:
+  zxio_t* zxio() { return zxio_; }
+
+ private:
+  zxio_storage_t storage_;
+  zxio_t* zxio_;
+  zx::eventpair event_server_;
+  RawSocketServer server_;
+  async::Loop control_loop_;
+};
+
+}  // namespace
+
+TEST_F(RawSocketTest, Basic) {}
+
+TEST_F(RawSocketTest, Release) {
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  EXPECT_OK(zxio_release(zxio(), &handle));
+  EXPECT_NE(handle, ZX_HANDLE_INVALID);
+
+  EXPECT_OK(zx_handle_close(handle));
+}
+
+TEST_F(RawSocketTest, Borrow) {
   zx_handle_t handle = ZX_HANDLE_INVALID;
   EXPECT_OK(zxio_borrow(zxio(), &handle));
   EXPECT_NE(handle, ZX_HANDLE_INVALID);

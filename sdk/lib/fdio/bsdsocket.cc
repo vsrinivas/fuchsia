@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/net/name/llcpp/fidl.h>
+#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
@@ -29,14 +30,10 @@ namespace fio = fuchsia_io;
 namespace fnet = fuchsia_net;
 namespace fnet_name = fuchsia_net_name;
 namespace fsocket = fuchsia_posix_socket;
+namespace frawsocket = fuchsia_posix_socket_raw;
 
 __EXPORT
 int socket(int domain, int type, int protocol) {
-  auto& provider = get_client<fsocket::Provider>();
-  if (provider.is_error()) {
-    return ERRNO(EIO);
-  }
-
   fsocket::wire::Domain sock_domain;
   switch (domain) {
     case AF_INET:
@@ -57,6 +54,11 @@ int socket(int domain, int type, int protocol) {
       switch (protocol) {
         case IPPROTO_IP:
         case IPPROTO_TCP: {
+          auto& provider = get_client<fsocket::Provider>();
+          if (provider.is_error()) {
+            return ERRNO(EIO);
+          }
+
           auto result =
               provider->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::kTcp);
           if (result.status() != ZX_OK) {
@@ -93,6 +95,12 @@ int socket(int domain, int type, int protocol) {
         default:
           return ERRNO(EPROTONOSUPPORT);
       }
+
+      auto& provider = get_client<fsocket::Provider>();
+      if (provider.is_error()) {
+        return ERRNO(EIO);
+      }
+
       auto result = provider->DatagramSocket(sock_domain, proto);
       if (result.status() != ZX_OK) {
         return ERROR(result.status());
@@ -102,11 +110,49 @@ int socket(int domain, int type, int protocol) {
       }
       client_end.channel() = result->result.mutable_response().s.TakeChannel();
     } break;
-    case SOCK_RAW:
+    case SOCK_RAW: {
       if (protocol == 0) {
         return ERRNO(EPROTONOSUPPORT);
       }
-      return ERRNO(EPERM);
+
+      auto& provider = get_client<frawsocket::Provider>();
+      if (provider.is_error()) {
+        return ERRNO(EIO);
+      }
+
+      if ((protocol > std::numeric_limits<uint8_t>::max()) ||
+          (protocol < std::numeric_limits<uint8_t>::min())) {
+        return ERRNO(EINVAL);
+      }
+      frawsocket::wire::ProtocolAssociation proto_assoc;
+      frawsocket::wire::Empty empty;
+      uint8_t sock_protocol = static_cast<uint8_t>(protocol);
+      // Sockets created with IPPROTO_RAW are only used to send packets as per
+      // https://linux.die.net/man/7/raw,
+      //
+      //   A protocol of IPPROTO_RAW implies enabled IP_HDRINCL and is able to
+      //   send any IP protocol that is specified in the passed header. Receiving
+      //   of all IP protocols via IPPROTO_RAW is not possible using raw sockets.
+      if (protocol == IPPROTO_RAW) {
+        proto_assoc.set_unassociated(
+            fidl::ObjectView<frawsocket::wire::Empty>::FromExternal(&empty));
+      } else {
+        proto_assoc.set_associated(fidl::ObjectView<uint8_t>::FromExternal(&sock_protocol));
+      }
+      auto result = provider->Socket(sock_domain, proto_assoc);
+      auto status = result.status();
+      if (status != ZX_OK) {
+        if (status == ZX_ERR_PEER_CLOSED) {
+          // Client does not have access to the raw socket protocol.
+          return ERRNO(EPERM);
+        }
+        return ERROR(status);
+      }
+      if (result->result.is_err()) {
+        return ERRNO(static_cast<int32_t>(result->result.err()));
+      }
+      client_end.channel() = result->result.mutable_response().s.TakeChannel();
+    } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
   }

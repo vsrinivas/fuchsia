@@ -38,6 +38,7 @@ import (
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
+	rawsocket "fidl/fuchsia/posix/socket/raw"
 	"fidl/fuchsia/stash"
 
 	glog "gvisor.dev/gvisor/pkg/log"
@@ -49,6 +50,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
+	"gvisor.dev/gvisor/pkg/tcpip/transport/raw"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
@@ -300,10 +302,7 @@ func Main() {
 		HandleLocal: true,
 		NUDDisp:     &nudDisp,
 
-		// Raw sockets are typically used for implementing custom protocols. We intend
-		// to support custom protocols through structured FIDL APIs in the future, so
-		// disable raw sockets to prevent them from accidentally becoming load-bearing.
-		RawFactory: nil,
+		RawFactory: &raw.EndpointFactory{},
 	})
 
 	delayEnabled := tcpip.TCPDelayEnabled(true)
@@ -474,6 +473,19 @@ func Main() {
 			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(socket.ProviderName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := rawsocket.ProviderWithCtxStub{Impl: &rawProviderImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			rawsocket.ProviderName,
+			func(ctx context.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(rawsocket.ProviderName, "%s", err)
 				})
 				return nil
 			},

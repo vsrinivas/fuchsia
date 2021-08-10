@@ -150,6 +150,7 @@ union/member fuchsia.io/NodeInfo.device fuchsia.io/Device
 union/member fuchsia.io/NodeInfo.directory fuchsia.io/DirectoryObject
 union/member fuchsia.io/NodeInfo.file fuchsia.io/FileObject
 union/member fuchsia.io/NodeInfo.pipe fuchsia.io/Pipe
+union/member fuchsia.io/NodeInfo.raw_socket fuchsia.io/RawSocket
 union/member fuchsia.io/NodeInfo.service fuchsia.io/Service
 union/member fuchsia.io/NodeInfo.stream_socket fuchsia.io/StreamSocket
 union/member fuchsia.io/NodeInfo.tty fuchsia.io/Tty
@@ -174,6 +175,8 @@ const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2
 struct/member fuchsia.io/Pipe.socket zx/handle:SOCKET
 resource struct fuchsia.io/Pipe
+struct/member fuchsia.io/RawSocket.event zx/handle:EVENTPAIR
+resource struct fuchsia.io/RawSocket
 enum/member fuchsia.io/SeekOrigin.CURRENT 1
 enum/member fuchsia.io/SeekOrigin.END 2
 enum/member fuchsia.io/SeekOrigin.START 0

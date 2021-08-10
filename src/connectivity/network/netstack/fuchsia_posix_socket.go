@@ -33,6 +33,7 @@ import (
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/posix"
 	"fidl/fuchsia/posix/socket"
+	rawsocket "fidl/fuchsia/posix/socket/raw"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -1052,15 +1053,10 @@ type endpointWithEvent struct {
 	entry waiter.Entry
 }
 
-func (epe *endpointWithEvent) Describe(fidl.Context) (fidlio.NodeInfo, error) {
-	var info fidlio.NodeInfo
+func (epe *endpointWithEvent) describe() (zx.Handle, error) {
 	event, err := epe.peer.Duplicate(zx.RightsBasic)
 	_ = syslog.DebugTf("Describe", "%p: err=%v", epe, err)
-	if err != nil {
-		return info, err
-	}
-	info.SetDatagramSocket(fidlio.DatagramSocket{Event: event})
-	return info, nil
+	return event, err
 }
 
 func (epe *endpointWithEvent) shutdown(how socket.ShutdownMode) (posix.Errno, error) {
@@ -1639,15 +1635,27 @@ func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode
 	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
 }
 
-type datagramSocketImpl struct {
+type datagramSocket struct {
 	*endpointWithEvent
 
 	cancel context.CancelFunc
 }
 
+type datagramSocketImpl struct {
+	datagramSocket
+}
+
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 
-func (s *datagramSocketImpl) close() {
+func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	event, err := s.describe()
+	if err != nil {
+		return fidlio.NodeInfo{}, err
+	}
+	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Event: event}), nil
+}
+
+func (s *datagramSocket) close() {
 	if s.endpoint.decRef() {
 		s.wq.EventUnregister(&s.entry)
 
@@ -1670,7 +1678,7 @@ func (s *datagramSocketImpl) close() {
 	s.cancel()
 }
 
-func (s *datagramSocketImpl) Close(fidl.Context) (int32, error) {
+func (s *datagramSocket) Close(fidl.Context) (int32, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
 	return int32(zx.ErrOk), nil
@@ -1681,27 +1689,31 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWit
 		sCopy := *s
 		s := &sCopy
 
-		s.ns.stats.SocketCount.Increment()
-		s.endpoint.incRef()
-		go func() {
-			defer s.ns.stats.SocketCount.Decrement()
-
-			ctx, cancel := context.WithCancel(context.Background())
-			s.cancel = cancel
-			defer func() {
-				// Avoid double close when the peer calls Close and then hangs up.
-				if ctx.Err() == nil {
-					s.close()
-				}
-			}()
-
-			stub := socket.DatagramSocketWithCtxStub{Impl: s}
-			component.ServeExclusive(ctx, &stub, object.Channel, func(err error) {
-				// NB: this protocol is not discoverable, so the bindings do not include its name.
-				_ = syslog.WarnTf("fuchsia.posix.socket.DatagramSocket", "%s", err)
-			})
-		}()
+		// NB: this protocol is not discoverable, so the bindings do not include its name.
+		s.datagramSocket.addConnection("fuchsia.posix.socket.DatagramSocket", object, &socket.DatagramSocketWithCtxStub{Impl: s})
 	}
+}
+
+func (s *datagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxInterfaceRequest, stub fidl.Stub) {
+	s.ns.stats.SocketCount.Increment()
+	s.endpoint.incRef()
+	go func() {
+		defer s.ns.stats.SocketCount.Decrement()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		s.cancel = cancel
+		defer func() {
+			// Avoid double close when the peer calls Close and then hangs up.
+			if ctx.Err() == nil {
+				s.close()
+			}
+		}()
+
+		component.ServeExclusive(ctx, stub, object.Channel, func(err error) {
+			// NB: this protocol is not discoverable, so the bindings do not include its name.
+			_ = syslog.WarnTf(prefix, "%s", err)
+		})
+	}()
 }
 
 func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
@@ -1712,16 +1724,14 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio
 	return nil
 }
 
-func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
+func (s *datagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.Error) {
 	var b bytes.Buffer
 	dst := tcpip.LimitedWriter{
 		W: &b,
 		N: int64(dataLen),
 	}
-	// TODO(https://fxbug.dev/21106): do something with control messages.
-	_ = wantControl
 	res, err := s.ep.Read(&dst, tcpip.ReadOptions{
-		Peek:           flags&socket.RecvMsgFlagsPeek != 0,
+		Peek:           peek,
 		NeedRemoteAddr: wantAddr,
 	})
 	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
@@ -1731,35 +1741,49 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 		panic(err)
 	}
 	if err != nil {
-		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
+		return fidlnet.SocketAddress{}, nil, 0, err
 	}
-	var addr *fidlnet.SocketAddress
+	var addr fidlnet.SocketAddress
 	if wantAddr {
 		sockaddr := toNetSocketAddress(s.netProto, res.RemoteAddr)
-		addr = &sockaddr
+		addr = sockaddr
+	}
+	return addr, b.Bytes(), uint32(res.Total - res.Count), nil
+}
+
+func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.DatagramSocketRecvMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control messages.
+	_ = wantControl
+
+	addr, data, truncated, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
+	if err != nil {
+		return socket.DatagramSocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var pAddr *fidlnet.SocketAddress
+	if wantAddr {
+		pAddr = &addr
 	}
 
 	return socket.DatagramSocketRecvMsgResultWithResponse(socket.DatagramSocketRecvMsgResponse{
-		Addr:      addr,
-		Data:      b.Bytes(),
-		Truncated: uint32(res.Total - res.Count),
+		Addr:      pAddr,
+		Data:      data,
+		Truncated: truncated,
 	}), nil
 }
 
-func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+func (s *datagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint8) (int64, tcpip.Error) {
 	var writeOpts tcpip.WriteOptions
 	if addr != nil {
 		addr, err := toTCPIPFullAddress(*addr)
 		if err != nil {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
+			return 0, &tcpip.ErrBadAddress{}
 		}
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
-			return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
+			return 0, &tcpip.ErrAddressFamilyNotSupported{}
 		}
 		writeOpts.To = &addr
 	}
-	// TODO(https://fxbug.dev/21106): do something with control.
-	_ = control
+
 	var r bytes.Reader
 	r.Reset(data)
 	n, err := s.ep.Write(&r, writeOpts)
@@ -1767,6 +1791,17 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 		if err := s.pending.update(); err != nil {
 			panic(err)
 		}
+		return 0, err
+	}
+	return n, nil
+}
+
+func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.SendControlData, _ socket.SendMsgFlags) (socket.DatagramSocketSendMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control.
+	_ = control
+
+	n, err := s.sendMsg(addr, data)
+	if err != nil {
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.DatagramSocketSendMsgResultWithResponse(socket.DatagramSocketSendMsgResponse{Len: n}), nil
@@ -2356,38 +2391,20 @@ func (cb callback) Callback(e *waiter.Entry, m waiter.EventMask) {
 	cb(e, m)
 }
 
-func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
-	code, netProto := toNetProto(domain)
-	if code != 0 {
-		return socket.ProviderDatagramSocketResultWithErr(code), nil
-	}
-	code, transProto := toTransProtoDatagram(domain, proto)
-	if code != 0 {
-		return socket.ProviderDatagramSocketResultWithErr(code), nil
-	}
-
-	wq := new(waiter.Queue)
-	ep, tcpErr := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
-	if tcpErr != nil {
-		return socket.ProviderDatagramSocketResultWithErr(tcpipErrorToCode(tcpErr)), nil
-	}
-
+func makeDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ns *Netstack) (datagramSocket, error) {
 	var localE, peerE zx.Handle
 	if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
-		return socket.ProviderDatagramSocketResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+		return datagramSocket{}, &zx.Error{Status: status, Text: "zx.EventPair"}
 	}
-	localC, peerC, err := zx.NewChannel(0)
-	if err != nil {
-		return socket.ProviderDatagramSocketResult{}, err
-	}
-	s := &datagramSocketImpl{
+
+	s := datagramSocket{
 		endpointWithEvent: &endpointWithEvent{
 			endpoint: endpoint{
 				ep:         ep,
 				wq:         wq,
 				transProto: transProto,
 				netProto:   netProto,
-				ns:         sp.ns,
+				ns:         ns,
 				pending: signaler{
 					supported:       waiter.EventIn | waiter.EventErr,
 					eventsToSignals: eventsToDatagramSignals,
@@ -2408,10 +2425,43 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 
 	s.wq.EventRegister(&s.entry, s.pending.supported)
 
+	return s, nil
+}
+
+func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return socket.ProviderDatagramSocketResultWithErr(code), nil
+	}
+	code, transProto := toTransProtoDatagram(domain, proto)
+	if code != 0 {
+		return socket.ProviderDatagramSocketResultWithErr(code), nil
+	}
+
+	wq := new(waiter.Queue)
+	var ep tcpip.Endpoint
+	{
+		var err tcpip.Error
+		ep, err = sp.ns.stack.NewEndpoint(transProto, netProto, wq)
+		if err != nil {
+			return socket.ProviderDatagramSocketResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+
+	datagramSocket, err := makeDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	if err != nil {
+		return socket.ProviderDatagramSocketResult{}, err
+	}
+
+	s := datagramSocketImpl{datagramSocket: datagramSocket}
+
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.ProviderDatagramSocketResult{}, err
+	}
+
 	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	_ = syslog.DebugTf("NewDatagram", "%p", s.endpointWithEvent)
-	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
-
 	sp.ns.onAddEndpoint(&s.endpoint)
 
 	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
@@ -2419,9 +2469,8 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	}
 
 	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponse{
-		S: socket.DatagramSocketWithCtxInterface{Channel: datagramSocketInterface.Channel},
+		S: socket.DatagramSocketWithCtxInterface{Channel: peerC},
 	}), nil
-
 }
 
 func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
@@ -2435,9 +2484,13 @@ func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto
 	}
 
 	wq := new(waiter.Queue)
-	ep, tcpErr := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
-	if tcpErr != nil {
-		return socket.ProviderStreamSocketResultWithErr(tcpipErrorToCode(tcpErr)), nil
+	var ep tcpip.Endpoint
+	{
+		var err tcpip.Error
+		ep, err = sp.ns.stack.NewEndpoint(transProto, netProto, wq)
+		if err != nil {
+			return socket.ProviderStreamSocketResultWithErr(tcpipErrorToCode(err)), nil
+		}
 	}
 
 	socketEp, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
@@ -2471,6 +2524,148 @@ func (sp *providerImpl) InterfaceNameToIndex(_ fidl.Context, name string) (socke
 		}
 	}
 	return socket.ProviderInterfaceNameToIndexResultWithErr(int32(zx.ErrNotFound)), nil
+}
+
+type rawProviderImpl struct {
+	ns *Netstack
+}
+
+var _ rawsocket.ProviderWithCtx = (*rawProviderImpl)(nil)
+
+func (sp *rawProviderImpl) Socket(ctx fidl.Context, domain socket.Domain, proto rawsocket.ProtocolAssociation) (rawsocket.ProviderSocketResult, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return rawsocket.ProviderSocketResultWithErr(code), nil
+	}
+
+	// If the endpoint is unassociated, then the protocol number doesn't matter.
+	//
+	// 255 is a reserved protocol number as per
+	// https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml.
+	transProto := tcpip.TransportProtocolNumber(255)
+	associated := true
+	switch tag := proto.Which(); tag {
+	case rawsocket.ProtocolAssociationUnassociated:
+		associated = false
+	case rawsocket.ProtocolAssociationAssociated:
+		transProto = tcpip.TransportProtocolNumber(proto.Associated)
+	default:
+		panic(fmt.Sprintf("unhandled association = %d; %#v", tag, proto))
+	}
+
+	wq := new(waiter.Queue)
+	var ep tcpip.Endpoint
+	{
+		var err tcpip.Error
+		ep, err = sp.ns.stack.NewRawEndpoint(transProto, netProto, wq, associated)
+		if err != nil {
+			return rawsocket.ProviderSocketResultWithErr(tcpipErrorToCode(err)), nil
+		}
+	}
+
+	datagramSocket, err := makeDatagramSocket(ep, netProto, transProto, wq, sp.ns)
+	if err != nil {
+		return rawsocket.ProviderSocketResult{}, err
+	}
+
+	s := rawSocketImpl{
+		datagramSocket: datagramSocket,
+		proto:          proto,
+	}
+
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return rawsocket.ProviderSocketResult{}, err
+	}
+
+	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	_ = syslog.DebugTf("NewRawSocket", "%p", s.endpointWithEvent)
+	sp.ns.onAddEndpoint(&s.endpoint)
+
+	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
+		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
+	}
+
+	return rawsocket.ProviderSocketResultWithResponse(rawsocket.ProviderSocketResponse{
+		S: rawsocket.SocketWithCtxInterface{Channel: peerC},
+	}), nil
+
+}
+
+type rawSocketImpl struct {
+	datagramSocket
+
+	proto rawsocket.ProtocolAssociation
+}
+
+var _ rawsocket.SocketWithCtx = (*rawSocketImpl)(nil)
+
+func (s *rawSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+	event, err := s.describe()
+	if err != nil {
+		return fidlio.NodeInfo{}, err
+	}
+	return fidlio.NodeInfoWithRawSocket(fidlio.RawSocket{Event: event}), nil
+}
+
+func (s *rawSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+	{
+		sCopy := *s
+		s := &sCopy
+
+		// NB: this protocol is not discoverable, so the bindings do not include its name.
+		s.datagramSocket.addConnection("fuchsia.posix.socket.raw.Socket", object, &rawsocket.SocketWithCtxStub{Impl: s})
+	}
+}
+
+func (s *rawSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.NodeWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object)
+
+	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
+
+	return nil
+}
+
+func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (rawsocket.SocketRecvMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control messages.
+	_ = wantControl
+
+	addr, data, truncated, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
+	if err != nil {
+		return rawsocket.SocketRecvMsgResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var pAddr *fidlnet.SocketAddress
+	if wantAddr {
+		pAddr = &addr
+	}
+
+	return rawsocket.SocketRecvMsgResultWithResponse(rawsocket.SocketRecvMsgResponse{
+		Addr:      pAddr,
+		Data:      data,
+		Truncated: truncated,
+	}), nil
+}
+
+func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control rawsocket.SendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
+	// TODO(https://fxbug.dev/21106): do something with control.
+	_ = control
+
+	n, err := s.sendMsg(addr, data)
+	if err != nil {
+		return rawsocket.SocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return rawsocket.SocketSendMsgResultWithResponse(rawsocket.SocketSendMsgResponse{Len: n}), nil
+}
+
+func (s *rawSocketImpl) GetInfo(fidl.Context) (rawsocket.SocketGetInfoResult, error) {
+	domain, err := s.domain()
+	if err != nil {
+		return rawsocket.SocketGetInfoResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return rawsocket.SocketGetInfoResultWithResponse(rawsocket.SocketGetInfoResponse{
+		Domain: domain,
+		Proto:  s.proto,
+	}), nil
 }
 
 // Adapted from helper function `nicStateFlagsToLinux` in gvisor's
@@ -2645,6 +2840,8 @@ func tcpipErrorToCode(err tcpip.Error) posix.Errno {
 		return posix.ErrnoEacces
 	case *tcpip.ErrAddressFamilyNotSupported:
 		return posix.ErrnoEafnosupport
+	case *tcpip.ErrMalformedHeader:
+		return posix.ErrnoEinval
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))
 	}
