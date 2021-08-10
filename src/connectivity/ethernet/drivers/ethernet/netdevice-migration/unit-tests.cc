@@ -4,10 +4,14 @@
 
 #include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 
+#include <array>
+
+#include <fbl/auto_lock.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "netdevice_migration.h"
+#include "src/devices/testing/fake-bti/include/lib/fake-bti/bti.h"
 #include "src/devices/testing/fake_ddk/include/lib/fake_ddk/fake_ddk.h"
 #include "src/lib/testing/predicates/status.h"
 
@@ -62,50 +66,55 @@ class MockEthernetImpl : public ddk::Device<MockEthernetImpl>,
 
 class NetdeviceMigrationTest : public ::testing::Test {
  protected:
+  void CreateDevice() {
+    zx::status device = netdevice_migration::NetdeviceMigration::Create(fake_ddk::kFakeParent);
+    ASSERT_OK(device.status_value());
+    device_ = std::move(device.value());
+  }
+
+  testing::StrictMock<MockNetworkDeviceIfc> mock_network_device_ifc_;
+  testing::StrictMock<MockEthernetImpl> mock_ethernet_impl_;
+  std::unique_ptr<netdevice_migration::NetdeviceMigration> device_;
+};
+
+class NetdeviceMigrationDefaultSetupTest : public NetdeviceMigrationTest {
+ protected:
   void SetUp() override {
-    device_ = std::make_unique<netdevice_migration::NetdeviceMigration>(fake_ddk::kFakeParent);
+    EXPECT_CALL(mock_ethernet_impl_, EthernetImplQuery(0, testing::_))
+        .WillOnce([](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
+          *out_info = {
+              .features = 0,
+          };
+          return ZX_OK;
+        });
+    ASSERT_NO_FATAL_FAILURE(CreateDevice());
     EXPECT_CALL(
         mock_network_device_ifc_,
         NetworkDeviceIfcAddPort(netdevice_migration::NetdeviceMigration::kPortId, testing::_))
         .Times(1);
     ASSERT_OK(device_->NetworkDeviceImplInit(&mock_network_device_ifc_.proto()));
   }
-
-  void TearDown() override {
-    device_->DdkRelease();
-    auto __UNUSED temp_ref = device_.release();
-  }
-
-  MockNetworkDeviceIfc mock_network_device_ifc_;
-  MockEthernetImpl mock_ethernet_impl_;
-  std::unique_ptr<netdevice_migration::NetdeviceMigration> device_;
 };
 
-TEST_F(NetdeviceMigrationTest, LifetimeTest) {
-  EXPECT_CALL(mock_ethernet_impl_, EthernetImplQuery(0, testing::_))
-      .Times(1)
-      .WillOnce(testing::Return(ZX_OK));
-  EXPECT_CALL(mock_ethernet_impl_, EthernetImplGetBti(testing::_)).Times(1);
-  ASSERT_OK(device_->Init());
+TEST_F(NetdeviceMigrationDefaultSetupTest, LifetimeTest) {
+  ASSERT_OK(device_->DeviceAdd());
   device_->DdkAsyncRemove();
   EXPECT_TRUE(mock_ethernet_impl_.ddk().Ok());
 }
 
-TEST_F(NetdeviceMigrationTest, NetworkDeviceImplInit) {
+TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplInit) {
   ASSERT_STATUS(device_->NetworkDeviceImplInit(&mock_network_device_ifc_.proto()),
                 ZX_ERR_ALREADY_BOUND);
 }
 
-TEST_F(NetdeviceMigrationTest, NetworkDeviceImplStartStop) {
+TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplStartStop) {
   auto callback = [](void* ctx) {
     auto* callback_called = static_cast<bool*>(ctx);
     *callback_called = true;
   };
 
   bool callback_called = false;
-  EXPECT_CALL(mock_ethernet_impl_, EthernetImplStart(testing::_))
-      .Times(1)
-      .WillOnce(testing::Return(ZX_OK));
+  EXPECT_CALL(mock_ethernet_impl_, EthernetImplStart(testing::_)).WillOnce(testing::Return(ZX_OK));
   device_->NetworkDeviceImplStart(callback, &callback_called);
   EXPECT_TRUE(callback_called);
   EXPECT_TRUE(device_->IsStarted());
@@ -122,7 +131,7 @@ TEST_F(NetdeviceMigrationTest, NetworkDeviceImplStartStop) {
   EXPECT_FALSE(device_->IsStarted());
 }
 
-TEST_F(NetdeviceMigrationTest, EthernetIfcStatus) {
+TEST_F(NetdeviceMigrationDefaultSetupTest, EthernetIfcStatus) {
   port_status_t status;
   device_->NetworkPortGetStatus(&status);
   EXPECT_EQ(status.mtu, ETH_MTU_SIZE);
@@ -143,10 +152,9 @@ TEST_F(NetdeviceMigrationTest, EthernetIfcStatus) {
             static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline));
 }
 
-TEST_F(NetdeviceMigrationTest, EthernetIfcStatusCalledFromEthernetImplStart) {
+TEST_F(NetdeviceMigrationDefaultSetupTest, EthernetIfcStatusCalledFromEthernetImplStart) {
   ethernet_ifc_protocol_t proto = device_->EthernetIfcProto();
   EXPECT_CALL(mock_ethernet_impl_, EthernetImplStart(&proto))
-      .Times(1)
       .WillOnce([](const ethernet_ifc_protocol_t* proto) -> zx_status_t {
         auto client = ddk::EthernetIfcProtocolClient(proto);
         client.Status(
@@ -166,5 +174,61 @@ TEST_F(NetdeviceMigrationTest, EthernetIfcStatusCalledFromEthernetImplStart) {
   EXPECT_EQ(status.mtu, ETH_MTU_SIZE);
   EXPECT_EQ(status.flags,
             static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline));
+}
+
+TEST_F(NetdeviceMigrationTest, NetworkDeviceImplPrepareReleaseVmo) {
+  constexpr size_t kVmoSize = ZX_PAGE_SIZE;
+  EXPECT_CALL(mock_ethernet_impl_, EthernetImplQuery(0, testing::_))
+      .WillOnce([](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
+        *out_info = {
+            .features = ETHERNET_FEATURE_DMA,
+        };
+        return ZX_OK;
+      });
+  EXPECT_CALL(mock_ethernet_impl_, EthernetImplGetBti(testing::_))
+      .WillOnce([](zx::bti* out_bti) -> zx_status_t {
+        return fake_bti_create(out_bti->reset_and_get_address());
+      });
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
+  std::array<fake_bti_pinned_vmo_info_t, 3> pinned_vmos;
+  size_t pinned;
+  ASSERT_OK(fake_bti_get_pinned_vmos(device_->Bti().get(), pinned_vmos.data(), pinned_vmos.size(),
+                                     &pinned));
+  ASSERT_EQ(pinned, 0u);
+
+  for (uint8_t vmo_id = 1; vmo_id <= pinned_vmos.size(); vmo_id++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+    device_->NetworkDeviceImplPrepareVmo(vmo_id, std::move(vmo));
+    ASSERT_OK(fake_bti_get_pinned_vmos(device_->Bti().get(), pinned_vmos.data(), pinned_vmos.size(),
+                                       &pinned));
+    ASSERT_EQ(pinned, vmo_id);
+    device_->WithVmoStore<void>(
+        [vmo_id, kVmoSize](netdevice_migration::NetdeviceMigrationVmoStore& vmo_store) {
+          auto* stored = vmo_store.GetVmo(vmo_id);
+          ASSERT_NE(stored, nullptr);
+          auto data = stored->data();
+          ASSERT_EQ(data.size(), kVmoSize);
+        });
+  }
+
+  for (uint8_t vmo_id = pinned_vmos.size(); vmo_id > 0;) {
+    device_->NetworkDeviceImplReleaseVmo(vmo_id--);
+    ASSERT_OK(fake_bti_get_pinned_vmos(device_->Bti().get(), pinned_vmos.data(), pinned_vmos.size(),
+                                       &pinned));
+    ASSERT_EQ(pinned, vmo_id);
+  }
+}
+
+TEST_F(NetdeviceMigrationTest, NetworkDeviceDoesNotGetBtiIfEthDoesNotSupportDma) {
+  EXPECT_CALL(mock_ethernet_impl_, EthernetImplQuery(0, testing::_))
+      .WillOnce([](uint32_t options, ethernet_info_t* out_info) -> zx_status_t {
+        *out_info = {
+            .features = 0,
+        };
+        return ZX_OK;
+      });
+  EXPECT_CALL(mock_ethernet_impl_, EthernetImplGetBti(testing::_)).Times(0);
+  ASSERT_NO_FATAL_FAILURE(CreateDevice());
 }
 }  // namespace
