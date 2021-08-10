@@ -117,8 +117,8 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       auto& socket = info.mutable_datagram_socket();
-      return zx::ok(fdio_datagram_socket_create(
-          std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel())));
+      return fdio_datagram_socket_create(
+          std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
       auto& socket = info.mutable_stream_socket().socket;

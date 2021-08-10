@@ -1620,18 +1620,18 @@ struct datagram_socket : public zxio {
 
 }  // namespace fdio_internal
 
-fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
-                                     fidl::ClientEnd<fsocket::DatagramSocket> client) {
+zx::status<fdio_ptr> fdio_datagram_socket_create(zx::eventpair event,
+                                                 fidl::ClientEnd<fsocket::DatagramSocket> client) {
   fdio_ptr io = fbl::MakeRefCounted<fdio_internal::datagram_socket>();
   if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
       zxio_datagram_socket_init(&io->zxio_storage(), std::move(event), std::move(client));
   if (status != ZX_OK) {
-    return nullptr;
+    return zx::error(status);
   }
-  return io;
+  return zx::ok(io);
 }
 
 static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
@@ -2037,7 +2037,7 @@ zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
 
   fdio_ptr io = fbl::MakeRefCounted<fdio_internal::stream_socket>(state.value());
   if (io == nullptr) {
-    return zx::ok(nullptr);
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
       zxio_stream_socket_init(&io->zxio_storage(), std::move(socket), std::move(client), info);
