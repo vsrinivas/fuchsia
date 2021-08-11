@@ -707,13 +707,6 @@ primarily for external tools that use bitcode for analysis.
 
 From //build/config/clang/clang.gni:17
 
-### clang_lib_dir
-Path to Clang lib directory.
-
-**Current value (from the default):** `"//prebuilt/third_party/clang/linux-x64/bin/../lib"`
-
-From //build/images/manifest.gni:13
-
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size. Note that
 the option only takes effect when `optimize` is set to `"size"`.
@@ -814,19 +807,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/7b64a33b2480e0f01ef811a565dfded5352c6633/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e47918b80abf61c9d013012b2df1769e0c0b18d2/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/7b64a33b2480e0f01ef811a565dfded5352c6633/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/e47918b80abf61c9d013012b2df1769e0c0b18d2/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/7b64a33b2480e0f01ef811a565dfded5352c6633/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e47918b80abf61c9d013012b2df1769e0c0b18d2/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1163,13 +1156,6 @@ This argument is temporary until Rust MLME is ready to be used.
 **Current value (from the default):** `false`
 
 From //src/connectivity/wlan/lib/mlme/cpp/BUILD.gn:12
-
-### extra_manifest_args
-Extra args to globally apply to the manifest generation script.
-
-**Current value (from the default):** `[]`
-
-From //build/images/manifest.gni:19
 
 ### extra_package_labels
 
@@ -2353,13 +2339,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/7b64a33b2480e0f01ef811a565dfded5352c6633/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/e47918b80abf61c9d013012b2df1769e0c0b18d2/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/7b64a33b2480e0f01ef811a565dfded5352c6633/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e47918b80abf61c9d013012b2df1769e0c0b18d2/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3211,13 +3197,6 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 **Current value (from the default):** `false`
 
 From //build/config/rust/BUILD.gn:13
-
-### rustc_lib_dir
-Path to rustc lib directory.
-
-**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64/bin/../lib"`
-
-From //build/images/manifest.gni:16
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
