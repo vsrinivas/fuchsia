@@ -59,6 +59,7 @@ rustc_library("pkg") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tokio",
+    "//third_party/rust_crates:url",
     "//third_party/rust_crates:walkdir",
   ]
 

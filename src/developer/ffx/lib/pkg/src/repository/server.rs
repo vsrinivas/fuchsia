@@ -221,11 +221,13 @@ async fn handle_request(
         },
     };
 
-    Response::builder()
-        .status(200)
-        .header("Content-Length", resource.len)
-        .body(Body::wrap_stream(resource.stream))
-        .unwrap()
+    let mut builder = Response::builder().status(200);
+
+    if let Some(len) = resource.len {
+        builder = builder.header("Content-Length", len);
+    }
+
+    builder.body(Body::wrap_stream(resource.stream)).unwrap()
 }
 
 async fn handle_auto(
