@@ -128,12 +128,15 @@ pub enum TestModelError {
     UseDeclNotFound,
     #[error("matching expose decl not found")]
     ExposeDeclNotFound,
+    #[error("found use decl for Event capability, but mode does not match request")]
+    EventModeMismatch,
 }
 
 impl TestModelError {
     pub fn as_zx_status(&self) -> zx_status::Status {
         match self {
             Self::UseDeclNotFound | Self::ExposeDeclNotFound => zx_status::Status::NOT_FOUND,
+            Self::EventModeMismatch => zx_status::Status::UNAVAILABLE,
         }
     }
 }
@@ -155,7 +158,18 @@ impl RoutingTestForAnalyzer {
                     .ok_or(TestModelError::UseDeclNotFound),
                 expected_res,
             ),
-            CheckUse::Event { .. } => unimplemented![],
+            CheckUse::Event { request, expected_res, .. } => {
+                let find_decl = decl.uses.iter().find_map(|u| match u {
+                    UseDecl::Event(d) if (d.target_name == request.event_name) => Some(d.clone()),
+                    _ => None,
+                });
+                let decl_result = match find_decl {
+                    Some(d) if d.mode == request.mode => Ok(UseDecl::Event(d)),
+                    Some(_) => Err(TestModelError::EventModeMismatch),
+                    None => Err(TestModelError::UseDeclNotFound),
+                };
+                (decl_result, expected_res)
+            }
             CheckUse::Protocol { path, expected_res, .. } => (
                 decl.uses
                     .iter()
@@ -244,7 +258,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         match &find_decl {
             Err(err) => {
                 match expected {
-                    ExpectedResult::Ok => panic!("expected UseDecl was not found"),
+                    ExpectedResult::Ok => panic!("expected UseDecl was not found: {}", err),
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }
@@ -254,7 +268,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
             }
             Ok(use_decl) => match self.model.check_use_capability(use_decl, &target).await {
                 Err(ref err) => match expected {
-                    ExpectedResult::Ok => panic!("routing failed, expected success"),
+                    ExpectedResult::Ok => panic!("routing failed, expected success: {}", err),
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }
@@ -280,7 +294,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         match &find_decl {
             Err(err) => {
                 match expected {
-                    ExpectedResult::Ok => panic!("expected ExposeDecl was not found"),
+                    ExpectedResult::Ok => panic!("expected ExposeDecl was not found: {}", err),
                     ExpectedResult::Err(status) => {
                         assert_eq!(err.as_zx_status(), status);
                     }

@@ -285,6 +285,13 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_component_provided_debug_capability_policy_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
+            test_use_event_from_framework,
+            test_can_offer_capability_requested_event,
+            test_use_event_from_parent,
+            test_use_event_from_grandparent,
+            test_event_filter_routing,
+            test_event_mode_routing_failure,
+            test_event_mode_routing_success,
             test_route_service_from_parent,
             test_route_service_from_child,
             test_route_service_from_sibling,
@@ -298,13 +305,6 @@ macro_rules! instantiate_common_routing_tests {
             test_use_builtin_from_grandparent,
             test_invalid_use_from_component_manager,
             test_invalid_offer_from_component_manager,
-            test_use_event_from_framework,
-            test_can_offer_capability_requested_event,
-            test_use_event_from_parent,
-            test_use_event_from_grandparent,
-            test_event_filter_routing,
-            test_event_mode_routing_failure,
-            test_event_mode_routing_success,
         }
     };
     ($builder_impl:path, $test:ident, $($remaining:ident),+ $(,)?) => {

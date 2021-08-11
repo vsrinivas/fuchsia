@@ -5,7 +5,7 @@
 use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
-    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{
@@ -42,6 +42,9 @@ pub enum AnalyzerModelError {
     #[error("the capability `{0}` is not a valid source for the capability `{1}`")]
     InvalidSourceCapability(String, String),
 
+    #[error("uses Event capability `{0}` without using the EventSource protocol")]
+    MissingEventSourceProtocol(String),
+
     #[error(transparent)]
     ComponentInstanceError(#[from] ComponentInstanceError),
 
@@ -54,6 +57,7 @@ impl AnalyzerModelError {
         match self {
             Self::SourceInstanceNotExecutable(_) => zx_status::Status::UNAVAILABLE,
             Self::InvalidSourceCapability(_, _) => zx_status::Status::UNAVAILABLE,
+            Self::MissingEventSourceProtocol(_) => zx_status::Status::UNAVAILABLE,
             Self::ComponentInstanceError(err) => err.as_zx_status(),
             Self::RoutingError(err) => err.as_zx_status(),
         }
@@ -190,6 +194,11 @@ impl ComponentModelForAnalyzer {
                 route_capability(RouteRequest::UseDirectory(use_directory_decl), target).await?
             }
             UseDecl::Event(use_event_decl) => {
+                if !self.uses_event_source_protocol(&target.decl().await?) {
+                    return Err(AnalyzerModelError::MissingEventSourceProtocol(
+                        use_event_decl.target_name.to_string(),
+                    ));
+                }
                 route_capability(RouteRequest::UseEvent(use_event_decl), target).await?
             }
             UseDecl::Protocol(use_protocol_decl) => {
@@ -234,6 +243,7 @@ impl ComponentModelForAnalyzer {
     ) -> Result<(), AnalyzerModelError> {
         match route_source {
             RouteSource::Directory(source, _) => self.check_directory_source(source).await,
+            RouteSource::Event(_) => Ok(()),
             RouteSource::Protocol(source) => self.check_protocol_source(source).await,
             RouteSource::Service(source) => self.check_service_source(source).await,
             RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source).await,
@@ -363,6 +373,19 @@ impl ComponentModelForAnalyzer {
                 component.abs_moniker().to_string(),
             )),
         }
+    }
+
+    fn uses_event_source_protocol(&self, decl: &ComponentDecl) -> bool {
+        decl.uses.iter().any(|u| match u {
+            UseDecl::Protocol(p) => {
+                p.target_path
+                    == CapabilityPath {
+                        dirname: "/svc".to_string(),
+                        basename: "fuchsia.sys2.EventSource".to_string(),
+                    }
+            }
+            _ => false,
+        })
     }
 }
 
