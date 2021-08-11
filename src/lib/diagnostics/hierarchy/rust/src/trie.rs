@@ -98,7 +98,7 @@ where
 
     /// Retrieves a node identified by the key fragment vector `key` if it
     /// exists in the prefix trie, else None.
-    pub fn get(&mut self, key: &Vec<K>) -> Option<&TrieNode<K, V>>
+    pub fn get(&self, key: &Vec<K>) -> Option<&TrieNode<K, V>>
     where
         K: Hash + Eq + Debug,
     {

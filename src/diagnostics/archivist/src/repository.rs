@@ -183,7 +183,7 @@ impl DataRepo {
     /// Returns `true` if a container exists for the requested `identity` and that container either
     /// corresponds to a running component or we've decided to still retain it.
     pub fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        let mut this = self.write();
+        let this = self.read();
         if let Some(containers) = this.data_directories.get(&identity.unique_key) {
             let diagnostics_containers = containers.get_values();
             diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain()
