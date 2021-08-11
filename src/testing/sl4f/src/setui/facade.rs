@@ -6,12 +6,12 @@ use anyhow::{format_err, Error};
 
 use serde_json::{from_value, to_value, Value};
 
-use crate::setui::types::{IntlInfo, NetworkType, SetUiResult};
+use crate::setui::types::{IntlInfo, MicStates, NetworkType, SetUiResult};
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
     self as fsettings, AudioMarker, AudioStreamSettingSource, AudioStreamSettings,
-    ConfigurationInterfaces, DisplayMarker, DisplaySettings, IntlMarker, SetupMarker,
-    SetupSettings, Volume,
+    ConfigurationInterfaces, DeviceState, DisplayMarker, DisplaySettings, InputMarker, InputState,
+    IntlMarker, SetupMarker, SetupSettings, Volume,
 };
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::fx_log_info;
@@ -25,11 +25,14 @@ pub struct SetUiFacade {
 
     /// Optional Display proxy for testing, similar to `audio_proxy`.
     display_proxy: Option<fsettings::DisplayProxy>,
+
+    /// Optional Input proxy for testing, similar to `audio_proxy`.
+    input_proxy: Option<fsettings::InputProxy>,
 }
 
 impl SetUiFacade {
     pub fn new() -> SetUiFacade {
-        SetUiFacade { audio_proxy: None, display_proxy: None }
+        SetUiFacade { audio_proxy: None, display_proxy: None, input_proxy: None }
     }
 
     /// Sets network option used by device setup.
@@ -119,9 +122,12 @@ impl SetUiFacade {
     ///
     /// Returns true if mic is muted or false if mic is unmuted.
     pub async fn is_mic_muted(&self) -> Result<Value, Error> {
-        let audio_proxy = match connect_to_protocol::<AudioMarker>() {
-            Ok(proxy) => proxy,
-            Err(e) => bail!("Failed to connect to Setup Audio service {:?}.", e),
+        let audio_proxy = match self.audio_proxy.as_ref() {
+            Some(proxy) => proxy.clone(),
+            None => match connect_to_protocol::<AudioMarker>() {
+                Ok(proxy) => proxy,
+                Err(e) => bail!("Failed to connect to Setup Audio service {:?}.", e),
+            },
         };
         match audio_proxy.watch().await?.input {
             Some(audio_input) => Ok(to_value(audio_input.muted)?),
@@ -192,13 +198,75 @@ impl SetUiFacade {
             Err(e) => Err(format_err!("SetVolume failed with err {:?}", e)),
         }
     }
+
+    /// Sets the AudioInput mic to (not)muted depending on input.
+    ///
+    /// # Arguments
+    /// * args: accepted args are "muted" or "available". ex: {"params": "muted"}
+    pub async fn set_mic_mute(&self, args: Value) -> Result<Value, Error> {
+        let mic_state: MicStates = from_value(args)?;
+
+        // If mic is already in desired state, then nothing left to execute.
+        let is_muted = self.is_mic_muted().await?.as_bool().unwrap();
+        let mut mute_mic: bool = false;
+        match mic_state {
+            MicStates::Muted => {
+                if is_muted {
+                    return Ok(to_value(SetUiResult::Success)?);
+                }
+                mute_mic = true;
+            }
+            MicStates::Available => {
+                if !is_muted {
+                    return Ok(to_value(SetUiResult::Success)?);
+                }
+            }
+            _ => return Err(format_err!("Mic state must either be muted or available.")),
+        }
+
+        // Use given proxy (if possible), else connect to protocol.
+        let input_proxy = match self.input_proxy.as_ref() {
+            Some(proxy) => proxy.clone(),
+            None => match connect_to_protocol::<InputMarker>() {
+                Ok(proxy) => proxy,
+                Err(e) => bail!("Failed to connect to Microphone {:?}.", e),
+            },
+        };
+
+        // Initialize the InputState struct.
+        let mut input_states = InputState {
+            name: Some("MICROPHONE".to_string()),
+            device_type: Some(fsettings::DeviceType::Microphone),
+            state: Some(DeviceState {
+                toggle_flags: Some(fsettings::ToggleStateFlags::Available),
+                ..DeviceState::EMPTY
+            }),
+            ..InputState::EMPTY
+        };
+
+        // Change DeviceState if microphone should be muted- dependent on input enum.
+        if mute_mic {
+            input_states.state = Some(DeviceState {
+                toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                ..DeviceState::EMPTY
+            });
+        }
+
+        fx_log_info!("SetMicMute: setting input state {:?}", input_states);
+        match input_proxy.set_states(&mut vec![input_states].into_iter()).await? {
+            Ok(_) => Ok(to_value(SetUiResult::Success)?),
+            Err(e) => Err(format_err!("SetMicMute failed with err {:?}", e)),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::common_utils::test::assert_value_round_trips_as;
-    use crate::setui::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
+    use crate::setui::types::{
+        HourCycle, IntlInfo, LocaleId, MicStates, MicStates::Muted, TemperatureUnit,
+    };
     use fidl::endpoints::create_proxy_and_stream;
     use fuchsia_async as fasync;
     use futures::TryStreamExt;
@@ -235,7 +303,8 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<DisplayMarker>().unwrap();
 
         // Create a facade future that sends a request to `proxy`.
-        let facade = SetUiFacade { audio_proxy: None, display_proxy: Some(proxy) };
+        let facade =
+            SetUiFacade { audio_proxy: None, display_proxy: Some(proxy), input_proxy: None };
         let facade_fut = async move {
             assert_eq!(
                 facade.set_brightness(to_value(brightness).unwrap()).await.unwrap(),
@@ -271,7 +340,8 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<AudioMarker>().unwrap();
 
         // Create a facade future that sends a request to `proxy`.
-        let facade = SetUiFacade { audio_proxy: Some(proxy), display_proxy: None };
+        let facade =
+            SetUiFacade { audio_proxy: Some(proxy), display_proxy: None, input_proxy: None };
         let facade_fut = async move {
             assert_eq!(
                 facade.set_media_volume(to_value(volume).unwrap()).await.unwrap(),
@@ -305,5 +375,79 @@ mod tests {
         };
 
         futures::future::join(facade_fut, stream_fut).await;
+    }
+
+    // Tests that `set_mic_mute` correctly sends a request to the Input service to mute the device mic.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_mic_mute() {
+        let mic_state: MicStates = Muted;
+        let (aud_proxy, mut aud_stream) = create_proxy_and_stream::<AudioMarker>().unwrap();
+        let (in_proxy, mut in_stream) = create_proxy_and_stream::<InputMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = SetUiFacade {
+            audio_proxy: Some(aud_proxy),
+            display_proxy: None,
+            input_proxy: Some(in_proxy),
+        };
+        let facade_fut = async move {
+            assert_eq!(
+                facade.set_mic_mute(to_value(mic_state).unwrap()).await.unwrap(),
+                to_value(SetUiResult::Success).unwrap()
+            );
+        };
+
+        // Create a future to service the request stream.
+        let input_stream_fut = async move {
+            match in_stream.try_next().await {
+                Ok(Some(fsettings::InputRequest::SetStates { input_states, responder })) => {
+                    assert_eq!(
+                        input_states[0],
+                        InputState {
+                            name: Some("MICROPHONE".to_string()),
+                            device_type: Some(fsettings::DeviceType::Microphone),
+                            state: Some(DeviceState {
+                                toggle_flags: Some(fsettings::ToggleStateFlags::Muted),
+                                ..DeviceState::EMPTY
+                            }),
+                            ..InputState::EMPTY
+                        }
+                    );
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                other => panic!("Unexpected stream item: {:?}", other),
+            }
+        };
+
+        // Create a future to service the Audio stream.
+        let audio_stream_fut = async move {
+            match aud_stream.try_next().await {
+                Ok(Some(fsettings::AudioRequest::Watch { responder })) => {
+                    let volume = 0.5f32;
+                    let streams = fsettings::AudioStreamSettings {
+                        stream: Some(AudioRenderUsage::Communication),
+                        source: Some(AudioStreamSettingSource::User),
+                        user_volume: Some(Volume {
+                            level: Some(volume),
+                            muted: Some(false),
+                            ..Volume::EMPTY
+                        }),
+                        ..AudioStreamSettings::EMPTY
+                    };
+                    let settings = fsettings::AudioSettings {
+                        streams: Some(vec![streams]),
+                        input: Some(fsettings::AudioInput {
+                            muted: Some(false),
+                            ..fsettings::AudioInput::EMPTY
+                        }),
+                        ..fsettings::AudioSettings::EMPTY
+                    };
+                    responder.send(settings).unwrap();
+                }
+                other => panic!("Unexpected Watch request: {:?}", other),
+            }
+        };
+
+        futures::future::join3(facade_fut, input_stream_fut, audio_stream_fut).await;
     }
 }

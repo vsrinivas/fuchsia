@@ -76,6 +76,7 @@
             "fuchsia.session.Launcher",
             "fuchsia.settings.Audio",
             "fuchsia.settings.Display",
+            "fuchsia.settings.Input",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Setup",
             "fuchsia.sys.Launcher",

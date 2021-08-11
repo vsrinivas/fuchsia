@@ -15,6 +15,7 @@ pub enum SetUiMethod {
     GetIntl,
     SetBrightness,
     SetMediaVolume,
+    SetMicMute,
 }
 
 impl std::str::FromStr for SetUiMethod {
@@ -29,6 +30,7 @@ impl std::str::FromStr for SetUiMethod {
             "IsMicMuted" => Ok(SetUiMethod::IsMicMuted),
             "SetBrightness" => Ok(SetUiMethod::SetBrightness),
             "SetMediaVolume" => Ok(SetUiMethod::SetMediaVolume),
+            "SetMicMute" => Ok(SetUiMethod::SetMicMute),
             _ => return Err(format_err!("invalid SetUi SL4F method: {}", method)),
         }
     }
@@ -44,6 +46,14 @@ pub enum SetUiResult {
 pub enum NetworkType {
     Ethernet,
     Wifi,
+    Unknown,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum MicStates {
+    Muted,
+    Available,
     Unknown,
 }
 

@@ -21,6 +21,7 @@ impl Facade for SetUiFacade {
             SetUiMethod::IsMicMuted => self.is_mic_muted().await,
             SetUiMethod::SetBrightness => self.set_brightness(args).await,
             SetUiMethod::SetMediaVolume => self.set_media_volume(args).await,
+            SetUiMethod::SetMicMute => self.set_mic_mute(args).await,
         }
     }
 }
