@@ -22,6 +22,11 @@
                 "fuchsia.media.sounds.Player",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
+
+                // This is added to support tracing. Therefore, we can run tests in order to trace
+                // the performance of the main setui_service.
+                // See more details here: https://fuchsia.dev/fuchsia-src/development/tracing.
+                "fuchsia.tracing.provider.Registry",
             ],
         },
         {
