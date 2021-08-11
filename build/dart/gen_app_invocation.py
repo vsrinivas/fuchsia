@@ -25,15 +25,15 @@ def main():
     if not os.path.exists(app_path):
         os.makedirs(app_path)
 
-    # `dart` and `snapshot` are used in the output app script, use absolute path
-    # so the script would work regardless where it's invoked.
-    abs_dart = os.path.abspath(args.dart)
-    abs_snapshot = os.path.abspath(args.snapshot)
+    # `dart` and `snapshot` are used in the output app script, use relative path
+    # from script directory so it works from wherever it is invoked.
+    rel_dart = os.path.relpath(args.dart, app_path)
+    rel_snapshot = os.path.relpath(args.snapshot, app_path)
 
-    script_content = f'''#!/bin/sh
-
-{abs_dart} \\
-  {abs_snapshot} \\
+    script_content = f'''#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" >/dev/null 2>&1 && pwd)"
+$SCRIPT_DIR/{rel_dart} \\
+  $SCRIPT_DIR/{rel_snapshot} \\
   "$@"
 '''
     with open(app_file, 'w') as file:
