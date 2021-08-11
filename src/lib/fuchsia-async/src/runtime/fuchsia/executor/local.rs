@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::super::timer::TimerHeap;
 use super::{
     common::{
-        next_deadline, with_local_timer_heap, ExecutorTime, Inner, Notifier, TimerHeap,
-        EMPTY_WAKEUP_ID, MAIN_TASK_ID, TASK_READY_WAKEUP_ID,
+        with_local_timer_heap, ExecutorTime, Inner, Notifier, EMPTY_WAKEUP_ID, MAIN_TASK_ID,
+        TASK_READY_WAKEUP_ID,
     },
     time::Time,
 };
@@ -51,7 +52,7 @@ impl LocalExecutor {
     /// Create a new single-threaded executor running with actual time.
     pub fn new() -> Result<Self, zx::Status> {
         let inner = Arc::new(Inner::new(ExecutorTime::RealTime, /* is_local */ true)?);
-        inner.clone().set_local(TimerHeap::new());
+        inner.clone().set_local(TimerHeap::default());
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
         let main_waker = futures::task::waker(main_task.clone());
@@ -83,7 +84,8 @@ impl LocalExecutor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
+                let deadline =
+                    timer_heap.next_deadline().map(|t| t.time()).unwrap_or(Time::INFINITE);
                 // into_zx: we are using real time, so the time is a monotonic time.
                 local_collector.will_wait();
                 match self.inner.port.wait(deadline.into_zx()) {
@@ -160,7 +162,7 @@ impl TestExecutor {
             ExecutorTime::FakeTime(AtomicI64::new(Time::INFINITE_PAST.into_nanos())),
             /* is_local */ true,
         )?);
-        inner.clone().set_local(TimerHeap::new());
+        inner.clone().set_local(TimerHeap::default());
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
         let main_waker = futures::task::waker(main_task.clone());
@@ -309,7 +311,7 @@ impl TestExecutor {
         }
         // If we are past a deadline, run the corresponding timer.
         let next_deadline = with_local_timer_heap(|timer_heap| {
-            next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE)
+            timer_heap.next_deadline().map(|t| t.time()).unwrap_or(Time::INFINITE)
         });
         if fire_timers && next_deadline <= self.local.inner.now() {
             NextStep::NextTimer
@@ -358,7 +360,7 @@ impl TestExecutor {
         let now = self.now();
         with_local_timer_heap(|timer_heap| {
             let mut ret = false;
-            while let Some(waker) = next_deadline(timer_heap).filter(|waker| waker.time <= now) {
+            while let Some(waker) = timer_heap.next_deadline().filter(|waker| waker.time() <= now) {
                 waker.wake();
                 timer_heap.pop();
                 ret = true;
@@ -381,9 +383,9 @@ impl TestExecutor {
     ///     assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
     pub fn wake_next_timer(&mut self) -> Option<Time> {
         with_local_timer_heap(|timer_heap| {
-            let deadline = next_deadline(timer_heap).map(|waker| {
+            let deadline = timer_heap.next_deadline().map(|waker| {
                 waker.wake();
-                waker.time
+                waker.time()
             });
             if deadline.is_some() {
                 timer_heap.pop();

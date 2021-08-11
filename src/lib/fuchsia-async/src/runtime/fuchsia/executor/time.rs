@@ -5,14 +5,7 @@
 use super::common::EHandle;
 use crate::runtime::DurationExt;
 use fuchsia_zircon as zx;
-use futures::task::AtomicWaker;
-use std::{
-    cmp, ops,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Weak,
-    },
-};
+use std::ops;
 
 /// A time relative to the executor's clock.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -128,49 +121,6 @@ impl ops::SubAssign<zx::Duration> for Time {
 impl DurationExt for zx::Duration {
     fn after_now(self) -> Time {
         Time::after(self)
-    }
-}
-
-pub(crate) struct TimeWaker {
-    pub time: Time,
-    pub waker_and_bool: Weak<(AtomicWaker, AtomicBool)>,
-}
-
-impl TimeWaker {
-    pub fn wake(&self) {
-        if let Some(wb) = self.waker_and_bool.upgrade() {
-            wb.1.store(true, Ordering::SeqCst);
-            wb.0.wake();
-        }
-    }
-}
-
-impl Ord for TimeWaker {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.time.cmp(&other.time).reverse() // Reverse to get min-heap rather than max
-    }
-}
-
-impl PartialOrd for TimeWaker {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Eq for TimeWaker {}
-
-// N.B.: two TimerWakers can be equal even if they don't have the same
-// waker_and_bool. This is fine since BinaryHeap doesn't deduplicate.
-impl PartialEq for TimeWaker {
-    fn eq(&self, other: &Self) -> bool {
-        self.time == other.time
-    }
-}
-
-pub(crate) fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
-    match timer {
-        None => false,
-        Some(timer) => timer.waker_and_bool.upgrade().is_none(),
     }
 }
 

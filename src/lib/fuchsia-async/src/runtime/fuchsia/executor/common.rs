@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::super::timer::{TimerHandle, TimerHeap};
 use super::{
     instrumentation::{Collector, LocalCollector},
     packets::{PacketReceiver, PacketReceiverMap, ReceiverRegistration},
-    time::{is_defunct_timer, Time, TimeWaker},
+    time::Time,
 };
 use crate::atomic_future::{AtomicFuture, AttemptPollResult};
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx};
 use futures::{
     future::{FutureObj, LocalFutureObj},
-    task::{waker_ref, ArcWake, AtomicWaker},
+    task::{waker_ref, ArcWake},
 };
 use parking_lot::Mutex;
 use std::{
     cell::RefCell,
-    collections::{BinaryHeap, HashMap},
+    collections::HashMap,
     fmt,
     panic::Location,
     sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
@@ -34,8 +35,6 @@ pub(crate) const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
 /// main futures, in cases where the executor runs multiple times during its lifetime.
 pub(crate) const MAIN_TASK_ID: usize = 0;
 
-pub(crate) type TimerHeap = BinaryHeap<TimeWaker>;
-
 thread_local!(
     static EXECUTOR: RefCell<Option<(Arc<Inner>, TimerHeap)>> = RefCell::new(None)
 );
@@ -51,13 +50,6 @@ where
             .expect("can't get timer heap before fuchsia_async::Executor is initialized")
             .1)
     })
-}
-
-pub(crate) fn next_deadline(heap: &mut TimerHeap) -> Option<&TimeWaker> {
-    while is_defunct_timer(heap.peek()) {
-        heap.pop();
-    }
-    heap.peek()
 }
 
 pub enum ExecutorTime {
@@ -349,15 +341,10 @@ impl EHandle {
         }
     }
 
-    pub(crate) fn register_timer(
-        &self,
-        time: Time,
-        waker_and_bool: &Arc<(AtomicWaker, AtomicBool)>,
-    ) {
+    pub(crate) fn register_timer(time: Time, handle: TimerHandle) {
         with_local_timer_heap(|timer_heap| {
-            let waker_and_bool = Arc::downgrade(waker_and_bool);
-            timer_heap.push(TimeWaker { time, waker_and_bool })
-        })
+            timer_heap.add_timer(time, handle);
+        });
     }
 }
 

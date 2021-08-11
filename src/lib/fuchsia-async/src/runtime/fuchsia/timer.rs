@@ -7,24 +7,24 @@
 //! This module contains the `Timer` type which is a future that will resolve
 //! at a particular point in the future.
 
-use {
-    crate::runtime::{EHandle, Time, WakeupTime},
-    fuchsia_zircon as zx,
-    futures::{
-        stream::FusedStream,
-        task::{AtomicWaker, Context},
-        FutureExt, Stream,
+use crate::runtime::{EHandle, Time, WakeupTime};
+use fuchsia_zircon as zx;
+use futures::{
+    stream::FusedStream,
+    task::{AtomicWaker, Context},
+    FutureExt, Stream,
+};
+use std::{
+    cmp,
+    collections::BinaryHeap,
+    future::Future,
+    marker::Unpin,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Weak,
     },
-    std::{
-        future::Future,
-        marker::Unpin,
-        pin::Pin,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc,
-        },
-        task::Poll,
-    },
+    task::Poll,
 };
 
 impl WakeupTime for std::time::Instant {
@@ -63,8 +63,13 @@ impl Timer {
         WT: WakeupTime,
     {
         let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
-        EHandle::local().register_timer(time.into_time(), &waker_and_bool);
-        Timer { waker_and_bool }
+        let this = Timer { waker_and_bool };
+        EHandle::register_timer(time.into_time(), this.handle());
+        this
+    }
+
+    fn handle(&self) -> TimerHandle {
+        TimerHandle { inner: Arc::downgrade(&self.waker_and_bool) }
     }
 
     /// Reset the `Timer` to a fire at a new time.
@@ -72,7 +77,7 @@ impl Timer {
     pub fn reset(&mut self, time: Time) {
         assert!(self.did_fire());
         self.waker_and_bool.1.store(false, Ordering::SeqCst);
-        EHandle::local().register_timer(time, &self.waker_and_bool)
+        EHandle::register_timer(time, self.handle());
     }
 
     fn did_fire(&self) -> bool {
@@ -102,6 +107,23 @@ impl Future for Timer {
             Poll::Ready(())
         } else {
             Poll::Pending
+        }
+    }
+}
+
+pub(crate) struct TimerHandle {
+    inner: Weak<(AtomicWaker, AtomicBool)>,
+}
+
+impl TimerHandle {
+    pub fn is_defunct(&self) -> bool {
+        self.inner.upgrade().is_none()
+    }
+
+    pub fn wake(&self) {
+        if let Some(wb) = self.inner.upgrade() {
+            wb.1.store(true, Ordering::SeqCst);
+            wb.0.wake();
         }
     }
 }
@@ -151,6 +173,67 @@ impl Stream for Interval {
         }
     }
 }
+
+#[derive(Default)]
+pub(crate) struct TimerHeap {
+    inner: BinaryHeap<TimeWaker>,
+}
+
+impl TimerHeap {
+    pub fn add_timer(&mut self, time: Time, handle: TimerHandle) {
+        self.inner.push(TimeWaker { time, handle })
+    }
+
+    pub fn next_deadline(&mut self) -> Option<&TimeWaker> {
+        while self.inner.peek().map(|t| t.handle.is_defunct()).unwrap_or_default() {
+            self.inner.pop();
+        }
+        self.inner.peek()
+    }
+
+    pub fn pop(&mut self) -> Option<TimeWaker> {
+        self.inner.pop()
+    }
+}
+
+pub(crate) struct TimeWaker {
+    time: Time,
+    handle: TimerHandle,
+}
+
+impl TimeWaker {
+    pub fn wake(&self) {
+        self.handle.wake();
+    }
+
+    pub fn time(&self) -> Time {
+        self.time
+    }
+}
+
+impl Ord for TimeWaker {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.time.cmp(&other.time).reverse() // Reverse to get min-heap rather than max
+    }
+}
+
+impl PartialOrd for TimeWaker {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for TimeWaker {
+    /// BinaryHeap requires `TimeWaker: Ord` above so that there's a total ordering between
+    /// elements, and `T: Ord` requires `T: Eq` even we don't actually need to check these for
+    /// equality. We could use `Weak::ptr_eq` to check the handles here, but then that would cause
+    /// the `PartialEq` implementation to return false in some cases where `Ord` returns
+    /// `Ordering::Equal`, which is asking for logic errors down the line.
+    fn eq(&self, other: &Self) -> bool {
+        self.time == other.time
+    }
+}
+impl Eq for TimeWaker {}
 
 #[cfg(test)]
 mod test {

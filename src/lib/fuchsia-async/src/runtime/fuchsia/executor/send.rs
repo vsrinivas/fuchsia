@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::super::timer::TimerHeap;
 use super::{
     common::{
-        next_deadline, with_local_timer_heap, EHandle, ExecutorTime, Inner, TimerHeap,
-        EMPTY_WAKEUP_ID, TASK_READY_WAKEUP_ID,
+        with_local_timer_heap, EHandle, ExecutorTime, Inner, EMPTY_WAKEUP_ID, TASK_READY_WAKEUP_ID,
     },
     time::Time,
 };
@@ -53,7 +53,7 @@ impl SendExecutor {
     /// Create a new multi-threaded executor.
     pub fn new(num_threads: usize) -> Result<Self, zx::Status> {
         let inner = Arc::new(Inner::new(ExecutorTime::RealTime, /* is_local */ false)?);
-        inner.clone().set_local(TimerHeap::new());
+        inner.clone().set_local(TimerHeap::default());
         Ok(Self { inner, threads: Vec::default(), num_threads })
     }
 
@@ -84,7 +84,7 @@ impl SendExecutor {
         // Start worker threads, handing off timers from the current thread.
         self.inner.done.store(false, Ordering::SeqCst);
         with_local_timer_heap(|timer_heap| {
-            let timer_heap = mem::replace(timer_heap, TimerHeap::new());
+            let timer_heap = mem::replace(timer_heap, TimerHeap::default());
             self.create_worker_threads(Some(timer_heap));
         });
 
@@ -129,7 +129,7 @@ impl SendExecutor {
     }
 
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
-        inner.clone().set_local(timers.unwrap_or(TimerHeap::new()));
+        inner.clone().set_local(timers.unwrap_or(TimerHeap::default()));
         let mut local_collector = inner.collector.create_local_collector();
         loop {
             if inner.done.load(Ordering::SeqCst) {
@@ -138,7 +138,8 @@ impl SendExecutor {
             }
 
             let packet = with_local_timer_heap(|timer_heap| {
-                let deadline = next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE);
+                let deadline =
+                    timer_heap.next_deadline().map(|t| t.time()).unwrap_or(Time::INFINITE);
 
                 local_collector.will_wait();
                 // into_zx: we are using real time, so the time is a monotonic time.
