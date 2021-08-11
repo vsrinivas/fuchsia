@@ -9,6 +9,7 @@ fidl("fuchsia.wlan.ieee80211") {
   sources = [
     "constants.fidl",
     "reason_code.fidl",
+    "rsn.fidl",
     "status_code.fidl",
   ]
 }

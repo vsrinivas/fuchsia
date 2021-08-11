@@ -1,6 +1,22 @@
 struct/member fuchsia.wlan.ieee80211/CSsid.data array<uint8,32>
 struct/member fuchsia.wlan.ieee80211/CSsid.len uint8
 struct fuchsia.wlan.ieee80211/CSsid
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.BIP_CMAC_128 6
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.BIP_CMAC_256 13
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.BIP_GMAC_128 11
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.BIP_GMAC_256 12
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.CCMP_128 4
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.CCMP_256 10
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.GCMP_128 8
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.GCMP_256 9
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.GROUP_ADDRESSED_NOT_ALLOWED 7
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.RESERVED_14_TO_255 14
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.RESERVED_3 3
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.TKIP 2
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.USE_GROUP 0
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_104 5
+enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40 1
+flexible enum fuchsia.wlan.ieee80211/CipherSuiteType uint32
 const fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN uint8 32
 const fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN uint8 32
 enum/member fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED 47

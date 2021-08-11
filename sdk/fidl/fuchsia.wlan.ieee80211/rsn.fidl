@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.ieee80211;
+
+/// IEEE Std 802.11-2016, 9.4.2.25.2
+type CipherSuiteType = flexible enum : uint32 {
+    USE_GROUP = 0;
+    WEP_40 = 1;
+    TKIP = 2;
+    RESERVED_3 = 3;
+    CCMP_128 = 4;
+    WEP_104 = 5;
+    BIP_CMAC_128 = 6;
+    GROUP_ADDRESSED_NOT_ALLOWED = 7;
+    GCMP_128 = 8;
+    GCMP_256 = 9;
+    CCMP_256 = 10;
+    BIP_GMAC_128 = 11;
+    BIP_GMAC_256 = 12;
+    BIP_CMAC_256 = 13;
+    RESERVED_14_TO_255 = 14;
+};
