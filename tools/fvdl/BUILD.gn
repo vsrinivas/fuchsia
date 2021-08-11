@@ -17,6 +17,7 @@ if (is_host) {
     deps = [
       "//src/developer/ffx/plugins/emulator:ffx_emulator",
       "//src/developer/ffx/plugins/emulator:ffx_emulator_args",
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
     ]

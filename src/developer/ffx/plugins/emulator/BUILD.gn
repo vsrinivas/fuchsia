@@ -16,6 +16,7 @@ ffx_plugin("ffx_emulator") {
     "src/images.rs",
     "src/lib.rs",
     "src/portpicker.rs",
+    "src/target.rs",
     "src/tools.rs",
     "src/types.rs",
     "src/vdl_files/mod.rs",
@@ -23,6 +24,7 @@ ffx_plugin("ffx_emulator") {
     "src/vdl_proto_parser.rs",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper:fuchsia-hyper",
     "//third_party/rust_crates:ansi_term-v0_11_0",

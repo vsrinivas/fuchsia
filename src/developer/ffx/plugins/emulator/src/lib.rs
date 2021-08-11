@@ -7,32 +7,33 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_emulator_args::{EmulatorCommand, VDLCommand},
+    fidl_fuchsia_developer_bridge as bridge,
 };
+
+pub mod portpicker;
+pub mod vdl_files;
 
 mod cipd;
 mod graphic_utils;
 mod images;
-pub mod portpicker;
+mod target;
 mod tools;
 mod types;
-pub mod vdl_files;
 mod vdl_proto_parser;
 
 #[ffx_plugin("emu.experimental")]
-pub fn emulator(cmd: EmulatorCommand) -> Result<()> {
-    process_command(cmd.command, cmd.sdk)
-}
-
-fn process_command(command: VDLCommand, is_sdk: bool) -> Result<()> {
-    match command {
+pub async fn emulator(cmd: EmulatorCommand, daemon_proxy: bridge::DaemonProxy) -> Result<()> {
+    match cmd.command {
         VDLCommand::Start(start_command) => std::process::exit(
-            VDLFiles::new(is_sdk, start_command.verbose)?.start_emulator(&start_command)?,
+            VDLFiles::new(cmd.sdk, start_command.verbose)?
+                .start_emulator(&start_command, Some(&daemon_proxy))
+                .await?,
         ),
         VDLCommand::Kill(stop_command) => {
-            VDLFiles::new(is_sdk, false)?.stop_vdl(&stop_command)?;
+            VDLFiles::new(cmd.sdk, false)?.stop_vdl(&stop_command, Some(&daemon_proxy)).await?;
         }
         VDLCommand::Remote(remote_command) => {
-            VDLFiles::new(is_sdk, false)?.remote_emulator(&remote_command)?;
+            VDLFiles::new(cmd.sdk, false)?.remote_emulator(&remote_command)?;
         }
     }
     Ok(())

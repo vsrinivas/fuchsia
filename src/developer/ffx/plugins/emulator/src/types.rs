@@ -17,6 +17,7 @@ use hyper::{StatusCode, Uri};
 use mockall::automock;
 use std::convert::From;
 use std::env;
+use std::fmt;
 use std::fs::{
     create_dir, create_dir_all, read_dir, read_to_string, remove_dir_all, remove_file, File,
 };
@@ -156,6 +157,7 @@ pub fn get_sdk_version_from_manifest() -> Result<String> {
         SdkVersion::Unknown => ffx_bail!("Cannot determine SDK version"),
     }
 }
+
 pub struct HostTools {
     pub aemu: PathBuf,
     pub device_finder: PathBuf,
@@ -168,13 +170,26 @@ pub struct HostTools {
     pub is_sdk: bool,
 }
 
+impl fmt::Debug for HostTools {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "[fvdl] tool aemu {:?}", self.aemu)?;
+        writeln!(f, "[fvdl] tool device_finder {:?}", self.device_finder)?;
+        writeln!(f, "[fvdl] tool far {:?}", self.far)?;
+        writeln!(f, "[fvdl] tool fvm {:?}", self.fvm)?;
+        writeln!(f, "[fvdl] tool grpcwebproxy {:?}", self.grpcwebproxy)?;
+        writeln!(f, "[fvdl] tool pm {:?}", self.pm)?;
+        writeln!(f, "[fvdl] tool vdl {:?}", self.vdl)?;
+        write!(f, "[fvdl] tool zbi {:?}", self.zbi)
+    }
+}
+
 impl HostTools {
     /// Initialize host tools for in-tree usage via fx vdl.
     ///
     /// Environment variable HOST_OUT_DIR, PREBUILT_AEMU_DIR,
     /// REBUILT_GRPCWEBPROXY_DIR, and PREBUILT_VDL_DIR are optional.
-    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<HostTools> {
-        Ok(HostTools {
+    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<Self> {
+        Ok(Self {
             // prebuilt binaries that can be optionally fetched from cipd.
             aemu: match read_env_path("PREBUILT_AEMU_DIR") {
                 Ok(val) => val.join("emulator"),
@@ -240,13 +255,13 @@ impl HostTools {
     ///
     /// First check the existence of environment variable TOOL_DIR, if not specified
     /// look for host tools in the program's containing directory.
-    pub fn from_sdk_env() -> Result<HostTools> {
+    pub fn from_sdk_env() -> Result<Self> {
         let sdk_tool_dir = match read_env_path("TOOL_DIR") {
             Ok(dir) => dir,
             _ => get_fuchsia_sdk_tools_dir()?,
         };
 
-        Ok(HostTools {
+        Ok(Self {
             // prebuilt binaries that can be optionally fetched from cipd.
             aemu: PathBuf::new(),
             grpcwebproxy: PathBuf::new(),
@@ -259,18 +274,6 @@ impl HostTools {
             zbi: sdk_tool_dir.join("zbi"),
             is_sdk: true,
         })
-    }
-
-    #[allow(dead_code)]
-    pub fn print(&self) {
-        println!("[fvdl] tool aemu {:?}", self.aemu);
-        println!("[fvdl] tool device_finder {:?}", self.device_finder);
-        println!("[fvdl] tool far {:?}", self.far);
-        println!("[fvdl] tool fvm {:?}", self.fvm);
-        println!("[fvdl] tool grpcwebproxy {:?}", self.grpcwebproxy);
-        println!("[fvdl] tool pm {:?}", self.pm);
-        println!("[fvdl] tool vdl {:?}", self.vdl);
-        println!("[fvdl] tool zbi {:?}", self.zbi);
     }
 
     /// Reads the <prebuild>.version file stored in <sdk_root>/bin/<prebuild>.version
@@ -383,16 +386,26 @@ pub struct ImageFiles {
     pub zbi: PathBuf,
 }
 
+impl fmt::Debug for ImageFiles {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "[fvdl] image package {:?}", self.amber_files)?;
+        writeln!(f, "[fvdl] image build_args {:?}", self.build_args)?;
+        writeln!(f, "[fvdl] image fvm {:?}", self.fvm)?;
+        writeln!(f, "[fvdl] image kernel {:?}", self.kernel)?;
+        write!(f, "[fvdl] image zbi {:?}", self.zbi)
+    }
+}
+
 impl ImageFiles {
     /// Initialize fuchsia image and package files for in-tree usage.
     ///
     /// First checks for environment variable FUCHSIA_BUILD_DIR. If not specify looks into
     /// <repo_root>/.fx-build-dir. For example ~/fuchsia/.fx-build-dir
-    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<ImageFiles> {
+    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<Self> {
         let fuchsia_build_dir = f.find_fuchsia_build_dir()?;
         println!("[fvdl] Using fuchsia build dir: {:?}", fuchsia_build_dir.display());
 
-        Ok(ImageFiles {
+        Ok(Self {
             amber_files: {
                 let f = fuchsia_build_dir.join("amber-files");
                 if f.exists() {
@@ -413,8 +426,8 @@ impl ImageFiles {
     /// When running from SDK (running with --sdk), we will either fetch images from GCS or use cached-image files.
     /// If fetching from GCS, these image files will be ignored by device_launcher.
     /// If using cached images, call update_paths_from_cache() to populate the image file paths.
-    pub fn from_sdk_env() -> Result<ImageFiles> {
-        Ok(ImageFiles {
+    pub fn from_sdk_env() -> Result<Self> {
+        Ok(Self {
             amber_files: None,
             build_args: None,
             fvm: None,
@@ -456,15 +469,6 @@ impl ImageFiles {
             && self.build_args.as_ref().map_or(true, |b| b.exists())
             && self.amber_files.as_ref().map_or(true, |a| a.exists())
             && self.fvm.as_ref().map_or(true, |f| f.exists());
-    }
-
-    #[allow(dead_code)]
-    pub fn print(&self) {
-        println!("[fvdl] image package {:?}", self.amber_files);
-        println!("[fvdl] image build_args {:?}", self.build_args);
-        println!("[fvdl] image fvm {:?}", self.fvm);
-        println!("[fvdl] image kernel {:?}", self.kernel);
-        println!("[fvdl] image zbi {:?}", self.zbi);
     }
 
     pub fn update_paths_from_cache(&mut self, cache_root: &PathBuf) {
@@ -518,35 +522,35 @@ pub struct SSHKeys {
     pub private_key: PathBuf,
 }
 
-impl SSHKeys {
-    #[allow(dead_code)]
-    pub fn print(&self) {
-        println!("[fvdl] private_key {:?}", self.private_key);
-        println!("[fvdl] authorized_keys {:?}", self.authorized_keys);
+impl fmt::Debug for SSHKeys {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "[fvdl] private_key {:?}", self.private_key)?;
+        write!(f, "[fvdl] authorized_keys {:?}", self.authorized_keys)
     }
+}
 
+impl SSHKeys {
     /// Initialize SSH key files for in-tree usage.
     ///
     /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
-    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<SSHKeys> {
+    pub fn from_tree_env(f: &mut impl FuchsiaPaths) -> Result<Self> {
         let ssh_file = File::open(f.find_fuchsia_root()?.join(".fx-ssh-path"))?;
         let ssh_file = BufReader::new(ssh_file);
         let mut lines = ssh_file.lines();
 
         let private_key = PathBuf::from(lines.next().unwrap()?);
         let authorized_keys = PathBuf::from(lines.next().unwrap()?);
-        Ok(SSHKeys { authorized_keys: authorized_keys, private_key: private_key })
+        Ok(Self { authorized_keys: authorized_keys, private_key: private_key })
     }
 
     /// Initialize SSH key files for GN SDK usage.
     ///
     /// Requires SSH keys to have been generated and stored in $HOME/.ssh/...
-    pub fn from_sdk_env() -> Result<SSHKeys> {
-        let keys = SSHKeys {
+    pub fn from_sdk_env() -> Result<Self> {
+        Ok(Self {
             authorized_keys: home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys"),
             private_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519"),
-        };
-        Ok(keys)
+        })
     }
 
     pub fn check(&self) -> Result<()> {
