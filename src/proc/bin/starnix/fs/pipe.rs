@@ -252,9 +252,11 @@ impl Pipe {
 /// The first FileObject is the read endpoint of the pipe. The second is the
 /// write endpoint of the pipe. This order matches the order expected by
 /// sys_pipe2().
-pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
+pub fn new_pipe(kernel: &Kernel) -> Result<(FileHandle, FileHandle), Errno> {
     let pipe = Pipe::new();
-    let node = FsNode::new(Box::new(Anon), FileMode::from_bits(0o600), pipe_fs(kernel));
+    let fs = pipe_fs(kernel);
+    let node = fs.create_node(Box::new(Anon), FileMode::from_bits(0o600));
+
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
@@ -262,7 +264,7 @@ pub fn new_pipe(kernel: &Kernel) -> (FileHandle, FileHandle) {
         FileObject::new_anonymous(ops, Arc::clone(&node), flags)
     };
 
-    (open(OpenFlags::RDONLY), open(OpenFlags::WRONLY))
+    Ok((open(OpenFlags::RDONLY), open(OpenFlags::WRONLY)))
 }
 
 struct PipeFs;

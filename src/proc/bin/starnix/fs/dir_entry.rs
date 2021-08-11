@@ -61,15 +61,6 @@ pub struct DirEntry {
 pub type DirEntryHandle = Arc<DirEntry>;
 
 impl DirEntry {
-    pub fn new_root<T: FsNodeOps + 'static>(ops: T, fs: &FileSystemHandle) -> DirEntryHandle {
-        // TODO: apply_umask
-        DirEntry::new(
-            FsNode::new(Box::new(ops), FileMode::IFDIR | FileMode::ALLOW_ALL, fs),
-            None,
-            FsString::new(),
-        )
-    }
-
     pub fn new(
         node: FsNodeHandle,
         parent: Option<DirEntryHandle>,

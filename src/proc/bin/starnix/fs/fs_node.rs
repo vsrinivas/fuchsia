@@ -23,6 +23,9 @@ pub struct FsNode {
     /// The tasks waiting on signals (e.g., POLLIN, POLLOUT) from this FsNode.
     pub observers: ObserverList,
 
+    /// The inode number for this FsNode.
+    pub inode_num: ino_t,
+
     /// Mutable informationa about this node.
     ///
     /// This data is used to populate the stat_t structure.
@@ -40,7 +43,6 @@ pub type FsNodeHandle = Arc<FsNode>;
 
 #[derive(Default)]
 pub struct FsNodeInfo {
-    pub inode_num: ino_t,
     pub mode: FileMode,
     pub size: usize,
     pub storage_size: usize,
@@ -139,27 +141,49 @@ pub trait FsNodeOps: Send + Sync {
 }
 
 impl FsNode {
-    pub fn new(ops: Box<dyn FsNodeOps>, mode: FileMode, fs: &FileSystemHandle) -> FsNodeHandle {
+    pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
+        Self::new_internal(Box::new(ops), Weak::new(), 0, FileMode::IFDIR | FileMode::ALLOW_ALL)
+    }
+
+    pub fn new(
+        ops: Box<dyn FsNodeOps>,
+        fs: &FileSystemHandle,
+        inode_num: ino_t,
+        mode: FileMode,
+    ) -> FsNodeHandle {
+        Arc::new(Self::new_internal(ops, Arc::downgrade(fs), inode_num, mode))
+    }
+
+    fn new_internal(
+        ops: Box<dyn FsNodeOps>,
+        fs: Weak<FileSystem>,
+        inode_num: ino_t,
+        mode: FileMode,
+    ) -> FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
-            inode_num: fs.next_inode_num(),
             mode,
             time_create: now,
             time_access: now,
             time_modify: now,
             ..Default::default()
         };
-        Arc::new(Self {
+        Self {
             ops,
             observers: ObserverList::default(),
-            fs: Arc::downgrade(&fs),
+            fs,
+            inode_num,
             info: RwLock::new(info),
             append_lock: RwLock::new(()),
-        })
+        }
     }
 
     pub fn fs(&self) -> FileSystemHandle {
         self.fs.upgrade().expect("FileSystem did not live long enough")
+    }
+
+    pub fn set_fs(&mut self, fs: &FileSystemHandle) {
+        self.fs = Arc::downgrade(fs);
     }
 
     fn ops(&self) -> &dyn FsNodeOps {
@@ -221,7 +245,7 @@ impl FsNode {
         /// st_blksize is measured in units of 512 bytes.
         const BYTES_PER_BLOCK: i64 = 512;
         Ok(stat_t {
-            st_ino: info.inode_num,
+            st_ino: self.inode_num,
             st_mode: info.mode.bits(),
             st_size: info.size as off_t,
             st_blocks: info.storage_size as i64 / BYTES_PER_BLOCK,
@@ -243,5 +267,13 @@ impl FsNode {
     }
     pub fn info_write(&self) -> RwLockWriteGuard<'_, FsNodeInfo> {
         self.info.write()
+    }
+}
+
+impl Drop for FsNode {
+    fn drop(&mut self) {
+        if let Some(fs) = self.fs.upgrade() {
+            fs.remove_node(self);
+        }
     }
 }

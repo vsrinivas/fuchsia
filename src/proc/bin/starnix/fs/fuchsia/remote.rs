@@ -21,7 +21,8 @@ impl FileSystemOps for RemoteFs {}
 impl RemoteFs {
     pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
         let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
-        FileSystem::new(RemoteFs, RemoteNode { zxio, rights })
+        // TODO: Should we use the inode_num from root rather than inventing a new number?
+        FileSystem::new(RemoteFs, FsNode::new_root(RemoteNode { zxio, rights }), None)
     }
 }
 
@@ -42,7 +43,6 @@ fn update_into_from_attrs(info: &mut FsNodeInfo, attrs: zxio_node_attributes_t) 
     /// st_blksize is measured in units of 512 bytes.
     const BYTES_PER_BLOCK: usize = 512;
 
-    info.inode_num = attrs.id;
     // TODO - store these in FsNodeState and convert on fstat
     info.size = attrs.content_size as usize;
     info.storage_size = attrs.storage_size as usize;
@@ -70,7 +70,12 @@ impl FsNodeOps for RemoteNode {
         let ops = Box::new(RemoteNode { zxio, rights: self.rights });
         let mode =
             FileMode::from_bits(unsafe { zxio_get_posix_mode(attrs.protocols, attrs.abilities) });
-        let child = FsNode::new(ops, mode, &node.fs());
+
+        // TODO: Consider using attrs.id for inode_num. We need to decide
+        // whether to trust the remote to use uniquie inode numbers or to continue
+        // to generate our own unique numbers.
+        let child = node.fs().create_node(ops, mode);
+
         update_into_from_attrs(&mut child.info_write(), attrs);
         Ok(child)
     }

@@ -559,7 +559,7 @@ pub fn sys_pipe2(
     if flags & !(O_CLOEXEC | supported_file_flags.bits()) != 0 {
         return Err(EINVAL);
     }
-    let (read, write) = new_pipe(ctx.kernel());
+    let (read, write) = new_pipe(ctx.kernel())?;
 
     let file_flags = OpenFlags::from_bits_truncate(flags & supported_file_flags.bits());
     read.update_file_flags(file_flags, supported_file_flags);

@@ -19,17 +19,18 @@ pub struct TmpFs {
 }
 impl FileSystemOps for Arc<TmpFs> {
     fn did_create_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        self.nodes.lock().insert(entry.node.info().inode_num, Arc::clone(entry));
+        self.nodes.lock().insert(entry.node.inode_num, Arc::clone(entry));
     }
 
     fn will_destroy_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        self.nodes.lock().remove(&entry.node.info().inode_num);
+        self.nodes.lock().remove(&entry.node.inode_num);
     }
 }
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
-        FileSystem::new(Arc::new(TmpFs::default()), TmpfsDirectory)
+        let ops = Arc::new(TmpFs::default());
+        FileSystem::new(ops, FsNode::new_root(TmpfsDirectory), None)
     }
 }
 
@@ -45,7 +46,7 @@ impl FsNodeOps for TmpfsDirectory {
     }
 
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Ok(FsNode::new(Box::new(TmpfsDirectory), FileMode::IFDIR, &node.fs()))
+        Ok(node.fs().create_node(Box::new(TmpfsDirectory), FileMode::IFDIR))
     }
 
     fn mknod(&self, node: &FsNode, _name: &FsStr, mode: FileMode) -> Result<FsNodeHandle, Errno> {
@@ -56,7 +57,7 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFCHR => Box::new(DeviceNode),
             _ => return Err(EACCES),
         };
-        Ok(FsNode::new(ops, mode, &node.fs()))
+        Ok(node.fs().create_node(ops, mode))
     }
 
     fn create_symlink(
@@ -65,7 +66,7 @@ impl FsNodeOps for TmpfsDirectory {
         _name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
-        Ok(FsNode::new(Box::new(SymlinkNode::new(target)), FileMode::IFLNK, &node.fs()))
+        Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), FileMode::IFLNK))
     }
 
     fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
@@ -152,12 +153,12 @@ impl FileOps for DirectoryFileObject {
         let mut offset = file.offset.lock();
         let mut readdir_position = self.readdir_position.lock();
         if *offset == 0 {
-            sink.add(file.node().info().inode_num, 1, DirectoryEntryType::DIR, b".")?;
+            sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
             *offset += 1;
         }
         if *offset == 1 {
             sink.add(
-                file.name.entry.parent_or_self().node.info().inode_num,
+                file.name.entry.parent_or_self().node.inode_num,
                 2,
                 DirectoryEntryType::DIR,
                 b"..",
@@ -171,7 +172,7 @@ impl FileOps for DirectoryFileObject {
                     let next_offset = *offset + 1;
                     let info = entry.node.info();
                     sink.add(
-                        info.inode_num,
+                        entry.node.inode_num,
                         next_offset,
                         DirectoryEntryType::from_mode(info.mode),
                         &name,

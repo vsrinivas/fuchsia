@@ -18,7 +18,7 @@ impl Anon {
     pub fn new_file(fs: &FileSystemHandle, ops: Box<dyn FileOps>, flags: OpenFlags) -> FileHandle {
         FileObject::new_anonymous(
             ops,
-            FsNode::new(Box::new(Anon), FileMode::from_bits(0o600), fs),
+            fs.create_node(Box::new(Anon), FileMode::from_bits(0o600)),
             flags,
         )
     }

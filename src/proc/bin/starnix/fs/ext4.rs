@@ -31,14 +31,13 @@ struct ExtNode {
 }
 
 impl ExtFilesystem {
-    #[allow(dead_code)]
     pub fn new(vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
         let size = vmo.get_size().map_err(|_| EIO)?;
         let vmo_reader = ExtVmoReader::new(Arc::new(fidl_fuchsia_mem::Buffer { vmo, size }));
         let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| EIO)?);
         let fs = Arc::new(Self { parser });
-        let root = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
-        Ok(FileSystem::new(fs, root))
+        let ops = ExtDirectory { inner: ExtNode::new(fs.clone(), ext_structs::ROOT_INODE_NUM)? };
+        Ok(FileSystem::new(fs, FsNode::new_root(ops), Some(ext_structs::ROOT_INODE_NUM as ino_t)))
     }
 }
 
@@ -66,30 +65,33 @@ impl FsNodeOps for ExtDirectory {
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
         let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(ENOENT)?;
-        let inner = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
+        let ext_node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
+        let inode_num = ext_node.inode_num as ino_t;
+        node.fs().get_or_create_node(inode_num as ino_t, || {
+            let entry_type = ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?;
+            let ops: Box<dyn FsNodeOps> = match entry_type {
+                ext_structs::EntryType::RegularFile => Box::new(ExtFile::new(ext_node.clone())),
+                ext_structs::EntryType::Directory => {
+                    Box::new(ExtDirectory { inner: ext_node.clone() })
+                }
+                ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: ext_node.clone() }),
+                _ => {
+                    log::warn!("unhandled ext entry type {:?}", entry_type);
+                    Box::new(ExtFile::new(ext_node.clone()))
+                }
+            };
+            let mode = FileMode::from_bits(ext_node.inode.e2di_mode.into());
+            let child = FsNode::new(ops, &node.fs(), inode_num, mode);
 
-        let entry_type = ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?;
-        let ops: Box<dyn FsNodeOps> = match entry_type {
-            ext_structs::EntryType::RegularFile => Box::new(ExtFile::new(inner.clone())),
-            ext_structs::EntryType::Directory => Box::new(ExtDirectory { inner: inner.clone() }),
-            ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: inner.clone() }),
-            _ => {
-                log::warn!("unhandled ext entry type {:?}", entry_type);
-                Box::new(ExtFile::new(inner.clone()))
-            }
-        };
-        let mode = FileMode::from_bits(inner.inode.e2di_mode.into());
-        let child = FsNode::new(ops, mode, &node.fs());
+            let mut info = child.info_write();
+            info.uid = ext_node.inode.e2di_uid.into();
+            info.gid = ext_node.inode.e2di_gid.into();
+            info.size = u32::from(ext_node.inode.e2di_size) as usize;
+            info.link_count = ext_node.inode.e2di_nlink.into();
+            std::mem::drop(info);
 
-        let mut info = child.info_write();
-        info.inode_num = inner.inode_num as u64;
-        info.uid = inner.inode.e2di_uid.into();
-        info.gid = inner.inode.e2di_gid.into();
-        info.size = u32::from(inner.inode.e2di_size) as usize;
-        info.link_count = inner.inode.e2di_nlink.into();
-        std::mem::drop(info);
-
-        Ok(child)
+            Ok(child)
+        })
     }
 }
 
@@ -172,12 +174,12 @@ impl FileOps for ExtDirFileObject {
     ) -> Result<(), Errno> {
         let mut offset = file.offset.lock();
         if *offset == 0 {
-            sink.add(file.node().info().inode_num, 1, DirectoryEntryType::DIR, b".")?;
+            sink.add(file.node().inode_num, 1, DirectoryEntryType::DIR, b".")?;
             *offset += 1;
         }
         if *offset == 1 {
             sink.add(
-                file.name.entry.parent_or_self().node.info().inode_num,
+                file.name.entry.parent_or_self().node.inode_num,
                 2,
                 DirectoryEntryType::DIR,
                 b"..",
