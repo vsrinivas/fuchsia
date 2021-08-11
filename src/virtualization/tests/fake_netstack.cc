@@ -251,6 +251,10 @@ fpromise::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> pa
       });
 }
 
+void FakeState::NotImplemented_(const std::string& name) {
+  FX_LOGS(ERROR) << "Not implemented: " << name;
+}
+
 void FakeNetstack::NotImplemented_(const std::string& name) {
   FX_LOGS(ERROR) << "Not implemented: " << name;
 }

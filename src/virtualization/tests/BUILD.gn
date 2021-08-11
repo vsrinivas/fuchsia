@@ -120,6 +120,7 @@ source_set("fake_netstack") {
     "fake_netstack.h",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/inet",
     "//zircon/system/ulib/async:async-cpp",

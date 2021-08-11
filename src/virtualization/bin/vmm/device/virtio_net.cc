@@ -256,61 +256,53 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     return fpromise::make_ok_promise(nic_id);
   }
 
-  struct HostInterfaceFinder {
-    using completer_type = fpromise::completer<uint32_t>;
-
-    void OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
-      std::optional result = [&event]() -> std::optional<completer_type::result_type> {
-        switch (event.Which()) {
-          case fuchsia::net::interfaces::Event::kExisting: {
-            std::optional<net::interfaces::Properties> validated =
-                net::interfaces::Properties::VerifyAndCreate(std::move(event.existing()));
-            if (!validated.has_value()) {
-              FX_LOGS(ERROR) << "malformed properties found in existing event from "
-                                "fuchsia.net.interfaces/Watcher";
-              return fpromise::error();
-            }
-            const net::interfaces::Properties& properties = validated.value();
-            if (properties.IsGloballyRoutable()) {
-              return fpromise::ok(properties.id());
-            }
-            __FALLTHROUGH;
+  void OnInterfacesEvent(fuchsia::net::interfaces::Event event,
+                         fpromise::completer<uint32_t> completer) {
+    std::optional result = [&event]() -> std::optional<fpromise::completer<uint32_t>::result_type> {
+      switch (event.Which()) {
+        case fuchsia::net::interfaces::Event::kExisting: {
+          std::optional<net::interfaces::Properties> validated =
+              net::interfaces::Properties::VerifyAndCreate(std::move(event.existing()));
+          if (!validated.has_value()) {
+            FX_LOGS(ERROR) << "malformed properties found in existing event from "
+                              "fuchsia.net.interfaces/Watcher";
+            return fpromise::error();
           }
-          case fuchsia::net::interfaces::Event::kAdded:
-          case fuchsia::net::interfaces::Event::kChanged:
-          case fuchsia::net::interfaces::Event::kRemoved:
-            return std::nullopt;
-          case fuchsia::net::interfaces::Event::kIdle:
-            FX_LOGS(ERROR) << "failed to find host interface";
-            return fpromise::error();
-          case fuchsia::net::interfaces::Event::Invalid:
-            FX_LOGS(ERROR) << "invalid event received from fuchsia.net.interfaces/Watcher";
-            return fpromise::error();
+          const net::interfaces::Properties& properties = validated.value();
+          if (properties.IsGloballyRoutable()) {
+            return fpromise::ok(properties.id());
+          }
+          __FALLTHROUGH;
         }
-      }();
-
-      if (result.has_value()) {
-        completer.complete_or_abandon(result.value());
-      } else {
-        watcher->Watch(
-            [this](fuchsia::net::interfaces::Event event) { OnInterfacesEvent(std::move(event)); });
+        case fuchsia::net::interfaces::Event::kAdded:
+        case fuchsia::net::interfaces::Event::kChanged:
+        case fuchsia::net::interfaces::Event::kRemoved:
+          return std::nullopt;
+        case fuchsia::net::interfaces::Event::kIdle:
+          FX_LOGS(ERROR) << "failed to find host interface";
+          return fpromise::error();
+        case fuchsia::net::interfaces::Event::Invalid:
+          FX_LOGS(ERROR) << "invalid event received from fuchsia.net.interfaces/Watcher";
+          return fpromise::error();
       }
-    }
+    }();
 
-    fuchsia::net::interfaces::WatcherPtr& watcher;
-    completer_type& completer;
-  };
+    if (result.has_value()) {
+      completer.complete_or_abandon(result.value());
+    } else {
+      watcher_->Watch(
+          [this, completer = std::move(completer)](fuchsia::net::interfaces::Event event) mutable {
+            OnInterfacesEvent(std::move(event), std::move(completer));
+          });
+    }
+  }
 
   fpromise::promise<uint32_t> FindHostInterface() {
     fpromise::bridge<uint32_t> bridge;
 
-    watcher_->Watch([completer = std::move(bridge.completer),
-                     this](fuchsia::net::interfaces::Event event) mutable {
-      HostInterfaceFinder finder{
-          .watcher = watcher_,
-          .completer = completer,
-      };
-      finder.OnInterfacesEvent(std::move(event));
+    watcher_->Watch([this, completer = std::move(bridge.completer)](
+                        fuchsia::net::interfaces::Event event) mutable {
+      OnInterfacesEvent(std::move(event), std::move(completer));
     });
 
     return bridge.consumer.promise();

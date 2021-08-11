@@ -122,9 +122,15 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
     return status;
   }
 
+  status = services->AddService(fake_state_.GetHandler(), fuchsia::net::interfaces::State::Name_);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failure launching fake state: " << zx_status_get_string(status);
+    return status;
+  }
+
   status = services->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failure launching mock netstack: " << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Failure launching fake netstack: " << zx_status_get_string(status);
     return status;
   }
 

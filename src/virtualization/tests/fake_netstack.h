@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 #define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 
+#include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -65,6 +66,18 @@ class Device {
   async::WaitMethod<Device, &Device::OnTransmit> tx_wait_{this};
 };
 
+class FakeState : public fuchsia::net::interfaces::testing::State_TestBase {
+ public:
+  fidl::InterfaceRequestHandler<fuchsia::net::interfaces::State> GetHandler() {
+    return bindings_.GetHandler(this);
+  }
+
+ private:
+  void NotImplemented_(const std::string& name) override;
+
+  fidl::BindingSet<fuchsia::net::interfaces::State> bindings_;
+};
+
 class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
  public:
   FakeNetstack() {
@@ -78,8 +91,6 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
     loop_.JoinThreads();
     loop_.Shutdown();
   }
-
-  void NotImplemented_(const std::string& name) override;
 
   // fuchsia::netstack::testing::Netstack_TestBase
   void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override;
@@ -118,6 +129,8 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase {
   };
 
   fpromise::promise<Device*> GetDevice(const fuchsia::hardware::ethernet::MacAddress& mac_addr);
+
+  void NotImplemented_(const std::string& name) override;
 
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
   std::mutex mutex_;
