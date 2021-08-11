@@ -13,10 +13,8 @@ use std::{sync::Arc, task::Poll};
 use thiserror::Error;
 use tracing::{debug, error, trace};
 
-mod asbestos;
 mod filter;
 
-pub use asbestos::pretend_scary_listener_is_safe;
 use filter::MessageFilter;
 
 // Number of bytes the header of a vector occupies in a fidl message.

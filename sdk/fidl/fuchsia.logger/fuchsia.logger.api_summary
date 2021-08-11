@@ -3,9 +3,7 @@ const fuchsia.logger/LOG_LEVEL_DEFAULT uint8 48
 const fuchsia.logger/LOG_SEVERITY_MAX_STEP uint8 6
 const fuchsia.logger/LOG_SEVERITY_STEP_SIZE uint8 16
 const fuchsia.logger/LOG_VERBOSITY_STEP_SIZE uint8 1
-protocol/member fuchsia.logger/Log.DumpLogs(client_end:fuchsia.logger/LogListener log_listener,box<fuchsia.logger/LogFilterOptions> options)
 protocol/member fuchsia.logger/Log.DumpLogsSafe(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)
-protocol/member fuchsia.logger/Log.Listen(client_end:fuchsia.logger/LogListener log_listener,box<fuchsia.logger/LogFilterOptions> options)
 protocol/member fuchsia.logger/Log.ListenSafe(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)
 protocol/member fuchsia.logger/Log.ListenSafeWithSelectors(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options,vector<fuchsia.logger/LogInterestSelector>:5 selectors)
 protocol fuchsia.logger/Log

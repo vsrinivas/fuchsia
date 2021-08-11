@@ -13,7 +13,7 @@ use {
             container::LogsArtifactsContainer,
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
-            listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
+            listener::Listener,
             multiplex::{Multiplexer, MultiplexerHandle},
             Message,
         },
@@ -133,20 +133,6 @@ impl DataRepo {
                 LogRequest::ListenSafeWithSelectors {
                     log_listener, options, selectors, ..
                 } => (log_listener, options, false, Some(selectors)),
-
-                // TODO(fxbug.dev/48758) delete these methods!
-                LogRequest::Listen { log_listener, options, .. } => {
-                    warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)
-                        .map_err(|source| ListenerError::AsbestosIo { source })?;
-                    (listener, options, false, None)
-                }
-                LogRequest::DumpLogs { log_listener, options, .. } => {
-                    warn!("Use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)
-                        .map_err(|source| ListenerError::AsbestosIo { source })?;
-                    (listener, options, true, None)
-                }
             };
 
             let listener = Listener::new(listener, options)?;

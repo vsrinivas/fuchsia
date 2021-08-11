@@ -111,18 +111,6 @@ type LogMessage = struct {
 /// Interface for LogListenerSafe to register to listen to logs.
 @discoverable
 protocol Log {
-    @deprecated
-    Listen(resource struct {
-        log_listener client_end:LogListener;
-        options box<LogFilterOptions>;
-    });
-
-    @deprecated
-    DumpLogs(resource struct {
-        log_listener client_end:LogListener;
-        options box<LogFilterOptions>;
-    });
-
     /// Dumps all cached logs by calling LogMany() in batches followed by Log() for each new log
     /// message.
     /// A null `options` indicates no filtering is requested.

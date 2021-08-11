@@ -119,7 +119,6 @@ rustc_library("lib") {
     "src/logs/debuglog.rs",
     "src/logs/error.rs",
     "src/logs/listener.rs",
-    "src/logs/listener/asbestos.rs",
     "src/logs/listener/filter.rs",
     "src/logs/message.rs",
     "src/logs/mod.rs",
