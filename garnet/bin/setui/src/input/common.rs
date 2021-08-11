@@ -15,12 +15,17 @@ use {
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
     },
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_syslog::fx_log_err,
-    futures::StreamExt,
+    fuchsia_zircon::Duration,
+    futures::future::Fuse,
+    futures::{self, FutureExt, StreamExt},
     serde::{Deserialize, Serialize},
     std::sync::Arc,
 };
+
+/// The amount of time in milliseconds to wait for a camera device to be detected.
+pub const CAMERA_WATCHER_TIMEOUT: i64 = 3000;
 
 /// Builder to simplify construction of fidl_fuchsia_ui_input::MediaButtonsEvent.
 /// # Example usage:
@@ -158,10 +163,46 @@ async fn get_camera_id(
     camera_watcher_proxy: &ExternalServiceProxy<Camera3DeviceWatcherProxy>,
 ) -> Result<u64, Error> {
     // Get a list of id structs containing existing, new, and removed ids.
-    let camera_ids = call_async!(camera_watcher_proxy => watch_devices()).await?;
 
-    // TODO(fxbug.dev/66881): support multiple camera devices.
-    let first_cam = camera_ids.first();
+    // Sets a timer and watches for changes from the camera api. If the first response is empty,
+    // continue to watch for an update to the devices. If we receive a nonempty response,
+    // we extract the id and return. If the timeout is reached, then it is assumed to be an error.
+    let timer =
+        fasync::Timer::new(Duration::from_millis(CAMERA_WATCHER_TIMEOUT).after_now()).fuse();
+    let camera_ids = call_async!(camera_watcher_proxy => watch_devices()).fuse();
+
+    // Used to add the second watch call if the first comes back with empty devices.
+    let unfulfilled_future = Fuse::terminated();
+
+    futures::pin_mut!(timer, camera_ids, unfulfilled_future);
+    loop {
+        futures::select! {
+            ids_result = camera_ids => {
+                let ids = ids_result?;
+                if ids.is_empty() {
+                    // The camera list might not be initialized yet, make another watch call and
+                    // keep waiting.
+                    let next_camera_ids = call_async!(camera_watcher_proxy => watch_devices()).fuse();
+                    unfulfilled_future.set(next_camera_ids);
+                } else {
+                    // Nonempty response, extract id.
+                    return extract_cam_id(ids);
+                }
+            }
+            ids_result_second = unfulfilled_future => {
+                let ids = ids_result_second?;
+                return extract_cam_id(ids);
+            }
+            _ = timer => {
+                return Err(format_err!("Could not find a camera"));
+            }
+        }
+    }
+}
+
+/// Extract the camera id from the list of ids. Assumes there is only one camera.
+fn extract_cam_id(ids: Vec<WatchDevicesEvent>) -> Result<u64, Error> {
+    let first_cam = ids.first();
     if let Some(WatchDevicesEvent::Existing(id)) | Some(WatchDevicesEvent::Added(id)) = first_cam {
         Ok(*id)
     } else {

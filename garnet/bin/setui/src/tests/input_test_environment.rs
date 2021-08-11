@@ -90,7 +90,7 @@ impl TestInputEnvironmentBuilder {
         service_registry.lock().await.register_service(input_button_service_handle.clone());
 
         // Register fake camera3 service.
-        let camera3_service_handle = Arc::new(Mutex::new(Camera3Service::new()));
+        let camera3_service_handle = Arc::new(Mutex::new(Camera3Service::new(true)));
         service_registry.lock().await.register_service(camera3_service_handle.clone());
 
         let mut environment_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))
