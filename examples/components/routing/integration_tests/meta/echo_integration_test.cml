@@ -1,34 +1,42 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 // [START example_snippet]
 {
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // The binary to run for this component.
+        binary: "bin/echo_integration_test",
+    },
+
+    // Child components orchestrated by the integration test.
     children: [
-        {
-            name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_integration_test_driver.cm",
-        },
         {
             name: "echo_server",
             url: "fuchsia-pkg://fuchsia.com/echo_integration_test#meta/echo_server.cm",
         },
     ],
+
+    // Capabilities used by this component.
+    use: [
+        {
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
+            from: "#echo_server",
+        },
+    ],
+
+    // Capabilities required by components under test.
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: [
-                "#driver",
-                "#echo_server",
-            ],
-        },
-        {
-            protocol: [ "fidl.examples.routing.echo.Echo" ],
-            from: "#echo_server",
-            to: [ "#driver" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#driver",
+            to: "#echo_server",
         },
     ],
 }

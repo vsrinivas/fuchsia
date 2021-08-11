@@ -30,6 +30,5 @@ group("echo-example") {
   public_deps = [
     "//examples/components/routing/echo_server:echo_server_component",
     "//examples/components/routing/integration_tests:echo_integration_test_component",
-    "//examples/components/routing/integration_tests:echo_integration_test_driver",
   ]
 }

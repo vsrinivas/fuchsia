@@ -1,4 +1,4 @@
-# Complex topologies and integration testing
+# Integration testing topologies
 
 <<../../components/_v2_banner.md>>
 
@@ -7,79 +7,64 @@ same realm and exchanging capabilities. While the majority of tests are unit
 tests that span only a single component, integration testing scenarios call for
 defining realm topologies and capability routes.
 
-In cases where the components in the test are static, the "driver" pattern
-should be used to create a statically defined topology for the test.
-In cases where realm topology needs to be defined at run time, or components
+In cases where all components in the test are static, you can define the
+topology for the test realm in the test component manifest.
+In cases where realm topology needs to be defined at runtime, or components
 need to be mocked out, [Realm Builder][realm-builder] should be used.
 
-## The "driver" pattern for v2 component tests
+Note: The example code referenced in this guide can be found under
+[`//examples/components/routing/integration_tests`][driver-pattern-example].
 
-We demonstrate the driver pattern for writing an integration test with a custom
-component topology.
+## Component topology
 
-### Build definition
+The integration test component declares the topology of the test realm with
+itself as the parent. This allows the test controller to be responsible for
+capability routing between components under test and their dependencies.
 
-We define the `BUILD.gn` file as shown below:
+The following is an example topology for integration testing the `echo_server`
+component:
 
-```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" %}
-```
+<br>![Integration test topology](images/echo-test-topology.png)<br>
 
-### Component topology
+This is a simple test realm that binds to the `fidl.examples.routing.echo.Echo`
+protocol exposed by the `echo_server` component.
+The `echo_integration_test` package contains the following components:
 
-The topology for the test realm in this example looks as follows:
-
-<br>![Test driver topology](images/echo-test-topology.png)<br>
-
-In this example the test package `echo_integration_test` contains three
-components:
-
-- **echo_integration_test** - Main entry point
+- **echo_integration_test** - Test controller
 - **echo_server** - Component under test
-- **echo_integration_test_driver** - Test driver
-
-`echo_integration_test` has two children:
-
-- **echo_integration_test_driver**
-- **echo_server**
-
-This is a simple component realm that launches `echo_server` and
-`echo_integration_test_driver`, and routes `fidl.examples.routing.echo.Echo`.
-
-Finally, note that all components under test are included in the test's own
-package. This promotes hermeticity and has many benefits. For instance it's
-possible to push an updated version of the same package to the device and run
-the test again without worrying whether the different components are all of the
-same version or have fallen out of sync.
-
-### Test Runner Framework integration
-
-Note that the driver component exposes `fuchsia.test.Suite` from its child to
-the test root. The root of a test realm must always expose this protocol in
-order to integrate with the [Test Runner Framework][trf].
-
-The root realm is defined as follows:
 
 ```json5
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/meta/echo_integration_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
-`echo_integration_test_driver` contains the test logic and expectations.
-The driver connects to the echo server and verifies it responds with an echo.
+The test controller component contains the test case logic, and interacts with
+the `echo_server` through its exposed capabilities.
 
-Note that this is a Rust test, and therefore includes `rust/default.shard.cml`
-as required to integrate with the [Test Runner Framework][trf].
+### Test Runner Framework integration
 
-```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/meta/echo_integration_test_driver.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+The integration test component includes `test_runners/rust/default.shard.cml`
+in order to integrate with the [Test Runner Framework][trf]. This shard provides
+two key elements:
+
+1.  Expose the `fuchsia.test.Suite` protocol, required for the framework to
+    discover and execute the test cases.
+1.  Set the program `runner` to the Rust test runner, required to execute test
+    cases using the Rust testing framework.
+
+## Build definition
+
+See the following `BUILD.gn` file that defines the `fuchsia_test_package()`
+target for this example:
+
+```gn
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" %}
 ```
 
-### Further study
+All components under test are included in the same **hermetic test package**.
+This promotes the ability to run and update tests in different environments
+without concern for dependencies falling out of sync.
 
-The code for this example can be found under
-[`//examples/components/routing/integration_tests`][driver-pattern-example].
-
-### Determining a component's moniker {#test-component-moniker}
+## Determining a component's moniker {#test-component-moniker}
 
 The `ArchiveReader` library allows your test to validate data in Inspect. The
 moniker for a component is always relative to the root realm. For a component

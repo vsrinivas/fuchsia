@@ -21,10 +21,10 @@ async fn launch_and_test_echo_test() {
 
     let expected_events = vec![
         RunEvent::suite_started(),
-        RunEvent::case_found("test_echo"),
-        RunEvent::case_started("test_echo"),
-        RunEvent::case_stopped("test_echo", CaseStatus::Passed),
-        RunEvent::case_finished("test_echo"),
+        RunEvent::case_found("echo_integration_test"),
+        RunEvent::case_started("echo_integration_test"),
+        RunEvent::case_stopped("echo_integration_test", CaseStatus::Passed),
+        RunEvent::case_finished("echo_integration_test"),
         RunEvent::suite_stopped(SuiteStatus::Passed),
     ];
     assert_eq!(expected_events, events);

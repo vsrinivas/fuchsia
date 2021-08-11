@@ -13,5 +13,5 @@ toc:
   path: /docs/concepts/testing/v2/test_component.md
 - title: "Test Runner Framework"
   path: /docs/concepts/testing/v2/test_runner_framework.md
-- title: "Complex topologies and testing"
+- title: "Integration testing"
   path: /docs/concepts/testing/v2/integration_testing.md

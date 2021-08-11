@@ -9,7 +9,6 @@ import("//build/rust/rustc_test.gni")
 rustc_test("bin") {
   name = "echo_integration_test"
   edition = "2018"
-  source_root = "src/echo_integration_test.rs"
 
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -19,26 +18,18 @@ rustc_test("bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  sources = [ "src/echo_integration_test.rs" ]
-}
-
-fuchsia_component("echo_integration_test_driver") {
-  testonly = true
-  manifest = "meta/echo_integration_test_driver.cml"
-  deps = [ ":bin" ]
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_component("echo_integration_test_component") {
-  component_name = "echo_integration_test"
   testonly = true
+  component_name = "echo_integration_test"
   manifest = "meta/echo_integration_test.cml"
+  deps = [ ":bin" ]
 }
 
 fuchsia_test_package("echo_integration_test") {
   test_components = [ ":echo_integration_test_component" ]
-  deps = [
-    ":echo_integration_test_driver",
-    "//examples/components/routing/echo_server:echo_server_component",
-  ]
+  deps = [ "//examples/components/routing/echo_server:echo_server_component" ]
 }
 # [END example_snippet]
