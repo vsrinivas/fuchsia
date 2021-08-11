@@ -49,7 +49,6 @@ group("non_hermetic_deps") {
     "//build/images/sizes/*",
     "//build/rust/*",
     "//scripts/sdk/gn/*",
-    "//src/lib/assembly/vbmeta/*",
     "//third_party/crashpad/*",
     "//vendor/google/*",
   ]

@@ -48,47 +48,28 @@ if (is_host) {
 
   salt = "56ebac2038b220d37b9b27e91c9e7afb3d7b7910c03775812c7a16cc01a8b380"
 
-  generated_file("test_image") {
-    outputs = [ "$target_out_dir/test_image" ]
-    contents = "0123456789ABCDEF0123456789ABCDEF"
-  }
-
-  test_image_outputs = get_target_outputs(":test_image")
-  test_image = test_image_outputs[0]
-
+  vbmeta_descriptor = "${target_out_dir}/expected_descriptor.vbmeta"
+  test_image = "${target_out_dir}/test_image"
   action("expected_descriptor") {
-    hermetic_deps = false
     testonly = true
-    script = "//third_party/android/platform/external/avb/avbtool.py"
-    deps = [ ":test_image" ]
+    script = "gen_expected_descriptor.py"
 
-    output_file = target_name + ".vbmeta"
-    output_file = "$target_out_dir/$output_file"
-    outputs = [ output_file ]
-
-    inputs = [ test_image ]
+    inputs = [ "//third_party/android/platform/external/avb/avbtool.py" ]
+    outputs = [
+      vbmeta_descriptor,
+      test_image,
+    ]
 
     args = [
-      "add_hash_footer",
+      "--avbtool",
+      rebase_path("//third_party/android/platform/external/avb/avbtool.py",
+                  root_build_dir),
       "--image",
       rebase_path(test_image, root_build_dir),
       "--salt",
       salt,
-      "--partition_name",
-      "zircon",
-      "--do_not_append_vbmeta_image",
       "--output_vbmeta_image",
-      rebase_path(outputs[0], root_build_dir),
-      "--partition_size",
-
-      # we are not going to add footer into image,
-      # so, we do not care about a partition size checking.
-      # `partition_size' is a mandatory option, thus let
-      # use obviously big number for the partition size to pass
-      # verification. 200M should be good enough.
-      # TODO (dmitryya@) fix avbtool to do not check partition
-      # size if --do_not_append_vbmeta_image is specified.
-      "209715200",
+      rebase_path(vbmeta_descriptor, root_build_dir),
     ]
   }
 
@@ -101,8 +82,6 @@ if (is_host) {
     output_file = "$target_out_dir/$output_file"
     outputs = [ output_file ]
 
-    vbmeta_descriptor_outputs = get_target_outputs(":expected_descriptor")
-    vbmeta_descriptor = vbmeta_descriptor_outputs[0]
     inputs = [
       test_avb_key,
       test_avb_atx_metadata,
@@ -154,8 +133,8 @@ if (is_host) {
       "//third_party/rust_crates:hex",
     ]
     non_rust_deps = [
+      ":expected_descriptor",
       ":expected_vbmeta",
-      ":test_image",
     ]
     configs += [ ":integration_test_assets" ]
     inputs = [
