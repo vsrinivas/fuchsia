@@ -122,8 +122,13 @@ class BuildInfoServiceTestFixture : public gtest::TestLoopFixture {
   void DestroyBuildInfoFile() {
     fdio_ns_t *ns;
     zx_status_t status = fdio_ns_get_installed(&ns);
+    ZX_ASSERT_MSG(status == ZX_OK, "Cannot retrieve the namespace: %s\n",
+                  zx_status_get_string(status));
+
     std::string build_info_directory_path(kFuchsiaBuildInfoDirectoryPath);
     status = fdio_ns_unbind(ns, build_info_directory_path.c_str());
+    ZX_ASSERT_MSG(status == ZX_OK, "Cannot unbind from a namespace: %s\n",
+                  zx_status_get_string(status));
 
     loop_.Quit();
     loop_.JoinThreads();
