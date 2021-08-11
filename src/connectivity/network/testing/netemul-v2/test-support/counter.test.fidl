@@ -23,7 +23,7 @@ protocol Counter {
     /// `flags`, and connects `request`.
     ///
     /// This is essentially a wrapper around [`fuchsia.io/Directory.Open`],
-    /// which always opens in "connect" mode.
+    /// which always opens in an implementation-defined mode.
     ///
     /// + request `path` the absolute path from the root of the server's
     ///     namespace.
