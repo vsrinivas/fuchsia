@@ -22,6 +22,7 @@ root_realm("root") {
 
 assemble_system("guest") {
   testonly = true
+  generate_fvm = !bootfs_only
   base_packages = [
     ":core",
     "//garnet/bin/run",

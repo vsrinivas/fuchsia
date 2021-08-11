@@ -19,6 +19,7 @@ supports_fastboot_fvm = fvm_partition != "" && !bootfs_only
 
 fuchsia_base = {
   testonly = fuchsia_zbi_testonly
+  generate_fvm = !bootfs_only
   board_name = board_name
   output_dir = root_build_dir
   use_esp = target_cpu != "arm64" && !use_vboot

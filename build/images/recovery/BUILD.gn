@@ -81,12 +81,13 @@ recovery_eng_packages =
 assemble_system("recovery-eng") {
   testonly = true
   base_packages = recovery_eng_packages
+  generate_fvm = !bootfs_only
 
   system_image_deps = recovery_system_image_deps
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  if (!bootfs_only) {
+  if (generate_fvm) {
     assembly_compress_blobs = false
   }
   ramdisk_fvm_in_zbi = true
@@ -133,12 +134,13 @@ assemble_system("recovery-eng") {
 
 assemble_system("recovery-fdr") {
   base_packages = recovery_packages
+  generate_fvm = !bootfs_only
 
   system_image_deps = recovery_system_image_deps
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  if (!bootfs_only) {
+  if (generate_fvm) {
     assembly_compress_blobs = false
   }
   ramdisk_fvm_in_zbi = true

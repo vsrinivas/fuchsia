@@ -14,6 +14,7 @@ assemble_system("bringup") {
   board_name = board_name
   output_dir = root_build_dir
   use_esp = target_cpu != "arm64" && !use_vboot
+  generate_fvm = false
 
   include_version_and_epoch = true
   include_component_id_index = true

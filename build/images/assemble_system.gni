@@ -163,6 +163,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 # Board: FVM parameters
 #
+#   generate_fvm (optional; default: true)
+#     [bool] Whether to generate a FVM image.
+#
 #   ramdisk_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
 #
@@ -259,8 +262,13 @@ template("assemble_system") {
     _universe_packages = invoker.universe_packages
   }
 
+  generate_fvm = true
+  if (defined(invoker.generate_fvm)) {
+    generate_fvm = invoker.generate_fvm
+  }
+
   system_image_deps = []
-  if (defined(invoker.system_image_deps) && !bootfs_only) {
+  if (defined(invoker.system_image_deps) && generate_fvm) {
     system_image_deps += invoker.system_image_deps
   } else {
     not_needed(invoker, [ "system_image_deps" ])
@@ -268,7 +276,7 @@ template("assemble_system") {
 
   embed_fvm_in_zbi = false
   if (defined(invoker.ramdisk_fvm_in_zbi)) {
-    embed_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
+    embed_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && generate_fvm
   }
 
   devmgr_config = []
@@ -303,7 +311,6 @@ template("assemble_system") {
     package_name = "driver-manager-base-config"
     deps = [ ":${base_driver_manifest_label}" ]
   }
-  _base_packages += [ ":${driver_manager_base_config_label}" ]
 
   # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
   # Assembler.
@@ -389,9 +396,10 @@ template("assemble_system") {
     kernel_image = "//zircon/kernel"
 
     base_packages = []
-    if (!bootfs_only) {
+    if (generate_fvm) {
       base_packages = _base_packages
       base_packages += component_id_index_dep
+      base_packages += [ ":${driver_manager_base_config_label}" ]
       base_packages += [
         ":${labels.config_data}",
         pkgfs_package_label,
@@ -409,8 +417,8 @@ template("assemble_system") {
     bootfs_labels += component_id_index_dep
     bootfs_labels += [ "//zircon/kernel" ]
 
-    # BootFS-only builds do not have pkgfs, therefore they do not need base-resolver.
-    if (!bootfs_only) {
+    # Only builds with an FVM need base-resolver for pkgfs.
+    if (generate_fvm) {
       bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
     }
 
@@ -448,6 +456,7 @@ template("assemble_system") {
                              "zbi_signing_args",
                            ])
     board_name = invoker.board_name
+    generate_fvm = generate_fvm
     output_path = files.board_config
 
     zbi_name = "${image_name}"
@@ -456,7 +465,7 @@ template("assemble_system") {
     }
 
     # Use an empty minfs by default, otherwise use the supplied minfs.
-    if (!bootfs_only) {
+    if (generate_fvm) {
       fvm_slice_size = 1048576
       if (defined(invoker.assembly_fvm_slice_size)) {
         fvm_slice_size = invoker.assembly_fvm_slice_size
@@ -489,16 +498,6 @@ template("assemble_system") {
   check_production_tag = false
   if (defined(invoker.check_production_tag)) {
     check_production_tag = invoker.check_production_tag
-  }
-
-  # Determine if a fastboot-supported FVM should be generated.
-  if (!bootfs_only) {
-    build_fastboot_fvm = false
-    if (fvm_partition != "" && !bootfs_only &&
-        (fvm_emmc_partition_size != false ||
-         fvm_ftl_nand_block_count != false)) {
-      build_fastboot_fvm = true
-    }
   }
 
   ffx_action(labels.image_assembler) {
@@ -567,7 +566,7 @@ template("assemble_system") {
     }
 
     # Base package dependencies and outputs, if this configuration uses them.
-    if (!bootfs_only) {
+    if (generate_fvm) {
       fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
       fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
       fvm_tool_path += "/fvm"
@@ -601,7 +600,8 @@ template("assemble_system") {
         files.base_package_manifest,
       ]
 
-      if (build_fastboot_fvm) {
+      if (fvm_emmc_partition_size != false ||
+          fvm_ftl_nand_block_count != false) {
         outputs += [ files.fvm_fastboot ]
       }
     }

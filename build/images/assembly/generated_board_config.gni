@@ -45,6 +45,9 @@ import("//build/zbi/zbi.gni")
 #     [int] Size options for blobfs to pass to the fvm tool.
 #
 # FVM arguments
+#   generate_fvm (optional; default: true)
+#     [bool] Whether to generate a FVM image.
+#
 #   embed_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
 #
@@ -74,6 +77,11 @@ template("generated_board_config") {
     use_esp = invoker.use_esp
   }
 
+  generate_fvm = true
+  if (defined(invoker.generate_fvm)) {
+    generate_fvm = invoker.generate_fvm
+  }
+
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
@@ -94,7 +102,7 @@ template("generated_board_config") {
     outputs = [ invoker.output_path ]
     output_conversion = "json"
 
-    if (fvm_partition != "" && !bootfs_only) {
+    if (fvm_partition != "" && generate_fvm) {
       if (fvm_fastboot_compression != "default") {
         fastboot_fvm_compression = fvm_fastboot_compression
       }
@@ -109,7 +117,7 @@ template("generated_board_config") {
       }
     }
 
-    if (!bootfs_only) {
+    if (generate_fvm) {
       if (defined(invoker.minfs)) {
         minfs_parameters = {
           MinFS = {
@@ -190,7 +198,7 @@ template("generated_board_config") {
         }
       }
 
-      if (!bootfs_only) {
+      if (generate_fvm) {
         fvm = {
           partition = fvm_partition
           slice_size = invoker.fvm_slice_size
