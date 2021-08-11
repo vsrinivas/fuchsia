@@ -306,8 +306,8 @@ Current challenges in scaling e2e test development include:
 - A [helpful developer guide][sl4f-guide] is provided, but instructions are
   given for developing SL4F tests in-tree only.
 
-Since system tests are so uniquely different than component tests, the
-exploration of this topic deserves a separate focused effort.
+Since system tests are so uniquely different than component tests, this topic is
+covered in a [separate roadmap document][oot-system-testing].
 
 [botanist]: /tools/botanist/
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
@@ -341,6 +341,7 @@ exploration of this topic deserves a separate focused effort.
 [idk]: /docs/development/idk/README.md
 [legacy-components]: /docs/concepts/components/v1/README.md
 [llvm]: https://llvm.org/
+[oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
 [overnet]: /src/connectivity/overnet/README.md
 [qemu-download]: /docs/development/idk/download.md#qemu
 [realm-builder]: /docs/development/components/v2/realm_builder.md
