@@ -21,6 +21,7 @@ import("//build/security/verify_build.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
+import("//build/zircon/tools.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
@@ -559,8 +560,22 @@ template("assemble_system") {
       outputs += [ files.vbmeta ]
     }
 
-    # Base package outputs, if this configuration uses them.
+    # Base package dependencies and outputs, if this configuration uses them.
     if (!bootfs_only) {
+      fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
+      fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
+      fvm_tool_path += "/fvm"
+
+      deps += [
+        blobfs_tool_target,
+        fvm_tool_target,
+      ]
+
+      inputs += [
+        blobfs_tool_path,
+        fvm_tool_path,
+      ]
+
       outputs += [
         # In the outdir.
         files.base_package,
