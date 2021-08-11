@@ -184,11 +184,16 @@ impl ScenicInputHandler {
         let device_id = self.keyboard_device_id.clone();
         let hid_usage = input3_key_to_hid_usage(key);
         let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
-        let code_point = keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
-            hid_usage,
-            modifiers.shift,
-            modifiers.caps_lock,
-        );
+
+        // Apply the resolved code point if one is available.  Fall back to US_QWERTY if no such
+        // luck. Note that the fallback currently includes the nonprintable keys, which may need to
+        // change in the future.
+        let code_point = match event.key_meaning {
+            Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(cp)) => Some(cp),
+            Some(fidl_fuchsia_ui_input3::KeyMeaning::NonPrintableKey(_)) | _ => keymaps::US_QWERTY
+                .hid_usage_to_code_point_for_mods(hid_usage, modifiers.shift, modifiers.caps_lock),
+        };
+
         let keyboard_event = keyboard::Event { code_point, hid_usage, modifiers, phase };
 
         let event = Event {
