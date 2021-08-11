@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        ie::{self, write_wmm_param_v1, IeType},
+        ie::{self, fake_ies::fake_wmm_param, write_wmm_param_v1, IeType},
         mac,
         test_utils::fake_frames::{
             fake_eap_rsne, fake_wpa1_ie, fake_wpa2_enterprise_rsne, fake_wpa2_rsne,
@@ -268,30 +268,7 @@ pub fn build_fake_bss_description_creator__(
         protection_cfg,
         ssid: (*b"fake-ssid").into(),
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-        wmm_param: Some(ie::WmmParam {
-            wmm_info: ie::WmmInfo(0).with_ap_wmm_info(ie::ApWmmInfo(0).with_uapsd(true)),
-            _reserved: 0,
-            ac_be_params: ie::WmmAcParams {
-                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(3).with_aci(0),
-                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
-                txop_limit: 0,
-            },
-            ac_bk_params: ie::WmmAcParams {
-                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(7).with_aci(1),
-                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
-                txop_limit: 0,
-            },
-            ac_vi_params: ie::WmmAcParams {
-                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(2).with_aci(2),
-                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(3).with_ecw_max(4),
-                txop_limit: 94,
-            },
-            ac_vo_params: ie::WmmAcParams {
-                aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(2).with_aci(3),
-                ecw_min_max: ie::EcwMinMax(0).with_ecw_min(2).with_ecw_max(3),
-                txop_limit: 47,
-            },
-        }),
+        wmm_param: Some(fake_wmm_param()),
 
         cf_pollable: false,
         cf_poll_req: false,
@@ -366,7 +343,10 @@ macro_rules! fake_bss_description {
 mod tests {
     use {
         super::*,
-        crate::bss::{BssDescription, Protection},
+        crate::{
+            bss::{BssDescription, Protection},
+            test_utils::fake_frames::{fake_wmm_param_body, fake_wmm_param_header},
+        },
         ie::IeType,
     };
 
@@ -460,7 +440,7 @@ mod tests {
         // - DSSS Param set's value is changed.
         // - Aruba vendor IE no longer there.
         #[rustfmt::skip]
-        let expected_ies = vec![
+        let mut expected_ies = vec![
             // SSID
             0x00, 0x07, b'f', b'u', b'c', b'h', b's', b'i', b'a',
             // Rates
@@ -517,18 +497,10 @@ mod tests {
             0x00, 0x50, 0xf2, 0x02, // multicast cipher: TKIP
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
-            // WMM parameters
-            0xdd, 0x18, // Vendor IE header
-            0x00, 0x50, 0xf2, // MSFT OUI
-            0x02, 0x01, // WMM OUI and WMM Parameter OUI Subtype
-            0x01, // Version 1
-            0x80, // U-APSD enabled
-            0x00, // reserved
-            0x03, 0xa4, 0x00, 0x00, // AC_BE parameters
-            0x27, 0xa4, 0x00, 0x00, // AC_BK parameters
-            0x42, 0x43, 0x5e, 0x00, // AC_VI parameters
-            0x62, 0x32, 0x2f, 0x00, // AC_VO parameters
         ];
+        expected_ies.extend(fake_wmm_param_header());
+        expected_ies.extend(fake_wmm_param_body());
+
         assert_eq!(bss.ies, expected_ies);
     }
 }

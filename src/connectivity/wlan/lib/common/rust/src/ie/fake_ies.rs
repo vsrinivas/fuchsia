@@ -237,3 +237,30 @@ pub fn get_vendor_ie_bytes_for_wsc_ie(wsc_ie_bytes: &[u8]) -> Result<Vec<u8>, Bu
     let mut buf = vec![];
     write_wsc_ie(&mut buf, &wsc_ie_bytes).map(|_| buf)
 }
+
+pub fn fake_wmm_param() -> WmmParam {
+    WmmParam {
+        wmm_info: WmmInfo(0).with_ap_wmm_info(ApWmmInfo(0).with_uapsd(true)),
+        _reserved: 0,
+        ac_be_params: WmmAcParams {
+            aci_aifsn: WmmAciAifsn(0).with_aifsn(3).with_aci(0),
+            ecw_min_max: EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+            txop_limit: 0,
+        },
+        ac_bk_params: WmmAcParams {
+            aci_aifsn: WmmAciAifsn(0).with_aifsn(7).with_aci(1),
+            ecw_min_max: EcwMinMax(0).with_ecw_min(4).with_ecw_max(10),
+            txop_limit: 0,
+        },
+        ac_vi_params: WmmAcParams {
+            aci_aifsn: WmmAciAifsn(0).with_aifsn(2).with_aci(2),
+            ecw_min_max: EcwMinMax(0).with_ecw_min(3).with_ecw_max(4),
+            txop_limit: 94,
+        },
+        ac_vo_params: WmmAcParams {
+            aci_aifsn: WmmAciAifsn(0).with_aifsn(2).with_aci(3),
+            ecw_min_max: EcwMinMax(0).with_ecw_min(2).with_ecw_max(3),
+            txop_limit: 47,
+        },
+    }
+}
