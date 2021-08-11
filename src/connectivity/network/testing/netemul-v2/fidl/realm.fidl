@@ -87,14 +87,10 @@ type Capability = strict union {
 
 /// The capabilities used by a child component in a [`ManagedRealm`].
 type ChildUses = strict union {
-    /// The child will be offered all the capabilities available in the realm,
-    /// including all built-in capabilities offered by netemul as well as all
-    /// capabilities offered by other child components in the same realm.
-    1: all Empty;
     /// The child will be offered each of the specified capabilities.
     ///
     /// `capabilities` must be unique.
-    2: capabilities vector<Capability>:MAX;
+    1: capabilities vector<Capability>:MAX;
 };
 
 /// The definition of a child component to be added to a [`ManagedRealm`].

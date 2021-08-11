@@ -126,11 +126,9 @@ async fn create_realm_instance(
     devfs: Arc<SimpleMutableDir>,
     devfs_proxy: fio::DirectoryProxy,
 ) -> Result<fcomponent::RealmInstance, CreateRealmError> {
-    // Keep track of all the protocols exposed by components in the test realm, as well as
-    // components requesting that all available capabilities be routed to them, so that we can wait
-    // until we've seen all the child component definitions to route those capabilities.
+    // Keep track of all the protocols exposed by components in the test realm, so that we can
+    // prevent two components from exposing the same protocol to the root of the realm.
     let mut exposed_protocols = HashMap::new();
-    let mut components_using_all = Vec::new();
     // Keep track of dependencies between child components in the test realm in order to create the
     // relevant routes at the end. RealmBuilder doesn't allow creating routes between components if
     // the components haven't both been created yet, so we wait until all components have been
@@ -187,6 +185,7 @@ async fn create_realm_instance(
         if let Some(exposes) = exposes {
             for exposed in exposes {
                 // TODO(https://fxbug.dev/72043): allow duplicate protocols.
+                //
                 // Protocol names will be aliased as `child_name/protocol_name`, and this panic will
                 // be replaced with an INVALID_ARGS epitaph sent on the `ManagedRealm` channel if a
                 // child component with a duplicate name is created, or if a child exposes two
@@ -212,19 +211,6 @@ async fn create_realm_instance(
         }
         if let Some(uses) = uses {
             match uses {
-                // TODO(https://fxbug.dev/82453): remove `fuchsia.netemul/ChildUses.all`.
-                ChildUses::All(fnetemul::Empty {}) => {
-                    // Route all built-in netemul capabilities to the child.
-                    // TODO(https://fxbug.dev/72403): route netemul-provided `SyncManager`.
-                    let () = components_using_devfs.push(DevfsUsage {
-                        component: name.clone(),
-                        capability_name: DEVFS.to_string(),
-                        subdir: None,
-                    });
-                    let () = route_network_context_to_component(&mut builder, &name)?;
-                    let () = route_log_sink_to_component(&mut builder, &name)?;
-                    let () = components_using_all.push(name);
-                }
                 ChildUses::Capabilities(caps) => {
                     // TODO(https://github.com/rust-lang/rust/issues/60896): use std's HashSet.
                     type HashSet<T> = HashMap<T, ()>;
@@ -332,19 +318,6 @@ async fn create_realm_instance(
                     }
                 }
             }
-        }
-    }
-    for component in components_using_all {
-        for (protocol, source) in &exposed_protocols {
-            // Don't route a capability back to its source.
-            if &component == source {
-                continue;
-            }
-            let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-                capability: Capability::protocol(protocol),
-                source: RouteEndpoint::component(source),
-                targets: vec![RouteEndpoint::component(&component)],
-            })?;
         }
     }
     for route in child_dep_routes {
@@ -1421,134 +1394,6 @@ mod tests {
             });
         })
         .await;
-    }
-
-    #[fixture(with_sandbox)]
-    #[fuchsia::test]
-    async fn child_uses_all_capabilities(sandbox: fnetemul::SandboxProxy) {
-        // These protocols are aliased instances of the `fuchsia.netemul.test.Counter` protocol
-        // (configured in the component manifest), so there is no actual `CounterAMarker` type, for
-        // example, from which we could extract its `PROTOCOL_NAME`.
-        //
-        // TODO(https://fxbug.dev/72043): once we allow duplicate protocol names, verify that we can
-        // also disambiguate protocols by specifying the component moniker of the component exposing
-        // the protocol, in addition to the A/B aliasing used here.
-        const COUNTER_A_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterA";
-        const COUNTER_B_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterB";
-
-        let TestRealm { realm } = TestRealm::new(
-            &sandbox,
-            fnetemul::RealmOptions {
-                children: Some(vec![
-                    fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some("counter-a".to_string()),
-                        exposes: Some(vec![COUNTER_A_PROTOCOL_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
-                        ..fnetemul::ChildDef::EMPTY
-                    },
-                    fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some("counter-b".to_string()),
-                        exposes: Some(vec![COUNTER_B_PROTOCOL_NAME.to_string()]),
-                        uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
-                        ..fnetemul::ChildDef::EMPTY
-                    },
-                    // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result
-                    // from the routing failure, add a child that does *not* use `All`, and verify
-                    // that it does not have access to the other components' exposed protocols.
-                ]),
-                ..fnetemul::RealmOptions::EMPTY
-            },
-        );
-        let counter_b = {
-            let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                .expect("failed to create CounterB proxy");
-            let () = realm
-                .connect_to_protocol(COUNTER_B_PROTOCOL_NAME, None, server_end.into_channel())
-                .expect("failed to connect to CounterB protocol");
-            counter_b
-        };
-        // counter-b should have access to counter-a's exposed protocol.
-        let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-            .expect("failed to create CounterA proxy");
-        let () = counter_b
-            .connect_to_protocol(COUNTER_A_PROTOCOL_NAME, server_end.into_channel())
-            .expect("fuchsia.netemul.test/CounterB.connect_to_protocol call failed");
-        assert_eq!(
-            counter_a
-                .increment()
-                .await
-                .expect("fuchsia.netemul.test/CounterA.increment call failed"),
-            1,
-        );
-        // counter-a should have access to counter-b's exposed protocol.
-        let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-            .expect("failed to create CounterA proxy");
-        let () = counter_a
-            .connect_to_protocol(COUNTER_B_PROTOCOL_NAME, server_end.into_channel())
-            .expect("fuchsia.netemul.test/CounterA.connect_to_protocol call failed");
-        assert_eq!(
-            counter_b
-                .increment()
-                .await
-                .expect("fuchsia.netemul.test/CounterB.increment call failed"),
-            1,
-        );
-    }
-
-    #[fixture(with_sandbox)]
-    #[fuchsia::test]
-    async fn child_uses_all_netemul_capabilities(sandbox: fnetemul::SandboxProxy) {
-        let realm = TestRealm::new(
-            &sandbox,
-            fnetemul::RealmOptions {
-                children: Some(vec![fnetemul::ChildDef {
-                    url: Some(COUNTER_PACKAGE_URL.to_string()),
-                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
-                    uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
-                    ..fnetemul::ChildDef::EMPTY
-                }]),
-                ..fnetemul::RealmOptions::EMPTY
-            },
-        );
-        let counter = realm.connect_to_protocol::<CounterMarker>();
-
-        // ================= Capability::NetemulNetworkContext =================
-        let (network_context, server_end) =
-            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
-                .expect("failed to create network context proxy");
-        let () = counter
-            .connect_to_protocol(
-                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME,
-                server_end.into_channel(),
-            )
-            .expect("failed to connect to network context through counter");
-        matches::assert_matches!(
-            network_context.setup(&mut Vec::new().iter_mut()).await,
-            Ok((zx::sys::ZX_OK, Some(_setup_handle)))
-        );
-
-        // ===================== Capability::NetemulDevfs =====================
-        let (devfs, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory proxy");
-        let () = counter
-            .open_in_namespace(DEVFS_PATH, fio::OPEN_RIGHT_READABLE, server_end.into_channel())
-            .expect("failed to connect to devfs through counter");
-        let (status, mut buf) =
-            devfs.read_dirents(fio::MAX_BUF).await.expect("calling read dirents");
-        let () = zx::Status::ok(status).expect("failed reading directory entries");
-        assert_eq!(
-            files_async::parse_dir_entries(&mut buf)
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()
-                .expect("failed parsing directory entries"),
-            &[files_async::DirEntry {
-                name: ".".to_string(),
-                kind: files_async::DirentKind::Directory
-            }],
-        );
     }
 
     #[fixture(with_sandbox)]
