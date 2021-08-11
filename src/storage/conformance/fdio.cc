@@ -167,8 +167,8 @@ int main(int argc, char** argv) {
   int exit_code = 0;
   for (const auto& harness_name : {
            "io_conformance_harness_sdkcpp",
-           "io_conformance_harness_ulibfs",
-           "io_conformance_harness_rust_pseudo_fs_mt",
+           "io_conformance_harness_cppvfs",
+           "io_conformance_harness_rustvfs",
        }) {
     FdioTest::harness_name = harness_name;
     std::cout << "----" << std::endl;

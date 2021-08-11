@@ -6,7 +6,7 @@ import("//build/components.gni")
 
 executable("bin") {
   testonly = true
-  output_name = "io_conformance_harness_ulibfs"
+  output_name = "io_conformance_harness_cppvfs"
   sources = [ "harness.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.io",
@@ -27,19 +27,19 @@ executable("bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-fuchsia_component("ulibfs-harness") {
+fuchsia_component("cppvfs-harness") {
   testonly = true
-  manifest = "meta/ulibfs_harness.cml"
+  manifest = "meta/cppvfs_harness.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("ulibfs-test") {
+fuchsia_component("cppvfs-test") {
   testonly = true
   manifest = "//src/storage/conformance/meta/io1_conformance_test.cml"
   deps = [ "//src/storage/conformance:io1_conformance_test" ]
 }
 
-fuchsia_test_package("ulibfs-io1-conformance-test") {
-  test_components = [ ":ulibfs-test" ]
-  deps = [ ":ulibfs-harness" ]
+fuchsia_test_package("cppvfs-io1-conformance-test") {
+  test_components = [ ":cppvfs-test" ]
+  deps = [ ":cppvfs-harness" ]
 }

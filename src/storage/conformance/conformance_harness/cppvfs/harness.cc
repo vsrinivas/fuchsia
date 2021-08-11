@@ -28,14 +28,14 @@ zx_status_t DummyReader(fbl::String* output) { return ZX_OK; }
 
 zx_status_t DummyWriter(std::string_view input) { return ZX_OK; }
 
-class UlibfsHarness : public fuchsia::io::test::Io1Harness {
+class TestHarness : public fuchsia::io::test::Io1Harness {
  public:
-  explicit UlibfsHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  explicit TestHarness() : vfs_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     vfs_loop_.StartThread("vfs_thread");
     vfs_ = std::make_unique<fs::ManagedVfs>(vfs_loop_.dispatcher());
   }
 
-  ~UlibfsHarness() override {
+  ~TestHarness() override {
     // |fs::ManagedVfs| must be shutdown first before stopping its dispatch loop.
     // Here we asynchronously post the shutdown request, then synchronously join
     // the |vfs_loop_| thread.
@@ -150,9 +150,9 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  syslog::SetTags({"io_conformance_harness_ulibfs"});
+  syslog::SetTags({"io_conformance_harness_cppvfs"});
 
-  UlibfsHarness harness;
+  TestHarness harness;
   fidl::BindingSet<fuchsia::io::test::Io1Harness> bindings;
 
   // Expose the Io1Harness protocol as an outgoing service.

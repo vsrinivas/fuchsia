@@ -1,17 +1,17 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/io1_conformance_test",
     },
     children: [
         {
-            // TODO(fxbug.dev/33880): Don't hardcode the ulibfs URL here. This
+            // TODO(fxbug.dev/33880): Don't hardcode the cppvfs URL here. This
             // needs to work for all the different filesystem test harnesses.
             name: "fs_test",
-            url: "fuchsia-pkg://fuchsia.com/ulibfs-io1-conformance-test#meta/ulibfs-harness.cm",
+            url: "fuchsia-pkg://fuchsia.com/cppvfs-io1-conformance-test#meta/cppvfs-harness.cm",
         },
     ],
     use: [
