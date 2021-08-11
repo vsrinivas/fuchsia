@@ -5,7 +5,8 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fidl_test_compatibility::{
-        EchoEchoArraysWithErrorResult, EchoEchoStructWithErrorResult, EchoEchoTableWithErrorResult,
+        EchoEchoArraysWithErrorResult, EchoEchoMinimalWithErrorResult,
+        EchoEchoStructWithErrorResult, EchoEchoTableWithErrorResult,
         EchoEchoVectorsWithErrorResult, EchoEchoXunionsWithErrorResult, EchoEvent, EchoMarker,
         EchoProxy, EchoRequest, EchoRequestStream, RespondWith,
     },
@@ -32,6 +33,62 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
     let handler = move |request| {
         Box::pin(async move {
             match request {
+                EchoRequest::EchoMinimal { forward_to_server, responder } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        echo.echo_minimal("")
+                            .await
+                            .context("Error calling echo_minimal on proxy")?;
+                        drop(app);
+                    }
+                    responder.send().context("Error responding")?;
+                }
+                EchoRequest::EchoMinimalWithError {
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_minimal_with_error("", result_variant)
+                            .await
+                            .context("Error calling echo_minimal_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoMinimalWithErrorResult::Err(0)
+                        } else {
+                            EchoEchoMinimalWithErrorResult::Ok(())
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
+                EchoRequest::EchoMinimalNoRetVal { forward_to_server, control_handle } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        echo.echo_minimal_no_ret_val("")
+                            .context("Error sending echo_minimal_no_ret_val to proxy")?;
+                        let mut event_stream = echo.take_event_stream();
+                        match event_stream
+                            .try_next()
+                            .await
+                            .context("Error getting event response from proxy")?
+                            .ok_or_else(|| format_err!("Proxy sent no events"))?
+                        {
+                            EchoEvent::EchoMinimalEvent {} => (),
+                            _ => panic!("Unexpected event type"),
+                        };
+                        drop(app);
+                    }
+                    control_handle
+                        .send_echo_minimal_event()
+                        .context("Error responding with event")?;
+                }
                 EchoRequest::EchoStruct { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
@@ -80,12 +137,16 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         echo.echo_struct_no_ret_val(&mut value, "")
                             .context("Error sending echo_struct_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
-                        let EchoEvent::EchoEvent { value: response_val } = event_stream
+                        if let EchoEvent::EchoEvent { value: response_val } = event_stream
                             .try_next()
                             .await
                             .context("Error getting event response from proxy")?
-                            .ok_or_else(|| format_err!("Proxy sent no events"))?;
-                        value = response_val;
+                            .ok_or_else(|| format_err!("Proxy sent no events"))?
+                        {
+                            value = response_val;
+                        } else {
+                            panic!("Unexpected event type");
+                        }
                         drop(app);
                     }
                     control_handle

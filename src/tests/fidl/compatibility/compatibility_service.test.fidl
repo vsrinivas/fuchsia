@@ -574,6 +574,21 @@ protocol Echo {
     // `forward_to_server` arg acts as a proxy for that other server.
     // For the error variants: if should_error is true, the provided err result
     // error is sent, otherwise the response variant is sent.
+    EchoMinimal(struct {
+        forward_to_server string;
+    }) -> ();
+    EchoMinimalWithError(struct {
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (struct{}) error uint32;
+
+    // Same as the above, but the server should use the event to return the
+    // response, rather than a return value.
+    EchoMinimalNoRetVal(struct {
+        forward_to_server string;
+    });
+    -> EchoMinimalEvent();
+
     EchoStruct(resource struct {
         value Struct;
         forward_to_server string;
@@ -588,9 +603,6 @@ protocol Echo {
     }) -> (resource struct {
         value Struct;
     }) error default_enum;
-
-    // Same as the above, but the server should use the event to return the
-    // response, rather than a return value.
     EchoStructNoRetVal(resource struct {
         value Struct;
         forward_to_server string;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -53,6 +54,75 @@ func (echo *echoImpl) getServer(url string) (*compatibility.EchoWithCtxInterface
 		return nil, err
 	}
 	return echoWithCtxInterface, nil
+}
+
+func (echo *echoImpl) EchoMinimal(_ fidl.Context, forwardURL string) error {
+	if forwardURL == "" {
+		return nil
+	}
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return err
+	}
+	if err := echoWithCtxInterface.EchoMinimal(context.Background(), ""); err != nil {
+		log.Printf("EchoMinimal failed: %s", err)
+		return err
+	}
+	return nil
+}
+
+func (echo *echoImpl) EchoMinimalWithError(_ fidl.Context, forwardURL string, resultVariant compatibility.RespondWith) (compatibility.EchoEchoMinimalWithErrorResult, error) {
+	if forwardURL == "" {
+		if resultVariant == compatibility.RespondWithErr {
+			return compatibility.EchoEchoMinimalWithErrorResultWithErr(0), nil
+		} else {
+			return compatibility.EchoEchoMinimalWithErrorResultWithResponse(compatibility.EchoEchoMinimalWithErrorResponse{}), nil
+		}
+	}
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.EchoEchoMinimalWithErrorResult{}, err
+	}
+	response, err := echoWithCtxInterface.EchoMinimalWithError(context.Background(), "", resultVariant)
+	if err != nil {
+		log.Printf("EchoMinimal failed: %s", err)
+		return compatibility.EchoEchoMinimalWithErrorResult{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoMinimalNoRetVal(_ fidl.Context, forwardURL string) error {
+	if forwardURL != "" {
+		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		if err != nil {
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
+			return err
+		}
+		go func() {
+			for {
+				if err := echoWithCtxInterface.ExpectEchoMinimalEvent(context.Background()); err != nil {
+					log.Fatalf("ExpectEchoMinimalEvent failed: %s while communicating with %s", err, forwardURL)
+					return
+				}
+				mu.Lock()
+				for pxy := range mu.proxies {
+					_ = pxy.EchoMinimalEvent()
+				}
+				mu.Unlock()
+				break
+			}
+		}()
+		echoWithCtxInterface.EchoMinimalNoRetVal(context.Background(), "")
+	} else {
+		mu.Lock()
+		for pxy := range mu.proxies {
+			_ = pxy.EchoMinimalEvent()
+		}
+		mu.Unlock()
+	}
+	return nil
 }
 
 func (echo *echoImpl) EchoStruct(_ fidl.Context, value compatibility.Struct, forwardURL string) (compatibility.Struct, error) {

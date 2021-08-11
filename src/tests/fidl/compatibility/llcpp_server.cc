@@ -31,6 +31,24 @@ class EchoClientApp {
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
+  fidl::WireResult<Echo::EchoMinimal> EchoMinimal(::fidl::StringView forward_to_server) {
+    return client_.EchoMinimal(std::move(forward_to_server));
+  }
+
+  fidl::WireResult<Echo::EchoMinimalWithError> EchoMinimalWithError(
+      ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
+    return client_.EchoMinimalWithError(std::move(forward_to_server), result_variant);
+  }
+
+  zx_status_t EchoMinimalNoRetVal(::fidl::StringView forward_to_server,
+                                  fidl::WireSyncEventHandler<Echo>& event_handler) {
+    auto result = client_.EchoMinimalNoRetVal(std::move(forward_to_server));
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    return client_.HandleOneEvent(event_handler).status();
+  }
+
   fidl::WireResult<Echo::EchoStruct> EchoStruct(wire::Struct value,
                                                 ::fidl::StringView forward_to_server) {
     return client_.EchoStruct(std::move(value), std::move(forward_to_server));
@@ -139,6 +157,72 @@ class EchoClientApp {
 class EchoConnection final : public fidl::WireServer<Echo> {
  public:
   EchoConnection() = default;
+
+  void EchoMinimal(EchoMinimalRequestView request, EchoMinimalCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      completer.Reply();
+    } else {
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoMinimal("");
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply();
+    }
+  }
+
+  void EchoMinimalWithError(EchoMinimalWithErrorRequestView request,
+                            EchoMinimalWithErrorCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(0u);
+      } else {
+        completer.ReplySuccess();
+      }
+    } else {
+      EchoClientApp app(request->forward_to_server);
+      auto result = app.EchoMinimalWithError("", request->result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
+  void EchoMinimalNoRetVal(EchoMinimalNoRetValRequestView request,
+                           EchoMinimalNoRetValCompleter::Sync&) override {
+    if (request->forward_to_server.empty()) {
+      auto status = server_binding_.value()->EchoMinimalEvent();
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed: %s",
+                    zx_status_get_string(status));
+    } else {
+      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+       public:
+        explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
+
+        zx_status_t status() const { return status_; }
+
+        void EchoMinimalEvent(fidl::WireResponse<Echo::EchoMinimalEvent>* event) override {
+          status_ = connection_->server_binding_.value()->EchoMinimalEvent();
+        }
+
+        zx_status_t Unknown() override {
+          ZX_PANIC("Received unexpected event");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+       private:
+        EchoConnection* const connection_;
+        zx_status_t status_ = ZX_OK;
+      };
+
+      EchoClientApp app(request->forward_to_server);
+      EventHandler event_handler(this);
+      zx_status_t status = app.EchoMinimalNoRetVal("", event_handler);
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      ZX_ASSERT_MSG(event_handler.status() == ZX_OK, "Replying with event failed indirect: %s",
+                    zx_status_get_string(event_handler.status()));
+    }
+  }
 
   void EchoStruct(EchoStructRequestView request, EchoStructCompleter::Sync& completer) override {
     if (request->forward_to_server.empty()) {

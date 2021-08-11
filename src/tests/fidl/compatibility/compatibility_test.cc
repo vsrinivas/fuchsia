@@ -34,6 +34,8 @@ using fidl::test::compatibility::AllTypesXunion;
 using fidl::test::compatibility::ArraysStruct;
 using fidl::test::compatibility::Echo_EchoArraysWithError_Response;
 using fidl::test::compatibility::Echo_EchoArraysWithError_Result;
+using fidl::test::compatibility::Echo_EchoMinimalWithError_Response;
+using fidl::test::compatibility::Echo_EchoMinimalWithError_Result;
 using fidl::test::compatibility::Echo_EchoStructWithError_Response;
 using fidl::test::compatibility::Echo_EchoStructWithError_Result;
 using fidl::test::compatibility::Echo_EchoTableWithError_Response;
@@ -1308,6 +1310,87 @@ void ForAllServers(TestBody body) {
     }
     return true;
   };
+}
+
+TEST(Minimal, EchoMinimal) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (minimal)"] =
+        false;
+
+    bool called_back = false;
+    proxy->EchoMinimal(server_url, [&loop, &called_back]() {
+      called_back = true;
+      loop.Quit();
+    });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (minimal)"] =
+        true;
+  });
+}
+
+TEST(Minimal, EchoMinimalWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal result success)"] = false;
+
+    bool called_back = false;
+    proxy->EchoMinimalWithError(server_url, RespondWith::SUCCESS,
+                                [&loop, &called_back](Echo_EchoMinimalWithError_Result resp) {
+                                  ASSERT_TRUE(resp.is_response());
+                                  called_back = true;
+                                  loop.Quit();
+                                });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal result success)"] = true;
+  });
+}
+
+TEST(Minimal, EchoMinimalWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal result error)"] = false;
+
+    bool called_back = false;
+    proxy->EchoMinimalWithError(server_url, RespondWith::ERR,
+                                [&loop, &called_back](Echo_EchoMinimalWithError_Result resp) {
+                                  ASSERT_TRUE(resp.is_err());
+                                  ASSERT_EQ(0u, resp.err());
+                                  called_back = true;
+                                  loop.Quit();
+                                });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal result error)"] = true;
+  });
+}
+
+TEST(Minimal, EchoMinimalNoRetval) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal_no_ret)"] = false;
+
+    bool event_received = false;
+    proxy.events().EchoMinimalEvent = [&loop, &event_received]() {
+      event_received = true;
+      loop.Quit();
+    };
+    proxy->EchoMinimalNoRetVal(server_url);
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (minimal_no_ret)"] = true;
+  });
 }
 
 TEST(Struct, EchoStruct) {

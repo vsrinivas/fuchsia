@@ -31,6 +31,83 @@ class EchoServerApp : public Echo {
 
   ~EchoServerApp() {}
 
+  void EchoMinimal(std::string forward_to_server, EchoMinimalCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoMinimal("", [this, &called_back, &callback]() {
+        called_back = true;
+        callback();
+        loop_->Quit();
+      });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      callback();
+    }
+  }
+
+  void EchoMinimalWithError(std::string forward_to_server, RespondWith result_variant,
+                            EchoMinimalWithErrorCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoMinimalWithError(
+          "", result_variant,
+          [this, &called_back, &callback](Echo_EchoMinimalWithError_Result result) {
+            called_back = true;
+            callback(std::move(result));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoMinimalWithError_Result result;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(0u);
+      } else {
+        result.set_response(Echo_EchoMinimalWithError_Response());
+      }
+      callback(std::move(result));
+    }
+  }
+
+  void EchoMinimalNoRetVal(std::string forward_to_server) override {
+    if (!forward_to_server.empty()) {
+      std::unique_ptr<EchoClientApp> app(new EchoClientApp);
+      app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app->Start(forward_to_server);
+      app->echo().events().EchoMinimalEvent = [this]() { this->HandleEchoMinimalEvent(); };
+      app->echo()->EchoMinimalNoRetVal("");
+      client_apps_.push_back(std::move(app));
+    } else {
+      for (const auto& binding : bindings_.bindings()) {
+        binding->events().EchoMinimalEvent();
+      }
+    }
+  }
+
   void EchoStruct(Struct value, std::string forward_to_server,
                   EchoStructCallback callback) override {
     if (!forward_to_server.empty()) {
@@ -368,6 +445,11 @@ class EchoServerApp : public Echo {
       Struct to_send;
       value.Clone(&to_send);
       binding->events().EchoEvent(std::move(to_send));
+    }
+  }
+  void HandleEchoMinimalEvent() {
+    for (const auto& binding : bindings_.bindings()) {
+      binding->events().EchoMinimalEvent();
     }
   }
 

@@ -12,6 +12,7 @@ import 'package:fuchsia_services/services.dart';
 class EchoImpl extends Echo {
   final _binding = EchoBinding();
   final _echoEventStreamController = StreamController<Struct>();
+  final _echoMinimalEventStreamController = StreamController<void>();
 
   // Saves references to proxies from which we're expecting events.
   Map<String, EchoProxy> proxies = {};
@@ -33,6 +34,52 @@ class EchoImpl extends Echo {
     incoming.connectToService(echo);
     return echo;
   }
+
+  @override
+  Future<void> echoMinimal(String forwardToServer) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      return (await proxy(forwardToServer)).echoMinimal('');
+    }
+    return null;
+  }
+
+  @override
+  Future<void> echoMinimalWithError(
+      String forwardToServer, RespondWith resultVariant) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      return (await proxy(forwardToServer))
+          .echoMinimalWithError('', resultVariant);
+    }
+    if (resultVariant == RespondWith.err) {
+      throw MethodException(0);
+    } else {
+      return null;
+    }
+  }
+
+  void _handleEchoMinimalEvent(String serverUrl) {
+    _echoMinimalEventStreamController.add(null);
+    // Not technically safe if there's more than one outstanding event on this
+    // proxy, but that shouldn't happen in the existing test.
+    proxies.remove(serverUrl);
+  }
+
+  @override
+  Future<void> echoMinimalNoRetVal(String forwardToServer) async {
+    if (forwardToServer != null && forwardToServer.isNotEmpty) {
+      final echo = await proxy(forwardToServer);
+      // Keep echo around until we process the expected event.
+      proxies[forwardToServer] = echo;
+      echo.echoMinimalEvent.listen((v) {
+        _handleEchoMinimalEvent(forwardToServer);
+      });
+      return echo.echoMinimalNoRetVal('');
+    }
+    return _echoMinimalEventStreamController.add(null);
+  }
+
+  @override
+  Stream<void> get echoMinimalEvent => _echoMinimalEventStreamController.stream;
 
   @override
   Future<Struct> echoStruct(Struct value, String forwardToServer) async {

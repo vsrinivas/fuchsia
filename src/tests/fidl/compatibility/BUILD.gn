@@ -156,6 +156,10 @@ executable("fidl_compatibility_test_executable") {
 
 fidl_compatibility_tests = [
   {
+    name = "minimal"
+    filter = "Minimal.*"
+  },
+  {
     name = "struct"
     filter = "Struct.*"
   },
