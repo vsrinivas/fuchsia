@@ -1,0 +1,37 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "test/fs-management-test",
+    },
+    children: [
+        {
+            name: "isolated-devmgr",
+            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.process.Launcher" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#isolated-devmgr",
+        },
+    ],
+}
