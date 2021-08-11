@@ -116,6 +116,7 @@ template("fuchsia_package") {
       verify_manifest_elf_binaries(package_manifest_verify_target) {
         forward_variables_from(invoker, [ "testonly" ])
         manifest = package_manifest_file
+        check_debug_files = true
         deps = [ ":$package_manifest_target" ]
       }
     }

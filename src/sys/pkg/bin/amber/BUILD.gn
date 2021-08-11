@@ -8,7 +8,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
-import("//build/images/manifest.gni")
 import("//src/go/grand_unified_binary/gub.gni")
 
 go_library("lib") {
