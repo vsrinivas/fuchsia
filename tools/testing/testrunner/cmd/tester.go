@@ -61,7 +61,7 @@ const (
 	// Number of times to try running a test command over serial before giving
 	// up. This value was somewhat arbitrarily chosen and can be adjusted higher
 	// or lower if deemed appropriate.
-	startSerialCommandMaxAttempts = 10
+	startSerialCommandMaxAttempts = 3
 
 	llvmProfileEnvKey    = "LLVM_PROFILE_FILE"
 	llvmProfileExtension = ".profraw"
