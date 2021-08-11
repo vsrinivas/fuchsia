@@ -1,0 +1,35 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.nvram;
+
+using zx;
+
+/// Maximum amount of data that can be transferred in a single transaction.
+const NVRAM_MAX uint32 = 256;
+
+/// A device that contains some small amount of non-volatile storage.
+protocol Device {
+    /// Get the size of the NVRAM NVRAM.
+    GetSize() -> (struct {
+        size uint32;
+    });
+
+    /// Read |size| bytes of data starting at |offset|.
+    /// Returns ZX_ERR_OUT_OF_RANGE if the data extends past the end of the
+    /// nvram.
+    Read(struct {
+        offset uint32;
+        size uint32;
+    }) -> (struct {
+        data vector<uint8>:NVRAM_MAX;
+    }) error zx.status;
+
+    /// Write |data| starting at |offset|.
+    /// Returns ZX_ERR_OUT_OF_RANGE if the data extends past the end of the
+    /// nvram.
+    Write(struct {
+        offset uint32;
+        data vector<uint8>:NVRAM_MAX;
+    }) -> (struct {}) error zx.status;
+};
