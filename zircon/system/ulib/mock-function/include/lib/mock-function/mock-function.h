@@ -109,7 +109,7 @@ class MockFunction {
   std::unique_ptr<Expectation> MakeExpectation(M matcher) {
     struct ExpectationWithMatcher : public Expectation {
       explicit ExpectationWithMatcher(M matcher) : matcher(std::move(matcher)) {}
-      R Match(Ts&&... actual_args) override { return matcher(actual_args...); }
+      R Match(Ts&&... actual_args) override { return matcher(std::forward<Ts>(actual_args)...); }
       M matcher;
     };
 
@@ -178,7 +178,7 @@ class MockFunction<void, Ts...> {
   std::unique_ptr<Expectation> MakeExpectation(M matcher) {
     struct ExpectationWithMatcher : public Expectation {
       explicit ExpectationWithMatcher(M matcher) : matcher(std::move(matcher)) {}
-      void Match(Ts&&... actual_args) override { matcher(actual_args...); }
+      void Match(Ts&&... actual_args) override { matcher(std::forward<Ts>(actual_args)...); }
       M matcher;
     };
 
