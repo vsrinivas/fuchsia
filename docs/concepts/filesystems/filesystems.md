@@ -268,18 +268,18 @@ filesystem, found on EFI partitions and many USB sticks.
 [Fuchsia Volume Manager](/src/storage/fvm/driver/)
 is a "logical volume manager" that adds flexibility on top of existing block
 devices. The current features include ability to add, remove, extend and
-shrink virtual partitions. To make these features possible, internally, fvm
+shrink virtual partitions. To make these features possible FVM internally
 maintains physical to virtual  mapping from (virtual partitions, blocks) to
-(slice, physical block). To keep maintenance overhead minimal, it allows to
-partitions to shrink/grow in chunks called slices. A slice is multiple of the
+(slice, physical block). To keep maintenance overhead minimal, it allows
+partitions to shrink/grow in chunks called slices. A slice is a multiple of the
 native block size. Metadata aside, the rest of the device is divided into
 slices. Each slice is either free or it belongs to one and only one partition.
-If a slice belongs to a partition then FVM maintains metadata about which
+If a slice belongs to a partition, FVM maintains metadata about which
 partition is using the slice, and the virtual address of the slice within
 that partition.
 
-[Superblock](/src/storage/fvm/format.h#27)
-at block zero describe the on-disk layout of the FVM, which may look like
+The on-disk layout of the FVM looks like the following, and is declared
+[here](/src/storage/fvm/format.h#27).
 
 ```c
       +---------------------------------+ <- Physical block 0
@@ -310,7 +310,7 @@ at block zero describe the on-disk layout of the FVM, which may look like
 ```
 
 The partition table is made of several virtual partition
-entries(`VPartitionEntry`). In addition to containing name and partition
+entries (`VPartitionEntry`). In addition to containing name and partition
 identifiers, each of these vpart entries contains the number of allocated
 slices for this partition.
 
@@ -320,7 +320,7 @@ The slice allocation table is made up of tightly packed slice entries
  * allocation status
  * if it is allocated,
    * what partition it belongs to and
-   * what logical slice within partition the slice maps to
+   * what logical slice within the partition the slice maps to
 
 FVM library can be found
 [here](/src/storage/fvm/). During
