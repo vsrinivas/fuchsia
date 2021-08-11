@@ -280,12 +280,12 @@ void DirectoryConnection::Unlink2(Unlink2RequestView request, Unlink2Completer::
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  zx_status_t status =
-      vfs()->Unlink(vnode(), name_str,
-                    request->options.has_flags()
-                        ? static_cast<bool>((request->options.flags() &
-                                             fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
-                        : false);
+  zx_status_t status = vfs()->UnlinkValidated(
+      vnode(), name_str,
+      request->options.has_flags()
+          ? static_cast<bool>(
+                (request->options.flags() & fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory))
+          : false);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {

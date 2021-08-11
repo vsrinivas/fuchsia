@@ -45,32 +45,6 @@ namespace fio2 = fuchsia_io2;
 namespace fs {
 namespace {
 
-// Trim a name before sending it to internal filesystem functions. Trailing '/' characters imply
-// that the name must refer to a directory.
-zx_status_t TrimName(std::string_view name, std::string_view* name_out, bool* dir_out) {
-  size_t len = name.length();
-  bool is_dir = false;
-  while ((len > 0) && name[len - 1] == '/') {
-    len--;
-    is_dir = true;
-  }
-
-  if (len == 0) {
-    // 'name' should not contain paths consisting of exclusively '/' characters.
-    return ZX_ERR_INVALID_ARGS;
-  } else if (len > NAME_MAX) {
-    // Name must be less than the maximum-expected length.
-    return ZX_ERR_BAD_PATH;
-  } else if (memchr(name.data(), '/', len) != nullptr) {
-    // Name must not contain '/' characters after being trimmed.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  *name_out = std::string_view(name.data(), len);
-  *dir_out = is_dir;
-  return ZX_OK;
-}
-
 zx_status_t LookupNode(fbl::RefPtr<Vnode> vn, std::string_view name, fbl::RefPtr<Vnode>* out) {
   if (name == "..") {
     return ZX_ERR_INVALID_ARGS;
@@ -298,7 +272,8 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
   return TraversePathResult::Ok{.vnode = std::move(vn)};
 }
 
-zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool must_be_dir) {
+zx_status_t Vfs::UnlinkValidated(fbl::RefPtr<Vnode> vndir, std::string_view name,
+                                 bool must_be_dir) {
   {
     std::lock_guard lock(vfs_lock_);
     if (ReadonlyLocked()) {
@@ -317,16 +292,13 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool mu
 
 zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
   bool must_be_dir;
-  zx_status_t r;
-  if ((r = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (path == ".") {
-    return ZX_ERR_UNAVAILABLE;
-  } else if (path == "..") {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  if (zx_status_t status = TrimName(path, &path, &must_be_dir); status != ZX_OK)
+    return status;
 
-  return Unlink(vndir, path, must_be_dir);
+  if (!vfs_valid_name(path))
+    return ZX_ERR_INVALID_ARGS;
+
+  return UnlinkValidated(vndir, path, must_be_dir);
 }
 
 #ifdef __Fuchsia__
@@ -652,6 +624,30 @@ void Vfs::UnregisterVnodeLocked(Vnode* vnode) {
   auto found = live_nodes_.find(vnode);
   ZX_DEBUG_ASSERT(found != live_nodes_.end());  // Should always be registered first.
   live_nodes_.erase(found);
+}
+
+zx_status_t Vfs::TrimName(std::string_view name, std::string_view* name_out, bool* is_dir_out) {
+  *is_dir_out = false;
+
+  size_t len = name.length();
+  while ((len > 0) && name[len - 1] == '/') {
+    len--;
+    *is_dir_out = true;
+  }
+
+  if (len == 0) {
+    // 'name' should not contain paths consisting of exclusively '/' characters.
+    return ZX_ERR_INVALID_ARGS;
+  } else if (len > NAME_MAX) {
+    // Name must be less than the maximum-expected length.
+    return ZX_ERR_BAD_PATH;
+  } else if (memchr(name.data(), '/', len) != nullptr) {
+    // Name must not contain '/' characters after being trimmed.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *name_out = std::string_view(name.data(), len);
+  return ZX_OK;
 }
 
 void Vfs::SetReadonly(bool value) {

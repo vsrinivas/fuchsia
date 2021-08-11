@@ -101,9 +101,14 @@ class Vfs {
   // for more information.
   OpenResult Open(fbl::RefPtr<Vnode> vn, std::string_view path, VnodeConnectionOptions options,
                   Rights parent_rights, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-  zx_status_t Unlink(fbl::RefPtr<Vnode> vn, std::string_view path, bool must_be_dir)
-      __TA_EXCLUDES(vfs_lock_);
+
+  // Automatically deduces whether the caller wants to unlink a directory by the presence of a
+  // trailing slash. Forwards to Unlink() with the result.
   zx_status_t Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) __TA_EXCLUDES(vfs_lock_);
+
+  // Implements Unlink for a pre-validated and trimmed name.
+  zx_status_t UnlinkValidated(fbl::RefPtr<Vnode> vn, std::string_view path, bool must_be_dir)
+      __TA_EXCLUDES(vfs_lock_);
 
   // Sets whether this file system is read-only.
   void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);
@@ -220,6 +225,14 @@ class Vfs {
   // Derived classes may want to unregister vnodes differently than this one. This function removes
   // the vnode from the live node map.
   void UnregisterVnodeLocked(Vnode* vnode) __TA_REQUIRES(live_nodes_lock_);
+
+  // Trim trailing slashes from name before sending it to internal filesystem functions. This also
+  // validates whether the name has internal slashes and rejects them. Returns failure if the
+  // resulting name is too long, empty, or contains slashes after trimming.
+  //
+  // A trailing slash indicates that this refers specifically to a directlry and *is_dir_out will be
+  // set to true. Otherwise this will be false.
+  static zx_status_t TrimName(std::string_view name, std::string_view* name_out, bool* is_dir_out);
 
   // A lock which should be used to protect lookup and walk operations
   mutable std::mutex vfs_lock_;
