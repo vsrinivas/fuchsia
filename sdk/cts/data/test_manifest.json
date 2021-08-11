@@ -1,22 +1,22 @@
 [
     {
         "archive_name": "my-cts-test-package",
-        "component_name": "my-cts-component",
+        "component_name": "my-cts-component.cmx",
         "package": "my-cts-test-package"
     },
     {
         "archive_name": "fuchsia-element-tests",
-        "component_name": "element-manager-test",
+        "component_name": "element-manager-test.cmx",
         "package": "fuchsia-element-tests"
     },
     {
         "archive_name": "fuchsia-hwinfo-tests",
-        "component_name": "hwinfo-test",
+        "component_name": "hwinfo-test.cmx",
         "package": "fuchsia-hwinfo-tests"
     },
     {
         "archive_name": "fuchsia-diagnostics-tests",
-        "component_name": "inspect-publisher",
+        "component_name": "inspect-publisher.cmx",
         "package": "fuchsia-diagnostics-tests"
     },
     {
