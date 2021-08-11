@@ -189,7 +189,7 @@ pub async fn disconnect_all(wlan_svc: &WlanService) -> Result<(), Error> {
 
 pub async fn passive_scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
-) -> Result<Vec<fidl_sme::BssInfo>, Error> {
+) -> Result<Vec<fidl_sme::ScanResult>, Error> {
     let scan_transaction = start_passive_scan_transaction(&iface_sme_proxy)?;
 
     get_scan_results(scan_transaction).await.map_err(Into::into)
@@ -206,7 +206,7 @@ fn start_passive_scan_transaction(
 
 async fn get_scan_results(
     scan_txn: fidl_sme::ScanTransactionProxy,
-) -> Result<Vec<fidl_sme::BssInfo>, Error> {
+) -> Result<Vec<fidl_sme::ScanResult>, Error> {
     let mut stream = scan_txn.take_event_stream();
     let mut scan_results = vec![];
 
@@ -1093,7 +1093,7 @@ mod tests {
     fn scan_success_returns_results() {
         let mut scan_results_for_response = Vec::new();
         // due to restrictions for cloning fidl objects, forced to make a copy of the vector here
-        let entry1 = create_bss_info(
+        let entry1 = create_scan_result(
             [0, 1, 2, 3, 4, 5],
             b"foo".to_vec(),
             -30,
@@ -1106,8 +1106,8 @@ mod tests {
             Protection::Wpa2Personal,
             true,
         );
-        let entry1_copy = clone_bss_info(&entry1);
-        let entry2 = create_bss_info(
+        let entry1_copy = clone_scan_result(&entry1);
+        let entry2 = create_scan_result(
             [1, 2, 3, 4, 5, 6],
             b"hello".to_vec(),
             -60,
@@ -1120,7 +1120,7 @@ mod tests {
             Protection::Wpa2Personal,
             false,
         );
-        let entry2_copy = clone_bss_info(&entry2);
+        let entry2_copy = clone_scan_result(&entry2);
         scan_results_for_response.push(entry1);
         scan_results_for_response.push(entry2);
         let mut expected_response = Vec::new();
@@ -1138,15 +1138,15 @@ mod tests {
         assert!(test_scan_error().is_err())
     }
 
-    fn clone_bss_info(bss_info: &fidl_sme::BssInfo) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo {
-            ssid: bss_info.ssid.clone(),
-            bss_description: bss_info.bss_description.clone(),
-            ..*bss_info
+    fn clone_scan_result(scan_result: &fidl_sme::ScanResult) -> fidl_sme::ScanResult {
+        fidl_sme::ScanResult {
+            ssid: scan_result.ssid.clone(),
+            bss_description: scan_result.bss_description.clone(),
+            ..*scan_result
         }
     }
 
-    fn test_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
+    fn test_scan(mut scan_results: Vec<fidl_sme::ScanResult>) -> Vec<fidl_sme::ScanResult> {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
@@ -1170,7 +1170,7 @@ mod tests {
     fn send_scan_result_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
-        scan_results: &mut Vec<fidl_sme::BssInfo>,
+        scan_results: &mut Vec<fidl_sme::ScanResult>,
     ) {
         let transaction = match poll_client_sme_request(exec, server) {
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan { txn, .. }) => txn,
@@ -1227,7 +1227,7 @@ mod tests {
         transaction.send_on_error(&mut scan_error).expect("failed to send ScanError");
     }
 
-    fn create_bss_info(
+    fn create_scan_result(
         bssid: [u8; 6],
         ssid: Vec<u8>,
         rssi_dbm: i8,
@@ -1235,8 +1235,8 @@ mod tests {
         channel: fidl_common::WlanChannel,
         protection: Protection,
         compatible: bool,
-    ) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo {
+    ) -> fidl_sme::ScanResult {
+        fidl_sme::ScanResult {
             bssid,
             ssid: ssid.clone(),
             rssi_dbm,

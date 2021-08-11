@@ -120,10 +120,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .context("scan failed")?;
                     let bss_description = networks
                         .into_iter()
-                        .filter(|peer_sta_info| {
-                            peer_sta_info.ssid.as_slice() == opt.target_ssid.as_bytes()
+                        .filter(|scan_result| {
+                            scan_result.ssid.as_slice() == opt.target_ssid.as_bytes()
                         })
-                        .map(|peer_sta_info| peer_sta_info.bss_description)
+                        .map(|scan_result| scan_result.bss_description)
                         .next()
                         .ok_or_else(|| format_err!("no station responding for SSID"))?;
                     let result = wlan_service_util::client::connect(

@@ -11,7 +11,6 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
-    wlan_common::bss::BssDescription,
     wlan_rsn::rsna::UpdateSink,
 };
 
@@ -39,13 +38,17 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_scan_ended<D>(&mut self, _txn_id: ScanTxnId, result: &scan::ScanResult<D>) {
+    pub fn report_scan_ended<D>(
+        &mut self,
+        _txn_id: ScanTxnId,
+        result: &Result<scan::ScanEnd<D>, ()>,
+    ) {
         match result {
-            scan::ScanResult::None => {}
-            scan::ScanResult::DiscoveryFinished { bss_description_list, .. } => {
-                let (bss_count, result_code) = summarize_scan_result(&bss_description_list);
+            Err(()) => {}
+            Ok(scan::ScanEnd { result_code, bss_description_list, .. }) => {
+                let bss_count = bss_description_list.len();
                 let stats =
-                    self.stats_collector.report_discovery_scan_ended(result_code, bss_count);
+                    self.stats_collector.report_discovery_scan_ended(*result_code, bss_count);
                 warn_if_err!(stats);
                 if let Ok(stats) = stats {
                     self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
@@ -113,16 +116,5 @@ impl InfoReporter {
         let source = disconnect_info.disconnect_source.clone();
         self.info_sink.send(InfoEvent::DisconnectInfo(disconnect_info));
         self.stats_collector.report_disconnect(ssid, source);
-    }
-}
-
-fn summarize_scan_result(
-    bss_description_list: &Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
-) -> (usize, fidl_mlme::ScanResultCode) {
-    match bss_description_list {
-        Ok(bss_description_list) => {
-            (bss_description_list.len(), fidl_mlme::ScanResultCode::Success)
-        }
-        Err(result_code) => (0, *result_code),
     }
 }

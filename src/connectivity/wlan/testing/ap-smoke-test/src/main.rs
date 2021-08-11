@@ -167,8 +167,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                         .context("scan failed")?;
                 let bss_description = networks
                     .into_iter()
-                    .filter(|peer_sta_info| peer_sta_info.ssid.as_slice() == target_ssid)
-                    .map(|peer_sta_info| peer_sta_info.bss_description)
+                    .filter(|scan_result| scan_result.ssid.as_slice() == target_ssid)
+                    .map(|scan_result| scan_result.bss_description)
                     .next()
                     .ok_or_else(|| format_err!("no station responding for SSID"))?;
                 wlan_client_results.found_ap_in_scan = true;

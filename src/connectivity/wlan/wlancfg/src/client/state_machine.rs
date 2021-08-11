@@ -760,7 +760,7 @@ mod tests {
                 listener,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_description, generate_random_bss_info, poll_sme_req,
+                    generate_random_bss_description, generate_random_sme_scan_result, poll_sme_req,
                     validate_sme_scan_request_and_send_results,
                 },
             },
@@ -1116,12 +1116,12 @@ mod tests {
             ssids: vec![next_network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
-        let scan_results = vec![fidl_sme::BssInfo {
+        let scan_results = vec![fidl_sme::ScanResult {
             ssid: next_network_ssid.as_bytes().to_vec(),
             bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wep,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -1319,12 +1319,12 @@ mod tests {
             ssids: vec![next_network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
-        let scan_results = vec![fidl_sme::BssInfo {
+        let scan_results = vec![fidl_sme::ScanResult {
             ssid: next_network_ssid.as_bytes().to_vec(),
             bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Wpa3Personal,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -1631,12 +1631,12 @@ mod tests {
             ssids: vec![next_network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
-        let mut scan_results = vec![fidl_sme::BssInfo {
+        let mut scan_results = vec![fidl_sme::ScanResult {
             ssid: next_network_ssid.as_bytes().to_vec(),
             bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -2718,12 +2718,12 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut state_fut), Poll::Pending);
 
         // Send a scan for the requested network
-        let mut scan_results = vec![fidl_sme::BssInfo {
+        let mut scan_results = vec![fidl_sme::ScanResult {
             ssid: network_ssid.clone(),
             bss_description: bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3137,12 +3137,12 @@ mod tests {
             ssids: vec![network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
-        let mut scan_results = vec![fidl_sme::BssInfo {
+        let mut scan_results = vec![fidl_sme::ScanResult {
             ssid: network_ssid.as_bytes().to_vec(),
             bss_description: new_bss_desc.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3391,12 +3391,12 @@ mod tests {
             ssids: vec![network_ssid.as_bytes().to_vec()],
             channels: vec![],
         });
-        let mut scan_results = vec![fidl_sme::BssInfo {
+        let mut scan_results = vec![fidl_sme::ScanResult {
             ssid: network_ssid.as_bytes().to_vec(),
             bss_description: new_bss_description.clone(),
             compatible: true,
             protection: fidl_sme::Protection::Wpa2Personal,
-            ..generate_random_bss_info()
+            ..generate_random_sme_scan_result()
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),

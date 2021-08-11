@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod bss;
 mod capabilities;
 mod event;
 pub mod info;
@@ -19,6 +18,7 @@ pub mod test_utils;
 
 use {
     self::{
+        capabilities::derive_join_channel_and_capabilities,
         event::Event,
         info::InfoReporter,
         protection::Protection,
@@ -32,7 +32,7 @@ use {
         responder::Responder,
         sink::{InfoSink, MlmeSink, UnboundedSink},
         timer::{self, TimedEvent},
-        InfoStream, MlmeRequest, MlmeStream, Ssid,
+        Config, InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -45,16 +45,17 @@ use {
     wlan_common::{
         self,
         bss::{BssDescription, Protection as BssProtection},
+        channel::Channel,
         hasher::WlanHasher,
-        ie::{self, wsc},
+        ie::{self, rsn::rsne, wsc},
         RadioConfig,
     },
     wlan_rsn::auth,
 };
 
 pub use self::{
-    bss::{BssInfo, ClientConfig},
     info::InfoEvent,
+    scan::{ScanResult, ScanResultList},
 };
 
 // This is necessary to trick the private-in-public checker.
@@ -94,10 +95,103 @@ pub type ConnectionAttemptId = u64;
 
 pub type ScanTxnId = u64;
 
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+pub struct ClientConfig {
+    cfg: Config,
+    pub wpa3_supported: bool,
+}
+
+impl ClientConfig {
+    pub fn from_config(cfg: Config, wpa3_supported: bool) -> Self {
+        Self { cfg, wpa3_supported }
+    }
+
+    /// Converts a given BssDescription into a ScanResult.
+    pub fn create_scan_result(
+        &self,
+        bss: &BssDescription,
+        wmm_param: Option<ie::WmmParam>,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> ScanResult {
+        ScanResult {
+            bssid: bss.bssid.clone(),
+            ssid: bss.ssid().to_vec(),
+            rssi_dbm: bss.rssi_dbm,
+            snr_db: bss.snr_db,
+            signal_report_time: zx::Time::ZERO,
+            channel: Channel::from(bss.channel),
+            protection: bss.protection(),
+            ht_cap: bss.raw_ht_cap(),
+            vht_cap: bss.raw_vht_cap(),
+            probe_resp_wsc: bss.probe_resp_wsc(),
+            wmm_param,
+            compatible: self.is_bss_compatible(bss, device_info),
+            bss_description: bss.clone().to_fidl(),
+        }
+    }
+
+    /// Determines whether a given BSS is compatible with this client SME configuration.
+    pub fn is_bss_compatible(
+        &self,
+        bss: &BssDescription,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> bool {
+        self.is_bss_protection_compatible(bss)
+            && self.are_bss_channel_and_data_rates_compatible(bss, device_info)
+    }
+
+    fn is_bss_protection_compatible(&self, bss: &BssDescription) -> bool {
+        let privacy = wlan_common::mac::CapabilityInfo(bss.capability_info).privacy();
+        let protection = bss.protection();
+        match &protection {
+            BssProtection::Open => true,
+            BssProtection::Wep => self.cfg.wep_supported,
+            BssProtection::Wpa1 => self.cfg.wpa1_supported,
+            BssProtection::Wpa2Wpa3Personal | BssProtection::Wpa3Personal
+                if self.wpa3_supported =>
+            {
+                match bss.rsne() {
+                    Some(rsne) if privacy => match rsne::from_bytes(rsne) {
+                        Ok((_, a_rsne)) => a_rsne.is_wpa3_rsn_compatible(),
+                        _ => false,
+                    },
+                    _ => false,
+                }
+            }
+            BssProtection::Wpa1Wpa2PersonalTkipOnly
+            | BssProtection::Wpa2PersonalTkipOnly
+            | BssProtection::Wpa1Wpa2Personal
+            | BssProtection::Wpa2Personal
+            | BssProtection::Wpa2Wpa3Personal => match bss.rsne() {
+                Some(rsne) if privacy => match rsne::from_bytes(rsne) {
+                    Ok((_, a_rsne)) => a_rsne.is_wpa2_rsn_compatible(),
+                    _ => false,
+                },
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    fn are_bss_channel_and_data_rates_compatible(
+        &self,
+        bss: &BssDescription,
+        device_info: &fidl_mlme::DeviceInfo,
+    ) -> bool {
+        derive_join_channel_and_capabilities(
+            Channel::from(bss.channel),
+            None,
+            bss.rates(),
+            device_info,
+        )
+        .is_ok()
+    }
+}
+
 pub struct ClientSme {
     cfg: ClientConfig,
     state: Option<ClientState>,
-    scan_sched: ScanScheduler<Responder<BssDiscoveryResult>>,
+    scan_sched: ScanScheduler<Responder<ScanResultList>>,
     wmm_status_responders: Vec<Responder<fidl_sme::ClientSmeWmmStatusResult>>,
     context: Context,
 }
@@ -286,8 +380,6 @@ impl From<EstablishRsnaFailure> for ConnectFailure {
     }
 }
 
-pub type BssDiscoveryResult = Result<Vec<BssInfo>, fidl_mlme::ScanResultCode>;
-
 // Almost mirrors fidl_sme::ServingApInfo except that ServingApInfo
 // contains more info here than it does in fidl_sme.
 #[derive(Clone, Debug, PartialEq)]
@@ -465,7 +557,7 @@ impl ClientSme {
     pub fn on_scan_command(
         &mut self,
         scan_request: fidl_sme::ScanRequest,
-    ) -> oneshot::Receiver<BssDiscoveryResult> {
+    ) -> oneshot::Receiver<ScanResultList> {
         info!("SME received a scan command, initiating a discovery scan");
         let (responder, receiver) = Responder::new();
         let scan = DiscoveryScan::new(responder, scan_request);
@@ -505,30 +597,40 @@ impl super::Station for ClientSme {
             }
             MlmeEvent::OnScanEnd { end } => {
                 let txn_id = end.txn_id;
-                let (result, request) =
+                let (scan_end, next_request) =
                     self.scan_sched.on_mlme_scan_end(end, &self.context.inspect);
                 // Finalize stats for previous scan first before sending scan request for the next
                 // one, which would also start stats collection for new scan scan.
-                self.context.info.report_scan_ended(txn_id, &result);
-                self.send_scan_request(request);
-                match result {
-                    scan::ScanResult::None => (),
-                    scan::ScanResult::DiscoveryFinished { tokens, bss_description_list } => {
-                        let bss_description_list =
-                            bss_description_list.map(|bss_description_list| {
-                                bss_description_list
+                self.context.info.report_scan_ended(txn_id, &scan_end);
+                self.send_scan_request(next_request);
+                match scan_end {
+                    Err(()) => warn!("Unexpected MLME scan end."),
+                    Ok(scan::ScanEnd { tokens, result_code, bss_description_list }) => {
+                        match result_code {
+                            fidl_mlme::ScanResultCode::Success => {
+                                let scan_result_list: Vec<ScanResult> = bss_description_list
                                     .iter()
                                     .map(|bss_description| {
-                                        self.cfg.convert_bss_description(
+                                        self.cfg.create_scan_result(
                                             &bss_description,
                                             None,
                                             &self.context.device_info,
                                         )
                                     })
-                                    .collect()
-                            });
-                        for responder in tokens {
-                            responder.respond(bss_description_list.clone());
+                                    .collect();
+                                for responder in tokens {
+                                    responder.respond(Ok(scan_result_list.clone()));
+                                }
+                            }
+                            result_code => {
+                                let count = bss_description_list.len();
+                                if count > 0 {
+                                    warn!("Incomplete scan with {} pending results.", count);
+                                }
+                                for responder in tokens {
+                                    responder.respond(Err(result_code));
+                                }
+                            }
                         }
                     }
                 }
@@ -683,12 +785,17 @@ mod tests {
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
     use wlan_common::{
-        assert_variant, fake_bss_description, fake_fidl_bss_description, ie::rsn::akm, RadioConfig,
+        assert_variant,
+        channel::Cbw,
+        fake_bss_description, fake_fidl_bss_description,
+        ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, rsn::akm, IeType},
+        test_utils::fake_stas::IesOverrides,
+        RadioConfig,
     };
 
     use super::test_utils::{
         create_assoc_conf, create_auth_conf, create_join_conf, create_on_wmm_status_resp,
-        expect_stream_empty, fake_wmm_status_resp,
+        expect_stream_empty, fake_wmm_param, fake_wmm_status_resp,
     };
 
     use crate::test_utils;
@@ -704,6 +811,195 @@ mod tests {
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
         });
+    }
+
+    #[test]
+    fn verify_protection_compatibility() {
+        // Compatible:
+        let cfg = ClientConfig::default();
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Open)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2TkipOnly)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa2Wpa3)));
+
+        // Not compatible:
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
+        assert!(!cfg.is_bss_protection_compatible(&fake_bss_description!(Eap)));
+
+        // WEP support is configurable to be on or off:
+        let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wep)));
+
+        // WPA1 support is configurable to be on or off:
+        let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa1)));
+
+        // WPA3 support is configurable to be on or off:
+        let cfg = ClientConfig::from_config(Config::default(), true);
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3)));
+        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3Transition)));
+    }
+
+    #[test]
+    fn verify_rates_compatibility() {
+        // Compatible:
+        let cfg = ClientConfig::default();
+        let device_info = test_utils::fake_device_info([1u8; 6]);
+        assert!(cfg
+            .are_bss_channel_and_data_rates_compatible(&fake_bss_description!(Open), &device_info));
+
+        // Not compatible:
+        let bss = fake_bss_description!(Open, rates: vec![140, 255]);
+        assert!(!cfg.are_bss_channel_and_data_rates_compatible(&bss, &device_info));
+    }
+
+    #[test]
+    fn convert_scan_result() {
+        let cfg = ClientConfig::default();
+        let bss_description = fake_bss_description!(Wpa2,
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
+        );
+        let device_info = test_utils::fake_device_info([1u8; 6]);
+        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
+
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rssi_dbm: -30,
+                snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+                protection: BssProtection::Wpa2Personal,
+                compatible: true,
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                probe_resp_wsc: None,
+                wmm_param: None,
+                bss_description: bss_description.to_fidl(),
+            }
+        );
+
+        let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
+            .expect("expect WMM param to be parseable");
+        let bss_description = fake_bss_description!(Wpa2,
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
+        );
+        let scan_result = cfg.create_scan_result(&bss_description, Some(wmm_param), &device_info);
+
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rssi_dbm: -30,
+                snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+                protection: BssProtection::Wpa2Personal,
+                compatible: true,
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                probe_resp_wsc: None,
+                wmm_param: Some(wmm_param),
+                bss_description: bss_description.to_fidl(),
+            }
+        );
+
+        let bss_description = fake_bss_description!(Wep,
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
+        );
+        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rssi_dbm: -30,
+                snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+                protection: BssProtection::Wep,
+                compatible: false,
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                probe_resp_wsc: None,
+                wmm_param: None,
+                bss_description: bss_description.to_fidl(),
+            },
+        );
+
+        let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
+        let bss_description = fake_bss_description!(Wep,
+            ssid: vec![],
+            bssid: [0u8; 6],
+            rssi_dbm: -30,
+            snr_db: 0,
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
+            ies_overrides: IesOverrides::new()
+                .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
+                .set(IeType::VHT_CAPABILITIES, fake_vht_cap_bytes().to_vec()),
+        );
+        let scan_result = cfg.create_scan_result(&bss_description, None, &device_info);
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rssi_dbm: -30,
+                snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
+                channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
+                protection: BssProtection::Wep,
+                compatible: true,
+                ht_cap: Some(fidl_internal::HtCapabilities { bytes: fake_ht_cap_bytes() }),
+                vht_cap: Some(fidl_internal::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
+                probe_resp_wsc: None,
+                wmm_param: None,
+                bss_description: bss_description.to_fidl(),
+            },
+        );
     }
 
     #[test]
@@ -1301,10 +1597,10 @@ mod tests {
         });
 
         // check that both BSS are received at the end of a scan
-        assert_variant!(recv.try_recv(), Ok(Some(Ok(bss_info))) => {
-            let mut reported_bss_ssid = bss_info.into_iter().map(|bss| (bss.ssid, bss.bssid)).collect::<Vec<_>>();
-            reported_bss_ssid.sort();
-            assert_eq!(reported_bss_ssid, vec![(b"foo".to_vec(), [3; 6]), (b"foo".to_vec(), [4; 6])]);
+        assert_variant!(recv.try_recv(), Ok(Some(Ok(scan_result_list))) => {
+            let mut reported_ssid = scan_result_list.into_iter().map(|scan_result| (scan_result.ssid, scan_result.bssid)).collect::<Vec<_>>();
+            reported_ssid.sort();
+            assert_eq!(reported_ssid, vec![(b"foo".to_vec(), [3; 6]), (b"foo".to_vec(), [4; 6])]);
         })
     }
 
@@ -1327,6 +1623,56 @@ mod tests {
             assert_eq!(scan_stats.result_code, fidl_mlme::ScanResultCode::Success);
             assert_eq!(scan_stats.bss_count, 1);
         });
+    }
+
+    #[test]
+    fn test_simple_scan_error() {
+        let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme();
+        let mut recv =
+            sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
+            },
+        });
+
+        assert_eq!(
+            recv.try_recv(),
+            Ok(Some(Err(fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware)))
+        );
+    }
+
+    #[test]
+    fn test_scan_error_after_some_results_returned() {
+        let (mut sme, _mlme_strem, _info_stream, _time_stream) = create_sme();
+        let mut recv =
+            sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
+
+        let mut bss = fake_fidl_bss_description!(Open, ssid: b"foo".to_vec());
+        bss.bssid = [3; 6];
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+        let mut bss = fake_fidl_bss_description!(Open, ssid: b"foo".to_vec());
+        bss.bssid = [4; 6];
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult { txn_id: 1, bss },
+        });
+
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd {
+                txn_id: 1,
+                code: fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
+            },
+        });
+
+        // Scan results are lost when an error occurs.
+        assert_eq!(
+            recv.try_recv(),
+            Ok(Some(Err(fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware)))
+        );
     }
 
     #[test]

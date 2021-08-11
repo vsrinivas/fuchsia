@@ -668,7 +668,7 @@ fn is_printable_ascii(v: &Vec<u8>) -> bool {
     return true;
 }
 
-fn print_scan_result(bss: &fidl_sme::BssInfo) {
+fn print_scan_result(bss: &fidl_sme::ScanResult) {
     let is_ascii = is_ascii(&bss.ssid);
     let is_ascii_print = is_printable_ascii(&bss.ssid);
     let is_utf8 = String::from_utf8(bss.ssid.clone()).is_ok();

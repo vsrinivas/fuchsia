@@ -114,16 +114,16 @@ fn extract_network_id(
 }
 
 /// Returns a BSS's BSSID as a string.
-fn extract_bss_info(bss_info: wlan_policy::Bss) -> (String, i8, u32) {
-    let bssid = match bss_info.bssid {
+fn extract_bss_details(bss: wlan_policy::Bss) -> (String, i8, u32) {
+    let bssid = match bss.bssid {
         Some(bssid) => hex::encode(bssid),
         None => "".to_string(),
     };
-    let rssi = match bss_info.rssi {
+    let rssi = match bss.rssi {
         Some(rssi) => rssi,
         None => 0,
     };
-    let frequency = match bss_info.frequency {
+    let frequency = match bss.frequency {
         Some(frequency) => frequency,
         None => 0,
     };
@@ -247,7 +247,7 @@ pub fn print_scan_results(scan_results: Vec<wlan_policy::ScanResult>) -> Result<
 
         if network.entries.is_some() {
             for entry in network.entries.unwrap() {
-                let (bssid, rssi, frequency) = extract_bss_info(entry);
+                let (bssid, rssi, frequency) = extract_bss_details(entry);
                 println!("\t0x{:12} | {:3} | {:5}", bssid, rssi, frequency);
             }
         }

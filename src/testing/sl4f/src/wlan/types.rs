@@ -102,7 +102,7 @@ impl From<fidl_sme::Protection> for Protection {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct BssInfo {
+pub struct ScanResult {
     pub bssid: [u8; 6],
     pub ssid: Vec<u8>,
     pub rssi_dbm: i8,
@@ -112,9 +112,9 @@ pub struct BssInfo {
     pub compatible: bool,
 }
 
-impl From<fidl_sme::BssInfo> for BssInfo {
-    fn from(bss_info: fidl_sme::BssInfo) -> Self {
-        BssInfo {
+impl From<fidl_sme::ScanResult> for ScanResult {
+    fn from(bss_info: fidl_sme::ScanResult) -> Self {
+        ScanResult {
             bssid: bss_info.bssid,
             ssid: bss_info.ssid,
             rssi_dbm: bss_info.rssi_dbm,

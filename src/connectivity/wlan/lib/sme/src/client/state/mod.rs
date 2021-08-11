@@ -8,15 +8,14 @@ use {
     crate::{
         capabilities::{intersect_with_ap_as_client, ClientCapabilities},
         client::{
-            bss::ClientConfig,
             capabilities::derive_join_channel_and_capabilities,
             event::{self, Event},
             info::{DisconnectCause, DisconnectInfo, DisconnectMlmeEventName, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
-            report_connect_finished, AssociationFailure, ClientSmeStatus, ConnectFailure,
-            ConnectResult, ConnectTransactionEvent, ConnectTransactionSink, EstablishRsnaFailure,
-            EstablishRsnaFailureReason, ServingApInfo,
+            report_connect_finished, AssociationFailure, ClientConfig, ClientSmeStatus,
+            ConnectFailure, ConnectResult, ConnectTransactionEvent, ConnectTransactionSink,
+            EstablishRsnaFailure, EstablishRsnaFailureReason, ServingApInfo,
         },
         mlme_event_name,
         phy_selection::derive_phy_cbw,

@@ -19,11 +19,14 @@ use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::hasher::WlanHasher;
 use wlan_inspect;
-use wlan_sme::client::{
-    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, ConnectTransactionEvent,
-    ConnectTransactionStream, InfoEvent,
+use wlan_sme::{
+    self as sme,
+    client::{
+        self as client_sme, ConnectFailure, ConnectResult, ConnectTransactionEvent,
+        ConnectTransactionStream, InfoEvent, ScanResult, ScanResultList,
+    },
+    InfoStream,
 };
-use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
 use crate::inspect;
 use crate::stats_scheduler::StatsRequest;
@@ -275,7 +278,7 @@ async fn handle_info_event(
 
 fn send_scan_results(
     handle: fidl_sme::ScanTransactionControlHandle,
-    result: BssDiscoveryResult,
+    result: ScanResultList,
 ) -> Result<(), fidl::Error> {
     // Maximum number of scan results to send at a time so we don't exceed FIDL msg size limit.
     // A scan result may contain all IEs, which is at most 2304 bytes since that's the maximum
@@ -283,11 +286,12 @@ fn send_scan_results(
     // At 15, maximum size is 45k bytes, which is well under the 64k bytes limit.
     const MAX_ON_SCAN_RESULT: usize = 15;
     match result {
-        Ok(bss_list) => {
-            info!("Sending scan results for {} APs", bss_list.len());
-            for chunk in &bss_list.into_iter().chunks(MAX_ON_SCAN_RESULT) {
-                let mut fidl_list = chunk.into_iter().map(convert_bss_info).collect::<Vec<_>>();
-                handle.send_on_result(&mut fidl_list.iter_mut())?;
+        Ok(scan_result_list) => {
+            info!("Sending scan results for {} APs", scan_result_list.len());
+            for chunk in &scan_result_list.into_iter().chunks(MAX_ON_SCAN_RESULT) {
+                let mut fidl_scan_result_list =
+                    chunk.into_iter().map(convert_scan_result).collect::<Vec<_>>();
+                handle.send_on_result(&mut fidl_scan_result_list.iter_mut())?;
             }
             handle.send_on_finished()?;
         }
@@ -316,16 +320,16 @@ fn send_scan_results(
     Ok(())
 }
 
-fn convert_bss_info(bss: BssInfo) -> fidl_sme::BssInfo {
-    fidl_sme::BssInfo {
-        bssid: bss.bssid,
-        ssid: bss.ssid,
-        rssi_dbm: bss.rssi_dbm,
-        snr_db: bss.snr_db,
-        channel: bss.channel.into(),
-        protection: bss.protection.into(),
-        compatible: bss.compatible,
-        bss_description: bss.bss_description,
+fn convert_scan_result(s: ScanResult) -> fidl_sme::ScanResult {
+    fidl_sme::ScanResult {
+        bssid: s.bssid,
+        ssid: s.ssid,
+        rssi_dbm: s.rssi_dbm,
+        snr_db: s.snr_db,
+        channel: s.channel.into(),
+        protection: s.protection.into(),
+        compatible: s.compatible,
+        bss_description: s.bss_description,
     }
 }
 
@@ -458,7 +462,7 @@ mod tests {
         let handle = txn.into_stream().expect("expect into_stream to succeed").control_handle();
 
         let mut rng = rand::thread_rng();
-        let scan_results = (0..1000).map(|_| random_bss_info(&mut rng)).collect::<Vec<_>>();
+        let scan_results = (0..1000).map(|_| random_scan_result(&mut rng)).collect::<Vec<_>>();
         // If we exceed size limit, it should already fail here
         send_scan_results(handle, Ok(scan_results.clone()))
             .expect("expect send_scan_results to succeed");
@@ -577,7 +581,7 @@ mod tests {
         });
     }
 
-    async fn collect_scan(proxy: &fidl_sme::ScanTransactionProxy) -> Vec<fidl_sme::BssInfo> {
+    async fn collect_scan(proxy: &fidl_sme::ScanTransactionProxy) -> Vec<fidl_sme::ScanResult> {
         let mut stream = proxy.take_event_stream();
         let mut results = vec![];
         while let Some(Ok(event)) = stream.next().await {
@@ -596,8 +600,8 @@ mod tests {
         panic!("Did not receive fidl_sme::ScanTransactionEvent::OnFinished");
     }
 
-    // Create roughly over 2k bytes BssInfo
-    fn random_bss_info(rng: &mut ThreadRng) -> BssInfo {
+    // Create roughly over 2k bytes ScanResult
+    fn random_scan_result(rng: &mut ThreadRng) -> ScanResult {
         let mut ies = vec![];
         // SSID
         let ssid =
@@ -628,7 +632,7 @@ mod tests {
             },
             snr_db: rng.gen::<i8>(),
         };
-        let bss_info = BssInfo {
+        let scan_result = ScanResult {
             bssid: bss_description.bssid.clone(),
             ssid,
             rssi_dbm: bss_description.rssi_dbm,
@@ -643,6 +647,6 @@ mod tests {
             wmm_param: None,
             bss_description: bss_description,
         };
-        bss_info
+        scan_result
     }
 }

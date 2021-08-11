@@ -1961,7 +1961,7 @@ mod tests {
         });
         let new_bss_desc = generate_random_bss_description();
         let mock_scan_results = vec![
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
@@ -1975,7 +1975,7 @@ mod tests {
                 compatible: true,
                 bss_description: generate_random_bss_description(),
             },
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: bss_1.bssid.clone(),
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 0,
@@ -2080,7 +2080,7 @@ mod tests {
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         let mock_scan_results = vec![
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
@@ -2094,7 +2094,7 @@ mod tests {
                 compatible: true,
                 bss_description: bss_desc1.clone(),
             },
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: test_id_2.ssid.clone(),
                 rssi_dbm: 0,
@@ -2124,7 +2124,7 @@ mod tests {
             ssids: vec![test_id_1.ssid.clone()],
             channels: vec![1],
         });
-        let mock_active_scan_results = vec![fidl_sme::BssInfo {
+        let mock_active_scan_results = vec![fidl_sme::ScanResult {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
@@ -2192,7 +2192,7 @@ mod tests {
             ssids: vec![test_id_2.ssid.clone()],
             channels: vec![1],
         });
-        let mock_active_scan_results = vec![fidl_sme::BssInfo {
+        let mock_active_scan_results = vec![fidl_sme::ScanResult {
             bssid: [0, 0, 0, 0, 0, 0],
             ssid: test_id_2.ssid.clone(),
             rssi_dbm: 10,
@@ -2420,7 +2420,7 @@ mod tests {
             channels: vec![],
         });
         let mock_scan_results = vec![
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
@@ -2435,7 +2435,7 @@ mod tests {
                 compatible: true,
                 bss_description: bss_desc_1.clone(),
             },
-            fidl_sme::BssInfo {
+            fidl_sme::ScanResult {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "other ssid".as_bytes().to_vec(),
                 rssi_dbm: 0,

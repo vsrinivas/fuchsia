@@ -43,7 +43,7 @@ type UserDisconnectReason = strict enum {
     WLAN_DEV_TOOL = 127;
 };
 
-type BssInfo = struct {
+type ScanResult = struct {
     bssid array<uint8, 6>;
     ssid ieee80211.Ssid;
     rssi_dbm int8;
@@ -69,7 +69,7 @@ type ScanError = struct {
 protocol ScanTransaction {
     // Can be called several times to deliver incremental scan results
     -> OnResult(struct {
-        aps vector<BssInfo>;
+        aps vector<ScanResult>;
     });
     -> OnFinished();
     -> OnError(struct {

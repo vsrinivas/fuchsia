@@ -46,10 +46,10 @@ pub fn generate_random_bss_description() -> fidl_fuchsia_wlan_internal::BssDescr
     }
 }
 
-pub fn generate_random_bss_info() -> fidl_sme::BssInfo {
+pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
     let mut rng = rand::thread_rng();
     let bssid = (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>();
-    fidl_sme::BssInfo {
+    fidl_sme::ScanResult {
         bssid: bssid.as_slice().try_into().unwrap(),
         ssid: format!("rand ssid {}", rng.gen::<i32>()).as_bytes().to_vec(),
         rssi_dbm: rng.gen_range(-100, 20),

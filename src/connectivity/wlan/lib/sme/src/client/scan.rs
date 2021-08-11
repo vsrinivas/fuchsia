@@ -5,9 +5,9 @@
 use {
     crate::client::{inspect, DeviceInfo, Ssid},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, ScanRequest, ScanResultCode},
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
+    fuchsia_zircon as zx,
     log::{error, warn},
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -15,9 +15,9 @@ use {
         sync::Arc,
     },
     wlan_common::{
-        bss::BssDescription,
+        bss::{BssDescription, Protection},
         channel::{Cbw, Channel},
-        ie::IesMerger,
+        ie::{self, wsc, IesMerger},
     },
 };
 
@@ -26,6 +26,29 @@ const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
 const ACTIVE_SCAN_CHANNEL_MS: u32 = 75;
 
 type BssId = [u8; 6];
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScanResult {
+    pub bssid: [u8; 6],
+    pub ssid: Ssid,
+    pub rssi_dbm: i8,
+    pub snr_db: i8,
+    pub compatible: bool,
+    pub bss_description: fidl_internal::BssDescription,
+
+    // fidl_sme fields converted to non-trivial wlan_sme types
+    pub channel: Channel,
+    pub protection: Protection,
+
+    // Additional fields reported to wlanstack from wlan_sme
+    pub signal_report_time: zx::Time,
+    pub ht_cap: Option<fidl_internal::HtCapabilities>,
+    pub vht_cap: Option<fidl_internal::VhtCapabilities>,
+    pub probe_resp_wsc: Option<wsc::ProbeRespWsc>,
+    pub wmm_param: Option<ie::WmmParam>,
+}
+
+pub type ScanResultList = Result<Vec<ScanResult>, fidl_mlme::ScanResultCode>;
 
 // A "user"-initiated scan request for the purpose of discovering available networks
 #[derive(Debug, PartialEq)]
@@ -48,40 +71,33 @@ impl<T> DiscoveryScan<T> {
     }
 }
 
-pub struct ScanScheduler<D> {
+pub struct ScanScheduler<T> {
     // The currently running scan. We assume that MLME can handle a single concurrent scan
     // regardless of its own state.
-    current: ScanState<D>,
+    current: ScanState<T>,
     // Pending discovery requests from the user
-    pending_discovery: Vec<DiscoveryScan<D>>,
+    pending_discovery: Vec<DiscoveryScan<T>>,
     device_info: Arc<DeviceInfo>,
     last_mlme_txn_id: u64,
 }
 
 #[derive(Debug)]
-enum ScanState<D> {
+enum ScanState<T> {
     NotScanning,
     ScanningToDiscover {
-        cmd: DiscoveryScan<D>,
+        cmd: DiscoveryScan<T>,
         mlme_txn_id: u64,
         bss_map: HashMap<BssId, (fidl_internal::BssDescription, IesMerger)>,
     },
 }
 
-// A reaction to MLME's ScanConfirm event
-pub enum ScanResult<D> {
-    // No reaction: the scan results are not relevant anymore, or we received
-    // an unexpected ScanConfirm.
-    None,
-    // Scan finished, either successfully or not.
-    // SME is expected to forward the result to the user.
-    DiscoveryFinished {
-        tokens: Vec<D>,
-        bss_description_list: Result<Vec<BssDescription>, fidl_mlme::ScanResultCode>,
-    },
+pub struct ScanEnd<T> {
+    pub tokens: Vec<T>,
+    pub result_code: fidl_mlme::ScanResultCode,
+    pub bss_description_list: Vec<BssDescription>,
 }
 
-impl<D> ScanScheduler<D> {
+impl<T> ScanScheduler<T> {
     pub fn new(device_info: Arc<DeviceInfo>) -> Self {
         ScanScheduler {
             current: ScanState::NotScanning,
@@ -94,7 +110,10 @@ impl<D> ScanScheduler<D> {
     // Initiate a "discovery" scan. The scan might or might not begin immediately.
     // The request can be merged with any pending or ongoing requests.
     // If a ScanRequest is returned, the caller is responsible for forwarding it to MLME.
-    pub fn enqueue_scan_to_discover(&mut self, s: DiscoveryScan<D>) -> Option<ScanRequest> {
+    pub fn enqueue_scan_to_discover(
+        &mut self,
+        s: DiscoveryScan<T>,
+    ) -> Option<fidl_mlme::ScanRequest> {
         if let ScanState::ScanningToDiscover { cmd, .. } = &mut self.current {
             if cmd.matches(&s) {
                 cmd.merges(s);
@@ -134,20 +153,18 @@ impl<D> ScanScheduler<D> {
         &mut self,
         msg: fidl_mlme::ScanEnd,
         sme_inspect: &Arc<inspect::SmeTree>,
-    ) -> (ScanResult<D>, Option<ScanRequest>) {
+    ) -> (Result<ScanEnd<T>, ()>, Option<fidl_mlme::ScanRequest>) {
         if !self.matching_mlme_txn_id(msg.txn_id) {
-            return (ScanResult::None, None);
+            return (Err(()), None);
         }
         let old_state = mem::replace(&mut self.current, ScanState::NotScanning);
         let result = match old_state {
-            ScanState::NotScanning => ScanResult::None,
-            ScanState::ScanningToDiscover { cmd, bss_map, .. } => ScanResult::DiscoveryFinished {
+            ScanState::NotScanning => Err(()),
+            ScanState::ScanningToDiscover { cmd, bss_map, .. } => Ok(ScanEnd {
                 tokens: cmd.tokens,
-                bss_description_list: match msg.code {
-                    ScanResultCode::Success => Ok(convert_bss_map(bss_map, None, sme_inspect)),
-                    other => Err(other),
-                },
-            },
+                result_code: msg.code,
+                bss_description_list: convert_bss_map(bss_map, None, sme_inspect),
+            }),
         };
         let request = self.start_next_scan();
         (result, request)
@@ -160,7 +177,7 @@ impl<D> ScanScheduler<D> {
         }
     }
 
-    fn start_next_scan(&mut self) -> Option<ScanRequest> {
+    fn start_next_scan(&mut self) -> Option<fidl_mlme::ScanRequest> {
         let has_pending = !self.pending_discovery.is_empty();
         (matches!(self.current, ScanState::NotScanning) && has_pending).then(|| {
             self.last_mlme_txn_id += 1;
@@ -232,8 +249,8 @@ fn new_scan_request(
     scan_request: fidl_sme::ScanRequest,
     ssid: Vec<u8>,
     device_info: &DeviceInfo,
-) -> ScanRequest {
-    let scan_req = ScanRequest {
+) -> fidl_mlme::ScanRequest {
+    let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
         // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
         bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
@@ -247,7 +264,7 @@ fn new_scan_request(
         ssid_list: None,
     };
     match scan_request {
-        fidl_sme::ScanRequest::Active(active_scan_params) => ScanRequest {
+        fidl_sme::ScanRequest::Active(active_scan_params) => fidl_mlme::ScanRequest {
             scan_type: fidl_mlme::ScanTypes::Active,
             probe_delay: ACTIVE_SCAN_PROBE_DELAY_MS,
             min_channel_time: ACTIVE_SCAN_CHANNEL_MS,
@@ -267,7 +284,7 @@ fn new_discovery_scan_request<T>(
     mlme_txn_id: u64,
     discovery_scan: &DiscoveryScan<T>,
     device_info: &DeviceInfo,
-) -> ScanRequest {
+) -> fidl_mlme::ScanRequest {
     new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), vec![], device_info)
 }
 
@@ -391,16 +408,18 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, bss_description_list) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
-            "expected discovery scan to be completed"
+        let (tokens, bss_description_list) = assert_variant!(
+            result,
+            Ok(ScanEnd {
+                tokens,
+                result_code: fidl_mlme::ScanResultCode::Success,
+                bss_description_list
+            }) => (tokens, bss_description_list),
+            "expected discovery scan to be completed successfully"
         );
         assert_eq!(vec![10], tokens);
-        let mut ssid_list = bss_description_list
-            .expect("expected a successful scan result")
-            .into_iter()
-            .map(|bss| bss.ssid().to_vec())
-            .collect::<Vec<_>>();
+        let mut ssid_list =
+            bss_description_list.into_iter().map(|bss| bss.ssid().to_vec()).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"foo".to_vec(), b"qux".to_vec()], ssid_list);
     }
@@ -439,16 +458,18 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, bss_description_list) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
-            "expected discovery scan to be completed"
+        let (tokens, bss_description_list) = assert_variant!(
+            result,
+            Ok(ScanEnd {
+                tokens,
+                result_code: fidl_mlme::ScanResultCode::Success,
+                bss_description_list
+            }) => (tokens, bss_description_list),
+            "expected discovery scan to be completed successfully"
         );
         assert_eq!(vec![10], tokens);
-        let mut ssid_list = bss_description_list
-            .expect("expected a successful scan result")
-            .into_iter()
-            .map(|bss| bss.ssid().to_vec())
-            .collect::<Vec<_>>();
+        let mut ssid_list =
+            bss_description_list.into_iter().map(|bss| bss.ssid().to_vec()).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"baz".to_vec()], ssid_list);
     }
@@ -478,17 +499,21 @@ mod tests {
             &sme_inspect,
         );
         assert!(req.is_none());
-        let (tokens, bss_description_list) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
-            "expected discovery scan to be completed"
+        let (tokens, bss_description_list) = assert_variant!(
+            result,
+            Ok(ScanEnd {
+                tokens,
+                result_code: fidl_mlme::ScanResultCode::Success,
+                bss_description_list
+            }) => (tokens, bss_description_list),
+            "expected discovery scan to be completed successfully"
         );
         assert_eq!(vec![10], tokens);
 
-        let result = bss_description_list.expect("expected a successful scan result");
-        assert_eq!(result.len(), 1);
+        assert_eq!(bss_description_list.len(), 1);
         // Verify that both IEs are processed.
-        assert!(slice_contains(&result[0].ies[..], ie_marker1));
-        assert!(slice_contains(&result[0].ies[..], ie_marker2));
+        assert!(slice_contains(&bss_description_list[0].ies[..], ie_marker1));
+        assert!(slice_contains(&bss_description_list[0].ies[..], ie_marker2));
     }
 
     fn slice_contains(slice: &[u8], subslice: &[u8]) -> bool {
@@ -675,7 +700,7 @@ mod tests {
             &sme_inspect,
         );
 
-        // Expect discovery result with 2nd and 3rd tokens
+        // Expect discovery result with 2nd and 4th tokens
         assert_discovery_scan_result(result, vec![20, 40], vec![b"bar".to_vec()]);
 
         // We don't expect another request to the MLME
@@ -683,20 +708,22 @@ mod tests {
     }
 
     fn assert_discovery_scan_result(
-        result: ScanResult<i32>,
+        result: Result<ScanEnd<i32>, ()>,
         expected_tokens: Vec<i32>,
         expected_ssids: Vec<Vec<u8>>,
     ) {
-        let (tokens, bss_description_list) = assert_variant!(result,
-            ScanResult::DiscoveryFinished { tokens, bss_description_list } => (tokens, bss_description_list),
-            "expected discovery scan to be completed"
+        let (tokens, bss_description_list) = assert_variant!(
+            result,
+            Ok(ScanEnd {
+                tokens,
+                result_code: fidl_mlme::ScanResultCode::Success,
+                bss_description_list
+            }) => (tokens, bss_description_list),
+            "expected discovery scan to be completed successfully"
         );
         assert_eq!(tokens, expected_tokens);
-        let mut ssid_list = bss_description_list
-            .expect("expected a successful scan result")
-            .into_iter()
-            .map(|bss| bss.ssid().to_vec())
-            .collect::<Vec<_>>();
+        let mut ssid_list =
+            bss_description_list.into_iter().map(|bss| bss.ssid().to_vec()).collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(ssid_list, expected_ssids);
     }

@@ -30,7 +30,7 @@ pub fn validate_sme_scan_request_and_send_results(
     exec: &mut fasync::TestExecutor,
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
     expected_scan_request: &fidl_sme::ScanRequest,
-    mut scan_results: Vec<fidl_sme::BssInfo>,
+    mut scan_results: Vec<fidl_sme::ScanResult>,
 ) {
     // Check that a scan request was sent to the sme and send back results
     assert_variant!(
@@ -64,7 +64,7 @@ pub fn poll_for_and_validate_sme_scan_request_and_send_results(
     network_selection_fut: &mut Pin<&mut impl futures::Future>,
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
     expected_scan_request: &fidl_sme::ScanRequest,
-    mut scan_results: Vec<fidl_sme::BssInfo>,
+    mut scan_results: Vec<fidl_sme::ScanResult>,
 ) {
     let mut counter = 0;
     let sme_stream_result = loop {
