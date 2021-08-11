@@ -52,7 +52,7 @@ TEST(RawSocketTest, SendToDifferentProtocolV6) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
 
-  struct sockaddr_in6 send_addr = {
+  const struct sockaddr_in6 send_addr = {
       .sin6_family = AF_INET6,
       // If spcified, the port value must not be different from the associated
       // protocol of the raw IPv6 socket.
@@ -62,7 +62,7 @@ TEST(RawSocketTest, SendToDifferentProtocolV6) {
 
   char payload[1] = {};
   ASSERT_EQ(sendto(fd.get(), &payload, sizeof(payload), 0,
-                   reinterpret_cast<struct sockaddr*>(&send_addr), sizeof(send_addr)),
+                   reinterpret_cast<const struct sockaddr*>(&send_addr), sizeof(send_addr)),
             -1);
   ASSERT_EQ(errno, EINVAL);
 
@@ -72,7 +72,7 @@ TEST(RawSocketTest, SendToDifferentProtocolV6) {
 TEST(RawSocketTest, SendToDifferentProtocolV4) {
   SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
 
-  const uint32_t loopback_as_u32 = htonl(INADDR_LOOPBACK);
+  const uint32_t network_endian_loopback_addr = htonl(INADDR_LOOPBACK);
 
   fbl::unique_fd udp;
   ASSERT_TRUE(udp = fbl::unique_fd(socket(AF_INET, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
@@ -80,9 +80,9 @@ TEST(RawSocketTest, SendToDifferentProtocolV4) {
   fbl::unique_fd tcp;
   ASSERT_TRUE(tcp = fbl::unique_fd(socket(AF_INET, SOCK_RAW, IPPROTO_TCP))) << strerror(errno);
 
-  struct sockaddr_in addr = {
+  const struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = loopback_as_u32,
+      .sin_addr.s_addr = network_endian_loopback_addr,
   };
 
   char addrbuf[INET_ADDRSTRLEN];
@@ -110,7 +110,8 @@ TEST(RawSocketTest, SendToDifferentProtocolV4) {
 
   // Receive a packet through the raw socket and make sure the transport
   // protocol matches what the socket is associated with.
-  auto recv = [&loopback_as_u32, &addrstr](const fbl::unique_fd& fd, uint16_t proto, char payload) {
+  auto recv = [&network_endian_loopback_addr, &addrstr](const fbl::unique_fd& fd, uint16_t proto,
+                                                        char payload) {
     char read_raw_ip_buf[sizeof(iphdr) + sizeof(payload)] = {};
     struct sockaddr_in peer;
     socklen_t peerlen = sizeof(peer);
@@ -123,8 +124,8 @@ TEST(RawSocketTest, SendToDifferentProtocolV4) {
     EXPECT_EQ(ntohs(ip->tot_len), sizeof(read_raw_ip_buf));
     EXPECT_EQ(ntohs(ip->frag_off) & IP_OFFMASK, 0);
     EXPECT_EQ(ip->protocol, proto);
-    EXPECT_EQ(ip->saddr, loopback_as_u32);
-    EXPECT_EQ(ip->daddr, loopback_as_u32);
+    EXPECT_EQ(ip->saddr, network_endian_loopback_addr);
+    EXPECT_EQ(ip->daddr, network_endian_loopback_addr);
     EXPECT_EQ(read_raw_ip_buf[sizeof(iphdr)], payload);
     char peerbuf[INET_ADDRSTRLEN];
     const char* peerstr = inet_ntop(peer.sin_family, &peer.sin_addr, peerbuf, sizeof(peerbuf));
@@ -151,23 +152,27 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
   fbl::unique_fd udpfd;
   ASSERT_TRUE(udpfd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
 
-  struct sockaddr_in6 addr = {
+  const uint16_t udpfd_bound_port = 1335;
+  const uint16_t udpfd_peer_port = 1336;
+  const struct sockaddr_in6 addr = {
       .sin6_family = AF_INET6,
       .sin6_addr = IN6ADDR_LOOPBACK_INIT,
   };
 
-  ASSERT_EQ(bind(udpfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(udpfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
-      << strerror(errno);
-  ASSERT_EQ(addrlen, sizeof(addr));
+  {
+    struct sockaddr_in6 bind_addr = addr;
+    bind_addr.sin6_port = htons(udpfd_bound_port);
+    ASSERT_EQ(
+        bind(udpfd.get(), reinterpret_cast<const struct sockaddr*>(&bind_addr), sizeof(bind_addr)),
+        0)
+        << strerror(errno);
+  }
 
   const char payload[] = {1, 2, 3, 4};
   char raw_udp_buf[sizeof(udphdr) + sizeof(payload)] = {};
   *(reinterpret_cast<udphdr*>(raw_udp_buf)) = udphdr{
-      .uh_sport = htons(1337),
-      .uh_dport = addr.sin6_port,
+      .uh_sport = htons(udpfd_peer_port),
+      .uh_dport = htons(udpfd_bound_port),
       .uh_ulen = htons(sizeof(raw_udp_buf)),
       .uh_sum = 0,  // Checksumming is not required for packets that are looped
                     // back on Fuchsia. For Linux, we use IPV6_CHECKSUM below.
@@ -187,14 +192,10 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
         << strerror(errno);
   }
 #endif
-  {
-    struct sockaddr_in6 raw_sendto_addr = addr;
-    raw_sendto_addr.sin6_port = 0;
-    ASSERT_EQ(sendto(rawfd.get(), raw_udp_buf, sizeof(raw_udp_buf), 0,
-                     reinterpret_cast<struct sockaddr*>(&raw_sendto_addr), sizeof(raw_sendto_addr)),
-              ssize_t(sizeof(raw_udp_buf)))
-        << strerror(errno);
-  }
+  ASSERT_EQ(sendto(rawfd.get(), raw_udp_buf, sizeof(raw_udp_buf), 0,
+                   reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+            ssize_t(sizeof(raw_udp_buf)))
+      << strerror(errno);
 
   char addrbuf[INET_ADDRSTRLEN];
   const char* addrstr = inet_ntop(addr.sin6_family, &addr.sin6_addr, addrbuf, sizeof(addrbuf));
@@ -216,6 +217,7 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
     const char* peerstr = inet_ntop(peer.sin6_family, &peer.sin6_addr, peerbuf, sizeof(peerbuf));
     ASSERT_NE(peerstr, nullptr);
     EXPECT_STREQ(peerstr, addrstr);
+    EXPECT_EQ(ntohs(peer.sin6_port), udpfd_peer_port);
     ASSERT_EQ(sendto(udpfd.get(), payload, sizeof(payload), 0,
                      reinterpret_cast<struct sockaddr*>(&peer), peerlen),
               ssize_t(sizeof(payload)))
@@ -252,10 +254,10 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
 
   // Validate the packet sent with the UDP socket.
   {
-    // Flip the ports as the packet was sent from the peer.
+    // Update expected ports as the packet was sent from the peer.
     udphdr* udp = reinterpret_cast<udphdr*>(raw_udp_buf);
-    udp->uh_dport = udp->uh_sport;
-    udp->uh_sport = addr.sin6_port;
+    udp->uh_dport = htons(udpfd_peer_port);
+    udp->uh_sport = htons(udpfd_bound_port);
     SCOPED_TRACE("check packet sent with UDP socket");
     ASSERT_NO_FATAL_FAILURE(check_packet());
   }
@@ -267,28 +269,32 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
 TEST(RawSocketTest, SendtoRecvfrom) {
   SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
 
-  const uint32_t loopback_as_u32 = htonl(INADDR_LOOPBACK);
+  const uint16_t udpfd_bound_port = 1338;
+  const uint16_t udpfd_peer_port = 1337;
+  const uint32_t network_endian_loopback_addr = htonl(INADDR_LOOPBACK);
 
   fbl::unique_fd udpfd;
   ASSERT_TRUE(udpfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
-  struct sockaddr_in addr = {
+  const struct sockaddr_in addr = {
       .sin_family = AF_INET,
-      .sin_addr.s_addr = loopback_as_u32,
+      .sin_addr.s_addr = network_endian_loopback_addr,
   };
 
-  ASSERT_EQ(bind(udpfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  socklen_t addrlen = sizeof(addr);
-  ASSERT_EQ(getsockname(udpfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
-      << strerror(errno);
-  ASSERT_EQ(addrlen, sizeof(addr));
+  {
+    struct sockaddr_in bind_addr = addr;
+    bind_addr.sin_port = htons(udpfd_bound_port);
+    ASSERT_EQ(
+        bind(udpfd.get(), reinterpret_cast<const struct sockaddr*>(&bind_addr), sizeof(bind_addr)),
+        0)
+        << strerror(errno);
+  }
 
   const char payload[] = {1, 2, 3, 4};
   char raw_udp_buf[sizeof(udphdr) + sizeof(payload)] = {};
   *(reinterpret_cast<udphdr*>(raw_udp_buf)) = udphdr{
-      .uh_sport = htons(1337),
-      .uh_dport = addr.sin_port,
+      .uh_sport = htons(udpfd_peer_port),
+      .uh_dport = htons(udpfd_bound_port),
       .uh_ulen = htons(sizeof(raw_udp_buf)),
       .uh_sum = 0,  // Checksum is optional for UDP on IPv4.
   };
@@ -297,7 +303,7 @@ TEST(RawSocketTest, SendtoRecvfrom) {
   fbl::unique_fd rawfd;
   ASSERT_TRUE(rawfd = fbl::unique_fd(socket(AF_INET, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
   ASSERT_EQ(sendto(rawfd.get(), raw_udp_buf, sizeof(raw_udp_buf), 0,
-                   reinterpret_cast<struct sockaddr*>(&addr), addrlen),
+                   reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
             ssize_t(sizeof(raw_udp_buf)))
       << strerror(errno);
 
@@ -305,7 +311,7 @@ TEST(RawSocketTest, SendtoRecvfrom) {
   const char* addrstr = inet_ntop(addr.sin_family, &addr.sin_addr, addrbuf, sizeof(addrbuf));
   ASSERT_NE(addrstr, nullptr);
 
-  {
+  auto check_payload = [&udpfd, &payload, addrstr, udpfd_peer_port]() {
     char read_payload[sizeof(payload)] = {};
     struct sockaddr_in peer;
     socklen_t peerlen = sizeof(peer);
@@ -321,16 +327,30 @@ TEST(RawSocketTest, SendtoRecvfrom) {
     const char* peerstr = inet_ntop(peer.sin_family, &peer.sin_addr, peerbuf, sizeof(peerbuf));
     ASSERT_NE(peerstr, nullptr);
     EXPECT_STREQ(peerstr, addrstr);
+    EXPECT_EQ(ntohs(peer.sin_port), udpfd_peer_port);
+  };
+  {
+    SCOPED_TRACE("check UDP payload sent with raw socket");
+    ASSERT_NO_FATAL_FAILURE(check_payload());
+  }
+  {
     int yes = 1;
-    ASSERT_EQ(setsockopt(udpfd.get(), SOL_SOCKET, SO_NO_CHECK, &yes, sizeof yes), 0)
+    ASSERT_EQ(setsockopt(udpfd.get(), SOL_SOCKET, SO_NO_CHECK, &yes, sizeof(yes)), 0)
         << strerror(errno);
+
+    struct sockaddr_in peer = addr;
+    peer.sin_port = htons(udpfd_peer_port);
     ASSERT_EQ(sendto(udpfd.get(), payload, sizeof(payload), 0,
-                     reinterpret_cast<struct sockaddr*>(&peer), peerlen),
+                     reinterpret_cast<struct sockaddr*>(&peer), sizeof(peer)),
               ssize_t(sizeof(payload)))
         << strerror(errno);
   }
 
-  auto check_packet = [loopback_as_u32, &rawfd, &raw_udp_buf, addrstr]() {
+  const unsigned int EXPECTED_IHL =
+      sizeof(iphdr) / 4;  // IHL holds the number of header bytes in 4 byte units.
+
+  auto check_packet = [EXPECTED_IHL, network_endian_loopback_addr, &rawfd, &raw_udp_buf,
+                       addrstr]() {
     char read_raw_ip_buf[sizeof(iphdr) + sizeof(udphdr) + sizeof(payload)] = {};
     struct sockaddr_in peer;
     socklen_t peerlen = sizeof(peer);
@@ -340,11 +360,13 @@ TEST(RawSocketTest, SendtoRecvfrom) {
         << strerror(errno);
     ASSERT_EQ(peerlen, sizeof(peer));
     iphdr* ip = reinterpret_cast<iphdr*>(read_raw_ip_buf);
+    EXPECT_EQ(ip->version, static_cast<unsigned int>(IPVERSION));
+    EXPECT_EQ(ip->ihl, EXPECTED_IHL);
     EXPECT_EQ(ntohs(ip->tot_len), sizeof(iphdr) + sizeof(udphdr) + sizeof(payload));
     EXPECT_EQ(ntohs(ip->frag_off) & IP_OFFMASK, 0);
     EXPECT_EQ(ip->protocol, SOL_UDP);
-    EXPECT_EQ(ip->saddr, loopback_as_u32);
-    EXPECT_EQ(ip->daddr, loopback_as_u32);
+    EXPECT_EQ(ip->saddr, network_endian_loopback_addr);
+    EXPECT_EQ(ip->daddr, network_endian_loopback_addr);
     char* read_raw_udp_buf = &read_raw_ip_buf[sizeof(iphdr)];
     for (size_t i = 0; i < sizeof(raw_udp_buf); i++) {
       EXPECT_EQ(raw_udp_buf[i], read_raw_udp_buf[i]) << "byte mismatch @ idx=" << i;
@@ -366,12 +388,39 @@ TEST(RawSocketTest, SendtoRecvfrom) {
 
   // Validate the packet sent with the UDP socket.
   {
-    // Flip the ports as the packet was sent from the peer.
+    // Update expected ports as the packet was sent from the peer.
     udphdr* udp = reinterpret_cast<udphdr*>(raw_udp_buf);
-    udp->uh_dport = udp->uh_sport;
-    udp->uh_sport = addr.sin_port;
+    udp->uh_dport = htons(udpfd_peer_port);
+    udp->uh_sport = htons(udpfd_bound_port);
     SCOPED_TRACE("check packet sent with UDP socket");
     ASSERT_NO_FATAL_FAILURE(check_packet());
+  }
+
+  // Attempt to write the packet but with the IPv4 header included.
+  {
+    udphdr* udp = reinterpret_cast<udphdr*>(raw_udp_buf);
+    udp->uh_dport = htons(udpfd_bound_port);
+    udp->uh_sport = htons(udpfd_peer_port);
+    char raw_ip_buf[sizeof(iphdr) + sizeof(udphdr) + sizeof(payload)] = {};
+    iphdr* ip = reinterpret_cast<iphdr*>(raw_ip_buf);
+    ip->version = IPVERSION;
+    ip->ihl = EXPECTED_IHL;
+    ip->ttl = 2;
+    ip->protocol = SOL_UDP;
+    ip->saddr = network_endian_loopback_addr;
+    ip->daddr = network_endian_loopback_addr;
+    memcpy(raw_ip_buf + sizeof(iphdr), raw_udp_buf, sizeof(raw_udp_buf));
+    int yes = 1;
+    ASSERT_EQ(setsockopt(rawfd.get(), SOL_IP, IP_HDRINCL, (void*)&yes, sizeof(yes)), 0)
+        << strerror(errno);
+    ASSERT_EQ(sendto(rawfd.get(), raw_ip_buf, sizeof(raw_ip_buf), 0,
+                     reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+              ssize_t(sizeof(raw_ip_buf)))
+        << strerror(errno);
+  }
+  {
+    SCOPED_TRACE("check UDP payload sent with raw socket with IP header included");
+    ASSERT_NO_FATAL_FAILURE(check_payload());
   }
 
   ASSERT_EQ(close(rawfd.release()), 0) << strerror(errno);

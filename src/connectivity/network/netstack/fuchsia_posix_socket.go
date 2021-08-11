@@ -2668,6 +2668,16 @@ func (s *rawSocketImpl) GetInfo(fidl.Context) (rawsocket.SocketGetInfoResult, er
 	}), nil
 }
 
+func (s *rawSocketImpl) SetIpHeaderIncluded(_ fidl.Context, value bool) (rawsocket.SocketSetIpHeaderIncludedResult, error) {
+	s.ep.SocketOptions().SetHeaderIncluded(value)
+	return rawsocket.SocketSetIpHeaderIncludedResultWithResponse(rawsocket.SocketSetIpHeaderIncludedResponse{}), nil
+}
+
+func (s *rawSocketImpl) GetIpHeaderIncluded(fidl.Context) (rawsocket.SocketGetIpHeaderIncludedResult, error) {
+	value := s.ep.SocketOptions().GetHeaderIncluded()
+	return rawsocket.SocketGetIpHeaderIncludedResultWithResponse(rawsocket.SocketGetIpHeaderIncludedResponse{Value: value}), nil
+}
+
 // Adapted from helper function `nicStateFlagsToLinux` in gvisor's
 // sentry/socket/netstack package.
 func nicInfoFlagsToFIDL(info stack.NICInfo) socket.InterfaceFlags {

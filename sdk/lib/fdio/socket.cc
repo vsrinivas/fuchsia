@@ -1644,6 +1644,29 @@ struct socket_with_event : public zxio {
   }
 };
 
+template <>
+zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, const void* optval,
+                                                     socklen_t optlen, int16_t* out_code) {
+  SockOptResult result = [&]() {
+    switch (level) {
+      case SOL_IP:
+        switch (optname) {
+          case IP_HDRINCL: {
+            SetSockOptProcessor proc(optval, optlen);
+            return proc.Process<bool>([this](bool value) {
+              return zxio_socket_with_event().client.SetIpHeaderIncluded(value);
+            });
+          }
+        }
+        break;
+    }
+    return BaseSocket(zxio_socket_with_event().client)
+        .setsockopt_fidl(level, optname, optval, optlen);
+  }();
+  *out_code = result.err;
+  return result.status;
+}
+
 using datagram_socket = socket_with_event<DatagramSocket>;
 using raw_socket = socket_with_event<RawSocket>;
 

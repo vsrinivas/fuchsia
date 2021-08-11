@@ -112,4 +112,13 @@ protocol Socket {
         domain fuchsia.posix.socket.Domain;
         proto ProtocolAssociation;
     }) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IP` -> `IP_HDRINCL`.
+    SetIpHeaderIncluded(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_HDRINCL`.
+    GetIpHeaderIncluded() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
 };
