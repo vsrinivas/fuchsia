@@ -132,6 +132,16 @@ If you are not seeing absolute or incremental coverage information for your
 code, first review the [limitations](#limitations) and ensure that your code is
 expected to receive coverage support in the first place.
 
+To help you troubleshoot, review whether you are missing coverage (lines should
+have coverage but are showing as not covered) or whether you have no coverage
+information at all (files don't appear in coverage reports at all, or lines are
+not annotated on whether or not they are covered).
+
+Missing coverage indicates that the code was built with instrumentation but
+wasn't actually covered by a test that ran. No coverage information at all might
+indicate for instance that your code doesn't build with coverage or your tests
+don't run under coverage (more on this below).
+
 ### Stale reports / latency
 
 Absolute coverage reports are generated after the code is merged and may take a
@@ -191,6 +201,23 @@ from your test. As a best practice you should treat flakes on coverage the same
 as you would treat flakes elsewhere, mainly fix the flakiness.
 
 See also: [flaky test policy][flaky-policy].
+
+### Not seeing expected coverage in Gerrit
+
+If you are not seeing coverage for certain lines but you are convinced that
+those lines should be covered by tests that are running, try collecting coverage
+again by pressing "Choose Tryjobs", finding `fuchsia-coverage`, and adding it.
+
+![Gerrit screenshot of adding fuchsia-coverage](choose_tryjobs_fuchsia_coverage.png)
+
+If `fuchsia-coverage` finishes (turns green) and you are seeing different line
+coverage results, then one of the following is true:
+
+1. Your tests exercise the code under test in an inconsistent way between
+   different runs. This often also leads to flaky test results, and is usually a
+   problem with the behavior of the test or the code under test.
+1. There is an issue in how coverage is generated and collected that leads to
+   inconsistent results. Please file a bug.
 
 ## How test coverage works
 
