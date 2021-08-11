@@ -38,22 +38,13 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_scan_ended<D>(
-        &mut self,
-        _txn_id: ScanTxnId,
-        result: &Result<scan::ScanEnd<D>, ()>,
-    ) {
-        match result {
-            Err(()) => {}
-            Ok(scan::ScanEnd { result_code, bss_description_list, .. }) => {
-                let bss_count = bss_description_list.len();
-                let stats =
-                    self.stats_collector.report_discovery_scan_ended(*result_code, bss_count);
-                warn_if_err!(stats);
-                if let Ok(stats) = stats {
-                    self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
-                }
-            }
+    pub fn report_scan_ended<D>(&mut self, _txn_id: ScanTxnId, scan_end: &scan::ScanEnd<D>) {
+        let bss_count = scan_end.bss_description_list.len();
+        let stats =
+            self.stats_collector.report_discovery_scan_ended(scan_end.result_code, bss_count);
+        warn_if_err!(stats);
+        if let Ok(stats) = stats {
+            self.info_sink.send(InfoEvent::DiscoveryScanStats(stats));
         }
     }
 

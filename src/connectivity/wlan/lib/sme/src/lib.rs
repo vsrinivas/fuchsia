@@ -15,6 +15,7 @@ pub mod timer;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
+use thiserror::Error;
 
 use crate::client::InfoEvent;
 use crate::timer::TimedEvent;
@@ -120,4 +121,16 @@ fn mlme_event_name(event: &MlmeEvent) -> &str {
         MlmeEvent::OnSaeFrameRx { .. } => "OnSaeFrameRx",
         MlmeEvent::OnWmmStatusResp { .. } => "OnWmmStatusResp",
     }
+}
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("scan end while not scanning")]
+    ScanEndNotScanning,
+    #[error("scan end with wrong txn id")]
+    ScanEndWrongTxnId,
+    #[error("scan result while not scanning")]
+    ScanResultNotScanning,
+    #[error("scan result with wrong txn id")]
+    ScanResultWrongTxnId,
 }

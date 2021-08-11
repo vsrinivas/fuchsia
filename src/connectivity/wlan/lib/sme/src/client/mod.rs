@@ -593,22 +593,24 @@ impl super::Station for ClientSme {
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         match event {
             MlmeEvent::OnScanResult { result } => {
-                self.scan_sched.on_mlme_scan_result(result, &self.context.inspect);
+                match self.scan_sched.on_mlme_scan_result(result, &self.context.inspect) {
+                    Ok(()) => {}
+                    Err(e) => error!("scan result error: {:?}", e),
+                }
             }
             MlmeEvent::OnScanEnd { end } => {
-                let txn_id = end.txn_id;
-                let (scan_end, next_request) =
-                    self.scan_sched.on_mlme_scan_end(end, &self.context.inspect);
-                // Finalize stats for previous scan first before sending scan request for the next
-                // one, which would also start stats collection for new scan scan.
-                self.context.info.report_scan_ended(txn_id, &scan_end);
-                self.send_scan_request(next_request);
-                match scan_end {
-                    Err(()) => warn!("Unexpected MLME scan end."),
-                    Ok(scan::ScanEnd { tokens, result_code, bss_description_list }) => {
-                        match result_code {
+                match self.scan_sched.on_mlme_scan_end(end, &self.context.inspect) {
+                    Err(e) => error!("scan end error: {:?}", e),
+                    Ok((scan_end, next_request)) => {
+                        // Finalize stats for previous scan before sending scan request for
+                        // the next one, which start stats collection for new scan.
+                        self.context.info.report_scan_ended(end.txn_id, &scan_end);
+                        self.send_scan_request(next_request);
+
+                        match scan_end.result_code {
                             fidl_mlme::ScanResultCode::Success => {
-                                let scan_result_list: Vec<ScanResult> = bss_description_list
+                                let scan_result_list: Vec<ScanResult> = scan_end
+                                    .bss_description_list
                                     .iter()
                                     .map(|bss_description| {
                                         self.cfg.create_scan_result(
@@ -618,16 +620,16 @@ impl super::Station for ClientSme {
                                         )
                                     })
                                     .collect();
-                                for responder in tokens {
+                                for responder in scan_end.tokens {
                                     responder.respond(Ok(scan_result_list.clone()));
                                 }
                             }
                             result_code => {
-                                let count = bss_description_list.len();
+                                let count = scan_end.bss_description_list.len();
                                 if count > 0 {
                                     warn!("Incomplete scan with {} pending results.", count);
                                 }
-                                for responder in tokens {
+                                for responder in scan_end.tokens {
                                     responder.respond(Err(result_code));
                                 }
                             }
