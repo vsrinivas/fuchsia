@@ -15,7 +15,7 @@ use {
         ime_handler::ImeHandler,
         input_device,
         input_handler::InputHandler,
-        input_pipeline::{InputDeviceBindingHashMap, InputPipeline},
+        input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap,
         mouse_handler::MouseHandler,
         shortcut_handler::ShortcutHandler,
@@ -50,7 +50,8 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        input_handlers(scene_manager, text_settings_handler).await,
+        InputPipelineAssembly::new()
+            .add_all_handlers(input_handlers(scene_manager, text_settings_handler).await),
     )
     .await
     .context("Failed to create InputPipeline.")?;

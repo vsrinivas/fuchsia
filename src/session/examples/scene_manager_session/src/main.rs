@@ -10,8 +10,8 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as fsyslog,
     input_pipeline::{
-        self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline, mouse,
-        Position,
+        self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline,
+        input_pipeline::InputPipelineAssembly, mouse, Position,
     },
     scene_management::{self, SceneManager, ScreenCoordinates},
     std::cell::RefCell,
@@ -80,11 +80,11 @@ async fn main() -> Result<(), Error> {
 
     let input_pipeline = InputPipeline::new(
         vec![input_device::InputDeviceType::Mouse],
-        vec![Rc::new(SimpleCursor {
+        InputPipelineAssembly::new().add_handler(Rc::new(SimpleCursor {
             position: RefCell::new(position),
             max_position,
             scene_manager: RefCell::new(scene_manager),
-        })],
+        })),
     )
     .await
     .context("Failed to create InputPipeline.")?;

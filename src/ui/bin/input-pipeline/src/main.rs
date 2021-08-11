@@ -36,7 +36,8 @@ async fn main() -> Result<(), Error> {
     let input_handlers = input_handlers::create(media_buttons_handler.clone()).await;
     let input_pipeline = input_pipeline_lib::input_pipeline::InputPipeline::new(
         device_types.clone(),
-        input_handlers,
+        input_pipeline_lib::input_pipeline::InputPipelineAssembly::new()
+            .add_all_handlers(input_handlers),
     )
     .await
     .expect("Failed to create input pipeline");

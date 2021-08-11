@@ -9,6 +9,7 @@ use {
     fuchsia_syslog::fx_log_info,
     input_pipeline::{
         self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline,
+        input_pipeline::InputPipelineAssembly,
     },
     std::rc::Rc,
 };
@@ -53,7 +54,7 @@ async fn main() -> Result<(), Error> {
 
     let input_pipeline = InputPipeline::new(
         vec![input_device::InputDeviceType::Mouse],
-        vec![Rc::new(MouseEventPrinter::new())],
+        InputPipelineAssembly::new().add_handler(Rc::new(MouseEventPrinter::new())),
     )
     .await
     .context("Failed to create InputPipeline.")?;
