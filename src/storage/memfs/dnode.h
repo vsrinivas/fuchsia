@@ -77,6 +77,9 @@ class Dnode : public fbl::DoublyLinkedListable<std::unique_ptr<Dnode>> {
   // Acquires a reference to the underlying vnode.
   fbl::RefPtr<VnodeMemfs> AcquireVnode() const;
 
+  // Get a pointer to the parent Dnode. If current Dnode is root, return nullptr.
+  Dnode* GetParent() const;
+
   // Returns ZX_OK if the dnode may be unlinked
   zx_status_t CanUnlink() const;
 

@@ -31,6 +31,8 @@ class InotifyTest : public zxtest::Test {
  protected:
   fbl::RefPtr<fs::RemoteDir> GetRemoteDir();
   void AddFile(const std::string& path, size_t content_size);
+  void WriteToFile(const std::string& path, size_t content_size);
+  void TruncateFile(const std::string& path, size_t new_file_size);
   void MakeDir(const std::string& path);
 
   static constexpr char kTmpfsPath[] = "/fshost-inotify-tmp";

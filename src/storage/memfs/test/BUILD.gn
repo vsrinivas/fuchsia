@@ -27,6 +27,7 @@ test("memfs-inotify-test") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp:inotify_test_base",
     "//src/storage/memfs",
+    "//src/storage/memfs:memfs-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",

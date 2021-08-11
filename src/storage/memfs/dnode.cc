@@ -65,6 +65,7 @@ void Dnode::Detach() {
   auto self = RemoveFromParent();
   // Detach from vnode
   self->vnode_->dnode_ = nullptr;
+  self->vnode_->dnode_parent_ = nullptr;
   self->vnode_ = nullptr;
 }
 
@@ -76,6 +77,7 @@ void Dnode::AddChild(Dnode* parent, std::unique_ptr<Dnode> child) {
   ZX_DEBUG_ASSERT(parent->IsDirectory());
 
   child->parent_ = parent;
+  child->vnode_->dnode_parent_ = parent;
   child->vnode_->link_count_++;
   if (child->IsDirectory()) {
     // Child has '..' pointing back at parent.
@@ -104,6 +106,8 @@ zx_status_t Dnode::Lookup(std::string_view name, Dnode** out) {
 }
 
 fbl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const { return vnode_; }
+
+Dnode* Dnode::GetParent() const { return parent_; }
 
 zx_status_t Dnode::CanUnlink() const {
   if (!children_.is_empty()) {

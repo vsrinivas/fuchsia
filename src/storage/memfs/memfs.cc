@@ -68,6 +68,7 @@ zx_status_t Vfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name
   fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get());
   std::unique_ptr<Dnode> dn = Dnode::Create(fs_name, root);
   root->dnode_ = dn.get();
+  root->dnode_parent_ = dn.get()->GetParent();
   fs->root_ = std::move(dn);
 
   if (zx_status_t status = zx::event::create(0, &fs->fs_id_); status != ZX_OK)
@@ -137,6 +138,24 @@ zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
   }
   SetRemote(std::move(h.client_end()));
   return ZX_OK;
+}
+
+void VnodeMemfs::UpdateModified() {
+  std::timespec ts;
+  if (std::timespec_get(&ts, TIME_UTC)) {
+    modify_time_ = zx_time_from_timespec(ts);
+  } else {
+    modify_time_ = 0;
+  }
+
+#ifdef __Fuchsia__
+  // Notify current vnode.
+  CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
+  // Notify all parent vnodes.
+  for (auto parent = dnode_parent_; parent != nullptr; parent = parent->GetParent()) {
+    parent->AcquireVnode()->CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask::kModify);
+  }
+#endif
 }
 
 }  // namespace memfs

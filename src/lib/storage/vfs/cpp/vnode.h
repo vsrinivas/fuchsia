@@ -376,6 +376,10 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
   virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
   virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
+
+  // Check existing inotify watches and issue inotify events.
+  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
+      __TA_EXCLUDES(gInotifyLock);
 #endif  // __Fuchsia__
 
   // Invoked by internal Connections to account transactions
@@ -434,12 +438,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Returns the number of open connections, not counting node_reference connections. See Open().
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
-
-#ifdef __Fuchsia__
-  // Check existing inotify watches and issue inotify events.
-  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
-      __TA_EXCLUDES(gInotifyLock);
-#endif
 
 #ifdef __Fuchsia__
  public:

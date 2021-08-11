@@ -46,14 +46,7 @@ class VnodeMemfs : public fs::Vnode {
   // To be more specific: Is this vnode connected into the directory hierarchy?
   // VnodeDirs can be unlinked, and this method will subsequently return false.
   bool IsDirectory() const { return dnode_ != nullptr; }
-  void UpdateModified() {
-    std::timespec ts;
-    if (std::timespec_get(&ts, TIME_UTC)) {
-      modify_time_ = zx_time_from_timespec(ts);
-    } else {
-      modify_time_ = 0;
-    }
-  }
+  void UpdateModified();
 
   ~VnodeMemfs() override;
 
@@ -68,6 +61,8 @@ class VnodeMemfs : public fs::Vnode {
   // Caution must be taken when detaching Dnodes from their parents to avoid leaving
   // this reference dangling.
   Dnode* dnode_ = nullptr;
+  // The Dnode to parent pointer is always set for both directory and file.
+  Dnode* dnode_parent_ = nullptr;
   uint32_t link_count_ = 0;
 
  protected:
