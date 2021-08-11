@@ -6,7 +6,6 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::task::Task;
 use crate::types::*;
 
 /// The mutable state for an FsContext.
@@ -79,54 +78,6 @@ impl FsContext {
     pub fn chdir(&self, file: &FileHandle) {
         let mut state = self.state.write();
         state.cwd = file.name.clone();
-    }
-
-    /// Lookup the parent of a namespace node.
-    ///
-    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
-    /// calling this function directly.
-    ///
-    /// This function resolves all but the last component of the given path.
-    /// The function returns the parent directory of the last component as well
-    /// as the last component.
-    ///
-    /// If path is empty, this function returns dir and an empty path.
-    /// Similarly, if path ends with "." or "..", these components will be
-    /// returned along with the parent.
-    ///
-    /// The returned parent might not be a directory.
-    pub fn lookup_parent<'a>(
-        &self,
-        task: &Task,
-        dir: NamespaceNode,
-        path: &'a FsStr,
-        symlink_mode: SymlinkMode,
-    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
-        let mut current_node = dir;
-        let mut it = path.split(|c| *c == b'/');
-        let mut current_path_component = it.next().unwrap_or(b"");
-        while let Some(next_path_component) = it.next() {
-            current_node = current_node.lookup(task, current_path_component, symlink_mode)?;
-            current_path_component = next_path_component;
-        }
-        Ok((current_node, current_path_component))
-    }
-
-    /// Lookup a namespace node.
-    ///
-    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
-    /// calling this function directly.
-    ///
-    /// This function resolves the component of the given path.
-    pub fn lookup_node(
-        &self,
-        task: &Task,
-        dir: NamespaceNode,
-        path: &FsStr,
-        symlink_mode: SymlinkMode,
-    ) -> Result<NamespaceNode, Errno> {
-        let (parent, basename) = self.lookup_parent(task, dir, path, symlink_mode)?;
-        parent.lookup(task, basename, symlink_mode)
     }
 
     pub fn apply_umask(&self, mode: FileMode) -> FileMode {

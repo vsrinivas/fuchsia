@@ -661,8 +661,6 @@ pub fn sys_mount(
     _flags: u64,
     _data_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let fs_ctx = &ctx.task.fs;
-
     let mut buf = [0u8; PATH_MAX as usize];
     let source = ctx.task.mm.read_c_string(source_addr, &mut buf)?;
     let mut buf = [0u8; PATH_MAX as usize];
@@ -678,9 +676,7 @@ pub fn sys_mount(
     );
 
     let fs = create_filesystem(ctx.kernel(), Some(ctx.task), source, fs_type, b"")?;
-    fs_ctx
-        .lookup_node(ctx.task, fs_ctx.root.clone(), target, SymlinkMode::max_follow())?
-        .mount(fs)?;
+    ctx.task.lookup_node(ctx.task.fs.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
     Ok(SUCCESS)
 }
 

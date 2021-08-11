@@ -445,7 +445,7 @@ impl Task {
     ) -> Result<NamespaceNode, Errno> {
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
         let (parent, basename) =
-            self.fs.lookup_parent(self, dir.clone(), &path, SymlinkMode::max_follow())?;
+            self.lookup_parent(dir.clone(), &path, SymlinkMode::max_follow())?;
         // The remaining follows tracks how many symlink traversals remain before ELOOP should
         // be returned.
         let remaining_follows = match symlink_mode {
@@ -581,7 +581,53 @@ impl Task {
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        self.fs.lookup_parent(self, dir, path, SymlinkMode::max_follow())
+        self.lookup_parent(dir, path, SymlinkMode::max_follow())
+    }
+
+    /// Lookup the parent of a namespace node.
+    ///
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
+    /// calling this function directly.
+    ///
+    /// This function resolves all but the last component of the given path.
+    /// The function returns the parent directory of the last component as well
+    /// as the last component.
+    ///
+    /// If path is empty, this function returns dir and an empty path.
+    /// Similarly, if path ends with "." or "..", these components will be
+    /// returned along with the parent.
+    ///
+    /// The returned parent might not be a directory.
+    pub fn lookup_parent<'a>(
+        &self,
+        dir: NamespaceNode,
+        path: &'a FsStr,
+        symlink_mode: SymlinkMode,
+    ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
+        let mut current_node = dir;
+        let mut it = path.split(|c| *c == b'/');
+        let mut current_path_component = it.next().unwrap_or(b"");
+        while let Some(next_path_component) = it.next() {
+            current_node = current_node.lookup(self, current_path_component, symlink_mode)?;
+            current_path_component = next_path_component;
+        }
+        Ok((current_node, current_path_component))
+    }
+
+    /// Lookup a namespace node.
+    ///
+    /// Consider using Task::open_file_at or Task::lookup_parent_at rather than
+    /// calling this function directly.
+    ///
+    /// This function resolves the component of the given path.
+    pub fn lookup_node(
+        &self,
+        dir: NamespaceNode,
+        path: &FsStr,
+        symlink_mode: SymlinkMode,
+    ) -> Result<NamespaceNode, Errno> {
+        let (parent, basename) = self.lookup_parent(dir, path, symlink_mode)?;
+        parent.lookup(self, basename, symlink_mode)
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

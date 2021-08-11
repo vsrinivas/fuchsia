@@ -308,12 +308,8 @@ fn start_component(
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
             create_filesystem_from_spec(&kernel, Some(&task_owner.task), &pkg, mount_spec)?;
-        let mount_point = fs.lookup_node(
-            &task_owner.task,
-            fs.root.clone(),
-            mount_point,
-            SymlinkMode::max_follow(),
-        )?;
+        let mount_point =
+            task_owner.task.lookup_node(fs.root.clone(), mount_point, SymlinkMode::max_follow())?;
         mount_point.mount(child_fs)?;
     }
 
@@ -331,8 +327,7 @@ fn start_component(
                 FileMode::IFDIR | FileMode::from_bits(0o700),
                 DeviceType::NONE,
             )?;
-            let apex_source = fs.lookup_node(
-                &task_owner.task,
+            let apex_source = task_owner.task.lookup_node(
                 fs.root.clone(),
                 &[b"/system/apex/", apex].concat(),
                 SymlinkMode::max_follow(),

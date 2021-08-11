@@ -96,10 +96,7 @@ pub fn create_filesystem(
         b"tmpfs" => Fs(TmpFs::new()),
         b"bind" => {
             let task = task.ok_or(ENOENT)?;
-            Dir(task
-                .fs
-                .lookup_node(task, task.fs.root.clone(), source, SymlinkMode::max_follow())?
-                .entry)
+            Dir(task.lookup_node(task.fs.root.clone(), source, SymlinkMode::max_follow())?.entry)
         }
         _ => return Err(ENODEV),
     })
@@ -237,8 +234,7 @@ impl NamespaceNode {
                         } else {
                             self.clone()
                         };
-                        child = task.fs.lookup_node(
-                            task,
+                        child = task.lookup_node(
                             link_directory,
                             &link_target,
                             SymlinkMode::Follow(count - 1),
