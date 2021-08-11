@@ -68,6 +68,29 @@ pub enum CloseError {
     CloseError(#[source] zx_status::Status),
 }
 
+/// An error encountered while renaming a node
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum RenameError {
+    #[error("while sending rename request")]
+    SendRenameRequest(#[source] fidl::Error),
+
+    #[error("while sending get_token request")]
+    SendGetTokenRequest(#[source] fidl::Error),
+
+    #[error("rename failed with status")]
+    RenameError(#[source] zx_status::Status),
+
+    #[error("while opening subdirectory")]
+    OpenError(#[from] OpenError),
+
+    #[error("get_token failed with status")]
+    GetTokenError(#[source] zx_status::Status),
+
+    #[error("no handle from get token")]
+    NoHandleError,
+}
+
 /// The type of a filesystem node
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(missing_docs)]

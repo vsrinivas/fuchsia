@@ -19,14 +19,14 @@ rustc_library("io_util") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [
     ":fidl.test.schema-rustc",
     "//src/lib/storage/vfs/rust:vfs",
-    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [

@@ -5,7 +5,7 @@
 //! Utility functions for fuchsia.io directories.
 
 use {
-    crate::node::{self, CloneError, CloseError, OpenError},
+    crate::node::{self, CloneError, CloseError, OpenError, RenameError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeMarker, NodeProxy,
@@ -205,6 +205,63 @@ pub fn clone_onto_no_describe(
 pub async fn close(dir: DirectoryProxy) -> Result<(), CloseError> {
     let status = dir.close().await.map_err(CloseError::SendCloseRequest)?;
     zx_status::Status::ok(status).map_err(CloseError::CloseError)
+}
+
+/// Create a randomly named file in the given directory with the given prefix, and return its path
+/// and `FileProxy`. `prefix` may contain "/".
+pub async fn create_randomly_named_file(
+    dir: &DirectoryProxy,
+    prefix: &str,
+    flags: u32,
+) -> Result<(String, FileProxy), OpenError> {
+    use rand::{distributions::Alphanumeric, FromEntropy, Rng};
+    let mut rng = rand::rngs::SmallRng::from_entropy();
+
+    let flags =
+        flags | fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_FLAG_CREATE_IF_ABSENT;
+
+    loop {
+        let random_string: String = rng.sample_iter(&Alphanumeric).take(6).collect();
+        let path = prefix.to_string() + &random_string;
+
+        match open_file(dir, &path, flags).await {
+            Ok(file) => return Ok((path, file)),
+            Err(OpenError::OpenError(zx_status::Status::ALREADY_EXISTS)) => {}
+            Err(err) => return Err(err),
+        }
+    }
+}
+
+// Split the given path under the directory into parent and file name, and open the parent directory
+// if the path contains "/".
+async fn split_path<'a>(
+    dir: &DirectoryProxy,
+    path: &'a str,
+) -> Result<(Option<DirectoryProxy>, &'a str), OpenError> {
+    match path.rsplit_once('/') {
+        Some((parent, name)) => {
+            let proxy = open_directory(dir, parent, fidl_fuchsia_io::OPEN_RIGHT_WRITABLE).await?;
+            Ok((Some(proxy), name))
+        }
+        None => Ok((None, path)),
+    }
+}
+
+/// Rename `src` to `dst` under the given directory, `src` and `dst` may contain "/".
+pub async fn rename(dir: &DirectoryProxy, src: &str, dst: &str) -> Result<(), RenameError> {
+    let (src_parent, src_filename) = split_path(dir, src).await?;
+    let src_parent = src_parent.as_ref().unwrap_or(dir);
+    let (dst_parent, dst_filename) = split_path(dir, dst).await?;
+    let dst_parent = dst_parent.as_ref().unwrap_or(dir);
+    let (status, dst_parent_dir_token) =
+        dst_parent.get_token().await.map_err(RenameError::SendGetTokenRequest)?;
+    zx_status::Status::ok(status).map_err(RenameError::GetTokenError)?;
+    let event = fidl::Event::from(dst_parent_dir_token.ok_or(RenameError::NoHandleError)?);
+    src_parent
+        .rename2(src_filename, event, dst_filename)
+        .await
+        .map_err(RenameError::SendRenameRequest)?
+        .map_err(|s| RenameError::RenameError(zx_status::Status::from_raw(s)))
 }
 
 #[cfg(test)]
@@ -559,5 +616,117 @@ mod tests {
             stream.next().await,
             Some(Ok(fio::DirectoryRequest::Clone { flags: 42, .. }))
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_randomly_named_file_simple() {
+        let (_tmp, proxy) = open_tmp();
+        let (path, file) =
+            create_randomly_named_file(&proxy, "prefix", OPEN_RIGHT_WRITABLE).await.unwrap();
+        assert!(path.starts_with("prefix"));
+        crate::file::close(file).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_randomly_named_file_subdir() {
+        let (_tmp, proxy) = open_tmp();
+        let _subdir = create_directory(&proxy, "subdir", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let (path, file) =
+            create_randomly_named_file(&proxy, "subdir/file", OPEN_RIGHT_WRITABLE).await.unwrap();
+        assert!(path.starts_with("subdir/file"));
+        crate::file::close(file).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_randomly_named_file_no_prefix() {
+        let (_tmp, proxy) = open_tmp();
+        let (_path, file) =
+            create_randomly_named_file(&proxy, "", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+                .await
+                .unwrap();
+        crate::file::close(file).await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_randomly_named_file_error() {
+        let pkg = open_pkg();
+        assert_matches!(create_randomly_named_file(&pkg, "", 0).await, Err(_));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_simple() {
+        let (tmp, proxy) = open_tmp();
+        let (path, file) =
+            create_randomly_named_file(&proxy, "", OPEN_RIGHT_WRITABLE).await.unwrap();
+        crate::file::close(file).await.unwrap();
+        rename(&proxy, &path, "new_path").await.unwrap();
+        assert!(!tmp.path().join(path).exists());
+        assert!(tmp.path().join("new_path").exists());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_with_subdir() {
+        let (tmp, proxy) = open_tmp();
+        let _subdir1 = create_directory(&proxy, "subdir1", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let _subdir2 = create_directory(&proxy, "subdir2", OPEN_RIGHT_WRITABLE).await.unwrap();
+        let (path, file) =
+            create_randomly_named_file(&proxy, "subdir1/file", OPEN_RIGHT_WRITABLE).await.unwrap();
+        crate::file::close(file).await.unwrap();
+        rename(&proxy, &path, "subdir2/file").await.unwrap();
+        assert!(!tmp.path().join(path).exists());
+        assert!(tmp.path().join("subdir2/file").exists());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_directory() {
+        let (tmp, proxy) = open_tmp();
+        let dir = create_directory(&proxy, "dir", OPEN_RIGHT_WRITABLE).await.unwrap();
+        close(dir).await.unwrap();
+        rename(&proxy, "dir", "dir2").await.unwrap();
+        assert!(!tmp.path().join("dir").exists());
+        assert!(tmp.path().join("dir2").exists());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_overwrite_existing_file() {
+        let (tmp, proxy) = open_tmp();
+        std::fs::write(tmp.path().join("foo"), b"foo").unwrap();
+        std::fs::write(tmp.path().join("bar"), b"bar").unwrap();
+        rename(&proxy, "foo", "bar").await.unwrap();
+        assert!(!tmp.path().join("foo").exists());
+        assert_eq!(std::fs::read_to_string(tmp.path().join("bar")).unwrap(), "foo");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_non_existing_src_fails() {
+        let (tmp, proxy) = open_tmp();
+        assert_matches!(
+            rename(&proxy, "foo", "bar").await,
+            Err(RenameError::RenameError(zx_status::Status::NOT_FOUND))
+        );
+        assert!(!tmp.path().join("foo").exists());
+        assert!(!tmp.path().join("bar").exists());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_to_non_existing_subdir_fails() {
+        let (tmp, proxy) = open_tmp();
+        std::fs::write(tmp.path().join("foo"), b"foo").unwrap();
+        assert_matches!(
+            rename(&proxy, "foo", "bar/foo").await,
+            Err(RenameError::OpenError(OpenError::OpenError(zx_status::Status::NOT_FOUND)))
+        );
+        assert!(tmp.path().join("foo").exists());
+        assert!(!tmp.path().join("bar/foo").exists());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn rename_root_path_fails() {
+        let (tmp, proxy) = open_tmp();
+        assert_matches!(
+            rename(&proxy, "/foo", "bar").await,
+            Err(RenameError::OpenError(OpenError::OpenError(zx_status::Status::INVALID_ARGS)))
+        );
+        assert!(!tmp.path().join("bar").exists());
     }
 }
