@@ -866,7 +866,7 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
     // Transform should be inverted from |global_transform| above.
     EXPECT_THAT(Mat4ToArray(node1.local_from_world_transform),
                 testing::ElementsAre(0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f));
-    EXPECT_EQ(utils::ExtractKoid(node1.view_ref), node1_koid);
+    EXPECT_EQ(utils::ExtractKoid(*node1.view_ref), node1_koid);
   }
 
   {
@@ -878,7 +878,7 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
     // Transform should be inverted from |global_transform| above.
     EXPECT_THAT(Mat4ToArray(node2.local_from_world_transform),
                 testing::ElementsAre(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
-    EXPECT_EQ(utils::ExtractKoid(node2.view_ref), node2_koid);
+    EXPECT_EQ(utils::ExtractKoid(*node2.view_ref), node2_koid);
   }
 }
 

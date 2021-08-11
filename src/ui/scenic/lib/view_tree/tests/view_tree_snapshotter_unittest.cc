@@ -31,6 +31,14 @@ enum : zx_koid_t {
   kNode11,
 };
 
+ViewNode NewViewNode(zx_koid_t parent, std::unordered_set<zx_koid_t> children) {
+  return ViewNode{
+      .parent = parent,
+      .children = children,
+      .view_ref = std::make_shared<const fuchsia::ui::views::ViewRef>(),
+  };
+}
+
 // Generates a valid tree out of three subtrees: A, B and C
 //  ViewTrees:           Unconnected nodes:
 // -------------         -----------------------
@@ -52,9 +60,9 @@ std::vector<SubtreeSnapshotGenerator> BasicTree() {
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
 
     root = kRoot1A;
-    view_tree[kRoot1A] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode2, kNode3}};
-    view_tree[kNode2] = ViewNode{.parent = kRoot1A, .children = {kRoot4B}};
-    view_tree[kNode3] = ViewNode{.parent = kRoot1A, .children = {kRoot6C}};
+    view_tree[kRoot1A] = NewViewNode(ZX_KOID_INVALID, {kNode2, kNode3});
+    view_tree[kNode2] = NewViewNode(kRoot1A, {kRoot4B});
+    view_tree[kNode3] = NewViewNode(kRoot1A, {kRoot6C});
     unconnected_views = {kNode8};
 
     tree_boundaries.emplace(kNode2, kRoot4B);
@@ -68,8 +76,8 @@ std::vector<SubtreeSnapshotGenerator> BasicTree() {
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
 
     root = kRoot4B;
-    view_tree[kRoot4B] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode5}};
-    view_tree[kNode5] = ViewNode{.parent = kRoot4B, .children = {}};
+    view_tree[kRoot4B] = NewViewNode(ZX_KOID_INVALID, {kNode5});
+    view_tree[kNode5] = NewViewNode(kRoot4B, {});
     unconnected_views = {kNode9};
     return subtree;
   });
@@ -80,8 +88,8 @@ std::vector<SubtreeSnapshotGenerator> BasicTree() {
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = subtree;
 
     root = kRoot6C;
-    view_tree[kRoot6C] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode7}};
-    view_tree[kNode7] = ViewNode{.parent = kRoot6C, .children = {}};
+    view_tree[kRoot6C] = NewViewNode(ZX_KOID_INVALID, {kNode7});
+    view_tree[kNode7] = NewViewNode(kRoot6C, {});
     unconnected_views = {kNode10, kNode11};
     return subtree;
   });
@@ -96,13 +104,13 @@ Snapshot BasicTreeSnapshot() {
 
   {
     auto& view_tree = snapshot.view_tree;
-    view_tree[kRoot1A] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNode2, kNode3}};
-    view_tree[kNode2] = ViewNode{.parent = kRoot1A, .children = {kRoot4B}};
-    view_tree[kNode3] = ViewNode{.parent = kRoot1A, .children = {kRoot6C}};
-    view_tree[kRoot4B] = ViewNode{.parent = kNode2, .children = {kNode5}};
-    view_tree[kNode5] = ViewNode{.parent = kRoot4B};
-    view_tree[kRoot6C] = ViewNode{.parent = kNode3, .children = {kNode7}};
-    view_tree[kNode7] = ViewNode{.parent = kRoot6C};
+    view_tree[kRoot1A] = NewViewNode(ZX_KOID_INVALID, {kNode2, kNode3});
+    view_tree[kNode2] = NewViewNode(kRoot1A, {kRoot4B});
+    view_tree[kNode3] = NewViewNode(kRoot1A, {kRoot6C});
+    view_tree[kRoot4B] = NewViewNode(kNode2, {kNode5});
+    view_tree[kNode5] = NewViewNode(kRoot4B, {});
+    view_tree[kRoot6C] = NewViewNode(kNode3, {kNode7});
+    view_tree[kNode7] = NewViewNode(kRoot6C, {});
   }
 
   snapshot.unconnected_views = {kNode8, kNode9, kNode10, kNode11};
@@ -200,10 +208,10 @@ TEST(ViewTreeSnapshotterTest, MultipleUpdateSessionsCalls) {
     SubtreeSnapshot subtree;
     if (first_call) {
       subtree.root = kRoot1A;
-      subtree.view_tree[kRoot1A] = ViewNode{};
+      subtree.view_tree[kRoot1A] = NewViewNode(ZX_KOID_INVALID, {});
     } else {
       subtree.root = kRoot4B;
-      subtree.view_tree[kRoot4B] = ViewNode{};
+      subtree.view_tree[kRoot4B] = NewViewNode(ZX_KOID_INVALID, {});
     }
     first_call = false;
     return subtree;
@@ -237,7 +245,7 @@ TEST(ViewTreeSnapshotterTest, SubscriberCallbackLifetime) {
   subtrees.emplace_back([] {
     SubtreeSnapshot subtree;
     subtree.root = kRoot1A;
-    subtree.view_tree[kRoot1A] = ViewNode{};
+    subtree.view_tree[kRoot1A] = NewViewNode(ZX_KOID_INVALID, {});
     return subtree;
   });
 

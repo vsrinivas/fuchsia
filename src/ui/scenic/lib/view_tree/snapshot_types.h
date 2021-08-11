@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace view_tree {
 
@@ -49,14 +50,14 @@ struct ViewNode {
   glm::mat4 local_from_world_transform = glm::mat4(1.f);
   bool is_focusable = true;
 
-  // TODO(fxbug.dev/72832): This will cause a lot of copies. Investigate if it's a potential
-  // performance issue, in which case we might need to store them by shared_ptr or something.
-  fuchsia::ui::views::ViewRef view_ref;
+  std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref = nullptr;
 
   bool operator==(const ViewNode& other) const {
     return parent == other.parent && bounding_box == other.bounding_box &&
            local_from_world_transform == other.local_from_world_transform &&
-           is_focusable == other.is_focusable && children == other.children;
+           is_focusable == other.is_focusable && children == other.children &&
+           ((!view_ref && !other.view_ref) ||
+            utils::ExtractKoid(*view_ref) == utils::ExtractKoid(*other.view_ref));
   }
 };
 

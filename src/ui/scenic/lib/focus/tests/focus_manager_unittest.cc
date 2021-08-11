@@ -19,6 +19,7 @@ namespace focus::test {
 
 enum : zx_koid_t { kNodeA = 1, kNodeB, kNodeC, kNodeD };
 
+using fuchsia::ui::views::ViewRef;
 using view_tree::ViewNode;
 
 namespace {
@@ -100,21 +101,25 @@ static std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshotWithViewRefs()
   auto& view_tree = snapshot->view_tree;
   {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    view_tree[kNodeA] = ViewNode{
-        .parent = ZX_KOID_INVALID, .children = {kNodeB, kNodeC}, .view_ref = std::move(view_ref)};
+    view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID,
+                                 .children = {kNodeB, kNodeC},
+                                 .view_ref = std::make_shared<ViewRef>(std::move(view_ref))};
   }
   {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    view_tree[kNodeB] =
-        ViewNode{.parent = kNodeA, .children = {kNodeD}, .view_ref = std::move(view_ref)};
+    view_tree[kNodeB] = ViewNode{.parent = kNodeA,
+                                 .children = {kNodeD},
+                                 .view_ref = std::make_shared<ViewRef>(std::move(view_ref))};
   }
   {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    view_tree[kNodeC] = ViewNode{.parent = kNodeA, .view_ref = std::move(view_ref)};
+    view_tree[kNodeC] =
+        ViewNode{.parent = kNodeA, .view_ref = std::make_shared<ViewRef>(std::move(view_ref))};
   }
   {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    view_tree[kNodeD] = ViewNode{.parent = kNodeB, .view_ref = std::move(view_ref)};
+    view_tree[kNodeD] =
+        ViewNode{.parent = kNodeB, .view_ref = std::make_shared<ViewRef>(std::move(view_ref))};
   }
 
   return snapshot;

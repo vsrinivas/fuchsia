@@ -79,8 +79,10 @@ bool ValidateSubtree(const SubtreeSnapshot& subtree) {
   FX_DCHECK(view_tree.at(root).parent == ZX_KOID_INVALID);
 
   size_t tree_walk_size = 0;
-  TreeWalk(view_tree, root,
-           [&tree_walk_size](zx_koid_t koid, const ViewNode& node) { ++tree_walk_size; });
+  TreeWalk(view_tree, root, [&tree_walk_size](zx_koid_t koid, const ViewNode& node) {
+    FX_DCHECK(node.view_ref) << "ViewRef not set on node " << koid;
+    ++tree_walk_size;
+  });
   FX_DCHECK(tree_walk_size == view_tree.size()) << "ViewTree is not fully connected";
 
   for (const auto& [koid, node] : view_tree) {

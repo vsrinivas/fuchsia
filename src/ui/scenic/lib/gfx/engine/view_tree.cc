@@ -308,16 +308,16 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
 
-  nodes_[koid] =
-      RefNode{.view_ref = std::move(new_node.view_ref),
-              .event_reporter = new_node.event_reporter,
-              .may_receive_focus = std::move(new_node.may_receive_focus),
-              .is_input_suppressed = std::move(new_node.is_input_suppressed),
-              .global_transform = std::move(new_node.global_transform),
-              .bounding_box = std::move(new_node.bounding_box),
-              .hit_test = std::move(new_node.hit_test),
-              .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
-              .session_id = new_node.session_id};
+  nodes_[koid] = RefNode{
+      .view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(new_node.view_ref)),
+      .event_reporter = new_node.event_reporter,
+      .may_receive_focus = std::move(new_node.may_receive_focus),
+      .is_input_suppressed = std::move(new_node.is_input_suppressed),
+      .global_transform = std::move(new_node.global_transform),
+      .bounding_box = std::move(new_node.bounding_box),
+      .hit_test = std::move(new_node.hit_test),
+      .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
+      .session_id = new_node.session_id};
 
   ref_node_koids_.insert({new_node.session_id, koid});
 
@@ -518,7 +518,7 @@ view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
       const escher::BoundingBox bbox = ref_node.bounding_box();
       it->second.bounding_box = {.min = {bbox.min().x, bbox.min().y},
                                  .max = {bbox.max().x, bbox.max().y}};
-      fidl::Clone(ref_node.view_ref, &it->second.view_ref);
+      it->second.view_ref = ref_node.view_ref;  // Copy shared_ptr.
     }
   }
 

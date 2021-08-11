@@ -80,7 +80,7 @@ class ViewTree {
   // - May have multiple children.
   struct RefNode {
     zx_koid_t parent = ZX_KOID_INVALID;
-    fuchsia::ui::views::ViewRef view_ref;
+    std::shared_ptr<fuchsia::ui::views::ViewRef> view_ref;
 
     // Focus events are generated and dispatched along this interface.
     EventReporterWeakPtr event_reporter;
