@@ -1,19 +1,10 @@
 {
     include: [
-        "//sdk/lib/inspect/client.shard.cml",
-        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
-        runner: "elf_test_runner",
         binary: "bin/fidl_hlcpp_conformance_tests",
     },
-    capabilities: [
-        { protocol: "fuchsia.test.Suite" },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "self",
-        },
-    ],
 }
