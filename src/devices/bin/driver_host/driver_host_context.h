@@ -126,7 +126,7 @@ class DriverHostContext {
 
   async::Loop& loop() { return loop_; }
 
-  fs::Vfs* vfs() { return &vfs_; }
+  fs::ManagedVfs* vfs() { return &vfs_; }
 
   const zx::resource& root_resource() { return root_resource_; }
 

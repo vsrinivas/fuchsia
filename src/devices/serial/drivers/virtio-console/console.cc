@@ -217,7 +217,7 @@ void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
 
   // Request all console connections be terminated.  Once that completes, finish
   // the unbind.
-  fs::Vfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) {
+  fs::FuchsiaVfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) {
     if (unbind_txn_.has_value()) {
       unbind_txn_->Reply();
     } else {

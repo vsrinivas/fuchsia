@@ -56,7 +56,7 @@ class PtyTestCase : public zxtest::Test {
   }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-  fs::Vfs* vfs() { return &vfs_; }
+  fs::ManagedVfs* vfs() { return &vfs_; }
   Connection take_server() { return std::move(server_); }
 
  private:

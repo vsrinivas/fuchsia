@@ -32,7 +32,7 @@
 #include <pretty/hexdump.h>
 
 #include "admin.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fblock = fuchsia_hardware_block;
 namespace fio = fuchsia_io;
@@ -360,7 +360,7 @@ zx_status_t fumount(int mount_fd) {
   // that actually speaks the |DirectoryAdmin| protocol.
   fidl::ClientEnd<fio::DirectoryAdmin> directory_admin_client(
       std::move(resp.value().remote.channel()));
-  return fs::Vfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
+  return fs::FuchsiaVfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
 }
 
 __EXPORT

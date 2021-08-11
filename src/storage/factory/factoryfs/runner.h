@@ -38,8 +38,7 @@ class Runner : public fs::ManagedVfs {
                             MountOptions* options, std::unique_ptr<Runner>* out);
 
   // fs::ManagedVfs interface.
-
-  void Shutdown(fs::Vfs::ShutdownCallback closure) final;
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
 
   // Other methods.
 

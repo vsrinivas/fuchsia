@@ -38,7 +38,7 @@ class Runner : public fs::PagedVfs {
                                                     zx::resource vmex_resource);
 
   // fs::ManagedVfs interface.
-  void Shutdown(fs::Vfs::ShutdownCallback closure) final;
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.

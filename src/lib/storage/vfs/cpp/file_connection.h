@@ -23,7 +23,7 @@ namespace internal {
 class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::File> {
  public:
   // Refer to documentation for |Connection::Connection|.
-  FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+  FileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
                  VnodeConnectionOptions options);
 
   ~FileConnection() = default;

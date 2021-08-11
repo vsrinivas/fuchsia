@@ -10,14 +10,14 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fio = fuchsia_io;
 
 namespace fs {
 
-zx_status_t Vfs::UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
-                               zx::time deadline) {
+zx_status_t FuchsiaVfs::UnmountHandle(fidl::ClientEnd<fuchsia_io::DirectoryAdmin> handle,
+                                      zx::time deadline) {
   fidl::WireResult<fio::DirectoryAdmin::Unmount> result(handle, deadline.get());
   if (!result.ok()) {
     return result.status();

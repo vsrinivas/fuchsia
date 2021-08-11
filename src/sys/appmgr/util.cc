@@ -48,7 +48,7 @@ std::string Util::GetArgsString(const ::fidl::VectorPtr<::std::string>& argument
   return args;
 }
 
-zx::channel Util::OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node) {
+zx::channel Util::OpenAsDirectory(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> node) {
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) != ZX_OK) {
     return zx::channel();

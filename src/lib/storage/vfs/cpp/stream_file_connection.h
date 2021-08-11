@@ -23,7 +23,7 @@ namespace internal {
 class StreamFileConnection final : public FileConnection {
  public:
   // Refer to documentation for |Connection::Connection|.
-  StreamFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::stream stream,
+  StreamFileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::stream stream,
                        VnodeProtocol protocol, VnodeConnectionOptions options);
 
   ~StreamFileConnection() final = default;

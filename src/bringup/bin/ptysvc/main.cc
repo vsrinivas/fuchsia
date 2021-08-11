@@ -22,7 +22,7 @@
 // Each Open() on this Vnode redirects to a new PtyServerVnode
 class PtyGeneratingVnode : public fs::Vnode {
  public:
-  PtyGeneratingVnode(fs::Vfs* vfs) : vfs_(vfs) {}
+  PtyGeneratingVnode(fs::FuchsiaVfs* vfs) : vfs_(vfs) {}
   ~PtyGeneratingVnode() override = default;
 
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
@@ -46,7 +46,7 @@ class PtyGeneratingVnode : public fs::Vnode {
     return ZX_OK;
   }
 
-  fs::Vfs* vfs_;
+  fs::FuchsiaVfs* vfs_;
 };
 
 int main(int argc, const char** argv) {

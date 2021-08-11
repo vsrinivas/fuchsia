@@ -14,7 +14,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "fifo.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 // forward-decl
 class PtyClient;
@@ -29,12 +29,12 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
  public:
   // This ctor is only public for the use of fbl::MakeRefCounted.  Use Create()
   // instead.
-  PtyServer(zx::eventpair local, zx::eventpair remote, fs::Vfs* vfs);
+  PtyServer(zx::eventpair local, zx::eventpair remote, fs::FuchsiaVfs* vfs);
 
   ~PtyServer();
 
   // Create a new PtyServer.  This method is preferred to the ctor.
-  static zx_status_t Create(fbl::RefPtr<PtyServer>* out, fs::Vfs* vfs);
+  static zx_status_t Create(fbl::RefPtr<PtyServer>* out, fs::FuchsiaVfs* vfs);
 
   zx_status_t Read(void* data, size_t len, size_t* out_actual);
   zx_status_t Write(const void* data, size_t len, size_t* out_actual);
@@ -83,7 +83,7 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   // conditions.
   zx::eventpair local_, remote_;
 
-  fs::Vfs* vfs_;
+  fs::FuchsiaVfs* vfs_;
 
   // Data waiting to be read by a connection to the server.
   Fifo rx_fifo_;

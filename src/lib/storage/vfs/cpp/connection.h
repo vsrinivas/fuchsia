@@ -22,7 +22,7 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -162,7 +162,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // |options| are client-specified options for this connection, converted from the flags and
   //           rights passed during the |fuchsia.io/Directory.Open| or |fuchsia.io/Node.Clone| FIDL
   //           call.
-  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+  Connection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
              VnodeConnectionOptions options, FidlProtocol fidl_protocol);
 
   VnodeProtocol protocol() const { return protocol_; }
@@ -171,7 +171,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
 
   void set_append(bool append) { options_.flags.append = append; }
 
-  Vfs* vfs() const { return vfs_; }
+  FuchsiaVfs* vfs() const { return vfs_; }
 
   zx::event& token() { return token_; }
 
@@ -235,7 +235,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
 
   // The Vfs instance which owns this connection. Connections must not outlive the Vfs, hence this
   // borrowing is safe.
-  fs::Vfs* const vfs_;
+  fs::FuchsiaVfs* const vfs_;
 
   fbl::RefPtr<fs::Vnode> vnode_;
 

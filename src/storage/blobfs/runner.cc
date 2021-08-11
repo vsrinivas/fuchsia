@@ -44,7 +44,7 @@ Runner::Runner(async::Loop* loop, int32_t paging_threads)
 
 Runner::~Runner() = default;
 
-void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
+void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   TRACE_DURATION("blobfs", "Runner::Unmount");
   // Shutdown all external connections to blobfs.
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {

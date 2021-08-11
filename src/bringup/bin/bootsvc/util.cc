@@ -281,8 +281,8 @@ zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
   return ZX_OK;
 }
 
-zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, fs::Rights rights,
-                                  zx::channel* out) {
+zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+                                  fs::Rights rights, zx::channel* out) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {

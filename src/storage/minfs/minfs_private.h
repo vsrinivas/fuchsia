@@ -302,7 +302,7 @@ class Minfs :
   }
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
-  void Shutdown(fs::Vfs::ShutdownCallback cb) final;
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
 
   // Returns a unique identifier for this instance.
   uint64_t GetFsId() const;

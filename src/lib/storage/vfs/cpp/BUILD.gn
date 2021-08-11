@@ -42,6 +42,7 @@ static_library("cpp") {
     public += [
       "fidl_transaction.h",
       "file_connection.h",
+      "fuchsia_vfs.h",
       "inspectable.h",
       "lazy_dir.h",
       "managed_vfs.h",
@@ -75,6 +76,7 @@ static_library("cpp") {
       "fidl_transaction.h",
       "file_connection.cc",
       "file_connection.h",
+      "fuchsia_vfs.cc",
       "lazy_dir.cc",
       "managed_vfs.cc",
       "mount.cc",

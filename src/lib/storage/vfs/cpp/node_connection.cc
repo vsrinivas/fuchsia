@@ -34,8 +34,8 @@ namespace fs {
 
 namespace internal {
 
-NodeConnection::NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
-                               VnodeConnectionOptions options)
+NodeConnection::NodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+                               VnodeProtocol protocol, VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::Node>(this)) {}
 
 void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {

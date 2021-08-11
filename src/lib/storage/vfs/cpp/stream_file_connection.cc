@@ -34,7 +34,7 @@ namespace fs {
 
 namespace internal {
 
-StreamFileConnection::StreamFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+StreamFileConnection::StreamFileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
                                            zx::stream stream, VnodeProtocol protocol,
                                            VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options), stream_(std::move(stream)) {}

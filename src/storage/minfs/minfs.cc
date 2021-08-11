@@ -1383,7 +1383,7 @@ void Minfs::LogMountMetrics() {
       1);
 }
 
-void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
+void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
   FX_LOGS(INFO) << "Shutting down";
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {

@@ -26,7 +26,7 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
   return ZX_OK;
 }
 
-void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
+void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   FX_LOGS(INFO) << "Shutdown";
   // Shutdown all external connections to Factoryfs.
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {

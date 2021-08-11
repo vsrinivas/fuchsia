@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace component {
 
@@ -31,7 +31,7 @@ class Util {
 
   static std::string GetArgsString(const ::fidl::VectorPtr<::std::string>& arguments);
 
-  static zx::channel OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node);
+  static zx::channel OpenAsDirectory(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> node);
 };
 
 }  // namespace component

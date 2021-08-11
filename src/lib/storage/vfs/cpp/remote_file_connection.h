@@ -23,7 +23,7 @@ namespace internal {
 class RemoteFileConnection final : public FileConnection {
  public:
   // Refer to documentation for |Connection::Connection|.
-  RemoteFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+  RemoteFileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
                        VnodeConnectionOptions options);
 
   ~RemoteFileConnection() final = default;

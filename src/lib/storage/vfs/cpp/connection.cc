@@ -113,7 +113,7 @@ Binding::Binding(Connection* connection, async_dispatcher_t* dispatcher, zx::cha
 
 Binding::~Binding() { CancelDispatching(); }
 
-Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode, VnodeProtocol protocol,
+Connection::Connection(FuchsiaVfs* vfs, fbl::RefPtr<Vnode> vnode, VnodeProtocol protocol,
                        VnodeConnectionOptions options, FidlProtocol fidl_protocol)
     : vnode_is_open_(!options.flags.node_reference),
       vfs_(vfs),
@@ -155,9 +155,11 @@ void Connection::UnmountAndShutdown(fit::callback<void(zx_status_t)> callback) {
   // connection object may be destroyed before the binding. We need to stop the binding from
   // monitoring further incoming FIDL messages.
   binding_->DetachFromConnection();
-  Vfs::ShutdownCallback closure([binding = std::move(binding_), callback = std::move(callback)](
-                                    zx_status_t status) mutable { callback(status); });
-  Vfs* vfs = vfs_;
+  FuchsiaVfs::ShutdownCallback closure(
+      [binding = std::move(binding_), callback = std::move(callback)](zx_status_t status) mutable {
+        callback(status);
+      });
+  FuchsiaVfs* vfs = vfs_;
   SyncTeardown();
   vfs->Shutdown(std::move(closure));
 }

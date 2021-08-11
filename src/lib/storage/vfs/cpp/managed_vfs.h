@@ -20,7 +20,7 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/lib/storage/vfs/cpp/connection.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fs {
 
@@ -29,7 +29,7 @@ namespace fs {
 //
 // This class is thread-safe, but it is unsafe to shutdown the dispatch loop before shutting down
 // the ManagedVfs object.
-class ManagedVfs : public Vfs {
+class ManagedVfs : public FuchsiaVfs {
  public:
   explicit ManagedVfs(async_dispatcher_t* dispatcher);
 
@@ -49,6 +49,7 @@ class ManagedVfs : public Vfs {
 
   void CloseAllConnectionsForVnode(const Vnode& node,
                                    CloseAllConnectionsForVnodeCallback callback) final;
+  bool IsTerminating() const final;
 
  private:
   // Posts the task for OnShutdownComplete if it is safe to do so.
@@ -66,7 +67,6 @@ class ManagedVfs : public Vfs {
   zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
                                  zx::channel channel) final __TA_EXCLUDES(lock_);
   void UnregisterConnection(internal::Connection* connection) final __TA_EXCLUDES(lock_);
-  bool IsTerminating() const final;
 
   std::mutex lock_;
 

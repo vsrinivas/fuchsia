@@ -19,7 +19,7 @@
 #include <fs-management/admin.h>
 
 #include "path.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fio = fuchsia_io;
 
@@ -29,7 +29,8 @@ namespace {
 void UnmountHandle(zx_handle_t export_root, bool wait_until_ready) {
   zx::channel root;
   fs_root_handle(export_root, root.reset_and_get_address());
-  fs::Vfs::UnmountHandle(std::move(root), wait_until_ready ? zx::time::infinite() : zx::time(0));
+  fs::FuchsiaVfs::UnmountHandle(std::move(root),
+                                wait_until_ready ? zx::time::infinite() : zx::time(0));
 }
 
 zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOptions& options,

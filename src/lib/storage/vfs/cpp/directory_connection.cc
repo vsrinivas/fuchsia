@@ -40,7 +40,7 @@ namespace fs {
 namespace {
 
 // Performs a path walk and opens a connection to another node.
-void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Node> channel,
+void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Node> channel,
             std::string_view path, VnodeConnectionOptions options, Rights parent_rights,
             uint32_t mode) {
   bool describe = options.flags.describe;
@@ -66,7 +66,7 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Nod
 }
 
 // Performs a path walk and adds inotify filter to the obtained vnode.
-void AddInotifyFilterAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, std::string_view path,
+void AddInotifyFilterAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent, std::string_view path,
                         fio2::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
                         zx::socket socket) {
   // TODO Not handling remote handoff currently.
@@ -94,7 +94,7 @@ void AddInotifyFilterAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, std::string_
 
 namespace internal {
 
-DirectoryConnection::DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+DirectoryConnection::DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
                                          VnodeProtocol protocol, VnodeConnectionOptions options)
     : Connection(vfs, std::move(vnode), protocol, options,
                  FidlProtocol::Create<fio::DirectoryAdmin>(this)) {}
@@ -431,7 +431,7 @@ void DirectoryConnection::Mount(MountRequestView request, MountCompleter::Sync& 
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
-    Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
+    FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
@@ -448,7 +448,7 @@ void DirectoryConnection::MountAndCreate(MountAndCreateRequestView request,
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<fio::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
-    Vfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
+    FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }

@@ -16,11 +16,11 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/lib/storage/vfs/cpp/connection.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fs {
 
-// A specialization of |Vfs| which tears down all active connections when it is destroyed.
+// A specialization of |FuchsiaVfs| which tears down all active connections when it is destroyed.
 //
 // This class is NOT thread-safe and it must be used with a single-threaded asynchronous dispatcher.
 //
@@ -28,17 +28,19 @@ namespace fs {
 // completion of operations.
 //
 // It is safe to shutdown the dispatch loop before destroying the SynchronousVfs object.
-class SynchronousVfs : public Vfs {
+class SynchronousVfs : public FuchsiaVfs {
  public:
   SynchronousVfs();
-
-  void CloseAllConnectionsForVnode(const Vnode& node,
-                                   CloseAllConnectionsForVnodeCallback callback) final;
 
   explicit SynchronousVfs(async_dispatcher_t* dispatcher);
 
   // The SynchronousVfs destructor terminates all open connections.
   ~SynchronousVfs() override;
+
+  // FuchsiaVfs overrides.
+  void CloseAllConnectionsForVnode(const Vnode& node,
+                                   CloseAllConnectionsForVnodeCallback callback) final;
+  bool IsTerminating() const final;
 
  private:
   // Synchronously drop all connections managed by the VFS.
@@ -50,7 +52,6 @@ class SynchronousVfs : public Vfs {
   zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
                                  zx::channel channel) final;
   void UnregisterConnection(internal::Connection* connection) final;
-  bool IsTerminating() const final;
 
   fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_;
   bool is_shutting_down_;

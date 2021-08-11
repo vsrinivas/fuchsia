@@ -7,12 +7,12 @@
 #include "pty-client-vnode.h"
 #include "pty-client.h"
 
-PtyServer::PtyServer(zx::eventpair local, zx::eventpair remote, fs::Vfs* vfs)
+PtyServer::PtyServer(zx::eventpair local, zx::eventpair remote, fs::FuchsiaVfs* vfs)
     : local_(std::move(local)), remote_(std::move(remote)), vfs_(vfs) {}
 
 PtyServer::~PtyServer() = default;
 
-zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out, fs::Vfs* vfs) {
+zx_status_t PtyServer::Create(fbl::RefPtr<PtyServer>* out, fs::FuchsiaVfs* vfs) {
   zx::eventpair local, remote;
   zx_status_t status = zx::eventpair::create(0, &local, &remote);
   if (status != ZX_OK) {

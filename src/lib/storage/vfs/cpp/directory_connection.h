@@ -22,7 +22,7 @@ class DirectoryConnection final : public Connection,
                                   public fidl::WireServer<fuchsia_io::DirectoryAdmin> {
  public:
   // Refer to documentation for |Connection::Connection|.
-  DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+  DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
                       VnodeConnectionOptions options);
 
   ~DirectoryConnection() final = default;

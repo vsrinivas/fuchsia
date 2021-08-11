@@ -74,7 +74,7 @@ TEST(SynchronousVfs, UnmountAndShutdown) {
   auto result = fidl::WireCall<fuchsia_io::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
-  ASSERT_TRUE(static_cast<fs::Vfs*>(&vfs)->IsTerminating());
+  ASSERT_TRUE(vfs.IsTerminating());
 }
 
 TEST(ManagedVfs, UnmountAndShutdown) {
@@ -91,10 +91,10 @@ TEST(ManagedVfs, UnmountAndShutdown) {
   auto result = fidl::WireCall<fuchsia_io::DirectoryAdmin>(zx::unowned_channel{local}).Unmount();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
-  ASSERT_TRUE(static_cast<fs::Vfs*>(&vfs)->IsTerminating());
+  ASSERT_TRUE(vfs.IsTerminating());
 }
 
-static void CheckClosesConnection(fs::Vfs* vfs, async::TestLoop* loop) {
+static void CheckClosesConnection(fs::FuchsiaVfs* vfs, async::TestLoop* loop) {
   zx::channel local_a, remote_a, local_b, remote_b;
   ASSERT_OK(zx::channel::create(0, &local_a, &remote_a));
   ASSERT_OK(zx::channel::create(0, &local_b, &remote_b));

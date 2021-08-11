@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fs {
 
@@ -13,7 +13,7 @@ MountChannel::~MountChannel() {
     // Note: this is best-effort, and would fail if the remote endpoint does not speak the
     // |fuchsia.io/DirectoryAdmin| protocol.
     fidl::ClientEnd<fuchsia_io::DirectoryAdmin> admin(client_end_.TakeChannel());
-    Vfs::UnmountHandle(std::move(admin), zx::time::infinite());
+    FuchsiaVfs::UnmountHandle(std::move(admin), zx::time::infinite());
   }
 }
 

@@ -18,8 +18,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -27,29 +27,29 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-constexpr Vfs::MountNode::MountNode() : vn_(nullptr) {}
+constexpr FuchsiaVfs::MountNode::MountNode() = default;
 
-Vfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
+FuchsiaVfs::MountNode::~MountNode() { ZX_DEBUG_ASSERT(vn_ == nullptr); }
 
-void Vfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
+void FuchsiaVfs::MountNode::SetNode(fbl::RefPtr<Vnode> vn) {
   ZX_DEBUG_ASSERT(vn_ == nullptr);
   vn_ = vn;
 }
 
-fidl::ClientEnd<fio::Directory> Vfs::MountNode::ReleaseRemote() {
+fidl::ClientEnd<fio::Directory> FuchsiaVfs::MountNode::ReleaseRemote() {
   ZX_DEBUG_ASSERT(vn_ != nullptr);
   fidl::ClientEnd<fio::Directory> h = vn_->DetachRemote();
   vn_ = nullptr;
   return h;
 }
 
-bool Vfs::MountNode::VnodeMatch(fbl::RefPtr<Vnode> vn) const {
+bool FuchsiaVfs::MountNode::VnodeMatch(fbl::RefPtr<Vnode> vn) const {
   ZX_DEBUG_ASSERT(vn_ != nullptr);
   return vn == vn_;
 }
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.
-zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
+zx_status_t FuchsiaVfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
   if (vn == nullptr) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -72,7 +72,7 @@ zx_status_t Vfs::InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) {
 }
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.
-zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
+zx_status_t FuchsiaVfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
   if (vn == nullptr) {
     return ZX_ERR_ACCESS_DENIED;
   }
@@ -93,8 +93,8 @@ zx_status_t Vfs::InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) {
   return ZX_OK;
 }
 
-zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
-                            uint32_t flags) {
+zx_status_t FuchsiaVfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
+                                   uint32_t flags) {
   std::lock_guard lock(vfs_lock_);
   return OpenLocked(
              vn, name,
@@ -102,7 +102,7 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountC
              fs::Rights::ReadWrite(), S_IFDIR)
       .visit([&](auto&& result) __TA_REQUIRES(vfs_lock_) {
         using T = std::decay_t<decltype(result)>;
-        using OpenResult = fs::Vfs::OpenResult;
+        using OpenResult = fs::FuchsiaVfs::OpenResult;
         if constexpr (std::is_same_v<T, OpenResult::Error>) {
           return result;
         } else {
@@ -111,30 +111,30 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountC
               // There is an old remote handle on this vnode; shut it down and replace it with our
               // own.
               fidl::ClientEnd<fio::Directory> old_remote;
-              Vfs::UninstallRemoteLocked(vn, &old_remote);
+              FuchsiaVfs::UninstallRemoteLocked(vn, &old_remote);
               // Passing |zx::time::infinite_past()| results in a fire-and-forget call.
               // TODO(fxbug.dev/42264): Add proper tracking of remote filesystem teardown.
               // Note: this is best-effort, and would fail if the remote endpoint does not speak the
               // |fuchsia.io/DirectoryAdmin| protocol.
               fidl::ClientEnd<fio::DirectoryAdmin> old_remote_admin(old_remote.TakeChannel());
-              Vfs::UnmountHandle(std::move(old_remote_admin), zx::time::infinite_past());
+              FuchsiaVfs::UnmountHandle(std::move(old_remote_admin), zx::time::infinite_past());
             } else {
               return ZX_ERR_BAD_STATE;
             }
           }
-          return Vfs::InstallRemoteLocked(result.vnode, std::move(h));
+          return FuchsiaVfs::InstallRemoteLocked(result.vnode, std::move(h));
         }
       });
 }
 
-zx_status_t Vfs::UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fio::Directory>* h) {
+zx_status_t FuchsiaVfs::UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fio::Directory>* h) {
   std::lock_guard lock(vfs_lock_);
   return UninstallRemoteLocked(std::move(vn), h);
 }
 
-zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::Node> channel,
-                                   std::string_view path, VnodeConnectionOptions options,
-                                   uint32_t mode) {
+zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::Node> channel,
+                                          std::string_view path, VnodeConnectionOptions options,
+                                          uint32_t mode) {
   std::lock_guard lock(vfs_lock_);
   auto h = vn->GetRemote();
   if (!h.is_valid()) {
@@ -154,7 +154,8 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd<fio::N
 
 // Uninstall the remote filesystem mounted on vn. Removes vn from the remote_list_, and sends its
 // corresponding filesystem an 'unmount' signal.
-zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fio::Directory>* h) {
+zx_status_t FuchsiaVfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
+                                              fidl::ClientEnd<fio::Directory>* h) {
   std::unique_ptr<MountNode> mount_point;
   {
     mount_point =
@@ -168,7 +169,7 @@ zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fi
 }
 
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all known remotes.
-zx_status_t Vfs::UninstallAll(zx::time deadline) {
+zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
   std::unique_ptr<MountNode> mount_point;
   for (;;) {
     {
@@ -179,7 +180,7 @@ zx_status_t Vfs::UninstallAll(zx::time deadline) {
       // Note: this is best-effort, and would fail if the remote endpoint does not speak the
       // |fuchsia.io/DirectoryAdmin| protocol.
       fidl::ClientEnd<fio::DirectoryAdmin> mount_admin(mount_point->ReleaseRemote().TakeChannel());
-      Vfs::UnmountHandle(std::move(mount_admin), deadline);
+      FuchsiaVfs::UnmountHandle(std::move(mount_admin), deadline);
     } else {
       return ZX_OK;
     }

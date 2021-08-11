@@ -11,14 +11,15 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/vfs/cpp/connection.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace {
 
 // Base class used to define fake Vfs objects to test |Connection::StartDispatching|.
-class NoOpVfs : public fs::Vfs {
+class NoOpVfs : public fs::FuchsiaVfs {
  public:
-  using Vfs::Vfs;
+  using FuchsiaVfs::FuchsiaVfs;
 
  protected:
   fbl::DoublyLinkedList<std::unique_ptr<fs::internal::Connection>> connections_;
@@ -68,8 +69,8 @@ class NoOpVfsBad : public NoOpVfs {
   }
 };
 
-template <typename Vfs>
-void RunTest(async::Loop* loop, Vfs&& vfs) {
+template <typename VfsType>
+void RunTest(async::Loop* loop, VfsType&& vfs) {
   auto root = fbl::MakeRefCounted<fs::PseudoDir>();
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());

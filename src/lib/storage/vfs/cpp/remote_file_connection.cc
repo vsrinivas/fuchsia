@@ -34,7 +34,7 @@ namespace fs {
 
 namespace internal {
 
-RemoteFileConnection::RemoteFileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+RemoteFileConnection::RemoteFileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
                                            VnodeProtocol protocol, VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options) {}
 

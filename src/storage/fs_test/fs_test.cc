@@ -39,7 +39,7 @@
 #include "sdk/lib/syslog/cpp/macros.h"
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/json_parser/json_parser.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/json_filesystem.h"
@@ -194,7 +194,7 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
     return status;
   }
   if (auto status =
-          zx::make_status(fs::Vfs::UnmountHandle(zx::channel(handle), zx::time::infinite()));
+          zx::make_status(fs::FuchsiaVfs::UnmountHandle(zx::channel(handle), zx::time::infinite()));
       status.is_error()) {
     std::cout << "Unable to unmount: " << status.status_string() << std::endl;
     return status;
