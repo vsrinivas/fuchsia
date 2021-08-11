@@ -130,7 +130,7 @@ impl FsNodeOps for ExtSymlink {
         Err(ENOSYS)
     }
 
-    fn readlink(&self, _node: &FsNode) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
         let data = self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
         Ok(data)
     }

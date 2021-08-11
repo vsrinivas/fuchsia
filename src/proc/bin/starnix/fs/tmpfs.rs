@@ -343,12 +343,12 @@ mod test {
             task.open_file(b"/usr/bin", OpenFlags::RDONLY).expect("failed to open /usr/bin");
         usr_bin
             .name
-            .unlink(&task.fs, b"test.txt", UnlinkKind::NonDirectory)
+            .unlink(task, b"test.txt", UnlinkKind::NonDirectory)
             .expect("failed to unlink test.text");
         assert_eq!(ENOENT, task.open_file(b"/usr/bin/test.txt", OpenFlags::RDWR).unwrap_err());
         assert_eq!(
             ENOENT,
-            usr_bin.name.unlink(&task.fs, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
+            usr_bin.name.unlink(task, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
         );
 
         assert_eq!(0, txt.read(task, &[]).expect("failed to read"));
@@ -358,9 +358,6 @@ mod test {
 
         let usr = task.open_file(b"/usr", OpenFlags::RDONLY).expect("failed to open /usr");
         assert_eq!(ENOENT, task.open_file(b"/usr/foo", OpenFlags::RDONLY).unwrap_err());
-        usr.name
-            .unlink(&task.fs, b"bin", UnlinkKind::Directory)
-            .expect("failed to unlink /usr/bin");
-        assert_eq!(ENOENT, task.open_file(b"/usr/bin", OpenFlags::RDONLY).unwrap_err());
+        usr.name.unlink(task, b"bin", UnlinkKind::Directory).expect("failed to unlink /usr/bin");
     }
 }

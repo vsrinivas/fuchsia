@@ -445,7 +445,7 @@ impl Task {
     ) -> Result<NamespaceNode, Errno> {
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
         let (parent, basename) =
-            self.fs.lookup_parent(dir.clone(), &path, SymlinkMode::max_follow())?;
+            self.fs.lookup_parent(self, dir.clone(), &path, SymlinkMode::max_follow())?;
         // The remaining follows tracks how many symlink traversals remain before ELOOP should
         // be returned.
         let remaining_follows = match symlink_mode {
@@ -453,7 +453,7 @@ impl Task {
             SymlinkMode::NoFollow => 0,
         };
 
-        match parent.lookup(&self.fs, basename, SymlinkMode::NoFollow) {
+        match parent.lookup(self, basename, SymlinkMode::NoFollow) {
             Ok(name) => {
                 if name.entry.node.info().mode.is_lnk() {
                     if remaining_follows == 0 && must_create {
@@ -466,7 +466,7 @@ impl Task {
                         return Err(ELOOP);
                     }
 
-                    let path = name.entry.node.readlink()?;
+                    let path = name.entry.node.readlink(self)?;
                     let dir = if path[0] == b'/' { self.fs.root.clone() } else { parent };
                     self.resolve_open_path(
                         dir,
@@ -581,7 +581,7 @@ impl Task {
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
-        self.fs.lookup_parent(dir, path, SymlinkMode::max_follow())
+        self.fs.lookup_parent(self, dir, path, SymlinkMode::max_follow())
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

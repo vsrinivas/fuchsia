@@ -225,7 +225,7 @@ fn lookup_entry_at(
         assert!(basename.is_empty());
         return Ok(parent.entry);
     }
-    let child = parent.lookup(&task.fs, basename, options.symlink_mode)?;
+    let child = parent.lookup(task, basename, options.symlink_mode)?;
     Ok(child.entry)
 }
 
@@ -387,9 +387,9 @@ pub fn sys_readlinkat(
         if stat.st_mode & S_IRUSR == 0 {
             return Err(EACCES);
         }
-        Ok(parent.lookup(&ctx.task.fs, basename, SymlinkMode::NoFollow)?.entry)
+        Ok(parent.lookup(ctx.task, basename, SymlinkMode::NoFollow)?.entry)
     })?;
-    let link = entry.node.readlink()?;
+    let link = entry.node.readlink(ctx.task)?;
 
     // Cap the returned length at buffer_size.
     let length = std::cmp::min(buffer_size, link.len());
@@ -480,7 +480,7 @@ pub fn sys_unlinkat(
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.unlink(&ctx.task.fs, basename, kind)
+        parent.unlink(ctx.task, basename, kind)
     })?;
     Ok(SUCCESS)
 }
@@ -677,8 +677,10 @@ pub fn sys_mount(
         String::from_utf8_lossy(fs_type)
     );
 
-    let fs = create_filesystem(Some(&fs_ctx), ctx.kernel(), source, fs_type, b"")?;
-    fs_ctx.lookup_node(fs_ctx.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
+    let fs = create_filesystem(ctx.kernel(), Some(ctx.task), source, fs_type, b"")?;
+    fs_ctx
+        .lookup_node(ctx.task, fs_ctx.root.clone(), target, SymlinkMode::max_follow())?
+        .mount(fs)?;
     Ok(SUCCESS)
 }
 

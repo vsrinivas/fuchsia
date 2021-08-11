@@ -208,8 +208,8 @@ fn files_from_numbered_handles(
 
 fn create_filesystem_from_spec<'a>(
     kernel: &Arc<Kernel>,
+    task: Option<&Task>,
     pkg: &fio::DirectorySynchronousProxy,
-    fs_ctx: Option<&FsContext>,
     spec: &'a str,
 ) -> Result<(&'a [u8], WhatToMount), Error> {
     use WhatToMount::*;
@@ -231,7 +231,7 @@ fn create_filesystem_from_spec<'a>(
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
             Fs(ExtFilesystem::new(vmo)?)
         }
-        _ => create_filesystem(fs_ctx, &kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
+        _ => create_filesystem(&kernel, task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
 }
@@ -287,8 +287,8 @@ fn start_component(
     let mut mounts_iter = mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
         &kernel,
-        &pkg,
         None,
+        &pkg,
         mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
     )?;
     if root_point != b"/" {
@@ -299,12 +299,21 @@ fn start_component(
     } else {
         anyhow::bail!("how did a bind mount manage to get created as the root?")
     };
+
     let fs = FsContext::new(root_fs);
+    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
+    let task_owner =
+        Task::create_process(&kernel, &binary_path, 0, files, fs.clone(), credentials, None)?;
+
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
-            create_filesystem_from_spec(&kernel, &pkg, Some(&fs), mount_spec)?;
-        let mount_point =
-            fs.lookup_node(fs.root.clone(), mount_point, SymlinkMode::max_follow())?;
+            create_filesystem_from_spec(&kernel, Some(&task_owner.task), &pkg, mount_spec)?;
+        let mount_point = fs.lookup_node(
+            &task_owner.task,
+            fs.root.clone(),
+            mount_point,
+            SymlinkMode::max_follow(),
+        )?;
         mount_point.mount(child_fs)?;
     }
 
@@ -312,9 +321,9 @@ fn start_component(
     // TODO(tbodt): Remove once apexd works.
     if let Some(apexes) = apex_hack {
         fs.root
-            .lookup(&fs, b"apex", SymlinkMode::max_follow())?
+            .lookup(&task_owner.task, b"apex", SymlinkMode::max_follow())?
             .mount(WhatToMount::Fs(TmpFs::new()))?;
-        let apex_dir = fs.root.lookup(&fs, b"apex", SymlinkMode::max_follow())?;
+        let apex_dir = fs.root.lookup(&task_owner.task, b"apex", SymlinkMode::max_follow())?;
         for apex in apexes {
             let apex = apex.as_bytes();
             let apex_subdir = apex_dir.create_node(
@@ -323,6 +332,7 @@ fn start_component(
                 DeviceType::NONE,
             )?;
             let apex_source = fs.lookup_node(
+                &task_owner.task,
                 fs.root.clone(),
                 &[b"/system/apex/", apex].concat(),
                 SymlinkMode::max_follow(),
@@ -330,10 +340,6 @@ fn start_component(
             apex_subdir.mount(WhatToMount::Dir(apex_source.entry))?;
         }
     }
-
-    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
-
-    let task_owner = Task::create_process(&kernel, &binary_path, 0, files, fs, credentials, None)?;
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());

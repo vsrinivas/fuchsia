@@ -8,6 +8,7 @@ use std::sync::{Arc, Weak};
 
 use crate::device::*;
 use crate::fs::*;
+use crate::task::Task;
 use crate::types::*;
 
 pub struct FsNode {
@@ -108,7 +109,7 @@ pub trait FsNodeOps: Send + Sync {
     }
 
     /// Reads the symlink from this node.
-    fn readlink(&self, _node: &FsNode) -> Result<FsString, Errno> {
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
         Err(EINVAL)
     }
 
@@ -228,8 +229,10 @@ impl FsNode {
         self.ops().create_symlink(self, name, target)
     }
 
-    pub fn readlink(&self) -> Result<FsString, Errno> {
-        self.ops().readlink(self)
+    pub fn readlink(&self, task: &Task) -> Result<FsString, Errno> {
+        let now = fuchsia_runtime::utc_time();
+        self.info_write().time_access = now;
+        self.ops().readlink(self, task)
     }
 
     pub fn unlink(&self, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {

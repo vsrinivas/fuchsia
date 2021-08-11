@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fd_impl_directory;
+use crate::fs::procfs::task_symlink::*;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -33,8 +34,15 @@ impl FsNodeOps for ProcDirectory {
         Ok(Box::new(DirectoryFileOps::new()))
     }
 
-    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        Err(ENOENT)
+    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        match name {
+            b"self" => node.fs().get_or_create_node(1, || {
+                let child =
+                    FsNode::new(Box::new(TaskSymlink::new()), &node.fs(), 1, FileMode::IFLNK);
+                Ok(child)
+            }),
+            _ => Err(ENOENT),
+        }
     }
 }
 
@@ -96,9 +104,13 @@ impl FileOps for DirectoryFileOps {
             )?;
             *offset += 1;
         }
+        if *offset == 2 {
+            sink.add(file.name.entry.node.inode_num, 3, DirectoryEntryType::DIR, b"self")?;
+            *offset += 1;
+        }
 
         // The amount to offset pids by, accounting for the non-pid entries.
-        const PID_OFFSET: i32 = 2;
+        const PID_OFFSET: i32 = 3;
 
         // Adjust the offset to take the `.` and `..` entries into account. The offset is
         // guaranteed to be >= 2 at this point.

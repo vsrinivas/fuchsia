@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::task::Task;
 use crate::types::*;
 
 /// A node that represents a symlink to another node.
@@ -22,9 +23,7 @@ impl FsNodeOps for SymlinkNode {
         unreachable!("Symlink nodes cannot be opened.");
     }
 
-    fn readlink(&self, node: &FsNode) -> Result<FsString, Errno> {
-        let now = fuchsia_runtime::utc_time();
-        node.info_write().time_access = now;
+    fn readlink(&self, _node: &FsNode, _task: &Task) -> Result<FsString, Errno> {
         Ok(self.target.clone())
     }
 }

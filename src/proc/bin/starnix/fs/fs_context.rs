@@ -6,6 +6,7 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 
 use crate::fs::*;
+use crate::task::Task;
 use crate::types::*;
 
 /// The mutable state for an FsContext.
@@ -96,6 +97,7 @@ impl FsContext {
     /// The returned parent might not be a directory.
     pub fn lookup_parent<'a>(
         &self,
+        task: &Task,
         dir: NamespaceNode,
         path: &'a FsStr,
         symlink_mode: SymlinkMode,
@@ -104,7 +106,7 @@ impl FsContext {
         let mut it = path.split(|c| *c == b'/');
         let mut current_path_component = it.next().unwrap_or(b"");
         while let Some(next_path_component) = it.next() {
-            current_node = current_node.lookup(self, current_path_component, symlink_mode)?;
+            current_node = current_node.lookup(task, current_path_component, symlink_mode)?;
             current_path_component = next_path_component;
         }
         Ok((current_node, current_path_component))
@@ -118,12 +120,13 @@ impl FsContext {
     /// This function resolves the component of the given path.
     pub fn lookup_node(
         &self,
+        task: &Task,
         dir: NamespaceNode,
         path: &FsStr,
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        let (parent, basename) = self.lookup_parent(dir, path, symlink_mode)?;
-        parent.lookup(self, basename, symlink_mode)
+        let (parent, basename) = self.lookup_parent(task, dir, path, symlink_mode)?;
+        parent.lookup(task, basename, symlink_mode)
     }
 
     pub fn apply_umask(&self, mode: FileMode) -> FileMode {

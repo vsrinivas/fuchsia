@@ -151,22 +151,26 @@ impl FileOps for RemoteFileObject {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::testing::*;
     use fidl::endpoints::Proxy;
     use fidl_fuchsia_io as fio;
 
     #[::fuchsia::test]
     async fn test_tree() -> Result<(), anyhow::Error> {
+        let (_kernel, task_owner) = create_kernel_and_task();
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
         let fs = RemoteFs::new(root.into_channel().unwrap().into_zx_channel(), rights);
         let ns = Namespace::new(fs.clone());
-        let context = FsContext::new(fs);
         let root = ns.root();
-        assert_eq!(root.lookup(&context, b"nib", SymlinkMode::max_follow()).err(), Some(ENOENT));
-        root.lookup(&context, b"lib", SymlinkMode::max_follow()).unwrap();
+        assert_eq!(
+            root.lookup(&task_owner.task, b"nib", SymlinkMode::max_follow()).err(),
+            Some(ENOENT)
+        );
+        root.lookup(&task_owner.task, b"lib", SymlinkMode::max_follow()).unwrap();
 
         let _test_file = root
-            .lookup(&context, b"bin/hello_starnix", SymlinkMode::max_follow())?
+            .lookup(&task_owner.task, b"bin/hello_starnix", SymlinkMode::max_follow())?
             .open(OpenFlags::RDONLY)?;
         Ok(())
     }

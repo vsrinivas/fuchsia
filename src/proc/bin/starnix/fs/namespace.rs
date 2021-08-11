@@ -15,6 +15,7 @@ use super::devfs::dev_tmp_fs;
 use super::tmpfs::TmpFs;
 use super::*;
 use crate::task::Kernel;
+use crate::task::Task;
 use crate::types::*;
 
 /// A mount namespace.
@@ -83,8 +84,8 @@ pub enum WhatToMount {
 }
 
 pub fn create_filesystem(
-    ctx: Option<&FsContext>,
     kernel: &Kernel,
+    task: Option<&Task>,
     source: &FsStr,
     fs_type: &FsStr,
     _data: &FsStr,
@@ -94,8 +95,11 @@ pub fn create_filesystem(
         b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
         b"tmpfs" => Fs(TmpFs::new()),
         b"bind" => {
-            let ctx = ctx.ok_or(ENOENT)?;
-            Dir(ctx.lookup_node(ctx.root.clone(), source, SymlinkMode::max_follow())?.entry)
+            let task = task.ok_or(ENOENT)?;
+            Dir(task
+                .fs
+                .lookup_node(task, task.fs.root.clone(), source, SymlinkMode::max_follow())?
+                .entry)
         }
         _ => return Err(ENODEV),
     })
@@ -183,11 +187,11 @@ impl NamespaceNode {
         self.create_namespace_node(name, || self.entry.create_symlink(name, target))
     }
 
-    pub fn unlink(&self, context: &FsContext, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(&self, task: &Task, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EINVAL);
         }
-        let child = self.lookup(context, name, SymlinkMode::NoFollow)?;
+        let child = self.lookup(task, name, SymlinkMode::NoFollow)?;
 
         let unlink = || {
             if child.mountpoint().is_some() {
@@ -211,7 +215,7 @@ impl NamespaceNode {
     /// Traverse down a parent-to-child link in the namespace.
     pub fn lookup(
         &self,
-        context: &FsContext,
+        task: &Task,
         name: &FsStr,
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
@@ -227,13 +231,14 @@ impl NamespaceNode {
             while child.entry.node.info().mode.is_lnk() {
                 match symlink_mode {
                     SymlinkMode::Follow(count) if count > 0 => {
-                        let link_target = child.entry.node.readlink()?;
+                        let link_target = child.entry.node.readlink(task)?;
                         let link_directory = if link_target[0] == b'/' {
-                            context.root.clone()
+                            task.fs.root.clone()
                         } else {
                             self.clone()
                         };
-                        child = context.lookup_node(
+                        child = task.fs.lookup_node(
+                            task,
                             link_directory,
                             &link_target,
                             SymlinkMode::Follow(count - 1),
@@ -365,9 +370,11 @@ impl Hash for NamespaceNode {
 mod test {
     use super::*;
     use crate::fs::tmpfs::TmpFs;
+    use crate::testing::*;
 
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
+        let (_kernel, task_owner) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -376,19 +383,19 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
-        let pts =
-            dev.lookup(&context, b"pts", SymlinkMode::max_follow()).expect("failed to lookup pts");
+        let pts = dev
+            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
+            .expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
@@ -399,6 +406,7 @@ mod test {
 
     #[test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
+        let (_kernel, task_owner) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -407,29 +415,29 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
         let new_dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.entry, &new_dev.entry));
         assert_ne!(&dev, &new_dev);
 
         let _new_pts = new_dev
-            .lookup(&context, b"pts", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
             .expect("failed to lookup pts");
-        assert!(dev.lookup(&context, b"pts", SymlinkMode::max_follow()).is_err());
+        assert!(dev.lookup(&task_owner.task, b"pts", SymlinkMode::max_follow()).is_err());
 
         Ok(())
     }
 
     #[test]
     fn test_path() -> anyhow::Result<()> {
+        let (_kernel, task_owner) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
@@ -438,19 +446,19 @@ mod test {
         let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
-        let context = FsContext::new(root_fs);
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
         dev.mount(WhatToMount::Fs(dev_fs)).expect("failed to mount dev root node");
 
         let dev = ns
             .root()
-            .lookup(&context, b"dev", SymlinkMode::max_follow())
+            .lookup(&task_owner.task, b"dev", SymlinkMode::max_follow())
             .expect("failed to lookup dev");
-        let pts =
-            dev.lookup(&context, b"pts", SymlinkMode::max_follow()).expect("failed to lookup pts");
+        let pts = dev
+            .lookup(&task_owner.task, b"pts", SymlinkMode::max_follow())
+            .expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());
