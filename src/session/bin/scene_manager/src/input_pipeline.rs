@@ -57,9 +57,9 @@ pub async fn handle_input(
 
     let input_device_registry_fut = handle_input_device_registry_request_streams(
         input_device_registry_request_stream_receiver,
-        input_pipeline.input_device_types.clone(),
-        input_pipeline.input_event_sender.clone(),
-        input_pipeline.input_device_bindings.clone(),
+        input_pipeline.input_device_types().clone(),
+        input_pipeline.input_event_sender().clone(),
+        input_pipeline.input_device_bindings().clone(),
     );
 
     fasync::Task::local(input_device_registry_fut).detach();

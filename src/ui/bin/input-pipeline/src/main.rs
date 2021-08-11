@@ -41,8 +41,8 @@ async fn main() -> Result<(), Error> {
     .await
     .expect("Failed to create input pipeline");
 
-    let input_event_sender = input_pipeline.input_event_sender.clone();
-    let bindings = input_pipeline.input_device_bindings.clone();
+    let input_event_sender = input_pipeline.input_event_sender().clone();
+    let bindings = input_pipeline.input_device_bindings().clone();
 
     // Handle input events.
     fasync::Task::local(input_pipeline.handle_input_events()).detach();

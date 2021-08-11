@@ -9,9 +9,9 @@ use {
     fidl_fuchsia_input_injection,
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
-    futures::channel::mpsc::{Receiver, Sender},
+    futures::channel::mpsc::{self, Receiver, Sender, UnboundedReceiver, UnboundedSender},
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
     io_util::open_directory_in_namespace,
@@ -27,6 +27,117 @@ type BoxedInputDeviceBinding = Box<dyn input_device::InputDeviceBinding>;
 /// It expects filenames of the input devices seen in /dev/class/input-report (ex. "001") or
 /// "injected_device" as keys.
 pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<u32, Vec<BoxedInputDeviceBinding>>>>;
+
+/// An input pipeline assembly.
+///
+/// Represents a partial stage of the input pipeline which accepts inputs through an asynchronous
+/// sender channel, and emits outputs through an asynchronous receiver channel.  Use [new] to
+/// create a new assembly from a sequence of [InputHandler]s.
+///
+/// Once assembled, use [into_components] to get the sender and receiver channels and the
+/// unstarted tasks corresponding to individual pipeline stages.
+///
+/// Convenience functions [run] and [catch_unhandled] are provided for running the tasks, and
+/// for error reporting for the events that fell through the input pipeline unhandled.
+///
+/// # Implementation notes
+///
+/// Internally, when a new [InputPipelineAssembly] is created with multiple [InputHandler]s, the
+/// handlers are connected together using async queues.  This allows fully streamed processing of
+/// input events, and also allows some pipeline stages to generate events spontaneously, i.e.
+/// without an external stimulus.
+pub(crate) struct InputPipelineAssembly {
+    /// The top-level sender: send into this queue to inject an event into the input
+    /// pipeline.
+    sender: UnboundedSender<input_device::InputEvent>,
+    /// The bottom-level receiver: any events that fall through the entire pipeline can
+    /// be read from this receiver.  See [catch_unhandled] for a canned way to catch and
+    /// log unhandled events.
+    receiver: UnboundedReceiver<input_device::InputEvent>,
+    /// The tasks that were instantiated as result of calling [new].  You *must*
+    /// submit all the tasks to an executor to have them start.  Use [components] to
+    /// get the tasks.  See [run] for a canned way to start these tasks.
+    tasks: Vec<fuchsia_async::Task<()>>,
+}
+
+impl InputPipelineAssembly {
+    /// Create a new input handler queue assembly from the supplied handlers.
+    /// The handlers will be attached together in the order they appear in the
+    /// `input_handlers`.
+    ///
+    /// # Parameters
+    ///
+    /// - `input_handlers`: the [InputHandler]s to be assembled into an input pipeline, in
+    ///   the order that they need to be invoked.
+    pub fn new(input_handlers: Vec<Rc<dyn input_handler::InputHandler>>) -> Self {
+        // Create an async channel used to pipe events through the input pipeline.
+        let (sender, mut receiver) = mpsc::unbounded();
+
+        // Iterate over all handlers: attach each one to a receiver at the input, and collect its
+        // outputs into a sender in a local async task.  String successive stages together forming
+        // a pipeline.  In the end we're left with a topmost sender for users to send events in,
+        // and the bottom-most receiver where all unprocessed events fall into.
+        let mut tasks = vec![];
+        for (index, handler) in input_handlers.into_iter().enumerate() {
+            let (next_sender, next_receiver) = mpsc::unbounded();
+            tasks.push(fasync::Task::local(async move {
+                while let Some(event) = receiver.next().await {
+                    for out_event in handler.clone().handle_input_event(event).await.into_iter() {
+                        if let Err(e) = next_sender.unbounded_send(out_event) {
+                            // Not the greatest of error reports, but at least gives an indication
+                            // of which stage in the stage sequence had a problem.
+                            fx_log_err!(
+                                "could not forward event output from handler: {:?}: {:?}",
+                                index,
+                                &e
+                            );
+                            // This is not a recoverable error, break here.
+                            break;
+                        }
+                    }
+                }
+                panic!("receive loop is not supposed to terminate for handler: {:?}", index);
+            }));
+            receiver = next_receiver;
+        }
+        InputPipelineAssembly { sender, receiver, tasks }
+    }
+
+    /// Deconstructs the queue for further processing.
+    ///
+    /// You may want to call [catch_unhandled] on the returned [async_channel::Receiver], and
+    /// [run] on the returned [fuchsia_async::Tasks].
+    pub fn into_components(
+        self,
+    ) -> (
+        UnboundedSender<input_device::InputEvent>,
+        UnboundedReceiver<input_device::InputEvent>,
+        Vec<fuchsia_async::Task<()>>,
+    ) {
+        (self.sender, self.receiver, self.tasks)
+    }
+
+    /// Starts all tasks in an asynchronous executor.
+    fn run(tasks: Vec<fuchsia_async::Task<()>>) {
+        fasync::Task::local(async move {
+            futures::future::join_all(tasks).await;
+            panic!("Runner task is not supposed to terminate.")
+        })
+        .detach();
+    }
+
+    /// Installs a handler that will print a warning for each event that is received
+    /// unhandled from this receiver.
+    fn catch_unhandled(mut receiver: UnboundedReceiver<input_device::InputEvent>) {
+        fasync::Task::local(async move {
+            while let Some(event) = receiver.next().await {
+                fx_log_warn!("unhandled input event: {:?}", &event);
+            }
+            panic!("unhandled event catcher is not supposed to terminate.");
+        })
+        .detach();
+    }
+}
 
 /// An [`InputPipeline`] manages input devices and propagates input events through input handlers.
 ///
@@ -53,22 +164,23 @@ pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<u32, Vec<BoxedInputDevice
 /// input_pipeline.handle_input_events().await;
 /// ```
 pub struct InputPipeline {
-    /// The input handlers that will dispatch InputEvents from the `device_bindings`.
-    /// The order of handlers in `input_handlers` is the order
-    input_handlers: Vec<Rc<dyn input_handler::InputHandler>>,
+    /// The entry point into the input handler pipeline. Incoming input events should
+    /// be inserted into this async queue, and the input pipeline will ensure that they
+    /// are propagated through all the input handlers in the appropriate sequence.
+    pipeline_sender: UnboundedSender<input_device::InputEvent>,
 
     /// A clone of this sender is given to every InputDeviceBinding that this pipeline owns.
     /// Each InputDeviceBinding will send InputEvents to the pipeline through this channel.
-    pub input_event_sender: Sender<input_device::InputEvent>,
+    device_event_sender: Sender<input_device::InputEvent>,
 
     /// Receives InputEvents from all InputDeviceBindings that this pipeline owns.
-    input_event_receiver: Receiver<input_device::InputEvent>,
+    device_event_receiver: Receiver<input_device::InputEvent>,
 
     /// The types of devices this pipeline supports.
-    pub input_device_types: Vec<input_device::InputDeviceType>,
+    input_device_types: Vec<input_device::InputDeviceType>,
 
     /// The InputDeviceBindings bound to this pipeline.
-    pub input_device_bindings: InputDeviceBindingHashMap,
+    input_device_bindings: InputDeviceBindingHashMap,
 }
 
 impl InputPipeline {
@@ -83,21 +195,27 @@ impl InputPipeline {
         device_types: Vec<input_device::InputDeviceType>,
         input_handlers: Vec<Rc<dyn input_handler::InputHandler>>,
     ) -> Result<Self, Error> {
-        let (input_event_sender, input_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        // Attach the pipeline stages together with async channels.
+        let (pipeline_sender, receiver, tasks) =
+            InputPipelineAssembly::new(input_handlers).into_components();
+        // Add a stage that catches events which drop all the way down through the pipeline
+        // and logs them.
+        InputPipelineAssembly::catch_unhandled(receiver);
+        // The tasks are all unstarted and need to be joined to start working.
+        InputPipelineAssembly::run(tasks);
 
+        let (device_event_sender, device_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        let device_bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
         let input_pipeline = InputPipeline {
-            input_handlers,
-            input_event_sender,
-            input_event_receiver,
-            input_device_types: device_types,
-            input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
+            pipeline_sender,
+            device_event_sender,
+            device_event_receiver,
+            input_device_types: device_types.clone(),
+            input_device_bindings: device_bindings.clone(),
         };
 
-        let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));
-        let device_types = input_pipeline.input_device_types.clone();
-        let input_event_sender = input_pipeline.input_event_sender.clone();
-        let device_bindings = bindings.clone();
+        let input_event_sender = input_pipeline.device_event_sender.clone();
         fasync::Task::local(async move {
             // Watches the input device directory for new input devices. Creates new InputDeviceBindings
             // that send InputEvents to `input_event_receiver`.
@@ -124,20 +242,27 @@ impl InputPipeline {
         Ok(input_pipeline)
     }
 
-    /// Sends all InputEvents from `input_event_receiver` to all `input_handlers`.
+    /// Gets the input device bindings.
+    pub fn input_device_bindings(&self) -> &InputDeviceBindingHashMap {
+        &self.input_device_bindings
+    }
+
+    /// Gets the input device sender: this is the channel that should be cloned
+    /// and used for injecting events from the drivers into the input pipeline.
+    pub fn input_event_sender(&self) -> &Sender<input_device::InputEvent> {
+        &self.device_event_sender
+    }
+
+    /// Gets a list of input device types supported by this input pipeline.
+    pub fn input_device_types(&self) -> &Vec<input_device::InputDeviceType> {
+        &self.input_device_types
+    }
+
+    /// Forwards all input events into the input pipeline.
     pub async fn handle_input_events(mut self) {
-        while let Some(input_event) = self.input_event_receiver.next().await {
-            let mut result_events: Vec<input_device::InputEvent> = vec![input_event];
-            // Pass the InputEvent through all InputHandlers
-            for input_handler in &self.input_handlers {
-                // The outputted events from one InputHandler serves as the input
-                // events for the next InputHandler.
-                let mut next_result_events: Vec<input_device::InputEvent> = vec![];
-                for event in result_events {
-                    next_result_events
-                        .append(&mut input_handler.clone().handle_input_event(event).await);
-                }
-                result_events = next_result_events;
+        while let Some(input_event) = self.device_event_receiver.next().await {
+            if let Err(e) = self.pipeline_sender.unbounded_send(input_event) {
+                fx_log_err!("could not forward event from driver: {:?}", &e);
             }
         }
 
@@ -387,12 +512,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn multiple_devices_single_handler() {
         // Create two fake device bindings.
-        let (input_event_sender, input_event_receiver) =
+        let (device_event_sender, device_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         let first_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new(input_event_sender.clone());
+            fake_input_device_binding::FakeInputDeviceBinding::new(device_event_sender.clone());
         let second_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new(input_event_sender.clone());
+            fake_input_device_binding::FakeInputDeviceBinding::new(device_event_sender.clone());
 
         // Create a fake input handler.
         let (handler_event_sender, mut handler_event_receiver) =
@@ -400,13 +525,17 @@ mod tests {
         let input_handler = fake_input_handler::FakeInputHandler::new(handler_event_sender);
 
         // Build the input pipeline.
+        let (sender, receiver, tasks) =
+            InputPipelineAssembly::new(vec![input_handler]).into_components();
         let input_pipeline = InputPipeline {
-            input_handlers: vec![input_handler],
-            input_event_sender,
-            input_event_receiver,
+            pipeline_sender: sender,
+            device_event_sender,
+            device_event_receiver,
             input_device_types: vec![],
             input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
         };
+        InputPipelineAssembly::catch_unhandled(receiver);
+        InputPipelineAssembly::run(tasks);
 
         // Send an input event from each device.
         let first_device_event = send_input_event(first_device_binding.input_event_sender());
@@ -446,13 +575,18 @@ mod tests {
             fake_input_handler::FakeInputHandler::new(second_handler_event_sender);
 
         // Build the input pipeline.
+        let (sender, receiver, tasks) =
+            InputPipelineAssembly::new(vec![first_input_handler, second_input_handler])
+                .into_components();
         let input_pipeline = InputPipeline {
-            input_handlers: vec![first_input_handler, second_input_handler],
-            input_event_sender,
-            input_event_receiver,
+            pipeline_sender: sender,
+            device_event_sender: input_event_sender,
+            device_event_receiver: input_event_receiver,
             input_device_types: vec![],
             input_device_bindings: Arc::new(Mutex::new(HashMap::new())),
         };
+        InputPipelineAssembly::catch_unhandled(receiver);
+        InputPipelineAssembly::run(tasks);
 
         // Send an input event.
         let input_event = send_input_event(input_device_binding.input_event_sender());
