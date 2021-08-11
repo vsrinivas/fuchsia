@@ -4,7 +4,6 @@
 
 // clang-format off
 #include "platform_auth_delegate.h"
-#include "configuration_manager_delegate_impl.h"
 // clang-format on
 
 #include <lib/fit/defer.h>
@@ -13,26 +12,34 @@
 #include <Weave/Core/WeaveTLV.h>
 
 #include "fake_weave_signer.h"
+#include "test_configuration_manager.h"
+#include "test_thread_stack_manager.h"
 #include "weave_test_fixture.h"
 
-namespace nl::Weave::DeviceLayer::Internal::testing {
+namespace weave::adaptation::testing {
 namespace {
 
-using weave::adaptation::testing::FakeWeaveSigner;
-
-using Profiles::kWeaveProfile_Security;
-using Profiles::Security::kKeyPurposeFlag_ServerAuth;
-using Profiles::Security::kKeyUsageFlag_DigitalSignature;
-using Profiles::Security::WeaveCertificateData;
-
+using nl::Ble::PacketBuffer;
+using nl::Weave::WeaveKeyExport;
+using nl::Weave::DeviceLayer::ConfigurationMgr;
+using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
+using nl::Weave::DeviceLayer::PlatformMgrImpl;
+using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+using nl::Weave::DeviceLayer::Internal::BeginSessionContext;
+using nl::Weave::DeviceLayer::Internal::PlatformAuthDelegate;
+using nl::Weave::DeviceLayer::Internal::ValidationContext;
+using nl::Weave::DeviceLayer::Internal::testing::WeaveTestFixture;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
-using nl::Weave::Profiles::Security::kTag_CASECertificateInfo_EntityCertificate;
-using nl::Weave::Profiles::Security::kTag_ECDSASignature_r;
-using nl::Weave::Profiles::Security::kTag_ECDSASignature_s;
-using nl::Weave::Profiles::Security::kTag_WeaveCASECertificateInformation;
-using nl::Weave::Profiles::Security::kTag_WeaveCASESignature;
-using nl::Weave::TLV::kTLVType_ByteString;
-using nl::Weave::TLV::kTLVType_Structure;
+using nl::Weave::Profiles::Security::WeaveCertificateData;
+using nl::Weave::Profiles::Security::WeaveCertificateSet;
+
+namespace ASN1 = nl::Weave::ASN1;
+namespace Profiles = nl::Weave::Profiles;
+namespace Security = nl::Weave::Profiles::Security;
+namespace TLV = nl::Weave::TLV;
+namespace Weave = nl::Weave;
+
+using WeaveKeyId = nl::Weave::WeaveKeyId;
 
 // A dummy account certificate, provided by openweave-core.
 constexpr char kTestDeviceCertName[] = "DUMMY-ACCOUNT-ID";
@@ -116,31 +123,6 @@ constexpr uint8_t kTestServiceConfig[] = {
     0x65, 0x73, 0x74, 0x6c, 0x61, 0x62, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x18, 0x18, 0x18, 0x18};
 }  // namespace
 
-class ConfigurationManagerTestDelegateImpl : public ConfigurationManagerDelegateImpl {
- public:
-  WEAVE_ERROR GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len) override {
-    return WeaveDeviceDescriptor::EncodeTLV(descriptor_, buf, static_cast<uint32_t>(buf_size),
-                                            reinterpret_cast<uint32_t&>(encoded_len));
-  }
-
-  void SetDeviceDescriptor(WeaveDeviceDescriptor descriptor) { descriptor_ = descriptor; }
-
-  void UseLocalPrivateKey() { use_local_private_key = true; }
-
-  zx_status_t GetPrivateKeyForSigning(std::vector<uint8_t>* signing_key) override {
-    if (use_local_private_key) {
-      signing_key->resize(sizeof(kTestPrivateKey) + 1);
-      std::copy(kTestPrivateKey, kTestPrivateKey + sizeof(kTestPrivateKey), signing_key->begin());
-      return ZX_OK;
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-
- private:
-  WeaveDeviceDescriptor descriptor_;
-  bool use_local_private_key = false;
-};
-
 class PlatformAuthDelegateTest : public WeaveTestFixture<> {
  public:
   PlatformAuthDelegateTest() {
@@ -153,27 +135,36 @@ class PlatformAuthDelegateTest : public WeaveTestFixture<> {
     WeaveTestFixture<>::RunFixtureLoop();
 
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
+    ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManager>());
 
-    ConfigurationMgrImpl().SetDelegate(nullptr);
-    ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
-    EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
-    // Initialize dummy certificate and service configuration.
+    // Initialize and set default certificate, service config. Disable the use
+    // of the signing key except for tests that explicitly want to provide the
+    // test signing key.
+    configuration_delegate().InitForTesting();
+    configuration_delegate().set_use_signing_key(false);
     EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate(kTestDeviceCert,
                                                                     sizeof(kTestDeviceCert)),
               WEAVE_NO_ERROR);
-    EXPECT_EQ(ConfigurationMgr().StoreServiceConfig((const uint8_t*)kTestServiceConfig,
-                                                    sizeof(kTestServiceConfig)),
+    EXPECT_EQ(ConfigurationMgr().StoreServiceConfig(kTestServiceConfig, sizeof(kTestServiceConfig)),
               WEAVE_NO_ERROR);
   }
 
   void TearDown() override {
     WeaveTestFixture<>::StopFixtureLoop();
     WeaveTestFixture<>::TearDown();
+
+    ConfigurationMgrImpl().SetDelegate(nullptr);
+    ThreadStackMgrImpl().SetDelegate(nullptr);
   }
 
  protected:
   FakeWeaveSigner& fake_weave_signer() { return fake_weave_signer_; }
   PlatformAuthDelegate& platform_auth_delegate() { return platform_auth_delegate_; }
+
+  TestConfigurationManager& configuration_delegate() {
+    return *reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
+  }
 
  private:
   FakeWeaveSigner fake_weave_signer_{kTestSignedHash, sizeof(kTestSignedHash)};
@@ -184,13 +175,11 @@ class PlatformAuthDelegateTest : public WeaveTestFixture<> {
 TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodePayload) {
   BeginSessionContext context;
   WeaveDeviceDescriptor descriptor;
-  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
-  uint16_t payload_len;
+  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxEncodedTLVLength] = {};
+  uint16_t payload_len = 0;
 
-  // Set dummy descriptor to return when encoding node payload.
-  ConfigurationManagerTestDelegateImpl* configuration_manager_delegate =
-      static_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
-  configuration_manager_delegate->SetDeviceDescriptor(descriptor);
+  // Get descriptor used when encoding node payload.
+  EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(descriptor), WEAVE_NO_ERROR);
 
   // Acquire node payload and decoded contents to device descriptor.
   WeaveDeviceDescriptor decoded_descriptor;
@@ -201,14 +190,14 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodePayload) {
             WEAVE_NO_ERROR);
 
   // Compare device descriptor from delegate and configuration manager.
-  uint8_t descriptor_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
-  uint32_t descriptor_buf_len;
+  uint8_t descriptor_buf[WeaveDeviceDescriptor::kMaxEncodedTLVLength] = {};
+  uint32_t descriptor_buf_len = 0;
   EXPECT_EQ(WeaveDeviceDescriptor::EncodeTLV(descriptor, descriptor_buf, sizeof(descriptor_buf),
                                              descriptor_buf_len),
             WEAVE_NO_ERROR);
 
-  uint8_t decoded_descriptor_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
-  uint32_t decoded_descriptor_buf_len;
+  uint8_t decoded_descriptor_buf[WeaveDeviceDescriptor::kMaxEncodedTLVLength] = {};
+  uint32_t decoded_descriptor_buf_len = 0;
   EXPECT_EQ(
       WeaveDeviceDescriptor::EncodeTLV(decoded_descriptor, decoded_descriptor_buf,
                                        sizeof(decoded_descriptor_buf), decoded_descriptor_buf_len),
@@ -220,13 +209,11 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodePayload) {
 TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodePayloadEncodingFailure) {
   BeginSessionContext context;
   WeaveDeviceDescriptor descriptor;
-  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxPairingCodeLength + 1];
-  uint16_t payload_len = 0U;
+  uint8_t payload_buf[WeaveDeviceDescriptor::kMaxEncodedTLVLength] = {};
+  uint16_t payload_len = 0;
 
-  // Set dummy descriptor to return when encoding node payload.
-  ConfigurationManagerTestDelegateImpl* configuration_manager_delegate =
-      static_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
-  configuration_manager_delegate->SetDeviceDescriptor(descriptor);
+  // Get descriptor used when encoding node payload.
+  EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(descriptor), WEAVE_NO_ERROR);
 
   // Acquire node payload and decoded contents to device descriptor, but supply
   // insufficient space to encode the descriptor.
@@ -254,23 +241,23 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodeCertInfo) {
   // Verify that the structure of the packet buffer contains sane information
   // from the manufacturer certificate.
   reader.ImplicitProfileId = Profiles::kWeaveProfile_Security;
-  EXPECT_EQ(reader.Next(kTLVType_Structure, TLV::ProfileTag(kWeaveProfile_Security,
-                                                            kTag_WeaveCASECertificateInformation)),
+  EXPECT_EQ(reader.Next(TLV::kTLVType_Structure,
+                        TLV::ProfileTag(Profiles::kWeaveProfile_Security,
+                                        Security::kTag_WeaveCASECertificateInformation)),
             WEAVE_NO_ERROR);
 
   WeaveCertificateSet cert_set;
-  Profiles::Security::WeaveCertificateData* cert;
+  WeaveCertificateData* cert;
 
   TLV::TLVType type;
   EXPECT_EQ(reader.EnterContainer(type), WEAVE_NO_ERROR);
   EXPECT_EQ(reader.Next(), WEAVE_NO_ERROR);
-  EXPECT_EQ(reader.GetTag(), TLV::ContextTag(kTag_CASECertificateInfo_EntityCertificate));
+  EXPECT_EQ(reader.GetTag(), TLV::ContextTag(Security::kTag_CASECertificateInfo_EntityCertificate));
 
   // Check that the CommonName of the certificate matches our dummy account id.
   auto release_cert_set = fit::defer([&] { cert_set.Release(); });
   EXPECT_EQ(cert_set.Init(kMaxCerts, kCertDecodeBufferSize), WEAVE_NO_ERROR);
-  EXPECT_EQ(cert_set.LoadCert(reader, Profiles::Security::kDecodeFlag_GenerateTBSHash, cert),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(cert_set.LoadCert(reader, Security::kDecodeFlag_GenerateTBSHash, cert), WEAVE_NO_ERROR);
   EXPECT_EQ(cert->SubjectDN.AttrOID, ASN1::kOID_AttributeType_CommonName);
   EXPECT_EQ(strncmp((const char*)cert->SubjectDN.AttrValue.String.Value, kTestDeviceCertName,
                     cert->SubjectDN.AttrValue.String.Len),
@@ -283,14 +270,14 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodeCertInfo) {
 }
 
 TEST_F(PlatformAuthDelegateTest, CASEAuth_EncodeNodeCertInfoInvalidCert) {
-  constexpr char kTestInvalidCert[] = "invalid-cert-data";
+  constexpr uint8_t kTestInvalidCert[] = "invalid-cert-data";
   BeginSessionContext context;
   TLVWriter writer;
 
   PacketBuffer* buffer = PacketBuffer::New();
   writer.Init(buffer);
 
-  EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate((const uint8_t*)kTestInvalidCert,
+  EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate(kTestInvalidCert,
                                                                   sizeof(kTestInvalidCert)),
             WEAVE_NO_ERROR);
   EXPECT_EQ(platform_auth_delegate().EncodeNodeCertInfo(context, writer),
@@ -311,24 +298,26 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignature) {
   PacketBuffer* buffer = PacketBuffer::New();
   writer.Init(buffer);
 
-  EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
-                context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
-                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      platform_auth_delegate().GenerateNodeSignature(
+          context, kTestHash, sizeof(kTestHash) - 1, writer,
+          TLV::ProfileTag(Profiles::kWeaveProfile_Security, Security::kTag_WeaveCASESignature)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
   TLVReader reader;
   reader.Init(buffer, WEAVE_SYSTEM_PACKETBUFFER_SIZE);
-  reader.ImplicitProfileId = kWeaveProfile_Security;
+  reader.ImplicitProfileId = Profiles::kWeaveProfile_Security;
 
   TLV::TLVType type;
-  EXPECT_EQ(reader.Next(kTLVType_Structure,
-                        TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      reader.Next(TLV::kTLVType_Structure, TLV::ProfileTag(Profiles::kWeaveProfile_Security,
+                                                           Security::kTag_WeaveCASESignature)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(reader.EnterContainer(type), WEAVE_NO_ERROR);
-  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_r)),
+  EXPECT_EQ(reader.Next(TLV::kTLVType_ByteString, TLV::ContextTag(Security::kTag_ECDSASignature_r)),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_s)),
+  EXPECT_EQ(reader.Next(TLV::kTLVType_ByteString, TLV::ContextTag(Security::kTag_ECDSASignature_s)),
             WEAVE_NO_ERROR);
 
   EXPECT_EQ(reader.ExitContainer(type), WEAVE_NO_ERROR);
@@ -346,19 +335,21 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignatureInvalidSignedHash
   // Set an invalid signed hash.
   fake_weave_signer().set_signed_hash(kInvalidSignedHash, sizeof(kInvalidSignedHash));
   writer.Init(buffer);
-  EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
-                context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
-                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            ASN1_ERROR_INVALID_ENCODING);
+  EXPECT_EQ(
+      platform_auth_delegate().GenerateNodeSignature(
+          context, kTestHash, sizeof(kTestHash) - 1, writer,
+          TLV::ProfileTag(Profiles::kWeaveProfile_Security, Security::kTag_WeaveCASESignature)),
+      ASN1_ERROR_INVALID_ENCODING);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
   // Set an error code when signing.
   fake_weave_signer().set_sign_hash_error(fuchsia::weave::ErrorCode::CRYPTO_ERROR);
   writer.Init(buffer);
-  EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
-                context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
-                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      platform_auth_delegate().GenerateNodeSignature(
+          context, kTestHash, sizeof(kTestHash) - 1, writer,
+          TLV::ProfileTag(Profiles::kWeaveProfile_Security, Security::kTag_WeaveCASESignature)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
   PacketBuffer::Free(buffer);
@@ -372,23 +363,23 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_BeginValidation) {
   msg_ctx.SetIsInitiator(true);
   EXPECT_EQ(platform_auth_delegate().BeginValidation(msg_ctx, valid_ctx, certs), WEAVE_NO_ERROR);
   EXPECT_EQ(certs.CertCount, 2);
-  EXPECT_EQ(certs.Certs[0].CertType, kCertType_AccessToken);
+  EXPECT_EQ(certs.Certs[0].CertType, Weave::kCertType_AccessToken);
   EXPECT_EQ(strncmp((const char*)certs.Certs[0].SubjectDN.AttrValue.String.Value,
                     kTestDeviceCertName, certs.Certs[0].SubjectDN.AttrValue.String.Len),
             0);
-  EXPECT_EQ(certs.Certs[1].CertType, kCertType_CA);
-  EXPECT_EQ(valid_ctx.RequiredKeyUsages, kKeyUsageFlag_DigitalSignature);
-  EXPECT_EQ(valid_ctx.RequiredKeyPurposes, kKeyPurposeFlag_ServerAuth);
+  EXPECT_EQ(certs.Certs[1].CertType, Weave::kCertType_CA);
+  EXPECT_EQ(valid_ctx.RequiredKeyUsages, Security::kKeyUsageFlag_DigitalSignature);
+  EXPECT_EQ(valid_ctx.RequiredKeyPurposes, Security::kKeyPurposeFlag_ServerAuth);
   platform_auth_delegate().EndValidation(msg_ctx, valid_ctx, certs);
 }
 
 TEST_F(PlatformAuthDelegateTest, CASEAuth_BeginValidationInvalidServiceConfig) {
-  constexpr char kTestInvalidServiceConfig[] = "invalid-service-config";
+  constexpr uint8_t kTestInvalidServiceConfig[] = "invalid-service-config";
   BeginSessionContext msg_ctx;
   ValidationContext valid_ctx;
   WeaveCertificateSet certs;
 
-  EXPECT_EQ(ConfigurationMgr().StoreServiceConfig((const uint8_t*)kTestInvalidServiceConfig,
+  EXPECT_EQ(ConfigurationMgr().StoreServiceConfig(kTestInvalidServiceConfig,
                                                   sizeof(kTestInvalidServiceConfig)),
             WEAVE_NO_ERROR);
   EXPECT_EQ(platform_auth_delegate().BeginValidation(msg_ctx, valid_ctx, certs),
@@ -418,7 +409,7 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_HandleValidationResult) {
   // receive WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT if the weave ID and peer node
   // ID do not match.
   result = WEAVE_NO_ERROR;
-  signing_cert.CertType = kCertType_Device;
+  signing_cert.CertType = Weave::kCertType_Device;
   signing_cert.SubjectDN.AttrValue.WeaveId = 1U;
   msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId + 1;
   EXPECT_EQ(platform_auth_delegate().HandleValidationResult(msg_ctx, valid_ctx, certs, result),
@@ -435,7 +426,7 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_HandleValidationResult) {
   // Expect to receive WEAVE_ERROR_WRONG_CERTIFICATE_SUBJECT if the weave ID and
   // peer node ID do not match.
   result = WEAVE_NO_ERROR;
-  signing_cert.CertType = kCertType_ServiceEndpoint;
+  signing_cert.CertType = Weave::kCertType_ServiceEndpoint;
   signing_cert.SubjectDN.AttrValue.WeaveId = 1U;
   msg_ctx.PeerNodeId = signing_cert.SubjectDN.AttrValue.WeaveId + 1;
   EXPECT_EQ(platform_auth_delegate().HandleValidationResult(msg_ctx, valid_ctx, certs, result),
@@ -456,7 +447,7 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_HandleValidationResult) {
 
   // Verify behavior when the signing cert is an access token certificate.
   result = WEAVE_NO_ERROR;
-  signing_cert.CertType = kCertType_AccessToken;
+  signing_cert.CertType = Weave::kCertType_AccessToken;
   msg_ctx.SetIsInitiator(false);
   EXPECT_EQ(platform_auth_delegate().HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
@@ -470,7 +461,7 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_HandleValidationResult) {
 
   // Verify behavior when the signing cert is not a valid type.
   result = WEAVE_NO_ERROR;
-  signing_cert.CertType = kCertType_General;
+  signing_cert.CertType = Weave::kCertType_General;
   EXPECT_EQ(platform_auth_delegate().HandleValidationResult(msg_ctx, valid_ctx, certs, result),
             WEAVE_NO_ERROR);
   EXPECT_EQ(result, WEAVE_ERROR_CERT_USAGE_NOT_ALLOWED);
@@ -480,30 +471,33 @@ TEST_F(PlatformAuthDelegateTest, CASEAuth_GenerateNodeSignatureWithPrivateKey) {
   BeginSessionContext context;
   TLVWriter writer;
 
-  // Use local private key and invoke GenerateNodeSignature.
-  reinterpret_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate())
-      ->UseLocalPrivateKey();
+  // Provide a test signing key for validation.
+  configuration_delegate().set_signing_key(
+      std::vector<uint8_t>(kTestPrivateKey, kTestPrivateKey + sizeof(kTestPrivateKey)));
+  configuration_delegate().set_use_signing_key(true);
+
   PacketBuffer* buffer = PacketBuffer::New();
   writer.Init(buffer);
-
-  EXPECT_EQ(platform_auth_delegate().GenerateNodeSignature(
-                context, (const uint8_t*)kTestHash, sizeof(kTestHash) - 1, writer,
-                TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      platform_auth_delegate().GenerateNodeSignature(
+          context, kTestHash, sizeof(kTestHash), writer,
+          TLV::ProfileTag(Profiles::kWeaveProfile_Security, Security::kTag_WeaveCASESignature)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(writer.Finalize(), WEAVE_NO_ERROR);
 
   TLVReader reader;
   reader.Init(buffer, WEAVE_SYSTEM_PACKETBUFFER_SIZE);
-  reader.ImplicitProfileId = kWeaveProfile_Security;
+  reader.ImplicitProfileId = Profiles::kWeaveProfile_Security;
 
   TLV::TLVType type;
-  EXPECT_EQ(reader.Next(kTLVType_Structure,
-                        TLV::ProfileTag(kWeaveProfile_Security, kTag_WeaveCASESignature)),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(
+      reader.Next(TLV::kTLVType_Structure, TLV::ProfileTag(Profiles::kWeaveProfile_Security,
+                                                           Security::kTag_WeaveCASESignature)),
+      WEAVE_NO_ERROR);
   EXPECT_EQ(reader.EnterContainer(type), WEAVE_NO_ERROR);
-  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_r)),
+  EXPECT_EQ(reader.Next(TLV::kTLVType_ByteString, TLV::ContextTag(Security::kTag_ECDSASignature_r)),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(reader.Next(kTLVType_ByteString, TLV::ContextTag(kTag_ECDSASignature_s)),
+  EXPECT_EQ(reader.Next(TLV::kTLVType_ByteString, TLV::ContextTag(Security::kTag_ECDSASignature_s)),
             WEAVE_NO_ERROR);
 
   EXPECT_EQ(reader.ExitContainer(type), WEAVE_NO_ERROR);
@@ -521,7 +515,7 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_GetNodeCertSet) {
   EXPECT_EQ(cert_set.CertCount, 1U);
 
   // Check that the CommonName of the certificate matches our dummy account id.
-  Profiles::Security::WeaveCertificateData* cert = cert_set.Certs;
+  WeaveCertificateData* cert = cert_set.Certs;
   EXPECT_EQ(cert->SubjectDN.AttrOID, ASN1::kOID_AttributeType_CommonName);
   EXPECT_EQ(strncmp((const char*)cert->SubjectDN.AttrValue.String.Value, kTestDeviceCertName,
                     cert->SubjectDN.AttrValue.String.Len),
@@ -532,12 +526,12 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_GetNodeCertSet) {
 }
 
 TEST_F(PlatformAuthDelegateTest, KeyExport_GetNodeCertSetInvalidCert) {
-  constexpr char kTestInvalidCert[] = "invalid-cert-data";
+  constexpr uint8_t kTestInvalidCert[] = "invalid-cert-data";
   WeaveCertificateSet cert_set;
   WeaveKeyExport key_export;
 
   // Populate some invalid certificate data.
-  EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate((const uint8_t*)kTestInvalidCert,
+  EXPECT_EQ(ConfigurationMgr().StoreManufacturerDeviceCertificate(kTestInvalidCert,
                                                                   sizeof(kTestInvalidCert)),
             WEAVE_NO_ERROR);
 
@@ -555,7 +549,7 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_HandleCertValidationResult) {
 
   // Construct valid signing certificate.
   valid_ctx.SigningCert = &signing_cert;
-  valid_ctx.SigningCert->CertFlags |= Profiles::Security::kCertFlag_IsTrusted;
+  valid_ctx.SigningCert->CertFlags |= Security::kCertFlag_IsTrusted;
   valid_ctx.SigningCert->SubjectDN.AttrOID = ASN1::kOID_AttributeType_CommonName;
   valid_ctx.SigningCert->SubjectDN.AttrValue.String.Value = kAttrValue;
   valid_ctx.SigningCert->SubjectDN.AttrValue.String.Len = sizeof(kAttrValue);
@@ -575,7 +569,7 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_HandleCertValidationResult) {
             WEAVE_ERROR_UNAUTHORIZED_KEY_EXPORT_RESPONSE);
 
   // Reject if cert flags are not trusted.
-  valid_ctx.SigningCert->CertFlags &= ~Profiles::Security::kCertFlag_IsTrusted;
+  valid_ctx.SigningCert->CertFlags &= ~Security::kCertFlag_IsTrusted;
   EXPECT_EQ(platform_auth_delegate().HandleCertValidationResult(&key_export, valid_ctx, cert_set,
                                                                 WeaveKeyId::kClientRootKey),
             WEAVE_ERROR_UNAUTHORIZED_KEY_EXPORT_RESPONSE);
@@ -598,4 +592,4 @@ TEST_F(PlatformAuthDelegateTest, KeyExport_HandleCertValidationResult) {
 
 // TODO(fxb/51892): Add tests for intermediate CA certs.
 
-}  // namespace nl::Weave::DeviceLayer::Internal::testing
+}  // namespace weave::adaptation::testing

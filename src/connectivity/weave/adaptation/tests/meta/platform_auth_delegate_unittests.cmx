@@ -1,11 +1,4 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.boot.FactoryItems"
-            ]
-        }
-    },
     "include": [
         "syslog/client.shard.cmx"
     ],
@@ -16,12 +9,6 @@
         "features": [
             "config-data",
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.factory.WeaveFactoryStoreProvider",
-            "fuchsia.hwinfo.Device",
-            "fuchsia.posix.socket.Provider",
-            "fuchsia.weave.FactoryDataManager"
         ]
     }
 }
