@@ -306,10 +306,12 @@ and inconsistently. This has resulted in growing tech debt.
 ## Solution statement
 
 Fuchsia platform teams will create robust system testing solutions in-tree and
-OOT. Platform and product teams will collaborate to migrate existing and future
-tests and testing use cases to the new platform solutions. Together we will
-leverage the sandboxing capabilities of the [Component Framework][cf] and
-[`ffx` plugins][ffx-plugins] to:
+OOT. Platform teams will work with product teams to understand product testing
+needs, meet them, and assist with any migrations that are driven by product
+teams.
+
+The new solutions will embrace the sandboxing capabilities of the
+[Component Framework][cf] and [`ffx` plugins][ffx-plugins] to:
 
 1. Make it possible to write great tests OOT, including great system tests.
 1. Make it more difficult (towards impossible) to write tests OOT that violate
