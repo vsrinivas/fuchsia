@@ -12,6 +12,9 @@ ALLOWED_CTS_DEPS = [
 
   # TODO(77889): Determine if this can be in the CTS.
   "//zircon/system/public:public",
+
+  # TODO(82404): Add wrappers that do not verify dependencies for prebuilt tests.
+  "//sdk/cts/examples/rust:bin",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.

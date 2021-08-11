@@ -4,12 +4,18 @@
 import("//sdk/cts/build/cts.gni")
 
 group("prebuilts") {
-  deps = [ "hello_world:prebuilts" ]
+  deps = [
+    "hello_world:prebuilts",
+    "rust:prebuilts",
+  ]
   testonly = true
 }
 
 group("tests") {
-  deps = [ "hello_world:tests" ]
+  deps = [
+    "hello_world:tests",
+    "rust:tests",
+  ]
   testonly = true
 }
 

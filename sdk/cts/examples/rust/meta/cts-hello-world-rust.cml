@@ -1,0 +1,19 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/cts_hello_world_rust",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
