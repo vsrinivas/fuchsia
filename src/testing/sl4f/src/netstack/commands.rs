@@ -15,10 +15,6 @@ use crate::netstack::facade::NetstackFacade;
 impl Facade for NetstackFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match NetstackMethod::from_str(&method) {
-            NetstackMethod::InitNetstack => {
-                let result = self.init_netstack_proxy()?;
-                Ok(to_value(result)?)
-            }
             NetstackMethod::ListInterfaces => {
                 let result = self.list_interfaces().await?;
                 Ok(to_value(result)?)

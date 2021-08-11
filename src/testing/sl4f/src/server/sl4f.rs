@@ -252,7 +252,7 @@ impl Sl4f {
                 "location_emergency_provider_facade" => EmergencyProviderFacade::new()?,
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
-                "netstack_facade" => NetstackFacade::new(),
+                "netstack_facade" => NetstackFacade::default(),
                 "ram_facade" => RamFacade::new(),
                 "repo_facade" => RepositoryManagerFacade::new(),
                 "paver" => PaverFacade::new(),

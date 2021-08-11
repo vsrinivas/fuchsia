@@ -29,7 +29,6 @@ class Diagnostics {
     final fileName = '$dumpName-diagnostic-net-if';
     _log.info('dump net-if as $fileName');
     try {
-      await _sl4f.request('netstack_facade.InitNetstack', {});
       final result = await _sl4f.request('netstack_facade.ListInterfaces', {});
       if (result == null) {
         return null;
