@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.bits/MyBits",
+      "naming_context": [
+        "MyBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 3,
@@ -79,6 +82,9 @@
     },
     {
       "name": "fidl.test.bits/StrictBits",
+      "naming_context": [
+        "StrictBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 10,
@@ -134,6 +140,9 @@
     },
     {
       "name": "fidl.test.bits/FlexibleBits",
+      "naming_context": [
+        "FlexibleBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits.test.fidl",
         "line": 15,

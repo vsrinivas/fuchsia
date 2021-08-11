@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.padding/Padding1ByteEnd",
+      "naming_context": [
+        "Padding1ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 3,
@@ -84,6 +87,9 @@
     },
     {
       "name": "fidl.test.padding/Padding2ByteEnd",
+      "naming_context": [
+        "Padding2ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 9,
@@ -157,6 +163,9 @@
     },
     {
       "name": "fidl.test.padding/Padding3ByteEnd",
+      "naming_context": [
+        "Padding3ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 15,
@@ -230,6 +239,9 @@
     },
     {
       "name": "fidl.test.padding/Padding4ByteEnd",
+      "naming_context": [
+        "Padding4ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 21,
@@ -303,6 +315,9 @@
     },
     {
       "name": "fidl.test.padding/Padding5ByteEnd",
+      "naming_context": [
+        "Padding5ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 27,
@@ -397,6 +412,9 @@
     },
     {
       "name": "fidl.test.padding/Padding6ByteEnd",
+      "naming_context": [
+        "Padding6ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 34,
@@ -470,6 +488,9 @@
     },
     {
       "name": "fidl.test.padding/Padding7ByteEnd",
+      "naming_context": [
+        "Padding7ByteEnd"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 40,
@@ -543,6 +564,9 @@
     },
     {
       "name": "fidl.test.padding/Padding1ByteMiddle",
+      "naming_context": [
+        "Padding1ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 46,
@@ -616,6 +640,9 @@
     },
     {
       "name": "fidl.test.padding/Padding2ByteMiddle",
+      "naming_context": [
+        "Padding2ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 52,
@@ -689,6 +716,9 @@
     },
     {
       "name": "fidl.test.padding/Padding3ByteMiddle",
+      "naming_context": [
+        "Padding3ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 58,
@@ -762,6 +792,9 @@
     },
     {
       "name": "fidl.test.padding/Padding4ByteMiddle",
+      "naming_context": [
+        "Padding4ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 64,
@@ -835,6 +868,9 @@
     },
     {
       "name": "fidl.test.padding/Padding5ByteMiddle",
+      "naming_context": [
+        "Padding5ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 70,
@@ -929,6 +965,9 @@
     },
     {
       "name": "fidl.test.padding/Padding6ByteMiddle",
+      "naming_context": [
+        "Padding6ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 77,
@@ -1002,6 +1041,9 @@
     },
     {
       "name": "fidl.test.padding/Padding7ByteMiddle",
+      "naming_context": [
+        "Padding7ByteMiddle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 83,
@@ -1075,6 +1117,9 @@
     },
     {
       "name": "fidl.test.padding/Padding4ByteAlignmentLength12",
+      "naming_context": [
+        "Padding4ByteAlignmentLength12"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 93,
@@ -1190,6 +1235,9 @@
     },
     {
       "name": "fidl.test.padding/Padding2ByteAlignmentLength6",
+      "naming_context": [
+        "Padding2ByteAlignmentLength6"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
         "line": 102,

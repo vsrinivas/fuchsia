@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.constants/BitsType",
+      "naming_context": [
+        "BitsType"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 22,
@@ -79,6 +82,9 @@
     },
     {
       "name": "fidl.test.constants/Bits",
+      "naming_context": [
+        "Bits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 37,
@@ -510,6 +516,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.constants/EnumType",
+      "naming_context": [
+        "EnumType"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 16,
@@ -542,6 +551,9 @@
     },
     {
       "name": "fidl.test.constants/Enum",
+      "naming_context": [
+        "Enum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 33,
@@ -579,6 +591,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.constants/Struct",
+      "naming_context": [
+        "Struct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 41,

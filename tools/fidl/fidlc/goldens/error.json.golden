@@ -122,7 +122,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.error/ExampleFooRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Example",
         "foo",
         "Request"
@@ -179,7 +179,7 @@
     },
     {
       "name": "fidl.test.error/Example_foo_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "Example",
         "foo",
         "Response",
@@ -238,7 +238,7 @@
     },
     {
       "name": "fidl.test.error/ExampleFooTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "Example",
         "foo",
         "Response"
@@ -299,7 +299,7 @@
   "union_declarations": [
     {
       "name": "fidl.test.error/Example_foo_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "Example",
         "foo",
         "Response",

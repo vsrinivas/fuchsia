@@ -20,6 +20,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.structdefaultvalueenumlibraryreference/Foo",
+      "naming_context": [
+        "Foo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
         "line": 5,

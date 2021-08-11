@@ -273,7 +273,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.inheritance/SuperFooRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "super",
         "foo",
         "Request"
@@ -330,7 +330,7 @@
     },
     {
       "name": "fidl.test.inheritance/SuperFooTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "super",
         "foo",
         "Response"
@@ -387,7 +387,7 @@
     },
     {
       "name": "fidl.test.inheritance/SuperFooRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "super",
         "foo",
         "Request"
@@ -444,7 +444,7 @@
     },
     {
       "name": "fidl.test.inheritance/SuperFooTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "super",
         "foo",
         "Response"

@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.bitsconstants/BitsType",
+      "naming_context": [
+        "BitsType"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
         "line": 3,

@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.protocols/rights",
+      "naming_context": [
+        "rights"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 11,
@@ -63,6 +66,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.protocols/obj_type",
+      "naming_context": [
+        "obj_type"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 6,
@@ -114,6 +120,9 @@
     },
     {
       "name": "fidl.test.protocols/ErrorEnum",
+      "naming_context": [
+        "ErrorEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 46,
@@ -2942,7 +2951,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "NoRequestWithResponse",
         "Response"
@@ -2999,7 +3008,7 @@
     },
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestNoResponse",
         "Request"
@@ -3056,7 +3065,7 @@
     },
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestEmptyResponse",
         "Request"
@@ -3113,7 +3122,7 @@
     },
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestWithResponse",
         "Request"
@@ -3170,7 +3179,7 @@
     },
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestWithResponse",
         "Response"
@@ -3227,7 +3236,7 @@
     },
     {
       "name": "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithAndWithoutRequestResponse",
         "OnWithResponse",
         "Request"
@@ -3284,7 +3293,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
         "Response",
@@ -3385,7 +3394,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
         "Response"
@@ -3443,7 +3452,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
         "Response",
@@ -3480,7 +3489,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
         "Response"
@@ -3538,7 +3547,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
         "Response",
@@ -3575,7 +3584,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
         "Response"
@@ -3633,7 +3642,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
         "Response",
@@ -3695,7 +3704,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
         "Response"
@@ -3753,7 +3762,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolMethodARequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "MethodA",
         "Request"
@@ -3831,7 +3840,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolEventARequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "EventA",
         "Request"
@@ -3909,7 +3918,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolMethodBRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "MethodB",
         "Request"
@@ -3987,7 +3996,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "MethodB",
         "Response"
@@ -4044,7 +4053,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "TakeHandle",
         "Request"
@@ -4104,7 +4113,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "MutateSocket",
         "Request"
@@ -4164,7 +4173,7 @@
     },
     {
       "name": "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "ChannelProtocol",
         "MutateSocket",
         "Response"
@@ -4224,7 +4233,7 @@
     },
     {
       "name": "fidl.test.protocols/SyscallProtocolMethodCRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "SyscallProtocol",
         "MethodC",
         "Request"
@@ -4302,7 +4311,7 @@
     },
     {
       "name": "fidl.test.protocols/TransitionalRequestRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Transitional",
         "Request",
         "Request"
@@ -4359,7 +4368,7 @@
     },
     {
       "name": "fidl.test.protocols/TransitionalRequestTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "Transitional",
         "Request",
         "Response"
@@ -4416,7 +4425,7 @@
     },
     {
       "name": "fidl.test.protocols/TransitionalOneWayRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Transitional",
         "OneWay",
         "Request"
@@ -4473,7 +4482,7 @@
     },
     {
       "name": "fidl.test.protocols/TransitionalEventRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Transitional",
         "Event",
         "Request"
@@ -4530,7 +4539,7 @@
     },
     {
       "name": "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "HandleRightsProtocol",
         "NoResponseMethod",
         "Request"
@@ -4590,7 +4599,7 @@
     },
     {
       "name": "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "HandleRightsProtocol",
         "ResponseMethod",
         "Request"
@@ -4650,7 +4659,7 @@
     },
     {
       "name": "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "HandleRightsProtocol",
         "ResponseMethod",
         "Response"
@@ -4710,7 +4719,7 @@
     },
     {
       "name": "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "HandleRightsProtocol",
         "AnEvent",
         "Request"
@@ -4770,7 +4779,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "ClientEnds",
         "Request"
@@ -4828,7 +4837,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "ClientEnds",
         "Response"
@@ -4886,7 +4895,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "ServerEnds",
         "Request"
@@ -4944,7 +4953,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "ServerEnds",
         "Response"
@@ -5002,7 +5011,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "StructContainingEnds",
         "Request"
@@ -5060,7 +5069,7 @@
     },
     {
       "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithProtocolEnds",
         "StructContainingEnds",
         "Response"
@@ -5118,7 +5127,7 @@
     },
     {
       "name": "fidl.test.protocols/ManyParametersFifteenRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ManyParameters",
         "Fifteen",
         "Request"
@@ -5469,7 +5478,7 @@
     },
     {
       "name": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "MethodWithUnion",
         "UnionMethod",
         "Request"
@@ -5527,6 +5536,9 @@
     },
     {
       "name": "fidl.test.protocols/ProtocolEnds",
+      "naming_context": [
+        "ProtocolEnds"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 136,
@@ -5649,7 +5661,7 @@
   "union_declarations": [
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
         "Response",
@@ -5724,7 +5736,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
         "Response",
@@ -5799,7 +5811,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
         "Response",
@@ -5875,7 +5887,7 @@
     },
     {
       "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
         "Response",
@@ -5950,6 +5962,9 @@
     },
     {
       "name": "fidl.test.protocols/TheUnion",
+      "naming_context": [
+        "TheUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 183,

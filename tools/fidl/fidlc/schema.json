@@ -161,9 +161,9 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the bits declaration"
                 },
-                "maybe_naming_context": {
+                "naming_context": {
                     "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the bits; present iff the bits is anonymous"
+                    "description": "Naming context of the bits"
                 },
                 "members": {
                     "description": "List of bits members",
@@ -353,9 +353,9 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the enum declaration"
                 },
-                "maybe_naming_context": {
+                "naming_context": {
                     "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the table; present iff the table is anonymous"
+                    "description": "Naming context of the table"
                 },
                 "maybe_unknown_value": {
                     "description": "Unknown member value (present for flexible enums only)",
@@ -1223,9 +1223,9 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the struct declaration"
                 },
-                "maybe_naming_context": {
+                "naming_context": {
                     "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the struct; present iff the struct is anonymous"
+                    "description": "Naming context of the struct"
                 },
                 "members": {
                     "description": "List of struct members",
@@ -1325,9 +1325,9 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of table attributes"
                 },
-                "maybe_naming_context": {
+                "naming_context": {
                     "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the table; present iff the table is anonymous"
+                    "description": "Naming context of the table"
                 },
                 "members": {
                     "description": "List of table members",
@@ -1599,9 +1599,9 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of extensible union attributes"
                 },
-                "maybe_naming_context": {
+                "naming_context": {
                     "$ref": "#/definitions/naming-context",
-                    "description": "Naming context of the union; present iff the union is anonymous"
+                    "description": "Naming context of the union"
                 },
                 "members": {
                     "description": "List of extensible union members",

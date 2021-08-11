@@ -92,6 +92,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.encapsulatedstructs/Int8Int32",
+      "naming_context": [
+        "Int8Int32"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 5,
@@ -165,6 +168,9 @@
     },
     {
       "name": "fidl.test.encapsulatedstructs/Int16Int8",
+      "naming_context": [
+        "Int16Int8"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 11,
@@ -238,6 +244,9 @@
     },
     {
       "name": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
+      "naming_context": [
+        "ArrayInt16Int8"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 17,
@@ -295,6 +304,9 @@
     },
     {
       "name": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
+      "naming_context": [
+        "StructPaddingTestStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 22,
@@ -392,6 +404,9 @@
     },
     {
       "name": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
+      "naming_context": [
+        "NonInlineStructTestStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 33,
@@ -469,6 +484,9 @@
     },
     {
       "name": "fidl.test.encapsulatedstructs/TopLevelStruct",
+      "naming_context": [
+        "TopLevelStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl",
         "line": 39,

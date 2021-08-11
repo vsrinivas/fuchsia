@@ -5,7 +5,7 @@
   "bits_declarations": [
     {
       "name": "fidl.test.anonymous/BitsMember",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Response",
@@ -68,7 +68,7 @@
     },
     {
       "name": "fidl.test.anonymous/Flags",
-      "maybe_naming_context": [
+      "naming_context": [
         "Expression",
         "function_application",
         "flags"
@@ -112,7 +112,7 @@
   "enum_declarations": [
     {
       "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Response",
@@ -171,7 +171,7 @@
     },
     {
       "name": "fidl.test.anonymous/Op",
-      "maybe_naming_context": [
+      "naming_context": [
         "Expression",
         "bin_op",
         "op"
@@ -386,7 +386,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.anonymous/TableData",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Request",
@@ -445,7 +445,7 @@
     },
     {
       "name": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Request"
@@ -525,7 +525,7 @@
     },
     {
       "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Response",
@@ -585,7 +585,7 @@
     },
     {
       "name": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Response"
@@ -643,7 +643,7 @@
     },
     {
       "name": "fidl.test.anonymous/BinOp",
-      "maybe_naming_context": [
+      "naming_context": [
         "Expression",
         "bin_op"
       ],
@@ -746,7 +746,7 @@
   "table_declarations": [
     {
       "name": "fidl.test.anonymous/TableMember",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Request",
@@ -814,7 +814,7 @@
     },
     {
       "name": "fidl.test.anonymous/FunctionApplication",
-      "maybe_naming_context": [
+      "naming_context": [
         "Expression",
         "function_application"
       ],
@@ -914,7 +914,7 @@
   "union_declarations": [
     {
       "name": "fidl.test.anonymous/UnionMember",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Request",
@@ -976,7 +976,7 @@
     },
     {
       "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
-      "maybe_naming_context": [
+      "naming_context": [
         "SomeProtocol",
         "SomeMethod",
         "Response",
@@ -1052,6 +1052,9 @@
     },
     {
       "name": "fidl.test.anonymous/Expression",
+      "naming_context": [
+        "Expression"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
         "line": 3,

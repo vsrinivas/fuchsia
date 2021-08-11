@@ -214,7 +214,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "First",
         "Request"
@@ -272,7 +272,7 @@
     },
     {
       "name": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Child",
         "Second",
         "Request"
@@ -330,7 +330,7 @@
     },
     {
       "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "First",
         "Request"

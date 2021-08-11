@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.arrays/StructSmallArray",
+      "naming_context": [
+        "StructSmallArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 3,
@@ -67,6 +70,9 @@
     },
     {
       "name": "fidl.test.arrays/StructLargeArray",
+      "naming_context": [
+        "StructLargeArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 7,
@@ -125,6 +131,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.arrays/TableSmallArray",
+      "naming_context": [
+        "TableSmallArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 11,
@@ -175,6 +184,9 @@
     },
     {
       "name": "fidl.test.arrays/TableLargeArray",
+      "naming_context": [
+        "TableLargeArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 15,
@@ -227,6 +239,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.arrays/UnionSmallArray",
+      "naming_context": [
+        "UnionSmallArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 19,
@@ -277,6 +292,9 @@
     },
     {
       "name": "fidl.test.arrays/UnionLargeArray",
+      "naming_context": [
+        "UnionLargeArray"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
         "line": 23,

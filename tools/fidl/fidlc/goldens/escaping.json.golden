@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.escaping/DocCommentWithQuotes",
+      "naming_context": [
+        "DocCommentWithQuotes"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
         "line": 4,

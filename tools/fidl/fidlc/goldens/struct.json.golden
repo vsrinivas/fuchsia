@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.struct/Simple",
+      "naming_context": [
+        "Simple"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
         "line": 3,
@@ -84,6 +87,9 @@
     },
     {
       "name": "fidl.test.struct/BasicStruct",
+      "naming_context": [
+        "BasicStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
         "line": 8,

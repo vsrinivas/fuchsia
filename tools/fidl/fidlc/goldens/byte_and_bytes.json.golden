@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.byteandbytes/ByteAndBytes",
+      "naming_context": [
+        "ByteAndBytes"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
         "line": 3,

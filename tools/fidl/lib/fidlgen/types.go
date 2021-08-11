@@ -621,11 +621,15 @@ func (d *Decl) GetName() EncodedCompoundIdentifier {
 // Layout represents data specific to bits/enums/structs/tables/unions. All
 // layouts are decls, but not all decls are layouts (e.g. protocols).
 type Layout struct {
-	NamingContext []string `json:"maybe_naming_context,omitempty"`
+	NamingContext []string `json:"naming_context"`
 }
 
 func (l *Layout) IsAnonymous() bool {
-	return len(l.NamingContext) > 0
+	// We treat inner layouts (i.e. layouts defined within another layout) as
+	// anonymous. All such layouts have a naming context with length greater
+	// than 1, since they include at least the top level name followed by 1 or
+	// more inner names
+	return len(l.NamingContext) > 1
 }
 
 // Assert that declarations conform to the Declaration interface

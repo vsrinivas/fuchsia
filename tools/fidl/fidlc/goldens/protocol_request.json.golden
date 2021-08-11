@@ -297,7 +297,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.protocolrequest/ParentGetChildTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "GetChild",
         "Response"
@@ -355,7 +355,7 @@
     },
     {
       "name": "fidl.test.protocolrequest/ParentGetChildRequestTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "GetChildRequest",
         "Response"
@@ -413,7 +413,7 @@
     },
     {
       "name": "fidl.test.protocolrequest/ParentTakeChildRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "TakeChild",
         "Request"
@@ -471,7 +471,7 @@
     },
     {
       "name": "fidl.test.protocolrequest/ParentTakeChildRequestRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "Parent",
         "TakeChildRequest",
         "Request"

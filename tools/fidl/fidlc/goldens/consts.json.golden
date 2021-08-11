@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.consts/BitsType",
+      "naming_context": [
+        "BitsType"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
         "line": 23,
@@ -450,6 +453,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.consts/EnumType",
+      "naming_context": [
+        "EnumType"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/consts.test.fidl",
         "line": 14,

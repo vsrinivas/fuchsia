@@ -15,6 +15,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.placementofattributes/ExampleBits",
+      "naming_context": [
+        "ExampleBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 7,
@@ -117,6 +120,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.placementofattributes/ExampleEnum",
+      "naming_context": [
+        "ExampleEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 16,
@@ -275,7 +281,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "ExampleProtocol",
         "Method",
         "Request"
@@ -333,6 +339,9 @@
     },
     {
       "name": "fidl.test.placementofattributes/ExampleStruct",
+      "naming_context": [
+        "ExampleStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 30,
@@ -413,6 +422,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.placementofattributes/ExampleTable",
+      "naming_context": [
+        "ExampleTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 36,
@@ -487,6 +499,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.placementofattributes/ExampleUnion",
+      "naming_context": [
+        "ExampleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 45,
@@ -559,6 +574,9 @@
     },
     {
       "name": "fidl.test.placementofattributes/ExampleXUnion",
+      "naming_context": [
+        "ExampleXUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 51,

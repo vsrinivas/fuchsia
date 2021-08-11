@@ -134,7 +134,7 @@
   "struct_declarations": [
     {
       "name": "bottom/BottomGetFooTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "Bottom",
         "GetFoo",
         "Response"

@@ -223,7 +223,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.nullable/SimpleProtocolAddRequest",
-      "maybe_naming_context": [
+      "naming_context": [
         "SimpleProtocol",
         "Add",
         "Request"
@@ -301,7 +301,7 @@
     },
     {
       "name": "fidl.test.nullable/SimpleProtocolAddTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "SimpleProtocol",
         "Add",
         "Response"
@@ -358,6 +358,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableString",
+      "naming_context": [
+        "StructWithNullableString"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 5,
@@ -410,6 +413,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableVector",
+      "naming_context": [
+        "StructWithNullableVector"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 9,
@@ -466,6 +472,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableHandle",
+      "naming_context": [
+        "StructWithNullableHandle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 13,
@@ -521,6 +530,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableProtocol",
+      "naming_context": [
+        "StructWithNullableProtocol"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 26,
@@ -574,6 +586,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableRequest",
+      "naming_context": [
+        "StructWithNullableRequest"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 30,
@@ -627,6 +642,9 @@
     },
     {
       "name": "fidl.test.nullable/Int32Wrapper",
+      "naming_context": [
+        "Int32Wrapper"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 34,
@@ -679,6 +697,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableStruct",
+      "naming_context": [
+        "StructWithNullableStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 38,
@@ -732,6 +753,9 @@
     },
     {
       "name": "fidl.test.nullable/StructWithNullableUnion",
+      "naming_context": [
+        "StructWithNullableUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 47,
@@ -788,6 +812,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.nullable/SimpleUnion",
+      "naming_context": [
+        "SimpleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 42,

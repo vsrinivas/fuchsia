@@ -7,6 +7,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.handlesintypes/obj_type",
+      "naming_context": [
+        "obj_type"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
         "line": 6,
@@ -93,6 +96,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.handlesintypes/HandlesInTypes",
+      "naming_context": [
+        "HandlesInTypes"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
         "line": 25,
@@ -282,6 +288,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.handlesintypes/TableWithHandle",
+      "naming_context": [
+        "TableWithHandle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
         "line": 17,
@@ -333,6 +342,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.handlesintypes/UnionWithHandle",
+      "naming_context": [
+        "UnionWithHandle"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
         "line": 21,

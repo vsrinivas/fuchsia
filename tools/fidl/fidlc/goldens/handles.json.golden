@@ -88,6 +88,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.handles/obj_type",
+      "naming_context": [
+        "obj_type"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 8,
@@ -732,6 +735,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.handles/Handles",
+      "naming_context": [
+        "Handles"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 54,

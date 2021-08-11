@@ -11,6 +11,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.vectors/ExampleUseOfVectors",
+      "naming_context": [
+        "ExampleUseOfVectors"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
         "line": 6,

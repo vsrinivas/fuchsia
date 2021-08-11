@@ -12,6 +12,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.table/EmptyTable",
+      "naming_context": [
+        "EmptyTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 3,
@@ -42,6 +45,9 @@
     },
     {
       "name": "fidl.test.table/SimpleTable",
+      "naming_context": [
+        "SimpleTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 5,
@@ -133,6 +139,9 @@
     },
     {
       "name": "fidl.test.table/OlderSimpleTable",
+      "naming_context": [
+        "OlderSimpleTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 13,
@@ -189,6 +198,9 @@
     },
     {
       "name": "fidl.test.table/NewerSimpleTable",
+      "naming_context": [
+        "NewerSimpleTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 18,
@@ -305,6 +317,9 @@
     },
     {
       "name": "fidl.test.table/ReverseOrdinalTable",
+      "naming_context": [
+        "ReverseOrdinalTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 28,
@@ -381,6 +396,9 @@
     },
     {
       "name": "fidl.test.table/GreaterThan64OrdinalTable",
+      "naming_context": [
+        "GreaterThan64OrdinalTable"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
         "line": 36,

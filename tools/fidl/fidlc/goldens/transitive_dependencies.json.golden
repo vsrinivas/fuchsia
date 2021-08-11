@@ -21,6 +21,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.transitivedependencies/Baz",
+      "naming_context": [
+        "Baz"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
         "line": 5,

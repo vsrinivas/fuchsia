@@ -23,6 +23,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.experimentalmaybefromtypealias/Testing",
+      "naming_context": [
+        "Testing"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 14,

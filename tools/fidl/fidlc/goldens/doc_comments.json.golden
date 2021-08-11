@@ -38,6 +38,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.doccomments/MyStrictBits",
+      "naming_context": [
+        "MyStrictBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 9,
@@ -192,6 +195,9 @@
     },
     {
       "name": "fidl.test.doccomments/MyFlexibleBits",
+      "naming_context": [
+        "MyFlexibleBits"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 23,
@@ -406,6 +412,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.doccomments/MyStrictEnum",
+      "naming_context": [
+        "MyStrictEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 42,
@@ -556,6 +565,9 @@
     },
     {
       "name": "fidl.test.doccomments/MyFlexibleEnum",
+      "naming_context": [
+        "MyFlexibleEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 57,
@@ -980,6 +992,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.doccomments/Struct",
+      "naming_context": [
+        "Struct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 72,
@@ -1100,6 +1115,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.doccomments/Table",
+      "naming_context": [
+        "Table"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 102,
@@ -1214,6 +1232,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.doccomments/StrictUnion",
+      "naming_context": [
+        "StrictUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 82,
@@ -1326,6 +1347,9 @@
     },
     {
       "name": "fidl.test.doccomments/FlexibleUnion",
+      "naming_context": [
+        "FlexibleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
         "line": 92,

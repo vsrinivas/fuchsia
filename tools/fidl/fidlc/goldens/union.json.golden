@@ -174,7 +174,7 @@
   "struct_declarations": [
     {
       "name": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "TestProtocol",
         "StrictXUnionHenceResponseMayBeStackAllocated",
         "Response"
@@ -232,7 +232,7 @@
     },
     {
       "name": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
-      "maybe_naming_context": [
+      "naming_context": [
         "TestProtocol",
         "FlexibleXUnionHenceResponseMustBeHeapAllocated",
         "Response"
@@ -290,6 +290,9 @@
     },
     {
       "name": "fidl.test.union/Pizza",
+      "naming_context": [
+        "Pizza"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 3,
@@ -347,6 +350,9 @@
     },
     {
       "name": "fidl.test.union/Pasta",
+      "naming_context": [
+        "Pasta"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 7,
@@ -400,6 +406,9 @@
     },
     {
       "name": "fidl.test.union/NullableUnionStruct",
+      "naming_context": [
+        "NullableUnionStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 66,
@@ -453,6 +462,9 @@
     },
     {
       "name": "fidl.test.union/Empty",
+      "naming_context": [
+        "Empty"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 113,
@@ -483,6 +495,9 @@
     },
     {
       "name": "fidl.test.union/StructWithNullableXUnion",
+      "naming_context": [
+        "StructWithNullableXUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 134,
@@ -536,6 +551,9 @@
     },
     {
       "name": "fidl.test.union/UnionSandwich",
+      "naming_context": [
+        "UnionSandwich"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 145,
@@ -634,6 +652,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.union/PizzaOrPasta",
+      "naming_context": [
+        "PizzaOrPasta"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 11,
@@ -697,6 +718,9 @@
     },
     {
       "name": "fidl.test.union/ExplicitPizzaOrPasta",
+      "naming_context": [
+        "ExplicitPizzaOrPasta"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 16,
@@ -780,6 +804,9 @@
     },
     {
       "name": "fidl.test.union/FlexiblePizzaOrPasta",
+      "naming_context": [
+        "FlexiblePizzaOrPasta"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 23,
@@ -843,6 +870,9 @@
     },
     {
       "name": "fidl.test.union/StrictPizzaOrPasta",
+      "naming_context": [
+        "StrictPizzaOrPasta"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 28,
@@ -906,6 +936,9 @@
     },
     {
       "name": "fidl.test.union/Union",
+      "naming_context": [
+        "Union"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 33,
@@ -986,6 +1019,9 @@
     },
     {
       "name": "fidl.test.union/FlexibleUnion",
+      "naming_context": [
+        "FlexibleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 39,
@@ -1066,6 +1102,9 @@
     },
     {
       "name": "fidl.test.union/StrictUnion",
+      "naming_context": [
+        "StrictUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 45,
@@ -1146,6 +1185,9 @@
     },
     {
       "name": "fidl.test.union/FieldCollision",
+      "naming_context": [
+        "FieldCollision"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 51,
@@ -1192,6 +1234,9 @@
     },
     {
       "name": "fidl.test.union/ExplicitUnion",
+      "naming_context": [
+        "ExplicitUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 55,
@@ -1263,6 +1308,9 @@
     },
     {
       "name": "fidl.test.union/ReverseOrdinalUnion",
+      "naming_context": [
+        "ReverseOrdinalUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 61,
@@ -1324,6 +1372,9 @@
     },
     {
       "name": "fidl.test.union/FlexibleFoo",
+      "naming_context": [
+        "FlexibleFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 70,
@@ -1385,6 +1436,9 @@
     },
     {
       "name": "fidl.test.union/StrictFoo",
+      "naming_context": [
+        "StrictFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 75,
@@ -1446,6 +1500,9 @@
     },
     {
       "name": "fidl.test.union/ExplicitFoo",
+      "naming_context": [
+        "ExplicitFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 80,
@@ -1517,6 +1574,9 @@
     },
     {
       "name": "fidl.test.union/ExplicitStrictFoo",
+      "naming_context": [
+        "ExplicitStrictFoo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 86,
@@ -1588,6 +1648,9 @@
     },
     {
       "name": "fidl.test.union/OlderSimpleUnion",
+      "naming_context": [
+        "OlderSimpleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 92,
@@ -1649,6 +1712,9 @@
     },
     {
       "name": "fidl.test.union/NewerSimpleUnion",
+      "naming_context": [
+        "NewerSimpleUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 97,
@@ -1729,6 +1795,9 @@
     },
     {
       "name": "fidl.test.union/StrictSimpleXUnion",
+      "naming_context": [
+        "StrictSimpleXUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 107,
@@ -1805,6 +1874,9 @@
     },
     {
       "name": "fidl.test.union/XUnionContainingEmptyStruct",
+      "naming_context": [
+        "XUnionContainingEmptyStruct"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 115,
@@ -1852,6 +1924,9 @@
     },
     {
       "name": "fidl.test.union/StrictBoundedXUnion",
+      "naming_context": [
+        "StrictBoundedXUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 121,
@@ -1903,6 +1978,9 @@
     },
     {
       "name": "fidl.test.union/ExplicitXUnion",
+      "naming_context": [
+        "ExplicitXUnion"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 138,

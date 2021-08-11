@@ -288,7 +288,10 @@ void JSONGenerator::Generate(const raw::Ordinal64& value) { EmitNumeric(value.va
 void JSONGenerator::GenerateDeclName(const flat::Name& name) {
   GenerateObjectMember("name", name, Position::kFirst);
   if (auto n = name.as_anonymous()) {
-    GenerateObjectMember("maybe_naming_context", n->context->Context());
+    GenerateObjectMember("naming_context", n->context->Context());
+  } else {
+    std::vector<std::string> ctx = {std::string(name.decl_name())};
+    GenerateObjectMember("naming_context", ctx);
   }
 }
 

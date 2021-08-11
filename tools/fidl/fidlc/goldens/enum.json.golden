@@ -7,6 +7,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.enum/MyStrictEnum",
+      "naming_context": [
+        "MyStrictEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 3,
@@ -58,6 +61,9 @@
     },
     {
       "name": "fidl.test.enum/MyFlexibleEnum",
+      "naming_context": [
+        "MyFlexibleEnum"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 8,
@@ -110,6 +116,9 @@
     },
     {
       "name": "fidl.test.enum/MyFlexibleEnumWithCustomUnknown",
+      "naming_context": [
+        "MyFlexibleEnumWithCustomUnknown"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
         "line": 13,

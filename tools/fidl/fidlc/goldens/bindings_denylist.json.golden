@@ -5,6 +5,9 @@
   "bits_declarations": [
     {
       "name": "fidl.test.bindingsdenylist/OnlySyzkaller",
+      "naming_context": [
+        "OnlySyzkaller"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 12,
@@ -134,6 +137,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.bindingsdenylist/OnlyDart",
+      "naming_context": [
+        "OnlyDart"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 17,
@@ -389,6 +395,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.bindingsdenylist/OnlyGo",
+      "naming_context": [
+        "OnlyGo"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 22,
@@ -454,6 +463,9 @@
   "table_declarations": [
     {
       "name": "fidl.test.bindingsdenylist/OnlyRust",
+      "naming_context": [
+        "OnlyRust"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 25,
@@ -519,6 +531,9 @@
   "union_declarations": [
     {
       "name": "fidl.test.bindingsdenylist/OnlyLlcpp",
+      "naming_context": [
+        "OnlyLlcpp"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 28,

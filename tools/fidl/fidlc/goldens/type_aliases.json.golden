@@ -17,6 +17,9 @@
   "enum_declarations": [
     {
       "name": "fidl.test.typealiases/obj_type",
+      "naming_context": [
+        "obj_type"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 8,
@@ -103,6 +106,9 @@
   "struct_declarations": [
     {
       "name": "fidl.test.typealiases/ExampleOfUseOfAliases",
+      "naming_context": [
+        "ExampleOfUseOfAliases"
+      ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 25,
