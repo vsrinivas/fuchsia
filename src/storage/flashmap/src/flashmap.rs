@@ -7,12 +7,16 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl::HandleBased,
     fidl_fuchsia_hardware_nand::Info as NandInfo,
-    fidl_fuchsia_nand::{BrokerProxy, BrokerRequestData},
+    fidl_fuchsia_nand::{BrokerProxy, BrokerRequestData, BrokerRequestDataBytes},
     fidl_fuchsia_nand_flashmap::{FlashmapRequest, FlashmapRequestStream},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
-    std::{collections::HashMap, convert::TryFrom, ffi::CStr},
+    std::{
+        collections::HashMap,
+        convert::{TryFrom, TryInto},
+        ffi::CStr,
+    },
 };
 
 #[repr(C, packed)]
@@ -335,6 +339,96 @@ impl Flashmap {
         Ok(fidl_fuchsia_mem::Range { vmo, offset: offset_in_page as u64, size: size as u64 })
     }
 
+    async fn write_flashmap_area(
+        &self,
+        name: &str,
+        offset: u32,
+        data: fidl_fuchsia_mem::Buffer,
+    ) -> Result<(), zx::Status> {
+        let area = self.areas.get(name).ok_or(zx::Status::NOT_FOUND)?;
+        if offset
+            .checked_add(data.size.try_into().map_err(|_| zx::Status::OUT_OF_RANGE)?)
+            .ok_or(zx::Status::OUT_OF_RANGE)?
+            > area.size
+        {
+            fx_log_warn!(
+                "Write {} at {:x} size={:x} is larger than area size {:x}",
+                name,
+                offset,
+                data.size,
+                area.size
+            );
+            return Err(zx::Status::OUT_OF_RANGE);
+        }
+
+        let offset_nand = area.offset + offset;
+
+        let mut request = BrokerRequestDataBytes {
+            vmo: data.vmo,
+            offset_data_vmo: 0,
+            length: data.size,
+            offset_nand: offset_nand as u64,
+        };
+
+        let status = self.device.write_bytes(&mut request).await.map_err(|e| {
+            fx_log_warn!("Send write failed: {:?}", e);
+            zx::Status::INTERNAL
+        })?;
+        zx::ok(status)?;
+
+        Ok(())
+    }
+
+    async fn erase_flashmap_area(
+        &self,
+        name: &str,
+        offset: u32,
+        range: u32,
+    ) -> Result<(), zx::Status> {
+        let area = self.areas.get(name).ok_or(zx::Status::NOT_FOUND)?;
+        if offset.checked_add(range).ok_or(zx::Status::OUT_OF_RANGE)? > area.size {
+            fx_log_warn!(
+                "Erase {} at {:x} size={:x} is larger than area size {:x}",
+                name,
+                offset,
+                range,
+                area.size
+            );
+            return Err(zx::Status::OUT_OF_RANGE);
+        }
+
+        let erase_block_size = self.info.page_size * self.info.pages_per_block;
+        // Make sure that the start address and size is aligned to an erase block.
+        let erase_start_byte = area.offset + offset;
+        if erase_start_byte % erase_block_size != 0 {
+            return Err(zx::Status::INVALID_ARGS);
+        }
+        if range % erase_block_size != 0 {
+            return Err(zx::Status::INVALID_ARGS);
+        }
+
+        let erase_start_block = erase_start_byte / erase_block_size;
+        let erase_range_blocks = range / erase_block_size;
+
+        let mut request = BrokerRequestData {
+            length: erase_range_blocks,
+            offset_nand: erase_start_block,
+            vmo: None,
+            offset_data_vmo: 0,
+            offset_oob_vmo: 0,
+            data_vmo: false,
+            oob_vmo: false,
+        };
+
+        let status = self.device.erase(&mut request).await.map_err(|e| {
+            fx_log_warn!("Send erase failed: {:?}", e);
+            zx::Status::INTERNAL
+        })?;
+        zx::ok(status)?;
+
+        Ok(())
+    }
+
     /// Handle fuchsia.nand.flashmap/Flashmap requests coming in on |stream|.
     pub async fn serve(&self, mut stream: FlashmapRequestStream) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await.context("Getting next request")? {
@@ -357,6 +451,11 @@ impl Flashmap {
 
                     responder.send(&mut fidl_areas.iter_mut()).context("Replying to GetAreas")?;
                 }
+                FlashmapRequest::GetEraseBlockSize { responder } => {
+                    responder
+                        .send(self.info.page_size * self.info.pages_per_block)
+                        .context("Responding to get erase block size")?;
+                }
                 FlashmapRequest::Read { name, offset, size, responder } => {
                     responder
                         .send(
@@ -367,7 +466,26 @@ impl Flashmap {
                         )
                         .context("Responding to flashmap read")?;
                 }
-                _ => {}
+                FlashmapRequest::Write { name, offset, data, responder } => {
+                    responder
+                        .send(
+                            &mut self
+                                .write_flashmap_area(&name, offset, data)
+                                .await
+                                .map_err(|e| e.into_raw()),
+                        )
+                        .context("Responding to flashmap write")?;
+                }
+                FlashmapRequest::Erase { name, offset, range, responder } => {
+                    responder
+                        .send(
+                            &mut self
+                                .erase_flashmap_area(&name, offset, range)
+                                .await
+                                .map_err(|e| e.into_raw()),
+                        )
+                        .context("Responding to flashmap erase")?;
+                }
             }
         }
 
@@ -397,12 +515,14 @@ pub mod tests {
     pub struct Stats {
         pub get_info: usize,
         pub reads: usize,
+        pub writes: usize,
+        pub erases: usize,
     }
 
     const PAGE_SIZE: u32 = 32;
     const PAGES_PER_BLOCK: u32 = 4;
     pub struct FakeNandDevice {
-        data: Vec<u8>,
+        data: Mutex<Vec<u8>>,
         stats: Mutex<Stats>,
     }
 
@@ -411,7 +531,7 @@ pub mod tests {
             let mut data: Vec<u8> = Vec::new();
             data.resize((blocks * PAGES_PER_BLOCK * PAGE_SIZE) as usize, 0xff);
 
-            FakeNandDevice { data, stats: Mutex::new(Default::default()) }
+            FakeNandDevice { data: Mutex::new(data), stats: Mutex::new(Default::default()) }
         }
 
         pub fn new_with_flashmap() -> Self {
@@ -432,7 +552,7 @@ pub mod tests {
             let slice = make_slice(&area);
             data[pos..pos + slice.len()].copy_from_slice(slice);
 
-            FakeNandDevice { data, stats: Mutex::new(Default::default()) }
+            FakeNandDevice { data: Mutex::new(data), stats: Mutex::new(Default::default()) }
         }
 
         /// Serve a single Controller GetTopologicalPath request before handling Broker requests.
@@ -466,7 +586,8 @@ pub mod tests {
                             ecc_bits: 0,
                             oob_size: 0,
                             pages_per_block: PAGES_PER_BLOCK,
-                            num_blocks: (self.data.len() / ((PAGE_SIZE * PAGES_PER_BLOCK) as usize))
+                            num_blocks: (self.data.lock().await.len()
+                                / ((PAGE_SIZE * PAGES_PER_BLOCK) as usize))
                                 as u32,
                             nand_class: fidl_fuchsia_hardware_nand::Class::Unknown,
                             partition_guid: [0; 16],
@@ -477,16 +598,49 @@ pub mod tests {
                         self.stats.lock().await.reads += 1;
                         let offset = (request.offset_nand * PAGE_SIZE) as usize;
                         let len = (request.length * PAGE_SIZE) as usize;
-                        if offset + len > self.data.len() {
+                        let data = self.data.lock().await;
+                        if offset + len > data.len() {
                             responder.send(zx::Status::OUT_OF_RANGE.into_raw(), 0).unwrap();
                             continue;
                         }
 
-                        let slice = &self.data[offset..offset + len];
+                        let slice = &data[offset..offset + len];
                         request.vmo.unwrap().write(slice, request.offset_data_vmo).unwrap();
                         responder.send(zx::Status::OK.into_raw(), 0).unwrap();
                     }
-                    _ => todo!(),
+                    BrokerRequest::WriteBytes { request, responder } => {
+                        self.stats.lock().await.writes += 1;
+                        let mut data = self.data.lock().await;
+                        if request.offset_nand + request.length > (data.len() as u64) {
+                            responder.send(zx::Status::OUT_OF_RANGE.into_raw()).unwrap();
+                            continue;
+                        }
+
+                        request
+                            .vmo
+                            .read(
+                                &mut data[(request.offset_nand as usize)
+                                    ..(request.offset_nand + request.length) as usize],
+                                0,
+                            )
+                            .unwrap();
+                        responder.send(zx::Status::OK.into_raw()).unwrap();
+                    }
+                    BrokerRequest::Erase { request, responder } => {
+                        self.stats.lock().await.erases += 1;
+                        let offset = request.offset_nand * PAGES_PER_BLOCK * PAGE_SIZE;
+                        let length = request.length * PAGES_PER_BLOCK * PAGE_SIZE;
+
+                        let mut data = self.data.lock().await;
+                        if (offset + length) as usize > data.len() {
+                            responder.send(zx::Status::OUT_OF_RANGE.into_raw()).unwrap();
+                            continue;
+                        }
+
+                        data[offset as usize..(offset + length) as usize].fill(0xff);
+                        responder.send(zx::Status::OK.into_raw()).unwrap();
+                    }
+                    _ => {}
                 }
             }
             Ok(())
@@ -542,7 +696,7 @@ pub mod tests {
 
     #[fuchsia::test]
     async fn test_find_flashmap_in_same_read() {
-        let mut nand = FakeNandDevice::new(4096);
+        let nand = FakeNandDevice::new(4096);
         let mut header = FlashmapHeader::default();
         header.nareas = 2;
 
@@ -551,15 +705,18 @@ pub mod tests {
 
         let mut base = 97;
 
-        // Write the header and the areas.
-        let slice = make_slice(&header);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
-        base += slice.len();
-        let slice = make_slice(&area);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
-        base += slice.len();
-        let slice = make_slice(&area2);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
+        {
+            let mut data = nand.data.lock().await;
+            // Write the header and the areas.
+            let slice = make_slice(&header);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area2);
+            data[base..base + slice.len()].copy_from_slice(slice);
+        }
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
 
@@ -576,7 +733,7 @@ pub mod tests {
 
     #[fuchsia::test]
     async fn test_find_flashmap_split_across_read() {
-        let mut nand = FakeNandDevice::new(zx::system_get_page_size() * 8);
+        let nand = FakeNandDevice::new(zx::system_get_page_size() * 8);
         let mut header = FlashmapHeader::default();
         header.nareas = 2;
 
@@ -587,15 +744,18 @@ pub mod tests {
             (4 * zx::system_get_page_size() as usize) - std::mem::size_of::<FlashmapHeader>();
         base -= 4;
 
-        // Write the header and the areas.
-        let slice = make_slice(&header);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
-        base += slice.len();
-        let slice = make_slice(&area);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
-        base += slice.len();
-        let slice = make_slice(&area2);
-        nand.data[base..base + slice.len()].copy_from_slice(slice);
+        {
+            let mut data = nand.data.lock().await;
+            // Write the header and the areas.
+            let slice = make_slice(&header);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area);
+            data[base..base + slice.len()].copy_from_slice(slice);
+            base += slice.len();
+            let slice = make_slice(&area2);
+            data[base..base + slice.len()].copy_from_slice(slice);
+        }
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
         let nand = Arc::new(nand);
@@ -623,5 +783,74 @@ pub mod tests {
 
         let flashmap = Flashmap::new(proxy).await;
         assert_eq!(flashmap.is_err(), true);
+    }
+
+    #[fuchsia::test]
+    async fn test_flashmap_write() {
+        let nand = Arc::new(FakeNandDevice::new_with_flashmap());
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
+        let clone = Arc::clone(&nand);
+        Task::spawn(async move {
+            clone.serve(stream).await.unwrap();
+        })
+        .detach();
+
+        let data: [u8; 6] = [0, 1, 2, 3, 4, 5];
+        let vmo = zx::Vmo::create(data.len() as u64).unwrap();
+        vmo.write(&data, 0).expect("vmo write ok");
+
+        let buffer = fidl_fuchsia_mem::Buffer { vmo, size: data.len() as u64 };
+
+        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        flashmap.write_flashmap_area("HELLO", 10, buffer).await.expect("Write succeeds");
+
+        let written_data = nand.data.lock().await;
+        let slice = &written_data[10..10 + data.len()];
+        assert_eq!(data, slice);
+    }
+
+    #[fuchsia::test]
+    async fn test_flashmap_erase_invalid_params() {
+        let nand = Arc::new(FakeNandDevice::new_with_flashmap());
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
+        let clone = Arc::clone(&nand);
+        Task::spawn(async move {
+            clone.serve(stream).await.unwrap();
+        })
+        .detach();
+
+        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        flashmap
+            .erase_flashmap_area("HELLO", 1, PAGE_SIZE * PAGES_PER_BLOCK)
+            .await
+            .expect_err("Erase should fail.");
+
+        flashmap
+            .erase_flashmap_area("HELLO", 0, PAGE_SIZE * PAGES_PER_BLOCK - 1)
+            .await
+            .expect_err("Erase should fail.");
+    }
+
+    #[fuchsia::test]
+    async fn test_flashmap_erase_succeeds() {
+        let nand = Arc::new(FakeNandDevice::new_with_flashmap());
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<BrokerMarker>().unwrap();
+        let clone = Arc::clone(&nand);
+        Task::spawn(async move {
+            clone.serve(stream).await.unwrap();
+        })
+        .detach();
+
+        let flashmap = Flashmap::new(proxy).await.expect("Flashmap OK");
+        flashmap
+            .erase_flashmap_area("HELLO", 0, PAGE_SIZE * PAGES_PER_BLOCK)
+            .await
+            .expect("Erase should succeed.");
+
+        let data = nand.data.lock().await;
+        assert_eq!(
+            data[0..(PAGE_SIZE * PAGES_PER_BLOCK) as usize].iter().all(|v| *v == 0xff),
+            true
+        );
     }
 }
