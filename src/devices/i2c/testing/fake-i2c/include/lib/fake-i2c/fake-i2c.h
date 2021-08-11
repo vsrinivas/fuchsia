@@ -47,7 +47,6 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c> {
     // Serialize the write information.
     uint8_t write_buffer[I2C_MAX_TOTAL_TRANSFER];
     size_t write_buffer_index = 0;
-    size_t read_request_size = 0;
     for (size_t i = 0; i < op_count; ++i) {
       if (!op_list[i].is_read) {
         if (write_buffer_index + op_list[i].data_size >= I2C_MAX_TOTAL_TRANSFER) {
@@ -56,8 +55,6 @@ class FakeI2c : public ddk::I2cProtocol<FakeI2c> {
         }
         memcpy(write_buffer + write_buffer_index, op_list[i].data_buffer, op_list[i].data_size);
         write_buffer_index += op_list[i].data_size;
-      } else {
-        read_request_size += op_list[i].data_size;
       }
     }
 
