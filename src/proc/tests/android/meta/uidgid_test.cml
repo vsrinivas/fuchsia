@@ -1,0 +1,8 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/uidgid_test",
+        args: [ "--gunit_filter=*.Setgroups" ],
+        user: "root:x:0:0",
+    },
+}

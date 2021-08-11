@@ -206,7 +206,13 @@ impl FileOps for DevKmsg {
         Ok(0)
     }
 
-    fn write_at(&self, _file: &FileObject, task: &Task, _offset: usize, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        task: &Task,
+        _offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         let total = UserBuffer::get_total_length(data);
         let mut bytes = vec![0; total];
         task.mm.read_all(data, &mut bytes)?;

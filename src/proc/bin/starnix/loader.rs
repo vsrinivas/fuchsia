@@ -173,11 +173,12 @@ pub fn load_executable(
     )?;
     let stack = stack_base + (stack_size - 8);
 
+    let creds = task.creds.read();
     let auxv = vec![
-        (AT_UID, task.creds.uid as u64),
-        (AT_EUID, task.creds.euid as u64),
-        (AT_GID, task.creds.gid as u64),
-        (AT_EGID, task.creds.egid as u64),
+        (AT_UID, creds.uid as u64),
+        (AT_EUID, creds.euid as u64),
+        (AT_GID, creds.gid as u64),
+        (AT_EGID, creds.egid as u64),
         (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
         (AT_PAGESZ, *PAGE_SIZE),
         (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),

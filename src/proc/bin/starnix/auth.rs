@@ -12,6 +12,7 @@ pub struct Credentials {
     pub egid: gid_t,
     pub saved_uid: uid_t,
     pub saved_gid: gid_t,
+    pub groups: Vec<gid_t>,
 }
 
 fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
@@ -35,7 +36,15 @@ impl Credentials {
         }
         let uid: uid_t = parse_id_number(fields.next())?;
         let gid: gid_t = parse_id_number(fields.next())?;
-        Ok(Credentials { uid: uid, gid: gid, euid: uid, egid: gid, saved_uid: uid, saved_gid: gid })
+        Ok(Credentials {
+            uid: uid,
+            gid: gid,
+            euid: uid,
+            egid: gid,
+            saved_uid: uid,
+            saved_gid: gid,
+            groups: vec![],
+        })
     }
 
     /// Compares the user ID of `self` to that of `other`.
@@ -56,6 +65,10 @@ impl Credentials {
             || self.euid == other.uid
             || self.uid == other.uid
             || self.uid == other.saved_uid
+    }
+
+    pub fn is_superuser(&self) -> bool {
+        self.euid == 0
     }
 }
 

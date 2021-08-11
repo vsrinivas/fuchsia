@@ -5,6 +5,7 @@
 use fuchsia_zircon as zx;
 use log::info;
 use std::ffi::CString;
+use zerocopy::AsBytes;
 
 use crate::mm::*;
 use crate::not_implemented;
@@ -111,19 +112,45 @@ pub fn sys_getpgid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult
 }
 
 pub fn sys_getuid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.creds.uid.into())
+    Ok(ctx.task.creds.read().uid.into())
 }
 
 pub fn sys_getgid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.creds.gid.into())
+    Ok(ctx.task.creds.read().gid.into())
 }
 
 pub fn sys_geteuid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.creds.euid.into())
+    Ok(ctx.task.creds.read().euid.into())
 }
 
 pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
-    Ok(ctx.task.creds.egid.into())
+    Ok(ctx.task.creds.read().egid.into())
+}
+
+pub fn sys_getresuid(
+    ctx: &SyscallContext<'_>,
+    ruid_addr: UserRef<uid_t>,
+    euid_addr: UserRef<uid_t>,
+    suid_addr: UserRef<uid_t>,
+) -> Result<SyscallResult, Errno> {
+    let creds = ctx.task.creds.read();
+    ctx.task.mm.write_object(ruid_addr, &creds.uid)?;
+    ctx.task.mm.write_object(euid_addr, &creds.euid)?;
+    ctx.task.mm.write_object(suid_addr, &creds.saved_uid)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_getresgid(
+    ctx: &SyscallContext<'_>,
+    ruid_addr: UserRef<uid_t>,
+    euid_addr: UserRef<uid_t>,
+    suid_addr: UserRef<uid_t>,
+) -> Result<SyscallResult, Errno> {
+    let creds = ctx.task.creds.read();
+    ctx.task.mm.write_object(ruid_addr, &creds.uid)?;
+    ctx.task.mm.write_object(euid_addr, &creds.euid)?;
+    ctx.task.mm.write_object(suid_addr, &creds.saved_uid)?;
+    Ok(SUCCESS)
 }
 
 pub fn sys_exit(ctx: &SyscallContext<'_>, exit_code: i32) -> Result<SyscallResult, Errno> {
@@ -376,6 +403,40 @@ pub fn sys_capget(
 ) -> Result<SyscallResult, Errno> {
     not_implemented!("Stubbed capget has no effect.");
     Ok(SUCCESS)
+}
+
+pub fn sys_setgroups(
+    ctx: &SyscallContext<'_>,
+    size: usize,
+    groups_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    if size > NGROUPS_MAX as usize {
+        return Err(EINVAL);
+    }
+    let mut groups: Vec<gid_t> = vec![0; size];
+    ctx.task.mm.read_memory(groups_addr, groups.as_mut_slice().as_bytes_mut())?;
+    let mut creds = ctx.task.creds.write();
+    if !creds.is_superuser() {
+        return Err(EPERM);
+    }
+    creds.groups = groups;
+    Ok(SUCCESS)
+}
+
+pub fn sys_getgroups(
+    ctx: &SyscallContext<'_>,
+    size: usize,
+    groups_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let creds = ctx.task.creds.read();
+    let groups = &creds.groups;
+    if size != 0 {
+        if size < groups.len() {
+            return Err(EINVAL);
+        }
+        ctx.task.mm.write_memory(groups_addr, groups.as_slice().as_bytes())?;
+    }
+    Ok(groups.len().into())
 }
 
 #[cfg(test)]

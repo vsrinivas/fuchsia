@@ -69,7 +69,7 @@ pub struct Task {
     pub fs: Arc<FsContext>,
 
     /// The security credentials for this task.
-    pub creds: Credentials,
+    pub creds: RwLock<Credentials>,
 
     /// The IDs used to perform shell job control.
     pub shell_job_control: ShellJobControl,
@@ -133,7 +133,7 @@ impl Task {
                 files,
                 mm,
                 fs,
-                creds,
+                creds: RwLock::new(creds),
                 shell_job_control: sjc,
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_stack: Mutex::new(None),
@@ -289,7 +289,7 @@ impl Task {
         let files =
             if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
 
-        let creds = self.creds.clone();
+        let creds = self.creds.read().clone();
 
         let child;
         if clone_thread {
@@ -626,7 +626,7 @@ impl Task {
             return true;
         }
 
-        if self.creds.has_same_uid(&target.creds) {
+        if self.creds.read().has_same_uid(&target.creds.read()) {
             return true;
         }
 
