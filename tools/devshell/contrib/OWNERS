@@ -14,6 +14,7 @@ per-file dart-tunnel=zra@google.com
 per-file debug=brettw@google.com,dangyi@google.com
 per-file delta,save-package-stats=kevinwells@google.com,raggi@google.com
 per-file disk-extract-serial-log=auradkar@google.com,csuter@google.com
+per-file arm-esr.fx=maniscalco@google.com
 per-file exec-host-tests=joshuaseaton@google.com
 per-file extract_pprof=ghanan@google.com,tamird@google.com
 per-file ffx=raggi@google.com,boetger@google.com,jwing@google.com,awdavies@google.com
