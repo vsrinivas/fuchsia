@@ -32,10 +32,10 @@ namespace linux_runner {
 static constexpr const char* kLinuxEnvirionmentName = "termina";
 static constexpr const char* kLinuxGuestPackage =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-static constexpr const char* kContainerName = "stretch";
-static constexpr const char* kContainerImageAlias = "debian/stretch";
+static constexpr const char* kContainerName = "buster";
+static constexpr const char* kContainerImageAlias = "debian/buster";
 static constexpr const char* kContainerImageServer =
-    "https://storage.googleapis.com/cros-containers";
+    "https://storage.googleapis.com/cros-containers/%d";
 static constexpr const char* kDefaultContainerUser = "machina";
 static constexpr const char* kLinuxUriScheme = "linux://";
 
