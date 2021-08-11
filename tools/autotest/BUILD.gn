@@ -32,6 +32,8 @@ if (is_host) {
     inputs = [
       "src/templates/template_BUILD",
       "src/templates/template_manifest",
+      "src/templates/template_rust_mock_function",
+      "src/templates/template_rust_test_function",
     ]
   }
   install_host_tools("host") {

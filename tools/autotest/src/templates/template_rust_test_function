@@ -1,0 +1,7 @@
+#[fuchsia::test]
+async fn test_MARKER_VAR_NAME() -> Result<(), Error> {
+    let instance = create_realm().await.expect("created testing realm");
+    let MARKER_VAR_NAME = instance.root.connect_to_protocol_at_exposed_dir::<MARKER>()?;
+    // Add test for the protocol
+    Ok(())
+}

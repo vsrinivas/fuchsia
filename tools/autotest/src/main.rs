@@ -55,10 +55,19 @@ fn main() -> Result<()> {
     let test_program_name = &format!("{}_test", &component_name);
 
     let mut rust_code = RustTestCode::new(&component_name);
-    rust_code.add_component(component_name, component_url, "COMPONENT_URL");
-    rust_code.add_import("fuchsia_component_test::{builder::*, mock::*, RealmInstance}");
+    rust_code.add_component(component_name, component_url, "COMPONENT_URL", false);
+    match input.generate_mocks {
+        true => {
+            rust_code.add_import("fuchsia_component_test::{builder::*, mock::*, RealmInstance}")
+        }
+        false => rust_code.add_import("fuchsia_component_test::{builder::*,  RealmInstance}"),
+    };
 
-    update_rust_code_for_use_declaration(&cm_decl.uses.unwrap_or(Vec::new()), &mut rust_code)?;
+    update_rust_code_for_use_declaration(
+        &cm_decl.uses.unwrap_or(Vec::new()),
+        &mut rust_code,
+        input.generate_mocks,
+    )?;
     update_rust_code_for_expose_declaration(
         &cm_decl.exposes.unwrap_or(Vec::new()),
         &mut rust_code,
@@ -111,8 +120,11 @@ fn main() -> Result<()> {
 fn update_rust_code_for_use_declaration(
     uses: &Vec<UseDecl>,
     rust_code: &mut RustTestCode,
+    gen_mocks: bool,
 ) -> Result<()> {
     let mut dep_counter = 1;
+    let mut dep_protocols = Protocols { protocols: HashMap::new() };
+
     for i in 0..uses.len() {
         match &uses[i] {
             UseDecl::Protocol(decl) => {
@@ -127,16 +139,19 @@ fn update_rust_code_for_use_declaration(
                         //
                         // TODO(yuanzhi) currently we don't keep track of this service,
                         // figure out if we need to route any root services to this service.
-                        //
-                        // TODO(yuanzhi) support a way for user to specify to auto-gen
-                        // mocks instead of launching the actual component.
-                        let component_name = format!("service_{}", dep_counter);
+                        dep_protocols.add_protocol(&protocol)?;
+                        let component_name = match gen_mocks {
+                            true => format!("service_{}", dep_counter),
+                            false => format!("mock_service_{}", dep_counter),
+                        };
+
                         let component_url = "{URL}";
                         dep_counter += 1;
                         rust_code.add_component(
                             &component_name,
                             &component_url,
                             &component_name.to_ascii_uppercase(),
+                            gen_mocks,
                         );
                         // Note: "root" => test framework (i.e "RouteEndpoint::above_root()")
                         // "self" => component-under-test
@@ -174,6 +189,12 @@ fn update_rust_code_for_use_declaration(
             _ => (),
         }
     }
+    if gen_mocks && dep_protocols.protocols.len() > 0 {
+        rust_code.add_import("fuchsia_component::server::*");
+        for (fidl_lib, _) in dep_protocols.protocols.iter() {
+            rust_code.add_import(&format!("{}::*", fidl_lib));
+        }
+    }
     Ok(())
 }
 
@@ -182,7 +203,7 @@ fn update_rust_code_for_expose_declaration(
     exposes: &Vec<ExposeDecl>,
     rust_code: &mut RustTestCode,
 ) -> Result<()> {
-    let mut protos_to_test = ProtocolsToTest { protocols_to_test: HashMap::new() };
+    let mut protos_to_test = Protocols { protocols: HashMap::new() };
 
     for i in 0..exposes.len() {
         match &exposes[i] {
@@ -197,7 +218,7 @@ fn update_rust_code_for_expose_declaration(
     }
 
     // Generate test case code for each protocol exposed
-    for (fidl_lib, markers) in protos_to_test.protocols_to_test.iter() {
+    for (fidl_lib, markers) in protos_to_test.protocols.iter() {
         rust_code.add_import(&format!("{}::*", fidl_lib));
         for i in 0..markers.len() {
             rust_code.add_test_case(&markers[i]);
@@ -208,11 +229,11 @@ fn update_rust_code_for_expose_declaration(
 
 // Keeps track of all the protocol exposed by the component-under-test.
 #[derive(Clone)]
-struct ProtocolsToTest {
-    protocols_to_test: HashMap<String, Vec<String>>,
+struct Protocols {
+    protocols: HashMap<String, Vec<String>>,
 }
 
-impl ProtocolsToTest {
+impl Protocols {
     pub fn add_protocol<'a>(&'a mut self, protocol: &str) -> Result<(), anyhow::Error> {
         let fields: Vec<&str> = protocol.split(".").collect();
         let mut fidl_lib = "fidl".to_string();
@@ -222,7 +243,7 @@ impl ProtocolsToTest {
         let capture =
             Regex::new(r"^(?P<protocol>\w+)").unwrap().captures(fields.last().unwrap()).unwrap();
 
-        let marker = self.protocols_to_test.entry(fidl_lib).or_insert(Vec::new());
+        let marker = self.protocols.entry(fidl_lib).or_insert(Vec::new());
         marker.push(format!("{}Marker", capture.name("protocol").unwrap().as_str()));
         marker.dedup();
         Ok(())
@@ -234,14 +255,14 @@ mod test {
     use super::*;
     #[test]
     fn test_add_protocol() -> Result<()> {
-        let mut p = ProtocolsToTest { protocols_to_test: HashMap::new() };
+        let mut p = Protocols { protocols: HashMap::new() };
         p.add_protocol("fuchsia.diagnostics.internal.FooController")?;
         p.add_protocol("fuchsia.diagnostics.internal.BarController-A")?;
         p.add_protocol("fuchsia.diagnostics.internal.BarController-B")?;
-        assert!(p.protocols_to_test.contains_key("fidl_fuchsia_diagnostics_internal"));
-        assert_eq!(p.protocols_to_test.len(), 1);
+        assert!(p.protocols.contains_key("fidl_fuchsia_diagnostics_internal"));
+        assert_eq!(p.protocols.len(), 1);
 
-        let markers = p.protocols_to_test.get("fidl_fuchsia_diagnostics_internal").unwrap();
+        let markers = p.protocols.get("fidl_fuchsia_diagnostics_internal").unwrap();
         assert_eq!(markers.len(), 2);
         assert_eq!(markers[0], "FooControllerMarker");
         assert_eq!(markers[1], "BarControllerMarker");

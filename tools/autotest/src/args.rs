@@ -19,6 +19,10 @@ pub struct AutoTestGeneratorCommand {
     #[argh(option, short = 'u')]
     pub component_url: Option<String>,
 
+    /// if true, will generate all dependent services as mocked services.
+    #[argh(switch, short = 'm')]
+    pub generate_mocks: bool,
+
     /// also print to stdout.
     #[argh(switch, short = 'v')]
     pub verbose: bool,
