@@ -12,7 +12,7 @@ class LoggerInitHelper {
  public:
   LoggerInitHelper() {
     zx::channel client_channel, server_channel;
-    zx_status_t status = zx::channel::create(0, &client_channel, &server_channel);
+    [[maybe_unused]] zx_status_t status = zx::channel::create(0, &client_channel, &server_channel);
     assert(status == ZX_OK);
 
     status = fdio_service_connect("/svc/fuchsia.logger.LogSink", server_channel.release());
