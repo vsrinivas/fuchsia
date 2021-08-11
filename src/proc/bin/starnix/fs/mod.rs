@@ -41,6 +41,7 @@ pub mod fuchsia;
 pub mod memfd;
 pub mod path;
 pub mod pipe;
+pub mod procfs;
 pub mod syscalls;
 pub mod tmpfs;
 

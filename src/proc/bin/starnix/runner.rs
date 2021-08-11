@@ -33,6 +33,7 @@ use std::sync::Arc;
 use crate::auth::Credentials;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
+use crate::fs::procfs::*;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
@@ -206,7 +207,7 @@ fn files_from_numbered_handles(
 }
 
 fn create_filesystem_from_spec<'a>(
-    kernel: &Kernel,
+    kernel: &Arc<Kernel>,
     pkg: &fio::DirectorySynchronousProxy,
     fs_ctx: Option<&FsContext>,
     spec: &'a str,
@@ -218,6 +219,7 @@ fn create_filesystem_from_spec<'a>(
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
     let fs_src = iter.next().unwrap_or("");
     let fs = match fs_type {
+        "procfs" => Fs(proc_fs(kernel.clone())),
         "remotefs" => {
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
             let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
@@ -229,7 +231,7 @@ fn create_filesystem_from_spec<'a>(
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
             Fs(ExtFilesystem::new(vmo)?)
         }
-        _ => create_filesystem(fs_ctx, kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
+        _ => create_filesystem(fs_ctx, &kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
 }

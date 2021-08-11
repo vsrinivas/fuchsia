@@ -56,4 +56,9 @@ impl PidTable {
     pub fn remove_thread_group(&mut self, pid: pid_t) {
         self.thread_groups.remove(&pid);
     }
+
+    /// Returns the task ids for all the currently running tasks.
+    pub fn task_ids(&self) -> Vec<pid_t> {
+        self.tasks.keys().cloned().collect()
+    }
 }
