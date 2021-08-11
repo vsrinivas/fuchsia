@@ -62,75 +62,35 @@ template("gvisor_test_component") {
   }
 }
 
-gvisor_test_component("access_test") {
-}
+gvisor_tests = [
+  "access_test",
+  "brk_test",
+  "clock_getres_test",
+  "clock_gettime_test",
+  "dev_test",
+  "exit_test",
+  "fork_test",
+  "getdents_test",
+  "getrandom_test",
+  "kill_test",
+  "lseek_test",
+  "mmap_test",
+  "munmap_test",
+  "open_test",
+  "pipe_test",
+  "pread64_test",
+  "read_test",
+  "readv_test",
+  "sigaction_test",
+  "sigprocmask_test",
+  "sigaltstack_test",
+  "stat_test",
+  "symlink_test",
+]
 
-gvisor_test_component("brk_test") {
-}
-
-gvisor_test_component("clock_getres_test") {
-}
-
-gvisor_test_component("clock_gettime_test") {
-}
-
-gvisor_test_component("dev_test") {
-}
-
-gvisor_test_component("exit_test") {
-}
-
-gvisor_test_component("fork_test") {
-}
-
-gvisor_test_component("getdents_test") {
-}
-
-gvisor_test_component("getrandom_test") {
-}
-
-gvisor_test_component("kill_test") {
-}
-
-gvisor_test_component("lseek_test") {
-}
-
-gvisor_test_component("mmap_test") {
-}
-
-gvisor_test_component("munmap_test") {
-}
-
-gvisor_test_component("open_test") {
-}
-
-gvisor_test_component("pipe_test") {
-}
-
-gvisor_test_component("pread64_test") {
-}
-
-gvisor_test_component("pwrite64_test") {
-}
-
-gvisor_test_component("read_test") {
-}
-gvisor_test_component("readv_test") {
-}
-
-gvisor_test_component("sigaction_test") {
-}
-
-gvisor_test_component("sigprocmask_test") {
-}
-
-gvisor_test_component("sigaltstack_test") {
-}
-
-gvisor_test_component("stat_test") {
-}
-
-gvisor_test_component("symlink_test") {
+foreach(test_name, gvisor_tests) {
+  gvisor_test_component(test_name) {
+  }
 }
 
 fuchsia_test_package("test_android_distro") {
@@ -141,33 +101,10 @@ fuchsia_test_package("test_android_distro") {
     ":starnix_data_tmp_placeholder",
   ]
 
-  test_components = [
-    ":access_test",
-    ":brk_test",
-    ":clock_getres_test",
-    ":clock_gettime_test",
-    ":dev_test",
-    ":exit_test",
-    ":fork_test",
-    ":getdents_test",
-    ":getrandom_test",
-    ":kill_test",
-    ":lseek_test",
-    ":mmap_test",
-    ":munmap_test",
-    ":open_test",
-    ":pipe_test",
-    ":pread64_test",
-    ":pwrite64_test",
-    ":read_test",
-    ":readv_test",
-    ":sh_test",
-    ":sigaction_test",
-    ":sigprocmask_test",
-    ":sigaltstack_test",
-    ":stat_test",
-    ":symlink_test",
-  ]
+  test_components = [ ":sh_test" ]
+  foreach(test_name, gvisor_tests) {
+    test_components += [ ":${test_name}" ]
+  }
 
   # This package intentionally contains many non-Fuchia ELF binaries that
   # are not under /data/, and some of them are even unstripped, so disable
