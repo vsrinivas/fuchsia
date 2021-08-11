@@ -6,10 +6,12 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{
+            data_buffer::{DataBufferFactory, NativeDataBuffer},
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
             HandleOptions, ObjectStore,
         },
+        pager::Pager,
         server::{
             directory::FxDirectory,
             errors::map_to_status,
@@ -33,11 +35,12 @@ use {
 pub struct FxVolume {
     cache: NodeCache,
     store: Arc<ObjectStore>,
+    pager: Pager,
 }
 
 impl FxVolume {
-    pub fn new(store: Arc<ObjectStore>) -> Self {
-        Self { cache: NodeCache::new(), store }
+    pub fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
+        Ok(Self { cache: NodeCache::new(), store, pager: Pager::new()? })
     }
 
     pub fn store(&self) -> &Arc<ObjectStore> {
@@ -46,6 +49,14 @@ impl FxVolume {
 
     pub fn cache(&self) -> &NodeCache {
         &self.cache
+    }
+
+    pub fn pager(&self) -> &Pager {
+        &self.pager
+    }
+
+    pub async fn terminate(&self) {
+        self.pager.terminate().await;
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
@@ -63,9 +74,9 @@ impl FxVolume {
             GetResult::Node(node) => Ok(node),
             GetResult::Placeholder(placeholder) => {
                 let node = match object_descriptor {
-                    ObjectDescriptor::File => Arc::new(FxFile::new(
+                    ObjectDescriptor::File => FxFile::new(
                         ObjectStore::open_object(self, object_id, HandleOptions::default()).await?,
-                    )) as Arc<dyn FxNode>,
+                    ) as Arc<dyn FxNode>,
                     ObjectDescriptor::Directory => {
                         Arc::new(FxDirectory::new(parent, Directory::open(self, object_id).await?))
                             as Arc<dyn FxNode>
@@ -118,6 +129,12 @@ impl FxVolume {
 impl AsRef<ObjectStore> for FxVolume {
     fn as_ref(&self) -> &ObjectStore {
         &self.store
+    }
+}
+
+impl DataBufferFactory for FxVolume {
+    fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> NativeDataBuffer {
+        self.pager.create_vmo(object_id, initial_size).unwrap().into()
     }
 }
 
@@ -271,7 +288,7 @@ pub struct FxVolumeAndRoot {
 impl FxVolumeAndRoot {
     pub async fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
         store.ensure_open().await?;
-        let volume = Arc::new(FxVolume::new(store));
+        let volume = Arc::new(FxVolume::new(store)?);
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;
         let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(None, root_dir));

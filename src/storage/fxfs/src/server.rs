@@ -95,6 +95,7 @@ impl FxfsServer {
         scope.wait().await;
 
         if !self.closed.load(atomic::Ordering::Relaxed) {
+            self.volume.volume().terminate().await;
             self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
         }
 
@@ -110,6 +111,7 @@ impl FxfsServer {
                 // drops connections at some point that isn't midway through processing a request.
                 scope.shutdown();
                 self.closed.store(true, atomic::Ordering::Relaxed);
+                self.volume.volume().terminate().await;
                 self.fs
                     .close()
                     .await

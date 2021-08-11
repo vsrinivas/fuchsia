@@ -5,7 +5,7 @@
 use {
     crate::object_store::{
         allocator::{self},
-        data_buffer::{create_data_buffer, DataBuffer},
+        data_buffer::{DataBuffer, NativeDataBuffer},
         store_object_handle::{round_down, round_up},
     },
     anyhow::Error,
@@ -186,7 +186,6 @@ impl AsRef<Range<u64>> for CachedRange {
 }
 
 struct Inner {
-    data: Box<dyn DataBuffer>,
     intervals: IntervalTree<CachedRange, u64>,
     // Bytes reserved for flushing data.
     bytes_reserved: u64,
@@ -198,7 +197,10 @@ struct Inner {
     flush_event: Option<Event>,
 }
 
-pub struct WritebackCache(Mutex<Inner>);
+pub struct WritebackCache {
+    inner: Mutex<Inner>,
+    data: NativeDataBuffer,
+}
 
 pub struct MissingRange<'a> {
     range: Range<u64>,
@@ -401,8 +403,8 @@ pub struct CachedMetadata {
 impl Inner {
     // TODO(jfsulliv): We should be able to give back some reserved bytes immediately after a
     // truncate.
-    fn resize(&mut self, size: u64, block_size: u64) {
-        let old_size = self.data.size() as u64;
+    fn resize(&mut self, size: u64, block_size: u64, data: &NativeDataBuffer) {
+        let old_size = data.size();
         let aligned_size = round_up(size, block_size).unwrap();
         if size < old_size {
             self.intervals.remove_interval(&(aligned_size..u64::MAX)).unwrap();
@@ -420,14 +422,14 @@ impl Inner {
         }
         if size != old_size {
             self.size_changed = true;
-            self.data.resize(size as usize);
+            data.resize(size);
         }
     }
 }
 
 impl Drop for WritebackCache {
     fn drop(&mut self) {
-        let inner = self.0.lock().unwrap();
+        let inner = self.inner.lock().unwrap();
         if inner.bytes_reserved > 0 || inner.sync_bytes_reserved > 0 {
             panic!("Dropping a WritebackCache without calling cleanup will leak reserved bytes");
         }
@@ -435,22 +437,23 @@ impl Drop for WritebackCache {
 }
 
 impl WritebackCache {
-    pub fn new(content_size: u64) -> Self {
-        let data = Box::new(create_data_buffer(content_size as usize));
-        Self(Mutex::new(Inner {
+    pub fn new(data: NativeDataBuffer) -> Self {
+        Self {
+            inner: Mutex::new(Inner {
+                intervals: IntervalTree::new(),
+                bytes_reserved: 0,
+                sync_bytes_reserved: 0,
+                size_changed: false,
+                creation_time: None,
+                modification_time: None,
+                flush_event: None,
+            }),
             data,
-            intervals: IntervalTree::new(),
-            bytes_reserved: 0,
-            sync_bytes_reserved: 0,
-            size_changed: false,
-            creation_time: None,
-            modification_time: None,
-            flush_event: None,
-        }))
+        }
     }
 
     pub fn cleanup(&self, reserve: &dyn StorageReservation) {
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
         let reserved = std::mem::take(&mut inner.bytes_reserved)
             + std::mem::take(&mut inner.sync_bytes_reserved);
         if reserved > 0 {
@@ -460,9 +463,9 @@ impl WritebackCache {
     }
 
     pub fn cached_metadata(&self) -> CachedMetadata {
-        let inner = self.0.lock().unwrap();
+        let inner = self.inner.lock().unwrap();
         CachedMetadata {
-            content_size: inner.data.size() as u64,
+            content_size: self.data.size(),
             bytes_reserved: inner.bytes_reserved,
             creation_time: inner.creation_time.clone(),
             modification_time: inner.modification_time.clone(),
@@ -470,11 +473,11 @@ impl WritebackCache {
     }
 
     pub fn content_size(&self) -> u64 {
-        self.0.lock().unwrap().data.size() as u64
+        self.data.size()
     }
 
     pub fn resize(&self, size: u64, block_size: u64) {
-        self.0.lock().unwrap().resize(size, block_size);
+        self.inner.lock().unwrap().resize(size, block_size, &self.data);
     }
 
     /// Read from the cache.  See ReadResult for details.
@@ -489,9 +492,9 @@ impl WritebackCache {
         // 3. Flush
         // 4. At this point the page is not discardable; the read hasn't finished so the page can't
         //    be discarded until the read has finished.
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
         let target_end = offset + buf.len() as u64;
-        let end = std::cmp::min(target_end, inner.data.size() as u64);
+        let end = std::cmp::min(target_end, self.data.size());
         let buf = if end < target_end {
             let len = buf.len() - (target_end - end) as usize;
             buf.subslice_mut(..len)
@@ -554,7 +557,7 @@ impl WritebackCache {
             ReadResult::MissingRanges(missing_ranges)
         } else {
             let len = buf.len() as u64;
-            inner.data.read(offset, buf);
+            self.data.read(offset, buf);
             ReadResult::Done(len)
         }
     }
@@ -562,7 +565,7 @@ impl WritebackCache {
     // Populates a range that had to be loaded from disk.
     // If |data| is none, the read was aborted, so the range returns to being unmapped.
     fn complete_read(&self, range: Range<u64>, data: Option<BufferRef<'_>>) {
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
         let ranges = inner
             .intervals
             .remove_matching_interval(&range, |r| {
@@ -582,8 +585,7 @@ impl WritebackCache {
                     (cached_range.range.end - cached_range.range.start) as usize,
                     buf.len() - buf_offset,
                 );
-                inner
-                    .data
+                self.data
                     .write(cached_range.range.start, buf.subslice(buf_offset..buf_offset + len));
                 cached_range.state = CacheState::Clean;
                 inner.intervals.add_interval(&cached_range).unwrap();
@@ -615,9 +617,9 @@ impl WritebackCache {
         // more explicit, but might also have other advantages, such as not needing the
         // StorageReservation trait nor the Reservation wrapper any more.  However, it involves
         // other complexity, mostly around the lock.
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
 
-        let offset = offset.unwrap_or(inner.data.size() as u64);
+        let offset = offset.unwrap_or(self.data.size() as u64);
         let end = offset + buf.len() as u64;
         let aligned_range = round_down(offset, block_size)..round_up(end, block_size).unwrap();
 
@@ -625,7 +627,7 @@ impl WritebackCache {
 
         // Determine if we need to request a read due to missing unaligned parts.
         let head_align = offset % block_size;
-        let tail_align = if end < inner.data.size() as u64 { end % block_size } else { 0 };
+        let tail_align = if end < self.data.size() as u64 { end % block_size } else { 0 };
         let first_block_start = offset - head_align;
         let last_block_start = end - tail_align;
         let mut missing_ranges = vec![];
@@ -633,7 +635,7 @@ impl WritebackCache {
             if head_align == 0 {
                 break;
             }
-            if first_block_start >= inner.data.size() as u64 {
+            if first_block_start >= self.data.size() as u64 {
                 break;
             }
             if let Some(interval) = intervals.get(0) {
@@ -657,7 +659,7 @@ impl WritebackCache {
             if tail_align == 0 {
                 break;
             }
-            if last_block_start >= inner.data.size() as u64 {
+            if last_block_start >= self.data.size() as u64 {
                 break;
             }
             if let Some(interval) = intervals.get(intervals.len().saturating_sub(1)) {
@@ -754,8 +756,8 @@ impl WritebackCache {
         }
 
         // After this point, we're committing changes, so nothing should fail.
-        if offset as usize + buf.len() > inner.data.size() {
-            inner.resize(offset + buf.len() as u64, block_size);
+        if offset + buf.len() as u64 > self.data.size() {
+            inner.resize(offset + buf.len() as u64, block_size, &self.data);
         }
         for interval in dirtied_intervals {
             assert!(interval.range.start % block_size == 0);
@@ -770,8 +772,8 @@ impl WritebackCache {
             inner.sync_bytes_reserved += sync_reservation.take();
         }
         inner.modification_time = current_time;
-        inner.data.write(offset, buf);
-        Ok(WriteResult::Done(inner.data.size() as u64))
+        self.data.write(offset, buf);
+        Ok(WriteResult::Done(self.data.size() as u64))
     }
 
     /// Returns all data which can be flushed.
@@ -790,8 +792,8 @@ impl WritebackCache {
     {
         // TODO(jfsulliv): Support reading out batches of flushable data.
         // TODO(jfsulliv): Support using a single shared transfer buffer for all pending data.
-        let mut inner = self.0.lock().unwrap();
-        let size = inner.data.size() as u64;
+        let mut inner = self.inner.lock().unwrap();
+        let size = self.data.size() as u64;
 
         if let Some(event) = inner.flush_event.as_ref() {
             return Err(event.wait_or_dropped());
@@ -812,7 +814,7 @@ impl WritebackCache {
 
             let len = std::cmp::min(size, interval.range.end) - interval.range.start;
             let mut buffer = allocate_buffer(len as usize);
-            inner.data.read(interval.range.start, buffer.as_mut());
+            self.data.read(interval.range.start, buffer.as_mut());
             ranges.push(FlushableRange { range: interval.range.clone(), data: buffer });
 
             interval.state = CacheState::Flushing;
@@ -823,7 +825,7 @@ impl WritebackCache {
         let sync_bytes_reserved = inner.sync_bytes_reserved;
         Ok(FlushableData {
             metadata: FlushableMetadata {
-                content_size: inner.data.size() as u64,
+                content_size: self.data.size() as u64,
                 content_size_changed: std::mem::take(&mut inner.size_changed),
                 creation_time: std::mem::take(&mut inner.creation_time),
                 modification_time: std::mem::take(&mut inner.modification_time),
@@ -852,7 +854,7 @@ impl WritebackCache {
         returned_bytes: u64,
         returned_sync_bytes: u64,
     ) {
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
         for range in ranges {
             let removed = inner
                 .intervals
@@ -885,9 +887,14 @@ impl WritebackCache {
         if let (None, None) = (creation_time.as_ref(), modification_time.as_ref()) {
             return;
         }
-        let mut inner = self.0.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
         inner.creation_time = creation_time.or(inner.creation_time);
         inner.modification_time = modification_time.or(inner.modification_time);
+    }
+
+    /// Returns the data buffer.
+    pub fn data_buffer(&self) -> &NativeDataBuffer {
+        &self.data
     }
 }
 
@@ -897,6 +904,7 @@ mod tests {
         super::{FlushableData, ReadResult, StorageReservation, WriteResult, WritebackCache},
         crate::object_store::{
             allocator::{Allocator, Reservation},
+            data_buffer::NativeDataBuffer,
             filesystem::Mutations,
             journal::checksum_list::ChecksumList,
             store_object_handle::{round_down, round_up},
@@ -1052,7 +1060,7 @@ mod tests {
     async fn test_read_absent() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(3000);
+        let cache = WritebackCache::new(NativeDataBuffer::new(3000));
         let mut buffer = allocator.allocate_buffer(8192);
 
         let result = cache.read(0, buffer.subslice_mut(..4096), 512);
@@ -1082,7 +1090,7 @@ mod tests {
     async fn test_reads_block() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(8192);
+        let cache = WritebackCache::new(NativeDataBuffer::new(8192));
         let mut buffer1 = allocator.allocate_buffer(8192);
         let mut buffer2 = allocator.allocate_buffer(8192);
         let (send1, recv1) = channel();
@@ -1136,7 +1144,7 @@ mod tests {
     async fn test_reads_block_unaligned_writes() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(65536, 512);
-        let cache = WritebackCache::new(8192);
+        let cache = WritebackCache::new(NativeDataBuffer::new(8192));
         let mut buffer1 = allocator.allocate_buffer(8192);
         let buffer2 = allocator.allocate_buffer(8192);
         let (send1, recv1) = channel();
@@ -1227,7 +1235,7 @@ mod tests {
     async fn test_read_aborted() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(3000);
+        let cache = WritebackCache::new(NativeDataBuffer::new(3000));
         let mut buffer = allocator.allocate_buffer(8192);
 
         let result = cache.read(0, buffer.subslice_mut(..4096), 512);
@@ -1253,7 +1261,7 @@ mod tests {
     async fn test_write_read() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
         let mut buffer = allocator.allocate_buffer(8192);
 
         buffer.as_mut_slice().fill(123u8);
@@ -1283,7 +1291,7 @@ mod tests {
     async fn test_write_over_pending_read() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(8192);
+        let cache = WritebackCache::new(NativeDataBuffer::new(8192));
         let mut buffer = allocator.allocate_buffer(8192);
 
         let result = cache.read(0, buffer.as_mut(), 512);
@@ -1330,7 +1338,7 @@ mod tests {
     async fn test_append() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
         let mut buffer = allocator.allocate_buffer(8192);
 
         buffer.as_mut_slice().fill(123u8);
@@ -1372,7 +1380,7 @@ mod tests {
     async fn test_write_read_partially_paged_in() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(4096);
+        let cache = WritebackCache::new(NativeDataBuffer::new(4096));
         let mut buffer = allocator.allocate_buffer(8192);
 
         buffer.as_mut_slice().fill(123u8);
@@ -1417,7 +1425,7 @@ mod tests {
     async fn test_write_read_sparse() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
         let mut buffer = allocator.allocate_buffer(8192);
 
         buffer.as_mut_slice().fill(123u8);
@@ -1448,7 +1456,7 @@ mod tests {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         // We size the reserver so that only a one-block write can succeed.
         let reserver = FakeReserver::new(512, 512);
-        let cache = WritebackCache::new(8192);
+        let cache = WritebackCache::new(NativeDataBuffer::new(8192));
 
         let buffer = allocator.allocate_buffer(8192);
         // Create a clean region in the middle of the cache so that we split the write into two
@@ -1491,7 +1499,7 @@ mod tests {
     async fn test_resize_expand() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let mut buffer = allocator.allocate_buffer(8192);
         buffer.as_mut_slice().fill(123u8);
@@ -1542,7 +1550,7 @@ mod tests {
     async fn test_resize_shrink() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(16384)));
         let reserver = FakeReserver::new(8192, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let mut buffer = allocator.allocate_buffer(8192);
         buffer.as_mut_slice().fill(123u8);
@@ -1573,7 +1581,7 @@ mod tests {
     async fn test_flush_no_data() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(1, 1);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let data = cache
             .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
@@ -1589,7 +1597,7 @@ mod tests {
     async fn test_flush_some_data() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 512);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let mut buffer = allocator.allocate_buffer(8192);
 
@@ -1664,7 +1672,7 @@ mod tests {
     async fn test_flush_returns_reservation_on_abort() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(512, 512);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let buffer = allocator.allocate_buffer(1);
         let result = cache
@@ -1700,7 +1708,7 @@ mod tests {
     async fn test_flush_most_recent_write_timestamp() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 4096);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
         let secs = AtomicU64::new(1);
         let current_time = || Some(Duration::new(secs.fetch_add(1, Ordering::SeqCst), 0));
 
@@ -1736,7 +1744,7 @@ mod tests {
     async fn test_flush_explicit_timestamps() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(65536)));
         let reserver = FakeReserver::new(65536, 4096);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let buffer = allocator.allocate_buffer(8192);
         let result = cache
@@ -1763,7 +1771,7 @@ mod tests {
     async fn test_flush_blocks_other_flush() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(65536, 512);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
@@ -1811,7 +1819,7 @@ mod tests {
     async fn test_resize_while_flushing() {
         let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
         let reserver = FakeReserver::new(65536, 512);
-        let cache = WritebackCache::new(0);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
         let mut buffer = allocator.allocate_buffer(512);
         buffer.as_mut_slice().fill(123u8);

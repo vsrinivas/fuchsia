@@ -41,6 +41,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
+            data_buffer::{DataBufferFactory, NativeDataBuffer},
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             record::{
@@ -668,6 +669,12 @@ impl ObjectStore {
             );
         }
         Ok(true)
+    }
+}
+
+impl DataBufferFactory for ObjectStore {
+    fn create_data_buffer(&self, _object_id: u64, initial_size: u64) -> NativeDataBuffer {
+        NativeDataBuffer::new(initial_size)
     }
 }
 

@@ -115,5 +115,8 @@ bitflags! {
 
         // Timer
         const TIMER_SIGNALED = ZX_TIMER_SIGNALED;
+
+        // Vmo
+        const VMO_ZERO_CHILDREN = ZX_VMO_ZERO_CHILDREN;
     }
 }

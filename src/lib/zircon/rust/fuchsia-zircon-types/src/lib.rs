@@ -301,6 +301,9 @@ multiconst!(zx_signals_t, [
 
     // Timer
     ZX_TIMER_SIGNALED           = ZX_OBJECT_SIGNAL_3;
+
+    // Vmo
+    ZX_VMO_ZERO_CHILDREN        = ZX_OBJECT_SIGNAL_3;
 ]);
 
 multiconst!(zx_obj_type_t, [
@@ -698,6 +701,7 @@ pub enum zx_packet_type_t {
     ZX_PKT_TYPE_GUEST_BELL = 3,
     ZX_PKT_TYPE_GUEST_MEM = 4,
     ZX_PKT_TYPE_GUEST_IO = 5,
+    ZX_PKT_TYPE_PAGE_REQUEST = 9,
     #[doc(hidden)]
     __Nonexhaustive,
 }
@@ -744,6 +748,30 @@ pub struct zx_packet_guest_io_t {
     pub input: bool,
     pub data: [u8; 4],
 }
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_page_request_t {
+    pub command: zx_page_request_command_t,
+    pub flags: u16,
+    _reserved0: u32,
+    pub offset: u64,
+    pub length: u64,
+    _reserved1: u64,
+}
+
+#[repr(u16)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum zx_page_request_command_t {
+    ZX_PAGER_VMO_READ = 0x0000,
+    ZX_PAGER_VMO_COMPLETE = 0x0001,
+    #[doc(hidden)]
+    __Nonexhaustive,
+}
+
+multiconst!(u32, [
+    ZX_PAGER_OP_FAIL = 1;
+]);
 
 pub type zx_excp_type_t = u32;
 

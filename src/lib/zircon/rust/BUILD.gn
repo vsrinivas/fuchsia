@@ -23,6 +23,7 @@ common_sources = [
   "src/interrupt.rs",
   "src/job.rs",
   "src/lib.rs",
+  "src/pager.rs",
   "src/port.rs",
   "src/process.rs",
   "src/profile.rs",

@@ -10,6 +10,7 @@ use {
         },
         object_store::{
             allocator::{self},
+            data_buffer::{DataBufferFactory, NativeDataBuffer},
             record::Timestamp,
             store_object_handle::{round_down, round_up},
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
@@ -38,10 +39,11 @@ pub struct CachingObjectHandle<S: AsRef<ObjectStore> + Send + Sync + 'static> {
     cache: WritebackCache,
 }
 
-impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
+impl<S: AsRef<ObjectStore> + DataBufferFactory + Send + Sync + 'static> CachingObjectHandle<S> {
     pub fn new(handle: StoreObjectHandle<S>) -> Self {
         let size = handle.get_size();
-        Self { handle, cache: WritebackCache::new(size) }
+        let buffer = handle.owner().create_data_buffer(handle.object_id(), size);
+        Self { handle, cache: WritebackCache::new(buffer) }
     }
 }
 
@@ -75,6 +77,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> CachingObjectHandle<S> {
 
     pub fn store(&self) -> &ObjectStore {
         self.handle.store()
+    }
+
+    pub fn data_buffer(&self) -> &NativeDataBuffer {
+        &self.cache.data_buffer()
     }
 }
 

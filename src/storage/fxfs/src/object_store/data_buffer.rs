@@ -3,21 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    std::ops::Range,
-    std::sync::Mutex,
+    std::{convert::TryInto, ops::Range, sync::Mutex},
     storage_device::buffer::{BufferRef, MutableBufferRef},
 };
 
 #[cfg(target_os = "fuchsia")]
 use crate::object_store::vmo_data_buffer::VmoDataBuffer;
 
+pub trait DataBufferFactory {
+    fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> NativeDataBuffer;
+}
+
 /// A readable, writable memory buffer that is not necessarily mapped into memory.
 /// Mainly serves as a portable abstraction over a VMO (see VmoDataBuffer).
 pub trait DataBuffer: Send + Sync {
     fn read(&self, offset: u64, buf: MutableBufferRef<'_>);
     fn write(&self, offset: u64, buf: BufferRef<'_>);
-    fn size(&self) -> usize;
-    fn resize(&self, size: usize);
+    fn size(&self) -> u64;
+    fn resize(&self, size: u64);
     /// Marks |range| as unused, permitting its memory to be reclaimed.  Reading from the region
     /// should return zeroes.  The range must be page-aligned.
     fn mark_unused(&self, range: Range<u64>);
@@ -26,21 +29,17 @@ pub trait DataBuffer: Send + Sync {
 }
 
 #[cfg(target_os = "fuchsia")]
-pub fn create_data_buffer(size: usize) -> impl DataBuffer {
-    VmoDataBuffer::new(size)
-}
+pub type NativeDataBuffer = VmoDataBuffer;
 
 #[cfg(not(target_os = "fuchsia"))]
-pub fn create_data_buffer(size: usize) -> impl DataBuffer {
-    MemDataBuffer::new(size)
-}
+pub type NativeDataBuffer = MemDataBuffer;
 
 /// A default implementation of a DataBuffer.
 pub struct MemDataBuffer(Mutex<Vec<u8>>);
 
 impl MemDataBuffer {
-    pub fn new(size: usize) -> Self {
-        Self(Mutex::new(vec![0u8; size]))
+    pub fn new(size: u64) -> Self {
+        Self(Mutex::new(vec![0u8; size.try_into().unwrap()]))
     }
 }
 
@@ -54,12 +53,12 @@ impl DataBuffer for MemDataBuffer {
         let mut data = self.0.lock().unwrap();
         data[offset as usize..offset as usize + buf.len()].copy_from_slice(buf.as_slice());
     }
-    fn size(&self) -> usize {
-        self.0.lock().unwrap().len()
+    fn size(&self) -> u64 {
+        self.0.lock().unwrap().len() as u64
     }
-    fn resize(&self, size: usize) {
+    fn resize(&self, size: u64) {
         let mut data = self.0.lock().unwrap();
-        data.resize(size, 0u8);
+        data.resize(size.try_into().unwrap(), 0u8);
     }
     fn mark_unused(&self, range: Range<u64>) {
         self.zero(range);

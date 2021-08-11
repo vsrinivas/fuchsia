@@ -102,6 +102,7 @@ if (is_fuchsia) {
   ]
   fxfs_sources += [
     "src/object_store/vmo_data_buffer.rs",
+    "src/pager.rs",
     "src/remote_crypt.rs",
     "src/server.rs",
     "src/server/directory.rs",

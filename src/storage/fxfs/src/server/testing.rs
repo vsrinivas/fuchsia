@@ -10,7 +10,7 @@ use {
             fsck::fsck,
             volume::{create_root_volume, root_volume},
         },
-        server::volume::FxVolumeAndRoot,
+        server::volume::{FxVolume, FxVolumeAndRoot},
     },
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
@@ -96,6 +96,8 @@ impl TestFixture {
         // hold references to the volume which we want to unwrap.
         self.scope.wait().await;
 
+        volume.volume().terminate().await;
+
         Arc::try_unwrap(volume.into_volume())
             .map_err(|_| "References to volume still exist")
             .unwrap();
@@ -126,6 +128,10 @@ impl TestFixture {
 
     pub fn fs(&self) -> &FxFilesystem {
         &self.state.as_ref().unwrap().filesystem
+    }
+
+    pub fn volume(&self) -> &Arc<FxVolume> {
+        &self.state.as_ref().unwrap().volume.volume()
     }
 }
 

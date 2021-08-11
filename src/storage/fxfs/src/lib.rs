@@ -20,3 +20,5 @@ pub mod testing;
 mod trace;
 #[macro_use]
 mod debug_assert_not_too_long;
+#[cfg(target_os = "fuchsia")]
+mod pager;

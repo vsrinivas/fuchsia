@@ -21,9 +21,9 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     std::sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
         Arc,
     },
     storage_device::buffer::MutableBufferRef,
@@ -53,12 +53,14 @@ pub struct FxFile {
 }
 
 impl FxFile {
-    pub fn new(handle: StoreObjectHandle<FxVolume>) -> Self {
-        Self {
+    pub fn new(handle: StoreObjectHandle<FxVolume>) -> Arc<Self> {
+        let file = Arc::new(Self {
             handle: CachingObjectHandle::new(handle),
             open_count: AtomicUsize::new(0),
             has_written: AtomicBool::new(false),
-        }
+        });
+        file.handle.owner().pager().register_file(&file);
+        file
     }
 
     pub fn open_count(&self) -> usize {
@@ -107,11 +109,46 @@ impl FxFile {
             }
         }
     }
+
+    pub fn vmo(&self) -> &zx::Vmo {
+        self.handle.data_buffer().vmo()
+    }
+
+    pub fn page_in(&self, range: std::ops::Range<u64>) {
+        // TODO(csuter): For now just always respond with a filled buffer.  This obviously needs
+        // to be replaced with something that does a read.
+        let len = range.end - range.start;
+        let vmo = zx::Vmo::create(len).unwrap();
+        static COUNTER: AtomicU8 = AtomicU8::new(1);
+        let fill = vec![COUNTER.fetch_add(1, Ordering::Relaxed); len as usize];
+        vmo.write(&fill, 0).unwrap();
+        self.handle.owner().pager().supply_pages(self.vmo(), range, &vmo, 0);
+    }
+
+    // Called by the pager to indicate there are no more VMO references.
+    pub fn on_zero_children(&self) {
+        // Drop the open count that we took in get_pageable_vmo.
+        self.open_count_sub_one();
+    }
+
+    // Returns a VMO handle that supports paging.
+    pub fn get_pageable_vmo(self: &Arc<Self>) -> Result<zx::Vmo, Error> {
+        let vmo = self.handle.data_buffer().vmo();
+        let vmo =
+            vmo.create_child(zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, vmo.get_size()?)?;
+        if self.handle.owner().pager().start_servicing(self.object_id())? {
+            // Take an open count so that we keep this object alive if it is unlinked.
+            self.open_count_add_one();
+        }
+        Ok(vmo)
+    }
 }
 
 impl Drop for FxFile {
     fn drop(&mut self) {
-        self.handle.owner().cache().remove(self);
+        let volume = self.handle.owner();
+        volume.cache().remove(self);
+        volume.pager().unregister_file(self);
     }
 }
 
@@ -284,9 +321,10 @@ impl File for FxFile {
 #[cfg(test)]
 mod tests {
     use {
+        super::FxFile,
         crate::{
             object_handle::INVALID_OBJECT_ID,
-            object_store::filesystem::Filesystem,
+            object_store::{filesystem::Filesystem, ObjectDescriptor},
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         fidl_fuchsia_io::{
@@ -298,9 +336,12 @@ mod tests {
         fuchsia_zircon::Status,
         futures::join,
         io_util::{read_file_bytes, write_file_bytes},
-        std::sync::{
-            atomic::{self, AtomicBool},
-            Arc,
+        std::{
+            sync::{
+                atomic::{self, AtomicBool},
+                Arc,
+            },
+            time::Duration,
         },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
@@ -792,5 +833,85 @@ mod tests {
         );
 
         Arc::try_unwrap(fixture).unwrap_or_else(|_| panic!()).close().await;
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_pager() {
+        let fixture = TestFixture::new().await;
+
+        {
+            let root = fixture.root();
+            let file_proxy = open_file_checked(
+                &root,
+                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_FILE,
+                "foo",
+            )
+            .await;
+            assert_eq!(file_proxy.truncate(100000).await.expect("truncate fidl failed"), 0);
+
+            let (status, attr) = file_proxy.get_attr().await.expect("get_attr fidl failed");
+            assert_eq!(status, 0);
+
+            let file = fixture
+                .volume()
+                .get_or_load_node(attr.id, ObjectDescriptor::File, None)
+                .await
+                .expect("get_or_load_node failed")
+                .into_any()
+                .downcast::<FxFile>()
+                .unwrap();
+
+            let vmo = file.get_pageable_vmo().expect("get_pageable_vmo failed");
+            let mut buf = [0; 100];
+            vmo.read(&mut buf, 0).expect("read failed");
+
+            assert_eq!(buf, [1; 100]);
+
+            // Now if we drop all other references, we should still be able to read from the VMO.
+            std::mem::drop(file_proxy);
+            std::mem::drop(file);
+
+            buf.fill(0);
+            vmo.read(&mut buf, 90000).expect("read failed");
+
+            assert_eq!(buf, [2; 100]);
+
+            // Reading from the first page shouldn't trigger another page in.
+            vmo.read(&mut buf, 0).expect("read failed");
+            assert_eq!(buf, [1; 100]);
+
+            // If we close the VMO now, it should cause the file to be dropped so that if we read it
+            // again, we should see another page-in.
+            std::mem::drop(vmo);
+
+            let mut pause = 100;
+            loop {
+                {
+                    let file = fixture
+                        .volume()
+                        .get_or_load_node(attr.id, ObjectDescriptor::File, None)
+                        .await
+                        .expect("get_or_load_node failed")
+                        .into_any()
+                        .downcast::<FxFile>()
+                        .unwrap();
+
+                    let vmo = file.get_pageable_vmo().expect("get_pageable_vmo failed");
+                    let mut buf = [0; 100];
+                    vmo.read(&mut buf, 0).expect("read failed");
+
+                    if buf == [3; 100] {
+                        break;
+                    }
+                }
+
+                // The NO_CHILDREN message is asynchronous, so all we can do is sleep and try again.
+                fasync::Timer::new(Duration::from_millis(pause)).await;
+                pause *= 2;
+            }
+        }
+
+        fixture.close().await;
     }
 }

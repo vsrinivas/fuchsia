@@ -250,9 +250,10 @@ impl FxDirectory {
                 Some(self.clone()),
                 self.directory.create_child_dir(transaction, name).await?,
             )) as Arc<dyn FxNode>),
-            0 | MODE_TYPE_FILE => Ok(Arc::new(FxFile::new(
-                self.directory.create_child_file(transaction, name).await?,
-            )) as Arc<dyn FxNode>),
+            0 | MODE_TYPE_FILE => {
+                Ok(FxFile::new(self.directory.create_child_file(transaction, name).await?)
+                    as Arc<dyn FxNode>)
+            }
             MODE_TYPE_BLOCK_DEVICE | MODE_TYPE_SOCKET | MODE_TYPE_SERVICE => {
                 bail!(FxfsError::NotSupported)
             }
