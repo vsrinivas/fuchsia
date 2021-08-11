@@ -81,9 +81,9 @@ fuchsia_base = {
   }
 
   # blobfs arguments
-  blob_layout_format = blob_layout_format
-  compress_blobs = compress_blobs
   if (!bootfs_only) {
+    assembly_blob_layout_format = blob_layout_format
+    assembly_compress_blobs = compress_blobs
     if (blobfs_product_minimum_inodes != false) {
       blobfs_minimum_inodes = blobfs_product_minimum_inodes
     } else if (blobfs_board_minimum_inodes != false) {
@@ -101,7 +101,7 @@ fuchsia_base = {
     }
 
     # fvm arguments
-    fvm_slice_size = fvm_slice_size
+    assembly_fvm_slice_size = fvm_slice_size
   }
 
   # zbi arguments

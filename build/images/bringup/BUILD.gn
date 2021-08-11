@@ -36,10 +36,6 @@ assemble_system("bringup") {
     "//:additional_universe_packages",
   ]
 
-  # blobfs arguments
-  blob_layout_format = blob_layout_format
-  compress_blobs = compress_blobs
-
   # zbi arguments
   if (custom_signing_script != "") {
     zbi_signing_script = custom_signing_script

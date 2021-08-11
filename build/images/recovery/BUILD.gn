@@ -86,7 +86,9 @@ assemble_system("recovery-eng") {
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  compress_blobs = false
+  if (!bootfs_only) {
+    assembly_compress_blobs = false
+  }
   ramdisk_fvm_in_zbi = true
 
   include_component_id_index = true
@@ -136,7 +138,9 @@ assemble_system("recovery-fdr") {
 
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
-  compress_blobs = false
+  if (!bootfs_only) {
+    assembly_compress_blobs = false
+  }
   ramdisk_fvm_in_zbi = true
 
   include_component_id_index = true

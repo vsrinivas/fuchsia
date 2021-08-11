@@ -124,10 +124,14 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   board_name (required)
 #     [string] The name of the board to place in the images.
 #
-#   compress_blobs (default: true)
+#   assembly_compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
 #
-#   blob_layout_format (default: "compact")
+#   compress_blobs (default: true)
+#     DEPRECATED
+#     [boolean] Whether the blobs added to the blobfs image should be compressed.
+#
+#   assembly_blob_layout_format (default: "compact")
 #     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
 #     "compact". The deprecated padded format is supported only for Astro devices and will be
 #     removed in the future (it wastes space).
@@ -163,7 +167,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   ramdisk_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
 #
-#   fvm_slice_size (optional; default: 1048576)
+#   assembly_fvm_slice_size (optional; default: 1048576)
 #     [int] The slice size of the FVM.
 #
 # Board: ZBI arguments
@@ -266,16 +270,6 @@ template("assemble_system") {
   embed_fvm_in_zbi = false
   if (defined(invoker.ramdisk_fvm_in_zbi)) {
     embed_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
-  }
-
-  compress_blobs = true
-  if (defined(invoker.compress_blobs)) {
-    compress_blobs = invoker.compress_blobs
-  }
-
-  blob_layout_format = "compact"
-  if (defined(invoker.blob_layout_format)) {
-    blob_layout_format = invoker.blob_layout_format
   }
 
   devmgr_config = []
@@ -436,11 +430,6 @@ template("assemble_system") {
     }
   }
 
-  fvm_slice_size = 1048576
-  if (defined(invoker.fvm_slice_size)) {
-    fvm_slice_size = invoker.fvm_slice_size
-  }
-
   generated_board_config(labels.board_config) {
     forward_variables_from(invoker,
                            [
@@ -448,7 +437,6 @@ template("assemble_system") {
                              "visibility",
                              "recovery",
                              "use_esp",
-                             "blobfs_layout_format",
                              "blobfs_minimum_inodes",
                              "blobfs_minimum_data_bytes",
                              "blobfs_maximum_bytes",
@@ -461,7 +449,6 @@ template("assemble_system") {
                              "zbi_signing_args",
                            ])
     board_name = invoker.board_name
-    compress_blobs = compress_blobs
     output_path = files.board_config
 
     zbi_name = "${image_name}"
@@ -471,6 +458,26 @@ template("assemble_system") {
 
     # Use an empty minfs by default, otherwise use the supplied minfs.
     if (!bootfs_only) {
+      fvm_slice_size = 1048576
+      if (defined(invoker.assembly_fvm_slice_size)) {
+        fvm_slice_size = invoker.assembly_fvm_slice_size
+      }
+
+      blob_layout_format = "compact"
+      if (defined(invoker.assembly_blob_layout_format)) {
+        blob_layout_format = invoker.assembly_blob_layout_format
+      }
+
+      compress_blobs = true
+      if (defined(invoker.assembly_compress_blobs)) {
+        compress_blobs = invoker.assembly_compress_blobs
+      } else
+      # TODO: Remove this once all clients have migrated to
+      # assembly_compress_blobs.
+      if (defined(invoker.compress_blobs)) {
+        compress_blobs = invoker.compress_blobs
+      }
+
       if (defined(invoker.minfs)) {
         minfs = invoker.minfs
       } else {
