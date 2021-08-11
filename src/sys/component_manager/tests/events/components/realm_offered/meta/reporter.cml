@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -15,10 +15,7 @@
 
         // Offered by the parent realm "nested"
         {
-            protocol: [
-                "fidl.test.components.Trigger",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fidl.test.components.Trigger" ],
         },
         {
             event: "started_nested",

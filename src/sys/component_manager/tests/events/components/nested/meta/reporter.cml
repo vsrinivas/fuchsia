@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -25,9 +25,6 @@
         },
     ],
     use: [
-        {
-            protocol: [ "fuchsia.sys2.EventSource" ],
-        },
         {
             event: [ "started" ],
             from: "framework",

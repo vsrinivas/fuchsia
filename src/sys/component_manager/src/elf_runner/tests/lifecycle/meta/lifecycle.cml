@@ -1,9 +1,9 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "//src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/lifecycle_integration_test",
@@ -18,9 +18,6 @@
         {
             protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
             event: [ "stopped" ],
