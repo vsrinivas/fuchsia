@@ -60,8 +60,6 @@ struct BssDescriptionDef {
     #[serde(with = "BssTypeDef")]
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
-    pub timestamp: u64,
-    pub local_time: u64,
     pub capability_info: u16,
     pub ies: Vec<u8>,
     #[serde(with = "ChannelDef")]

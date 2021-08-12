@@ -465,6 +465,10 @@ mod tests {
         );
     }
 
+    // TODO(fxbug.dev/###): There is no test coverage for consistency between MLME scan results
+    // and SME scan results produced by wlanstack. In particular, the timestamp_nanos field
+    // of fidl_mlme::ScanResult is dropped in SME, and no tests reveal this problem.
+
     // Verify that we don't exceed FIDL maximum message limit when sending scan results
     #[test]
     fn test_large_on_scan_result() {
@@ -620,6 +624,7 @@ mod tests {
         // TODO(fxbug.dev/###): Merge this with a similar function in wlancfg.
         wlan_common::scan::ScanResult {
             compatible: rng.gen::<bool>(),
+            timestamp: zx::Time::from_nanos(rng.gen()),
             bss_description: random_bss_description!(),
         }
     }

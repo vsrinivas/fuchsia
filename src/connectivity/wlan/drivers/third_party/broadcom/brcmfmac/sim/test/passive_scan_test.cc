@@ -9,12 +9,14 @@
 #include <memory>
 #include <utility>
 
+#include <lib/zx/clock.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
@@ -144,6 +146,7 @@ constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 TEST_F(PassiveScanTest, BasicFunctionality) {
+  const int64_t test_start_timestamp_nanos = zx::clock::get_monotonic().get();
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(100);
   constexpr uint64_t kScanId = 0x1248;
@@ -160,7 +163,10 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
       kScanStartTime);
 
   // The lambda arg will be run on each result, inside PassiveScanTestInterface::VerifyScanResults.
-  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
+  client_ifc_.AddVerifierFunction([&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+    // Verify timestamp is after test start
+    ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
+    
     // Verify BSSID.
     ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
     const common::MacAddr result_bssid(result.bss.bssid);
@@ -185,6 +191,7 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
 }
 
 TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
+  const int64_t test_start_timestamp_nanos = zx::clock::get_monotonic().get();
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(100);
   constexpr uint64_t kScanId = 0x1248;
@@ -207,7 +214,10 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
       std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
       kScanStartTime);
 
-  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) {
+  client_ifc_.AddVerifierFunction([&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+    // Verify timestamp is after test start
+    ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
+    
     // Verify BSSID.
     ASSERT_EQ(sizeof(result.bss.bssid), sizeof(common::MacAddr::byte));
     const common::MacAddr result_bssid(result.bss.bssid);
@@ -254,8 +264,7 @@ TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
@@ -281,8 +290,7 @@ TEST_F(PassiveScanTest, ScanWhileAssocInProgress) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 }
@@ -310,8 +318,7 @@ TEST_F(PassiveScanTest, ScanAbortedInFirmware) {
 
   env_->Run(kDefaultTestDuration);
 
-  // Verify that there is no scan result and the scan result code is WLAN_SCAN_RESULT_SHOULD_WAIT.
-  EXPECT_GE(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(),
             WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);

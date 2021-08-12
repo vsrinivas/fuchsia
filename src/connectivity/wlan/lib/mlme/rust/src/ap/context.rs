@@ -318,7 +318,6 @@ impl Context {
     pub fn make_probe_resp_frame(
         &mut self,
         addr: MacAddr,
-        timestamp: u64,
         beacon_interval: TimeUnit,
         capabilities: mac::CapabilityInfo,
         ssid: &Ssid,
@@ -336,7 +335,7 @@ impl Context {
                     self.bssid,
                     mac::SequenceControl(0).with_seq_num(self.seq_mgr.next_sns1(&addr) as u16)
                 ),
-                mac::ProbeRespHdr: &mac::ProbeRespHdr { timestamp, beacon_interval, capabilities },
+                mac::ProbeRespHdr: &mac::ProbeRespHdr::new(beacon_interval, capabilities),
             },
             // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27,
             // numbered below.
@@ -362,7 +361,6 @@ impl Context {
 
     pub fn make_beacon_frame(
         &self,
-        timestamp: u64,
         beacon_interval: TimeUnit,
         capabilities: mac::CapabilityInfo,
         ssid: &Ssid,
@@ -384,7 +382,7 @@ impl Context {
                     // The sequence control is 0 because the firmware will set it.
                     mac::SequenceControl(0)
                 ),
-                mac::BeaconHdr: &mac::BeaconHdr { timestamp, beacon_interval, capabilities },
+                mac::BeaconHdr: &mac::BeaconHdr::new(beacon_interval, capabilities),
             },
             // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27,
             // numbered below.
@@ -836,7 +834,6 @@ mod test {
         let (in_buf, bytes_written) = ctx
             .make_probe_resp_frame(
                 CLIENT_ADDR,
-                0,
                 TimeUnit(10),
                 mac::CapabilityInfo(33),
                 &Ssid::from([1, 2, 3, 4, 5]),
@@ -856,7 +853,7 @@ mod test {
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
                 // Beacon header:
-                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp zero since TSF Timer not implemented
                 10, 0, // Beacon interval
                 33, 0, // Capabilities
                 // IEs:
@@ -877,7 +874,6 @@ mod test {
 
         let (in_buf, bytes_written, params) = ctx
             .make_beacon_frame(
-                0,
                 TimeUnit(10),
                 mac::CapabilityInfo(33),
                 &Ssid::from([1, 2, 3, 4, 5]),
@@ -899,7 +895,7 @@ mod test {
                 2, 2, 2, 2, 2, 2, // addr3
                 0, 0, // Sequence Control
                 // Beacon header:
-                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp zero since TSF Timer not implemented
                 10, 0, // Beacon interval
                 33, 0, // Capabilities
                 // IEs:

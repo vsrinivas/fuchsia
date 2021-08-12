@@ -343,8 +343,7 @@ fn insert_bss_to_network_bss_map(
                 rssi: scan_result.rssi_dbm(),
                 snr_db: scan_result.snr_db(),
                 channel: scan_result.channel().into(),
-                // TODO(fxbug.dev/82585): timestamp_nanos should be u64,
-                timestamp_nanos: scan_result.timestamp() as i64,
+                timestamp: scan_result.timestamp,
                 observed_in_passive_scan,
                 compatible: scan_result.compatible,
                 bss_description: scan_result.bss_description.into(),
@@ -432,7 +431,7 @@ fn scan_result_to_policy_scan_result(
                                     bssid: Some(input.bssid.0),
                                     rssi: Some(input.rssi),
                                     frequency: Some(frequency.into()), // u16.into() -> u32
-                                    timestamp_nanos: Some(input.timestamp_nanos),
+                                    timestamp_nanos: Some(input.timestamp.into_nanos()),
                                     ..fidl_policy::Bss::EMPTY
                                 }
                             })
@@ -707,48 +706,57 @@ mod tests {
         combined_fidl_aps: Vec<fidl_policy::ScanResult>,
     }
     fn create_scan_ap_data() -> MockScanData {
-        let bss_desc1 = random_fidl_bss_description!(
-            Wpa3Enterprise,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: Ssid::from("duplicated ssid"),
-            rssi_dbm: 0,
-            snr_db: 1,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
-        let bss_desc2 = random_fidl_bss_description!(
-            Wpa2,
-            bssid: [1, 2, 3, 4, 5, 6],
-            ssid: Ssid::from("unique ssid"),
-            rssi_dbm: 7,
-            snr_db: 2,
-            channel: fidl_common::WlanChannel {
-                primary: 8,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
-        let bss_desc3 = random_fidl_bss_description!(
-            Wpa3Enterprise,
-            bssid: [7, 8, 9, 10, 11, 12],
-            ssid: Ssid::from("duplicated ssid"),
-            rssi_dbm: 13,
-            snr_db: 3,
-            channel: fidl_common::WlanChannel {
-                primary: 11,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
+        let passive_result_1 = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa3Enterprise,
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: Ssid::from("duplicated ssid"),
+                rssi_dbm: 0,
+                snr_db: 1,
+                channel: fidl_common::WlanChannel {
+                    primary: 1,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
+        let passive_result_2 = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa2,
+                bssid: [1, 2, 3, 4, 5, 6],
+                ssid: Ssid::from("unique ssid"),
+                rssi_dbm: 7,
+                snr_db: 2,
+                channel: fidl_common::WlanChannel {
+                    primary: 8,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
+        let passive_result_3 = fidl_sme::ScanResult {
+            compatible: false,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa3Enterprise,
+                bssid: [7, 8, 9, 10, 11, 12],
+                ssid: Ssid::from("duplicated ssid"),
+                rssi_dbm: 13,
+                snr_db: 3,
+                channel: fidl_common::WlanChannel {
+                    primary: 11,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
 
-        let passive_input_aps = vec![
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc1.clone() },
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc2.clone() },
-            fidl_sme::ScanResult { compatible: false, bss_description: bss_desc3.clone() },
-        ];
+        let passive_input_aps =
+            vec![passive_result_1.clone(), passive_result_2.clone(), passive_result_3.clone()];
         // input_aps contains some duplicate SSIDs, which should be
         // grouped in the output.
         let passive_internal_aps = vec![
@@ -759,7 +767,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
-                        timestamp_nanos: bss_desc1.timestamp as i64,
+                        timestamp: zx::Time::from_nanos(passive_result_1.timestamp_nanos),
                         snr_db: 1,
                         channel: fidl_common::WlanChannel {
                             primary: 1,
@@ -768,12 +776,12 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: true,
-                        bss_description: bss_desc1.clone(),
+                        bss_description: passive_result_1.bss_description.clone(),
                     },
                     types::Bss {
                         bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
-                        timestamp_nanos: bss_desc3.timestamp as i64,
+                        timestamp: zx::Time::from_nanos(passive_result_3.timestamp_nanos),
                         snr_db: 3,
                         channel: fidl_common::WlanChannel {
                             primary: 11,
@@ -782,7 +790,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: false,
-                        bss_description: bss_desc3.clone(),
+                        bss_description: passive_result_3.bss_description.clone(),
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -793,7 +801,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
-                    timestamp_nanos: bss_desc2.timestamp as i64,
+                    timestamp: zx::Time::from_nanos(passive_result_2.timestamp_nanos),
                     snr_db: 2,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -802,7 +810,7 @@ mod tests {
                     },
                     observed_in_passive_scan: true,
                     compatible: true,
-                    bss_description: bss_desc2.clone(),
+                    bss_description: passive_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -818,14 +826,14 @@ mod tests {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
                         frequency: Some(CENTER_FREQ_CHAN_1),
-                        timestamp_nanos: Some(bss_desc1.timestamp as i64),
+                        timestamp_nanos: Some(passive_result_1.timestamp_nanos),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(CENTER_FREQ_CHAN_11),
-                        timestamp_nanos: Some(bss_desc3.timestamp as i64),
+                        timestamp_nanos: Some(passive_result_3.timestamp_nanos),
                         ..fidl_policy::Bss::EMPTY
                     },
                 ]),
@@ -841,7 +849,7 @@ mod tests {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(bss_desc2.timestamp as i64),
+                    timestamp_nanos: Some(passive_result_2.timestamp_nanos),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -849,34 +857,39 @@ mod tests {
             },
         ];
 
-        let bss_desc4 = random_fidl_bss_description!(
-            Wpa3Enterprise,
-            bssid: [9, 9, 9, 9, 9, 9],
-            ssid: Ssid::from("foo active ssid"),
-            rssi_dbm: 0,
-            snr_db: 8,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
-        let bss_desc5 = random_fidl_bss_description!(
-            Wpa2,
-            bssid: [8, 8, 8, 8, 8, 8],
-            ssid: Ssid::from("misc ssid"),
-            rssi_dbm: 7,
-            snr_db: 9,
-            channel: fidl_common::WlanChannel {
-                primary: 8,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
-        let active_input_aps = vec![
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc4.clone() },
-            fidl_sme::ScanResult { compatible: true, bss_description: bss_desc5.clone() },
-        ];
+        let active_result_1 = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa3Enterprise,
+                bssid: [9, 9, 9, 9, 9, 9],
+                ssid: Ssid::from("foo active ssid"),
+                rssi_dbm: 0,
+                snr_db: 8,
+                channel: fidl_common::WlanChannel {
+                    primary: 1,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
+        let active_result_2 = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa2,
+                bssid: [8, 8, 8, 8, 8, 8],
+                ssid: Ssid::from("misc ssid"),
+                rssi_dbm: 7,
+                snr_db: 9,
+                channel: fidl_common::WlanChannel {
+                    primary: 8,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
+        let active_input_aps = vec![active_result_1.clone(), active_result_2.clone()];
         let combined_internal_aps = vec![
             types::ScanResult {
                 ssid: Ssid::from("duplicated ssid"),
@@ -885,7 +898,7 @@ mod tests {
                     types::Bss {
                         bssid: Bssid([0, 0, 0, 0, 0, 0]),
                         rssi: 0,
-                        timestamp_nanos: bss_desc1.timestamp as i64,
+                        timestamp: zx::Time::from_nanos(passive_result_1.timestamp_nanos),
                         snr_db: 1,
                         channel: fidl_common::WlanChannel {
                             primary: 1,
@@ -894,12 +907,12 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: true,
-                        bss_description: bss_desc1.clone(),
+                        bss_description: passive_result_1.bss_description.clone(),
                     },
                     types::Bss {
                         bssid: Bssid([7, 8, 9, 10, 11, 12]),
                         rssi: 13,
-                        timestamp_nanos: bss_desc3.timestamp as i64,
+                        timestamp: zx::Time::from_nanos(passive_result_3.timestamp_nanos),
                         snr_db: 3,
                         channel: fidl_common::WlanChannel {
                             primary: 11,
@@ -908,7 +921,7 @@ mod tests {
                         },
                         observed_in_passive_scan: true,
                         compatible: false,
-                        bss_description: bss_desc3.clone(),
+                        bss_description: passive_result_3.bss_description.clone(),
                     },
                 ],
                 compatibility: types::Compatibility::Supported,
@@ -919,7 +932,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([9, 9, 9, 9, 9, 9]),
                     rssi: 0,
-                    timestamp_nanos: bss_desc4.timestamp as i64,
+                    timestamp: zx::Time::from_nanos(active_result_1.timestamp_nanos),
                     snr_db: 8,
                     channel: fidl_common::WlanChannel {
                         primary: 1,
@@ -928,7 +941,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_description: bss_desc4.clone(),
+                    bss_description: active_result_1.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -938,7 +951,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([8, 8, 8, 8, 8, 8]),
                     rssi: 7,
-                    timestamp_nanos: bss_desc5.timestamp as i64,
+                    timestamp: zx::Time::from_nanos(active_result_2.timestamp_nanos),
                     snr_db: 9,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -947,7 +960,7 @@ mod tests {
                     },
                     observed_in_passive_scan: false,
                     compatible: true,
-                    bss_description: bss_desc5.clone(),
+                    bss_description: active_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -957,7 +970,7 @@ mod tests {
                 entries: vec![types::Bss {
                     bssid: Bssid([1, 2, 3, 4, 5, 6]),
                     rssi: 7,
-                    timestamp_nanos: bss_desc2.timestamp as i64,
+                    timestamp: zx::Time::from_nanos(passive_result_2.timestamp_nanos),
                     snr_db: 2,
                     channel: fidl_common::WlanChannel {
                         primary: 8,
@@ -966,7 +979,7 @@ mod tests {
                     },
                     observed_in_passive_scan: true,
                     compatible: true,
-                    bss_description: bss_desc2.clone(),
+                    bss_description: passive_result_2.bss_description.clone(),
                 }],
                 compatibility: types::Compatibility::Supported,
             },
@@ -982,14 +995,14 @@ mod tests {
                         bssid: Some([0, 0, 0, 0, 0, 0]),
                         rssi: Some(0),
                         frequency: Some(CENTER_FREQ_CHAN_1),
-                        timestamp_nanos: Some(bss_desc1.timestamp as i64),
+                        timestamp_nanos: Some(passive_result_1.timestamp_nanos),
                         ..fidl_policy::Bss::EMPTY
                     },
                     fidl_policy::Bss {
                         bssid: Some([7, 8, 9, 10, 11, 12]),
                         rssi: Some(13),
                         frequency: Some(CENTER_FREQ_CHAN_11),
-                        timestamp_nanos: Some(bss_desc3.timestamp as i64),
+                        timestamp_nanos: Some(passive_result_3.timestamp_nanos),
                         ..fidl_policy::Bss::EMPTY
                     },
                 ]),
@@ -1005,7 +1018,7 @@ mod tests {
                     bssid: Some([9, 9, 9, 9, 9, 9]),
                     rssi: Some(0),
                     frequency: Some(CENTER_FREQ_CHAN_1),
-                    timestamp_nanos: Some(bss_desc4.timestamp as i64),
+                    timestamp_nanos: Some(active_result_1.timestamp_nanos),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1020,7 +1033,7 @@ mod tests {
                     bssid: Some([8, 8, 8, 8, 8, 8]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(bss_desc5.timestamp as i64),
+                    timestamp_nanos: Some(active_result_2.timestamp_nanos),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1035,7 +1048,7 @@ mod tests {
                     bssid: Some([1, 2, 3, 4, 5, 6]),
                     rssi: Some(7),
                     frequency: Some(CENTER_FREQ_CHAN_8),
-                    timestamp_nanos: Some(bss_desc2.timestamp as i64),
+                    timestamp_nanos: Some(passive_result_2.timestamp_nanos),
                     ..fidl_policy::Bss::EMPTY
                 }]),
                 compatibility: Some(fidl_policy::Compatibility::Supported),
@@ -1576,23 +1589,28 @@ mod tests {
         let mut bss_by_network = HashMap::new();
 
         // Create some input data with duplicated BSSID and Network Identifiers
-        let passive_bss_desc = random_fidl_bss_description!(
-            Wpa3Enterprise,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: Ssid::from("duplicated ssid"),
-            rssi_dbm: 0,
-            snr_db: 1,
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            },
-        );
+        let passive_result = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                Wpa3Enterprise,
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: Ssid::from("duplicated ssid"),
+                rssi_dbm: 0,
+                snr_db: 1,
+                channel: fidl_common::WlanChannel {
+                    primary: 1,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+            ),
+        };
 
         let passive_input_aps = vec![
-            fidl_sme::ScanResult { compatible: true, bss_description: passive_bss_desc.clone() },
+            passive_result.clone(),
             fidl_sme::ScanResult {
                 compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
                     Wpa3Enterprise,
                     bssid: [0, 0, 0, 0, 0, 0],
@@ -1617,7 +1635,7 @@ mod tests {
         let expected_bss = vec![types::Bss {
             bssid: Bssid([0, 0, 0, 0, 0, 0]),
             rssi: 0,
-            timestamp_nanos: passive_bss_desc.timestamp as i64,
+            timestamp: zx::Time::from_nanos(passive_result.timestamp_nanos),
             snr_db: 1,
             channel: fidl_common::WlanChannel {
                 primary: 1,
@@ -1626,7 +1644,7 @@ mod tests {
             },
             observed_in_passive_scan: true,
             compatible: true,
-            bss_description: passive_bss_desc.clone(),
+            bss_description: passive_result.bss_description.clone(),
         }];
 
         insert_bss_to_network_bss_map(
@@ -1641,21 +1659,26 @@ mod tests {
         assert_eq!(bss_by_network[&expected_id], expected_bss);
 
         // Create some input data with one duplicate BSSID and one new BSSID
-        let active_bss_desc = random_fidl_bss_description!(
-            Wpa3Enterprise,
-            ssid: Ssid::from("duplicated ssid"),
-            bssid: [1, 2, 3, 4, 5, 6],
-            rssi_dbm: 101,
-            snr_db: 101,
-            channel: fidl_common::WlanChannel {
-                primary: 101,
-                cbw: fidl_common::ChannelBandwidth::Cbw40,
-                secondary80: 0,
-            },
-        );
+        let active_result = fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: random_fidl_bss_description!(
+                        Wpa3Enterprise,
+                        ssid: Ssid::from("duplicated ssid"),
+                        bssid: [1, 2, 3, 4, 5, 6],
+                        rssi_dbm: 101,
+                        snr_db: 101,
+                        channel: fidl_common::WlanChannel {
+                            primary: 101,
+                            cbw: fidl_common::ChannelBandwidth::Cbw40,
+                            secondary80: 0,
+                        },
+            ),
+        };
         let active_input_aps = vec![
             fidl_sme::ScanResult {
                 compatible: true,
+                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
                     Wpa3Enterprise,
                     bssid: [0, 0, 0, 0, 0, 0],
@@ -1669,7 +1692,7 @@ mod tests {
                     },
                 ),
             },
-            fidl_sme::ScanResult { compatible: true, bss_description: active_bss_desc.clone() },
+            active_result.clone(),
         ];
 
         // After the active scan, there should be a second bss included in the results
@@ -1677,7 +1700,7 @@ mod tests {
             types::Bss {
                 bssid: Bssid([0, 0, 0, 0, 0, 0]),
                 rssi: 0,
-                timestamp_nanos: passive_bss_desc.timestamp as i64,
+                timestamp: zx::Time::from_nanos(passive_result.timestamp_nanos),
                 snr_db: 1,
                 channel: fidl_common::WlanChannel {
                     primary: 1,
@@ -1686,12 +1709,12 @@ mod tests {
                 },
                 observed_in_passive_scan: true,
                 compatible: true,
-                bss_description: passive_bss_desc.clone(),
+                bss_description: passive_result.bss_description.clone(),
             },
             types::Bss {
                 bssid: Bssid([1, 2, 3, 4, 5, 6]),
                 rssi: 101,
-                timestamp_nanos: active_bss_desc.timestamp as i64,
+                timestamp: zx::Time::from_nanos(active_result.timestamp_nanos),
                 snr_db: 101,
                 channel: fidl_common::WlanChannel {
                     primary: 101,
@@ -1700,7 +1723,7 @@ mod tests {
                 },
                 observed_in_passive_scan: false,
                 compatible: true,
-                bss_description: active_bss_desc.clone(),
+                bss_description: active_result.bss_description.clone(),
             },
         ];
 
@@ -2224,6 +2247,7 @@ mod tests {
         let ssid = Ssid::from("some_ssid");
         let sme_scan_result = fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
                 Wpa2Wpa3,
                 ssid: ssid.clone(),
@@ -2254,7 +2278,7 @@ mod tests {
                 rssi: Some(common_scan_result.rssi_dbm()),
                 // For now frequency and timestamp are set to 0 when converting types.
                 frequency: Some(CENTER_FREQ_CHAN_8),
-                timestamp_nanos: Some(common_scan_result.timestamp() as i64),
+                timestamp_nanos: Some(common_scan_result.timestamp.into_nanos()),
                 ..fidl_policy::Bss::EMPTY
             }]),
             compatibility: Some(types::Compatibility::Supported),
@@ -2269,7 +2293,7 @@ mod tests {
                 rssi: common_scan_result.rssi_dbm(),
                 snr_db: common_scan_result.snr_db(),
                 channel: common_scan_result.channel().into(),
-                timestamp_nanos: common_scan_result.timestamp() as i64,
+                timestamp: common_scan_result.timestamp,
                 observed_in_passive_scan: true,
                 compatible: common_scan_result.compatible,
                 bss_description: common_scan_result.bss_description.into(),

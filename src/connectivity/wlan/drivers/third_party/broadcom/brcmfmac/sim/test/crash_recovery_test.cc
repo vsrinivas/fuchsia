@@ -78,13 +78,13 @@ void CrashRecoveryTest::ScheduleCrash(zx::duration delay) {
 
 void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_result_num,
                                          wlan_scan_result_t expect_code) {
-  EXPECT_GE(client_ifc_.ScanResultBssList(scan_id)->size(), min_result_num);
+  EXPECT_GE(client_ifc_.ScanResultList(scan_id)->size(), min_result_num);
 
-  bss_description_t result_bss_des = client_ifc_.ScanResultBssList(scan_id)->back();
-  auto ssid = brcmf_find_ssid_in_ies(result_bss_des.ies_list, result_bss_des.ies_count);
-  common::MacAddr res_bssid(result_bss_des.bssid);
+  wlanif_scan_result_t back_scan_result = client_ifc_.ScanResultList(scan_id)->back();
+  auto ssid = brcmf_find_ssid_in_ies(back_scan_result.bss.ies_list, back_scan_result.bss.ies_count);
+  common::MacAddr bssid(back_scan_result.bss.bssid);
 
-  EXPECT_EQ(res_bssid, kDefaultBssid);
+  EXPECT_EQ(bssid, kDefaultBssid);
   EXPECT_EQ(ssid.size(), kDefaultSsid.len);
   EXPECT_EQ(std::memcmp(ssid.data(), kDefaultSsid.data, kDefaultSsid.len), 0);
 
@@ -136,7 +136,7 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
   env_->Run(kTestDuration);
 
   // Verify no scan result is received from SME
-  EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
 
   // Verify that the association succeeded.
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);

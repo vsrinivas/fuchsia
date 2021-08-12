@@ -133,7 +133,7 @@ class SimInterface {
   // Scan operations
   void StartScan(uint64_t txn_id = 0, bool active = false);
   std::optional<wlan_scan_result_t> ScanResultCode(uint64_t txn_id);
-  const std::list<bss_description_t>* ScanResultBssList(uint64_t txn_id);
+  const std::list<wlanif_scan_result_t>* ScanResultList(uint64_t txn_id);
 
   // SoftAP operation
   void StartSoftAp(const cssid_t& ssid = kDefaultSoftApSsid,
@@ -177,7 +177,7 @@ class SimInterface {
   struct ScanStatus {
     // If not present, indicates that the scan has not completed yet
     std::optional<wlan_scan_result_t> result_code = std::nullopt;
-    std::list<bss_description_t> result_list;
+    std::list<wlanif_scan_result_t> result_list;
   };
   // One entry per scan started
   std::map<uint64_t, ScanStatus> scan_results_;

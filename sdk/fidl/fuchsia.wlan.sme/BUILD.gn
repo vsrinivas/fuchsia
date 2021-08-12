@@ -18,5 +18,6 @@ fidl("fuchsia.wlan.sme") {
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.internal",
     "//sdk/fidl/fuchsia.wlan.mesh",
+    "//zircon/vdso/zx",
   ]
 }

@@ -248,7 +248,6 @@ impl InfraBss {
         let (pvb_offset, pvb_bitmap) = tim.make_partial_virtual_bitmap();
 
         ctx.make_beacon_frame(
-            0,
             self.beacon_interval,
             self.capabilities,
             &self.ssid,
@@ -277,7 +276,6 @@ impl InfraBss {
         let (in_buf, bytes_written) = ctx
             .make_probe_resp_frame(
                 client_addr,
-                0,
                 self.beacon_interval,
                 self.capabilities,
                 &self.ssid,

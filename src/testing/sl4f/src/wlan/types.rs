@@ -170,8 +170,6 @@ pub struct BssDescription {
     bssid: [u8; 6],
     bss_type: BssType,
     beacon_period: u16,
-    timestamp: u64,
-    local_time: u64,
     capability_info: u16,
     ies: Vec<u8>,
     channel: Channel,
@@ -185,8 +183,6 @@ impl From<fidl_internal::BssDescription> for BssDescription {
             bssid: bss_description.bssid,
             bss_type: bss_description.bss_type.into(),
             beacon_period: bss_description.beacon_period,
-            timestamp: bss_description.timestamp,
-            local_time: bss_description.local_time,
             capability_info: bss_description.capability_info,
             ies: bss_description.ies,
             channel: bss_description.channel.into(),
@@ -199,6 +195,7 @@ impl From<fidl_internal::BssDescription> for BssDescription {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ScanResult {
     pub compatible: bool,
+    pub timestamp_nanos: i64,
     pub bss_description: BssDescription,
 }
 
@@ -206,6 +203,7 @@ impl From<fidl_sme::ScanResult> for ScanResult {
     fn from(scan_result: fidl_sme::ScanResult) -> Self {
         ScanResult {
             compatible: scan_result.compatible,
+            timestamp_nanos: scan_result.timestamp_nanos,
             bss_description: scan_result.bss_description.into(),
         }
     }

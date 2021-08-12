@@ -272,8 +272,6 @@ mod tests {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
             bss_type: fidl_fuchsia_wlan_internal::BssType::Personal,
             beacon_period: rng.gen::<u16>(),
-            timestamp: rng.gen::<u64>(),
-            local_time: rng.gen::<u64>(),
             capability_info: rng.gen::<u16>(),
             ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
             rssi_dbm: rng.gen::<i8>(),
@@ -1231,6 +1229,7 @@ mod tests {
     ) -> fidl_sme::ScanResult {
         fidl_sme::ScanResult {
             compatible,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: fake_fidl_bss_description!(
                 protection => protection,
                 bssid: bssid,

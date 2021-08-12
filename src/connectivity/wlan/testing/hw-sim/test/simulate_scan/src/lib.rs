@@ -22,6 +22,8 @@ lazy_static! {
     static ref SSID_BAZ: Ssid = Ssid::from("baz");
 }
 
+// TODO(fxbug.dev/###): This is a test of scan functionality from the perspective of wlancfg,
+// but the results of wlanstack itself are untested.
 /// Test scan is working by simulating some fake APs that sends out beacon frames on specific
 /// channel and verify all beacon frames are correctly reported as valid networks.
 #[fuchsia_async::run_singlethreaded(test)]

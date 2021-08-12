@@ -66,6 +66,7 @@ class ActiveScanTest : public SimTest {
                    zx::duration beacon_interval = kBeaconInterval);
 
   void StartScan(const wlanif_scan_req_t* req);
+  // TODO(fxbug.dev/###): Align the way active_scan_test and passive_scan_test verify scan results.
   void VerifyScanResults();
   void EndSimulation();
 

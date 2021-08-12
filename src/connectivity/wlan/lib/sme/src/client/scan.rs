@@ -29,6 +29,8 @@ const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
 const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
 const ACTIVE_SCAN_CHANNEL_MS: u32 = 75;
 
+// TODO(fxbug.dev/###): This type seems to unnecessarily duplicate what's already available
+// in wlan_common::scan::ScanResult.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScanResult {
     pub bssid: Bssid,
@@ -373,6 +375,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
@@ -385,6 +388,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: txn_id + 100, // mismatching transaction id
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
@@ -398,6 +402,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [3; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("qux"))
@@ -442,6 +447,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
@@ -455,6 +461,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("baz"))
@@ -501,7 +508,14 @@ mod tests {
         let ie_marker1 = &[0xdd, 0x07, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee];
         bss.ies.extend_from_slice(ie_marker1);
         sched
-            .on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect)
+            .on_mlme_scan_result(
+                fidl_mlme::ScanResult {
+                    txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                    bss,
+                },
+                &sme_inspect,
+            )
             .expect("expect scan result received");
 
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::from("ssid"));
@@ -509,7 +523,14 @@ mod tests {
         let ie_marker2 = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
         bss.ies.extend_from_slice(ie_marker2);
         sched
-            .on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss }, &sme_inspect)
+            .on_mlme_scan_result(
+                fidl_mlme::ScanResult {
+                    txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+                    bss,
+                },
+                &sme_inspect,
+            )
             .expect("expect scan result received");
         let (scan_end, mlme_req) = assert_variant!(
             sched.on_mlme_scan_end(
@@ -609,6 +630,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
@@ -627,6 +649,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
@@ -695,6 +718,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
@@ -725,6 +749,7 @@ mod tests {
             .on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [2; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("bar"))
@@ -764,6 +789,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: txn_id + 1,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))
@@ -783,6 +809,7 @@ mod tests {
             sched.on_mlme_scan_result(
                 fidl_mlme::ScanResult {
                     txn_id: 0,
+                    timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                     bss: fidl_internal::BssDescription {
                         bssid: [1; 6],
                         ..fake_fidl_bss_description!(Open, ssid: Ssid::from("foo"))

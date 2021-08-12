@@ -226,7 +226,6 @@ impl<'a> BoundScanner<'a> {
     pub fn handle_beacon_or_probe_response(
         &mut self,
         bssid: Bssid,
-        timestamp: u64,
         beacon_interval: TimeUnit,
         capability_info: CapabilityInfo,
         ies: &[u8],
@@ -236,14 +235,8 @@ impl<'a> BoundScanner<'a> {
             Some(req) => req.req.txn_id,
             None => return,
         };
-        let bss_description = construct_bss_description(
-            bssid,
-            timestamp,
-            beacon_interval,
-            capability_info,
-            ies,
-            rx_info,
-        );
+        let bss_description =
+            construct_bss_description(bssid, beacon_interval, capability_info, ies, rx_info);
         let bss_description = match bss_description {
             Ok(bss) => bss,
             Err(e) => {
@@ -366,7 +359,11 @@ fn get_band_info(
 
 fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mut Device) {
     let result = device.access_sme_sender(|sender| {
-        sender.send_on_scan_result(&mut fidl_mlme::ScanResult { txn_id, bss })
+        sender.send_on_scan_result(&mut fidl_mlme::ScanResult {
+            txn_id,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss,
+        })
     });
     if let Err(e) = result {
         error!("error sending MLME ScanResult: {}", e);
@@ -404,7 +401,6 @@ mod tests {
     // Original channel set by FakeDevice
     const ORIGINAL_CHAN: banjo_common::WlanChannel = channel(0);
 
-    const TIMESTAMP: u64 = 364983910445;
     // Capability information: ESS
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(1);
     const BEACON_INTERVAL: u16 = 100;
@@ -747,7 +743,7 @@ mod tests {
         }, "HW scan not initiated");
 
         // Mock receiving a beacon
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
         m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
 
         // Verify scan results are sent on hw scan complete
@@ -808,7 +804,7 @@ mod tests {
         assert_variant!(m.fake_device.hw_scan_req, Some(_), "HW scan not initiated");
 
         // Mock receiving a beacon
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
         m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
 
         // Verify scan results are sent on hw scan complete
@@ -828,6 +824,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
+        let test_start_timestamp_nanos = zx::Time::get_monotonic().into_nanos();
 
         scanner
             .bind(&mut ctx)
@@ -837,33 +834,30 @@ mod tests {
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
         scanner.bind(&mut ctx).handle_channel_req_complete();
 
         let scan_result = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
+        assert_eq!(scan_result.txn_id, 1337);
+        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
         assert_eq!(
-            scan_result,
-            fidl_mlme::ScanResult {
-                txn_id: 1337,
-                bss: fidl_internal::BssDescription {
-                    bssid: BSSID.0,
-                    bss_type: fidl_internal::BssType::Infrastructure,
-                    beacon_period: BEACON_INTERVAL,
-                    timestamp: TIMESTAMP,
-                    local_time: 0,
-                    capability_info: CAPABILITY_INFO.0,
-                    ies: beacon_ies(),
-                    rssi_dbm: RX_INFO.rssi_dbm,
-                    channel: fidl_common::WlanChannel {
-                        primary: RX_INFO.channel.primary,
-                        cbw: fidl_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
-                    snr_db: 0,
-                }
+            scan_result.bss,
+            fidl_internal::BssDescription {
+                bssid: BSSID.0,
+                bss_type: fidl_internal::BssType::Infrastructure,
+                beacon_period: BEACON_INTERVAL,
+                capability_info: CAPABILITY_INFO.0,
+                ies: beacon_ies(),
+                rssi_dbm: RX_INFO.rssi_dbm,
+                channel: fidl_common::WlanChannel {
+                    primary: RX_INFO.channel.primary,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
+                    secondary80: 0,
+                },
+                snr_db: 0,
             }
         );
 
@@ -891,9 +885,9 @@ mod tests {
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        handle_beacon(&mut scanner, &mut ctx, &beacon_ies()[..]);
         // Replace with beacon that has different SSID
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies_2()[..]);
+        handle_beacon(&mut scanner, &mut ctx, &beacon_ies_2()[..]);
         scanner.bind(&mut ctx).handle_channel_req_complete();
 
         // Verify that one scan result is sent for each beacon
@@ -937,10 +931,9 @@ mod tests {
         assert_eq!(true, scanner.is_scanning());
     }
 
-    fn handle_beacon(scanner: &mut Scanner, ctx: &mut Context, timestamp: u64, ies: &[u8]) {
+    fn handle_beacon(scanner: &mut Scanner, ctx: &mut Context, ies: &[u8]) {
         scanner.bind(ctx).handle_beacon_or_probe_response(
             BSSID,
-            timestamp,
             TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             ies,

@@ -39,8 +39,6 @@ pub fn clone_bss_desc(d: &fidl_internal::BssDescription) -> fidl_internal::BssDe
         bssid: d.bssid.clone(),
         bss_type: d.bss_type,
         beacon_period: d.beacon_period,
-        timestamp: d.timestamp,
-        local_time: d.local_time,
         capability_info: d.capability_info,
 
         ies: d.ies.clone(),

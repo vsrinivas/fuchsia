@@ -698,6 +698,9 @@ void Device::OnScanResult(const wlanif_scan_result_t* result) {
   // txn_id
   fidl_result.txn_id = result->txn_id;
 
+  // timestamp_nanos
+  fidl_result.timestamp_nanos = result->timestamp_nanos;
+  
   // bss
   ConvertBssDescription(&fidl_result.bss, result->bss);
 

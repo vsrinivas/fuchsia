@@ -852,7 +852,7 @@ TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
   env_->Run(kTestDuration);
   // There will be no result received from firmware, because the fake external AP's channel number
   // is 149, The scan has been stopped before reaching that channel.
-  EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  EXPECT_EQ(client_ifc_.ScanResultList(kScanId)->size(), 0U);
   ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
   EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_SHOULD_WAIT);
 

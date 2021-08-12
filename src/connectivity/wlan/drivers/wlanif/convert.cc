@@ -122,12 +122,6 @@ void ConvertBssDescription(bss_description_t* banjo_desc,
   // beacon_period
   banjo_desc->beacon_period = fidl_desc.beacon_period;
 
-  // timestamp
-  banjo_desc->timestamp = fidl_desc.timestamp;
-
-  // local_time
-  banjo_desc->local_time = fidl_desc.local_time;
-
   // capability
   banjo_desc->capability_info = fidl_desc.capability_info;
 
@@ -200,12 +194,6 @@ void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
 
   // beacon_period
   fidl_desc->beacon_period = banjo_desc.beacon_period;
-
-  // timestamp
-  fidl_desc->timestamp = banjo_desc.timestamp;
-
-  // local_time
-  fidl_desc->local_time = banjo_desc.local_time;
 
   // capability
   fidl_desc->capability_info = banjo_desc.capability_info;

@@ -71,8 +71,8 @@ TEST_F(TimeoutTest, ScanTimeout) {
   EXPECT_EQ(*result, WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE);
 
   // No results should have been seen
-  auto bss_list = client_ifc_.ScanResultBssList(kDefaultScanTxnId);
-  EXPECT_EQ(bss_list->size(), 0U);
+  auto scan_result_list = client_ifc_.ScanResultList(kDefaultScanTxnId);
+  EXPECT_EQ(scan_result_list->size(), 0U);
 }
 
 // Verify association timeout is triggered.
@@ -147,8 +147,8 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
 
   // There is only one AP in the environmnet, but two scan results will be heard from SME since the
   // scan dwell time is twice the beacon interval.
-  auto bss_list = client_ifc_.ScanResultBssList(kDefaultScanTxnId);
-  EXPECT_EQ(bss_list->size(), 2U);
+  auto scan_result_list = client_ifc_.ScanResultList(kDefaultScanTxnId);
+  EXPECT_EQ(scan_result_list->size(), 2U);
 }
 
 }  // namespace wlan::brcmfmac

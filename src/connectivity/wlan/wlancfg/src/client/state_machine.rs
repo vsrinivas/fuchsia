@@ -1115,6 +1115,7 @@ mod tests {
         });
         let scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
@@ -1316,6 +1317,7 @@ mod tests {
         });
         let scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         validate_sme_scan_request_and_send_results(
@@ -1624,14 +1626,10 @@ mod tests {
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::ScanResult {
-        <<<<<<< HEAD
-                    ssid: next_network_ssid.to_vec(),
-                    bss_description: bss_description.clone(),
-        =======
-        >>>>>>> 7aed53e5ccf ([wlan] Reduce ScanResult footprint)
-                    compatible: true,
-                    bss_description: bss_description.clone(),
-                }];
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: bss_description.clone(),
+        }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Scan {
@@ -1656,25 +1654,21 @@ mod tests {
 
         // Ensure a connect request is sent to the SME
         assert_variant!(
-                    poll_sme_req(&mut exec, &mut sme_fut),
-                    Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
-        <<<<<<< HEAD
-                        assert_eq!(req.ssid, next_network_ssid.to_vec());
-        =======
-                        assert_eq!(req.ssid, next_network_ssid);
-        >>>>>>> 7aed53e5ccf ([wlan] Reduce ScanResult footprint)
-                        assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
-                        assert_eq!(req.bss_description, bss_description);
-                        assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
-                        assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
-                        assert_eq!(req.multiple_bss_candidates, false);
-                         // Send connection response.
-                        let (_stream, ctrl) = txn.expect("connect txn unused")
-                            .into_stream_and_control_handle().expect("error accessing control handle");
-                        ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
-                            .expect("failed to send connection completion");
-                    }
-                );
+            poll_sme_req(&mut exec, &mut sme_fut),
+            Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
+                assert_eq!(req.ssid, next_network_ssid.to_vec());
+                assert_eq!(req.credential, sme_credential_from_policy(&connect_request.target.credential));
+                assert_eq!(req.bss_description, bss_description);
+                assert_eq!(req.radio_cfg, RadioConfig { phy: None, cbw: None, primary_channel: None }.to_fidl());
+                assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
+                assert_eq!(req.multiple_bss_candidates, false);
+                 // Send connection response.
+                let (_stream, ctrl) = txn.expect("connect txn unused")
+                    .into_stream_and_control_handle().expect("error accessing control handle");
+                ctrl.send_on_connect_result(fidl_sme::ConnectResultCode::Success, false)
+                    .expect("failed to send connection completion");
+            }
+        );
 
         // Cobalt metrics logged
         validate_cobalt_events!(
@@ -2718,6 +2712,7 @@ mod tests {
         // Send a scan for the requested network
         let mut scan_results = vec![fidl_sme::ScanResult {
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: bss_description.clone(),
         }];
         assert_variant!(
@@ -3132,8 +3127,11 @@ mod tests {
             ssids: vec![network_ssid.to_vec()],
             channels: vec![],
         });
-        let mut scan_results =
-            vec![fidl_sme::ScanResult { compatible: true, bss_description: new_bss_desc.clone() }];
+        let mut scan_results = vec![fidl_sme::ScanResult {
+            compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: new_bss_desc.clone(),
+        }];
 
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -3383,8 +3381,9 @@ mod tests {
             channels: vec![],
         });
         let mut scan_results = vec![fidl_sme::ScanResult {
-            bss_description: new_bss_description.clone(),
             compatible: true,
+            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
+            bss_description: new_bss_description.clone(),
         }];
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),

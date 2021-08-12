@@ -7,6 +7,7 @@ using fuchsia.wlan.common;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.mesh;
+using zx;
 
 /// Security protection which should mirror the Protection enum defined in wlan lib common
 type Protection = strict enum {
@@ -45,6 +46,8 @@ type UserDisconnectReason = strict enum {
 
 type ScanResult = struct {
     compatible bool;
+    // The timestamp of the received Probe Response or Beacon frame from the found BSS.
+    timestamp_nanos zx.time;
     bss_description fuchsia.wlan.internal.BssDescription;
 };
 

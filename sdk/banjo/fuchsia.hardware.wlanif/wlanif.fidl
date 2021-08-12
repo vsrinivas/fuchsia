@@ -213,6 +213,7 @@ type WlanifStartCaptureFramesResp = struct {
 
 type WlanifScanResult = struct {
     txn_id uint64;
+    timestamp_nanos zx.time;
     bss fuchsia.wlan.internal.BssDescription;
 };
 
