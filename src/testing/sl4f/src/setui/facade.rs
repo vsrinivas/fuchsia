@@ -423,21 +423,62 @@ mod tests {
         let audio_stream_fut = async move {
             match aud_stream.try_next().await {
                 Ok(Some(fsettings::AudioRequest::Watch { responder })) => {
-                    let volume = 0.5f32;
-                    let streams = fsettings::AudioStreamSettings {
-                        stream: Some(AudioRenderUsage::Communication),
-                        source: Some(AudioStreamSettingSource::User),
-                        user_volume: Some(Volume {
-                            level: Some(volume),
-                            muted: Some(false),
-                            ..Volume::EMPTY
-                        }),
-                        ..AudioStreamSettings::EMPTY
-                    };
                     let settings = fsettings::AudioSettings {
-                        streams: Some(vec![streams]),
+                        streams: Some(vec![]),
                         input: Some(fsettings::AudioInput {
                             muted: Some(false),
+                            ..fsettings::AudioInput::EMPTY
+                        }),
+                        ..fsettings::AudioSettings::EMPTY
+                    };
+                    responder.send(settings).unwrap();
+                }
+                other => panic!("Unexpected Watch request: {:?}", other),
+            }
+        };
+
+        futures::future::join3(facade_fut, input_stream_fut, audio_stream_fut).await;
+    }
+
+    // Tests that `set_mic_mute` does not send a request to the Input service if the mic is already in desired state.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_mic_mute_in_desired_state() {
+        let mic_state: MicStates = Muted;
+        let (aud_proxy, mut aud_stream) = create_proxy_and_stream::<AudioMarker>().unwrap();
+        let (in_proxy, mut in_stream) = create_proxy_and_stream::<InputMarker>().unwrap();
+
+        // Create a facade future that sends a request to `proxy`.
+        let facade = SetUiFacade {
+            audio_proxy: Some(aud_proxy),
+            display_proxy: None,
+            input_proxy: Some(in_proxy),
+        };
+        let facade_fut = async move {
+            assert_eq!(
+                facade.set_mic_mute(to_value(mic_state).unwrap()).await.unwrap(),
+                to_value(SetUiResult::Success).unwrap()
+            );
+        };
+
+        // Create a future to check that the request stream is never called (due to early termination).
+        let input_stream_fut = async move {
+            match in_stream.try_next().await {
+                Ok(Some(fsettings::InputRequest::SetStates { input_states, responder: _ })) => {
+                    panic!("Unexpected stream item: {:?}", input_states[0]);
+                }
+                _ => (),
+            }
+        };
+
+        // Create a future to service the Audio stream.
+        let audio_stream_fut = async move {
+            match aud_stream.try_next().await {
+                Ok(Some(fsettings::AudioRequest::Watch { responder })) => {
+                    // Volume level chosen from test_set_media_volume().
+                    let settings = fsettings::AudioSettings {
+                        streams: Some(vec![]),
+                        input: Some(fsettings::AudioInput {
+                            muted: Some(true),
                             ..fsettings::AudioInput::EMPTY
                         }),
                         ..fsettings::AudioSettings::EMPTY
