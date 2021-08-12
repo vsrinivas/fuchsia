@@ -11,6 +11,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/zxio/private.h"
+
 constexpr size_t kSize = 300;
 constexpr zx_off_t kInitialSeek = 4;
 

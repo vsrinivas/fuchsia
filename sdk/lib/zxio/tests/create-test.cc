@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/syscalls/types.h>
@@ -46,6 +47,116 @@ TEST(Create, NotSupported) {
   zx_info_handle_basic_t info = {};
   ASSERT_OK(handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   EXPECT_EQ(info.type, ZX_OBJ_TYPE_EVENT);
+}
+
+// Tests that calling zxio_create_with_type() with an invalid storage pointer
+// still closes all of the handles known for the type.
+TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+  zx::channel channel0, channel1;
+  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, event0.release(),
+                                  channel0.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
+
+  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, Directory) {
+  zx::channel channel0, channel1;
+  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DIR, channel0.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  zx_signals_t pending = 0;
+  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, Node) {
+  zx::channel channel0, channel1;
+  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_NODE, channel0.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  zx_signals_t pending = 0;
+  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, StreamSocket) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));
+  zx::channel channel0, channel1;
+  ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket0.release(),
+                                  channel0.release(), nullptr),
+            ZX_ERR_INVALID_ARGS);
+
+  zx_signals_t pending = 0;
+  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
+
+  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, Pipe) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_PIPE, socket0.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  // Make sure that the handle is closed.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, RawSocket) {
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_RAW_SOCKET, event0.release(),
+                                  socket0.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  // Make sure that the handle is closed.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
+
+  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
+}
+
+TEST(CreateWithTypeInvalidStorageClosesHandles, Vmo) {
+  zx::vmo parent, child;
+  ASSERT_OK(zx::vmo::create(4096, 0, &parent));
+  ASSERT_OK(parent.create_child(ZX_VMO_CHILD_SLICE, 0, 4096, &child));
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(0, child, 0, &stream));
+
+  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_VMO, child.release(), stream.release()),
+            ZX_ERR_INVALID_ARGS);
+
+  // Make sure that the handle is closed.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(parent.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_VMO_ZERO_CHILDREN, ZX_VMO_ZERO_CHILDREN);
 }
 
 template <typename NodeServer>
@@ -175,6 +286,27 @@ TEST_F(CreateDirectoryTest, Directory) {
   ASSERT_OK(zxio_close(zxio()));
 }
 
+TEST_F(CreateDirectoryTest, DirectoryWithType) {
+  StartServerThread();
+
+  ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_DIR, TakeClientChannel().release()));
+
+  EXPECT_OK(zxio_sync(zxio()));
+
+  ASSERT_OK(zxio_close(zxio()));
+}
+
+TEST_F(CreateDirectoryTest, DirectoryWithTypeWrapper) {
+  StartServerThread();
+
+  ASSERT_OK(zxio::CreateDirectory(storage(),
+                                  fidl::ClientEnd<fuchsia_io::Directory>(TakeClientChannel())));
+
+  EXPECT_OK(zxio_sync(zxio()));
+
+  ASSERT_OK(zxio_close(zxio()));
+}
+
 using CreateDirectoryWithOnOpenTest = CreateTestBase<SyncNodeServer>;
 
 TEST_F(CreateDirectoryWithOnOpenTest, Directory) {
@@ -289,6 +421,58 @@ TEST_F(CreateTest, Pipe) {
   EXPECT_EQ(buffer, data);
 
   ASSERT_OK(zxio_close(zxio()));
+}
+
+TEST(CreateWithTypeTest, Pipe) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
+
+  zx_info_socket_t info = {};
+  ASSERT_OK(socket0.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio_create_with_type(&storage, ZXIO_OBJECT_TYPE_PIPE, socket0.release(), &info));
+  zxio_t* zxio = &storage.io;
+
+  // Send some data through the kernel socket object and read it through zxio to
+  // sanity check that the pipe is functional.
+  int32_t data = 0x1a2a3a4a;
+  size_t actual = 0u;
+  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
+  EXPECT_EQ(actual, sizeof(data));
+
+  int32_t buffer = 0;
+  ASSERT_OK(zxio_read(zxio, &buffer, sizeof(buffer), 0u, &actual));
+  EXPECT_EQ(actual, sizeof(buffer));
+  EXPECT_EQ(buffer, data);
+
+  ASSERT_OK(zxio_close(zxio));
+}
+
+TEST(CreateWithTypeWrapperTest, Pipe) {
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
+
+  zx_info_socket_t info = {};
+  ASSERT_OK(socket0.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio::CreatePipe(&storage, std::move(socket0), info));
+  zxio_t* zxio = &storage.io;
+
+  // Send some data through the kernel socket object and read it through zxio to
+  // sanity check that the pipe is functional.
+  int32_t data = 0x1a2a3a4a;
+  size_t actual = 0u;
+  ASSERT_OK(socket1.write(0u, &data, sizeof(data), &actual));
+  EXPECT_EQ(actual, sizeof(data));
+
+  int32_t buffer = 0;
+  ASSERT_OK(zxio_read(zxio, &buffer, sizeof(buffer), 0u, &actual));
+  EXPECT_EQ(actual, sizeof(buffer));
+  EXPECT_EQ(buffer, data);
+
+  ASSERT_OK(zxio_close(zxio));
 }
 
 TEST_F(CreateWithOnOpenTest, Pipe) {
@@ -439,6 +623,60 @@ TEST_F(CreateVmofileTest, File) {
   ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
 
   ASSERT_OK(zxio_close(zxio()));
+}
+
+TEST(CreateVmofileWithTypeTest, File) {
+  const uint64_t vmo_size = 5678;
+  const uint64_t file_start_offset = 1234;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
+
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo, file_start_offset, &stream));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio_create_with_type(&storage, ZXIO_OBJECT_TYPE_VMO, vmo.release(), stream.release()));
+  zxio_t* zxio = &storage.io;
+
+  zxio_node_attributes_t attr;
+  EXPECT_OK(zxio_attr_get(zxio, &attr));
+
+  EXPECT_TRUE(attr.has.content_size);
+  EXPECT_EQ(attr.content_size, vmo_size);
+
+  size_t seek_current_offset = 0u;
+  EXPECT_OK(zxio_seek(zxio, ZXIO_SEEK_ORIGIN_CURRENT, 0, &seek_current_offset));
+  EXPECT_EQ(static_cast<size_t>(file_start_offset), seek_current_offset);
+
+  ASSERT_OK(zxio_close(zxio));
+}
+
+TEST(CreateVmofileWithTypeWrapperTest, File) {
+  const uint64_t vmo_size = 5678;
+  const uint64_t file_start_offset = 1234;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
+
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo, file_start_offset, &stream));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio::CreateVmo(&storage, std::move(vmo), std::move(stream)));
+  zxio_t* zxio = &storage.io;
+
+  zxio_node_attributes_t attr;
+  EXPECT_OK(zxio_attr_get(zxio, &attr));
+
+  EXPECT_TRUE(attr.has.content_size);
+  EXPECT_EQ(attr.content_size, vmo_size);
+
+  size_t seek_current_offset = 0u;
+  EXPECT_OK(zxio_seek(zxio, ZXIO_SEEK_ORIGIN_CURRENT, 0, &seek_current_offset));
+  EXPECT_EQ(static_cast<size_t>(file_start_offset), seek_current_offset);
+
+  ASSERT_OK(zxio_close(zxio));
 }
 
 using CreateVmofileWithOnOpenTest = CreateTestBase<zxio_tests::TestVmofileServer>;

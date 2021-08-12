@@ -167,7 +167,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
     return fdio::create_with_on_open(std::move(endpoints->client));
   }
 
-  return fdio_internal::remote::create(std::move(endpoints->client), zx::eventpair{});
+  return fdio_internal::remote::create(std::move(endpoints->client));
 }
 
 zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const char* path,

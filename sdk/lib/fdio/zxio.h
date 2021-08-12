@@ -59,7 +59,7 @@ struct zxio : public base {
 };
 
 struct remote : public zxio {
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
+  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node);
   static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override;

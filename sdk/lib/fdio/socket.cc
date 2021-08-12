@@ -4,6 +4,7 @@
 
 #include <lib/fdio/fdio.h>
 #include <lib/zx/socket.h>
+#include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
@@ -1679,7 +1680,7 @@ zx::status<fdio_ptr> fdio_datagram_socket_create(zx::eventpair event,
     return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
-      zxio_datagram_socket_init(&io->zxio_storage(), std::move(event), std::move(client));
+      zxio::CreateDatagramSocket(&io->zxio_storage(), std::move(event), std::move(client));
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -1693,7 +1694,7 @@ zx::status<fdio_ptr> fdio_raw_socket_create(zx::eventpair event,
     return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
-      zxio_raw_socket_init(&io->zxio_storage(), std::move(event), std::move(client));
+      zxio::CreateRawSocket(&io->zxio_storage(), std::move(event), std::move(client));
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -2106,7 +2107,7 @@ zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
     return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
-      zxio_stream_socket_init(&io->zxio_storage(), std::move(socket), std::move(client), info);
+      zxio::CreateStreamSocket(&io->zxio_storage(), std::move(socket), std::move(client), info);
   if (status != ZX_OK) {
     return zx::error(status);
   }

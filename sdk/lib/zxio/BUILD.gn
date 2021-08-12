@@ -20,6 +20,20 @@ library_headers("headers") {
   ]
 }
 
+# This is a header-only library that provides type safe C++ wrappers around the
+# zxio_create_with_type() entry point.
+library_headers("create_with_type") {
+  headers = [ "lib/zxio/cpp/create_with_type.h" ]
+
+  public_deps = [
+    ":zxio",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 # This header exposes implementation details of the zxio library in order to
 # facilitate moving logic from fdio into zxio. It should not be used outside of
 # these two libraries.

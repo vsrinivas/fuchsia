@@ -64,6 +64,45 @@ ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
                                               const zx_info_handle_basic_t* chandle_info,
                                               zxio_storage_t* storage);
 
+// Creates a new zxio_t object with a known type and type-specific parameters.
+//
+// On success, this function returns ZX_OK and initializes a zxio_t instance on
+// |storage->io|.
+//
+// Always consumes any known handle parameters for the given type.
+//
+// C++ callers should use the type safe wrappers in <lib/zxio/cpp/create_with_type.h>
+//
+// Expected parameters for supported types:
+//
+//  ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET:
+//     |zx_handle_t| eventpair associated with the socket
+//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.DatagramSocket protocol
+//
+//  ZXIO_OBJECT_TYPE_DIR:
+//     |zx_handle_t| channel for the client end of the fuchsia.io.Directory protocol
+//
+//  ZXIO_OBJECT_TYPE_NODE:
+//     |zx_handle_t| channel for the client end of the fuchsia.io.Node protocol
+//
+//  ZXIO_OBJECT_TYPE_STREAM_SOCKET:
+//     |zx_handle_t| socket for the data plane of the socket
+//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.StreamSocket protocol
+//     |zx_info_socket_t*| information about the socket
+//
+//  ZXIO_OBJECT_TYPE_PIPE:
+//     |zx_handle_t| socket for the data plane of the pipe
+//     |zx_info_socket_t*| information about the socket
+//
+//  ZXIO_OBJECT_TYPE_RAW_SOCKET:
+//     |zx_handle_t| eventpair associated with the socket
+//     |zx_handle_t| channel for the client end of the fuchsia.posix.socket.raw.Socket protocol
+//
+//  ZXIO_OBJECT_TYPE_VMO:
+//     |zx_handle_t| vmo containing the file contents
+//     |zx_handle_t| stream referring to the file contents and offset
+zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t type, ...);
+
 // Attempt to close |io|.
 //
 // Where applicable, waits for an acknowledgement from the server which may communicate any I/O

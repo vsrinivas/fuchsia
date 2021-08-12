@@ -5,8 +5,8 @@
 #include "local-connection.h"
 
 #include <fcntl.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
+#include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
 #include <atomic>

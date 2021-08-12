@@ -6,6 +6,8 @@
 #define LIB_ZXIO_PRIVATE_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/posix/socket/raw/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zxio/cpp/vector.h>
@@ -103,14 +105,12 @@ bool zxio_is_valid(const zxio_t* io);
 
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
+zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
+
 zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event,
                            zx_handle_t stream);
 
-zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
-                                      fuchsia_io::wire::NodeInfo& node_info,
-                                      zxio_storage_t* storage);
-
-zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
+zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
 
 // debuglog --------------------------------------------------------------------
 
@@ -118,6 +118,42 @@ zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
 //
 // The |handle| should be a Zircon debuglog object.
 zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
+
+// datagram socket (channel backed) --------------------------------------------
+
+zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
+
+// stream socket (channel backed) --------------------------------------------
+
+zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
+                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
+                                    zx_info_socket_t& info);
+
+// raw socket (channel backed) --------------------------------------------
+
+zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
+                                 fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
+
+// remote ----------------------------------------------------------------------
+
+// A |zxio_t| backend that uses the |fuchsia.io.Node| protocol.
+//
+// The |control| handle is a channel that implements the |fuchsia.io.Node|. The
+// |event| handle is an optional event object used with some |fuchsia.io.Node|
+// servers.
+//
+// Will eventually be an implementation detail of zxio once fdio completes its
+// transition to the zxio backend.
+using zxio_remote_t = struct zxio_remote {
+  zxio_t io;
+  zx_handle_t control;
+  zx_handle_t event;
+  zx_handle_t stream;
+};
+
+static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
+              "zxio_remote_t must fit inside zxio_storage_t.");
 
 // remote v2 -------------------------------------------------------------------
 
@@ -145,6 +181,19 @@ zx_status_t zxio_dir_v2_init(zxio_storage_t* remote, zx_handle_t control);
 zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer,
                               zx_handle_t stream);
 
+zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
+
+// vmo -------------------------------------------------------------------------
+
+// Initialize |file| with from a VMO.
+//
+// The file will be sized to match the underlying VMO by reading the size of the
+// VMO from the kernel. The size of a VMO is always a multiple of the page size,
+// which means the size of the file will also be a multiple of the page size.
+//
+// The |offset| is the initial seek offset within the file.
+zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
+
 // vmofile ---------------------------------------------------------------------
 
 zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia_io::File> control,
@@ -152,6 +201,10 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia
 
 zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,
                                 zx_handle_t* out_vmo, size_t* out_size);
+
+zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
+                                      fuchsia_io::wire::NodeInfo& node_info,
+                                      zxio_storage_t* storage);
 
 // Common functionalities shared by the fuchsia.io v1 |node| and |remote| transports.
 // These operate on the raw FIDL channel directly, as |node| and |remote|

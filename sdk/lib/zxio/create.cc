@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
+#include <stdarg.h>
 #include <zircon/syscalls.h>
 
 #include "sdk/lib/zxio/private.h"
@@ -221,4 +224,74 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
+}
+
+zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t type, ...) {
+  va_list args;
+  va_start(args, type);
+  auto va_cleanup = fit::defer([&args]() { va_end(args); });
+  switch (type) {
+    case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET: {
+      zx::eventpair event(va_arg(args, zx_handle_t));
+      zx::channel client(va_arg(args, zx_handle_t));
+      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_datagram_socket_init(
+          storage, std::move(event),
+          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(std::move(client)));
+    }
+    case ZXIO_OBJECT_TYPE_DIR: {
+      zx::handle control(va_arg(args, zx_handle_t));
+      if (!control.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_dir_init(storage, control.release());
+    }
+    case ZXIO_OBJECT_TYPE_NODE: {
+      zx::handle control(va_arg(args, zx_handle_t));
+      if (!control.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_remote_init(storage, control.release(), ZX_HANDLE_INVALID);
+    }
+    case ZXIO_OBJECT_TYPE_STREAM_SOCKET: {
+      zx::socket socket(va_arg(args, zx_handle_t));
+      zx::channel client(va_arg(args, zx_handle_t));
+      zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
+      if (!socket.is_valid() || !client.is_valid() || storage == nullptr || info == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_stream_socket_init(
+          storage, std::move(socket),
+          fidl::ClientEnd<fuchsia_posix_socket::StreamSocket>(std::move(client)), *info);
+    }
+    case ZXIO_OBJECT_TYPE_PIPE: {
+      zx::socket socket(va_arg(args, zx_handle_t));
+      zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
+      if (!socket.is_valid() || storage == nullptr || info == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_pipe_init(storage, std::move(socket), *info);
+    }
+    case ZXIO_OBJECT_TYPE_RAW_SOCKET: {
+      zx::eventpair event(va_arg(args, zx_handle_t));
+      zx::channel client(va_arg(args, zx_handle_t));
+      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_raw_socket_init(
+          storage, std::move(event),
+          fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(std::move(client)));
+    }
+    case ZXIO_OBJECT_TYPE_VMO: {
+      zx::vmo vmo(va_arg(args, zx_handle_t));
+      zx::stream stream(va_arg(args, zx_handle_t));
+      if (!vmo.is_valid() || !stream.is_valid() || storage == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_vmo_init(storage, std::move(vmo), std::move(stream));
+    }
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }

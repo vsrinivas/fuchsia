@@ -92,6 +92,26 @@ typedef struct zxio_storage {
   zxio_private_t reserved;
 } zxio_storage_t;
 
+// Type of a zxio object.
+typedef uint32_t zxio_object_type_t;
+
+// clang-format off
+#define ZXIO_OBJECT_TYPE_NONE            ((zxio_object_type_t) 0)
+#define ZXIO_OBJECT_TYPE_NODE            ((zxio_object_type_t) 1)
+#define ZXIO_OBJECT_TYPE_DIR             ((zxio_object_type_t) 2)
+#define ZXIO_OBJECT_TYPE_SERVICE         ((zxio_object_type_t) 3)
+#define ZXIO_OBJECT_TYPE_FILE            ((zxio_object_type_t) 4)
+#define ZXIO_OBJECT_TYPE_DEVICE          ((zxio_object_type_t) 5)
+#define ZXIO_OBJECT_TYPE_TTY             ((zxio_object_type_t) 6)
+#define ZXIO_OBJECT_TYPE_VMOFILE         ((zxio_object_type_t) 7)
+#define ZXIO_OBJECT_TYPE_VMO             ((zxio_object_type_t) 8)
+#define ZXIO_OBJECT_TYPE_DEBUGLOG        ((zxio_object_type_t) 9)
+#define ZXIO_OBJECT_TYPE_PIPE            ((zxio_object_type_t)10)
+#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET ((zxio_object_type_t)11)
+#define ZXIO_OBJECT_TYPE_STREAM_SOCKET   ((zxio_object_type_t)12)
+#define ZXIO_OBJECT_TYPE_RAW_SOCKET   ((zxio_object_type_t)13)
+// clang-format on
+
 // File and directory access ---------------------------------------------------
 
 // The set of supported representations of a node.
@@ -291,8 +311,8 @@ typedef struct zxio_dirent {
 typedef uint32_t zxio_shutdown_options_t;
 
 #define ZXIO_SHUTDOWN_OPTIONS_WRITE ((zxio_shutdown_options_t)1ul << 0)
-#define ZXIO_SHUTDOWN_OPTIONS_READ  ((zxio_shutdown_options_t)1ul << 1)
-#define ZXIO_SHUTDOWN_OPTIONS_MASK  (ZXIO_SHUTDOWN_OPTIONS_WRITE | ZXIO_SHUTDOWN_OPTIONS_READ)
+#define ZXIO_SHUTDOWN_OPTIONS_READ ((zxio_shutdown_options_t)1ul << 1)
+#define ZXIO_SHUTDOWN_OPTIONS_MASK (ZXIO_SHUTDOWN_OPTIONS_WRITE | ZXIO_SHUTDOWN_OPTIONS_READ)
 
 enum advisory_lock_type {
   ADVISORY_LOCK_SHARED = 0x1,

@@ -7,7 +7,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
@@ -45,7 +45,7 @@ zx::status<fdio_ptr> zxio::create_pipe(zx::socket socket) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
+  status = ::zxio::CreatePipe(&io->zxio_storage(), std::move(socket), info);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -320,7 +320,7 @@ zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mod
     return fdio::create_with_on_open(std::move(endpoints->client));
   }
 
-  return remote::create(std::move(endpoints->client), zx::eventpair{});
+  return remote::create(std::move(endpoints->client));
 }
 
 void remote::wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
@@ -375,13 +375,12 @@ void remote::wait_end(zx_signals_t signals, uint32_t* out_events) {
   *out_events = events;
 }
 
-zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event) {
+zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node) {
   fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status =
-      zxio_remote_init(&io->zxio_storage(), node.channel().release(), event.release());
+  zx_status_t status = ::zxio::CreateNode(&io->zxio_storage(), std::move(node));
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -393,7 +392,7 @@ zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status = zxio_vmo_init(&io->zxio_storage(), std::move(vmo), std::move(stream));
+  zx_status_t status = ::zxio::CreateVmo(&io->zxio_storage(), std::move(vmo), std::move(stream));
   if (status != ZX_OK) {
     return zx::error(status);
   }

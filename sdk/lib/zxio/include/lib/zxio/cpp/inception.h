@@ -17,39 +17,6 @@
 // This header exposes some guts of zxio in order to transition fdio to build on
 // top of zxio.
 
-// remote ----------------------------------------------------------------------
-
-// A |zxio_t| backend that uses the |fuchsia.io.Node| protocol.
-//
-// The |control| handle is a channel that implements the |fuchsia.io.Node|. The
-// |event| handle is an optional event object used with some |fuchsia.io.Node|
-// servers.
-//
-// Will eventually be an implementation detail of zxio once fdio completes its
-// transition to the zxio backend.
-using zxio_remote_t = struct zxio_remote {
-  zxio_t io;
-  zx_handle_t control;
-  zx_handle_t event;
-  zx_handle_t stream;
-};
-
-static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
-              "zxio_remote_t must fit inside zxio_storage_t.");
-
-zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
-
-// vmo -------------------------------------------------------------------------
-
-// Initialize |file| with from a VMO.
-//
-// The file will be sized to match the underlying VMO by reading the size of the
-// VMO from the kernel. The size of a VMO is always a multiple of the page size,
-// which means the size of the file will also be a multiple of the page size.
-//
-// The |offset| is the initial seek offset within the file.
-zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
-
 // pipe ------------------------------------------------------------------------
 
 // A |zxio_t| backend that uses a Zircon socket object.
@@ -66,8 +33,6 @@ using zxio_pipe_t = struct zxio_pipe {
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
-
 // datagram socket (channel backed) --------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
@@ -77,10 +42,7 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
   fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
 };
 
-zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::eventpair event,
-                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
-
-// stream socket (channel backed) ----------------------------------------------
+// stream socket (channel backed) --------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
 using zxio_stream_socket_t = struct zxio_stream_socket {
@@ -91,10 +53,6 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
 };
 
-zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
-                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                    zx_info_socket_t& info);
-
 // raw socket (channel backed) -------------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.raw.Socket object.
@@ -104,30 +62,7 @@ using zxio_raw_socket_t = struct zxio_raw_socket {
   fidl::WireSyncClient<fuchsia_posix_socket_raw::Socket> client;
 };
 
-zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
-                                 fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
-
 zx_status_t zxio_is_socket(zxio_t* io, bool* out_is_socket);
-
-// generic  --------------------------------------------------------------------
-
-using zxio_object_type_t = uint32_t;
-
-// clang-format off
-#define ZXIO_OBJECT_TYPE_NONE            ((zxio_object_type_t) 0)
-#define ZXIO_OBJECT_TYPE_DIR             ((zxio_object_type_t) 1)
-#define ZXIO_OBJECT_TYPE_SERVICE         ((zxio_object_type_t) 2)
-#define ZXIO_OBJECT_TYPE_FILE            ((zxio_object_type_t) 3)
-#define ZXIO_OBJECT_TYPE_DEVICE          ((zxio_object_type_t) 4)
-#define ZXIO_OBJECT_TYPE_TTY             ((zxio_object_type_t) 5)
-#define ZXIO_OBJECT_TYPE_VMOFILE         ((zxio_object_type_t) 6)
-#define ZXIO_OBJECT_TYPE_VMO             ((zxio_object_type_t) 7)
-#define ZXIO_OBJECT_TYPE_DEBUGLOG        ((zxio_object_type_t) 8)
-#define ZXIO_OBJECT_TYPE_PIPE            ((zxio_object_type_t) 9)
-#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET ((zxio_object_type_t)10)
-#define ZXIO_OBJECT_TYPE_STREAM_SOCKET   ((zxio_object_type_t)11)
-#define ZXIO_OBJECT_TYPE_RAW_SOCKET      ((zxio_object_type_t)12)
-// clang-format on
 
 // Allocates storage for a zxio_t object of a given type.
 //
