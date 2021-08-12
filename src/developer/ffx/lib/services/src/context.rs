@@ -83,4 +83,15 @@ impl Context {
         );
         Ok((info, proxy))
     }
+
+    pub async fn get_target_event_queue(
+        &self,
+        target_identifier: Option<String>,
+    ) -> Result<(bridge::Target, Queue<TargetEvent>)> {
+        self.inner.get_target_event_queue(target_identifier).await
+    }
+
+    pub async fn daemon_event_queue(&self) -> Queue<DaemonEvent> {
+        self.inner.daemon_event_queue().await
+    }
 }

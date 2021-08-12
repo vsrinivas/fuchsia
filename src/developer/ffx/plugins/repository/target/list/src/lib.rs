@@ -52,6 +52,9 @@ async fn list_impl<W: Write>(
             items.entry(repo).or_insert_with(Vec::new).push(target_identifier);
         }
     }
+    if items.is_empty() {
+        return Ok(());
+    }
 
     for value in items.values_mut() {
         value.sort();

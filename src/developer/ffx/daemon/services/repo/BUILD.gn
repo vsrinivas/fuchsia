@@ -29,6 +29,8 @@ if (is_host) {
       "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
       "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
       "//src/developer/ffx/config:lib",
+      "//src/developer/ffx/daemon/core:lib",
+      "//src/developer/ffx/daemon/events:lib",
       "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
       "//src/developer/ffx/lib/pkg",
       "//src/developer/ffx/lib/services:lib",
