@@ -361,7 +361,7 @@ pub struct FileObject {
     /// Represents the name the process used to open this file.
     pub name: NamespaceNode,
 
-    _fs: FileSystemHandle,
+    pub fs: FileSystemHandle,
 
     pub offset: Mutex<off_t>,
 
@@ -392,7 +392,7 @@ impl FileObject {
         let fs = name.entry.node.fs();
         Arc::new(Self {
             name,
-            _fs: fs,
+            fs,
             ops,
             offset: Mutex::new(0),
             flags: Mutex::new(flags),
