@@ -159,7 +159,10 @@ foreach(test, shard_test_list) {
 
       non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
-      environments = [ nuc_env ]
+      environments = [
+        nuc_env,
+        vim3_env,
+      ]
     }
     test_list += [ target_name ]
   }
