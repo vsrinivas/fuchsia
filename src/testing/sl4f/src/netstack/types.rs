@@ -13,6 +13,7 @@ pub enum NetstackMethod {
     GetInterfaceInfo,
     GetIpv6Addresses,
     GetLinkLocalIpv6Addresses,
+    InitNetstack,
     ListInterfaces,
     NetstackUndefined,
 }
@@ -26,6 +27,7 @@ impl NetstackMethod {
             "GetIpv6Addresses" => NetstackMethod::GetIpv6Addresses,
             "GetLinkLocalIpv6Addresses" => NetstackMethod::GetLinkLocalIpv6Addresses,
             "ListInterfaces" => NetstackMethod::ListInterfaces,
+            "InitNetstack" => NetstackMethod::InitNetstack,
             _ => NetstackMethod::NetstackUndefined,
         }
     }
