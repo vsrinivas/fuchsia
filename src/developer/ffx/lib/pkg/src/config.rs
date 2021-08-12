@@ -22,6 +22,10 @@ fn registration_query(repo_name: &str, target_identifier: &str) -> String {
     format!("{}.{}.{}", CONFIG_KEY_REGISTRATIONS, repo_name, target_identifier)
 }
 
+fn repository_registrations_query(repo_name: &str) -> String {
+    format!("{}.{}", CONFIG_KEY_REGISTRATIONS, repo_name)
+}
+
 /// Return the default repository from the configuration if set.
 pub async fn get_default_repository() -> Result<Option<String>> {
     Ok(ffx_config::get(CONFIG_KEY_DEFAULT_REPOSITORY).await?)
@@ -97,7 +101,7 @@ pub async fn get_registration(
     Ok(repo_target)
 }
 
-pub async fn get_registrations() -> HashMap<(String, String), RepositoryTarget> {
+pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTarget>> {
     let value = match ffx_config::get::<Value, _>(CONFIG_KEY_REGISTRATIONS).await {
         Ok(value) => value,
         Err(err) => {
@@ -114,34 +118,49 @@ pub async fn get_registrations() -> HashMap<(String, String), RepositoryTarget> 
         }
     };
 
-    let mut registrations: HashMap<(String, String), _> = HashMap::new();
-    for (repo_name, targets) in entries.into_iter() {
-        let targets = match targets {
-            Value::Object(targets) => targets,
-            _ => {
-                log::warn!("repository {:?} targets should be a map, not {}", repo_name, targets);
-                continue;
-            }
-        };
+    entries
+        .into_iter()
+        .map(|(repo_name, targets)| {
+            let targets = parse_target_registrations(&repo_name, targets);
+            (repo_name, targets)
+        })
+        .collect()
+}
 
-        for (target_nodename, target_info) in targets.into_iter() {
-            match serde_json::from_value(target_info) {
-                Ok(target_info) => {
-                    registrations.insert((repo_name.clone(), target_nodename), target_info);
-                }
-                Err(err) => {
-                    log::warn!(
-                        "failed to parse registration {:?} {:?}: {:?}",
-                        repo_name,
-                        target_nodename,
-                        err
-                    );
-                }
-            }
+pub async fn get_repository_registrations(repo_name: &str) -> HashMap<String, RepositoryTarget> {
+    let targets = match ffx_config::get(&repository_registrations_query(repo_name)).await {
+        Ok(targets) => targets,
+        Err(err) => {
+            log::warn!("failed to load repository registrations: {:?} {:#?}", repo_name, err);
+            serde_json::Map::new().into()
         }
-    }
+    };
 
-    registrations
+    parse_target_registrations(repo_name, targets)
+}
+
+fn parse_target_registrations(
+    repo_name: &str,
+    targets: serde_json::Value,
+) -> HashMap<String, RepositoryTarget> {
+    let targets = match targets {
+        Value::Object(targets) => targets,
+        _ => {
+            log::warn!("repository {:?} targets should be a map, not {:?}", repo_name, targets);
+            return HashMap::new();
+        }
+    };
+
+    targets
+        .into_iter()
+        .filter_map(|(target_nodename, target_info)| match serde_json::from_value(target_info) {
+            Ok(target_info) => Some((target_nodename, target_info)),
+            Err(err) => {
+                log::warn!("failed to parse registration {:?}: {:?}", target_nodename, err);
+                None
+            }
+        })
+        .collect()
 }
 
 pub async fn set_registration(target_nodename: &str, target_info: &RepositoryTarget) -> Result<()> {
