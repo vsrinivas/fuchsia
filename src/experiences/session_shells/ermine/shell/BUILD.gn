@@ -140,6 +140,7 @@ flutter_component("component") {
   component_name = "ermine"
   manifest = "meta/ermine.cmx"
   deps = [
+    ":app_launch_entries_resource",
     ":lib",
     ":resources",
     ":time_zone_list",
@@ -173,15 +174,19 @@ static_icu_data("time_zone_list") {
   command_args = [ "--fixed-order=${fixed_order}" ]
 }
 
+resource("app_launch_entries_resource") {
+  sources = [ ermine_app_entries ]
+  outputs = [ "data/app_launch_entries.json" ]
+  visibility = [ ":*" ]
+}
+
 resource("resources") {
   sources = [
-    ermine_app_entries,
     "config/keyboard_shortcuts.json",
     rebase_path(tz_ids_path),
     rebase_path(
         "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
   ]
-
   outputs = [ "data/{{source_file_part}}" ]
 }
 
