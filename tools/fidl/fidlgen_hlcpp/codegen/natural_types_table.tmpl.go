@@ -194,7 +194,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t envelope_size = (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) ?
+  size_t envelope_size = (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) ?
     sizeof(fidl_envelope_t) : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
   auto next_unknown = _unknown_data.begin();
@@ -216,7 +216,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
 
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
           _encoder,
           &{{ .FieldDataName }}.value,
@@ -236,7 +236,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<{{ .Type }}>(_encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &{{ .FieldDataName }}.value, envelope_base
           {{- if .HandleInformation -}}

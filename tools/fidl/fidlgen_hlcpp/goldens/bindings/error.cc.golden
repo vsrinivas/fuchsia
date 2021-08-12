@@ -21,7 +21,7 @@ void Example_foo_Response::Encode(
     memcpy(_encoder->template GetPtr<Example_foo_Response>(_offset), this,
            sizeof(Example_foo_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &y, _offset + 0);
 
     } else {
@@ -112,7 +112,7 @@ void Example_foo_Result::Encode(
   switch (Which()) {
     case ::fidl::test::error::Example_foo_Result::Tag::kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -128,7 +128,7 @@ void Example_foo_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::error::Example_foo_Response>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -164,7 +164,7 @@ void Example_foo_Result::Encode(
     }
     case ::fidl::test::error::Example_foo_Result::Tag::kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -180,7 +180,7 @@ void Example_foo_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &err_,

@@ -21,7 +21,7 @@ void StructWithNullableVector::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableVector>(_offset), this,
            sizeof(StructWithNullableVector));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0);
 
     } else {
@@ -59,7 +59,7 @@ void StructWithNullableUnion::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableUnion>(_offset), this,
            sizeof(StructWithNullableUnion));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0);
 
     } else {
@@ -97,7 +97,7 @@ void StructWithNullableStruct::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableStruct>(_offset), this,
            sizeof(StructWithNullableStruct));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0);
 
     } else {
@@ -135,7 +135,7 @@ void StructWithNullableString::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableString>(_offset), this,
            sizeof(StructWithNullableString));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0);
 
     } else {
@@ -175,7 +175,7 @@ void StructWithNullableRequest::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableRequest>(_offset), this,
            sizeof(StructWithNullableRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -225,7 +225,7 @@ void StructWithNullableProtocol::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableProtocol>(_offset), this,
            sizeof(StructWithNullableProtocol));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -275,7 +275,7 @@ void StructWithNullableHandle::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableHandle>(_offset), this,
            sizeof(StructWithNullableHandle));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_VMO,
@@ -371,7 +371,7 @@ void SimpleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::nullable::SimpleUnion::Tag::kA: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &a_,
               encoder->Alloc(
@@ -387,7 +387,7 @@ void SimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &a_,
@@ -422,7 +422,7 @@ void SimpleUnion::Encode(
     }
     case ::fidl::test::nullable::SimpleUnion::Tag::kB: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &b_,
               encoder->Alloc(
@@ -437,7 +437,7 @@ void SimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<float>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &b_,
@@ -572,7 +572,7 @@ void Int32Wrapper::Encode(
     memcpy(_encoder->template GetPtr<Int32Wrapper>(_offset), this,
            sizeof(Int32Wrapper));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &val, _offset + 0);
 
     } else {

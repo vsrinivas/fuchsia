@@ -56,7 +56,7 @@ void Table::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -76,7 +76,7 @@ void Table::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &Field_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(
@@ -91,7 +91,7 @@ void Table::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int32_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &Field_value_.value, envelope_base);
@@ -201,7 +201,7 @@ void Struct::Encode(
   if (::fidl::IsMemcpyCompatible<Struct>::value) {
     memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &Field, _offset + 0);
 
     } else {
@@ -274,7 +274,7 @@ void StrictUnion::Encode(
   switch (Which()) {
     case ::fidl::test::doccomments::StrictUnion::Tag::kField: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &Field_,
               encoder->Alloc(
@@ -290,7 +290,7 @@ void StrictUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Field_,
@@ -476,7 +476,7 @@ void FlexibleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::doccomments::FlexibleUnion::Tag::kField: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &Field_,
               encoder->Alloc(
@@ -492,7 +492,7 @@ void FlexibleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Field_,

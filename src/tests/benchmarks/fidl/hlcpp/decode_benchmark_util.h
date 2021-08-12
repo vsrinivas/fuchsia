@@ -24,7 +24,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     // decode time.
     FidlType obj = builder();
 
-    fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, fidl::Encoder::WireFormat::V1);
+    fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, FIDL_WIRE_FORMAT_VERSION_V1);
     auto offset = enc.Alloc(EncodedSize<FidlType>);
     obj.Encode(&enc, offset);
     fidl::HLCPPOutgoingMessage encode_msg = enc.GetMessage();

@@ -140,7 +140,7 @@ TEST(XUnion, Empty) {
 TEST(XUnion, EmptyInStruct) {
   SampleXUnionInStruct input;
   ASSERT_TRUE(input.xu.has_invalid_tag());
-  util::CheckEncodeFailure(fidl::Encoder::WireFormat::V1, input, ZX_ERR_INVALID_ARGS);
+  util::CheckEncodeFailure(FIDL_WIRE_FORMAT_VERSION_V1, input, ZX_ERR_INVALID_ARGS);
 }
 
 TEST(XUnion, Int32) {

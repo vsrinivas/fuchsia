@@ -68,7 +68,7 @@ void ExampleXUnion::Encode(
   switch (Which()) {
     case ::fidl::test::placementofattributes::ExampleXUnion::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -84,7 +84,7 @@ void ExampleXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &variant_,
@@ -267,7 +267,7 @@ void ExampleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::placementofattributes::ExampleUnion::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -283,7 +283,7 @@ void ExampleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &variant_,
@@ -440,7 +440,7 @@ void ExampleTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -460,7 +460,7 @@ void ExampleTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &member_value_.value,
             _encoder->Alloc(
@@ -476,7 +476,7 @@ void ExampleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &member_value_.value, envelope_base);
@@ -590,7 +590,7 @@ void ExampleStruct::Encode(
     memcpy(_encoder->template GetPtr<ExampleStruct>(_offset), this,
            sizeof(ExampleStruct));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &member, _offset + 0);
 
     } else {

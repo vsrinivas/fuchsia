@@ -27,7 +27,7 @@ void WithErrorSyntax_HandleInResult_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_HandleInResult_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &h, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_NONE,
@@ -152,7 +152,7 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
         kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -169,7 +169,7 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::protocols::
                       WithErrorSyntax_HandleInResult_Response>(encoder) <=
@@ -208,7 +208,7 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
         kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -224,7 +224,7 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &err_,
@@ -392,7 +392,7 @@ void WithErrorSyntax_ResponseAsStruct_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ResponseAsStruct_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &a, _offset + 0);
       ::fidl::Encode(_encoder, &b, _offset + 8);
       ::fidl::Encode(_encoder, &c, _offset + 16);
@@ -517,7 +517,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
         kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -534,7 +534,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::protocols::
                       WithErrorSyntax_ResponseAsStruct_Response>(encoder) <=
@@ -573,7 +573,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
         kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -589,7 +589,7 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &err_,
@@ -756,7 +756,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ErrorAsPrimitive_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 
     } else {
@@ -871,7 +871,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
         kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -888,7 +888,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::protocols::
                       WithErrorSyntax_ErrorAsPrimitive_Response>(encoder) <=
@@ -927,7 +927,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
         kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -943,7 +943,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &err_,
@@ -1109,7 +1109,7 @@ void WithErrorSyntax_ErrorAsEnum_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ErrorAsEnum_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 
     } else {
@@ -1195,7 +1195,7 @@ void TheUnion::Encode(
   switch (Which()) {
     case ::fidl::test::protocols::TheUnion::Tag::kV: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &v_,
               encoder->Alloc(
@@ -1211,7 +1211,7 @@ void TheUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &v_,
@@ -1356,7 +1356,7 @@ void ProtocolEnds::Encode(
     memcpy(_encoder->template GetPtr<ProtocolEnds>(_offset), this,
            sizeof(ProtocolEnds));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &client, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_CHANNEL,
@@ -1518,7 +1518,7 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
         kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -1535,7 +1535,7 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::protocols::
                       WithErrorSyntax_ErrorAsEnum_Response>(encoder) <=
@@ -1574,7 +1574,7 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
     case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
         kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -1590,7 +1590,7 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<::fidl::test::protocols::ErrorEnum>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &err_,

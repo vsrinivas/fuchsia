@@ -19,7 +19,7 @@ void Simple::Encode(
   if (::fidl::IsMemcpyCompatible<Simple>::value) {
     memcpy(_encoder->template GetPtr<Simple>(_offset), this, sizeof(Simple));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &f1, _offset + 0);
       ::fidl::Encode(_encoder, &f2, _offset + 1);
 
@@ -57,7 +57,7 @@ void BasicStruct::Encode(
     memcpy(_encoder->template GetPtr<BasicStruct>(_offset), this,
            sizeof(BasicStruct));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &x, _offset + 0);
       ::fidl::Encode(_encoder, &y, _offset + 8);
 

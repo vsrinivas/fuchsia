@@ -22,7 +22,7 @@ void Handles::Encode(
   if (::fidl::IsMemcpyCompatible<Handles>::value) {
     memcpy(_encoder->template GetPtr<Handles>(_offset), this, sizeof(Handles));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &plain_handle, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_NONE,

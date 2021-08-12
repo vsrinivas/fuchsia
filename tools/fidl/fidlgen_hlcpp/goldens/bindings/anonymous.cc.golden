@@ -68,7 +68,7 @@ void UnionMember::Encode(
   switch (Which()) {
     case ::fidl::test::anonymous::UnionMember::Tag::kUnionData: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &union_data_,
               encoder->Alloc(
@@ -84,7 +84,7 @@ void UnionMember::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint8_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &union_data_,
@@ -227,7 +227,7 @@ void TableData::Encode(
     memcpy(_encoder->template GetPtr<TableData>(_offset), this,
            sizeof(TableData));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &data, _offset + 0);
 
     } else {
@@ -301,7 +301,7 @@ void TableMember::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -321,7 +321,7 @@ void TableMember::Encode(
 
     size_t envelope_base = base + (2 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &table_data_value_.value,
             _encoder->Alloc(::fidl::EncodingInlineSize<
@@ -337,7 +337,7 @@ void TableMember::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<
                 ::std::vector<::fidl::test::anonymous::TableData>>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -468,7 +468,7 @@ void BinOp::Encode(
   if (::fidl::IsMemcpyCompatible<BinOp>::value) {
     memcpy(_encoder->template GetPtr<BinOp>(_offset), this, sizeof(BinOp));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &op, _offset + 0);
       ::fidl::Encode(_encoder, &left, _offset + 8);
       ::fidl::Encode(_encoder, &right, _offset + 32);
@@ -591,7 +591,7 @@ void FunctionApplication::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -611,7 +611,7 @@ void FunctionApplication::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &func_value_.value,
             _encoder->Alloc(
@@ -627,7 +627,7 @@ void FunctionApplication::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<::std::string>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &func_value_.value, envelope_base);
@@ -672,7 +672,7 @@ void FunctionApplication::Encode(
 
     size_t envelope_base = base + (3 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &args_value_.value,
             _encoder->Alloc(
@@ -690,7 +690,7 @@ void FunctionApplication::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<::std::vector<
                 ::std::unique_ptr<::fidl::test::anonymous::Expression>>>(
                 _encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -738,7 +738,7 @@ void FunctionApplication::Encode(
 
     size_t envelope_base = base + (4 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &flags_value_.value,
             _encoder->Alloc(
@@ -754,7 +754,7 @@ void FunctionApplication::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<::fidl::test::anonymous::Flags>(
                 _encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &flags_value_.value, envelope_base);
@@ -989,7 +989,7 @@ void Expression::Encode(
   switch (Which()) {
     case ::fidl::test::anonymous::Expression::Tag::kValue: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &value_,
               encoder->Alloc(
@@ -1005,7 +1005,7 @@ void Expression::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<uint64_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &value_,
@@ -1040,7 +1040,7 @@ void Expression::Encode(
     }
     case ::fidl::test::anonymous::Expression::Tag::kBinOp: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &bin_op_,
               encoder->Alloc(
@@ -1056,7 +1056,7 @@ void Expression::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<::fidl::test::anonymous::BinOp>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &bin_op_,
@@ -1091,7 +1091,7 @@ void Expression::Encode(
     }
     case ::fidl::test::anonymous::Expression::Tag::kFunctionApplication: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &function_application_,
               encoder->Alloc(::fidl::EncodingInlineSize<
@@ -1107,7 +1107,7 @@ void Expression::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::anonymous::FunctionApplication>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -1306,7 +1306,7 @@ void SomeProtocol_SomeMethod_Response::Encode(
     memcpy(_encoder->template GetPtr<SomeProtocol_SomeMethod_Response>(_offset),
            this, sizeof(SomeProtocol_SomeMethod_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &bits_member, _offset + 0);
 
     } else {
@@ -1411,7 +1411,7 @@ void SomeProtocol_SomeMethod_Result::Encode(
     case ::fidl::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::
         kResponse: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &response_,
               encoder->Alloc(
@@ -1428,7 +1428,7 @@ void SomeProtocol_SomeMethod_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::anonymous::SomeProtocol_SomeMethod_Response>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -1465,7 +1465,7 @@ void SomeProtocol_SomeMethod_Result::Encode(
     }
     case ::fidl::test::anonymous::SomeProtocol_SomeMethod_Result::Tag::kErr: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &err_,
               encoder->Alloc(
@@ -1482,7 +1482,7 @@ void SomeProtocol_SomeMethod_Result::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::anonymous::SomeProtocol_SomeMethod_Error>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {

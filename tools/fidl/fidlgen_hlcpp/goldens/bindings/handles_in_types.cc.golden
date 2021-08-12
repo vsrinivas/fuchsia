@@ -73,7 +73,7 @@ void UnionWithHandle::Encode(
   switch (Which()) {
     case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
               encoder, &h_,
               encoder->Alloc(
@@ -91,7 +91,7 @@ void UnionWithHandle::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<::zx::vmo>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(
@@ -284,7 +284,7 @@ void TableWithHandle::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -303,7 +303,7 @@ void TableWithHandle::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(
             _encoder, &h_value_.value,
             _encoder->Alloc(
@@ -321,7 +321,7 @@ void TableWithHandle::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(
@@ -443,7 +443,7 @@ void HandlesInTypes::Encode(
     memcpy(_encoder->template GetPtr<HandlesInTypes>(_offset), this,
            sizeof(HandlesInTypes));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &normal_handle, _offset + 0,
                      ::fidl::HandleInformation{
                          .object_type = ZX_OBJ_TYPE_VMO,

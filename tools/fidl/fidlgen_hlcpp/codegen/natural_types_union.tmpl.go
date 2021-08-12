@@ -283,7 +283,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
     {{- range .Members }}
     case {{ .TagName }}: {
       switch (encoder->wire_format()) {
-        case ::fidl::Encoder::WireFormat::V1: {
+        case FIDL_WIRE_FORMAT_VERSION_V1: {
           ::fidl::Encode(
             encoder,
             &{{ .StorageName }},
@@ -304,7 +304,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case ::fidl::Encoder::WireFormat::V2: {
+        case FIDL_WIRE_FORMAT_VERSION_V2: {
           if (::fidl::EncodingInlineSize<{{ .Type }}>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &{{ .StorageName }}, offset + offsetof(fidl_xunion_v2_t, envelope)
             {{- if .HandleInformation -}}

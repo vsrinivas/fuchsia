@@ -1121,15 +1121,15 @@ class SomeProtocol_RequestEncoder {
       ::fidl::test::anonymous::TableMember* table_member) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1:
+      case FIDL_WIRE_FORMAT_VERSION_V1:
         _encoder->Alloc(56 - sizeof(fidl_message_header_t));
         break;
-      case ::fidl::Encoder::WireFormat::V2:
+      case FIDL_WIRE_FORMAT_VERSION_V2:
         _encoder->Alloc(56 - sizeof(fidl_message_header_t));
         break;
     }
 
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, union_member, 16);
 
       ::fidl::Encode(_encoder, table_member, 40);
@@ -1161,15 +1161,15 @@ class SomeProtocol_ResponseEncoder {
       ::fidl::test::anonymous::SomeProtocol_SomeMethod_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1:
+      case FIDL_WIRE_FORMAT_VERSION_V1:
         _encoder->Alloc(40 - sizeof(fidl_message_header_t));
         break;
-      case ::fidl::Encoder::WireFormat::V2:
+      case FIDL_WIRE_FORMAT_VERSION_V2:
         _encoder->Alloc(32 - sizeof(fidl_message_header_t));
         break;
     }
 
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, result, 16);
 
     } else {

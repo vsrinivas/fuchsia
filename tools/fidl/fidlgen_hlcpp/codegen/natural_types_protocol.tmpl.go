@@ -40,15 +40,15 @@ class {{ .RequestEncoder.Name }} {
   static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .RequestArgs }}) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1:
+      case FIDL_WIRE_FORMAT_VERSION_V1:
         _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
         break;
-      case ::fidl::Encoder::WireFormat::V2:
+      case FIDL_WIRE_FORMAT_VERSION_V2:
         _encoder->Alloc({{ .Request.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
         break;
     }
 
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       {{- range .RequestArgs }}
       {{- if .HandleInformation }}
       ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {
@@ -97,16 +97,16 @@ class {{ .ResponseEncoder.Name }} {
   static ::fidl::HLCPPOutgoingMessage {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .ResponseArgs }}) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1:
+      case FIDL_WIRE_FORMAT_VERSION_V1:
         _encoder->Alloc({{ .Response.TypeShapeV1.InlineSize }} - sizeof(fidl_message_header_t));
         break;
-      case ::fidl::Encoder::WireFormat::V2:
+      case FIDL_WIRE_FORMAT_VERSION_V2:
         _encoder->Alloc({{ .Response.TypeShapeV2.InlineSize }} - sizeof(fidl_message_header_t));
         break;
     }
 
 
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       {{- range .ResponseArgs }}
       {{- if .HandleInformation }}
       ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }}, ::fidl::HandleInformation {

@@ -18,7 +18,7 @@ void Baz::Encode(::fidl::Encoder* _encoder, size_t _offset,
   if (::fidl::IsMemcpyCompatible<Baz>::value) {
     memcpy(_encoder->template GetPtr<Baz>(_offset), this, sizeof(Baz));
   } else {
-    if (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1) {
+    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
       ::fidl::Encode(_encoder, &g, _offset + 0);
 
     } else {

@@ -73,7 +73,7 @@ void SimpleTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -93,7 +93,7 @@ void SimpleTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &x_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -108,7 +108,7 @@ void SimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
@@ -152,7 +152,7 @@ void SimpleTable::Encode(
 
     size_t envelope_base = base + (5 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &y_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -167,7 +167,7 @@ void SimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &y_value_.value, envelope_base);
@@ -372,7 +372,7 @@ void ReverseOrdinalTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -392,7 +392,7 @@ void ReverseOrdinalTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &z_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -407,7 +407,7 @@ void ReverseOrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &z_value_.value, envelope_base);
@@ -451,7 +451,7 @@ void ReverseOrdinalTable::Encode(
 
     size_t envelope_base = base + (2 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &y_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -466,7 +466,7 @@ void ReverseOrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &y_value_.value, envelope_base);
@@ -510,7 +510,7 @@ void ReverseOrdinalTable::Encode(
 
     size_t envelope_base = base + (3 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &x_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -525,7 +525,7 @@ void ReverseOrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
@@ -717,7 +717,7 @@ void OlderSimpleTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -737,7 +737,7 @@ void OlderSimpleTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &x_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -752,7 +752,7 @@ void OlderSimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
@@ -934,7 +934,7 @@ void NewerSimpleTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -954,7 +954,7 @@ void NewerSimpleTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &x_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -969,7 +969,7 @@ void NewerSimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
@@ -1013,7 +1013,7 @@ void NewerSimpleTable::Encode(
 
     size_t envelope_base = base + (5 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &y_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -1028,7 +1028,7 @@ void NewerSimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &y_value_.value, envelope_base);
@@ -1072,7 +1072,7 @@ void NewerSimpleTable::Encode(
 
     size_t envelope_base = base + (6 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &z_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -1087,7 +1087,7 @@ void NewerSimpleTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &z_value_.value, envelope_base);
@@ -2386,7 +2386,7 @@ void GreaterThan64OrdinalTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
@@ -2406,7 +2406,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (1 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v1_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2421,7 +2421,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v1_value_.value, envelope_base);
@@ -2465,7 +2465,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (2 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v2_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2480,7 +2480,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v2_value_.value, envelope_base);
@@ -2524,7 +2524,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (3 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v3_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2539,7 +2539,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v3_value_.value, envelope_base);
@@ -2583,7 +2583,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (4 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v4_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2598,7 +2598,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v4_value_.value, envelope_base);
@@ -2642,7 +2642,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (5 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v5_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2657,7 +2657,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v5_value_.value, envelope_base);
@@ -2701,7 +2701,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (6 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v6_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2716,7 +2716,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v6_value_.value, envelope_base);
@@ -2760,7 +2760,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (7 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v7_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2775,7 +2775,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v7_value_.value, envelope_base);
@@ -2819,7 +2819,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (8 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v8_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2834,7 +2834,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v8_value_.value, envelope_base);
@@ -2878,7 +2878,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (9 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v9_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2893,7 +2893,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v9_value_.value, envelope_base);
@@ -2937,7 +2937,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (10 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v10_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -2952,7 +2952,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v10_value_.value, envelope_base);
@@ -2996,7 +2996,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (11 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v11_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3011,7 +3011,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v11_value_.value, envelope_base);
@@ -3055,7 +3055,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (12 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v12_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3070,7 +3070,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v12_value_.value, envelope_base);
@@ -3114,7 +3114,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (13 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v13_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3129,7 +3129,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v13_value_.value, envelope_base);
@@ -3173,7 +3173,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (14 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v14_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3188,7 +3188,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v14_value_.value, envelope_base);
@@ -3232,7 +3232,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (15 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v15_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3247,7 +3247,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v15_value_.value, envelope_base);
@@ -3291,7 +3291,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (16 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v16_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3306,7 +3306,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v16_value_.value, envelope_base);
@@ -3350,7 +3350,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (17 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v17_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3365,7 +3365,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v17_value_.value, envelope_base);
@@ -3409,7 +3409,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (18 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v18_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3424,7 +3424,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v18_value_.value, envelope_base);
@@ -3468,7 +3468,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (19 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v19_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3483,7 +3483,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v19_value_.value, envelope_base);
@@ -3527,7 +3527,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (20 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v20_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3542,7 +3542,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v20_value_.value, envelope_base);
@@ -3586,7 +3586,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (21 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v21_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3601,7 +3601,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v21_value_.value, envelope_base);
@@ -3645,7 +3645,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (22 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v22_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3660,7 +3660,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v22_value_.value, envelope_base);
@@ -3704,7 +3704,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (23 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v23_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3719,7 +3719,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v23_value_.value, envelope_base);
@@ -3763,7 +3763,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (24 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v24_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3778,7 +3778,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v24_value_.value, envelope_base);
@@ -3822,7 +3822,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (25 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v25_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3837,7 +3837,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v25_value_.value, envelope_base);
@@ -3881,7 +3881,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (26 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v26_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3896,7 +3896,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v26_value_.value, envelope_base);
@@ -3940,7 +3940,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (27 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v27_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -3955,7 +3955,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v27_value_.value, envelope_base);
@@ -3999,7 +3999,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (28 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v28_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4014,7 +4014,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v28_value_.value, envelope_base);
@@ -4058,7 +4058,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (29 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v29_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4073,7 +4073,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v29_value_.value, envelope_base);
@@ -4117,7 +4117,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (30 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v30_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4132,7 +4132,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v30_value_.value, envelope_base);
@@ -4176,7 +4176,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (31 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v31_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4191,7 +4191,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v31_value_.value, envelope_base);
@@ -4235,7 +4235,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (32 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v32_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4250,7 +4250,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v32_value_.value, envelope_base);
@@ -4294,7 +4294,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (33 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v33_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4309,7 +4309,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v33_value_.value, envelope_base);
@@ -4353,7 +4353,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (34 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v34_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4368,7 +4368,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v34_value_.value, envelope_base);
@@ -4412,7 +4412,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (35 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v35_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4427,7 +4427,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v35_value_.value, envelope_base);
@@ -4471,7 +4471,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (36 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v36_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4486,7 +4486,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v36_value_.value, envelope_base);
@@ -4530,7 +4530,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (37 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v37_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4545,7 +4545,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v37_value_.value, envelope_base);
@@ -4589,7 +4589,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (38 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v38_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4604,7 +4604,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v38_value_.value, envelope_base);
@@ -4648,7 +4648,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (39 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v39_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4663,7 +4663,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v39_value_.value, envelope_base);
@@ -4707,7 +4707,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (40 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v40_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4722,7 +4722,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v40_value_.value, envelope_base);
@@ -4766,7 +4766,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (41 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v41_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4781,7 +4781,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v41_value_.value, envelope_base);
@@ -4825,7 +4825,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (42 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v42_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4840,7 +4840,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v42_value_.value, envelope_base);
@@ -4884,7 +4884,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (43 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v43_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4899,7 +4899,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v43_value_.value, envelope_base);
@@ -4943,7 +4943,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (44 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v44_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -4958,7 +4958,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v44_value_.value, envelope_base);
@@ -5002,7 +5002,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (45 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v45_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5017,7 +5017,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v45_value_.value, envelope_base);
@@ -5061,7 +5061,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (46 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v46_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5076,7 +5076,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v46_value_.value, envelope_base);
@@ -5120,7 +5120,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (47 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v47_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5135,7 +5135,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v47_value_.value, envelope_base);
@@ -5179,7 +5179,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (48 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v48_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5194,7 +5194,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v48_value_.value, envelope_base);
@@ -5238,7 +5238,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (49 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v49_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5253,7 +5253,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v49_value_.value, envelope_base);
@@ -5297,7 +5297,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (50 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v50_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5312,7 +5312,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v50_value_.value, envelope_base);
@@ -5356,7 +5356,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (51 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v51_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5371,7 +5371,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v51_value_.value, envelope_base);
@@ -5415,7 +5415,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (52 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v52_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5430,7 +5430,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v52_value_.value, envelope_base);
@@ -5474,7 +5474,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (53 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v53_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5489,7 +5489,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v53_value_.value, envelope_base);
@@ -5533,7 +5533,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (54 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v54_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5548,7 +5548,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v54_value_.value, envelope_base);
@@ -5592,7 +5592,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (55 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v55_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5607,7 +5607,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v55_value_.value, envelope_base);
@@ -5651,7 +5651,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (56 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v56_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5666,7 +5666,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v56_value_.value, envelope_base);
@@ -5710,7 +5710,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (57 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v57_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5725,7 +5725,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v57_value_.value, envelope_base);
@@ -5769,7 +5769,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (58 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v58_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5784,7 +5784,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v58_value_.value, envelope_base);
@@ -5828,7 +5828,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (59 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v59_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5843,7 +5843,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v59_value_.value, envelope_base);
@@ -5887,7 +5887,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (60 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v60_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5902,7 +5902,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v60_value_.value, envelope_base);
@@ -5946,7 +5946,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (61 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v61_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -5961,7 +5961,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v61_value_.value, envelope_base);
@@ -6005,7 +6005,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (62 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v62_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -6020,7 +6020,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v62_value_.value, envelope_base);
@@ -6064,7 +6064,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (63 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v63_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -6079,7 +6079,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v63_value_.value, envelope_base);
@@ -6123,7 +6123,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (64 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v64_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -6138,7 +6138,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v64_value_.value, envelope_base);
@@ -6182,7 +6182,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (65 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v65_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -6197,7 +6197,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v65_value_.value, envelope_base);
@@ -6241,7 +6241,7 @@ void GreaterThan64OrdinalTable::Encode(
 
     size_t envelope_base = base + (66 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
-      case ::fidl::Encoder::WireFormat::V1: {
+      case FIDL_WIRE_FORMAT_VERSION_V1: {
         ::fidl::Encode(_encoder, &v66_value_.value,
                        _encoder->Alloc(
                            ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
@@ -6256,7 +6256,7 @@ void GreaterThan64OrdinalTable::Encode(
         envelope->presence = FIDL_ALLOC_PRESENT;
         break;
       }
-      case ::fidl::Encoder::WireFormat::V2: {
+      case FIDL_WIRE_FORMAT_VERSION_V2: {
         if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
             FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v66_value_.value, envelope_base);
@@ -7874,7 +7874,7 @@ void EmptyTable::Encode(
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
   size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::Encoder::WireFormat::V1)
+      (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1)
           ? sizeof(fidl_envelope_t)
           : sizeof(fidl_envelope_v2_t);
   size_t base = _encoder->Alloc(max_ordinal * envelope_size);
