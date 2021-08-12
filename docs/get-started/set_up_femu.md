@@ -101,7 +101,7 @@ Start the Fuchsia emulator on your machine.
 
   * `FUCHSIA_ROOT`: The path to the Fuchsia checkout on your machine (for example, `~/fuchsia`).
 
-  This command opens a new terminal window with the title "Fuchsia Emulator".
+  This command opens a new window with the title "Fuchsia Emulator".
   After the Fuchsia emulator is launched successfully, the terminal starts a
   SSH console. You can run shell commands on this console, as you would on a
   Fuchsia device.
@@ -130,10 +130,16 @@ Start the Fuchsia emulator on your machine.
      a window pops up asking if you want to allow the process `aemu` to run on your
      machine. Click **Allow**.
 
-     This command prints an instruction on running `fx set-device`. Make a note of
-     this command for the next step.
+     This command opens a new window with the title "Fuchsia Emulator".
+     After the Fuchsia emulator is launched successfully, the terminal starts a
+     SSH console. You can run shell commands on this console, as you would on a
+     Fuchsia device.
 
-  2. Run the `fx set-device` command to specify the launched Fuchsia emulator SSH port:
+     Additionally, the command's output includes an instruction that
+     asks you to run `fx set-device`. Make a note of this instruction for the next step.
+
+  2. Open a new terminal and run the `fx set-device` command to specify
+     the launched Fuchsia emulator SSH port:
 
      ```posix-terminal
      fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}

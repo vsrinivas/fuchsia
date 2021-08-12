@@ -66,8 +66,10 @@ directory named `fuchsia` and downloads the Fuchsia source code in that
 directory.
 
 Important: Downloading the Fuchsia source code requires about 2 GiB of space
-on your machine. Plus, depending on your build configuration, you need
-another 80 to 90 GiB of space later when you build Fuchsia.
+on your machine. Depending on your build configuration, you need
+another 80 to 90 GiB of space later when you build Fuchsia. Additionally, 
+the download process uses a substantial amount of memory. It is advisible 
+to close non-crucial processes during this time.
 
 To download the Fuchsia source, do the following:
 
@@ -124,7 +126,8 @@ in Appendices instead.
 To update your shell profile to configure Fuchsia's environment variables,
 do the following:
 
-1.  Use a text editor to open your `~/.bash_profile` file, for example:
+1.  Use a text editor to open your `~/.bash_profile` file. In our below example we use 
+    [nano](https://www.nano-editor.org/docs.php)):
 
     Note: This guide uses a `bash` terminal as an example. If you are
     using `zsh`, replace `~/.bash_profile` with `~/.zprofile` in the
