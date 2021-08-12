@@ -266,6 +266,8 @@ template("test_spec") {
     allowed_device_types = [ "Nelson" ]
   } else if (board_name == "vim3") {
     allowed_device_types = [ "Vim3" ]
+  } else if (board_name == "chromebook-x64") {
+    allowed_device_types = [ "Atlas" ]
   }
 
   _environments = []

@@ -28,6 +28,10 @@ all_dimension_keys = [
 # Scopes of dimensions for every available platform.
 test_platforms = [
   {
+    device_type = "Atlas"
+    cpu = "x64"
+  },
+  {
     device_type = "AEMU"
     cpu = "x64"
   },

@@ -157,6 +157,18 @@ _all_named_envs += [
   },
 ]
 
+atlas_env = {
+  dimensions = {
+    device_type = "Atlas"
+  }
+}
+_all_named_envs += [
+  {
+    name = "atlas"
+    env = atlas_env
+  },
+]
+
 ### END Individual test environments
 
 ### Aliases ###
@@ -192,6 +204,8 @@ with_display_envs = [
   # Re-enable once vim3 supports vulkan (https://fxbug.dev/75581)
   # vim3_env,
 ]
+
+chromebook_envs = [ atlas_env ]
 
 ### Select environment lists ###
 
