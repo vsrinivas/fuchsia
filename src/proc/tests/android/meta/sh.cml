@@ -6,7 +6,7 @@
         mounts: [
             "/:ext4:data/system.img",
             "/data:tmpfs",
-            "/proc:procfs",
+            "/proc:proc",
         ],
     },
 }
