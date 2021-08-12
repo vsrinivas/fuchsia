@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 
 pub mod client;
-pub mod token_store;
+pub(crate) mod token_store;

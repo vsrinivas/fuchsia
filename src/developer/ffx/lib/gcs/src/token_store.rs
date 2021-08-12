@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Provide Google Cloud Storage (GCS) authentication.
+//! Provide Google Cloud Storage (GCS) access.
 
 use {
     anyhow::{anyhow, Result},
-    fuchsia_hyper::new_https_client,
-    http::request,
-    hyper::{Body, Method, Request},
+    async_lock::Mutex,
+    fuchsia_hyper::HttpsClient,
+    http::{request, StatusCode},
+    hyper::{Body, Method, Request, Response},
+    once_cell::sync::OnceCell,
+    regex::Regex,
     serde::{Deserialize, Serialize},
     serde_json,
-    std::time::{Duration, Instant},
+    std::{fs, path::Path},
+    url::Url,
 };
 
 /// For a web site, a client secret is kept locked away in a secure server. This
@@ -29,9 +33,11 @@ use {
 const GSUTIL_CLIENT_ID: &str = "909320924072.apps.googleusercontent.com";
 const GSUTIL_CLIENT_SECRET: &str = "p3RlpR10xMFh9ZXBS/ZNLYUu";
 
-/// Insist on a margin of extra time (avoid using a token that is about to
-/// expire).
-const EXPIRATION_MARGIN: Duration = Duration::from_secs(60);
+/// Base URL for JSON API access.
+const API_BASE: &str = "https://www.googleapis.com/storage/v1";
+
+/// Base URL for reading (blob) objects.
+const STORAGE_BASE: &str = "https://storage.googleapis.com";
 
 /// URL used for gaining a new access token.
 ///
@@ -55,27 +61,21 @@ struct RefreshTokenRequest<'a> {
 }
 
 /// Response body from [`OAUTH_REFRESH_TOKEN_ENDPOINT`].
+/// 'expires_in' is intentionally omitted.
 #[derive(Deserialize)]
 struct OauthTokenResponse {
     /// A limited time (see `expires_in`) token used in an Authorization header.
     access_token: String,
-
-    /// This is optional per OAuth spec, so a default value is provided.
-    #[serde(default = "OauthTokenResponse::default_expires_in")]
-    expires_in: u64, // seconds
-}
-
-impl OauthTokenResponse {
-    /// The default access token lifetime in seconds from Google OAuth servers.
-    /// Used only when no "expires_in" is provided in the `OauthTokenResponse`.
-    fn default_expires_in() -> u64 {
-        // Default access token lifetime in seconds.
-        3599
-    }
 }
 
 /// User credentials for use with GCS.
 pub struct TokenStore {
+    /// Base URL for JSON API access.
+    _api_base: Url,
+
+    /// Base URL for reading (blob) objects.
+    storage_base: Url,
+
     /// A value provided by GCS for fetching tokens.
     client_id: &'static str,
 
@@ -87,106 +87,206 @@ pub struct TokenStore {
     /// value is a user secret and must not be misused (such as by logging).
     refresh_token: Option<String>,
 
-    /// A limited time (see `access_expires`) token used in an Authorization
-    /// header.
+    /// A limited time token used in an Authorization header.
     ///
     /// Only valid if `Instant::now() < expired()`, though it's better to allow
     /// some extra time (e.g. maybe 30 seconds).
-    access_token: String,
-
-    /// Determine if a new `access_token` needed (i.e. the current token has
-    /// expired).
-    access_expires: Instant,
-}
-
-/// Create a time that is prior to "now" such that `Instant::now() > expired()`.
-fn expired() -> Instant {
-    Instant::now().checked_sub(Duration::new(1, 0)).expect("expired instant")
+    access_token: Mutex<String>,
 }
 
 impl TokenStore {
     /// Using a refresh_token of None will only allow access to public GCS data,
-    /// unless it's set later with `set_refresh_token()`.
+    /// unless it's set later with `refresh_access_token()`.
+    ///
+    /// The new client will default to using:
+    /// - api_base: https://www.googleapis.com/storage/v1
+    /// - storage_base: https://storage.googleapis.com
     pub fn new(refresh_token: Option<String>) -> Self {
         Self {
+            _api_base: Url::parse(API_BASE).expect("parse API_BASE"),
+            storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
             client_id: GSUTIL_CLIENT_ID,
             client_secret: GSUTIL_CLIENT_SECRET,
-            refresh_token: refresh_token,
-            access_token: "".to_string(),
-            access_expires: expired(),
+            refresh_token,
+            access_token: Mutex::new("".to_string()),
+        }
+    }
+
+    /// Create localhost base URLs and fake credentials for testing.
+    #[cfg(test)]
+    fn local_fake(refresh_token: Option<String>) -> Self {
+        let api_base = Url::parse("http://localhost:9000").expect("api_base");
+        let storage_base = Url::parse("http://localhost:9001").expect("storage_base");
+        Self {
+            _api_base: api_base,
+            storage_base,
+            client_id: "fake_client_id",
+            client_secret: "fake_client_secret",
+            refresh_token,
+            access_token: Mutex::new("".to_string()),
         }
     }
 
     /// Apply Authorization header, if available.
     ///
     /// If no access_token is set, no changes are made to the builder.
-    pub async fn authenticate(&mut self, builder: request::Builder) -> Result<request::Builder> {
-        match &self.get_access_token().await? {
-            Some(access_token) => {
-                Ok(builder.header("Authorization", format!("Bearer {}", access_token)))
-            }
-            None => Ok(builder),
+    pub async fn authenticate(&self, builder: request::Builder) -> Result<request::Builder> {
+        if self.refresh_token.is_none() {
+            return Ok(builder);
         }
+        let access_token = self.access_token.lock().await;
+        Ok(builder.header("Authorization", format!("Bearer {}", access_token)))
     }
 
-    /// If `refresh_token` is set, either return the current access token or
-    /// attempt to retrieve a new access token from GCS (erring if retrieval
-    /// fails).
-    ///
-    /// If `refresh_token` is None return None.
-    async fn get_access_token(&mut self) -> Result<Option<&str>> {
+    /// Use the refresh token to get a new access token.
+    pub async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<()> {
         match &self.refresh_token {
             Some(refresh_token) => {
-                if Instant::now() + EXPIRATION_MARGIN >= self.access_expires {
-                    let req_body = RefreshTokenRequest {
-                        client_id: &self.client_id,
-                        client_secret: &self.client_secret,
-                        refresh_token: refresh_token,
-                        grant_type: "refresh_token",
-                    };
-                    let body = serde_json::to_vec(&req_body)?;
-                    let req = Request::builder()
-                        .method(Method::POST)
-                        .uri(OAUTH_REFRESH_TOKEN_ENDPOINT)
-                        .body(Body::from(body))?;
+                let req_body = RefreshTokenRequest {
+                    client_id: &self.client_id,
+                    client_secret: &self.client_secret,
+                    refresh_token: refresh_token,
+                    grant_type: "refresh_token",
+                };
+                let body = serde_json::to_vec(&req_body)?;
+                let req = Request::builder()
+                    .method(Method::POST)
+                    .uri(OAUTH_REFRESH_TOKEN_ENDPOINT)
+                    .body(Body::from(body))?;
 
-                    let res = new_https_client().request(req).await?;
+                let res = https_client.request(req).await?;
 
-                    if res.status().is_success() {
-                        let bytes = hyper::body::to_bytes(res.into_body()).await?;
-                        let info: OauthTokenResponse = serde_json::from_slice(&bytes)?;
-                        self.access_token = info.access_token;
-                        self.access_expires = Instant::now() + Duration::from_secs(info.expires_in);
-                        Ok(Some(&self.access_token))
-                    } else {
-                        Err(anyhow!("Failed to update GCS access token."))
-                    }
+                if res.status().is_success() {
+                    let bytes = hyper::body::to_bytes(res.into_body()).await?;
+                    let info: OauthTokenResponse = serde_json::from_slice(&bytes)?;
+                    let mut access_token = self.access_token.lock().await;
+                    *access_token = info.access_token;
+                    Ok(())
                 } else {
-                    Ok(Some(&self.access_token))
+                    Err(anyhow!("Unable to gain new access token."))
                 }
             }
-            None => Ok(None),
+            None => Err(anyhow!("A refresh token is required to gain new access token.")),
         }
     }
+
+    /// Reads content of a stored object (blob) from GCS.
+    pub async fn download(
+        &self,
+        https_client: &HttpsClient,
+        bucket: &str,
+        object: &str,
+    ) -> Result<Response<Body>> {
+        let res = self.attempt_download(https_client, bucket, object).await?;
+        Ok(match res.status() {
+            StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
+                match &self.refresh_token {
+                    Some(_) => {
+                        // Refresh the access token and make one extra try.
+                        self.refresh_access_token(&https_client).await?;
+                        self.attempt_download(https_client, bucket, object).await?
+                    }
+                    None =>
+                    // With no refresh token, there's no option to retry.
+                    {
+                        res
+                    }
+                }
+            }
+            _ => res,
+        })
+    }
+
+    /// Make one attempt to read content of a stored object (blob) from GCS
+    /// without considering redirects or retries.
+    ///
+    /// Callers are expected to handle errors and call attempt_download() again
+    /// as desired (e.g. follow redirects).
+    async fn attempt_download(
+        &self,
+        https_client: &HttpsClient,
+        bucket: &str,
+        object: &str,
+    ) -> Result<Response<Body>> {
+        let url = self.storage_base.join(&format!("{}/{}", bucket, object))?;
+
+        let req = Request::builder().method(Method::GET).uri(url.into_string());
+        let req = self.authenticate(req).await?;
+        let req = req.body(Body::from(""))?;
+
+        let res = https_client.request(req).await?;
+        Ok(res)
+    }
+}
+
+/// Fetch an existing refresh token from a .boto (gsutil) configuration file.
+///
+/// TODO(fxbug.dev/82014): Using an ffx specific token will be preferred once
+/// that feature is created. For the near term, an existing gsutil token is
+/// workable.
+///
+/// Alert: The refresh token is considered a private secret for the user. Do
+///        not print the token to a log or otherwise disclose it.
+pub fn read_boto_refresh_token(boto_path: &Path) -> Result<Option<String>> {
+    // Read the file at `boto_path` to retrieve a value from a line resembling
+    // "gs_oauth2_refresh_token = <string_of_chars>".
+    static GS_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
+    let re = GS_REFRESH_TOKEN_RE
+        .get_or_init(|| Regex::new(r#"\n\s*gs_oauth2_refresh_token\s*=\s*(\S+)"#).expect("regex"));
+    let data = fs::read_to_string(boto_path)?;
+    let refresh_token = match re.captures(&data) {
+        Some(found) => Some(found.get(1).expect("found at least one").as_str().to_string()),
+        None => None,
+    };
+    Ok(refresh_token)
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode};
 
-    #[test]
-    fn test_expired() {
-        assert!(Instant::now() > expired());
+    #[should_panic(expected = "Connection refused")]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fake_download() {
+        let token_store = TokenStore::local_fake(/*refresh_token=*/ None);
+        let bucket = "fake_bucket";
+        let object = "fake/object/path.txt";
+        token_store.download(&new_https_client(), bucket, object).await.expect("client download");
     }
 
-    #[test]
-    fn test_default_expires_in() {
-        let res: OauthTokenResponse =
-            serde_json::from_str(r#"{"access_token": "fake", "expires_in": 123}"#)
-                .expect("token response");
-        assert_eq!(res.expires_in, 123);
-        let res: OauthTokenResponse =
-            serde_json::from_str(r#"{"access_token": "fake"}"#).expect("token response");
-        assert_eq!(res.expires_in, 3599);
+    // This test is marked "ignore" because it actually downloads from GCS,
+    // which isn't good for a CI/GI test. It's here because it's handy to have
+    // as a local developer test. Run with `fx test gcs_lib_test -- --ignored`.
+    // Note: gsutil config is required.
+    #[ignore]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gcs_download_public() {
+        let token_store = TokenStore::new(/*refresh_token=*/ None);
+        let bucket = "fuchsia";
+        let object = "development/5.20210610.3.1/sdk/linux-amd64/gn.tar.gz";
+        let res = token_store
+            .download(&new_https_client(), bucket, object)
+            .await
+            .expect("client download");
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    // This test is marked "ignore" because it actually downloads from GCS,
+    // which isn't good for a CI/GI test. It's here because it's handy to have
+    // as a local developer test. Run with `fx test gcs_lib_test -- --ignored`.
+    // Note: gsutil config is required.
+    #[ignore]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gcs_download_auth() {
+        use home::home_dir;
+        let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
+        let refresh_token = read_boto_refresh_token(&boto_path).expect("boto token");
+        let token_store = TokenStore::new(refresh_token);
+        let https = new_https_client();
+        token_store.refresh_access_token(&https).await.expect("refresh_access_token");
+        let bucket = "fuchsia-sdk";
+        let object = "development/8910718018192331792/images/astro-release.tgz";
+        let res = token_store.download(&https, bucket, object).await.expect("client download");
+        assert_eq!(res.status(), StatusCode::OK);
     }
 }
