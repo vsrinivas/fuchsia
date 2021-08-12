@@ -69,8 +69,6 @@ impl FxfsServer {
         let scope = ExecutionScope::build().token_registry(registry).new();
         let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
-        self.volume.volume().start_flush_task(volume::DEFAULT_FLUSH_PERIOD);
-
         self.volume.root().clone().open(
             scope.clone(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
