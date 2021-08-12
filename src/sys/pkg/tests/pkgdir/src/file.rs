@@ -472,3 +472,63 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
         assert_get_flags(&root_dir, path, open_flag, status_flags, right_flags).await;
     }
 }
+
+#[fuchsia::test]
+async fn unsupported() {
+    for dir in dirs_to_test().await {
+        unsupported_per_package_source(dir).await
+    }
+}
+
+async fn unsupported_per_package_source(root_dir: DirectoryProxy) {
+    async fn verify_unsupported_calls(
+        root_dir: &DirectoryProxy,
+        path: &str,
+        expected_status: zx::Status,
+    ) {
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+
+        // Verify write() fails.
+        let (status, bytes_written) = file.write(b"potato").await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), expected_status);
+        assert_eq!(bytes_written, 0);
+
+        // Verify writeAt() fails.
+        let (status, bytes_written) = file.write_at(b"potato", 0).await.unwrap();
+        assert_eq!(zx::Status::from_raw(status), expected_status);
+        assert_eq!(bytes_written, 0);
+
+        // Verify setAttr() fails.
+        assert_eq!(
+            zx::Status::from_raw(
+                file.set_attr(
+                    0,
+                    &mut fidl_fuchsia_io::NodeAttributes {
+                        mode: 0,
+                        id: 0,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 0,
+                        creation_time: 0,
+                        modification_time: 0
+                    }
+                )
+                .await
+                .unwrap()
+            ),
+            expected_status
+        );
+
+        // Verify truncate() fails.
+        assert_eq!(zx::Status::from_raw(file.truncate(0).await.unwrap()), expected_status);
+    }
+
+    // The name of this test is slightly misleading because files not under meta will yield
+    // BAD_HANDLE for the unsupported file APIs. This is actually consistent with the fuchsia.io
+    // documentation because files without WRITE permissions *should* yield BAD_HANDLE for these
+    // methods.
+    verify_unsupported_calls(&root_dir, "file", zx::Status::BAD_HANDLE).await;
+
+    verify_unsupported_calls(&root_dir, "meta/file", zx::Status::NOT_SUPPORTED).await;
+    verify_unsupported_calls(&root_dir, "meta", zx::Status::NOT_SUPPORTED).await;
+}
