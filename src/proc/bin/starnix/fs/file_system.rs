@@ -81,16 +81,17 @@ impl FileSystem {
     /// Returns Err only if create_fn returns Err.
     pub fn get_or_create_node<F>(
         &self,
-        inode_num: ino_t,
+        inode_num: Option<ino_t>,
         create_fn: F,
     ) -> Result<FsNodeHandle, Errno>
     where
-        F: FnOnce() -> Result<FsNodeHandle, Errno>,
+        F: FnOnce(ino_t) -> Result<FsNodeHandle, Errno>,
     {
+        let inode_num = inode_num.unwrap_or_else(|| self.next_inode_num());
         let mut nodes = self.nodes.lock();
         match nodes.entry(inode_num) {
             Entry::Vacant(entry) => {
-                let node = create_fn()?;
+                let node = create_fn(inode_num)?;
                 entry.insert(Arc::downgrade(&node));
                 Ok(node)
             }
@@ -98,7 +99,7 @@ impl FileSystem {
                 if let Some(node) = entry.get().upgrade() {
                     return Ok(node);
                 }
-                let node = create_fn()?;
+                let node = create_fn(inode_num)?;
                 entry.insert(Arc::downgrade(&node));
                 Ok(node)
             }

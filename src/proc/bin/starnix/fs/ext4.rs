@@ -67,7 +67,7 @@ impl FsNodeOps for ExtDirectory {
         let entry = dir_entries.iter().find(|e| e.name_bytes() == name).ok_or(ENOENT)?;
         let ext_node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
         let inode_num = ext_node.inode_num as ino_t;
-        node.fs().get_or_create_node(inode_num as ino_t, || {
+        node.fs().get_or_create_node(Some(inode_num as ino_t), |inode_num| {
             let entry_type = ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?;
             let ops: Box<dyn FsNodeOps> = match entry_type {
                 ext_structs::EntryType::RegularFile => Box::new(ExtFile::new(ext_node.clone())),

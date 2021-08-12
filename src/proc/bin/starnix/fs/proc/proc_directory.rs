@@ -36,9 +36,13 @@ impl FsNodeOps for ProcDirectory {
 
     fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
         match name {
-            b"self" => node.fs().get_or_create_node(1, || {
-                let child =
-                    FsNode::new(Box::new(TaskSymlink::new()), &node.fs(), 1, FileMode::IFLNK);
+            b"self" => node.fs().get_or_create_node(Some(1), |inode_num| {
+                let child = FsNode::new(
+                    Box::new(TaskSymlink::new()),
+                    &node.fs(),
+                    inode_num,
+                    FileMode::IFLNK,
+                );
                 Ok(child)
             }),
             _ => Err(ENOENT),
