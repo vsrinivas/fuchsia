@@ -51,6 +51,13 @@ dart_test("experiences_ermine_session_shell_performance_test") {
       service_account = _service_account
       tags = [ "e2e-fyi" ]
     },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
+    },
   ]
 }
 

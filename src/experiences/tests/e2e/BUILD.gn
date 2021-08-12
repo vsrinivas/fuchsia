@@ -61,6 +61,12 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
       }
       tags = [ "e2e-fyi" ]
     },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      tags = [ "e2e-fyi" ]
+    },
   ]
 }
 
@@ -89,6 +95,12 @@ dart_test("experiences_ermine_terminal_e2e_test") {
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
       }
       tags = [ "e2e-fyi" ]
     },
@@ -131,6 +143,13 @@ dart_test("experiences_ermine_simple_browser_e2e_test") {
       service_account = _service_account
       tags = [ "e2e-fyi" ]
     },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
+    },
   ]
 }
 
@@ -159,6 +178,11 @@ dart_test("experiences_ermine_smoke_e2e_test") {
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
       }
     },
   ]
