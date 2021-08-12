@@ -13,7 +13,9 @@
 
 namespace fs {
 
-ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher) : FuchsiaVfs(dispatcher) {}
+ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher) : FuchsiaVfs(dispatcher) {
+  ZX_DEBUG_ASSERT(dispatcher);
+}
 
 ManagedVfs::~ManagedVfs() { ZX_DEBUG_ASSERT(connections_.is_empty()); }
 
