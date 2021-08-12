@@ -12,6 +12,7 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
 use super::devfs::dev_tmp_fs;
+use super::devpts::DevptsFs;
 use super::proc::proc_fs;
 use super::tmpfs::TmpFs;
 use super::*;
@@ -93,6 +94,7 @@ pub fn create_filesystem(
     use WhatToMount::*;
     Ok(match fs_type {
         b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
+        b"devpts" => Fs(DevptsFs::new()),
         b"proc" => Fs(proc_fs(kernel.clone())),
         b"tmpfs" => Fs(TmpFs::new()),
         _ => return Err(ENODEV),
