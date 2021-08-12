@@ -5,12 +5,15 @@
 #ifndef SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 #define SRC_DEVICES_RTC_DRIVERS_INTEL_RTC_INTEL_RTC_H_
 
+#include <fuchsia/hardware/nvram/llcpp/fidl.h>
 #include <fuchsia/hardware/rtc/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <librtc_llcpp.h>
 
 #include <ddktl/device.h>
 
 namespace intel_rtc {
+constexpr size_t kRtcBankSize = 128;
 
 namespace FidlRtc = rtc::FidlRtc;
 
@@ -31,9 +34,6 @@ enum Registers {
   kRegD,
 };
 
-constexpr uint32_t kIndexOffset = 0;
-constexpr uint32_t kDataOffset = 1;
-
 constexpr uint8_t kHourPmBit = (1 << 7);
 enum RegisterA {
   kRegAUpdateInProgressBit = 1 << 7,
@@ -46,22 +46,34 @@ enum RegisterB {
 };
 
 class RtcDevice;
-using DeviceType = ddk::Device<RtcDevice, ddk::Messageable<fuchsia_hardware_rtc::Device>::Mixin>;
+using DeviceType = ddk::Device<RtcDevice, ddk::MessageableManual>;
 
-class RtcDevice : public DeviceType {
+class RtcDevice : public DeviceType,
+                  public fidl::WireServer<FidlRtc::Device>,
+                  public fidl::WireServer<fuchsia_hardware_nvram::Device> {
  public:
-  RtcDevice(zx_device_t* parent, zx::resource ioport, uint16_t port_base)
-      : DeviceType(parent), ioport_(std::move(ioport)), port_base_(port_base) {}
-
+  RtcDevice(zx_device_t* parent, zx::resource ioport, uint16_t port_base, uint16_t port_count);
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
   void DdkRelease() { delete this; }
 
+  // fuchsia.hardware.rtc implementation.
   void Get(GetRequestView request, GetCompleter::Sync& completer) override;
   void Set(SetRequestView request, SetCompleter::Sync& completer) override;
+
+  // fuchsia.hardware.nvram implementation.
+  void GetSize(GetSizeRequestView request, GetSizeCompleter::Sync& completer) override;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
 
   FidlRtc::wire::Time ReadTime() __TA_EXCLUDES(time_lock_);
   void WriteTime(FidlRtc::wire::Time time) __TA_EXCLUDES(time_lock_);
 
  private:
+  // Read a byte from nvram. |offset| should be based on the start of nvram.
+  uint8_t ReadNvramReg(uint16_t offset) __TA_REQUIRES(time_lock_);
+  // Write a byte to nvram. |offset| should be based on the start of nvram.
+  void WriteNvramReg(uint16_t offset, uint8_t val) __TA_REQUIRES(time_lock_);
+
   // Read a register without doing any transformation of the value.
   uint8_t ReadRegRaw(Registers reg) __TA_REQUIRES(time_lock_);
   // Write a register without doing any transformation of the value.
@@ -82,6 +94,8 @@ class RtcDevice : public DeviceType {
 
   zx::resource ioport_;
   uint16_t port_base_;
+  size_t bank_count_;
+  size_t nvram_size_;
 
   bool is_24_hour_;
   bool is_bcd_;

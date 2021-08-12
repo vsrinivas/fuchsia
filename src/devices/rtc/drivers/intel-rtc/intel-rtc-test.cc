@@ -4,6 +4,7 @@
 
 #include "src/devices/rtc/drivers/intel-rtc/intel-rtc.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <librtc.h>
 
 #include <ddktl/device.h>
@@ -16,17 +17,34 @@ class IntelRtcTest;
 IntelRtcTest* CUR_TEST = nullptr;
 
 constexpr uint16_t kPortBase = 0x20;
+constexpr size_t kNvramStart = intel_rtc::kRegD + 1;
 
 using intel_rtc::Registers;
 
 class IntelRtcTest : public zxtest::Test {
  public:
+  IntelRtcTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
     ASSERT_EQ(CUR_TEST, nullptr);
     CUR_TEST = this;
+    ASSERT_OK(loop_.StartThread("fidl-thread"));
 
     fake_root_ = MockDevice::FakeRootParent();
-    device_ = std::make_unique<intel_rtc::RtcDevice>(fake_root_.get(), zx::resource(), kPortBase);
+  }
+
+  void CreateDevice(size_t banks) {
+    ASSERT_GT(banks, 0);
+    ASSERT_LE(banks, countof(registers_) / intel_rtc::kRtcBankSize);
+    device_ = std::make_unique<intel_rtc::RtcDevice>(fake_root_.get(), zx::resource(), kPortBase,
+                                                     2 * banks);
+  }
+
+  void ServeNvram(fidl::WireSyncClient<fuchsia_hardware_nvram::Device>* out) {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_nvram::Device>();
+    ASSERT_OK(endpoints.status_value());
+    out->client_end() = std::move(endpoints->client);
+    fidl::BindServer<fidl::WireServer<fuchsia_hardware_nvram::Device>>(
+        loop_.dispatcher(), std::move(endpoints->server), device_.get());
   }
 
   void TearDown() override { CUR_TEST = nullptr; }
@@ -96,12 +114,12 @@ class IntelRtcTest : public zxtest::Test {
     ASSERT_EQ(reg_seconds, time.seconds);
   }
 
-  void Set(uint8_t index, uint8_t val) {
+  void Set(size_t index, uint8_t val) {
     ASSERT_LT(index, countof(registers_));
     registers_[index] = val;
   }
 
-  uint8_t Get(uint8_t index) {
+  uint8_t Get(size_t index) {
     ZX_ASSERT(index < countof(registers_));
     if (index == Registers::kRegA && update_in_progress_count_ > 0) {
       update_in_progress_count_--;
@@ -113,35 +131,38 @@ class IntelRtcTest : public zxtest::Test {
  protected:
   std::shared_ptr<MockDevice> fake_root_;
   std::unique_ptr<intel_rtc::RtcDevice> device_;
+  async::Loop loop_;
 
-  uint8_t registers_[Registers::kRegD + 1] = {0};
+  uint8_t registers_[2 * intel_rtc::kRtcBankSize] = {0};
   uint8_t update_in_progress_count_ = 0;
 };
 
 // Hooks used by driver code.
 namespace intel_rtc {
 
-static std::optional<uint8_t> next_reg_index;
+static std::optional<size_t> next_reg_index;
 
 void TestOutp(uint16_t port, uint8_t value) {
   ASSERT_NE(CUR_TEST, nullptr);
   ASSERT_GE(port, kPortBase);
-  switch (port - kPortBase) {
-    case kIndexOffset:
-      next_reg_index = value;
-      break;
-    case kDataOffset:
-      ASSERT_TRUE(next_reg_index.has_value());
-      CUR_TEST->Set(next_reg_index.value(), value);
-      next_reg_index.reset();
-      break;
+  uint16_t offset = port - kPortBase;
+  uint16_t bank = offset / 2;
+  bool is_index = (offset % 2) == 0;
+  if (is_index) {
+    next_reg_index = (kRtcBankSize * bank) + value;
+  } else {
+    ASSERT_TRUE(next_reg_index.has_value());
+    CUR_TEST->Set(next_reg_index.value(), value);
+    next_reg_index.reset();
   }
 }
 
 uint8_t TestInp(uint16_t port) {
   ZX_ASSERT(CUR_TEST != nullptr);
   ZX_ASSERT(port >= kPortBase);
-  ZX_ASSERT(port - kPortBase == kDataOffset);
+  uint16_t offset = port - kPortBase;
+  bool is_index = (offset % 2) == 0;
+  ZX_ASSERT(!is_index);
   ZX_ASSERT(next_reg_index.has_value());
   return CUR_TEST->Get(next_reg_index.value());
 }
@@ -149,6 +170,7 @@ uint8_t TestInp(uint16_t port) {
 }  // namespace intel_rtc
 
 TEST_F(IntelRtcTest, TestReadWriteBinary24Hr) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 0, 10, 32, /*bcd=*/false, /*is_24hr=*/true);
 
   auto time = device_->ReadTime();
@@ -165,6 +187,7 @@ TEST_F(IntelRtcTest, TestReadWriteBinary24Hr) {
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBcd24Hr) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 0, 10, 32, /*bcd=*/true, /*is_24hr=*/true);
 
   auto time = device_->ReadTime();
@@ -181,6 +204,7 @@ TEST_F(IntelRtcTest, TestReadWriteBcd24Hr) {
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBinary12Hr) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 12, 10, 32, /*bcd=*/false, /*is_24hr=*/false, /*pm=*/true);
 
   auto time = device_->ReadTime();
@@ -196,6 +220,7 @@ TEST_F(IntelRtcTest, TestReadWriteBinary12Hr) {
 }
 
 TEST_F(IntelRtcTest, TestReadWriteBcd12Hr) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 12, 10, 32, /*bcd=*/true, /*is_24hr=*/false, /*pm=*/true);
 
   auto time = device_->ReadTime();
@@ -211,6 +236,7 @@ TEST_F(IntelRtcTest, TestReadWriteBcd12Hr) {
 }
 
 TEST_F(IntelRtcTest, TestReadWrite12HrMidnight) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 12, 10, 32, /*bcd=*/false, /*is_24hr=*/false, /*pm=*/false);
 
   auto time = device_->ReadTime();
@@ -226,9 +252,96 @@ TEST_F(IntelRtcTest, TestReadWrite12HrMidnight) {
 }
 
 TEST_F(IntelRtcTest, TestReadWaitsForUpdate) {
+  CreateDevice(1);
   SetTime(2021, 8, 5, 12, 10, 32, /*bcd=*/false, /*is_24hr=*/false, /*pm=*/false);
   update_in_progress_count_ = 3;
 
   device_->ReadTime();
   ASSERT_EQ(update_in_progress_count_, 0);
+}
+
+TEST_F(IntelRtcTest, TestNvramGetSize) {
+  CreateDevice(1);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+
+  auto result = client.GetSize();
+  ASSERT_OK(result.status());
+  ASSERT_EQ(result->size, 114);
+}
+
+TEST_F(IntelRtcTest, TestNvramWrite) {
+  CreateDevice(1);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+
+  std::vector<uint8_t> my_data = {1, 2, 3, 4};
+  auto result = client.Write(0, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+
+  ASSERT_BYTES_EQ(&registers_[kNvramStart], my_data.data(), my_data.size());
+}
+
+TEST_F(IntelRtcTest, TestNvramRead) {
+  CreateDevice(1);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  std::vector<uint8_t> my_data = {7, 8, 42, 10};
+  memcpy(&registers_[kNvramStart + 30], my_data.data(), my_data.size());
+
+  auto result = client.Read(30, 4);
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+
+  auto& data = result->result.response().data;
+  ASSERT_EQ(data.count(), my_data.size());
+  ASSERT_BYTES_EQ(data.data(), my_data.data(), data.count());
+}
+
+TEST_F(IntelRtcTest, TestNvramWriteAcrossBanks) {
+  CreateDevice(2);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+
+  std::vector<uint8_t> my_data = {1, 2, 3, 4};
+  auto result = client.Write(112, fidl::VectorView<uint8_t>::FromExternal(my_data));
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+
+  ASSERT_BYTES_EQ(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
+}
+
+TEST_F(IntelRtcTest, TestNvramReadAcrossBanks) {
+  CreateDevice(2);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+  std::vector<uint8_t> my_data = {7, 8, 42, 10};
+  memcpy(&registers_[kNvramStart + 112], my_data.data(), my_data.size());
+
+  auto result = client.Read(112, 4);
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+
+  auto& data = result->result.response().data;
+  ASSERT_EQ(data.count(), my_data.size());
+  ASSERT_BYTES_EQ(data.data(), my_data.data(), data.count());
+}
+
+TEST_F(IntelRtcTest, TestNvramOutOfBounds) {
+  CreateDevice(1);
+  fidl::WireSyncClient<fuchsia_hardware_nvram::Device> client;
+  ASSERT_NO_FATAL_FAILURES(ServeNvram(&client));
+
+  {
+    auto result = client.Read(400, 4);
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result->result.err(), ZX_ERR_OUT_OF_RANGE);
+  }
+  {
+    std::vector<uint8_t> my_data = {7, 8, 42, 10};
+    auto result = client.Write(400, fidl::VectorView<uint8_t>::FromExternal(my_data));
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result->result.err(), ZX_ERR_OUT_OF_RANGE);
+  }
 }

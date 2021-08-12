@@ -9,14 +9,25 @@
 #include <lib/ddk/hw/inout.h>
 #include <librtc.h>
 #include <librtc_llcpp.h>
+#include <zircon/errors.h>
 
 #include <ddktl/device.h>
+#include <safemath/checked_math.h>
 
 #include "src/devices/lib/acpi/client.h"
 #include "src/devices/rtc/drivers/intel-rtc/intel_rtc_bind.h"
 
+// The Intel RTC is documented in "7th and 8th Generation Intel® Processor Family I/O for U/Y
+// Platforms and 10th Generation Intel® Processor Family I/O for Y Platforms", vol 1 section 27 and
+// vol 2 section 33.
+
 namespace intel_rtc {
 constexpr uint32_t kPortCount = 2;
+// User ram starts after register D.
+constexpr uint8_t kNvramStart = kRegD + 1;
+
+constexpr uint16_t RtcIndex(uint16_t bank) { return bank * 2; }
+constexpr uint16_t RtcData(uint16_t bank) { return (bank * 2) + 1; }
 
 #ifdef FOR_TEST
 void TestOutp(uint16_t port, uint8_t value);
@@ -25,14 +36,45 @@ uint8_t TestInp(uint16_t port);
 #define inp TestInp
 #endif
 
+RtcDevice::RtcDevice(zx_device_t* parent, zx::resource ioport, uint16_t port_base,
+                     uint16_t port_count)
+    : DeviceType(parent), ioport_(std::move(ioport)), port_base_(port_base) {
+  if (port_count > 2) {
+    bank_count_ = 2;
+  } else {
+    bank_count_ = 1;
+  }
+  nvram_size_ = (kRtcBankSize * bank_count_) - (kRegD + 1);
+  zxlogf(INFO, "%zu bank%s of nvram, %lu bytes available.", bank_count_,
+         bank_count_ == 1 ? "" : "s", nvram_size_);
+}
+
+uint8_t RtcDevice::ReadNvramReg(uint16_t offset) {
+  offset += kNvramStart;
+  uint8_t bank = offset / kRtcBankSize;
+  uint16_t reg = offset % kRtcBankSize;
+
+  outp(port_base_ + RtcIndex(bank), reg);
+  return inp(port_base_ + RtcData(bank));
+}
+
+void RtcDevice::WriteNvramReg(uint16_t offset, uint8_t value) {
+  offset += kNvramStart;
+  uint8_t bank = offset / kRtcBankSize;
+  uint16_t reg = offset % kRtcBankSize;
+
+  outp(port_base_ + RtcIndex(bank), reg);
+  outp(port_base_ + RtcData(bank), value);
+}
+
 uint8_t RtcDevice::ReadRegRaw(Registers reg) {
-  outp(port_base_ + kIndexOffset, reg);
-  return inp(port_base_ + kDataOffset);
+  outp(port_base_ + RtcIndex(0), reg);
+  return inp(port_base_ + RtcData(0));
 }
 
 void RtcDevice::WriteRegRaw(Registers reg, uint8_t val) {
-  outp(port_base_ + kIndexOffset, reg);
-  outp(port_base_ + kDataOffset, val);
+  outp(port_base_ + RtcIndex(0), reg);
+  outp(port_base_ + RtcData(0), val);
 }
 
 uint8_t RtcDevice::ReadReg(Registers reg) {
@@ -155,6 +197,49 @@ void RtcDevice::Set(SetRequestView request, SetCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 
+void RtcDevice::GetSize(GetSizeRequestView request, GetSizeCompleter::Sync& completer) {
+  size_t bytes = kRtcBankSize * bank_count_;
+  bytes -= kRegD + 1;
+  completer.Reply(bytes);
+}
+
+void RtcDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  if (safemath::CheckAdd(request->offset, request->size).ValueOrDefault(nvram_size_ + 1) >
+      nvram_size_) {
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+  uint8_t data[fuchsia_hardware_nvram::wire::kNvramMax];
+  std::scoped_lock lock(time_lock_);
+  for (uint32_t i = 0; i < request->size; i++) {
+    data[i] = ReadNvramReg(i + request->offset);
+  }
+
+  auto view = fidl::VectorView<uint8_t>::FromExternal(data, request->size);
+  completer.ReplySuccess(view);
+}
+
+void RtcDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  if (safemath::CheckAdd(request->offset, request->data.count()).ValueOrDefault(nvram_size_ + 1) >
+      nvram_size_) {
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+
+  std::scoped_lock lock(time_lock_);
+  for (size_t i = 0; i < request->data.count(); i++) {
+    WriteNvramReg(request->offset + i, request->data[i]);
+  }
+  completer.ReplySuccess();
+}
+
+void RtcDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  if (fidl::WireTryDispatch<FidlRtc::Device>(this, msg, &txn) == fidl::DispatchResult::kFound) {
+    return;
+  }
+  fidl::WireTryDispatch<fuchsia_hardware_nvram::Device>(this, msg, &txn);
+}
+
 zx_status_t Bind(void* ctx, zx_device_t* parent) {
   auto client = acpi::Client::Create(parent);
   if (client.is_error()) {
@@ -192,8 +277,9 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::unique_ptr<RtcDevice> rtc = std::make_unique<RtcDevice>(
-      parent, std::move(pio->result.mutable_response().pio), resource_info.base);
+  std::unique_ptr<RtcDevice> rtc =
+      std::make_unique<RtcDevice>(parent, std::move(pio->result.mutable_response().pio),
+                                  resource_info.base, resource_info.size);
   auto time = rtc->ReadTime();
   auto new_time = rtc::SanitizeRtc(time);
   rtc->WriteTime(new_time);

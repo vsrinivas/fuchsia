@@ -19,6 +19,7 @@ driver_bind_rules("intel_rtc_bind") {
 
 common_deps = [
   ":intel_rtc_bind",
+  "//sdk/fidl/fuchsia.hardware.nvram:fuchsia.hardware.nvram_llcpp",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
   "//src/devices/lib/acpi",
@@ -27,6 +28,7 @@ common_deps = [
   "//src/devices/rtc/lib/rtc:rtc_llcpp",
   "//src/lib/ddk",
   "//src/lib/ddktl",
+  "//zircon/public/lib/safemath",
 ]
 
 driver_module("intel-rtc-driver") {
@@ -50,6 +52,7 @@ test("intel-rtc-test-bin") {
   cflags = [ "-DFOR_TEST" ]
   deps = common_deps + [
            "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
            "//zircon/system/ulib/zxtest",
          ]
 }
