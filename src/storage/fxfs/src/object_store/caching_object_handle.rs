@@ -222,10 +222,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for Cachin
     }
 
     async fn flush(&self) -> Result<(), Error> {
-        if !self.cache.is_dirty() {
-            return Ok(());
-        }
-
         let bs = self.block_size() as u64;
         let fs = self.store().filesystem();
         let locks = fs
