@@ -93,7 +93,8 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   fallback->fallback = true;
   resolver.map[fallback_libname] = std::move(fallback);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), true);
+
   loop.StartThread("fidl-thread");
 
   DriverLoader::MatchDeviceConfig config;
@@ -119,7 +120,7 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
   fallback->fallback = true;
   resolver.map[fallback_libname] = std::move(fallback);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), true);
   loop.StartThread("fidl-thread");
 
   // Wait for base drivers, which is when we load fallback drivers.
@@ -153,7 +154,7 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
   fallback->fallback = true;
   resolver.map[fallback_libname] = std::move(fallback);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, false);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false);
   loop.StartThread("fidl-thread");
 
   DriverLoader::MatchDeviceConfig config;
@@ -181,7 +182,7 @@ TEST_F(DriverLoaderTest, TestLibname) {
   driver2->libname = name2;
   resolver.map[name2] = std::move(driver2);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), true);
   loop.StartThread("fidl-thread");
 
   DriverLoader::MatchDeviceConfig config;
@@ -208,7 +209,7 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   driver2->libname = name2;
   resolver.map[name2] = std::move(driver2);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), true);
   loop.StartThread("fidl-thread");
 
   // We can also match libname by the path that the URL turns into.
@@ -243,7 +244,7 @@ TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   driver3->fallback = true;
   resolver.map[name3] = std::move(driver3);
 
-  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, false);
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), false);
   loop.StartThread("fidl-thread");
 
   // We can also match libname by the path that the URL turns into.

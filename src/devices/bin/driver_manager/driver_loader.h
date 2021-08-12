@@ -24,9 +24,11 @@ class DriverLoader {
   // Takes in an unowned connection to base_resolver. base_resolver must outlive DriverLoader.
   explicit DriverLoader(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
                         fidl::WireSharedClient<fdf::DriverIndex> driver_index,
-                        internal::PackageResolverInterface* base_resolver, bool require_system)
+                        internal::PackageResolverInterface* base_resolver,
+                        async_dispatcher_t* dispatcher, bool require_system)
       : base_resolver_(base_resolver),
         driver_index_(std::move(driver_index)),
+        dispatcher_(dispatcher),
         include_fallback_drivers_(!require_system) {}
 
   ~DriverLoader();
@@ -59,6 +61,9 @@ class DriverLoader {
 
   const Driver* LoadDriverUrl(const std::string& driver_url);
 
+  // This API is used for debugging, for GetDriverInfo and DumpDrivers.
+  std::vector<const Driver*> GetAllDriverIndexDrivers();
+
  private:
   bool MatchesLibnameDriverIndex(const std::string& driver_url, std::string_view libname);
 
@@ -68,6 +73,7 @@ class DriverLoader {
   internal::PackageResolverInterface* base_resolver_;
   std::optional<std::thread> system_loading_thread_;
   fidl::WireSharedClient<fdf::DriverIndex> driver_index_;
+  async_dispatcher_t* dispatcher_;
 
   // When this is true we will return DriverIndex fallback drivers.
   // This is true after the system is loaded (or if require_system is false)

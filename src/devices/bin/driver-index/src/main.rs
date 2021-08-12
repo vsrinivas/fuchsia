@@ -231,8 +231,10 @@ impl ResolvedDriver {
     }
 
     fn create_driver_info(&self) -> fdd::DriverInfo {
+        let mut driver_url = self.component_url.clone();
+        driver_url.set_fragment(Some(&self.driver_path));
         fdd::DriverInfo {
-            url: Some(self.component_url.as_str().to_string()),
+            url: Some(driver_url.to_string()),
             bind_rules: Some(fdd::BindRulesBytecode::BytecodeV2(
                 self.bind_rules.instructions.clone(),
             )),

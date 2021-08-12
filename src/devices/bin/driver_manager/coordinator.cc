@@ -127,7 +127,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       dispatcher_(dispatcher),
       base_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
-                     config_.require_system),
+                     dispatcher, config_.require_system),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {
@@ -1731,36 +1731,26 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
     }
   }
 
+  // Check the driver index for drivers.
+  auto driver_index_drivers = driver_loader_.GetAllDriverIndexDrivers();
+  for (auto driver : driver_index_drivers) {
+    if (request->driver_filter.empty()) {
+      driver_list.push_back(driver);
+    } else {
+      for (const auto& d : request->driver_filter) {
+        std::string_view driver_path(d.data(), d.size());
+        if (driver_path.compare(driver->libname) == 0) {
+          driver_list.push_back(driver);
+        }
+      }
+    }
+  }
+
   fidl::Arena allocator;
   auto result = GetDriverInfo(allocator, driver_list);
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
   }
-
-  // Check the driver index for drivers.
-  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
-  if (driver_index_client.is_error()) {
-    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
-    completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
-    return;
-  }
-
-  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
-      std::move(driver_index_client.value()), dispatcher());
-  auto info_result = driver_index->GetDriverInfo_Sync(request->driver_filter);
-  // There are still some environments where we can't connect to DriverIndex.
-  if (info_result.status() != ZX_OK) {
-    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
-    completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
-    return;
-  }
-  if (info_result->result.is_err()) {
-    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
-    completer.ReplyError(info_result->result.err());
-    return;
-  }
-  const auto& drivers = info_result->result.response().drivers;
-  result->insert(result->end(), drivers.begin(), drivers.end());
   completer.ReplySuccess(fidl::VectorView<fdd::wire::DriverInfo>::FromExternal(*result));
 }
 
@@ -1939,92 +1929,54 @@ void Coordinator::DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync&
   completer.Reply(writer.status(), writer.written(), writer.available());
 }
 
+static void DumpDriver(const Driver& drv, VmoWriter& writer) {
+  writer.Printf("Name    : %s\n", drv.name.c_str());
+  writer.Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
+  writer.Printf("Flags   : %#08x\n", drv.flags);
+  writer.Printf("Bytecode Version   : %u\n", drv.bytecode_version);
+
+  if (!drv.binding_size) {
+    return;
+  }
+
+  if (drv.bytecode_version == 1) {
+    auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv.binding);
+    if (!binding) {
+      return;
+    }
+
+    char line[256];
+    uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(binding->get()[0]));
+    writer.Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
+                  drv.binding_size);
+    for (uint32_t i = 0; i < count; ++i) {
+      di_dump_bind_inst(&binding->get()[i], line, sizeof(line));
+      writer.Printf("[%u/%u]: %s\n", i + 1, count, line);
+    }
+  } else if (drv.bytecode_version == 2) {
+    auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&drv.binding);
+    if (!binding) {
+      return;
+    }
+
+    writer.Printf("Bytecode (%u byte%s): \n", drv.binding_size, (drv.binding_size == 1) ? "" : "s");
+    for (uint32_t i = 0; i < drv.binding_size; ++i) {
+      writer.Printf("0x%02x", (binding->get()[i]));
+    }
+    writer.Printf("\n\n");
+  }
+}
+
 void Coordinator::DumpDrivers(DumpDriversRequestView request,
                               DumpDriversCompleter::Sync& completer) {
   VmoWriter writer{std::move(request->output)};
-  bool first = true;
   for (const auto& drv : drivers_) {
-    writer.Printf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
-    writer.Printf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
-    writer.Printf("Flags   : %#08x\n", drv.flags);
-    writer.Printf("Bytecode Version   : %u\n", drv.bytecode_version);
-
-    if (!drv.binding_size) {
-      continue;
-    }
-
-    if (drv.bytecode_version == 1) {
-      auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv.binding);
-      if (!binding) {
-        continue;
-      }
-
-      char line[256];
-      uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(binding->get()[0]));
-      writer.Printf("Binding : %u instruction%s (%u bytes)\n", count, (count == 1) ? "" : "s",
-                    drv.binding_size);
-      for (uint32_t i = 0; i < count; ++i) {
-        di_dump_bind_inst(&binding->get()[i], line, sizeof(line));
-        writer.Printf("[%u/%u]: %s\n", i + 1, count, line);
-      }
-    } else if (drv.bytecode_version == 2) {
-      auto* binding = std::get_if<std::unique_ptr<uint8_t[]>>(&drv.binding);
-      if (!binding) {
-        continue;
-      }
-
-      writer.Printf("Bytecode (%u byte%s): \n", drv.binding_size,
-                    (drv.binding_size == 1) ? "" : "s");
-      for (uint32_t i = 0; i < drv.binding_size; ++i) {
-        writer.Printf("0x%02x", (binding->get()[i]));
-      }
-      writer.Printf("\n");
-    }
-    first = false;
+    DumpDriver(drv, writer);
   }
 
-  // Check the driver index for drivers.
-  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
-  if (driver_index_client.is_error()) {
-    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
-    completer.Reply(writer.status(), writer.written(), writer.available());
-    return;
-  }
-
-  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
-      std::move(driver_index_client.value()), dispatcher());
-  auto info_result = driver_index->GetDriverInfo_Sync(fidl::VectorView<fidl::StringView>());
-  // There are still some environments where we can't connect to DriverIndex.
-  if (info_result.status() != ZX_OK) {
-    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
-    completer.Reply(writer.status(), writer.written(), writer.available());
-    return;
-  }
-  if (info_result->result.is_err()) {
-    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
-    completer.Reply(writer.status(), writer.written(), writer.available());
-    return;
-  }
-  const auto& drivers = info_result->result.response().drivers;
-  for (const auto& driver : drivers) {
-    const char* name = driver.has_name() ? driver.name().data() : "<unknown>";
-    writer.Printf("%sName    : %s\n", first ? "" : "\n", name);
-
-    const char* url = driver.has_url() ? driver.url().data() : "<unknown>";
-    writer.Printf("Driver  : %s\n", url);
-
-    if (!driver.has_bind_rules() || !driver.bind_rules().is_bytecode_v2()) {
-      continue;
-    }
-
-    writer.Printf("Bytecode Version   : %u\n", 2);
-    auto bytecode = driver.bind_rules().bytecode_v2();
-    writer.Printf("Bytecode (%lu byte%s): \n", bytecode.count(),
-                  (bytecode.count() == 1) ? "" : "s");
-    for (uint32_t i = 0; i < bytecode.count(); ++i) {
-      writer.Printf("0x%02x", (bytecode[i]));
-    }
-    writer.Printf("\n");
+  auto drivers = driver_loader_.GetAllDriverIndexDrivers();
+  for (const auto& drv : drivers) {
+    DumpDriver(*drv, writer);
   }
 
   completer.Reply(writer.status(), writer.written(), writer.available());

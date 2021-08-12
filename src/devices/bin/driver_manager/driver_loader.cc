@@ -245,3 +245,39 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
                          matched_fallback_drivers.end());
   return matched_drivers;
 }
+
+std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
+  std::vector<const Driver*> drivers;
+
+  auto driver_index_client = service::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex\n");
+    return drivers;
+  }
+
+  auto driver_index = fidl::WireSharedClient<fuchsia_driver_development::DriverIndex>(
+      std::move(driver_index_client.value()), dispatcher_);
+  auto info_result = driver_index->GetDriverInfo_Sync(fidl::VectorView<fidl::StringView>());
+
+  // There are still some environments where we can't connect to DriverIndex.
+  if (info_result.status() != ZX_OK) {
+    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d\n", info_result.status());
+    return drivers;
+  }
+  if (info_result->result.is_err()) {
+    LOGF(ERROR, "GetDriverInfo failed: %d\n", info_result->result.err());
+    return drivers;
+  }
+  for (auto driver : info_result->result.response().drivers) {
+    if (!driver.has_url()) {
+      continue;
+    }
+    std::string url(driver.url().data(), driver.url().size());
+    const Driver* drv = LoadDriverUrl(url);
+    if (drv) {
+      drivers.push_back(drv);
+    }
+  }
+
+  return drivers;
+}
