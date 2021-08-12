@@ -2,198 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Use this template to create a group() that redirects to a shared_library()
-# target built in the appropriate build variant toolchain.
-#
-# This is seldom needed, typically when a non-linkable GN target needs to
-# depend on a shared_library() instance directly. Let's consider the example
-# of a component that contains a prebuilt ELF binary, which depends on libfdio.so
-# defined by the //sdk/lib/fdio target. To achieve this, one would use something
-# like the following:
-#
-#     variant_shared_library_redirect("my_fdio") {
-#       library = "//sdk/lib/fdio"
-#     }
-#
-#     fuchsia_component("my_component") {
-#       deps = [
-#         ":my_prebuilt_binary",
-#         ":my_fdio",
-#       ]
-#       ...
-#     }
-#
-# This ensures that the version of libfdio.so installed in the component corresponds
-# to the appropriate variant selection for this build.
-#
-# This template should not be used for when executable(), loadable_module() or other
-# linkable GN targets are defined, and depend on other shared_library() instances.
-# That's because these templates perform variant selection first, to determine the
-# right GN toolchain() to build them, then all their dependencies, including
-# shared_library() ones, will be built in it as well.
-#
-# Arguments:
-#   library: (required)
-#     [GN label] A GN label, without toolchain, pointing to a shared_library()
-#     instance.
-#
-#   exclude_toolchain_tags: (optional)
-#     [list of strings]
-#
-#   output_dir, output_name, output_extension, testonly (optional)
-#     [string] or [boolean]: These must match the target library's definition, if
-#     it happens to set these arguments. This will ensure that variant selectors
-#     based on the target's output name and testonly flag work correctly.
-#
+import("//build/dist/packaged_shared_library.gni")
+
+# This template is deprecated, call packaged_shared_library() instead.
 template("variant_shared_library_redirect") {
-  assert(defined(invoker.library),
-         "'library' must be defined when calling this template!")
-  _library_label = get_label_info(invoker.library, "label_no_toolchain")
-  assert(
-      _library_label != get_label_info(_library_label, "label_with_toolchain"),
-      "'library' label must not contain a toolchain when calling this template: $_library_label")
-
-  # Keep this in sync with variant_target() in //build/config/BUILDCONFIG.gn
-  #
-  _exclude_toolchain_tags = []
-  if (defined(invoker.exclude_toolchain_tags)) {
-    _exclude_toolchain_tags += invoker.exclude_toolchain_tags
-  }
-  if (defined(toolchain_variant.exclude_variant_tags)) {
-    _exclude_toolchain_tags += toolchain_variant.exclude_variant_tags
-  }
-
-  # Compute library output name, keep this in sync with shared_library()
-  if (defined(invoker.output_name)) {
-    _output_name = invoker.output_name
-  } else {
-    _output_name = get_label_info(_library_label, "name")
-  }
-  _prefixless = string_replace("###$_output_name", "###lib", "")
-  if (_prefixless != "###$_output_name") {
-    _output_name = _prefixless
-  }
-  if (defined(invoker.output_extension)) {
-    _output_extension = invoker.output_extension
-  } else {
-    if (current_os == "mac") {
-      _output_extension = "dylib"
-    } else if (current_os == "win") {
-      _output_extension = "dll"
-    } else {
-      _output_extension = "so"
-    }
-  }
-  _output_name = "lib${_output_name}"
-  if (_output_extension != "") {
-    _output_name += "." + _output_extension
-  }
-
-  if (defined(invoker.output_dir)) {
-    _output_dir = invoker.output_dir
-  } else {
-    _output_dir = target_out_dir
-  }
-
-  forward_variables_from(invoker, [ "testonly" ])
-  if (!defined(testonly)) {
-    testonly = false
-  }
-
-  _select = {
-    host = is_host
-    testonly = testonly
-    target_type = [ "shared_library" ]
-    output_name = [ _output_name ]
-    label = [ _library_label ]
-    name = [ get_label_info(_library_label, "name") ]
-    dir = [ get_label_info(_library_label, "dir") ]
-    exclude_toolchain_tags = _exclude_toolchain_tags
-  }
-
-  not_needed([ "_select" ])
-
-  _variant = false
-  if (select_variant_canonical != []) {
-    _selected = false
-
-    foreach(selector, select_variant_canonical) {
-      if (_variant == false) {
-        _selector = {
-        }
-        _selector = {
-          target_type = []
-          output_name = []
-          label = []
-          name = []
-          dir = []
-          forward_variables_from(selector, "*")
-        }
-
-        _selected = true
-        if (_selected && defined(_selector.host)) {
-          _selected = _selector.host == _select.host
-        }
-
-        if (_selected && defined(_selector.testonly)) {
-          _selected = _selector.testonly == _select.testonly
-        }
-
-        if (_selected && _selector.target_type != []) {
-          _selected = _selector.target_type + _select.target_type -
-                      _select.target_type != _selector.target_type
-        }
-
-        if (_selected && _selector.output_name != []) {
-          _selected = _selector.output_name + _select.output_name -
-                      _select.output_name != _selector.output_name
-        }
-
-        if (_selected && _selector.label != []) {
-          _selected =
-              _selector.label + _select.label - _select.label != _selector.label
-        }
-
-        if (_selected && _selector.name != []) {
-          _selected =
-              _selector.name + _select.name - _select.name != _selector.name
-        }
-
-        if (_selected && _selector.dir != []) {
-          _selected = _selector.dir + _select.dir - _select.dir != _selector.dir
-        }
-
-        if (_selected && _select.exclude_toolchain_tags != []) {
-          _selected = _select.exclude_toolchain_tags + _selector.variant_tags -
-                      _selector.variant_tags == _select.exclude_toolchain_tags
-        }
-
-        if (_selected && _selector.variant != false) {
-          _variant = "-${_selector.variant}"
-        }
-      }
-    }
-  }
-
-  if (_variant == false) {
-    _library_toolchain = shlib_toolchain
-  } else {
-    _library_toolchain = "${toolchain_variant.base}${_variant}-shared"
-  }
-
-  _final_target = "${_library_label}(${_library_toolchain})"
-
-  if (defined(invoker.output_dir)) {
-    _output_dir = invoker.output_dir
-  } else if (_library_toolchain == default_toolchain) {
-    _output_dir =
-        get_label_info("${_library_label}($shlib_toolchain)", "root_out_dir")
-  } else {
-    _output_dir = get_label_info(_final_target, "root_out_dir") + "-shared"
-  }
-
-  group(target_name) {
-    testonly = testonly
-    public_deps = [ _final_target ]
+  packaged_shared_library(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }

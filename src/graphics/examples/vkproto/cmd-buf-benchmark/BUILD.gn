@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/toolchain/variant_shared_library_redirect.gni")
+import("//build/dist/packaged_shared_library.gni")
 import("//src/graphics/examples/vkproto/common/common.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
@@ -17,7 +17,7 @@ resource("shaders") {
   outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
-variant_shared_library_redirect("libvulkan") {
+packaged_shared_library("libvulkan") {
   library = "//third_party/Vulkan-Loader:libvulkan"
 }
 

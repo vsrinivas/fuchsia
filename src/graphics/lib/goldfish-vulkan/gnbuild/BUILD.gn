@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
-import("//build/toolchain/variant_shared_library_redirect.gni")
+import("//build/dist/packaged_shared_library.gni")
 
 declare_args() {
   if (target_cpu == "x64") {
@@ -32,7 +32,7 @@ group("goldfish-vulkan-config") {
 if (have_libvulkan) {
   icd_name = "libvulkan_goldfish"
 
-  variant_shared_library_redirect("libvulkan_goldfish") {
+  packaged_shared_library("libvulkan_goldfish") {
     library = build_libvulkan_goldfish
 
     # libvulkan_goldfish.so doesn't build with instrumented variants.

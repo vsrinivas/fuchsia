@@ -1857,7 +1857,7 @@ template("variant_target") {
 
   # IMPORTANT: The computations below are duplicated in several other
   # files. Please keep them in sync, see:
-  #   //build/toolchain/variant_shared_library_redirect.gni
+  #   //build/dist/packaged_shared_library.gni
   #   //zircon/system/ulib/c/libc_toolchain.gni
   target_variant = false
   excluded_toolchain = false
