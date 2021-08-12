@@ -307,7 +307,14 @@ impl FileOps for OPathOps {
     ) -> Result<off_t, Errno> {
         Err(EBADF)
     }
-
+    fn get_vmo(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _prot: zx::VmarFlags,
+    ) -> Result<zx::Vmo, Errno> {
+        Err(EBADF)
+    }
     fn readdir(
         &self,
         _file: &FileObject,
