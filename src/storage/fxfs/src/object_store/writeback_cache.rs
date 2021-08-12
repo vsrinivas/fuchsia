@@ -191,6 +191,7 @@ struct Inner {
     bytes_reserved: u64,
     // Bytes reserved for the actual flush operation.
     sync_bytes_reserved: u64,
+    dirty: bool,
     size_changed: bool,
     creation_time: Option<Duration>,
     modification_time: Option<Duration>,
@@ -422,6 +423,7 @@ impl Inner {
         }
         if size != old_size {
             self.size_changed = true;
+            self.dirty = true;
             data.resize(size);
         }
     }
@@ -444,12 +446,17 @@ impl WritebackCache {
                 bytes_reserved: 0,
                 sync_bytes_reserved: 0,
                 size_changed: false,
+                dirty: false,
                 creation_time: None,
                 modification_time: None,
                 flush_event: None,
             }),
             data,
         }
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.inner.lock().unwrap().dirty
     }
 
     pub fn cleanup(&self, reserve: &dyn StorageReservation) {
@@ -772,6 +779,7 @@ impl WritebackCache {
             inner.sync_bytes_reserved += sync_reservation.take();
         }
         inner.modification_time = current_time;
+        inner.dirty = true;
         self.data.write(offset, buf);
         Ok(WriteResult::Done(self.data.size() as u64))
     }
@@ -875,6 +883,7 @@ impl WritebackCache {
         inner.bytes_reserved += returned_bytes;
         inner.sync_bytes_reserved += returned_sync_bytes;
         inner.flush_event = None;
+        inner.dirty = !completed;
     }
 
     /// Sets the cached timestamp values.  The filesystem should provide values which are truncated
@@ -890,6 +899,7 @@ impl WritebackCache {
         let mut inner = self.inner.lock().unwrap();
         inner.creation_time = creation_time.or(inner.creation_time);
         inner.modification_time = modification_time.or(inner.modification_time);
+        inner.dirty = true;
     }
 
     /// Returns the data buffer.
@@ -1583,6 +1593,7 @@ mod tests {
         let reserver = FakeReserver::new(1, 1);
         let cache = WritebackCache::new(NativeDataBuffer::new(0));
 
+        assert!(!cache.is_dirty());
         let data = cache
             .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
             .ok()
@@ -1633,6 +1644,7 @@ mod tests {
         } else {
             panic!("Unexpected result {:?}", result);
         }
+        assert!(cache.is_dirty());
         let data = cache
             .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
             .ok()
@@ -1665,6 +1677,7 @@ mod tests {
         assert_eq!(data.metadata.content_size, 4100);
         assert!(data.metadata.content_size_changed);
         cache.complete_flush(data);
+        assert!(!cache.is_dirty());
         cache.cleanup(&reserver);
     }
 
@@ -1693,6 +1706,7 @@ mod tests {
         }
         // Dropping |data| should have given the reservation back to |cache|.  Taking the flushable
         // data again should still yield the reserved byte.
+        assert!(cache.is_dirty()); // The cache should still be dirty.
         let data = cache
             .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
             .ok()
@@ -1859,6 +1873,48 @@ mod tests {
         assert_eq!(data.metadata.content_size, 511);
         check_data_matches(&data, &[ExpectedRange(0, vec![123u8; 511])]);
         cache.complete_flush(data);
+        cache.cleanup(&reserver);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_resize_dirties_cache() {
+        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
+        let reserver = FakeReserver::new(65536, 512);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
+
+        assert!(!cache.is_dirty());
+        cache.resize(1024, 512);
+        assert!(cache.is_dirty());
+        let data = cache
+            .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
+            .ok()
+            .unwrap();
+        assert!(data.metadata.has_updates());
+        assert_eq!(data.metadata.content_size, 1024);
+        check_data_matches(&data, &[]);
+        cache.complete_flush(data);
+        assert!(!cache.is_dirty());
+
+        cache.cleanup(&reserver);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_timestamp_updates_dirties_cache() {
+        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(8192)));
+        let reserver = FakeReserver::new(65536, 512);
+        let cache = WritebackCache::new(NativeDataBuffer::new(0));
+
+        assert!(!cache.is_dirty());
+        cache.update_timestamps(None, Some(Duration::from_secs(1)));
+        assert!(cache.is_dirty());
+        let data = cache
+            .take_flushable_data(512, |size| allocator.allocate_buffer(size), &reserver)
+            .ok()
+            .unwrap();
+        assert!(data.metadata.has_updates());
+        cache.complete_flush(data);
+        assert!(!cache.is_dirty());
+
         cache.cleanup(&reserver);
     }
 }
