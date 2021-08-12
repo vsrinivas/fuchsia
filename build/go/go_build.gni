@@ -444,6 +444,7 @@ template("go_build") {
               destination = "test/$output_name"
             }
             label = get_label_info(":$target_name", "label_with_toolchain")
+            elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
           },
         ]
 

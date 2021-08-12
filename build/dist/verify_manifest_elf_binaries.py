@@ -248,37 +248,61 @@ def main():
         help=
         'Path to toolchain-provided lib directory. Can be used multiple times.')
 
-    parser.add_argument(
-        '--manifest', required=True, help='Input FINI manifest.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--fini-manifest', help='Input FINI manifest.')
+    group.add_argument(
+        '--partial-manifest', help='Input partial distribution manifest.')
+
     parser.add_argument('--stamp', required=True, help='Output stamp file.')
     parser.add_argument('--depfile', help='Output Ninja depfile.')
 
     args = parser.parse_args()
 
+    depfile_items = set()
+
     # Read the input manifest into a {target: source} dictionary.
     manifest_entries = {}
-    with open(args.manifest) as f:
-        for line in f.readlines():
-            line = line.rstrip()
-            target, _, source = line.partition('=')
-            assert source is not None, ('Invalid manifest line: [%s]' % line)
+    elf_runtime_dir_map = None
 
-            source_file = os.path.join(args.source_dir, source)
+    if args.fini_manifest:
+        input_manifest = args.fini_manifest
+        with open(args.fini_manifest) as f:
+            for line in f:
+                line = line.rstrip()
+                target, _, source = line.partition('=')
+                assert source is not None, (
+                    'Invalid manifest line: [%s]' % line)
 
-            # Duplicate entries happen in some manifests, but they will have the
-            # same content, so assert otherwise.
-            if target in manifest_entries:
-                assert manifest_entries[target] == source_file, (
-                    'Duplicate entries for target "%s": %s vs %s' %
-                    (target, source_file, manifest_entries[target]))
+                source_file = os.path.join(args.source_dir, source)
 
-            assert os.path.exists(source_file), (
-                'Missing source file for manifest line: %s' % line)
-            manifest_entries[target] = source_file
+                # Duplicate entries happen in some manifests, but they will have the
+                # same content, so assert otherwise.
+                if target in manifest_entries:
+                    assert manifest_entries[target] == source_file, (
+                        'Duplicate entries for target "%s": %s vs %s' %
+                        (target, source_file, manifest_entries[target]))
+
+                assert os.path.exists(source_file), (
+                    'Missing source file for manifest line: %s' % line)
+                manifest_entries[target] = source_file
+    else:
+        input = args.input_manifest
+        with open(args.partial_manifest) as f:
+            partial_entries = json.load(f)
+
+        result = distribution_manifest.expand_partial_manifest_items(
+            partial_entries, depfile_items)
+        if result.errors:
+            print(
+                'ERRORS FOUND IN %s:\n%s' %
+                (args.partial_manifest, '\n'.join(result.errors)),
+                file=sys.stderr)
+
+        manifest_entries = {e.destination: e.source for e in result.entries}
+        elf_runtime_dir_map = result.elf_runtime_map
 
     # Filter the input manifest entries to keep only the ELF ones
     # that are not under data/, lib/firmware/ or meta/
-    depfile_items = set()
     elf_entries = {}
     for target, source_file in manifest_entries.items():
         if target.startswith('data/') or target.startswith(
@@ -313,20 +337,27 @@ def main():
     # First verify all executables, since we can find their library directory
     # from their PT_INTERP value, then check their dependencies recursively.
     for target, info in elf_entries.items():
-        interp = info.interp
-        if interp is None:
-            continue
 
-        interp_name = os.path.basename(interp)
-        if interp_name != 'ld.so.1':
-            errors.append(
-                '%s has invalid or unsupported PT_INTERP value: %s' %
-                (target, interp))
-            continue
+        if elf_runtime_dir_map is not None:
+            lib_dir = elf_runtime_dir_map.get(target)
+            if not lib_dir:
+                continue
+        else:
+            interp = info.interp
+            if interp is None:
+                continue
 
-        lib_dir = os.path.join('lib', os.path.dirname(interp))
-        extras.append(
-            'Binary %s has interp %s, lib_dir %s' % (target, interp, lib_dir))
+            interp_name = os.path.basename(interp)
+            if interp_name != 'ld.so.1':
+                errors.append(
+                    '%s has invalid or unsupported PT_INTERP value: %s' %
+                    (target, interp))
+                continue
+
+            lib_dir = os.path.join('lib', os.path.dirname(interp))
+            extras.append(
+                'Binary %s has interp %s, lib_dir %s' %
+                (target, interp, lib_dir))
 
         binary_errors, binary_deps = verify_elf_dependencies(
             target, lib_dir, info.needed, elf_entries)
@@ -354,7 +385,7 @@ def main():
 
     if errors:
         print(
-            'ERRORS FOUND IN %s:\n%s' % (args.manifest, '\n'.join(errors)),
+            'ERRORS FOUND IN %s:\n%s' % (input_manifest, '\n'.join(errors)),
             file=sys.stderr)
         if extras:
             print('\n'.join(extras), file=sys.stderr)
@@ -363,7 +394,7 @@ def main():
     if args.depfile:
         with open(args.depfile, 'w') as f:
             f.write(
-                '%s: %s\n' % (args.manifest, ' '.join(sorted(depfile_items))))
+                '%s: %s\n' % (input_manifest, ' '.join(sorted(depfile_items))))
 
     # Write the stamp file on success.
     with open(args.stamp, 'w') as f:

@@ -19,6 +19,8 @@ import("//build/rust/config.gni")
 #   manifest (required)
 #     [file path] Path to input manifest to verify.
 #
+#
+#
 #   check_debug_files (optional)
 #     [boolean] Set to true to verify that all binaries have proper debug
 #     files.
@@ -29,6 +31,14 @@ import("//build/rust/config.gni")
 #     the manifest.
 #
 template("verify_manifest_elf_binaries") {
+  if (defined(invoker.manifest)) {
+    input_manifest = invoker.manifest
+  } else if (defined(invoker.partial_manifest)) {
+    input_manifest = invoker.partial_manifest
+  } else {
+    assert(defined(invoker.manifest) || defined(invoker.partial_manifest),
+           "Missing 'manifest' or 'partial_manifest' argument!")
+  }
   action(target_name) {
     forward_variables_from(invoker,
                            [
@@ -37,15 +47,20 @@ template("verify_manifest_elf_binaries") {
                            ])
     script = "//build/dist/verify_manifest_elf_binaries.py"
     inputs = [ "//build/images/elfinfo.py" ]
-    sources = [ invoker.manifest ]
+    sources = [ input_manifest ]
     outputs = [ "$target_gen_dir/${target_name}" ]
     depfile = outputs[0] + ".d"
     args = [
       "--check-stripped",
       "--depfile=" + rebase_path(depfile, root_build_dir),
-      "--manifest=" + rebase_path(sources[0], root_build_dir),
       "--stamp=" + rebase_path(outputs[0], root_build_dir),
     ]
+    if (defined(invoker.manifest)) {
+      args += [ "--fini-manifest=" + rebase_path(sources[0], root_build_dir) ]
+    } else {
+      args +=
+          [ "--partial-manifest=" + rebase_path(sources[0], root_build_dir) ]
+    }
     if (defined(invoker.check_debug_files) && invoker.check_debug_files) {
       args += [
         "--check-debug-files",

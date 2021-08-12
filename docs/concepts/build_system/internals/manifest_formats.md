@@ -87,11 +87,27 @@ These entries match the schema used for distribution manifests. They
 correspond to a simple source file to install to a given destination
 path.
 
-When used to generate a distribution manifest, they are copied as-is
-into the output file, unless they have the same source as another
-regular entry (see [this section](#duplicate-entries) for details),
-in which case only one of the entries is preserved, or if its source
-path is used by a renamed entry (see below).
+- `source`: A source path string (REQUIRED).
+
+- `destination`: A destination path string (REQUIRED).
+
+- `label`: A GN label pointing to the target that generated the source file.
+   Only used for debugging (OPTIONAL).
+
+- `elf_runtime_dir`: Only used for ELF executables and loadable modules,
+   an optional destination directory path that specifies where this
+   binary's ELF dependencies should be at runtime.
+   Default value is "lib"
+
+When used to generate a distribution manifest, they are copied as-is,
+without the `elf_runtime_dir` key into the output file, unless one
+of the following conditions are met:
+
+  - they have the same source as another regular entry (see
+    [this section](#duplicate-entries) for details), in which case only
+    one of the entries is preserved.
+
+  - its source path is used by a renamed entry (see below).
 
 Example:
 
@@ -99,8 +115,9 @@ Example:
   {
     "destination": "bin/foo",
     "source": "x64-asan/foo",
-    "label": "//some/dir:foo"
-  }
+    "label": "//some/dir:foo",
+    "elf_runtime_dir": "lib/asan"
+  },
 ```
 
 ### Copy entries.

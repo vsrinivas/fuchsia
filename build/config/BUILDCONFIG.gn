@@ -2605,6 +2605,8 @@ template("executable") {
                 destination = "bin/$output_name"
                 label =
                     get_label_info(":$_executable_name", "label_with_toolchain")
+
+                elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
               },
             ]
           }
@@ -2754,6 +2756,7 @@ template("loadable_module") {
               source = rebased_output_file
               destination = "lib/$output_file_name"
               label = get_label_info(":$_module_name", "label_with_toolchain")
+              elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
             },
           ]
         }

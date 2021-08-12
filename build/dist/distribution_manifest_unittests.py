@@ -43,6 +43,79 @@ class TestExpandManifestItems(unittest.TestCase):
         self.assertListEqual(result, expected)
         self.assertEqual(opened_files, set())
 
+    def test_regular_entries_with_elf_runtime_dir(self):
+        input = [
+            {
+                'source': 'some/file',
+                'destination': 'bin/foo',
+                'label': '//src/foo',
+                'elf_runtime_dir': 'lib',
+            },
+            {
+                'source': 'other/stuff',
+                'destination': 'bin/bar',
+                'label': '//src/bar',
+                'elf_runtime_dir': 'lib/asan',
+            },
+            {
+                'source': 'other/stuff2',
+                'destination': 'bin/tool',
+                'label': '//src/tool',
+            },
+        ]
+
+        opened_files = set()
+        result = dm.expand_partial_manifest_items(input, opened_files)
+
+        # Here the elf_runtime_dir should be ignored / removed from the output
+        expected = [
+            Entry(destination='bin/foo', source='some/file', label='//src/foo'),
+            Entry(
+                destination='bin/bar', source='other/stuff', label='//src/bar'),
+            Entry(
+                destination='bin/tool',
+                source='other/stuff2',
+                label='//src/tool'),
+        ]
+
+        self.assertListEqual(result.entries, expected)
+
+        expected_elf_runtime_map = {
+            'bin/foo': 'lib',
+            'bin/bar': 'lib/asan',
+        }
+
+        self.assertFalse(result.errors)
+        self.assertDictEqual(result.elf_runtime_map, expected_elf_runtime_map)
+        self.assertEqual(opened_files, set())
+
+    def test_regular_entries_with_elf_runtime_dir_conflicts(self):
+        input = [
+            {
+                'source': 'some/file',
+                'destination': 'bin/foo',
+                'label': '//src/foo',
+                'elf_runtime_dir': 'lib',
+            },
+            {
+                'source': 'some/alt/file',
+                'destination': 'bin/foo',
+                'label': '//src/foo',
+                'elf_runtime_dir': 'lib/alt',
+            },
+        ]
+
+        opened_files = set()
+        result = dm.expand_partial_manifest_items(input, opened_files)
+
+        expected_errors = [
+            'ERROR: Entries with same destination path have different ELF runtime dir:',
+            '  - destination=bin/foo source=some/file label=//src/foo elf_runtime_dir=lib',
+            '  - destination=bin/foo source=some/alt/file label=//src/foo elf_runtime_dir=lib/alt',
+        ]
+        self.assertEqual(opened_files, set())
+        self.assertListEqual(result.errors, expected_errors)
+
     def test_default_label(self):
         input = [
             {
@@ -185,8 +258,7 @@ class TestExpandManifestItems(unittest.TestCase):
             },
         ]
         opened_files = set()
-        result, errors = dm.expand_manifest_items_with_errors(
-            input, opened_files)
+        result = dm.expand_partial_manifest_items(input, opened_files)
 
         expected_errors = []
         expected_errors += [
@@ -198,7 +270,7 @@ class TestExpandManifestItems(unittest.TestCase):
         expected_errors += [
             '  - {"destination": "bin/tool", "renamed_source": "some/foo2"}'
         ]
-        self.assertEqual(errors, expected_errors)
+        self.assertEqual(result.errors, expected_errors)
         self.assertEqual(opened_files, set())
 
     def test_renamed_entries_with_resource_errors(self):
@@ -220,8 +292,7 @@ class TestExpandManifestItems(unittest.TestCase):
             },
         ]
         opened_files = set()
-        result, errors = dm.expand_manifest_items_with_errors(
-            input, opened_files)
+        result = dm.expand_partial_manifest_items(input, opened_files)
 
         expected_errors = []
         expected_errors += [
@@ -235,7 +306,7 @@ class TestExpandManifestItems(unittest.TestCase):
             'that reference the same source. Try replacing the resource() targets by\n'
             + 'renamed_binary() ones to fix the problem\n')
 
-        self.assertEqual(errors, expected_errors)
+        self.assertEqual(result.errors, expected_errors)
         self.assertEqual(opened_files, set())
 
     def test_renamed_entries_with_copy(self):

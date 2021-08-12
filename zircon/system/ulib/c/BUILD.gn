@@ -146,6 +146,15 @@ if (zircon_toolchain == false) {
       runtime_deps_manifest_lines =
           [ "lib/${toolchain_variant.libprefix}ld.so.1=" +
             rebase_path("$root_out_dir/libc.so", root_build_dir) ]
+
+      distribution_entries = [
+        {
+          destination = "lib/${toolchain_variant.libprefix}${install_name}"
+          source = rebase_path("$root_out_dir/libc.so", root_build_dir)
+          label = get_label_info(target_name, "label_with_toolchain")
+          elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
+        },
+      ]
     }
 
     public_configs = [ "//zircon/third_party/ulib/musl:headers" ]

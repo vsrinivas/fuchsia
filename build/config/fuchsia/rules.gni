@@ -128,6 +128,7 @@ template("driver_module") {
           source = _rebased_output_file
           destination = "$_dest_dir/$_output_file_name"
           label = get_label_info(":$_target_name", "label_with_toolchain")
+          elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
         },
       ]
     }
