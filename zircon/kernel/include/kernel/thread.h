@@ -595,6 +595,11 @@ class MemoryAllocationState {
 };
 
 struct Thread {
+  static constexpr size_t kBacktraceDepth = 16;
+  struct Backtrace {
+    void* pc[kBacktraceDepth]{};
+  };
+
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
   // avoid circular include dependencies involving Thread, WaitQueue, and
@@ -718,6 +723,9 @@ struct Thread {
   static void SleepHandler(Timer* timer, zx_time_t now, void* arg);
   void HandleSleep(Timer* timer, zx_time_t now);
 
+  // Decode and print a thread backtrace.
+  static void PrintBacktrace(Backtrace*);
+
   // All of these operations implicitly operate on the current thread.
   struct Current {
     // This is defined below, just after the Thread declaration.
@@ -768,7 +776,10 @@ struct Thread {
       return Thread::Current::Get()->memory_allocation_state_;
     }
 
-    // Print the backtrace on the current thread
+    // Get the backtrace of the current thread.
+    static size_t GetBacktrace(Backtrace*);
+
+    // Print the backtrace on the current thread.
     static void PrintBacktrace();
 
     // Print the backtrace on the current thread at the given frame.

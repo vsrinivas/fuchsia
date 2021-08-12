@@ -571,8 +571,7 @@ bool runtime_test() {
 }
 
 // TODO(fxbug.dev/78695): Test is disabled. Remove annotation once it's enabled.
-[[maybe_unused]]
-bool migrate_stress_test() {
+[[maybe_unused]] bool migrate_stress_test() {
   BEGIN_TEST;
 
   // Get number of CPUs in the system.
@@ -717,6 +716,23 @@ bool backtrace_test() {
   END_TEST;
 }
 
+bool get_backtrace_test() {
+  BEGIN_TEST;
+
+  Thread::Backtrace bt;
+  Thread::Current::GetBacktrace(&bt);
+  int non_null_pcs = 0;
+
+  for (size_t i = 0; i < Thread::kBacktraceDepth; i++) {
+    if (bt.pc[i] != nullptr) {
+      non_null_pcs++;
+    }
+  }
+  EXPECT_GT(non_null_pcs, 0);
+
+  END_TEST;
+}
+
 bool scoped_allocation_disabled_test() {
   BEGIN_TEST;
 
@@ -761,5 +777,6 @@ UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 // UNITTEST("migrate_stress_test", migrate_stress_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
+UNITTEST("get_backtrace_test", get_backtrace_test)
 UNITTEST("scoped_allocation_disabled_test", scoped_allocation_disabled_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

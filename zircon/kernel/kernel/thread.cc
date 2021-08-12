@@ -1580,11 +1580,6 @@ void ktrace_report_live_threads() {
   }
 }
 
-#define THREAD_BACKTRACE_DEPTH 16
-typedef struct thread_backtrace {
-  void* pc[THREAD_BACKTRACE_DEPTH];
-} thread_backtrace_t;
-
 static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz) {
   if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack().base()) ||
       (reinterpret_cast<vaddr_t>(ptr) > (t->stack().top() - sizeof(void*)))) {
@@ -1594,7 +1589,7 @@ static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz)
   return ZX_OK;
 }
 
-static size_t thread_get_backtrace(Thread* t, void* fp, thread_backtrace_t* tb) {
+static size_t thread_get_backtrace(Thread* t, void* fp, Thread::Backtrace* tb) {
   // without frame pointers, dont even try
   // the compiler should optimize out the body of all the callers if it's not present
   if (!WITH_FRAME_POINTERS) {
@@ -1606,7 +1601,7 @@ static size_t thread_get_backtrace(Thread* t, void* fp, thread_backtrace_t* tb) 
     return 0;
   }
   size_t n = 0;
-  for (; n < THREAD_BACKTRACE_DEPTH; n++) {
+  for (; n < Thread::kBacktraceDepth; n++) {
     if (thread_read_stack(t, static_cast<char*>(fp) + 8, &pc, sizeof(void*))) {
       break;
     }
@@ -1622,27 +1617,40 @@ namespace {
 
 constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
 
+void thread_print_backtrace(Thread::Backtrace* tb) {
+  print_backtrace_version_info();
+
+  for (size_t n = 0; n < Thread::kBacktraceDepth; n++) {
+    if (tb->pc[n] == 0) {
+      break;
+    }
+    printf(bt_fmt, n, tb->pc[n]);
+  }
+}
+
 zx_status_t thread_print_backtrace(Thread* t, void* fp) {
   if (!t || !fp) {
     return ZX_ERR_BAD_STATE;
   }
 
-  thread_backtrace_t tb;
+  Thread::Backtrace tb;
   size_t count = thread_get_backtrace(t, fp, &tb);
   if (count == 0) {
     return ZX_ERR_BAD_STATE;
   }
 
-  print_backtrace_version_info();
-
-  for (size_t n = 0; n < count; n++) {
-    printf(bt_fmt, n, tb.pc[n]);
-  }
+  thread_print_backtrace(&tb);
 
   return ZX_OK;
 }
 
 }  // namespace
+
+size_t Thread::Current::GetBacktrace(Thread::Backtrace* bt) {
+  return thread_get_backtrace(Thread::Current::Get(), __GET_FRAME(0), bt);
+}
+
+void Thread::PrintBacktrace(Thread::Backtrace* bt) { thread_print_backtrace(bt); }
 
 // Print the backtrace of the current thread, at the current spot.
 void Thread::Current::PrintBacktrace() {
@@ -1659,7 +1667,7 @@ size_t Thread::Current::AppendBacktrace(char* out, const size_t out_len) {
     return 0;
   }
 
-  thread_backtrace_t tb;
+  Thread::Backtrace tb;
   size_t count = thread_get_backtrace(current, fp, &tb);
   if (count == 0) {
     return 0;
