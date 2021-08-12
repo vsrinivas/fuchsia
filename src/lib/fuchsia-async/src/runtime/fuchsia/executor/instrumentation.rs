@@ -405,7 +405,7 @@ mod tests {
         let mut executor = LocalExecutor::new().unwrap();
         executor.run_singlethreaded(simple_task_for_snapshot());
         let snapshot = executor.snapshot();
-        snapshot_basic_check(&snapshot, 0);
+        snapshot_sanity_check(&snapshot, 0);
     }
 
     #[test]
@@ -417,7 +417,7 @@ mod tests {
         executor.wake_expired_timers();
         assert!(executor.run_until_stalled(&mut fut).is_ready());
         let snapshot = executor.snapshot();
-        snapshot_basic_check(&snapshot, 0);
+        snapshot_sanity_check(&snapshot, 0);
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
         let mut executor = SendExecutor::new(2).unwrap();
         executor.run(simple_task_for_snapshot());
         let snapshot = executor.snapshot();
-        snapshot_basic_check(&snapshot, /* extra_tasks */ 1);
+        snapshot_sanity_check(&snapshot, /* extra_tasks */ 1);
     }
 
     // This task spawns another tasks, which completes. It should wake up from IO, notification
@@ -453,14 +453,15 @@ mod tests {
         t.await;
     }
 
-    // Basic check for running simple_task on an executor. `extra_tasks` represents
+    // Sanity check for running simple_task on an executor. `extra_tasks` represents
     // synthetic tasks that are added as an impl detail of the execution - e.g. a multithreaded
     // execution run creates an extra synthetic task for the main future.
-    pub fn snapshot_basic_check(snapshot: &Snapshot, extra_tasks: usize) {
+    pub fn snapshot_sanity_check(snapshot: &Snapshot, extra_tasks: usize) {
         assert!(snapshot.polls >= 4);
         assert_eq!(snapshot.tasks_created - extra_tasks, 2);
         assert_eq!(snapshot.tasks_completed - extra_tasks, 1);
         assert!(snapshot.wakeups_io >= 1);
+        assert!(snapshot.wakeups_deadline >= 1);
 
         // Future optimizations of the executor could theoretically lead to notifications
         // being eliminated in some cases.

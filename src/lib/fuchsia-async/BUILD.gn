@@ -91,10 +91,7 @@ rustc_library("fuchsia-async") {
       "src/runtime/portable.rs",
     ]
   }
-  test_deps = [
-    "//third_party/rust_crates:futures-lite",
-    "//third_party/rust_crates:futures-test",
-  ]
+  test_deps = [ "//third_party/rust_crates:futures-test" ]
 
   if (fuchsia_async_trace_level_logging) {
     configs += [ ":trace_level_logging" ]

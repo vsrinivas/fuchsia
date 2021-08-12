@@ -124,9 +124,6 @@ impl LocalExecutor {
                     }
                 }
             }
-
-            // we've just yielded out of a task, wake any timers that expired while we were polling
-            with_local_timer_heap(|timer_heap| timer_heap.wake_expired_timers(self.inner.now()));
         }
     }
 
@@ -360,7 +357,16 @@ impl TestExecutor {
     ///
     /// This is intended for use in test code in conjunction with fake time.
     pub fn wake_expired_timers(&mut self) -> bool {
-        with_local_timer_heap(|timer_heap| timer_heap.wake_expired_timers(self.now()))
+        let now = self.now();
+        with_local_timer_heap(|timer_heap| {
+            let mut ret = false;
+            while let Some(waker) = timer_heap.next_deadline().filter(|waker| waker.time() <= now) {
+                waker.wake();
+                timer_heap.pop();
+                ret = true;
+            }
+            ret
+        })
     }
 
     /// Wake up the next task waiting for a timer, if any, and return the time for which the
