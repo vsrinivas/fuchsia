@@ -77,7 +77,7 @@ impl ArchiveAccessor {
         ArchiveAccessor { pipeline, archive_accessor_stats, moniker_rewriter: None }
     }
 
-    pub fn add_moniker_rewriter(mut self, rewriter: Arc<MonikerRewriter>) -> Self {
+    pub fn add_moniker_rewriter(&mut self, rewriter: Arc<MonikerRewriter>) -> &mut Self {
         self.moniker_rewriter = Some(rewriter);
         self
     }

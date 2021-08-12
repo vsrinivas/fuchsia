@@ -4,23 +4,20 @@
 
 use {
     crate::{
-        accessor::ArchiveAccessor,
-        configs, constants,
+        configs,
         container::ComponentIdentity,
-        diagnostics::{self, AccessorStats},
+        diagnostics,
         events::{
             source_registry::EventSourceRegistry,
             sources::{StaticEventStream, UnattributedLogSinkSource},
             types::{ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventSource},
         },
-        logs::{budget::BudgetManager, redact::Redactor, socket::LogMessageSocket},
-        moniker_rewriter::MonikerRewriter,
+        logs::{budget::BudgetManager, socket::LogMessageSocket},
         pipeline::Pipeline,
         repository::DataRepo,
     },
     anyhow::Error,
     fidl::{endpoints::RequestStream, AsyncChannel},
-    fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fidl_fuchsia_sys2::EventSourceMarker,
@@ -38,7 +35,7 @@ use {
         prelude::*,
     },
     parking_lot::RwLock,
-    std::{path::Path, sync::Arc},
+    std::sync::Arc,
     tracing::{debug, error, info, warn},
 };
 
@@ -50,18 +47,9 @@ pub struct LogOpts {
 
 /// Responsible for initializing an `Archivist` instance. Supports multiple configurations by
 /// either calling or not calling methods on the builder like `install_controller_service`.
-pub struct ArchivistBuilder {
+pub struct Archivist {
     /// Archive state, including the diagnostics repo which currently stores all logs.
-    archivist: Archivist,
-
-    /// True if pipeline exists.
-    pipeline_exists: bool,
-
-    /// Store for safe keeping,
-    _pipeline_nodes: Vec<fuchsia_inspect::Node>,
-
-    // Store for safe keeping.
-    _pipeline_configs: Vec<configs::PipelineConfig>,
+    archivist_state: ArchivistState,
 
     /// ServiceFs object to server outgoing directory.
     fs: ServiceFs<ServiceObj<'static, ()>>,
@@ -92,171 +80,62 @@ pub struct ArchivistBuilder {
 
     /// Recieve stop signal to kill this archivist.
     stop_recv: Option<mpsc::Receiver<()>>,
-
-    /// Accessor stats that should remain alive for the whole execution of the archivist.
-    _stats: Vec<Arc<AccessorStats>>,
 }
 
-impl ArchivistBuilder {
+impl Archivist {
     /// Creates new instance, sets up inspect and adds 'archive' directory to output folder.
     /// Also installs `fuchsia.diagnostics.Archive` service.
     /// Call `install_log_services`, `add_event_source`.
     pub fn new(archivist_configuration: configs::Config) -> Result<Self, Error> {
-        let (log_sender, log_receiver) = mpsc::unbounded();
-        let (listen_sender, listen_receiver) = mpsc::unbounded();
-
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
-        let pipelines_node = component::inspector().root().create_child("pipelines");
-        let feedback_pipeline_node = pipelines_node.create_child("feedback");
-        let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
-        let feedback_path =
-            format!("{}/feedback", archivist_configuration.pipelines_path.display());
-        let legacy_metrics_path =
-            format!("{}/legacy_metrics", archivist_configuration.pipelines_path.display());
-        let mut feedback_config = configs::PipelineConfig::from_directory(
-            &feedback_path,
-            configs::EmptyBehavior::DoNotFilter,
-        );
-        feedback_config.record_to_inspect(&feedback_pipeline_node);
-        let mut legacy_config = configs::PipelineConfig::from_directory(
-            &legacy_metrics_path,
-            configs::EmptyBehavior::Disable,
-        );
-        legacy_config.record_to_inspect(&legacy_pipeline_node);
-        // Do not set the state to error if the pipelines simply do not exist.
-        let pipeline_exists = !((Path::new(&feedback_path).is_dir()
-            && feedback_config.has_error())
-            || (Path::new(&legacy_metrics_path).is_dir() && legacy_config.has_error()));
+        let (log_sender, log_receiver) = mpsc::unbounded();
+        let (listen_sender, listen_receiver) = mpsc::unbounded();
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs.max_cached_original_bytes);
         let diagnostics_repo = DataRepo::new(&logs_budget, component::inspector().root());
 
-        // The Inspect Repository offered to the ALL_ACCESS pipeline. This
-        // repository is unique in that it has no statically configured
-        // selectors, meaning all diagnostics data is visible.
-        // This should not be used for production services.
-        // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
-        let all_access_pipeline =
-            Arc::new(RwLock::new(Pipeline::new(None, Redactor::noop(), diagnostics_repo.clone())));
+        let pipelines_node = component::inspector().root().create_child("pipelines");
+        let pipelines_path = archivist_configuration.pipelines_path;
+        let pipelines = vec![
+            Pipeline::feedback(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
+            Pipeline::legacy_metrics(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
+            Pipeline::all_access(diagnostics_repo.clone(), &pipelines_path, &pipelines_node),
+        ];
+        component::inspector().root().record(pipelines_node);
 
-        // The Inspect Repository offered to the Feedback pipeline. This repository applies
-        // static selectors configured under config/data/feedback to inspect exfiltration.
-        let (feedback_static_selectors, feedback_redactor) = if !feedback_config.disable_filtering {
-            (
-                feedback_config.take_inspect_selectors().map(|selectors| {
-                    selectors
-                        .into_iter()
-                        .map(|selector| Arc::new(selector))
-                        .collect::<Vec<Arc<Selector>>>()
-                }),
-                Redactor::with_static_patterns(),
-            )
+        if pipelines.iter().any(|p| p.config_has_error()) {
+            component::health().set_unhealthy("Pipeline config has an error");
         } else {
-            (None, Redactor::noop())
-        };
-
-        let feedback_pipeline = Arc::new(RwLock::new(Pipeline::new(
-            feedback_static_selectors,
-            feedback_redactor,
-            diagnostics_repo.clone(),
-        )));
-
-        // The Inspect Repository offered to the LegacyMetrics
-        // pipeline. This repository applies static selectors configured
-        // under config/data/legacy_metrics to inspect exfiltration.
-        let legacy_metrics_pipeline = Arc::new(RwLock::new(Pipeline::new(
-            match legacy_config.disable_filtering {
-                false => legacy_config.take_inspect_selectors().map(|selectors| {
-                    selectors
-                        .into_iter()
-                        .map(|selector| Arc::new(selector))
-                        .collect::<Vec<Arc<Selector>>>()
-                }),
-                true => None,
-            },
-            Redactor::noop(),
-            diagnostics_repo.clone(),
-        )));
-
-        // TODO(fxbug.dev/55736): Refactor this code so that we don't store
-        // diagnostics data N times if we have N pipelines. We should be
-        // storing a single copy regardless of the number of pipelines.
-        let archivist = Archivist::new(
-            vec![
-                all_access_pipeline.clone(),
-                feedback_pipeline.clone(),
-                legacy_metrics_pipeline.clone(),
-            ],
-            diagnostics_repo,
-            logs_budget,
-        )?;
+            component::health().set_ok();
+        }
 
         let stats_node = component::inspector().root().create_child("archive_accessor_stats");
-        let all_accessor_stats = Arc::new(AccessorStats::new(stats_node.create_child("all")));
-
-        let feedback_accessor_stats =
-            Arc::new(AccessorStats::new(stats_node.create_child("feedback")));
-        let legacy_accessor_stats =
-            Arc::new(AccessorStats::new(stats_node.create_child("legacy_metrics")));
+        let pipelines = pipelines
+            .into_iter()
+            .map(|pipeline| pipeline.serve(&mut fs, listen_sender.clone(), &stats_node))
+            .collect();
         component::inspector().root().record(stats_node);
-        let legacy_moniker_rewriter = Arc::new(MonikerRewriter::new());
 
-        let sender_for_accessor = listen_sender.clone();
-        let sender_for_feedback = listen_sender.clone();
-        let sender_for_legacy = listen_sender.clone();
-        let feedback_stats_for_server = feedback_accessor_stats.clone();
-        let all_stats_for_server = all_accessor_stats.clone();
-        let legacy_stats_for_server = legacy_accessor_stats.clone();
-        fs.dir("svc")
-            .add_fidl_service(move |stream| {
-                debug!("fuchsia.diagnostics.ArchiveAccessor connection");
-                let all_archive_accessor =
-                    ArchiveAccessor::new(all_access_pipeline.clone(), all_stats_for_server.clone());
-                all_archive_accessor
-                    .spawn_archive_accessor_server(stream, sender_for_accessor.clone());
-            })
-            .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
-                debug!("fuchsia.diagnostics.FeedbackArchiveAccessor connection");
-                let feedback_archive_accessor = ArchiveAccessor::new(
-                    feedback_pipeline.clone(),
-                    feedback_stats_for_server.clone(),
-                );
-                feedback_archive_accessor
-                    .spawn_archive_accessor_server(chan, sender_for_feedback.clone());
-            })
-            .add_fidl_service_at(constants::LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME, move |chan| {
-                debug!("fuchsia.diagnostics.LegacyMetricsAccessor connection");
-                let legacy_archive_accessor = ArchiveAccessor::new(
-                    legacy_metrics_pipeline.clone(),
-                    legacy_stats_for_server.clone(),
-                )
-                .add_moniker_rewriter(legacy_moniker_rewriter.clone());
-                legacy_archive_accessor
-                    .spawn_archive_accessor_server(chan, sender_for_legacy.clone());
-            });
+        let archivist_state = ArchivistState::new(pipelines, diagnostics_repo, logs_budget)?;
 
         let events_node = component::inspector().root().create_child("event_stats");
         Ok(Self {
             fs,
-            archivist,
+            archivist_state,
             log_receiver,
             log_sender,
             listen_receiver,
             listen_sender,
-            pipeline_exists,
-            _pipeline_nodes: vec![pipelines_node, feedback_pipeline_node, legacy_pipeline_node],
-            _pipeline_configs: vec![feedback_config, legacy_config],
             event_source_registry: EventSourceRegistry::new(events_node),
             stop_recv: None,
-            _stats: vec![feedback_accessor_stats, legacy_accessor_stats, all_accessor_stats],
         })
     }
 
     pub fn data_repo(&self) -> &DataRepo {
-        &self.archivist.diagnostics_repo
+        &self.archivist_state.diagnostics_repo
     }
 
     pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
@@ -417,20 +296,17 @@ impl ArchivistBuilder {
         let events = self.event_source_registry.take_stream().await.expect("Created event stream");
 
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
-        self.archivist.logs_budget.set_remover(snd);
+        self.archivist_state.logs_budget.set_remover(snd);
         let component_removal_task = fasync::Task::spawn(Self::process_removal_of_components(
             rcv,
             data_repo.clone(),
-            self.archivist.diagnostics_pipelines.clone(),
+            self.archivist_state.diagnostics_pipelines.clone(),
         ));
 
-        let logs_budget = self.archivist.logs_budget.handle();
-        let run_event_collection_task = fasync::Task::spawn(Self::collect_component_events(
-            events,
-            self.log_sender.clone(),
-            self.archivist,
-            self.pipeline_exists,
-        ));
+        let logs_budget = self.archivist_state.logs_budget.handle();
+        let run_event_collection_task = fasync::Task::spawn(
+            self.archivist_state.process_events(events, self.log_sender.clone()),
+        );
 
         // Process messages from log sink.
         let log_receiver = self.log_receiver;
@@ -479,20 +355,6 @@ impl ArchivistBuilder {
             maybe_remove_component(&identity, &diagnostics_repo, &diagnostics_pipelines);
         }
     }
-
-    async fn collect_component_events(
-        events: ComponentEventStream,
-        log_sender: mpsc::UnboundedSender<Task<()>>,
-        archivist: Archivist,
-        pipeline_exists: bool,
-    ) {
-        if !pipeline_exists {
-            component::health().set_unhealthy("Pipeline config has an error");
-        } else {
-            component::health().set_ok();
-        }
-        archivist.process_events(events, log_sender).await
-    }
 }
 
 fn maybe_remove_component(
@@ -515,7 +377,7 @@ fn maybe_remove_component(
 /// to the archive, as well as the service-specific repositories
 /// that are populated by the archivist server and exposed in the
 /// service sessions.
-pub struct Archivist {
+pub struct ArchivistState {
     diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     pub diagnostics_repo: DataRepo,
 
@@ -523,13 +385,13 @@ pub struct Archivist {
     logs_budget: BudgetManager,
 }
 
-impl Archivist {
+impl ArchivistState {
     pub fn new(
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
         diagnostics_repo: DataRepo,
         logs_budget: BudgetManager,
     ) -> Result<Self, Error> {
-        Ok(Archivist {
+        Ok(Self {
             diagnostics_pipelines: Arc::new(diagnostics_pipelines),
             diagnostics_repo,
             logs_budget,
@@ -650,7 +512,7 @@ mod tests {
     use fuchsia_component::client::connect_to_protocol_at_dir_svc;
     use futures::channel::oneshot;
 
-    fn init_archivist() -> ArchivistBuilder {
+    fn init_archivist() -> Archivist {
         let config = configs::Config {
             num_threads: 1,
             logs: configs::LogsConfig {
@@ -659,7 +521,7 @@ mod tests {
             pipelines_path: DEFAULT_PIPELINES_PATH.into(),
         };
 
-        ArchivistBuilder::new(config).unwrap()
+        Archivist::new(config).unwrap()
     }
 
     // run archivist and send signal when it dies.

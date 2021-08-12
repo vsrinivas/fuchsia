@@ -9,7 +9,10 @@
 use {
     anyhow::{Context, Error},
     archivist_lib::{
-        archivist, configs, diagnostics, events::sources::LogConnectorEventSource, logs,
+        archivist::{Archivist, LogOpts},
+        configs, diagnostics,
+        events::sources::LogConnectorEventSource,
+        logs,
     },
     argh::FromArgs,
     fdio::service_connect,
@@ -120,12 +123,10 @@ async fn async_main(
     archivist_configuration: configs::Config,
     log_server: Option<zx::Socket>,
 ) -> Result<(), Error> {
-    let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
+    let mut archivist = Archivist::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    archivist
-        .install_log_services(archivist::LogOpts { ingest_v2_logs: !opt.disable_event_source })
-        .await;
+    archivist.install_log_services(LogOpts { ingest_v2_logs: !opt.disable_event_source }).await;
     if !opt.disable_component_event_provider {
         let legacy_event_provider = connect_to_protocol::<ComponentEventProviderMarker>()
             .context("failed to connect to event provider")?;
