@@ -4,8 +4,7 @@
 use {
     anyhow::{anyhow, Context as _, Error},
     fidl_fuchsia_io::{
-        DirectoryProxy, FileProxy, MAX_BUF, OPEN_FLAG_CREATE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryProxy, FileProxy, MAX_BUF, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
@@ -103,17 +102,29 @@ where
             }
         }
 
-        // TODO(fxbug.dev/82009): Do the temp file and rename dance to write the file atomically.
-        let file_proxy = io_util::directory::open_file(
+        let (temp_path, temp_proxy) = io_util::directory::create_randomly_named_file(
             &self.repo_proxy,
             &path,
-            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_TRUNCATE,
+            OPEN_RIGHT_WRITABLE,
         )
         .await
         .with_context(|| format!("creating file: {}", path))
         .map_err(make_opaque_error)?;
 
-        write_all(&file_proxy, reader).await.map_err(make_opaque_error)
+        write_all(&temp_proxy, reader).await.map_err(make_opaque_error)?;
+
+        let status =
+            temp_proxy.sync().await.context("sending sync request").map_err(make_opaque_error)?;
+        zx::Status::ok(status).context("syncing file").map_err(make_opaque_error)?;
+        io_util::file::close(temp_proxy)
+            .await
+            .context("closing file")
+            .map_err(make_opaque_error)?;
+
+        io_util::directory::rename(&self.repo_proxy, &temp_path, &path)
+            .await
+            .context("renaming files")
+            .map_err(make_opaque_error)
     }
 }
 
