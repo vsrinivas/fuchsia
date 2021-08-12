@@ -732,30 +732,30 @@ impl<A, Z> sealed::Sealed for AddrAndZone<A, Z> {}
 /// An address that may have an associated scope zone.
 #[allow(missing_docs)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum ZonedAddress<A, Z> {
+pub enum ZonedAddr<A, Z> {
     Unzoned(SpecifiedAddr<A>),
     Zoned(AddrAndZone<A, Z>),
 }
 
-impl<A: ScopeableAddress + SpecifiedAddress, Z> ZonedAddress<A, Z> {
-    /// Creates a new `ZonedAddress` with the provided optional scope zone.
+impl<A: ScopeableAddress + SpecifiedAddress, Z> ZonedAddr<A, Z> {
+    /// Creates a new `ZonedAddr` with the provided optional scope zone.
     ///
-    /// If `zone` is `None`, [`ZonedAddress::Unzoned`] is returned. Otherwise, a
-    /// [`ZonedAddress::Zoned`] is returned only if the provided `addr`'s scope
-    /// can have a zone (`addr.scope().can_have_zone()`).
+    /// If `zone` is `None`, [`ZonedAddr::Unzoned`] is returned. Otherwise, a
+    /// [`ZonedAddr::Zoned`] is returned only if the provided `addr`'s scope can
+    /// have a zone (`addr.scope().can_have_zone()`).
     pub fn new(addr: A, zone: Option<Z>) -> Option<Self> {
         match zone {
-            Some(zone) => AddrAndZone::new(addr, zone).map(ZonedAddress::Zoned),
-            None => SpecifiedAddr::new(addr).map(ZonedAddress::Unzoned),
+            Some(zone) => AddrAndZone::new(addr, zone).map(ZonedAddr::Zoned),
+            None => SpecifiedAddr::new(addr).map(ZonedAddr::Unzoned),
         }
     }
 
-    /// Decomposes this `ZonedAddress` into a `SpecifiedAddr` and an optional
-    /// scope zone.
+    /// Decomposes this `ZonedAddr` into a `SpecifiedAddr` and an optional scope
+    /// zone.
     pub fn into_addr_zone(self) -> (SpecifiedAddr<A>, Option<Z>) {
         match self {
-            ZonedAddress::Unzoned(addr) => (addr, None),
-            ZonedAddress::Zoned(scope_and_zone) => {
+            ZonedAddr::Unzoned(addr) => (addr, None),
+            ZonedAddr::Zoned(scope_and_zone) => {
                 let (addr, zone) = scope_and_zone.into_specified_addr_zone();
                 (addr, Some(zone))
             }
@@ -936,29 +936,29 @@ mod tests {
     fn test_scoped_address() {
         // Type alias to help the compiler when the scope type can't be
         // inferred.
-        type ZonedAddress = crate::ZonedAddress<Address, ()>;
+        type ZonedAddr = crate::ZonedAddr<Address, ()>;
         assert_eq!(
-            ZonedAddress::new(Address::GlobalUnicast, None),
-            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::GlobalUnicast)))
+            ZonedAddr::new(Address::GlobalUnicast, None),
+            Some(ZonedAddr::Unzoned(SpecifiedAddr(Address::GlobalUnicast)))
         );
-        assert_eq!(ZonedAddress::new(Address::Unspecified, None), None);
+        assert_eq!(ZonedAddr::new(Address::Unspecified, None), None);
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocalUnicast, None),
-            Some(ZonedAddress::Unzoned(SpecifiedAddr(Address::LinkLocalUnicast)))
+            ZonedAddr::new(Address::LinkLocalUnicast, None),
+            Some(ZonedAddr::Unzoned(SpecifiedAddr(Address::LinkLocalUnicast)))
         );
-        assert_eq!(ZonedAddress::new(Address::GlobalUnicast, Some(())), None);
-        assert_eq!(ZonedAddress::new(Address::Unspecified, Some(())), None);
+        assert_eq!(ZonedAddr::new(Address::GlobalUnicast, Some(())), None);
+        assert_eq!(ZonedAddr::new(Address::Unspecified, Some(())), None);
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocalUnicast, Some(())),
-            Some(ZonedAddress::Zoned(AddrAndZone(Address::LinkLocalUnicast, ())))
+            ZonedAddr::new(Address::LinkLocalUnicast, Some(())),
+            Some(ZonedAddr::Zoned(AddrAndZone(Address::LinkLocalUnicast, ())))
         );
 
         assert_eq!(
-            ZonedAddress::new(Address::GlobalUnicast, None).unwrap().into_addr_zone(),
+            ZonedAddr::new(Address::GlobalUnicast, None).unwrap().into_addr_zone(),
             (SpecifiedAddr(Address::GlobalUnicast), None)
         );
         assert_eq!(
-            ZonedAddress::new(Address::LinkLocalUnicast, Some(())).unwrap().into_addr_zone(),
+            ZonedAddr::new(Address::LinkLocalUnicast, Some(())).unwrap().into_addr_zone(),
             (SpecifiedAddr(Address::LinkLocalUnicast), Some(()))
         );
     }
