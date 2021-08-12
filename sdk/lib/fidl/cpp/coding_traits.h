@@ -30,9 +30,9 @@ struct CodingTraits;
 template <typename T, class EncoderImpl = Encoder>
 size_t EncodingInlineSize(EncoderImpl* encoder) {
   switch (encoder->wire_format()) {
-    case FIDL_WIRE_FORMAT_VERSION_V1:
+    case ::fidl::internal::WireFormatVersion::kV1:
       return CodingTraits<T>::inline_size_v1_no_ee;
-    case FIDL_WIRE_FORMAT_VERSION_V2:
+    case ::fidl::internal::WireFormatVersion::kV2:
       return CodingTraits<T>::inline_size_v2;
   }
   __builtin_unreachable();
@@ -283,14 +283,14 @@ template <class EncoderImpl>
 void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_t envelope_offset) {
   // encode the envelope header
   switch (encoder->wire_format()) {
-    case FIDL_WIRE_FORMAT_VERSION_V1: {
+    case ::fidl::internal::WireFormatVersion::kV1: {
       fidl_envelope_t* envelope = encoder->template GetPtr<fidl_envelope_t>(envelope_offset);
       envelope->num_bytes = static_cast<uint32_t>(value->size());
       envelope->num_handles = 0;
       envelope->presence = FIDL_ALLOC_PRESENT;
       break;
     }
-    case FIDL_WIRE_FORMAT_VERSION_V2: {
+    case ::fidl::internal::WireFormatVersion::kV2: {
       fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
       if (value->size() <= 4) {
@@ -331,14 +331,14 @@ template <class EncoderImpl>
 void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope_offset) {
   // encode the envelope header
   switch (encoder->wire_format()) {
-    case FIDL_WIRE_FORMAT_VERSION_V1: {
+    case ::fidl::internal::WireFormatVersion::kV1: {
       fidl_envelope_t* envelope = encoder->template GetPtr<fidl_envelope_t>(envelope_offset);
       envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
       envelope->num_handles = static_cast<uint16_t>(value->handles.size());
       envelope->presence = FIDL_ALLOC_PRESENT;
       break;
     }
-    case FIDL_WIRE_FORMAT_VERSION_V2: {
+    case ::fidl::internal::WireFormatVersion::kV2: {
       fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
       if (value->bytes.size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {

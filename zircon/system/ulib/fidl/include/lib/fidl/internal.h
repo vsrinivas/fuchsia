@@ -23,6 +23,17 @@
 #include <type_traits>
 #endif  // __cplusplus
 
+#ifdef __cplusplus
+namespace fidl {
+namespace internal {
+enum class WireFormatVersion {
+  kV1,
+  kV2,
+};
+}  // namespace internal
+}  // namespace fidl
+#endif
+
 __BEGIN_CDECLS
 
 typedef uint32_t FidlWireFormatVersion;

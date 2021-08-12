@@ -222,11 +222,6 @@ namespace internal {
 template <typename T>
 class DecodedMessageBase;
 
-enum class WireFormatVersion {
-  kV1,
-  kV2,
-};
-
 constexpr WireFormatVersion kLLCPPInMemoryWireFormatVersion = WireFormatVersion::kV1;
 
 }  // namespace internal

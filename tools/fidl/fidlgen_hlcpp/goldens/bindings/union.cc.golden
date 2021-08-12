@@ -88,7 +88,7 @@ void Union::Encode(
   switch (Which()) {
     case ::fidl::test::union_::Union::Tag::kPrimitive: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &Primitive_,
               encoder->Alloc(
@@ -104,7 +104,7 @@ void Union::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Primitive_,
@@ -139,7 +139,7 @@ void Union::Encode(
     }
     case ::fidl::test::union_::Union::Tag::kStringNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &StringNeedsConstructor_,
               encoder->Alloc(
@@ -155,7 +155,7 @@ void Union::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &StringNeedsConstructor_,
@@ -190,7 +190,7 @@ void Union::Encode(
     }
     case ::fidl::test::union_::Union::Tag::kVectorStringAlsoNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &VectorStringAlsoNeedsConstructor_,
               encoder->Alloc(
@@ -206,7 +206,7 @@ void Union::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::vector<::std::string>>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_,
@@ -373,7 +373,7 @@ void StructWithNullableXUnion::Encode(
     memcpy(_encoder->template GetPtr<StructWithNullableXUnion>(_offset), this,
            sizeof(StructWithNullableXUnion));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &x1, _offset + 0);
 
     } else {
@@ -480,7 +480,7 @@ void StrictUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::StrictUnion::Tag::kPrimitive: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &Primitive_,
               encoder->Alloc(
@@ -496,7 +496,7 @@ void StrictUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Primitive_,
@@ -531,7 +531,7 @@ void StrictUnion::Encode(
     }
     case ::fidl::test::union_::StrictUnion::Tag::kStringNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &StringNeedsConstructor_,
               encoder->Alloc(
@@ -547,7 +547,7 @@ void StrictUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &StringNeedsConstructor_,
@@ -583,7 +583,7 @@ void StrictUnion::Encode(
     case ::fidl::test::union_::StrictUnion::Tag::
         kVectorStringAlsoNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &VectorStringAlsoNeedsConstructor_,
               encoder->Alloc(
@@ -599,7 +599,7 @@ void StrictUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::vector<::std::string>>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_,
@@ -835,7 +835,7 @@ void StrictSimpleXUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::StrictSimpleXUnion::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -851,7 +851,7 @@ void StrictSimpleXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -886,7 +886,7 @@ void StrictSimpleXUnion::Encode(
     }
     case ::fidl::test::union_::StrictSimpleXUnion::Tag::kF: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &f_,
               encoder->Alloc(
@@ -901,7 +901,7 @@ void StrictSimpleXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<float>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &f_,
@@ -935,7 +935,7 @@ void StrictSimpleXUnion::Encode(
     }
     case ::fidl::test::union_::StrictSimpleXUnion::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -951,7 +951,7 @@ void StrictSimpleXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -1157,7 +1157,7 @@ void StrictFoo::Encode(
   switch (Which()) {
     case ::fidl::test::union_::StrictFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -1173,7 +1173,7 @@ void StrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -1208,7 +1208,7 @@ void StrictFoo::Encode(
     }
     case ::fidl::test::union_::StrictFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -1224,7 +1224,7 @@ void StrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -1406,7 +1406,7 @@ void StrictBoundedXUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::StrictBoundedXUnion::Tag::kV: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &v_,
               encoder->Alloc(
@@ -1422,7 +1422,7 @@ void StrictBoundedXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::vector<uint8_t>>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &v_,
@@ -1597,7 +1597,7 @@ void ReverseOrdinalUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ReverseOrdinalUnion::Tag::kSecond: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &second_,
               encoder->Alloc(
@@ -1613,7 +1613,7 @@ void ReverseOrdinalUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &second_,
@@ -1648,7 +1648,7 @@ void ReverseOrdinalUnion::Encode(
     }
     case ::fidl::test::union_::ReverseOrdinalUnion::Tag::kFirst: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &first_,
               encoder->Alloc(
@@ -1664,7 +1664,7 @@ void ReverseOrdinalUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &first_,
@@ -1800,7 +1800,7 @@ void Pizza::Encode(
   if (::fidl::IsMemcpyCompatible<Pizza>::value) {
     memcpy(_encoder->template GetPtr<Pizza>(_offset), this, sizeof(Pizza));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &toppings, _offset + 0);
 
     } else {
@@ -1832,7 +1832,7 @@ void Pasta::Encode(
   if (::fidl::IsMemcpyCompatible<Pasta>::value) {
     memcpy(_encoder->template GetPtr<Pasta>(_offset), this, sizeof(Pasta));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &sauce, _offset + 0);
 
     } else {
@@ -1923,7 +1923,7 @@ void StrictPizzaOrPasta::Encode(
   switch (Which()) {
     case ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPizza: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pizza_,
               encoder->Alloc(
@@ -1939,7 +1939,7 @@ void StrictPizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pizza>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pizza_,
@@ -1974,7 +1974,7 @@ void StrictPizzaOrPasta::Encode(
     }
     case ::fidl::test::union_::StrictPizzaOrPasta::Tag::kPasta: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pasta_,
               encoder->Alloc(
@@ -1990,7 +1990,7 @@ void StrictPizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pasta>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pasta_,
@@ -2189,7 +2189,7 @@ void PizzaOrPasta::Encode(
   switch (Which()) {
     case ::fidl::test::union_::PizzaOrPasta::Tag::kPizza: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pizza_,
               encoder->Alloc(
@@ -2205,7 +2205,7 @@ void PizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pizza>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pizza_,
@@ -2240,7 +2240,7 @@ void PizzaOrPasta::Encode(
     }
     case ::fidl::test::union_::PizzaOrPasta::Tag::kPasta: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pasta_,
               encoder->Alloc(
@@ -2256,7 +2256,7 @@ void PizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pasta>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pasta_,
@@ -2464,7 +2464,7 @@ void FlexiblePizzaOrPasta::Encode(
   switch (Which()) {
     case ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPizza: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pizza_,
               encoder->Alloc(
@@ -2480,7 +2480,7 @@ void FlexiblePizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pizza>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pizza_,
@@ -2515,7 +2515,7 @@ void FlexiblePizzaOrPasta::Encode(
     }
     case ::fidl::test::union_::FlexiblePizzaOrPasta::Tag::kPasta: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pasta_,
               encoder->Alloc(
@@ -2531,7 +2531,7 @@ void FlexiblePizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pasta>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pasta_,
@@ -2758,7 +2758,7 @@ void ExplicitPizzaOrPasta::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPizza: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pizza_,
               encoder->Alloc(
@@ -2774,7 +2774,7 @@ void ExplicitPizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pizza>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pizza_,
@@ -2809,7 +2809,7 @@ void ExplicitPizzaOrPasta::Encode(
     }
     case ::fidl::test::union_::ExplicitPizzaOrPasta::Tag::kPasta: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &pasta_,
               encoder->Alloc(
@@ -2825,7 +2825,7 @@ void ExplicitPizzaOrPasta::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Pasta>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &pasta_,
@@ -3030,7 +3030,7 @@ void OlderSimpleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::OlderSimpleUnion::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -3046,7 +3046,7 @@ void OlderSimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int64_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -3081,7 +3081,7 @@ void OlderSimpleUnion::Encode(
     }
     case ::fidl::test::union_::OlderSimpleUnion::Tag::kF: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &f_,
               encoder->Alloc(
@@ -3096,7 +3096,7 @@ void OlderSimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<float>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &f_,
@@ -3254,7 +3254,7 @@ void NullableUnionStruct::Encode(
     memcpy(_encoder->template GetPtr<NullableUnionStruct>(_offset), this,
            sizeof(NullableUnionStruct));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &the_union, _offset + 0);
 
     } else {
@@ -3364,7 +3364,7 @@ void NewerSimpleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::NewerSimpleUnion::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -3380,7 +3380,7 @@ void NewerSimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int64_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -3415,7 +3415,7 @@ void NewerSimpleUnion::Encode(
     }
     case ::fidl::test::union_::NewerSimpleUnion::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -3431,7 +3431,7 @@ void NewerSimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -3466,7 +3466,7 @@ void NewerSimpleUnion::Encode(
     }
     case ::fidl::test::union_::NewerSimpleUnion::Tag::kV: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &v_,
               encoder->Alloc(
@@ -3482,7 +3482,7 @@ void NewerSimpleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::vector<::std::string>>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &v_,
@@ -3741,7 +3741,7 @@ void FlexibleUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::FlexibleUnion::Tag::kPrimitive: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &Primitive_,
               encoder->Alloc(
@@ -3757,7 +3757,7 @@ void FlexibleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Primitive_,
@@ -3792,7 +3792,7 @@ void FlexibleUnion::Encode(
     }
     case ::fidl::test::union_::FlexibleUnion::Tag::kStringNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &StringNeedsConstructor_,
               encoder->Alloc(
@@ -3808,7 +3808,7 @@ void FlexibleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &StringNeedsConstructor_,
@@ -3844,7 +3844,7 @@ void FlexibleUnion::Encode(
     case ::fidl::test::union_::FlexibleUnion::Tag::
         kVectorStringAlsoNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &VectorStringAlsoNeedsConstructor_,
               encoder->Alloc(
@@ -3860,7 +3860,7 @@ void FlexibleUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::vector<::std::string>>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_,
@@ -4115,7 +4115,7 @@ void FlexibleFoo::Encode(
   switch (Which()) {
     case ::fidl::test::union_::FlexibleFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -4131,7 +4131,7 @@ void FlexibleFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -4166,7 +4166,7 @@ void FlexibleFoo::Encode(
     }
     case ::fidl::test::union_::FlexibleFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -4182,7 +4182,7 @@ void FlexibleFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -4383,7 +4383,7 @@ void FieldCollision::Encode(
   switch (Which()) {
     case ::fidl::test::union_::FieldCollision::Tag::kFieldCollisionTag: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &field_collision_tag_,
               encoder->Alloc(
@@ -4399,7 +4399,7 @@ void FieldCollision::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &field_collision_tag_,
@@ -4578,7 +4578,7 @@ void ExplicitXUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ExplicitXUnion::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -4594,7 +4594,7 @@ void ExplicitXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int64_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -4629,7 +4629,7 @@ void ExplicitXUnion::Encode(
     }
     case ::fidl::test::union_::ExplicitXUnion::Tag::kF: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &f_,
               encoder->Alloc(
@@ -4644,7 +4644,7 @@ void ExplicitXUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<float>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &f_,
@@ -4802,7 +4802,7 @@ void UnionSandwich::Encode(
     memcpy(_encoder->template GetPtr<UnionSandwich>(_offset), this,
            sizeof(UnionSandwich));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &a, _offset + 0);
       ::fidl::Encode(_encoder, &u, _offset + 8);
       ::fidl::Encode(_encoder, &b, _offset + 32);
@@ -4900,7 +4900,7 @@ void ExplicitUnion::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ExplicitUnion::Tag::kPrimitive: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &Primitive_,
               encoder->Alloc(
@@ -4916,7 +4916,7 @@ void ExplicitUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &Primitive_,
@@ -4951,7 +4951,7 @@ void ExplicitUnion::Encode(
     }
     case ::fidl::test::union_::ExplicitUnion::Tag::kStringNeedsConstructor: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &StringNeedsConstructor_,
               encoder->Alloc(
@@ -4967,7 +4967,7 @@ void ExplicitUnion::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &StringNeedsConstructor_,
@@ -5163,7 +5163,7 @@ void ExplicitStrictFoo::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ExplicitStrictFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -5179,7 +5179,7 @@ void ExplicitStrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -5214,7 +5214,7 @@ void ExplicitStrictFoo::Encode(
     }
     case ::fidl::test::union_::ExplicitStrictFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -5230,7 +5230,7 @@ void ExplicitStrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -5428,7 +5428,7 @@ void ExplicitFoo::Encode(
   switch (Which()) {
     case ::fidl::test::union_::ExplicitFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -5444,7 +5444,7 @@ void ExplicitFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -5479,7 +5479,7 @@ void ExplicitFoo::Encode(
     }
     case ::fidl::test::union_::ExplicitFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -5495,7 +5495,7 @@ void ExplicitFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -5655,7 +5655,7 @@ void Empty::Encode(
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
     memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 
     } else {
@@ -5742,7 +5742,7 @@ void XUnionContainingEmptyStruct::Encode(
   switch (Which()) {
     case ::fidl::test::union_::XUnionContainingEmptyStruct::Tag::kEmpty: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &empty_,
               encoder->Alloc(
@@ -5758,7 +5758,7 @@ void XUnionContainingEmptyStruct::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::fidl::test::union_::Empty>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &empty_,

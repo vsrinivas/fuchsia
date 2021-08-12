@@ -24,7 +24,7 @@ void ExampleOfUseOfAliases::Encode(
     memcpy(_encoder->template GetPtr<ExampleOfUseOfAliases>(_offset), this,
            sizeof(ExampleOfUseOfAliases));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &field_of_u32, _offset + 0);
       ::fidl::Encode(_encoder, &field_of_vec_of_strings, _offset + 8);
       ::fidl::Encode(_encoder, &field_of_vec_of_strings_at_most_nine,

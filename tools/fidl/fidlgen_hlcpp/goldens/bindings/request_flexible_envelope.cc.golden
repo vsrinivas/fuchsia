@@ -73,7 +73,7 @@ void StrictFoo::Encode(
   switch (Which()) {
     case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -89,7 +89,7 @@ void StrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -124,7 +124,7 @@ void StrictFoo::Encode(
     }
     case ::fidl::test::requestflexibleenvelope::StrictFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -140,7 +140,7 @@ void StrictFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,
@@ -341,7 +341,7 @@ void FlexibleFoo::Encode(
   switch (Which()) {
     case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kS: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &s_,
               encoder->Alloc(
@@ -357,7 +357,7 @@ void FlexibleFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::string>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &s_,
@@ -392,7 +392,7 @@ void FlexibleFoo::Encode(
     }
     case ::fidl::test::requestflexibleenvelope::FlexibleFoo::Tag::kI: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &i_,
               encoder->Alloc(
@@ -408,7 +408,7 @@ void FlexibleFoo::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<int32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &i_,

@@ -19,7 +19,7 @@ void Empty::Encode(
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
     memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 
     } else {

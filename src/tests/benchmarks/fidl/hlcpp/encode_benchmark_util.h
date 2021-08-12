@@ -23,7 +23,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER, FIDL_WIRE_FORMAT_VERSION_V1);
+      fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER,
+                        ::fidl::internal::WireFormatVersion::kV1);
       auto offset = enc.Alloc(fidl::EncodingInlineSize<FidlType, fidl::Encoder>(&enc));
       obj.Encode(&enc, offset);
       fidl::HLCPPOutgoingMessage msg = enc.GetMessage();

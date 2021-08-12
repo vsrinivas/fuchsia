@@ -89,7 +89,7 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
     memcpy(_encoder->template GetPtr<{{ .Name }}>(_offset), this, sizeof({{ .Name }}));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       {{- range .Members }}
       {{- if .HandleInformation }}
       ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1 }}, ::fidl::HandleInformation {

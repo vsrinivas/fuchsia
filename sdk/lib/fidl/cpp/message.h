@@ -215,7 +215,7 @@ class HLCPPOutgoingMessage {
   // being read from a zx_channel_t or having been created in that state.
   //
   // Does not modify the message.
-  zx_status_t ValidateWithVersion_InternalMayBreak(FidlWireFormatVersion wire_format_version,
+  zx_status_t ValidateWithVersion_InternalMayBreak(internal::WireFormatVersion wire_format_version,
                                                    const fidl_type_t* v1_type,
                                                    const char** error_msg_out) const;
 

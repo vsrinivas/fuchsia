@@ -51,15 +51,15 @@ class SecondProtocol_RequestEncoder {
       ::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case FIDL_WIRE_FORMAT_VERSION_V1:
+      case ::fidl::internal::WireFormatVersion::kV1:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
-      case FIDL_WIRE_FORMAT_VERSION_V2:
+      case ::fidl::internal::WireFormatVersion::kV2:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
     }
 
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
     } else {
     }
 
@@ -90,15 +90,15 @@ class FirstProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodOnFirst(::fidl::Encoder* _encoder) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
-      case FIDL_WIRE_FORMAT_VERSION_V1:
+      case ::fidl::internal::WireFormatVersion::kV1:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
-      case FIDL_WIRE_FORMAT_VERSION_V2:
+      case ::fidl::internal::WireFormatVersion::kV2:
         _encoder->Alloc(16 - sizeof(fidl_message_header_t));
         break;
     }
 
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
     } else {
     }
 

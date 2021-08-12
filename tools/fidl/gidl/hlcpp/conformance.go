@@ -320,7 +320,7 @@ func wireFormatHeader(wireFormat gidlir.WireFormat) string {
 }
 
 func encoderWireFormat(wireFormat gidlir.WireFormat) string {
-	return fmt.Sprintf("FIDL_WIRE_FORMAT_VERSION_%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
+	return fmt.Sprintf("fidl::internal::WireFormatVersion::k%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
 var supportedWireFormats = []gidlir.WireFormat{

@@ -23,7 +23,7 @@ class Encoder final {
   enum NoHeader { NO_HEADER };
 
   explicit Encoder(uint64_t ordinal);
-  explicit Encoder(NoHeader marker, FidlWireFormatVersion wire_format)
+  explicit Encoder(NoHeader marker, internal::WireFormatVersion wire_format)
       : wire_format_(wire_format) {}
 
   ~Encoder();
@@ -60,7 +60,7 @@ class Encoder final {
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
-  FidlWireFormatVersion wire_format() { return wire_format_; }
+  internal::WireFormatVersion wire_format() { return wire_format_; }
 
  private:
   void EncodeMessageHeader(uint64_t ordinal);
@@ -68,7 +68,7 @@ class Encoder final {
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_disposition_t> handles_;
 
-  FidlWireFormatVersion wire_format_ = FIDL_WIRE_FORMAT_VERSION_V1;
+  internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV1;
 };
 
 }  // namespace fidl

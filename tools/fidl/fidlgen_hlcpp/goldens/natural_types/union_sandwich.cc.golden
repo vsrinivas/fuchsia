@@ -62,7 +62,7 @@ void UnionSize8Alignment4::Encode(
   switch (Which()) {
     case ::fidl::test::unionsandwich::UnionSize8Alignment4::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -78,7 +78,7 @@ void UnionSize8Alignment4::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &variant_,
@@ -200,7 +200,7 @@ void SandwichUnionSize8Alignment4::Encode(
     memcpy(_encoder->template GetPtr<SandwichUnionSize8Alignment4>(_offset),
            this, sizeof(SandwichUnionSize8Alignment4));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &before, _offset + 0);
       ::fidl::Encode(_encoder, &union_, _offset + 8);
       ::fidl::Encode(_encoder, &after, _offset + 32);
@@ -293,7 +293,7 @@ void UnionSize36Alignment4::Encode(
   switch (Which()) {
     case ::fidl::test::unionsandwich::UnionSize36Alignment4::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -309,7 +309,7 @@ void UnionSize36Alignment4::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::array<uint8_t, 32>>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &variant_,
@@ -436,7 +436,7 @@ void SandwichUnionSize36Alignment4::Encode(
     memcpy(_encoder->template GetPtr<SandwichUnionSize36Alignment4>(_offset),
            this, sizeof(SandwichUnionSize36Alignment4));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &before, _offset + 0);
       ::fidl::Encode(_encoder, &union_, _offset + 8);
       ::fidl::Encode(_encoder, &after, _offset + 32);
@@ -529,7 +529,7 @@ void UnionSize12Alignment4::Encode(
   switch (Which()) {
     case ::fidl::test::unionsandwich::UnionSize12Alignment4::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -545,7 +545,7 @@ void UnionSize12Alignment4::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<::std::array<uint8_t, 6>>(encoder) <=
               FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
             ::fidl::Encode(encoder, &variant_,
@@ -672,7 +672,7 @@ void SandwichUnionSize12Alignment4::Encode(
     memcpy(_encoder->template GetPtr<SandwichUnionSize12Alignment4>(_offset),
            this, sizeof(SandwichUnionSize12Alignment4));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &before, _offset + 0);
       ::fidl::Encode(_encoder, &union_, _offset + 8);
       ::fidl::Encode(_encoder, &after, _offset + 32);
@@ -722,7 +722,7 @@ void StructSize16Alignment8::Encode(
     memcpy(_encoder->template GetPtr<StructSize16Alignment8>(_offset), this,
            sizeof(StructSize16Alignment8));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &f1, _offset + 0);
       ::fidl::Encode(_encoder, &f2, _offset + 8);
 
@@ -809,7 +809,7 @@ void UnionSize24Alignment8::Encode(
   switch (Which()) {
     case ::fidl::test::unionsandwich::UnionSize24Alignment8::Tag::kVariant: {
       switch (encoder->wire_format()) {
-        case FIDL_WIRE_FORMAT_VERSION_V1: {
+        case ::fidl::internal::WireFormatVersion::kV1: {
           ::fidl::Encode(
               encoder, &variant_,
               encoder->Alloc(
@@ -826,7 +826,7 @@ void UnionSize24Alignment8::Encode(
           xunion->envelope.presence = FIDL_ALLOC_PRESENT;
           break;
         }
-        case FIDL_WIRE_FORMAT_VERSION_V2: {
+        case ::fidl::internal::WireFormatVersion::kV2: {
           if (::fidl::EncodingInlineSize<
                   ::fidl::test::unionsandwich::StructSize16Alignment8>(
                   encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
@@ -959,7 +959,7 @@ void SandwichUnionSize24Alignment8::Encode(
     memcpy(_encoder->template GetPtr<SandwichUnionSize24Alignment8>(_offset),
            this, sizeof(SandwichUnionSize24Alignment8));
   } else {
-    if (_encoder->wire_format() == FIDL_WIRE_FORMAT_VERSION_V1) {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
       ::fidl::Encode(_encoder, &before, _offset + 0);
       ::fidl::Encode(_encoder, &union_, _offset + 8);
       ::fidl::Encode(_encoder, &after, _offset + 32);

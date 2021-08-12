@@ -9,7 +9,7 @@ namespace fidl {
 
 template <class T>
 zx_status_t EncodeObject(T* object, std::vector<uint8_t>* output, const char** error_msg_out) {
-  Encoder encoder(Encoder::NO_HEADER, FIDL_WIRE_FORMAT_VERSION_V1);
+  Encoder encoder(Encoder::NO_HEADER, ::fidl::internal::WireFormatVersion::kV1);
   object->Encode(&encoder, encoder.Alloc(EncodingInlineSize<T, fidl::Encoder>(&encoder)));
   if (encoder.CurrentHandleCount() != 0) {
     if (error_msg_out != nullptr) {
