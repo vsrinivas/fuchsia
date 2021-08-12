@@ -170,6 +170,9 @@ impl SendExecutor {
                     }
                 }
             }
+
+            // we've just yielded out of a task, wake any timers that expired while we were polling
+            with_local_timer_heap(|timer_heap| timer_heap.wake_expired_timers(inner.now()));
         }
     }
 

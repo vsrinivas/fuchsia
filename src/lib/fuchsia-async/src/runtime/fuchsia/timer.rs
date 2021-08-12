@@ -194,6 +194,17 @@ impl TimerHeap {
     pub fn pop(&mut self) -> Option<TimeWaker> {
         self.inner.pop()
     }
+
+    /// Wake any expired timers, returning `true` if any are woken.
+    pub fn wake_expired_timers(&mut self, now: Time) -> bool {
+        let mut woke_something = false;
+        while let Some(waker) = self.next_deadline().filter(|waker| waker.time() <= now) {
+            waker.wake();
+            self.pop();
+            woke_something = true;
+        }
+        woke_something
+    }
 }
 
 pub(crate) struct TimeWaker {
@@ -255,6 +266,71 @@ mod test {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }
+    }
+
+    #[test]
+    fn starved_local_timers() {
+        use futures_lite::future::yield_now;
+        use std::{cell::Cell, rc::Rc, time::Duration};
+
+        let mut exec = LocalExecutor::new().unwrap();
+        let should_return: Rc<Cell<bool>> = Rc::new(Cell::new(false));
+        let timer_duration = Duration::from_millis(500);
+        let _blocked_on_timer = crate::Task::local({
+            let should_return = Rc::clone(&should_return);
+            async move {
+                Timer::new(timer_duration).await;
+                should_return.set(true);
+            }
+        });
+        exec.run_singlethreaded(async move {
+            while !should_return.get() {
+                // wakes the task before yielding, exec can now schedule this task or others
+                yield_now().await;
+
+                // sleep to avoid wasting CPU, spinlooping would be equally valid for this test
+                std::thread::sleep(timer_duration / 50);
+
+                // this loop will time out if timers are starved
+            }
+        });
+    }
+
+    #[test]
+    fn starved_send_timers() {
+        use futures_lite::future::yield_now;
+        use std::{
+            sync::{
+                atomic::{AtomicBool, Ordering},
+                Arc,
+            },
+            time::Duration,
+        };
+
+        // create a send executor with only 1 thread so we can guarantee co-scheduling
+        let mut exec = SendExecutor::new(1).unwrap();
+        let should_return: Arc<AtomicBool> = Default::default();
+
+        let timer_duration = Duration::from_millis(500);
+
+        let _blocked_on_timer = crate::Task::spawn({
+            let should_return = Arc::clone(&should_return);
+            async move {
+                Timer::new(timer_duration).await;
+                should_return.store(true, Ordering::SeqCst);
+            }
+        });
+        exec.run(async move {
+            while !should_return.load(Ordering::SeqCst) {
+                // wakes the task before yielding, exec can now schedule this task or others
+                yield_now().await;
+
+                // sleep to avoid wasting CPU, spinlooping would be equally valid for this test
+                std::thread::sleep(timer_duration / 50);
+
+                // this loop will time out if timers are starved
+            }
+        });
     }
 
     #[test]
