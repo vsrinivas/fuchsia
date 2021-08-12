@@ -33,7 +33,6 @@ use std::sync::Arc;
 use crate::auth::Credentials;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
-use crate::fs::procfs::*;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
@@ -218,8 +217,11 @@ fn create_filesystem_from_spec<'a>(
         iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", spec))?;
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
     let fs_src = iter.next().unwrap_or("");
+
+    // The filesystem types handled in this match are the ones that can only be specified in a
+    // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
+    // common code that also handles the mount() system call.
     let fs = match fs_type {
-        "procfs" => Fs(proc_fs(kernel.clone())),
         "remotefs" => {
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
             let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::task_symlink::*;
 use crate::fd_impl_directory;
-use crate::fs::procfs::task_symlink::*;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;

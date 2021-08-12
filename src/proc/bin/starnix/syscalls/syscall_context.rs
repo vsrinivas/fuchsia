@@ -22,7 +22,7 @@ impl SyscallContext<'_> {
         SyscallContext { task, registers: zx_thread_state_general_regs_t::default() }
     }
 
-    pub fn kernel(&self) -> &Kernel {
+    pub fn kernel(&self) -> &Arc<Kernel> {
         &self.task.thread_group.kernel
     }
 }

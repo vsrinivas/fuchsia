@@ -12,6 +12,7 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 
 use super::devfs::dev_tmp_fs;
+use super::proc::proc_fs;
 use super::tmpfs::TmpFs;
 use super::*;
 use crate::task::Kernel;
@@ -84,7 +85,7 @@ pub enum WhatToMount {
 }
 
 pub fn create_filesystem(
-    kernel: &Kernel,
+    kernel: &Arc<Kernel>,
     task: Option<&Task>,
     source: &FsStr,
     fs_type: &FsStr,
@@ -93,6 +94,7 @@ pub fn create_filesystem(
     use WhatToMount::*;
     Ok(match fs_type {
         b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
+        b"proc" => Fs(proc_fs(kernel.clone())),
         b"tmpfs" => Fs(TmpFs::new()),
         b"bind" => {
             let task = task.ok_or(ENOENT)?;
