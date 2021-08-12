@@ -54,9 +54,12 @@ namespace {
 // All pointers passed to the visitor are guaranteed to be alive throughout the duration
 // of the message traversal.
 // For all callbacks in the visitor, the return value indicates if an error has occurred.
-template <typename MutationTrait_, typename Position_, typename EnvelopeCheckpoint_>
+template <FidlWireFormatVersion WireFormatVersion_, typename MutationTrait_, typename Position_,
+          typename EnvelopeCheckpoint_>
 class Visitor {
  public:
+  static constexpr FidlWireFormatVersion WireFormatVersion = WireFormatVersion_;
+
   using MutationTrait = MutationTrait_;
 
   template <typename T>
@@ -86,8 +89,10 @@ class Visitor {
   // HandlePointer is ([const] zx_handle_t)*
   using HandlePointer = Ptr<zx_handle_t>;
 
-  // EnvelopePointer is ([const] fidl_envelope_t)*
-  using EnvelopePointer = Ptr<fidl_envelope_t>;
+  // EnvelopePointer is ([const] fidl_envelope_t)* or ([const] fidl_envelope_v2_t)*
+  using EnvelopePointer =
+      Ptr<typename std::conditional_t<WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1,
+                                      fidl_envelope_t, fidl_envelope_v2_t>>;
 
   // CountPointer is ([const] uint64_t)*
   using CountPointer = Ptr<uint64_t>;

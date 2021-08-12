@@ -430,8 +430,7 @@ decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_denylist = [go, dart, c, llcpp, hlcpp],
+    bindings_denylist = [go, dart, c, llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion {
             0: {
@@ -459,8 +458,7 @@ encode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
 encode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_denylist = [go, dart, c, llcpp, hlcpp],
+    bindings_denylist = [go, dart, c, llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {
             0: {
@@ -485,21 +483,6 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
     err = UNION_FIELD_NOT_SET,
 }
 
-encode_failure("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
-    // TODO(fxbug.dev/7805): Fix in Go and Dart.
-    // C and LLCPP cannot construct unknown variants.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_denylist = [go, dart, c, llcpp, hlcpp],
-    value = TestOptionalFlexibleXUnionInStruct {
-        xu: SampleXUnion {
-            0: {
-                bytes = [],
-            }
-        }
-    },
-    err = UNION_FIELD_NOT_SET,
-}
-
 encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.
@@ -508,21 +491,6 @@ encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
         xu: SampleXUnion {
             0: {
                 bytes = [repeat(0xab):20, padding:4],
-            }
-        }
-    },
-    err = UNION_FIELD_NOT_SET,
-}
-
-encode_failure("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
-    // TODO(fxbug.dev/7805): Fix in Go and Dart.
-    // C and LLCPP cannot construct unknown variants.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_denylist = [go, dart, c, llcpp, hlcpp],
-    value = TestOptionalFlexibleResourceXUnionInStruct {
-        xu: SampleResourceXUnion {
-            0: {
-                bytes = [],
             }
         }
     },
@@ -832,8 +800,7 @@ decode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
 }
 
 encode_failure("RequiredStrictValueUnionDefaultInitialized") {
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_allowlist = [go, llcpp],
+    bindings_allowlist = [go, llcpp, hlcpp],
     value = TestStrictXUnionInStruct {
         xu: SampleStrictXUnion {},
     },
@@ -841,8 +808,7 @@ encode_failure("RequiredStrictValueUnionDefaultInitialized") {
 }
 
 encode_failure("RequiredStrictResourceUnionDefaultInitialized") {
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_allowlist = [go, llcpp],
+    bindings_allowlist = [go, llcpp, hlcpp],
     value = TestStrictResourceXUnionInStruct {
         xu: SampleStrictResourceXUnion {},
     },
@@ -851,8 +817,7 @@ encode_failure("RequiredStrictResourceUnionDefaultInitialized") {
 
 encode_failure("RequiredFlexibleValueUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in Go.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_allowlist = [llcpp],
+    bindings_allowlist = [llcpp, hlcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion {},
     },
@@ -861,8 +826,7 @@ encode_failure("RequiredFlexibleValueUnionDefaultInitialized") {
 
 encode_failure("RequiredFlexibleResourceUnionDefaultInitialized") {
     // TODO(fxbug.dev/7805): Enable in Go.
-    // TODO(fxbug.dev/82251): Re-enable in HLCPP once v2 validator implemented.
-    bindings_allowlist = [llcpp],
+    bindings_allowlist = [llcpp, hlcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion {},
     },

@@ -34,6 +34,7 @@ source_set("test_sources") {
     "formatting_tests.cc",
     "on_error_handle_tests.cc",
     "validating_tests.cc",
+    "validating_v2_tests.cc",
   ]
   public_deps = [
     ":fidl.test.coding.fuchsia_llcpp",
@@ -140,6 +141,7 @@ source_set("host_test_sources") {
     "fidl_coded_types.cc",
     "validate_string_tests.cc",
     "validating_tests.cc",
+    "validating_v2_tests.cc",
   ]
   public_deps = [
     ":fidl.test.coding_llcpp",

@@ -153,6 +153,21 @@ struct SampleXUnion {
   FIDL_ALIGNDECL
   int32_t raw_int;
 };
+struct SampleXUnionV2 {
+  FIDL_ALIGNDECL
+  fidl_xunion_v2_t header;
+
+  // Representing out-of-line part.
+  // There are three possibilities. All are allocated here, but only one will be set and used.
+  FIDL_ALIGNDECL
+  IntStruct i;
+
+  FIDL_ALIGNDECL
+  SimpleTable st;
+
+  FIDL_ALIGNDECL
+  int32_t raw_int;
+};
 constexpr uint32_t kSampleXUnionIntStructOrdinal = 1;
 constexpr uint32_t kSampleXUnionSimpleTableOrdinal = 2;
 constexpr uint32_t kSampleXUnionRawIntOrdinal = 3;
@@ -180,6 +195,10 @@ struct SampleXUnionStruct {
   FIDL_ALIGNDECL
   SampleXUnion xu;
 };
+struct SampleXUnionV2Struct {
+  FIDL_ALIGNDECL
+  SampleXUnionV2 xu;
+};
 
 struct SampleStrictXUnionStruct {
   FIDL_ALIGNDECL
@@ -189,6 +208,10 @@ struct SampleStrictXUnionStruct {
 struct SampleNullableXUnionStruct {
   FIDL_ALIGNDECL
   SampleXUnion opt_xu;
+};
+struct SampleNullableXUnionV2Struct {
+  FIDL_ALIGNDECL
+  SampleXUnionV2 opt_xu;
 };
 
 struct Uint32VectorStruct {

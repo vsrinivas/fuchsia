@@ -294,7 +294,7 @@ void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_
       fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
       if (value->size() <= 4) {
-        memcpy(envelope->inline_value, value->data(), value->size());
+        std::copy(value->begin(), value->end(), envelope->inline_value);
         envelope->num_handles = 0;
         envelope->flags = 1;
       }

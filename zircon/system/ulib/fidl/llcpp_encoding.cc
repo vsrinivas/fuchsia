@@ -73,9 +73,11 @@ struct EncodeArgs {
 };
 
 class FidlEncoder final
-    : public ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint> {
+    : public ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+                             EncodingPosition, EnvelopeCheckpoint> {
  public:
-  using Base = ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint>;
+  using Base = ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+                               EncodingPosition, EnvelopeCheckpoint>;
   using Status = typename Base::Status;
   using PointeeType = typename Base::PointeeType;
   using ObjectPointerPointer = typename Base::ObjectPointerPointer;
@@ -383,8 +385,9 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, num_backing_buffer, &primary_size,
-                                                 &next_out_of_line, out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V1>(
+                    type, num_backing_buffer, &primary_size, &next_out_of_line, out_error_msg)) !=
+               ZX_OK)) {
     return status;
   }
 
@@ -409,7 +412,8 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
     args.handles = handle_dispositions;
   }
   FidlEncoder encoder(args);
-  ::fidl::Walk(encoder, type, {.source_object = value, .dest = backing_buffer});
+  ::fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(encoder, type,
+                                            {.source_object = value, .dest = backing_buffer});
   if (unlikely(encoder.status() != ZX_OK)) {
     *out_actual_handles = 0;
     FidlHandleDispositionCloseMany(handle_dispositions, encoder.num_out_handles());

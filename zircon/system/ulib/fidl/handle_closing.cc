@@ -35,7 +35,8 @@ struct Position {
 struct EnvelopeCheckpoint {};
 
 class FidlHandleCloser final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
+    : public fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait, Position,
+                           EnvelopeCheckpoint> {
  public:
   FidlHandleCloser(const char** out_error_msg) : out_error_msg_(out_error_msg) {}
 
@@ -119,7 +120,8 @@ zx_status_t fidl_close_handles(const fidl_type_t* type, void* value, const char*
   }
 
   FidlHandleCloser handle_closer(out_error_msg);
-  fidl::Walk(handle_closer, type, Position{reinterpret_cast<uint8_t*>(value)});
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(handle_closer, type,
+                                          Position{reinterpret_cast<uint8_t*>(value)});
 
   return handle_closer.status();
 }

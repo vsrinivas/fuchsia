@@ -142,6 +142,28 @@ zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* v1_type,
   return status;
 }
 
+zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
+    FidlWireFormatVersion wire_format_version, const fidl_type_t* type,
+    const char** error_msg_out) const {
+  fidl_trace(WillHLCPPValidate, type, bytes_.data(), bytes_.actual(), handles_.actual());
+  zx_status_t status;
+  switch (wire_format_version) {
+    case FIDL_WIRE_FORMAT_VERSION_V1:
+      status =
+          fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+      break;
+    case FIDL_WIRE_FORMAT_VERSION_V2:
+      status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),
+                                                      handles_.actual(), error_msg_out);
+      break;
+    default:
+      __builtin_unreachable();
+  }
+  fidl_trace(DidHLCPPValidate);
+
+  return status;
+}
+
 #ifdef __Fuchsia__
 zx_status_t HLCPPOutgoingMessage::Write(zx_handle_t channel, uint32_t flags) {
   fidl_trace(WillHLCPPChannelWrite, nullptr /* type */, bytes_.data(), bytes_.actual(),

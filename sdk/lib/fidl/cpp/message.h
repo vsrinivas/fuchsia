@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
@@ -198,11 +199,25 @@ class HLCPPOutgoingMessage {
 
   // Validates the message in-place.
   //
+  // Assumes a message header is present.
+  //
   // The message must already be in an encoded state, for example, either by
   // being read from a zx_channel_t or having been created in that state.
   //
   // Does not modify the message.
   zx_status_t Validate(const fidl_type_t* type, const char** error_msg_out) const;
+
+  // Validates the message in-place.
+  //
+  // The wire format version is provided as an argument for internal tests.
+  //
+  // The message must already be in an encoded state, for example, either by
+  // being read from a zx_channel_t or having been created in that state.
+  //
+  // Does not modify the message.
+  zx_status_t ValidateWithVersion_InternalMayBreak(FidlWireFormatVersion wire_format_version,
+                                                   const fidl_type_t* v1_type,
+                                                   const char** error_msg_out) const;
 
   // Writes a message to the given channel.
   //

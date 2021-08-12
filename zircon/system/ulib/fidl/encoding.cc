@@ -66,9 +66,11 @@ struct BufferEncodeArgs {
 };
 
 class FidlEncoder final
-    : public ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint> {
+    : public ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+                             EncodingPosition, EnvelopeCheckpoint> {
  public:
-  using Base = ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint>;
+  using Base = ::fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait,
+                               EncodingPosition, EnvelopeCheckpoint>;
   using Status = typename Base::Status;
   using PointeeType = typename Base::PointeeType;
   using ObjectPointerPointer = typename Base::ObjectPointerPointer;
@@ -303,8 +305,8 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
-                                                 out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V1>(
+                    type, num_bytes, &primary_size, &next_out_of_line, out_error_msg)) != ZX_OK)) {
     return status;
   }
   memset(reinterpret_cast<uint8_t*>(bytes) + primary_size, 0, next_out_of_line - primary_size);
@@ -318,7 +320,8 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     args.handles = handles;
   }
   FidlEncoder encoder(args);
-  fidl::Walk(encoder, type, {.dest = reinterpret_cast<uint8_t*>(bytes)});
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(encoder, type,
+                                          {.dest = reinterpret_cast<uint8_t*>(bytes)});
 
   auto drop_all_handles = [&]() {
     if (out_actual_handles) {

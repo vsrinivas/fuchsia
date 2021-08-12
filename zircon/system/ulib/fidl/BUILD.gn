@@ -34,7 +34,6 @@ zx_library("fidl_base") {
     "transformer.cc",
     "txn_header.c",
     "validate_string.cc",
-    "walker.cc",
   ]
   deps = [
     "//sdk/lib/fit",

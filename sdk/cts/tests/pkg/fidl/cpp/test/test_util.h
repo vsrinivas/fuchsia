@@ -174,7 +174,16 @@ bool ValueToBytes(FidlWireFormatVersion wire_format, Input input, const std::vec
     handles_match =
         cmp_payload(msg_handles, msg.handles().actual(), expected_handles, handles.size());
   }
-  return bytes_match && handles_match;
+  const char* validation_error = nullptr;
+  zx_status_t validation_status =
+      msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, &validation_error);
+  if (validation_status != ZX_OK) {
+    std::cout << "Validator exited with status " << validation_status << std::endl;
+  }
+  if (validation_error) {
+    std::cout << "Validator error " << validation_error << std::endl;
+  }
+  return bytes_match && handles_match && (validation_status == ZX_OK);
 }
 
 template <class Output>
@@ -202,7 +211,9 @@ void CheckEncodeFailure(FidlWireFormatVersion wire_format, const Input& input,
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
   const char* error = nullptr;
-  EXPECT_EQ(expected_failure_code, msg.Validate(Input::FidlType, &error), "%s", error);
+  EXPECT_EQ(expected_failure_code,
+            msg.ValidateWithVersion_InternalMayBreak(wire_format, Input::FidlType, &error), "%s",
+            error);
 }
 
 }  // namespace util

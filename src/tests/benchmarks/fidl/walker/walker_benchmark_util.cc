@@ -25,7 +25,8 @@ struct Position {
 struct EnvelopeCheckpoint {};
 
 class NoOpVisitor final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
+    : public fidl::Visitor<FIDL_WIRE_FORMAT_VERSION_V1, fidl::MutatingVisitorTrait, Position,
+                           EnvelopeCheckpoint> {
  public:
   NoOpVisitor() {}
 
@@ -80,7 +81,7 @@ class NoOpVisitor final
 
 void Walk(const fidl_type_t* fidl_type, uint8_t* data) {
   NoOpVisitor visitor;
-  fidl::Walk(visitor, fidl_type, NoOpVisitor::Position{data});
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(visitor, fidl_type, NoOpVisitor::Position{data});
   ZX_ASSERT(visitor.error() == nullptr);
 }
 

@@ -61,14 +61,15 @@ void AssignInDecode(const T* ptr, U value) {
   // nothing in validate mode
 }
 
-template <typename Byte>
+template <FidlWireFormatVersion WireFormatVersion, typename Byte>
 using BaseVisitor =
-    fidl::Visitor<std::conditional_t<std::is_const<Byte>::value, fidl::NonMutatingVisitorTrait,
+    fidl::Visitor<WireFormatVersion,
+                  std::conditional_t<std::is_const<Byte>::value, fidl::NonMutatingVisitorTrait,
                                      fidl::MutatingVisitorTrait>,
                   DecodingPosition<Byte>, EnvelopeCheckpoint>;
 
-template <Mode mode, typename Byte>
-class FidlDecoder final : public BaseVisitor<Byte> {
+template <Mode mode, FidlWireFormatVersion WireFormatVersion, typename Byte>
+class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
  public:
   FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg, bool skip_unknown_handles)
@@ -97,13 +98,13 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     }
   }
 
-  using Position = typename BaseVisitor<Byte>::Position;
-  using Status = typename BaseVisitor<Byte>::Status;
-  using PointeeType = typename BaseVisitor<Byte>::PointeeType;
-  using ObjectPointerPointer = typename BaseVisitor<Byte>::ObjectPointerPointer;
-  using HandlePointer = typename BaseVisitor<Byte>::HandlePointer;
-  using CountPointer = typename BaseVisitor<Byte>::CountPointer;
-  using EnvelopePointer = typename BaseVisitor<Byte>::EnvelopePointer;
+  using Position = typename BaseVisitor<WireFormatVersion, Byte>::Position;
+  using Status = typename BaseVisitor<WireFormatVersion, Byte>::Status;
+  using PointeeType = typename BaseVisitor<WireFormatVersion, Byte>::PointeeType;
+  using ObjectPointerPointer = typename BaseVisitor<WireFormatVersion, Byte>::ObjectPointerPointer;
+  using HandlePointer = typename BaseVisitor<WireFormatVersion, Byte>::HandlePointer;
+  using CountPointer = typename BaseVisitor<WireFormatVersion, Byte>::CountPointer;
+  using EnvelopePointer = typename BaseVisitor<WireFormatVersion, Byte>::EnvelopePointer;
 
   static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = false;
@@ -117,7 +118,8 @@ class FidlDecoder final : public BaseVisitor<Byte> {
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
-    if (unlikely(reinterpret_cast<uintptr_t>(*object_ptr_ptr) != FIDL_ALLOC_PRESENT)) {
+    if (unlikely(WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1 &&
+                 reinterpret_cast<uintptr_t>(*object_ptr_ptr) != FIDL_ALLOC_PRESENT)) {
       SetError("invalid presence marker");
       return Status::kMemoryError;
     }
@@ -262,6 +264,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
       handle_idx_ += envelope->num_handles;
       return Status::kSuccess;
     }
+    ZX_ASSERT(WireFormatVersion == FIDL_WIRE_FORMAT_VERSION_V1);
 
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
@@ -408,8 +411,8 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
-                                                 out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize<FIDL_WIRE_FORMAT_VERSION_V1>(
+                    type, num_bytes, &primary_size, &next_out_of_line, out_error_msg)) != ZX_OK)) {
     drop_all_handles();
     return status;
   }
@@ -423,9 +426,10 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     }
   }
 
-  FidlDecoder<mode, uint8_t> decoder(b, num_bytes, handles, num_handles, next_out_of_line,
-                                     out_error_msg, close_unknown_union_handles);
-  fidl::Walk(decoder, type, DecodingPosition<uint8_t>{b});
+  FidlDecoder<mode, FIDL_WIRE_FORMAT_VERSION_V1, uint8_t> decoder(
+      b, num_bytes, handles, num_handles, next_out_of_line, out_error_msg,
+      close_unknown_union_handles);
+  fidl::Walk<FIDL_WIRE_FORMAT_VERSION_V1>(decoder, type, DecodingPosition<uint8_t>{b});
 
   if (unlikely(decoder.status() != ZX_OK)) {
     drop_all_handles();
@@ -496,8 +500,9 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
                          out_error_msg);
 }
 
-zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** out_error_msg) {
+template <FidlWireFormatVersion WireFormatVersion>
+zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
+                               uint32_t num_handles, const char** out_error_msg) {
   auto set_error = [&out_error_msg](const char* msg) {
     if (out_error_msg)
       *out_error_msg = msg;
@@ -518,8 +523,8 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
   zx_status_t status;
   uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
-                                                 out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize<WireFormatVersion>(
+                    type, num_bytes, &primary_size, &next_out_of_line, out_error_msg)) != ZX_OK)) {
     return status;
   }
 
@@ -531,9 +536,9 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
     }
   }
 
-  FidlDecoder<Mode::Validate, const uint8_t> validator(
+  FidlDecoder<Mode::Validate, WireFormatVersion, const uint8_t> validator(
       b, num_bytes, (zx_handle_t*)(nullptr), num_handles, next_out_of_line, out_error_msg, false);
-  fidl::Walk(validator, type, DecodingPosition<const uint8_t>{b});
+  fidl::Walk<WireFormatVersion>(validator, type, DecodingPosition<const uint8_t>{b});
 
   if (validator.status() == ZX_OK) {
     if (!validator.DidConsumeAllBytes()) {
@@ -547,6 +552,19 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
   }
 
   return validator.status();
+}
+
+zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
+                          uint32_t num_handles, const char** out_error_msg) {
+  return fidl_validate_impl<FIDL_WIRE_FORMAT_VERSION_V1>(type, bytes, num_bytes, num_handles,
+                                                         out_error_msg);
+}
+
+zx_status_t internal__fidl_validate__v2__may_break(const fidl_type_t* type, const void* bytes,
+                                                   uint32_t num_bytes, uint32_t num_handles,
+                                                   const char** out_error_msg) {
+  return fidl_validate_impl<FIDL_WIRE_FORMAT_VERSION_V2>(type, bytes, num_bytes, num_handles,
+                                                         out_error_msg);
 }
 
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_byte_t* msg,
