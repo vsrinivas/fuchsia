@@ -214,10 +214,12 @@ type ReadOptions = flexible union {
 type WriteMode = flexible enum {
     /// In `DEFAULT` mode, wait for a response from the server before returning
     /// and do not verify the echo response.
+    /// Supported for both characteristics and descriptors.
     DEFAULT = 1;
     /// In `RELIABLE` mode, every value blob is verified against an echo
     /// response from the server. The procedure is aborted if a value blob has
     /// not been reliably delivered to the peer.
+    /// Only supported for characteristics.
     RELIABLE = 2;
     /// In `WITHOUT_RESPONSE` mode, delivery will not be confirmed before
     /// returning. Writing without a response is only supported for short
@@ -225,12 +227,15 @@ type WriteMode = flexible enum {
     /// must fit into a single message. It is guaranteed that at least 20 bytes
     /// will fit into a single message. If the value does not fit, a `FAILURE`
     /// error will be produced. The value will be written at offset 0.
+    /// Only supported for characteristics.
     WITHOUT_RESPONSE = 3;
 };
 
-/// Represents the supported options to write a characteristic value to a server.
+/// Represents the supported options to write a characteristic/descriptor value
+/// to a server.
 type WriteOptions = table {
-    /// The mode of the write operation.
+    /// The mode of the write operation. For descriptors, only
+    /// [`WriteMode.DEFAULT`] is supported
     /// Optional.
     /// Default: [`WriteMode.DEFAULT`]
     1: write_mode WriteMode;
