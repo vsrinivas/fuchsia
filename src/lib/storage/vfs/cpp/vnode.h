@@ -49,7 +49,7 @@ namespace fs {
 class Vfs;
 struct VdirCookie;
 
-inline bool vfs_valid_name(std::string_view name) {
+inline bool IsValidName(std::string_view name) {
   return name.length() > 0 && name.length() <= NAME_MAX &&
          memchr(name.data(), '/', name.length()) == nullptr && name != "." && name != "..";
 }
@@ -59,7 +59,7 @@ inline bool vfs_valid_name(std::string_view name) {
 //
 // The ops are used for dispatch and the lifecycle of Vnodes are owned by RefPtrs.
 //
-// All names passed to the Vnode class are valid according to "vfs_valid_name".
+// All names passed to the Vnode class are valid according to "IsValidName".
 //
 // Memory management
 // -----------------

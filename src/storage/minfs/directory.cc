@@ -505,7 +505,7 @@ zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, siz
 
 zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Lookup", "name", name);
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
+  ZX_DEBUG_ASSERT(fs::IsValidName(name));
 
   return LookupInternal(name, out);
 }
@@ -621,7 +621,7 @@ fail:
 zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
   TRACE_DURATION("minfs", "Directory::Create", "name", name);
 
-  if (!fs::vfs_valid_name(name)) {
+  if (!fs::IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -726,7 +726,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
 
 zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Unlink", "name", name);
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
+  ZX_DEBUG_ASSERT(fs::IsValidName(name));
   bool success = false;
   fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fit::defer(
@@ -786,8 +786,8 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   auto get_metrics = fit::defer(
       [&ticker, &success, this]() { Vfs()->UpdateRenameMetrics(success, ticker.End()); });
 
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
+  ZX_DEBUG_ASSERT(fs::IsValidName(oldname));
+  ZX_DEBUG_ASSERT(fs::IsValidName(newname));
 
   auto newdir_minfs = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
 
@@ -913,7 +913,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
 
 zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   TRACE_DURATION("minfs", "Directory::Link", "name", name);
-  ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
+  ZX_DEBUG_ASSERT(fs::IsValidName(name));
 
   if (IsUnlinked()) {
     return ZX_ERR_BAD_STATE;

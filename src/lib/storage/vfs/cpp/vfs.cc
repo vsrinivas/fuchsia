@@ -222,7 +222,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view path) {
   if (zx_status_t status = TrimName(path, &path, &must_be_dir); status != ZX_OK)
     return status;
 
-  if (!vfs_valid_name(path))
+  if (!IsValidName(path))
     return ZX_ERR_INVALID_ARGS;
 
   return UnlinkValidated(vndir, path, must_be_dir);

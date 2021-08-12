@@ -97,7 +97,7 @@ zx_status_t PseudoDir::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol pro
 zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
   ZX_DEBUG_ASSERT(vn);
 
-  if (!vfs_valid_name(name)) {
+  if (!IsValidName(name)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

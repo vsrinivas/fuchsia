@@ -276,7 +276,7 @@ void DirectoryConnection::Unlink2(Unlink2RequestView request, Unlink2Completer::
     return;
   }
   std::string_view name_str(request->name.data(), request->name.size());
-  if (!vfs_valid_name(name_str)) {
+  if (!IsValidName(name_str)) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
