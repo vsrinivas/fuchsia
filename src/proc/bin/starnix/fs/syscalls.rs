@@ -675,7 +675,7 @@ pub fn sys_mount(
         String::from_utf8_lossy(fs_type)
     );
 
-    let fs = create_filesystem(ctx.kernel(), Some(ctx.task), source, fs_type, b"")?;
+    let fs = create_filesystem(ctx.kernel(), source, fs_type, b"")?;
     ctx.task.lookup_node(ctx.task.fs.root.clone(), target, SymlinkMode::max_follow())?.mount(fs)?;
     Ok(SUCCESS)
 }

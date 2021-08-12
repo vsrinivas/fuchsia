@@ -222,6 +222,12 @@ fn create_filesystem_from_spec<'a>(
     // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
     // common code that also handles the mount() system call.
     let fs = match fs_type {
+        "bind" => {
+            let task = task.ok_or(ENOENT)?;
+            Dir(task
+                .lookup_node(task.fs.root.clone(), fs_src.as_bytes(), SymlinkMode::max_follow())?
+                .entry)
+        }
         "remotefs" => {
             let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
             let root = syncio::directory_open_directory_async(&pkg, &fs_src, rights)
@@ -233,7 +239,7 @@ fn create_filesystem_from_spec<'a>(
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
             Fs(ExtFilesystem::new(vmo)?)
         }
-        _ => create_filesystem(&kernel, task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
+        _ => create_filesystem(&kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
 }

@@ -86,8 +86,7 @@ pub enum WhatToMount {
 
 pub fn create_filesystem(
     kernel: &Arc<Kernel>,
-    task: Option<&Task>,
-    source: &FsStr,
+    _source: &FsStr,
     fs_type: &FsStr,
     _data: &FsStr,
 ) -> Result<WhatToMount, Errno> {
@@ -96,10 +95,6 @@ pub fn create_filesystem(
         b"devfs" => Fs(dev_tmp_fs(kernel).clone()),
         b"proc" => Fs(proc_fs(kernel.clone())),
         b"tmpfs" => Fs(TmpFs::new()),
-        b"bind" => {
-            let task = task.ok_or(ENOENT)?;
-            Dir(task.lookup_node(task.fs.root.clone(), source, SymlinkMode::max_follow())?.entry)
-        }
         _ => return Err(ENODEV),
     })
 }
