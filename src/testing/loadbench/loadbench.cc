@@ -72,8 +72,6 @@ int main(int argc, char** argv) {
   std::optional<std::chrono::nanoseconds> default_interval;
   std::string workload_path = kDefaultWorkloadPath;
   bool help_flag = false;
-  bool list_flag = false;
-  bool terse_flag = false;
   bool verbose_flag = false;
 
   int opt;
@@ -81,12 +79,6 @@ int main(int argc, char** argv) {
     switch (opt) {
       case 'h':
         help_flag = true;
-        break;
-      case 'l':
-        list_flag = true;
-        break;
-      case 't':
-        terse_flag = true;
         break;
       case 'v':
         verbose_flag = true;
