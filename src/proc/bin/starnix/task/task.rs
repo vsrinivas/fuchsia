@@ -46,6 +46,9 @@ pub struct Task {
     // The command of this task.
     pub command: RwLock<CString>,
 
+    /// The namespace node that represents the executable associated with this task.
+    pub executable_node: RwLock<Option<NamespaceNode>>,
+
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
 
@@ -112,6 +115,7 @@ impl Task {
     fn new(
         id: pid_t,
         comm: CString,
+        executable_node: Option<NamespaceNode>,
         thread_group: Arc<ThreadGroup>,
         parent: pid_t,
         thread: zx::Thread,
@@ -126,6 +130,7 @@ impl Task {
             task: Arc::new(Task {
                 id,
                 command: RwLock::new(comm),
+                executable_node: RwLock::new(executable_node),
                 thread_group,
                 parent,
                 children: RwLock::new(HashSet::new()),
@@ -178,6 +183,7 @@ impl Task {
         let task_owner = Self::new(
             id,
             comm.clone(),
+            None,
             Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
             parent,
             thread,
@@ -191,6 +197,7 @@ impl Task {
             ShellJobControl::new(id),
             exit_signal,
         );
+
         pids.add_task(&task_owner.task);
         pids.add_thread_group(&task_owner.task.thread_group);
         Ok(task_owner)
@@ -219,6 +226,7 @@ impl Task {
         let task_owner = Self::new(
             id,
             self.command.read().clone(),
+            self.executable_node.read().clone(),
             Arc::clone(&self.thread_group),
             self.parent,
             thread,
@@ -332,6 +340,7 @@ impl Task {
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
         let executable_file = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
+        *self.executable_node.write() = Some(executable_file.name.clone());
         let executable = executable_file
             .get_vmo(self, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
 
