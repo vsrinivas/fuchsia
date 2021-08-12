@@ -23,9 +23,10 @@ namespace {
 // are not included - we do not ever execute from physmap addresses.
 constexpr uint kPhysmapMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 // Permissions & flags for regions of the physmap that are not backed by memory; they
-// may represent MMIOs or non-allocatable (ACPI NVS) memory. The kernel will not normally
-// access these addresses.
-constexpr uint kGapMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_UNCACHED_DEVICE;
+// may represent MMIOs or non-allocatable (ACPI NVS) memory. The kernel may access
+// some peripherals in these addresses (such as MMIO-based UARTs) in early boot.
+constexpr uint kGapMmuFlags =
+    ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_UNCACHED_DEVICE;
 
 // Protect the region [ |base|, |base| + |size| ) from the physmap.
 void physmap_protect_region(vaddr_t base, size_t size, uint mmu_flags) {
@@ -40,7 +41,10 @@ void physmap_protect_region(vaddr_t base, size_t size, uint mmu_flags) {
 }
 
 void physmap_protect_gap(vaddr_t base, size_t size) {
-  // Ideally, we'd drop the PERM_READ, but MMU code doesn't support that.
+  // Ideally, we'd drop the range completely, but early boot code currently relies
+  // on peripherals being mapped in.
+  //
+  // TODO(fxbug.dev/47856): Remove these regions completely.
   physmap_protect_region(base, size, kGapMmuFlags);
 }
 
