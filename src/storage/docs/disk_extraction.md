@@ -14,14 +14,18 @@ environment (physical device or a VM) in which the issue is seen and has the
 ability to log into the system to run debug commands.
 
 If you do not have full control over the environment, the disk extractor
-library and tool only retrieves information such as the filesystem metadata of
-the storage without including personally identifiable (PII). By only extracting
-relevant portions of the storage, the size of the extracted image remains small.
+library and tool can help extract relevant information. The minfs extractor only
+retrieves information such as the filesystem metadata of the storage without
+including personally identifiable (PII). Blobfs extractor can dump metadata as
+well as corrupted blob data. Blobfs metadata will include the superblock, nodemap,
+bitmap, and the journal. The Fvm extractor dumps two copies of metadata. Each Fvm
+metadata copy includes the header, the partition table, and the allocation table.
+By only extracting relevant portions of the storage, the size of the extracted
+image remains small.
 
 ## Current state
 
-At the moment only minfs disk image extraction is supported. BlobFS
-and FVM are currently not supported.
+At the moment, minfs, blobfs, and fvm disk image extraction are supported.
 
 ## Extraction over serial
 
@@ -101,10 +105,17 @@ Things to keep in mind if you are manually scraping logs:
 ## Tool
 
 If you have control over the device environment, you can extract the disk image
-by runnig [disk-extract](/src/storage/extractor/bin/BUILD.gn). The workflow
-might look something like
+by running [disk-extract](/src/storage/extractor/bin/BUILD.gn). This particular
+workflow is for minfs but you can substitute in blobfs or fvm for minfs.
+
+NOTE: Before starting, ensure that your fx set includes //src/storage:tools
+to get access to the disk-extract tool.
 
 ```
+
+# Determine path of block device with
+fuchsia$ lsblk
+
 # Assuming minfs block device is at /dev/class/block/001, on fuchsia
 fuchsia$ disk-extract extract --type minfs --disk /dev/class/block/001 --image /tmp/img.ext
 
@@ -134,4 +145,4 @@ extractor at [/src/storage/extractor/cpp/minfs_extractor.cc](/src/storage/extrac
 
 ## Future work
 
-Only minfs supports extraction. Extraction can be added to blobfs, fvm, ftl and fxfs.
+Only minfs, blobfs, and fvm support extraction. Extraction can be added to ftl and fxfs.
