@@ -11,14 +11,21 @@ class TldsProvider {
 
   // Creates the TldsModel Once when the simple browser is initiated.
   Future<String?> loadIanaTldsList() async {
-    final response = await http
-        .get(Uri.parse('http://data.iana.org/TLD/tlds-alpha-by-domain.txt'));
+    try {
+      final response = await http
+          .get(Uri.parse('http://data.iana.org/TLD/tlds-alpha-by-domain.txt'));
 
-    if (response.statusCode == 200) {
-      log.info('Successfully loaded a TLD list from iana.org');
-      return response.body;
-    } else {
-      log.warning('Failed to load a TLD list from iana.org.');
+      if (response.statusCode == 200) {
+        log.info('Successfully loaded a TLD list from iana.org');
+        return response.body;
+      } else {
+        log.warning('Failed to load a TLD list from iana.org '
+            '(Bad response: ${response.statusCode})');
+        return null;
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      log.severe('Failed to load a TLD list from iana.org ($e)');
       return null;
     }
   }
