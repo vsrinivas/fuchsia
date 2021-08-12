@@ -351,12 +351,8 @@ impl Surface {
             SurfaceCommand::AttachBuffer(attachment) => {
                 let buffer = attachment.buffer.clone();
                 let material = scenic::Material::new(node.scenic.as_inner().clone());
-                if let Some(image) = buffer.create_image(&node.scenic.as_inner()) {
-                    material.set_texture(Some(&image));
-                }
-                if let Some(image3) = buffer.image3_resource(&node.scenic.as_inner()) {
-                    material.set_texture_resource(Some(&image3));
-                }
+                let image3 = buffer.image_resource(&node.scenic.as_inner());
+                material.set_texture_resource(Some(&image3));
                 node.surface_node.set_material(&material);
                 let previous_size = mem::replace(&mut self.size, buffer.image_size());
 
