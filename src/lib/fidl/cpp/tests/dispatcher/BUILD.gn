@@ -13,7 +13,11 @@ group("dispatcher") {
 
 test("fidl_cpp_dispatcher_tests_bin") {
   output_name = "fidl_cpp_dispatcher_tests"
-  sources = [ "natural_client_messenger_test.cc" ]
+  sources = [
+    "client_test.cc",
+    "natural_client_messenger_test.cc",
+    "test_messages.h",
+  ]
   deps = [
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",

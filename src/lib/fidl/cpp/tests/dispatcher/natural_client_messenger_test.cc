@@ -6,13 +6,14 @@
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/message.h>
 
 #include <array>
 
 #include <zxtest/zxtest.h>
+
+#include "test_messages.h"
 
 namespace {
 
@@ -112,38 +113,12 @@ class NaturalClientMessengerTest : public zxtest::Test {
   MockResponseContext context_;
 };
 
-class GoodMessage {
- public:
-  GoodMessage() { fidl_init_txn_header(&content_, 0, kTestOrdinal); }
-
-  fidl::HLCPPOutgoingMessage message() {
-    return fidl::HLCPPOutgoingMessage(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(&content_), sizeof(content_), sizeof(content_)),
-        fidl::HandleDispositionPart());
-  }
-
- private:
-  FIDL_ALIGNDECL fidl_message_header_t content_ = {};
-};
-
-class BadMessage {
- public:
-  fidl::HLCPPOutgoingMessage message() {
-    return fidl::HLCPPOutgoingMessage(
-        fidl::BytePart(too_large_.data(), too_large_.size(), too_large_.size()),
-        fidl::HandleDispositionPart());
-  }
-
- private:
-  FIDL_ALIGNDECL std::array<uint8_t, sizeof(fidl_message_header_t) * 2> too_large_;
-};
-
 TEST_F(NaturalClientMessengerTest, TwoWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, good.message(), &context());
+  messenger().TwoWay(good.type(), good.message(), &context());
   EXPECT_EQ(1, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
@@ -161,7 +136,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayInvalidMessage) {
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, too_large.message(), &context());
+  messenger().TwoWay(too_large.type(), too_large.message(), &context());
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(1, context().num_errors());
@@ -181,7 +156,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, good.message(), &context());
+  messenger().TwoWay(good.type(), good.message(), &context());
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_TRUE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
@@ -195,8 +170,7 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result =
-      messenger().OneWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, good.message());
+  fidl::Result result = messenger().OneWay(good.type(), good.message());
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
@@ -210,8 +184,7 @@ TEST_F(NaturalClientMessengerTest, OneWayInvalidMessage) {
   BadMessage too_large;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result =
-      messenger().OneWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, too_large.message());
+  fidl::Result result = messenger().OneWay(too_large.type(), too_large.message());
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
@@ -225,8 +198,7 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
   controller().Unbind();
   ASSERT_OK(loop().RunUntilIdle());
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result =
-      messenger().OneWay(&fidl::_llcpp_coding_AnyZeroArgMessageTable, good.message());
+  fidl::Result result = messenger().OneWay(good.type(), good.message());
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 

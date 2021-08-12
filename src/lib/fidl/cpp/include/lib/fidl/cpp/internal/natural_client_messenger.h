@@ -38,18 +38,18 @@ class NaturalClientMessenger {
   //
   // Otherwise, |context| ownership is passed to |ClientBase|.
   void TwoWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
-              fidl::internal::ResponseContext* context);
+              fidl::internal::ResponseContext* context) const;
 
   // Sends a one way message.
   //
   // Any send-time errors are propagated via the return value.
   //
   // |type| is used to validate the message.
-  fidl::Result OneWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message);
+  fidl::Result OneWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message) const;
 
  private:
   // Private implementation behind |TwoWay| and |OneWay|.
-  fidl::Result Send(const fidl_type_t* type, HLCPPOutgoingMessage&& message);
+  fidl::Result Send(const fidl_type_t* type, HLCPPOutgoingMessage&& message) const;
 
   // The client messaging implementation.
   fidl::internal::ClientBase* client_base_;

@@ -12,7 +12,7 @@ namespace internal {
 
 // TODO(fxbug.dev/82189): Switch to new natural domain objects instead of HLCPP.
 void NaturalClientMessenger::TwoWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
-                                    fidl::internal::ResponseContext* context) {
+                                    fidl::internal::ResponseContext* context) const {
   client_base_->PrepareAsyncTxn(context);
   message.set_txid(context->Txid());
 
@@ -30,13 +30,14 @@ void NaturalClientMessenger::TwoWay(const fidl_type_t* type, HLCPPOutgoingMessag
 
 // TODO(fxbug.dev/82189): Switch to new natural domain objects instead of HLCPP.
 fidl::Result NaturalClientMessenger::OneWay(const fidl_type_t* type,
-                                            HLCPPOutgoingMessage&& message) {
+                                            HLCPPOutgoingMessage&& message) const {
   message.set_txid(0);
   return Send(type, std::move(message));
 }
 
 // TODO(fxbug.dev/82189): Switch to new natural domain objects instead of HLCPP.
-fidl::Result NaturalClientMessenger::Send(const fidl_type_t* type, HLCPPOutgoingMessage&& message) {
+fidl::Result NaturalClientMessenger::Send(const fidl_type_t* type,
+                                          HLCPPOutgoingMessage&& message) const {
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
