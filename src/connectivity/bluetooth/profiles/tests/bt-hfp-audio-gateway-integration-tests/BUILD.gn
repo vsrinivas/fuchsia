@@ -12,22 +12,30 @@ rustc_test("tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/connectivity/bluetooth/lib/bt-rfcomm",
+    "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/connectivity/bluetooth/testing/test-call-manager",
+    "//src/connectivity/bluetooth/tests/bt-manifest-integration-tests:lib",
     "//src/connectivity/lib/at-commands",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/testing/fixture",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt_hfp_audio_gateway_integration_tests") {
@@ -52,6 +60,9 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     # The HFP component + the default configuration file used by it.
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:component-v2",
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config",
+
+    # The RFCOMM component that is the intermediary for HFP and test driven peers.
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
 
     # Mock Piconet Server
     "//src/connectivity/bluetooth/testing/mock-piconet-server",

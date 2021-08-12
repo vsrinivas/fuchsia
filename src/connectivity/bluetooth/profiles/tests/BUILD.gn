@@ -8,9 +8,7 @@ group("tests") {
     "bt-a2dp-loopback",
     "bt-a2dp-source-integration-tests",
     "bt-avrcp-integration-tests:tests",
-
-    # TODO(fxbug.dev/79954): Disabled due to lack of ability to mock or disable DAI audio outputs
-    # "bt-hfp-audio-gateway-integration-tests:tests",
+    "bt-hfp-audio-gateway-integration-tests:tests",
     "bt-rfcomm-integration-tests:tests",
 
     # Mock cobalt component that is injected into the integration tests.
