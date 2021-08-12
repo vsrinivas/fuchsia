@@ -142,6 +142,10 @@ impl FxFile {
         }
         Ok(vmo)
     }
+
+    pub async fn flush(&self) -> Result<(), Error> {
+        self.handle.flush().await
+    }
 }
 
 impl Drop for FxFile {

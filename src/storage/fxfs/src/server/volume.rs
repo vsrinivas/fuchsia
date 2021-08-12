@@ -21,8 +21,14 @@ use {
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
+    fuchsia_async::{self as fasync},
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    futures::{self, channel::oneshot, FutureExt},
+    std::{
+        any::Any,
+        sync::{Arc, Mutex},
+        time::Duration,
+    },
     storage_device::buffer::Buffer,
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
@@ -30,17 +36,27 @@ use {
     },
 };
 
+pub static DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
+
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
 pub struct FxVolume {
     cache: NodeCache,
     store: Arc<ObjectStore>,
     pager: Pager,
+
+    // A tuple of the actual task and a channel to signal to terminate the task.
+    flush_task: Mutex<Option<(fasync::Task<()>, oneshot::Sender<()>)>>,
 }
 
 impl FxVolume {
     pub fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
-        Ok(Self { cache: NodeCache::new(), store, pager: Pager::new()? })
+        Ok(Self {
+            cache: NodeCache::new(),
+            store,
+            pager: Pager::new()?,
+            flush_task: Mutex::new(None),
+        })
     }
 
     pub fn store(&self) -> &Arc<ObjectStore> {
@@ -57,6 +73,11 @@ impl FxVolume {
 
     pub async fn terminate(&self) {
         self.pager.terminate().await;
+        let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
+        if let Some((task, terminate)) = task {
+            let _ = terminate.send(());
+            task.await;
+        }
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
@@ -123,6 +144,43 @@ impl FxVolume {
             .tombstone(object_id, Options { borrow_metadata_space: true, ..Default::default() })
             .await?;
         Ok(())
+    }
+
+    /// Starts the background flush task.  This task will periodically scan all files and flush them
+    /// to disk.
+    /// The task will hold a strong reference to the FxVolume while it is running, so the task must
+    /// be closed later with Self::terminate, or the FxVolume will never be dropped.
+    pub fn start_flush_task(self: &Arc<Self>, period: Duration) {
+        let mut flush_task = self.flush_task.lock().unwrap();
+        if let None = &*flush_task {
+            let (tx, rx) = oneshot::channel();
+            *flush_task = Some((fasync::Task::spawn(self.clone().flush_task(period, rx)), tx));
+        }
+    }
+
+    async fn flush_task(self: Arc<Self>, period: Duration, mut terminate: oneshot::Receiver<()>) {
+        log::debug!("FxVolume::flush_task start {}", self.store.store_object_id());
+        loop {
+            if futures::select!(
+                _ = fasync::Timer::new(period).fuse() => false,
+                _ = terminate => true,
+            ) {
+                break;
+            }
+            let files = self.cache.get_all_files();
+            log::debug!("FxVolume {} flushing {} files", self.store.store_object_id(), files.len());
+            for file in files {
+                if let Err(e) = file.flush().await {
+                    log::warn!(
+                        "Failed to flush {}.{}: {:?}",
+                        self.store.store_object_id(),
+                        file.object_id(),
+                        e
+                    )
+                }
+            }
+        }
+        log::debug!("FxVolume::flush_task end {}", self.store.store_object_id());
     }
 }
 
@@ -316,9 +374,24 @@ impl FxVolumeAndRoot {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::testing::{
-            close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
-            open_file_checked, TestFixture,
+        crate::{
+            object_handle::{ObjectHandle, ObjectHandleExt},
+            object_store::{
+                crypt::InsecureCrypt,
+                directory::ObjectDescriptor,
+                filesystem::FxFilesystem,
+                transaction::{Options, TransactionHandler},
+                volume::create_root_volume,
+                HandleOptions, ObjectStore,
+            },
+            server::{
+                file::FxFile,
+                testing::{
+                    close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
+                    open_file_checked, TestFixture,
+                },
+                volume::FxVolumeAndRoot,
+            },
         },
         fidl_fuchsia_io::{
             MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
@@ -327,6 +400,9 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
+        std::sync::Arc,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
+        vfs::file::File,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -539,5 +615,74 @@ mod tests {
         close_dir_checked(src).await;
 
         fixture.close().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_background_flush() {
+        // We have to do a bit of set-up ourselves for this test, since we want to be able to access
+        // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
+        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
+        let filesystem =
+            FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
+        {
+            let root_volume = create_root_volume(&filesystem).await.unwrap();
+            let volume = root_volume.new_volume("vol").await.unwrap();
+            let mut transaction = filesystem
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let object_id = ObjectStore::create_object(
+                &volume,
+                &mut transaction,
+                HandleOptions::default(),
+                Some(0),
+            )
+            .await
+            .expect("create_object failed")
+            .object_id();
+            transaction.commit().await.expect("commit failed");
+            let vol = FxVolumeAndRoot::new(volume.clone()).await.unwrap();
+
+            let file = vol
+                .volume()
+                .get_or_load_node(object_id, ObjectDescriptor::File, None)
+                .await
+                .expect("get_or_load_node failed")
+                .into_any()
+                .downcast::<FxFile>()
+                .expect("Not a file");
+
+            // Write some data to the file, which will only go to the cache for now.
+            file.write_at(0, &[123u8]).await.expect("write_at failed");
+
+            let data_has_persisted = || async {
+                // We have to reopen the object each time since this is a distinct handle from the
+                // one managed by the FxFile.
+                let object = ObjectStore::open_object(&volume, object_id, HandleOptions::default())
+                    .await
+                    .expect("open_object failed");
+                let data = object.contents(8192).await.expect("read failed");
+                data.len() == 1 && data[..] == [123u8]
+            };
+            assert!(!data_has_persisted().await);
+
+            vol.volume().start_flush_task(std::time::Duration::from_millis(100));
+
+            let mut wait = 100;
+            loop {
+                if data_has_persisted().await {
+                    break;
+                }
+                fasync::Timer::new(std::time::Duration::from_millis(wait)).await;
+                wait *= 2;
+            }
+
+            vol.volume().terminate().await;
+        }
+
+        filesystem.close().await.expect("close filesystem failed");
+        let device = filesystem.take_device().await;
+        device.ensure_unique();
     }
 }

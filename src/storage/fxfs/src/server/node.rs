@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::server::directory::FxDirectory,
+    crate::server::{directory::FxDirectory, file::FxFile},
     futures::future::poll_fn,
     std::{
         any::TypeId,
@@ -162,6 +162,19 @@ impl NodeCache {
     /// Returns the given node if present in the cache.
     pub fn get(&self, object_id: u64) -> Option<Arc<dyn FxNode>> {
         self.0.lock().unwrap().map.get(&object_id).and_then(Weak::upgrade)
+    }
+
+    /// Returns a strong reference to all files in the cache.
+    pub fn get_all_files(&self) -> Vec<Arc<FxFile>> {
+        self.0
+            .lock()
+            .unwrap()
+            .map
+            .values()
+            .map(|n| n.upgrade().and_then(|m| m.into_any().downcast::<FxFile>().ok()))
+            .filter(|n| n.is_some())
+            .map(|n| n.unwrap())
+            .collect::<Vec<_>>()
     }
 }
 
