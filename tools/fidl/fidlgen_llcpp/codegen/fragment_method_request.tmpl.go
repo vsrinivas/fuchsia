@@ -14,6 +14,10 @@ const fragmentMethodRequestTmpl = `
 {{- end }}
 template<>
 struct {{ .WireRequest }} final {
+{{- range .RequestAnonymousChildren }}
+  using {{ .ScopedName }} = {{ .FlattenedName }};
+{{- end }}
+
   FIDL_ALIGNDECL
   {{- /* Add underscore to prevent name collision */}}
   fidl_message_header_t _hdr;

@@ -48,6 +48,8 @@ extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
 
 class ExampleFooResult {
  public:
+  using Response = fidl_test_error::wire::ExampleFooResponse;
+
   ExampleFooResult()
       : ordinal_(::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid),
         envelope_{} {}
@@ -535,6 +537,8 @@ struct ::fidl::WireRequest<::fidl_test_error::Example::Foo> final {
 };
 template <>
 struct ::fidl::WireResponse<::fidl_test_error::Example::Foo> final {
+  using Result = fidl_test_error::wire::ExampleFooResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_error::wire::ExampleFooResult result;

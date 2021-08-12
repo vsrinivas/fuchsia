@@ -164,3 +164,15 @@ protocol TypesTest {
         value array<byte, 497>;
     });
 };
+
+protocol UsesAnonymous {
+    FooMethod(struct {
+        req_member table {
+            1: inner_table union {
+                1: data uint8;
+            };
+        };
+    }) -> (struct {}) error enum {
+        FOO = 1;
+    };
+};

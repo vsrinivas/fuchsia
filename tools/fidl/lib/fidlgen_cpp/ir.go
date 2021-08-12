@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -168,6 +169,35 @@ func (t *Type) WireInitMessage(n string) string {
 	}
 }
 
+type namingContextKey = string
+
+// toKey converts a naming context into a value that can be used as a map key
+// (i.e. with equality), such that no different naming contexts produce the same
+// key. A naming context is a stack of strings identifying the naming scopes
+// that something is defined in; see naming-context in the IR and
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0050_syntax_revamp?hl=en#layout-naming-contexts
+// for details.
+func toKey(idents []string) namingContextKey {
+	// relies on the fact that '$' is not a valid part of an identifier
+	return strings.Join(idents, "$")
+}
+
+// ScopedLayout represents the definition of a scoped name for an anonymous
+// layout. It consists of the scoped name (defined within the parent layout),
+// and the flattened name (defined at the top level)
+type ScopedLayout struct {
+	scopedName    stringNamePart
+	flattenedName nameVariants
+}
+
+func (s ScopedLayout) ScopedName() string {
+	return s.scopedName.String()
+}
+
+func (s ScopedLayout) FlattenedName() string {
+	return s.flattenedName.NoLeading()
+}
+
 type Member interface {
 	NameAndType() (string, Type)
 }
@@ -309,12 +339,18 @@ func codingTableName(ident fidlgen.EncodedCompoundIdentifier) string {
 }
 
 type compiler struct {
-	symbolPrefix    string
-	decls           fidlgen.DeclInfoMap
-	library         fidlgen.LibraryIdentifier
-	handleTypes     map[fidlgen.HandleSubtype]struct{}
-	resultForStruct map[fidlgen.EncodedCompoundIdentifier]*Result
-	resultForUnion  map[fidlgen.EncodedCompoundIdentifier]*Result
+	symbolPrefix           string
+	decls                  fidlgen.DeclInfoMap
+	library                fidlgen.LibraryIdentifier
+	handleTypes            map[fidlgen.HandleSubtype]struct{}
+	resultForStruct        map[fidlgen.EncodedCompoundIdentifier]*Result
+	resultForUnion         map[fidlgen.EncodedCompoundIdentifier]*Result
+	requestResponsePayload map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
+	// anonymousChildren maps a layout (defined by its naming context key) to
+	// the anonymous layouts defined directly within that layout. We opt to flatten
+	// the naming context and use a map rather than a trie like structure for
+	// simplicity.
+	anonymousChildren map[namingContextKey][]ScopedLayout
 }
 
 func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
@@ -494,6 +530,10 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	return r
 }
 
+func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
+	return c.anonymousChildren[toKey(layout.NamingContext)]
+}
+
 func compile(r fidlgen.Root, h HeaderOptions) Root {
 	root := Root{
 		HeaderOptions: h,
@@ -506,12 +546,14 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 		rawLibrary = append(rawLibrary, identifier)
 	}
 	c := compiler{
-		symbolPrefix:    formatLibraryPrefix(rawLibrary),
-		decls:           r.DeclsWithDependencies(),
-		library:         fidlgen.ParseLibraryName(r.Name),
-		handleTypes:     make(map[fidlgen.HandleSubtype]struct{}),
-		resultForStruct: make(map[fidlgen.EncodedCompoundIdentifier]*Result),
-		resultForUnion:  make(map[fidlgen.EncodedCompoundIdentifier]*Result),
+		symbolPrefix:           formatLibraryPrefix(rawLibrary),
+		decls:                  r.DeclsWithDependencies(),
+		library:                fidlgen.ParseLibraryName(r.Name),
+		handleTypes:            make(map[fidlgen.HandleSubtype]struct{}),
+		resultForStruct:        make(map[fidlgen.EncodedCompoundIdentifier]*Result),
+		resultForUnion:         make(map[fidlgen.EncodedCompoundIdentifier]*Result),
+		requestResponsePayload: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
+		anonymousChildren:      make(map[namingContextKey][]ScopedLayout),
 	}
 
 	root.RawLibrary = rawLibrary
@@ -524,6 +566,36 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 		libraryReversed[len(libraryReversed)-i-1] = identifier
 	}
 	root.LibraryReversed = libraryReversed
+
+	addAnonymousLayouts := func(layout fidlgen.Layout) {
+		if !layout.IsAnonymous() {
+			return
+		}
+
+		// given a naming context ["foo", "bar", "baz"], we mark that the layout
+		// at context ["foo", "bar"] has a child "baz"
+		key := toKey(layout.NamingContext[:len(layout.NamingContext)-1])
+		c.anonymousChildren[key] = append(c.anonymousChildren[key], ScopedLayout{
+			// TODO(fxbug.dev/60240): change this when other bindings use name transforms
+			scopedName:    stringNamePart(fidlgen.ToUpperCamelCase(layout.NamingContext[len(layout.NamingContext)-1])),
+			flattenedName: c.compileNameVariants(layout.GetName()),
+		})
+	}
+	for _, v := range r.Bits {
+		addAnonymousLayouts(v.Layout)
+	}
+	for _, v := range r.Enums {
+		addAnonymousLayouts(v.Layout)
+	}
+	for _, v := range r.Unions {
+		addAnonymousLayouts(v.Layout)
+	}
+	for _, v := range r.Tables {
+		addAnonymousLayouts(v.Layout)
+	}
+	for _, v := range r.Structs {
+		addAnonymousLayouts(v.Layout)
+	}
 
 	decls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)
 
@@ -545,11 +617,11 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 	}
 
 	for _, v := range r.Structs {
-		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
 		if v.IsRequestOrResponse {
-			continue
+			c.requestResponsePayload[v.Name] = v
+		} else {
+			decls[v.Name] = c.compileStruct(v)
 		}
-		decls[v.Name] = c.compileStruct(v)
 	}
 
 	for _, v := range r.Tables {

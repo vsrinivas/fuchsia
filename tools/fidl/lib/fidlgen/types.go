@@ -621,6 +621,7 @@ func (d *Decl) GetName() EncodedCompoundIdentifier {
 // Layout represents data specific to bits/enums/structs/tables/unions. All
 // layouts are decls, but not all decls are layouts (e.g. protocols).
 type Layout struct {
+	Decl
 	NamingContext []string `json:"naming_context"`
 }
 
@@ -646,7 +647,7 @@ var _ = []Declaration{
 
 // Union represents the declaration of a FIDL union.
 type Union struct {
-	Decl
+	Layout
 	Members      []UnionMember `json:"members"`
 	Strictness   `json:"strict"`
 	Resourceness `json:"resource"`
@@ -670,7 +671,7 @@ type UnionMember struct {
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
-	Decl
+	Layout
 	Members      []TableMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
@@ -718,7 +719,6 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
-	Decl
 	Layout
 	IsRequestOrResponse bool           `json:"is_request_or_response"`
 	Members             []StructMember `json:"members"`
@@ -890,7 +890,7 @@ type Parameter struct {
 
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
-	Decl
+	Layout
 	Type            PrimitiveSubtype `json:"type"`
 	Members         []EnumMember     `json:"members"`
 	Strictness      `json:"strict"`
@@ -954,7 +954,7 @@ func (member *EnumMember) IsUnknown() bool {
 
 // Bits represents a FIDL declaration of an bits.
 type Bits struct {
-	Decl
+	Layout
 	Type       Type         `json:"type"`
 	Mask       string       `json:"mask"`
 	Members    []BitsMember `json:"members"`

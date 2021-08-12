@@ -22,6 +22,10 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 class {{ .Name }} final {
 public:
+{{- range .AnonymousChildren }}
+  using {{ .ScopedName }} = {{ .FlattenedName }};
+{{- end }}
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 

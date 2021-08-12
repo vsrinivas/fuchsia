@@ -25,6 +25,7 @@ fidl("fidl.llcpp.types.test") {
 test("fidl_llcpp_wire_type_api_tests_bin") {
   output_name = "fidl_llcpp_wire_type_api_tests"
   sources = [
+    "anonymous_test.cc",
     "bits_test.cc",
     "enum_test.cc",
   ]

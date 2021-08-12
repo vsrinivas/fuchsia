@@ -27,6 +27,10 @@ struct {{ .Name }} {
   static constexpr uint32_t MaxOutOfLine = {{ .TypeShapeV1.MaxOutOfLine }};
   static constexpr bool HasPointer = {{ .TypeShapeV1.HasPointer }};
 
+{{- range .AnonymousChildren }}
+  using {{ .ScopedName }} = {{ .FlattenedName }};
+{{- end }}
+
   {{- range .Members }}
 {{ "" }}
     {{- .Docs }}

@@ -956,7 +956,7 @@
             "type": "object"
         },
         "naming-context": {
-            "description": "List of names identifying the use of an anonymous object",
+            "description": "A naming context is a list of names, from least specific to most specific, which identifies the use of a layout. For example, in `type Outer = struct { inner struct {}; };`, the context for the innermost struct is [\"Outer\", \"inner\"]. Naming contexts are only specified for anonyous layouts.",
             "items": {
                 "type": "string"
             },

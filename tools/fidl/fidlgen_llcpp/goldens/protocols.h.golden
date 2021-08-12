@@ -197,6 +197,9 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntaxHandleInResultResult {
  public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse;
+
   WithErrorSyntaxHandleInResultResult()
       : ordinal_(::fidl_test_protocols::wire::
                      WithErrorSyntaxHandleInResultResult::Ordinal::Invalid),
@@ -372,6 +375,9 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntaxResponseAsStructResult {
  public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResponse;
+
   WithErrorSyntaxResponseAsStructResult()
       : ordinal_(::fidl_test_protocols::wire::
                      WithErrorSyntaxResponseAsStructResult::Ordinal::Invalid),
@@ -544,6 +550,9 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntaxErrorAsPrimitiveResult {
  public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse;
+
   WithErrorSyntaxErrorAsPrimitiveResult()
       : ordinal_(::fidl_test_protocols::wire::
                      WithErrorSyntaxErrorAsPrimitiveResult::Ordinal::Invalid),
@@ -796,6 +805,9 @@ extern "C" const fidl_type_t
 
 class WithErrorSyntaxErrorAsEnumResult {
  public:
+  using Response =
+      fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse;
+
   WithErrorSyntaxErrorAsEnumResult()
       : ordinal_(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
                      Ordinal::Invalid),
@@ -11094,6 +11106,9 @@ template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
     final {
+  using Result =
+      fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult result;
@@ -11450,6 +11465,9 @@ template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     final {
+  using Result =
+      fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result;
@@ -11803,6 +11821,8 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
 template <>
 struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     final {
+  using Result = fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result;
@@ -12154,6 +12174,8 @@ template <>
 struct ::fidl::WireResponse<
     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
     final {
+  using Result = fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult result;

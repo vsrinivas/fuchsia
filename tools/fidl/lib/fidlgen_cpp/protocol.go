@@ -365,13 +365,15 @@ type methodInner struct {
 
 	Attributes
 	nameVariants
-	Ordinal      uint64
-	HasRequest   bool
-	RequestArgs  []Parameter
-	HasResponse  bool
-	ResponseArgs []Parameter
-	Transitional bool
-	Result       *Result
+	Ordinal                   uint64
+	HasRequest                bool
+	RequestArgs               []Parameter
+	RequestAnonymousChildren  []ScopedLayout
+	HasResponse               bool
+	ResponseArgs              []Parameter
+	ResponseAnonymousChildren []ScopedLayout
+	Transitional              bool
+	Result                    *Result
 }
 
 // Method should be created using newMethod.
@@ -542,26 +544,38 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) Protocol {
 
 		methodMarker := protocolName.nest(name.Wire.Name())
 
+		var requestChildren []ScopedLayout
+		if val, ok := c.requestResponsePayload[v.RequestPayload]; ok {
+			requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+		}
+
+		var responseChildren []ScopedLayout
+		if val, ok := c.requestResponsePayload[v.ResponsePayload]; ok {
+			responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+		}
+
 		method := newMethod(methodInner{
 			nameVariants: name,
 			protocolName: protocolName,
 			// Using the raw identifier v.Name instead of the name after
 			// reserved words logic, since that's the behavior in fidlc.
-			baseCodingTableName: codingTableName + string(v.Name),
-			Marker:              methodMarker,
-			requestTypeShapeV1:  TypeShape{v.RequestTypeShapeV1},
-			requestTypeShapeV2:  TypeShape{v.RequestTypeShapeV2},
-			responseTypeShapeV1: TypeShape{v.ResponseTypeShapeV1},
-			responseTypeShapeV2: TypeShape{v.ResponseTypeShapeV2},
-			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
-			Attributes:          Attributes{v.Attributes},
-			Ordinal:             v.Ordinal,
-			HasRequest:          v.HasRequest,
-			RequestArgs:         c.compileParameterArray(v.Request),
-			HasResponse:         v.HasResponse,
-			ResponseArgs:        c.compileParameterArray(v.Response),
-			Transitional:        v.IsTransitional(),
-			Result:              result,
+			baseCodingTableName:       codingTableName + string(v.Name),
+			Marker:                    methodMarker,
+			requestTypeShapeV1:        TypeShape{v.RequestTypeShapeV1},
+			requestTypeShapeV2:        TypeShape{v.RequestTypeShapeV2},
+			responseTypeShapeV1:       TypeShape{v.ResponseTypeShapeV1},
+			responseTypeShapeV2:       TypeShape{v.ResponseTypeShapeV2},
+			wireMethod:                newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
+			Attributes:                Attributes{v.Attributes},
+			Ordinal:                   v.Ordinal,
+			HasRequest:                v.HasRequest,
+			RequestArgs:               c.compileParameterArray(v.Request),
+			RequestAnonymousChildren:  requestChildren,
+			HasResponse:               v.HasResponse,
+			ResponseArgs:              c.compileParameterArray(v.Response),
+			ResponseAnonymousChildren: responseChildren,
+			Transitional:              v.IsTransitional(),
+			Result:                    result,
 		}, hlMessaging, wireTypeNames)
 		methods = append(methods, method)
 	}

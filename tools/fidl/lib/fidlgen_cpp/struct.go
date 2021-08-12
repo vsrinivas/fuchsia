@@ -15,6 +15,7 @@ type Struct struct {
 	Attributes
 	fidlgen.Resourceness
 	nameVariants
+	AnonymousChildren   []ScopedLayout
 	CodingTableType     string
 	Members             []StructMember
 	BackingBufferTypeV1 string
@@ -85,13 +86,14 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	n := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
-		Attributes:      Attributes{val.Attributes},
-		TypeShapeV1:     TypeShape{val.TypeShapeV1},
-		TypeShapeV2:     TypeShape{val.TypeShapeV2},
-		Resourceness:    val.Resourceness,
-		nameVariants:    n,
-		CodingTableType: codingTableType,
-		Members:         []StructMember{},
+		Attributes:        Attributes{val.Attributes},
+		AnonymousChildren: c.getAnonymousChildren(val.Layout),
+		TypeShapeV1:       TypeShape{val.TypeShapeV1},
+		TypeShapeV2:       TypeShape{val.TypeShapeV2},
+		Resourceness:      val.Resourceness,
+		nameVariants:      n,
+		CodingTableType:   codingTableType,
+		Members:           []StructMember{},
 		BackingBufferTypeV1: computeAllocation(
 			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),

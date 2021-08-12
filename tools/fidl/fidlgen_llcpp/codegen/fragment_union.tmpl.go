@@ -21,6 +21,10 @@ extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ .Docs }}
 class {{ .Name }} {
   public:
+{{- range .AnonymousChildren }}
+  using {{ .ScopedName }} = {{ .FlattenedName }};
+{{- end }}
+
   {{ .Name }}() : ordinal_({{ .WireInvalidOrdinal }}), envelope_{} {}
 
   {{ .Name }}(const {{ .Name }}&) = default;

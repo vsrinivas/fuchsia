@@ -16,6 +16,7 @@ type Table struct {
 	Attributes
 	fidlgen.Resourceness
 	nameVariants
+	AnonymousChildren   []ScopedLayout
 	CodingTableType     string
 	Members             []TableMember
 	BiggestOrdinal      int
@@ -84,14 +85,15 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{
-		Attributes:      Attributes{val.Attributes},
-		TypeShapeV1:     TypeShape{val.TypeShapeV1},
-		TypeShapeV2:     TypeShape{val.TypeShapeV2},
-		Resourceness:    val.Resourceness,
-		nameVariants:    name,
-		CodingTableType: codingTableType,
-		Members:         nil,
-		BiggestOrdinal:  0,
+		Attributes:        Attributes{val.Attributes},
+		AnonymousChildren: c.getAnonymousChildren(val.Layout),
+		TypeShapeV1:       TypeShape{val.TypeShapeV1},
+		TypeShapeV2:       TypeShape{val.TypeShapeV2},
+		Resourceness:      val.Resourceness,
+		nameVariants:      name,
+		CodingTableType:   codingTableType,
+		Members:           nil,
+		BiggestOrdinal:    0,
 		BackingBufferTypeV1: computeAllocation(
 			TypeShape{val.TypeShapeV1}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),

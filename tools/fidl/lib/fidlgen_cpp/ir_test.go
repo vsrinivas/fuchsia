@@ -7,6 +7,7 @@ package fidlgen_cpp
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
@@ -38,4 +39,145 @@ protocol P {
 	// TODO(fxbug.dev/72980): Switch to ClientEnd/ServerEnd and underscore namespace when
 	// corresponding endpoint types can easily convert into each other.
 	expectEqual(t, ty.Unified.String(), "::std::vector<::fidl::InterfaceHandle<::foo::bar::P>>")
+}
+
+func makeTestName(s string) nameVariants {
+	return nameVariants{
+		Natural: makeName("example::" + s),
+		Unified: makeName("example::" + s),
+		Wire:    makeName("example::wire::" + s),
+	}
+}
+
+func TestAnonymousLayoutAliases(t *testing.T) {
+	currentVariant = wireVariant
+
+	cases := []struct {
+		desc     string
+		fidl     string
+		expected map[namingContextKey][]ScopedLayout
+	}{
+		{
+			desc: "single struct",
+			fidl: "type Foo = struct { bar struct {}; };",
+			expected: map[namingContextKey][]ScopedLayout{
+				"Foo": {{
+					scopedName:    stringNamePart("Bar"),
+					flattenedName: makeTestName("Bar"),
+				}},
+			},
+		},
+		{
+			desc: "request",
+			fidl: `
+		protocol MyProtocol {
+			MyMethod(struct { req_data struct {}; });
+		};
+		`,
+			expected: map[namingContextKey][]ScopedLayout{
+				"MyMethodRequest": {{
+					scopedName:    stringNamePart("ReqData"),
+					flattenedName: makeTestName("ReqData"),
+				}},
+			},
+		},
+		{
+			desc: "result",
+			fidl: `
+		protocol MyProtocol {
+			MyMethod() -> (struct {}) error enum : uint32 { FOO = 1; };
+		};
+		`,
+			expected: map[namingContextKey][]ScopedLayout{
+				"MyMethodResponse": {{
+					scopedName:    stringNamePart("Result"),
+					flattenedName: makeTestName("MyProtocolMyMethodResult"),
+				}},
+				"MyProtocolMyMethodResult": {
+					{
+						scopedName:    stringNamePart("Err"),
+						flattenedName: makeTestName("MyProtocolMyMethodError"),
+					},
+					{
+						scopedName:    stringNamePart("Response"),
+						flattenedName: makeTestName("MyProtocolMyMethodResponse"),
+					},
+				},
+			},
+		},
+		{
+			desc: "expression",
+			fidl: `
+		type Expression = flexible union {
+			1: value uint64;
+			2: bin_op struct {
+				op flexible enum {
+					ADD = 1;
+					SUB = 2;
+				};
+				left Expression:optional;
+				right Expression:optional;
+			};
+			3: flags bits {
+				FLAGS_A = 1;
+			};
+		};
+		`,
+			expected: map[namingContextKey][]ScopedLayout{
+				"Expression": {
+					{
+						scopedName:    stringNamePart("Flags"),
+						flattenedName: makeTestName("Flags"),
+					},
+					{
+						scopedName:    stringNamePart("BinOp"),
+						flattenedName: makeTestName("BinOp"),
+					},
+				},
+				"BinOp": {{
+					scopedName:    stringNamePart("Op"),
+					flattenedName: makeTestName("Op"),
+				}},
+			},
+		},
+	}
+	for _, ex := range cases {
+		t.Run(ex.desc, func(t *testing.T) {
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; "+ex.fidl),
+				HeaderOptions{})
+
+			layoutToChildren := make(map[namingContextKey][]ScopedLayout)
+			for _, decl := range root.Decls {
+				switch d := decl.(type) {
+				case Struct:
+					if len(d.AnonymousChildren) > 0 {
+						layoutToChildren[d.Name()] = d.AnonymousChildren
+					}
+				case Union:
+					if len(d.AnonymousChildren) > 0 {
+						layoutToChildren[d.Name()] = d.AnonymousChildren
+					}
+				case Table:
+					if len(d.AnonymousChildren) > 0 {
+						layoutToChildren[d.Name()] = d.AnonymousChildren
+					}
+				case Protocol:
+					for _, m := range d.Methods {
+						if len(m.RequestAnonymousChildren) > 0 {
+							layoutToChildren[m.Name()+"Request"] = m.RequestAnonymousChildren
+						}
+						if len(m.ResponseAnonymousChildren) > 0 {
+							layoutToChildren[m.Name()+"Response"] = m.ResponseAnonymousChildren
+						}
+					}
+				}
+			}
+
+			if !cmp.Equal(layoutToChildren, ex.expected, cmp.Comparer(func(x, y ScopedLayout) bool {
+				return x.ScopedName() == y.ScopedName() && x.FlattenedName() == y.FlattenedName()
+			})) {
+				t.Error(cmp.Diff(layoutToChildren, ex.expected))
+			}
+		})
+	}
 }

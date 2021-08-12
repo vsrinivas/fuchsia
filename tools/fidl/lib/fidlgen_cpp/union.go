@@ -14,6 +14,7 @@ type Union struct {
 	fidlgen.Resourceness
 	nameVariants
 	CodingTableType    string
+	AnonymousChildren  []ScopedLayout
 	TagEnum            nameVariants
 	TagUnknown         nameVariants
 	TagInvalid         nameVariants
@@ -60,6 +61,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		Attributes:         Attributes{val.Attributes},
 		TypeShapeV1:        TypeShape{val.TypeShapeV1},
 		TypeShapeV2:        TypeShape{val.TypeShapeV2},
+		AnonymousChildren:  c.getAnonymousChildren(val.Layout),
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
 		nameVariants:       name,

@@ -427,6 +427,8 @@ extern "C" const fidl_type_t fidl_test_anonymous_TableMemberTable;
 
 class TableMember final {
  public:
+  using TableData = fidl_test_anonymous::wire::TableData;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -662,6 +664,8 @@ extern "C" const fidl_type_t fidl_test_anonymous_FunctionApplicationTable;
 
 class FunctionApplication final {
  public:
+  using Flags = fidl_test_anonymous::wire::Flags;
+
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
@@ -968,6 +972,9 @@ extern "C" const fidl_type_t fidl_test_anonymous_ExpressionTable;
 
 class Expression {
  public:
+  using FunctionApplication = fidl_test_anonymous::wire::FunctionApplication;
+  using BinOp = fidl_test_anonymous::wire::BinOp;
+
   Expression()
       : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
         envelope_{} {}
@@ -1161,6 +1168,9 @@ extern "C" const fidl_type_t
 
 class SomeProtocolSomeMethodResult {
  public:
+  using Err = fidl_test_anonymous::wire::SomeProtocolSomeMethodError;
+  using Response = fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse;
+
   SomeProtocolSomeMethodResult()
       : ordinal_(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
                      Ordinal::Invalid),
@@ -1474,6 +1484,7 @@ struct BinOp {
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
+  using Op = fidl_test_anonymous::wire::Op;
 
   ::fidl_test_anonymous::wire::Op op = {};
 
@@ -1620,6 +1631,7 @@ struct SomeProtocolSomeMethodResponse {
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr bool HasPointer = false;
+  using BitsMember = fidl_test_anonymous::wire::BitsMember;
 
   ::fidl_test_anonymous::wire::BitsMember bits_member = {};
 
@@ -1796,6 +1808,9 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
     final {
+  using UnionMember = fidl_test_anonymous::wire::UnionMember;
+  using TableMember = fidl_test_anonymous::wire::TableMember;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_anonymous::wire::UnionMember union_member;
@@ -1980,6 +1995,8 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 template <>
 struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
     final {
+  using Result = fidl_test_anonymous::wire::SomeProtocolSomeMethodResult;
+
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result;
