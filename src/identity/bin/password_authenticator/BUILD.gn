@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "password_authenticator"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  test_deps = []
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("component") {
+  component_name = "password-authenticator"
+  manifest = "meta/password-authenticator.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("password_authenticator") {
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("password-authenticator-tests") {
+  manifest = "meta/password-authenticator-test.cml"
+  deps = [ ":bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":password-authenticator-tests" ]
+}
