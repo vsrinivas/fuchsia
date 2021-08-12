@@ -5,6 +5,7 @@
 #ifndef SRC_UI_A11Y_LIB_SEMANTICS_TESTS_SEMANTICS_INTEGRATION_TEST_FIXTURE_H_
 #define SRC_UI_A11Y_LIB_SEMANTICS_TESTS_SEMANTICS_INTEGRATION_TEST_FIXTURE_H_
 
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -33,6 +34,9 @@ class SemanticsIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   // |testing::Test|
   void SetUp() override;
+
+  // |testing::Test|
+  void TearDown() override;
 
   // Configures services available to the test environment. This method is called by |SetUp()|. It
   // shadows but calls |TestWithEnvironment::CreateServices()|. In addition the default
@@ -76,6 +80,7 @@ class SemanticsIntegrationTest : public gtest::TestWithEnvironmentFixture {
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
+  fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 };
 
 }  // namespace accessibility_test

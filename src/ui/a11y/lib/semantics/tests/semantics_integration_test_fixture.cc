@@ -27,7 +27,7 @@ namespace accessibility_test {
 namespace {
 
 // Services to inject into the test environment that we want to re-create for each test case
-constexpr size_t kNumInjectedServices = 15;
+constexpr size_t kNumInjectedServices = 16;
 constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> kInjectedServices =
     {{
         // clang-format off
@@ -64,6 +64,9 @@ constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> 
     }, {
       "fuchsia.ui.input.ImeVisibilityService",
       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+    }, {
+      "fuchsia.ui.lifecycle.LifecycleController",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
     }, {
       "fuchsia.ui.pointerinjector.Registry",
       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
@@ -127,7 +130,17 @@ void SemanticsIntegrationTest::SetUp() {
   // Wait for scenic to get initialized by calling GetDisplayInfo.
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo info) { QuitLoop(); });
   RunLoop();
+
+  // Connects to scenic lifecycle controller in order to shutdown scenic at the end of the test.
+  // This ensures the correct ordering of shutdown: first scenic, then the fake display controller.
+  scenic_lifecycle_controller_ =
+      environment()->ConnectToService<fuchsia::ui::lifecycle::LifecycleController>();
+  scenic_lifecycle_controller_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(INFO) << "terminating Scenic with status: " << zx_status_get_string(status);
+  });
 }
+
+void SemanticsIntegrationTest::TearDown() { scenic_lifecycle_controller_->Terminate(); }
 
 fuchsia::ui::views::ViewToken SemanticsIntegrationTest::CreatePresentationViewToken() {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
