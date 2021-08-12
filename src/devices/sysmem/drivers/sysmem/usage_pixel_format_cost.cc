@@ -200,6 +200,10 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
 // These costs are expected to be true on every platform.
 const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = [] {
   std::list<const UsagePixelFormatCostEntry> result;
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiledCcs, 500.0,
+                     result);
+  AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiledCcs, 600.0,
+                     result);
   AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled, 1000.0,
                      result);
   AddRgbaPixelFormat(allocator, fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled, 2000.0,

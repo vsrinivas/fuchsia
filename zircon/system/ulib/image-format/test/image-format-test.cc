@@ -797,3 +797,46 @@ TEST(ImageFormat, CorrectModifiers) {
   EXPECT_EQ(sysmem_v1::wire::kFormatModifierGoogleGoldfishOptimal,
             sysmem_v2::wire::kFormatModifierGoogleGoldfishOptimal);
 }
+
+TEST(ImageFormat, IntelCcsFormats_V1_LLCPP) {
+  for (auto& format_modifier : {
+           sysmem_v1::wire::kFormatModifierIntelI915YTiledCcs,
+           sysmem_v1::wire::kFormatModifierIntelI915YfTiledCcs,
+       }) {
+    sysmem_v1::wire::PixelFormat format = {
+        .type = sysmem_v1::wire::PixelFormatType::kBgra32,
+        .has_format_modifier = true,
+        .format_modifier.value = format_modifier,
+    };
+
+    sysmem_v1::wire::ImageFormatConstraints constraints = {
+        .pixel_format = format,
+        .min_coded_width = 12,
+        .max_coded_width = 100,
+        .min_coded_height = 12,
+        .max_coded_height = 100,
+        .max_bytes_per_row = 100000,
+        .bytes_per_row_divisor = 4 * 8,
+    };
+
+    auto optional_format = image_format::ConstraintsToFormat(constraints, 64, 63);
+    EXPECT_TRUE(optional_format);
+
+    auto& image_format = *optional_format;
+    constexpr uint32_t kWidthInTiles = 2;
+    constexpr uint32_t kHeightInTiles = 2;
+    constexpr uint32_t kTileSize = 4096;
+    constexpr uint32_t kMainPlaneSize = kWidthInTiles * kHeightInTiles * kTileSize;
+    constexpr uint32_t kCcsWidthInTiles = 1;
+    constexpr uint32_t kCcsHeightInTiles = 1;
+    constexpr uint32_t kCcsPlane = 3;
+    EXPECT_EQ(kMainPlaneSize + kCcsWidthInTiles * kCcsHeightInTiles * kTileSize,
+              ImageFormatImageSize(image_format));
+    uint64_t ccs_byte_offset;
+    EXPECT_TRUE(ImageFormatPlaneByteOffset(image_format, kCcsPlane, &ccs_byte_offset));
+    EXPECT_EQ(kMainPlaneSize, ccs_byte_offset);
+    uint32_t ccs_row_stride;
+    EXPECT_TRUE(ImageFormatPlaneRowBytes(image_format, kCcsPlane, &ccs_row_stride));
+    EXPECT_EQ(ccs_row_stride, 128u * kCcsWidthInTiles);
+  }
+}

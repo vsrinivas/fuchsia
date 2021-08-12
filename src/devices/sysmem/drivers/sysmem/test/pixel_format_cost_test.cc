@@ -119,6 +119,8 @@ TEST(PixelFormatCost, IntelTiling) {
       fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled,
       fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled,
       fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled,
+      fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiledCcs,
+      fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiledCcs,
   };
   constraints.set_image_format_constraints(allocator, allocator, modifier_list.size());
 

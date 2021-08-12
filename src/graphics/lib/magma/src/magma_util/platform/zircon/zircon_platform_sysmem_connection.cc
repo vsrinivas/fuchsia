@@ -25,6 +25,17 @@ uint32_t SysmemToMagmaFormat(fuchsia_sysmem::wire::PixelFormatType format) {
   return static_cast<uint32_t>(format);
 }
 
+static_assert(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED ==
+              fuchsia_sysmem::wire::kFormatModifierIntelI915XTiled);
+static_assert(MAGMA_FORMAT_MODIFIER_INTEL_Y_TILED ==
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled);
+static_assert(MAGMA_FORMAT_MODIFIER_INTEL_YF_TILED ==
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled);
+static_assert(MAGMA_FORMAT_MODIFIER_INTEL_Y_TILED_CCS ==
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YTiledCcs);
+static_assert(MAGMA_FORMAT_MODIFIER_INTEL_YF_TILED_CCS ==
+              fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiledCcs);
+
 }  // namespace
 
 class ZirconPlatformBufferDescription : public PlatformBufferDescription {

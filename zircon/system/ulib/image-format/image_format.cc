@@ -128,49 +128,39 @@ class IntelTiledFormats : public ImageFormatSet {
       case fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled:
       case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled:
       case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled:
+      // X-Tiled CCS is not supported.
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiledCcs:
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiledCcs:
         return true;
       default:
         return false;
     }
   }
   uint64_t ImageFormatImageSize(const ImageFormat& image_format) const override {
-    // See
-    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
-    constexpr uint32_t kIntelTileByteSize = 4096;
-    constexpr uint32_t kIntelYTilePixelWidth = 32;
-    constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
-    constexpr uint32_t kIntelXTilePixelWidth = 128;
-    constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
-    constexpr uint32_t kIntelYFTilePixelWidth = 32;  // For a 4 byte per component format
-    constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
-    switch (image_format.pixel_format().format_modifier_value()) {
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled:
-        return fbl::round_up(image_format.coded_width(), kIntelXTilePixelWidth) /
-               kIntelXTilePixelWidth *
-               fbl::round_up(image_format.coded_height(), kIntelXTileHeight) / kIntelXTileHeight *
-               kIntelTileByteSize;
 
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled:
-        return fbl::round_up(image_format.coded_width(), kIntelYTilePixelWidth) /
-               kIntelYTilePixelWidth *
-               fbl::round_up(image_format.coded_height(), kIntelYTileHeight) / kIntelYTileHeight *
-               kIntelTileByteSize;
-
-      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled:
-        return fbl::round_up(image_format.coded_width(), kIntelYFTilePixelWidth) /
-               kIntelYFTilePixelWidth *
-               fbl::round_up(image_format.coded_height(), kIntelYFTileHeight) / kIntelYFTileHeight *
-               kIntelTileByteSize;
-      default:
-        return 0u;
+    uint32_t width_in_tiles, height_in_tiles;
+    GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+    uint64_t size = width_in_tiles * height_in_tiles * kIntelTileByteSize;
+    if (FormatHasCcs(image_format.pixel_format())) {
+      size += CcsSize(width_in_tiles, height_in_tiles);
     }
+    return size;
   }
+
   bool ImageFormatPlaneByteOffset(const ImageFormat& image_format, uint32_t plane,
                                   uint64_t* offset_out) const override {
     ZX_DEBUG_ASSERT(IsSupported(image_format.pixel_format()));
     if (plane == 0) {
       *offset_out = 0;
+      return true;
+    }
+    if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
+      uint32_t width_in_tiles, height_in_tiles;
+      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+      *offset_out = width_in_tiles * height_in_tiles * kIntelTileByteSize;
+      // Start of CCS must be aligned by 4k.
+      ZX_DEBUG_ASSERT(*offset_out % 4096 == 0);
       return true;
     }
     return false;
@@ -180,9 +170,87 @@ class IntelTiledFormats : public ImageFormatSet {
     if (plane == 0) {
       *row_bytes_out = 0;
       return true;
+    } else if (plane == kCcsPlane && FormatHasCcs(image_format.pixel_format())) {
+      uint32_t width_in_tiles, height_in_tiles;
+      GetSizeInTiles(image_format, &width_in_tiles, &height_in_tiles);
+      *row_bytes_out = CcsWidthInTiles(width_in_tiles) * kCcsBytesPerRowPerTile;
+      return true;
     } else {
       return false;
     }
+  }
+
+ private:
+  static constexpr uint32_t kIntelTileByteSize = 4096;
+  static constexpr uint32_t kIntelYTilePixelWidth = 32;
+  static constexpr uint32_t kIntelYTileHeight = 4096 / (kIntelYTilePixelWidth * 4);
+  static constexpr uint32_t kIntelXTilePixelWidth = 128;
+  static constexpr uint32_t kIntelXTileHeight = 4096 / (kIntelXTilePixelWidth * 4);
+  static constexpr uint32_t kIntelYFTilePixelWidth = 32;  // For a 4 byte per component format
+  static constexpr uint32_t kIntelYFTileHeight = 4096 / (kIntelYFTilePixelWidth * 4);
+  // For simplicity CCS plane is always 3, leaving room for Y, U, and V planes if the format is I420
+  // or similar.
+  static constexpr uint32_t kCcsPlane = 3;
+  // See https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol12-display.pdf
+  // for a description of the color control surface. The CCS is always Y-tiled. A CCS cache-line
+  // (64 bytes, so 2 fit horizontally in a tile) represents 16 horizontal cache line pairs (so 16
+  // tiles) and 16 pixels tall.
+  static constexpr uint32_t kCcsTileWidthRatio = 2 * 16;
+  static constexpr uint32_t kCcsTileHeightRatio = 16;
+  static constexpr uint32_t kCcsBytesPerRowPerTile = 128;
+
+  static void GetSizeInTiles(const ImageFormat& image_format, uint32_t* width_out,
+                             uint32_t* height_out) {
+    // See
+    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
+    uint32_t tile_width;
+    uint32_t tile_height;
+
+    // These calculations are only correct for 4-byte-per-pixel formats.
+    switch (image_format.pixel_format().format_modifier_value() &
+            ~fuchsia_sysmem2::wire::kFormatModifierIntelCcsBit) {
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915XTiled:
+        tile_width = kIntelXTilePixelWidth;
+        tile_height = kIntelXTileHeight;
+
+        break;
+
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YTiled:
+        tile_width = kIntelYTilePixelWidth;
+        tile_height = kIntelYTileHeight;
+
+        break;
+
+      case fuchsia_sysmem2::wire::kFormatModifierIntelI915YfTiled:
+        tile_width = kIntelYFTilePixelWidth;
+        tile_height = kIntelYFTileHeight;
+
+        break;
+      default:
+        ZX_DEBUG_ASSERT(false);
+        *width_out = 0;
+        *height_out = 0;
+        return;
+    }
+    uint32_t width_in_tiles = fbl::round_up(image_format.coded_width(), tile_width) / tile_width;
+    uint32_t height_in_tiles =
+        fbl::round_up(image_format.coded_height(), tile_height) / tile_height;
+    *width_out = width_in_tiles;
+    *height_out = height_in_tiles;
+  }
+
+  static bool FormatHasCcs(const fuchsia_sysmem2::wire::PixelFormat& pixel_format) {
+    return pixel_format.format_modifier_value() & fuchsia_sysmem2::wire::kFormatModifierIntelCcsBit;
+  }
+
+  static uint64_t CcsWidthInTiles(uint32_t main_plane_width_in_tiles) {
+    return fbl::round_up(main_plane_width_in_tiles, kCcsTileWidthRatio) / kCcsTileWidthRatio;
+  }
+
+  static uint64_t CcsSize(uint32_t width_in_tiles, uint32_t height_in_tiles) {
+    uint32_t height_in_ccs_tiles =
+        fbl::round_up(height_in_tiles, kCcsTileHeightRatio) / kCcsTileHeightRatio;
+    return CcsWidthInTiles(width_in_tiles) * height_in_ccs_tiles * kIntelTileByteSize;
   }
 };
 class AfbcFormats : public ImageFormatSet {
