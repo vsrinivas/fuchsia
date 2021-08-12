@@ -363,6 +363,12 @@ impl XdgToplevel {
                 }
                 Ok(())
             }),
+            fidl_fuchsia_ui_gfx::Event::ViewDetachedFromScene(
+                fidl_fuchsia_ui_gfx::ViewDetachedFromSceneEvent { view_id: _ },
+            ) => task_queue.post(move |_client| {
+                // Returning an error causes the client connection to be closed.
+                Err(format_err!("View detached"))
+            }),
 
             e => println!("Got unhandled gfx event: {:?}", e),
         }

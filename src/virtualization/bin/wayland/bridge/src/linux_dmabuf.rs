@@ -80,7 +80,6 @@ impl LinuxBufferParams {
         let raw_import_token = self.token.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
         let import_token = composition::BufferCollectionImportToken { value: raw_import_token };
 
-        println!("wayland: DmaBufl::create {:?}x{:?}", width, height);
         Ok(Buffer::from_import_token(Rc::new(import_token), image_size))
     }
 
