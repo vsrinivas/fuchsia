@@ -197,8 +197,8 @@ where
     callback(parent, basename)
 }
 
-/// Options for lookup_node_at.
-struct LookupNodeOptions {
+/// Options for lookup_at.
+struct LookupOptions {
     /// Whether AT_EMPTY_PATH was supplied.
     allow_empty_path: bool,
 
@@ -206,27 +206,29 @@ struct LookupNodeOptions {
     symlink_mode: SymlinkMode,
 }
 
-impl Default for LookupNodeOptions {
+impl Default for LookupOptions {
     fn default() -> Self {
-        LookupNodeOptions { allow_empty_path: false, symlink_mode: SymlinkMode::max_follow() }
+        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::max_follow() }
     }
 }
 
-fn lookup_entry_at(
+fn lookup_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    options: LookupNodeOptions,
-) -> Result<DirEntryHandle, Errno> {
+    options: LookupOptions,
+) -> Result<NamespaceNode, Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
-    if options.allow_empty_path && path.is_empty() {
-        assert!(basename.is_empty());
-        return Ok(parent.entry);
+    if path.is_empty() {
+        if options.allow_empty_path {
+            let (node, _) = task.resolve_dir_fd(dir_fd, path)?;
+            return Ok(node);
+        }
+        return Err(ENOENT);
     }
-    let child = parent.lookup(task, basename, options.symlink_mode)?;
-    Ok(child.entry)
+    let (parent, basename) = task.lookup_parent_at(dir_fd, path)?;
+    parent.lookup(task, basename, options.symlink_mode)
 }
 
 pub fn sys_openat(
@@ -256,12 +258,13 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let entry = lookup_entry_at(
+    let name = lookup_at(
         &ctx.task,
         dir_fd,
         user_path,
-        LookupNodeOptions { allow_empty_path: false, symlink_mode: SymlinkMode::NoFollow },
+        LookupOptions { allow_empty_path: false, symlink_mode: SymlinkMode::NoFollow },
     )?;
+    let node = &name.entry.node;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -271,7 +274,7 @@ pub fn sys_faccessat(
     // they don't consider the current uid and they don't consider GRO or
     // OTH bits. Really, these checks should be done by the auth system once
     // that exists.
-    let stat = entry.node.stat()?;
+    let stat = node.stat()?;
     if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
         return Err(EACCES);
     }
@@ -359,7 +362,7 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let options = LookupNodeOptions {
+    let options = LookupOptions {
         allow_empty_path: flags & AT_EMPTY_PATH != 0,
         symlink_mode: if flags & AT_SYMLINK_NOFOLLOW != 0 {
             SymlinkMode::NoFollow
@@ -367,8 +370,8 @@ pub fn sys_newfstatat(
             SymlinkMode::max_follow()
         },
     };
-    let entry = lookup_entry_at(ctx.task, dir_fd, user_path, options)?;
-    let result = entry.node.stat()?;
+    let name = lookup_at(ctx.task, dir_fd, user_path, options)?;
+    let result = name.entry.node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
 }
@@ -413,10 +416,9 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let entry =
-        lookup_entry_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupNodeOptions::default())?;
+    let name = lookup_at(&ctx.task, FdNumber::AT_FDCWD, user_path, LookupOptions::default())?;
     // TODO: Check for writability.
-    entry.node.truncate(length)?;
+    name.entry.node.truncate(length)?;
     Ok(SUCCESS)
 }
 
@@ -468,6 +470,42 @@ pub fn sys_mknodat(
     Ok(SUCCESS)
 }
 
+pub fn sys_linkat(
+    ctx: &SyscallContext<'_>,
+    old_dir_fd: FdNumber,
+    old_user_path: UserCString,
+    new_dir_fd: FdNumber,
+    new_user_path: UserCString,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags & !(AT_SYMLINK_FOLLOW | AT_EMPTY_PATH) != 0 {
+        not_implemented!("linkat: flags 0x{:x}", flags);
+        return Err(EINVAL);
+    }
+
+    // TODO: AT_EMPTY_PATH requires CAP_DAC_READ_SEARCH.
+    let options = LookupOptions {
+        allow_empty_path: flags & AT_EMPTY_PATH != 0,
+        symlink_mode: if flags & AT_SYMLINK_FOLLOW != 0 {
+            SymlinkMode::max_follow()
+        } else {
+            SymlinkMode::NoFollow
+        },
+    };
+    let target = lookup_at(ctx.task, old_dir_fd, old_user_path, options)?;
+    if target.entry.node.is_dir() {
+        return Err(EPERM);
+    }
+    lookup_parent_at(ctx.task, new_dir_fd, new_user_path, |parent, basename| {
+        if !NamespaceNode::mount_eq(&target, &parent) {
+            return Err(EXDEV);
+        }
+        parent.entry.link(basename, &target.entry.node)
+    })?;
+
+    Ok(SUCCESS)
+}
+
 pub fn sys_unlinkat(
     ctx: &SyscallContext<'_>,
     dir_fd: FdNumber,
@@ -507,8 +545,8 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return Err(EINVAL);
     }
-    let entry = lookup_entry_at(&ctx.task, dir_fd, user_path, LookupNodeOptions::default())?;
-    entry.node.info_write().mode = mode;
+    let name = lookup_at(&ctx.task, dir_fd, user_path, LookupOptions::default())?;
+    name.entry.node.chmod(mode);
     Ok(SUCCESS)
 }
 

@@ -106,6 +106,10 @@ impl DirEntry {
         self.state.read().parent.as_ref().unwrap_or(self).clone()
     }
 
+    fn is_reserved_name(name: &FsStr) -> bool {
+        name.is_empty() || name == b"." || name == b".."
+    }
+
     pub fn component_lookup(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
         let (node, _) = self.get_or_create_child(name, || self.node.lookup(name))?;
         Ok(node)
@@ -129,6 +133,9 @@ impl DirEntry {
         F: FnOnce() -> Result<FsNodeHandle, Errno>,
     {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
+        if DirEntry::is_reserved_name(name) {
+            return Err(EEXIST);
+        }
         let (entry, exists) = self.get_or_create_child(name, || {
             let node = create_node_fn()?;
             let mut info = node.info_write();
@@ -142,11 +149,7 @@ impl DirEntry {
         if exists {
             return Err(EEXIST);
         }
-        let now = fuchsia_runtime::utc_time();
-        let mut info = self.node.info_write();
-        info.time_access = now;
-        info.time_modify = now;
-        std::mem::drop(info);
+        self.node.touch();
         entry.node.fs().did_create_dir_entry(&entry);
         Ok(entry)
     }
@@ -184,6 +187,22 @@ impl DirEntry {
         })
     }
 
+    pub fn link(self: &DirEntryHandle, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        if DirEntry::is_reserved_name(name) {
+            return Err(EEXIST);
+        }
+        let (entry, exists) = self.get_or_create_child(name, || {
+            self.node.link(name, child)?;
+            Ok(child.clone())
+        })?;
+        if exists {
+            return Err(EEXIST);
+        }
+        self.node.touch();
+        entry.node.fs().did_create_dir_entry(&entry);
+        Ok(())
+    }
+
     pub fn unlink(self: &DirEntryHandle, name: &FsStr, _kind: UnlinkKind) -> Result<(), Errno> {
         let mut state = self.state.write();
         let child = state.children.get(name).ok_or(ENOENT)?.upgrade().unwrap();
@@ -219,6 +238,11 @@ impl DirEntry {
     where
         F: FnOnce() -> Result<FsNodeHandle, Errno>,
     {
+        assert!(!DirEntry::is_reserved_name(name));
+        // Only directories can have children.
+        if !self.node.is_dir() {
+            return Err(ENOTDIR);
+        }
         // Check if the child is already in children. In that case, we can
         // simply return the child and we do not need to call init_fn.
         let state = self.state.read();

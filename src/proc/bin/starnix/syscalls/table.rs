@@ -90,6 +90,7 @@ pub fn dispatch_syscall(
         getuid[0],
         ioctl[4],
         kill[2],
+        linkat[5],
         lseek[3],
         memfd_create[2],
         mkdirat[3],

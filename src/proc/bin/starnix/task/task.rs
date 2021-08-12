@@ -406,7 +406,7 @@ impl Task {
     /// Determine namespace node indicated by the dir_fd.
     ///
     /// Returns the namespace node and the path to use relative to that node.
-    fn resolve_dir_fd<'a>(
+    pub fn resolve_dir_fd<'a>(
         &self,
         dir_fd: FdNumber,
         mut path: &'a FsStr,

@@ -73,6 +73,7 @@ gvisor_tests = [
   "getdents_test",
   "getrandom_test",
   "kill_test",
+  "link_test",
   "lseek_test",
   "mmap_test",
   "munmap_test",

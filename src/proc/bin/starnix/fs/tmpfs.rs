@@ -15,15 +15,17 @@ use crate::types::*;
 
 #[derive(Default)]
 pub struct TmpFs {
-    nodes: Mutex<HashMap<ino_t, DirEntryHandle>>,
+    entries: Mutex<HashMap<usize, DirEntryHandle>>,
 }
 impl FileSystemOps for Arc<TmpFs> {
     fn did_create_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        self.nodes.lock().insert(entry.node.inode_num, Arc::clone(entry));
+        let k = Arc::as_ptr(entry) as usize;
+        self.entries.lock().insert(k, Arc::clone(entry));
     }
 
     fn will_destroy_dir_entry(&self, _fs: &FileSystem, entry: &DirEntryHandle) {
-        self.nodes.lock().remove(&entry.node.inode_num);
+        let k = Arc::as_ptr(entry) as usize;
+        self.entries.lock().remove(&k);
     }
 }
 
@@ -69,7 +71,13 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(node.fs().create_node(Box::new(SymlinkNode::new(target)), FileMode::IFLNK))
     }
 
-    fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
+    fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        child.info_write().link_count += 1;
+        Ok(())
+    }
+
+    fn unlink(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        child.info_write().link_count -= 1;
         Ok(())
     }
 }

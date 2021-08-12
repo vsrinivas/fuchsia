@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/android.shard.cml" ],
+    program: {
+        binary: "/data/tests/link_test",
+    },
+}

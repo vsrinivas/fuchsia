@@ -40,6 +40,7 @@ impl FileMode {
 
     pub const DEFAULT_UMASK: FileMode = FileMode(0o022);
     pub const ALLOW_ALL: FileMode = FileMode(0o777);
+    pub const PERMISSIONS: FileMode = FileMode(0o7777);
     pub const EMPTY: FileMode = FileMode(0);
 
     pub fn from_bits(mask: u32) -> FileMode {

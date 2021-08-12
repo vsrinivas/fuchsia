@@ -113,6 +113,11 @@ pub trait FsNodeOps: Send + Sync {
         Err(EINVAL)
     }
 
+    /// Create a hard link with the given name to the given child.
+    fn link(&self, _node: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
+        Err(EPERM)
+    }
+
     /// Remove the child with the given name, if the child exists.
     ///
     /// The UnlinkKind parameter indicates whether the caller intends to unlink
@@ -164,6 +169,7 @@ impl FsNode {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             mode,
+            link_count: 1,
             time_create: now,
             time_access: now,
             time_modify: now,
@@ -235,12 +241,37 @@ impl FsNode {
         self.ops().readlink(self, task)
     }
 
+    pub fn link(&self, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        self.ops().link(self, name, child)
+    }
+
     pub fn unlink(&self, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
         self.ops().unlink(self, name, child)
     }
 
     pub fn truncate(&self, length: u64) -> Result<(), Errno> {
         self.ops().truncate(self, length)
+    }
+
+    /// Set the permissions on this FsNode to the given values.
+    ///
+    /// Does not change the IFMT of the node.
+    pub fn chmod(&self, mode: FileMode) {
+        let mut info = self.info_write();
+        info.mode = (info.mode & !FileMode::PERMISSIONS) | (mode & FileMode::PERMISSIONS);
+    }
+
+    /// Whether this node is a directory.
+    pub fn is_dir(&self) -> bool {
+        self.info().mode.is_dir()
+    }
+
+    /// Update the access and modify time for this node to now.
+    pub fn touch(&self) {
+        let now = fuchsia_runtime::utc_time();
+        let mut info = self.info_write();
+        info.time_access = now;
+        info.time_modify = now;
     }
 
     pub fn stat(&self) -> Result<stat_t, Errno> {

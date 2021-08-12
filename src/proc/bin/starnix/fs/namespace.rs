@@ -215,7 +215,7 @@ impl NamespaceNode {
         name: &FsStr,
         symlink_mode: SymlinkMode,
     ) -> Result<NamespaceNode, Errno> {
-        if !self.entry.node.info().mode.is_dir() {
+        if !self.entry.node.is_dir() {
             Err(ENOTDIR)
         } else if name == b"." || name == b"" {
             Ok(self.clone())
@@ -327,6 +327,10 @@ impl NamespaceNode {
         } else {
             Err(EBUSY)
         }
+    }
+
+    pub fn mount_eq(a: &NamespaceNode, b: &NamespaceNode) -> bool {
+        a.mount.as_ref().map(Arc::as_ptr) == b.mount.as_ref().map(Arc::as_ptr)
     }
 
     fn with_new_entry(&self, node: DirEntryHandle) -> NamespaceNode {
