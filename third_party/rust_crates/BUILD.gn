@@ -82,10 +82,8 @@ group("bitflags") {
   deps = [ ":bitflags-v1_2_1" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("blocking") {
-    deps = [ ":blocking-v1_0_2" ]
-  }
+group("blocking") {
+  deps = [ ":blocking-v1_0_2" ]
 }
 
 group("bumpalo") {
