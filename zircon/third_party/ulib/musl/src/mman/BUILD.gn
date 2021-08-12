@@ -6,6 +6,7 @@ source_set("mman") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "madvise.c",
+    "memfd_create.c",
     "mlock.c",
     "mlockall.c",
     "mmap.c",

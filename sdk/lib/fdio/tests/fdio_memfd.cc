@@ -10,9 +10,6 @@
 
 #include "predicates.h"
 
-// TODO(https://fxbug.dev/60236): get the memfd_create symbol from libc instead.
-#include "memfd.h"
-
 TEST(MemFDTest, Smoke) {
   fbl::unique_fd fd(memfd_create(nullptr, 0));
   EXPECT_TRUE(fd.is_valid());

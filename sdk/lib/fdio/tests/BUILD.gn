@@ -90,7 +90,6 @@ test("fdio-test") {
       "fdio_unsafe.cc",
       "fdio_vfs.cc",
       "fdio_watcher.cc",
-      "memfd.h",
     ]
     deps += [
       "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",

@@ -92,6 +92,10 @@ int munlockall(void);
 int madvise(void*, size_t, int);
 #endif
 
+#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
+int memfd_create(const char* name, unsigned int flags);
+#endif
+
 int shm_open(const char*, int, mode_t);
 int shm_unlink(const char*);
 

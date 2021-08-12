@@ -12,10 +12,6 @@
 #include "internal.h"
 #include "zxio.h"
 
-// TODO(60236): remove declaration macros when symbol becomes available in libc
-// headers.
-__BEGIN_CDECLS
-
 __EXPORT
 int memfd_create(const char* name, unsigned int flags) {
   if (flags) {
@@ -51,5 +47,3 @@ int memfd_create(const char* name, unsigned int flags) {
   }
   return ERRNO(EMFILE);
 }
-
-__END_CDECLS
