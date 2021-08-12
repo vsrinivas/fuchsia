@@ -18,7 +18,7 @@ guest_packages = [
 guest_environments = nuc_env_fails_on_asan + [
                        sherlock_env,
                        vim3_env,
-                     ]
+                     ] + chromebook_envs
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
