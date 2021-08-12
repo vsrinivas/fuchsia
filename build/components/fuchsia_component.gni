@@ -184,6 +184,9 @@ template("fuchsia_component") {
                                "deps",
                                "testonly",
                              ])
+      if (!defined(deps)) {
+        deps = []
+      }
       visibility = [ ":*" ]
       component_manifest = invoker.manifest
       label = get_label_info(":$target_name", "label_with_toolchain")
