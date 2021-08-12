@@ -27,7 +27,7 @@ fidl("fuchsia.sys2") {
   ]
 
   sources = [
-    "crash_records.fidl",
+    "crash_introspect.fidl",
     "decls/capability_decl.fidl",
     "decls/child_decl.fidl",
     "decls/collection_decl.fidl",

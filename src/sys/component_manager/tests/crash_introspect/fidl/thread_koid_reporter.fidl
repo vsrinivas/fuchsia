@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test;
+
+using zx;
+
+/// Used by report_then_panic_on_start to report its thread koid before
+/// crashing, so that anyone using fuchsia.sys2.CrashIntrospect will know what
+/// thread koid to look for
+@discoverable
+protocol ThreadKoidReporter {
+    /// Reports the koid for this component's thread
+    ReportMyThreadKoid(resource struct {
+        thread_koid zx.koid;
+    });
+};

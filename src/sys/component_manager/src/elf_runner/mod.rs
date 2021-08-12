@@ -17,7 +17,7 @@ use {
         stdout::bind_streams_to_syslog,
     },
     crate::{
-        builtin::{crash_records::CrashRecords, runner::BuiltinRunnerFactory},
+        builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
         config::RuntimeConfig,
         model::{
             policy::ScopedPolicyChecker,

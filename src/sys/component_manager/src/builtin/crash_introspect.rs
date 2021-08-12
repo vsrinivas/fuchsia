@@ -18,7 +18,8 @@ use {
 const CLEANUP_DEADLINE_SECONDS: i64 = 600;
 
 lazy_static! {
-    static ref CRASH_RECORDS_CAPABILITY_NAME: CapabilityName = "fuchsia.sys2.CrashRecords".into();
+    static ref CRASH_RECORDS_CAPABILITY_NAME: CapabilityName =
+        "fuchsia.sys2.CrashIntrospect".into();
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,17 +108,17 @@ impl CrashRecords {
     }
 }
 
-pub struct CrashRecordsSvc(CrashRecords);
+pub struct CrashIntrospectSvc(CrashRecords);
 
-impl CrashRecordsSvc {
+impl CrashIntrospectSvc {
     pub fn new(crash_records: CrashRecords) -> Arc<Self> {
         Arc::new(Self(crash_records))
     }
 }
 
 #[async_trait]
-impl BuiltinCapability for CrashRecordsSvc {
-    const NAME: &'static str = "CrashRecords";
+impl BuiltinCapability for CrashIntrospectSvc {
+    const NAME: &'static str = "CrashIntrospect";
     type Marker = fsys::CrashIntrospectMarker;
 
     async fn serve(
@@ -150,7 +151,7 @@ mod tests {
     #[fuchsia::test]
     async fn get_crash_report() -> Result<(), Error> {
         let crash_records = CrashRecords::new();
-        let crash_records_svc = CrashRecordsSvc::new(crash_records.clone());
+        let crash_records_svc = CrashIntrospectSvc::new(crash_records.clone());
 
         let (crash_records_proxy, crash_records_stream) =
             create_proxy_and_stream::<fsys::CrashIntrospectMarker>()?;

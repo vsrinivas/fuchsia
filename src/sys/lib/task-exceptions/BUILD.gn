@@ -38,7 +38,7 @@ fuchsia_component("task-exceptions-cmp") {
 
 fuchsia_test_package("task-exceptions-tests") {
   test_components = [ ":task-exceptions-cmp" ]
-  deps = [ "//src/sys/component_manager/tests/crash_records:panic_on_start" ]
+  deps = [ "//src/sys/component_manager/tests/crash_introspect:panic_on_start" ]
 }
 
 group("tests") {

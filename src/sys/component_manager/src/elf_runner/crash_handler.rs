@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::builtin::crash_records::{ComponentCrashInfo, CrashRecords},
+    crate::builtin::crash_introspect::{ComponentCrashInfo, CrashRecords},
     anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},

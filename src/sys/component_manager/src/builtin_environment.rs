@@ -8,7 +8,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
-            crash_records::{CrashRecords, CrashRecordsSvc},
+            crash_introspect::{CrashIntrospectSvc, CrashRecords},
             debug_resource::DebugResource,
             fuchsia_boot_resolver::{FuchsiaBootResolver, SCHEME as BOOT_SCHEME},
             hypervisor_resource::HypervisorResource,
@@ -327,7 +327,7 @@ pub struct BuiltinEnvironment {
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_resource: Option<Arc<VmexResource>>,
-    pub crash_records_svc: Arc<CrashRecordsSvc>,
+    pub crash_records_svc: Arc<CrashIntrospectSvc>,
 
     pub work_scheduler: Arc<WorkScheduler>,
     pub binder_capability_host: Arc<BinderCapabilityHost>,
@@ -424,7 +424,7 @@ impl BuiltinEnvironment {
         model.root().hooks.install(boot_args.hooks()).await;
 
         // Set up CrashRecords service.
-        let crash_records_svc = CrashRecordsSvc::new(crash_records);
+        let crash_records_svc = CrashIntrospectSvc::new(crash_records);
         model.root().hooks.install(crash_records_svc.hooks()).await;
 
         // Set up KernelStats service.
