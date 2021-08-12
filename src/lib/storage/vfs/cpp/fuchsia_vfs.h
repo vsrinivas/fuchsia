@@ -100,16 +100,14 @@ class FuchsiaVfs : public Vfs {
   virtual void CloseAllConnectionsForVnode(const Vnode& node,
                                            CloseAllConnectionsForVnodeCallback callback) = 0;
 
-  // Pins a handle to a remote filesystem onto a vnode, if possible.
+  // Pins/unpin a handle to a remote filesystem onto a vnode, if possible.
   zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
+  zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
+      __TA_EXCLUDES(vfs_lock_);
 
   // Create and mount a directory with a provided name
   zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
                          uint32_t flags) __TA_EXCLUDES(vfs_lock_);
-
-  // Unpin a handle to a remote filesystem from a vnode, if one exists.
-  zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
-      __TA_EXCLUDES(vfs_lock_);
 
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
