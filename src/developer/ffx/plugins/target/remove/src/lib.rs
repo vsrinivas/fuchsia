@@ -21,7 +21,6 @@ pub async fn remove_impl<W: std::io::Write>(
     match daemon_proxy.remove_target(&mut id).await? {
         Ok(found) => {
             if found {
-                daemon_proxy.quit().await?;
                 writeln!(err_writer, "Removed.")?;
             } else {
                 writeln!(err_writer, "No matching target found.")?;
