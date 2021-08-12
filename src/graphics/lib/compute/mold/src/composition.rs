@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{borrow::Cow, cell::RefCell, rc::Rc};
 
 use rustc_hash::FxHashMap;
 use surpass::{
@@ -198,15 +198,17 @@ impl Composition {
 
         impl LayerProps for CompositionContext<'_> {
             #[inline]
-            fn get(&self, layer: u16) -> Props {
+            fn get(&self, layer: u16) -> Cow<'_, Props> {
                 let layer_id = self
                     .orders_to_layers
                     .get(&layer)
                     .expect("orders_to_layers was not populated in Composition::render");
-                self.layers
-                    .get(layer_id)
-                    .map(|layer| layer.props().clone())
-                    .expect("orders_to_layers points to non-existant Layer")
+                Cow::Borrowed(
+                    self.layers
+                        .get(layer_id)
+                        .map(|layer| layer.props())
+                        .expect("orders_to_layers points to non-existant Layer"),
+                )
             }
 
             #[inline]

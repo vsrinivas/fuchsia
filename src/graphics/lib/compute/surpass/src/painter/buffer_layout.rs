@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
-    cell::RefCell,
+    cell::{RefCell, RefMut},
     ops::Range,
     slice::{self, ChunksExactMut},
 };
@@ -17,9 +17,12 @@ use crate::{
     TILE_MASK, TILE_SHIFT, TILE_SIZE,
 };
 
-use crate::painter::Painter;
+use crate::painter::{LayerWorkbench, Painter};
 
-thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
+thread_local!(static PAINTER_WORKBENCH: RefCell<(Painter, LayerWorkbench)> = RefCell::new((
+    Painter::new(),
+    LayerWorkbench::new(),
+)));
 
 #[derive(Debug)]
 pub struct TileSlice {
@@ -192,10 +195,12 @@ impl BufferLayout {
                 })
                 .unwrap_or(&[]);
 
-            PAINTER.with(|painter| {
-                let mut painter = painter.borrow_mut();
+            PAINTER_WORKBENCH.with(|pair| {
+                let (mut painter, mut workbench) =
+                    RefMut::map_split(pair.borrow_mut(), |pair| (&mut pair.0, &mut pair.1));
 
                 painter.paint_tile_row(
+                    &mut workbench,
                     j,
                     segments,
                     &styles,
@@ -205,7 +210,6 @@ impl BufferLayout {
                     row,
                     crop.clone(),
                 );
-                painter.reset();
             });
         });
     }

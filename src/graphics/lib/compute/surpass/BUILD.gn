@@ -26,6 +26,7 @@ rustc_library("surpass") {
     "src/layer.rs",
     "src/lib.rs",
     "src/painter/buffer_layout.rs",
+    "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",
     "src/painter/style.rs",
     "src/point.rs",
