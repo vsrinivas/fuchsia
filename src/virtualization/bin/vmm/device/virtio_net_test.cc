@@ -86,7 +86,7 @@ class VirtioNetTest : public TestWithDevice,
 
     bool eth_started = false;
     eth_device_->Start([&eth_started](zx_status_t status) {
-      ASSERT_EQ(ZX_OK, status);
+      ASSERT_EQ(status, ZX_OK);
       eth_started = true;
     });
     bool ready_signal = false;
@@ -119,14 +119,8 @@ class VirtioNetTest : public TestWithDevice,
 
     // Fake |fuchsia.net.interfaces/Watcher| implementation.
     void Watch(WatchCallback callback) override {
-      ASSERT_FALSE(sent_);
-      sent_ = true;
-
       // Return a single fake interface.
       fuchsia::net::interfaces::Properties properties;
-      properties.set_id(0);
-      properties.set_name("virtio47");
-      properties.set_online(true);
       std::vector<fuchsia::net::interfaces::Address> addresses;
       fuchsia::net::interfaces::Address addr;
       addr.set_addr({
@@ -135,14 +129,30 @@ class VirtioNetTest : public TestWithDevice,
       });
       addresses.emplace_back(std::move(addr));
       properties.set_addresses(std::move(addresses));
-      properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
-          fuchsia::hardware::network::DeviceClass::ETHERNET));
+      properties.set_online(true);
       properties.set_has_default_ipv4_route(true);
       properties.set_has_default_ipv6_route(false);
-      callback(fuchsia::net::interfaces::Event::WithExisting(std::move(properties)));
+
+      switch (event_++) {
+        case 0:
+          properties.set_id(0);
+          properties.set_name("loopback");
+          properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithLoopback({}));
+          callback(fuchsia::net::interfaces::Event::WithExisting(std::move(properties)));
+          break;
+        case 1:
+          properties.set_id(1);
+          properties.set_name("virtio47");
+          properties.set_device_class(fuchsia::net::interfaces::DeviceClass::WithDevice(
+              fuchsia::hardware::network::DeviceClass::ETHERNET));
+          callback(fuchsia::net::interfaces::Event::WithExisting(std::move(properties)));
+          break;
+        default:
+          callback(fuchsia::net::interfaces::Event::WithIdle({}));
+      }
     }
 
-    bool sent_ = false;
+    uint8_t event_ = 0;
     const fidl::Binding<fuchsia::net::interfaces::Watcher> binding_;
   };
 
