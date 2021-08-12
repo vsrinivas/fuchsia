@@ -52,11 +52,20 @@ bool MessageLoopFuchsia::Init(std::string* error_message) {
 void MessageLoopFuchsia::Cleanup() {
   DEBUG_LOG(MessageLoop) << "Cleaning up the message loop.";
 
+  // Destruct the FDWatcher first, because they may call StopWatching and expect some key is still
+  // in watches_ and signal_handlers_.
+  std::vector<FDWatcher> to_delete;
+  to_delete.reserve(watches_.size());
+  for (auto& [key, info] : watches_) {
+    to_delete.push_back(std::move(info.fd_watcher));
+  }
+  to_delete.clear();
+  watches_.clear();
+
   // We need to remove the signal/exception handlers/watches before the message loop
   // goes away.
   signal_handlers_.clear();
   channel_exception_handlers_.clear();
-  watches_.clear();
 
   MessageLoop::Cleanup();
 }
@@ -74,7 +83,7 @@ const MessageLoopFuchsia::WatchInfo* MessageLoopFuchsia::FindWatchInfo(int id) c
 }
 
 zx_status_t MessageLoopFuchsia::AddSignalHandler(int id, zx_handle_t object, zx_signals_t signals,
-                                                WatchInfo* associated_info) {
+                                                 WatchInfo* associated_info) {
   SignalHandler handler;
   zx_status_t status = handler.Init(id, object, signals);
   if (status != ZX_OK)
@@ -90,7 +99,7 @@ zx_status_t MessageLoopFuchsia::AddSignalHandler(int id, zx_handle_t object, zx_
 }
 
 zx_status_t MessageLoopFuchsia::AddChannelExceptionHandler(int id, zx_handle_t object,
-                                                          uint32_t options, WatchInfo* info) {
+                                                           uint32_t options, WatchInfo* info) {
   ChannelExceptionHandler handler;
   zx_status_t status = handler.Init(id, object, options);
   if (status != ZX_OK)
@@ -151,7 +160,7 @@ MessageLoop::WatchHandle MessageLoopFuchsia::WatchFD(WatchMode mode, int fd, FDW
 }
 
 zx_status_t MessageLoopFuchsia::WatchSocket(WatchMode mode, zx_handle_t socket_handle,
-                                           SocketWatcher* watcher, MessageLoop::WatchHandle* out) {
+                                            SocketWatcher* watcher, MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.type = WatchType::kSocket;
   info.mode = mode;
@@ -183,7 +192,7 @@ zx_status_t MessageLoopFuchsia::WatchSocket(WatchMode mode, zx_handle_t socket_h
 }
 
 zx_status_t MessageLoopFuchsia::WatchProcessExceptions(WatchProcessConfig config,
-                                                      MessageLoop::WatchHandle* out) {
+                                                       MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.process_name;
   info.type = WatchType::kProcessExceptions;
@@ -219,7 +228,7 @@ zx_status_t MessageLoopFuchsia::WatchProcessExceptions(WatchProcessConfig config
 }
 
 zx_status_t MessageLoopFuchsia::WatchJobExceptions(WatchJobConfig config,
-                                                  MessageLoop::WatchHandle* out) {
+                                                   MessageLoop::WatchHandle* out) {
   WatchInfo info;
   info.resource_name = config.job_name;
   info.type = WatchType::kJobExceptions;
@@ -263,8 +272,8 @@ bool MessageLoopFuchsia::CheckAndProcessPendingTasks() {
 }
 
 void MessageLoopFuchsia::HandleChannelException(const ChannelExceptionHandler& handler,
-                                               zx::exception exception,
-                                               zx_exception_info_t exception_info) {
+                                                zx::exception exception,
+                                                zx_exception_info_t exception_info) {
   WatchInfo* watch_info = nullptr;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -433,7 +442,7 @@ void MessageLoopFuchsia::RemoveChannelExceptionHandler(WatchInfo* info) {
 }
 
 void MessageLoopFuchsia::OnProcessException(const WatchInfo& info, zx::exception exception,
-                                           zx_exception_info_t exception_info) {
+                                            zx_exception_info_t exception_info) {
   switch (exception_info.type) {
     case ZX_EXCP_THREAD_STARTING:
       info.exception_watcher->OnThreadStarting(std::move(exception), exception_info);
@@ -461,7 +470,7 @@ void MessageLoopFuchsia::OnProcessTerminated(const WatchInfo& info, zx_signals_t
 }
 
 void MessageLoopFuchsia::OnJobException(const WatchInfo& info, zx::exception exception,
-                                       zx_exception_info_t exception_info) {
+                                        zx_exception_info_t exception_info) {
   // Currently job exceptions only track process starting exceptions.
   // TODO(fxbug.dev/34167): Debugger job exception ports should receive all exceptions.
   if (exception_info.type != ZX_EXCP_PROCESS_STARTING) {
@@ -472,7 +481,8 @@ void MessageLoopFuchsia::OnJobException(const WatchInfo& info, zx::exception exc
   info.exception_watcher->OnProcessStarting(std::move(exception), exception_info);
 }
 
-void MessageLoopFuchsia::OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
+void MessageLoopFuchsia::OnSocketSignal(int watch_id, const WatchInfo& info,
+                                        zx_signals_t observed) {
   if (observed & ZX_SOCKET_PEER_CLOSED) {
     info.socket_watcher->OnSocketError(info.socket_handle);
     return;

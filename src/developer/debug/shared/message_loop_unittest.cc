@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -363,18 +364,9 @@ TEST(MessageLoop, RunNestedPromiseSync) {
 
 TEST(MessageLoop, WatchPipeFD) {
   // Make a pipe to talk about.
-  int pipefd[2] = {-1, -1};
-  ASSERT_EQ(0, pipe(pipefd));
-  ASSERT_NE(-1, pipefd[0]);
-  ASSERT_NE(-1, pipefd[1]);
-
-  int flags = fcntl(pipefd[0], F_GETFD);
-  flags |= O_NONBLOCK;
-  ASSERT_EQ(0, fcntl(pipefd[0], F_SETFD, flags));
-
-  flags = fcntl(pipefd[1], F_GETFD);
-  flags |= O_NONBLOCK;
-  ASSERT_EQ(0, fcntl(pipefd[1], F_SETFD, flags));
+  fbl::unique_fd pipe_out;
+  fbl::unique_fd pipe_in;
+  ASSERT_TRUE(CreateLocalNonBlockingPipe(&pipe_out, &pipe_in));
 
   PlatformMessageLoop loop;
   std::string error_message;
@@ -387,17 +379,18 @@ TEST(MessageLoop, WatchPipeFD) {
     bool got_err = true;
 
     // Going to write to pipefd[1] -> read from pipefd[0].
-    MessageLoop::WatchHandle watch_handle = loop.WatchFD(
-        MessageLoop::WatchMode::kRead, pipefd[0], [&](int fd, bool read, bool write, bool err) {
-          got_read = read;
-          got_write = write;
-          got_err = err;
-          loop.QuitNow();
-        });
+    MessageLoop::WatchHandle watch_handle =
+        loop.WatchFD(MessageLoop::WatchMode::kRead, pipe_out.get(),
+                     [&](int fd, bool read, bool write, bool err) {
+                       got_read = read;
+                       got_write = write;
+                       got_err = err;
+                       loop.QuitNow();
+                     });
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[0] to become readable.
-    loop.PostTask(FROM_HERE, [write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
+    loop.PostTask(FROM_HERE, [write_fd = pipe_in.get()]() { write(write_fd, "Hello", 5); });
 
     // This will quit on success because the OnFDReady callback called QuitNow,
     // or hang forever on failure.
@@ -470,6 +463,40 @@ TEST(MessageLoop, RunUntilNoTasks_EmptyQueue) {
   { loop.RunUntilNoTasks(); }
 
   loop.Cleanup();
+}
+
+// Cleanup should destruct tasks correctly.
+TEST(MessageLoop, CorrectCleanup) {
+  PlatformMessageLoop loop;
+
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
+
+  // Post a task that quits the loop immediately.
+  loop.PostTask(FROM_HERE, [&loop]() { loop.QuitNow(); });
+
+  // Post a timer in the future.
+  bool timer_destructed = false;
+  auto on_timer_destruct = fit::defer([&timer_destructed]() { timer_destructed = true; });
+  loop.PostTimer(FROM_HERE, 100, [on_timer_destruct = std::move(on_timer_destruct)]() {});
+
+  // Watch a pipe forever.
+  fbl::unique_fd pipe_out;
+  fbl::unique_fd pipe_in;
+  ASSERT_TRUE(CreateLocalNonBlockingPipe(&pipe_out, &pipe_in));
+  MessageLoop::WatchHandle watch_handle;
+  auto on_destruct = fit::defer([&watch_handle]() { watch_handle = {}; });
+  watch_handle = loop.WatchFD(
+      MessageLoop::WatchMode::kRead, pipe_out.get(),
+      [on_destruct = std::move(on_destruct)](int fd, bool read, bool write, bool err) {});
+
+  loop.Run();
+  EXPECT_FALSE(timer_destructed);
+  EXPECT_TRUE(watch_handle.watching());
+
+  loop.Cleanup();
+  EXPECT_TRUE(timer_destructed);
+  EXPECT_FALSE(watch_handle.watching());
 }
 
 #if defined(__Fuchsia__)

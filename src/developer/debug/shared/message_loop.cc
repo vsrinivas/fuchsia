@@ -4,9 +4,14 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 
+#include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <unistd.h>
 
 #include <algorithm>
+
+#include "src/lib/files/eintr_wrapper.h"
+#include "src/lib/fxl/build_config.h"
 
 namespace debug {
 
@@ -15,6 +20,31 @@ namespace {
 thread_local MessageLoop* current_message_loop = nullptr;
 
 }  // namespace
+
+bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end) {
+  int fds[2];
+
+#if defined(OS_LINUX)
+  if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0)
+    return false;
+#else
+  if (pipe(fds) != 0)
+    return false;
+
+  for (auto i : {0, 1}) {
+#if defined(OS_MACOSX)
+    if (HANDLE_EINTR(fcntl(fds[i], F_SETFD, fcntl(fds[i], F_GETFD) | FD_CLOEXEC)) == -1)
+      return false;
+#endif
+    if (HANDLE_EINTR(fcntl(fds[i], F_SETFL, fcntl(fds[i], F_GETFL) | O_NONBLOCK)) == -1)
+      return false;
+  }
+#endif
+
+  out_end->reset(fds[0]);
+  in_end->reset(fds[1]);
+  return true;
+}
 
 fpromise::executor* MessageLoopContext::executor() const { return message_loop_; }
 
@@ -36,12 +66,15 @@ bool MessageLoop::Init(std::string* error_message) {
 
 void MessageLoop::Cleanup() {
   FX_DCHECK(current_message_loop == this);
-  current_message_loop = nullptr;
 
   // Clear all tasks because ~MessageLoop() might be called on another thread but some tasks might
   // hold thread_local resources.
   task_queue_.clear();
   timers_.clear();
+
+  // Reset current_message_loop after tasks are cleared because some tasks may call StopWatching
+  // during the destruction which checks current_message_loop.
+  current_message_loop = nullptr;
 }
 
 // static

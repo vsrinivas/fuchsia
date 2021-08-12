@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/lib/fxl/macros.h"
 
@@ -284,11 +286,13 @@ class MessageLoop::WatchHandle {
   WatchHandle(MessageLoop* msg_loop, int id);
 
   WatchHandle(WatchHandle&&);
+  WatchHandle(const WatchHandle&) = delete;
 
   // Stops watching.
   ~WatchHandle();
 
   WatchHandle& operator=(WatchHandle&& other);
+  WatchHandle& operator=(const WatchHandle& other) = delete;
 
   // Stops watching from the message loop.
   // If the handle is not watching, this doesn't do anything.
@@ -302,6 +306,10 @@ class MessageLoop::WatchHandle {
   MessageLoop* msg_loop_ = nullptr;
   int id_ = 0;
 };
+
+// Creates a nonblocking temporary pipe pipe and assigns the two ends of it to the two out
+// parameters. Returns true on success.
+bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end);
 
 #if !defined(__Fuchsia__)
 #undef __TA_REQUIRES

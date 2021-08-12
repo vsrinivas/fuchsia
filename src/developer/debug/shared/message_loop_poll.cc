@@ -12,69 +12,8 @@
 #include <unistd.h>
 
 #include "src/lib/files/eintr_wrapper.h"
-#include "src/lib/fxl/build_config.h"
 
 namespace debug {
-
-namespace {
-
-#if !defined(OS_LINUX)
-bool SetCloseOnExec(int fd) {
-  const int flags = fcntl(fd, F_GETFD);
-  if (flags == -1)
-    return false;
-  if (flags & FD_CLOEXEC)
-    return true;
-  if (HANDLE_EINTR(fcntl(fd, F_SETFD, flags | FD_CLOEXEC)) == -1)
-    return false;
-  return true;
-}
-
-bool SetNonBlocking(int fd) {
-  const int flags = fcntl(fd, F_GETFL);
-  if (flags == -1)
-    return false;
-  if (flags & O_NONBLOCK)
-    return true;
-  if (HANDLE_EINTR(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) == -1)
-    return false;
-  return true;
-}
-#endif
-
-// Creates a nonblocking temporary pipe pipe and assigns the two ends of it to
-// the two out parameters. Returns true on success.
-bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end) {
-#if defined(OS_LINUX)
-  int fds[2];
-  if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0)
-    return false;
-  out_end->reset(fds[0]);
-  in_end->reset(fds[1]);
-  return true;
-#else
-  int fds[2];
-  if (pipe(fds) != 0)
-    return false;
-
-  fbl::unique_fd fd_out(fds[0]);
-  fbl::unique_fd fd_in(fds[1]);
-  if (!SetCloseOnExec(fd_out.get()))
-    return false;
-  if (!SetCloseOnExec(fd_in.get()))
-    return false;
-  if (!SetNonBlocking(fd_out.get()))
-    return false;
-  if (!SetNonBlocking(fd_in.get()))
-    return false;
-
-  *out_end = std::move(fd_out);
-  *in_end = std::move(fd_in);
-  return true;
-#endif
-}
-
-}  // namespace
 
 struct MessageLoopPoll::WatchInfo {
   int fd = -1;
@@ -116,6 +55,15 @@ bool MessageLoopPoll::Init(std::string* error_message) {
 void MessageLoopPoll::Cleanup() {
   // Force unregister our watch before cleaning up current MessageLoop.
   wakeup_pipe_watch_ = WatchHandle();
+
+  // Destruct the FDWatcher first, because they may call StopWatching and expect the key is still
+  // there.
+  std::vector<FDWatcher> to_delete;
+  to_delete.reserve(watches_.size());
+  for (auto& [key, info] : watches_) {
+    to_delete.push_back(std::move(info.watcher));
+  }
+  to_delete.clear();
   watches_.clear();
   MessageLoop::Cleanup();
 }

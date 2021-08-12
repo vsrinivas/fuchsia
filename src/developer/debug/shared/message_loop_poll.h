@@ -8,8 +8,6 @@
 #include <map>
 #include <vector>
 
-#include <fbl/unique_fd.h>
-
 #include "src/developer/debug/shared/message_loop.h"
 
 struct pollfd;
@@ -52,8 +50,7 @@ class MessageLoopPoll : public MessageLoop {
 
   // This must only be accessed on the same thread as the message loop, so is not protected by the
   // lock.
-  using WatchMap = std::map<int, WatchInfo>;
-  WatchMap watches_;
+  std::map<int, WatchInfo> watches_;
 
   // ID used as an index into watches_.
   int next_watch_id_ = 1;

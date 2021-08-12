@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
-#define SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
+#ifndef SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_FUCHSIA_H_
+#define SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_FUCHSIA_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -124,8 +124,7 @@ class MessageLoopFuchsia : public MessageLoop {
 
   void OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed);
 
-  using WatchMap = std::map<int, WatchInfo>;
-  WatchMap watches_;
+  std::map<int, WatchInfo> watches_;
 
   // ID used as an index into watches_.
   int next_watch_id_ = 1;
@@ -188,4 +187,4 @@ struct MessageLoopFuchsia::WatchInfo {
 
 }  // namespace debug
 
-#endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
+#endif  // SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_FUCHSIA_H_
