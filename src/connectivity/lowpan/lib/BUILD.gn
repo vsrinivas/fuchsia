@@ -2,20 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/variant_shared_library_redirect.gni")
-
-variant_shared_library_redirect("lowpan_driver_common") {
-  library = "lowpan_driver_common"
-}
-
-variant_shared_library_redirect("spinel_pack") {
-  library = "spinel_pack"
-}
-
 group("lib") {
   deps = [
-    ":lowpan_driver_common",
-    ":spinel_pack",
+    "lowpan_driver_common",
+    "spinel_pack",
   ]
 }
 

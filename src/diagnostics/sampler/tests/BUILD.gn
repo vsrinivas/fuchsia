@@ -68,10 +68,7 @@ rustc_test("integration-bin") {
 fuchsia_component("sampler-for-test") {
   testonly = true
   manifest = "meta/sampler-for-test.cml"
-  deps = [
-    "//src/diagnostics/launcher:bin",
-    "//src/diagnostics/sampler:sampler_lib",
-  ]
+  deps = [ "//src/diagnostics/launcher:bin" ]
 }
 
 fuchsia_unittest_component("sampler-integration-test") {
