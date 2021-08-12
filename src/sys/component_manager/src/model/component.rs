@@ -1661,8 +1661,8 @@ pub mod tests {
     async fn stop_component_well_behaved_component_stop() {
         // Create a mock controller which simulates immediately shutting down
         // the component.
-        let stop_timeout = zx::Duration::from_millis(5);
-        let kill_timeout = zx::Duration::from_millis(1);
+        let stop_timeout = zx::Duration::from_millis(50);
+        let kill_timeout = zx::Duration::from_millis(10);
         let (client, server) =
             endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
         let server_channel_koid = server
