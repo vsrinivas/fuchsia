@@ -50,7 +50,7 @@ VmoFile::~VmoFile() {}
 
 VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kMemory; }
 
-bool VmoFile::ValidateRights(Rights rights) { return !rights.write || writable_; }
+bool VmoFile::ValidateRights(Rights rights) const { return !rights.write || writable_; }
 
 zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();

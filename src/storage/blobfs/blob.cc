@@ -911,7 +911,7 @@ Blob::~Blob() { ActivateLowMemory(); }
 
 fs::VnodeProtocolSet Blob::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
-bool Blob::ValidateRights(fs::Rights rights) {
+bool Blob::ValidateRights(fs::Rights rights) const {
   // To acquire write access to a blob, it must be empty.
   //
   // TODO(fxbug.dev/67659) If we run FIDL on multiple threads (we currently don't) there is a race

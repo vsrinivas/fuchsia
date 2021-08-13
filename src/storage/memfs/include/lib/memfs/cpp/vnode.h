@@ -167,7 +167,7 @@ class VnodeVmo final : public VnodeMemfs {
   ~VnodeVmo() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;
-  bool ValidateRights(fs::Rights rights) final;
+  bool ValidateRights(fs::Rights rights) const final;
 
  private:
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;

@@ -115,7 +115,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // To be overridden by implementations to check that it is valid to access the vnode with the
   // given |rights|. The default implementation always returns true. The vnode will only be opened
   // for a particular request if the validation passes.
-  virtual bool ValidateRights(Rights rights);
+  virtual bool ValidateRights(Rights rights) const;
 
   // Ensures that it is valid to access the vnode with given connection options. The vnode will only
   // be opened for a particular request if the validation returns |fpromise::ok(...)|.
@@ -126,7 +126,8 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // The |fpromise::error| variant of the return value contains a suitable error code
   // when validation fails.
-  fpromise::result<ValidatedOptions, zx_status_t> ValidateOptions(VnodeConnectionOptions options);
+  fpromise::result<ValidatedOptions, zx_status_t> ValidateOptions(
+      VnodeConnectionOptions options) const;
 
   // Picks one protocol from |protocols|, when the intersection of the protocols requested by the
   // client and the ones supported by the vnode has more than one elements i.e. tie-breaking is

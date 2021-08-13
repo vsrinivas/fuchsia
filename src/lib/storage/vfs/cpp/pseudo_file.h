@@ -53,7 +53,7 @@ class PseudoFile : public Vnode {
 
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
-  bool ValidateRights(Rights rights) override;
+  bool ValidateRights(Rights rights) const override;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
 
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,

@@ -60,7 +60,7 @@ VnodeVmo::~VnodeVmo() {
 
 fs::VnodeProtocolSet VnodeVmo::GetProtocols() const { return fs::VnodeProtocol::kMemory; }
 
-bool VnodeVmo::ValidateRights(fs::Rights rights) {
+bool VnodeVmo::ValidateRights(fs::Rights rights) const {
   return !rights.write && (!rights.execute || executable_);
 }
 

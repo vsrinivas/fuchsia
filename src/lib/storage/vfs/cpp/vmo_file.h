@@ -66,7 +66,7 @@ class VmoFile : public Vnode {
 
   // |Vnode| implementation:
   VnodeProtocolSet GetProtocols() const final;
-  bool ValidateRights(Rights rights) final;
+  bool ValidateRights(Rights rights) const final;
   zx_status_t GetAttributes(VnodeAttributes* a) final;
   zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;

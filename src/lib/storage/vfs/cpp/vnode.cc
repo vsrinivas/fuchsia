@@ -125,9 +125,9 @@ bool Vnode::Supports(VnodeProtocolSet protocols) const {
   return (GetProtocols() & protocols).any();
 }
 
-bool Vnode::ValidateRights([[maybe_unused]] Rights rights) { return true; }
+bool Vnode::ValidateRights([[maybe_unused]] Rights rights) const { return true; }
 
-auto Vnode::ValidateOptions(VnodeConnectionOptions options)
+auto Vnode::ValidateOptions(VnodeConnectionOptions options) const
     -> fpromise::result<ValidatedOptions, zx_status_t> {
   auto protocols = options.protocols();
   if (!Supports(protocols)) {

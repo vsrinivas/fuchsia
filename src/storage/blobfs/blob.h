@@ -76,7 +76,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final __TA_EXCLUDES(mutex_);
   fs::VnodeProtocolSet GetProtocols() const final __TA_EXCLUDES(mutex_);
-  bool ValidateRights(fs::Rights rights) final __TA_EXCLUDES(mutex_);
+  bool ValidateRights(fs::Rights rights) const final __TA_EXCLUDES(mutex_);
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final
       __TA_EXCLUDES(mutex_);
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final

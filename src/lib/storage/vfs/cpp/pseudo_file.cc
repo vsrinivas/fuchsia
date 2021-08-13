@@ -24,7 +24,7 @@ PseudoFile::~PseudoFile() = default;
 
 VnodeProtocolSet PseudoFile::GetProtocols() const { return VnodeProtocol::kFile; }
 
-bool PseudoFile::ValidateRights(Rights rights) {
+bool PseudoFile::ValidateRights(Rights rights) const {
   if (rights.read && !read_handler_) {
     return false;
   }
