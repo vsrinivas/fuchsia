@@ -26,9 +26,6 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <zircon/syscalls.h>
 #endif
 
-// TODO(fxbug.dev/82411) Re-enable tests on release builds.
-#ifndef NDEBUG
-
 {{ range .EncodeSuccessCases }}
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
@@ -128,8 +125,6 @@ TEST(Conformance, {{ .Name }}_Decode_Failure) {
 #endif  // __Fuchsia__
 {{- end }}
 {{ end }}
-
-#endif // NDEBUG
 `))
 
 type conformanceTmplInput struct {
@@ -202,7 +197,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueBuild := valueBuilder.String()
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForEncode(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -235,7 +230,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		equalityCheck := BuildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -269,7 +264,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		valueBuild := valueBuilder.String()
 		errorCode := cppErrorCode(encodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
-		for _, wireFormat := range supportedWireFormats {
+		for _, wireFormat := range supportedEncodeWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:              testCaseName(encodeFailure.Name, wireFormat),
 				HandleDefs:        handleDefs,
@@ -297,7 +292,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		errorCode := cppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -323,13 +318,24 @@ func encoderWireFormat(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("fidl::internal::WireFormatVersion::k%s", fidlgen.ToUpperCamelCase(wireFormat.String()))
 }
 
-var supportedWireFormats = []gidlir.WireFormat{
+var supportedEncodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+}
+var supportedDecodeWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 
-func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedWireFormats {
+func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedEncodeWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
+}
+func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedDecodeWireFormats {
 		if wireFormat == wf {
 			return true
 		}
