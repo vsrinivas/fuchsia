@@ -508,6 +508,56 @@ foreach(firmware, firmware_prebuilts) {
   }
 }
 
+# Stores bootstrap partition information to assemble the flashing manifest.
+bootstrap_parts = []
+archive_bootstrap_parts = []
+
+foreach(file, bootstrap_files) {
+  file_name = get_path_info(file.path, "file")
+  out_path = "${root_out_dir}/${file_name}"
+
+  copy(file_name) {
+    sources = [ rebase_path(file.path, root_build_dir) ]
+    outputs = [ out_path ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":${file_name}", "label_with_toolchain")
+          archive = true
+          name = get_path_info(file.path, "name")
+          path = rebase_path(out_path, root_build_dir)
+          type = get_path_info(file.path, "extension")
+        },
+      ]
+    }
+  }
+
+  default_image_deps += [ ":${file_name}" ]
+
+  if (defined(file.partition)) {
+    part = {
+    }
+    archive_part = {
+    }
+
+    # The only difference here is the path. For the normal partition map it
+    # should be the path relative to the build dir, whereas the archive needs it
+    # to be just the file name.
+    part.name = file.partition
+    part.path = rebase_path(out_path, root_build_dir)
+    archive_part.name = file.partition
+    archive_part.path = file_name
+    if (defined(file.condition)) {
+      part.condition = file.condition
+      archive_part.condition = file.condition
+    }
+
+    bootstrap_parts += [ part ]
+    archive_bootstrap_parts += [ archive_part ]
+  }
+}
+
 # If a GPT image was specified, make it available as a build artifact.
 if (gpt_image != "") {
   copy("gpt") {
@@ -726,6 +776,16 @@ action("flash_script") {
               partitions = parts
               oem_files = []
             },
+
+            # "bootstrap" product is only responsible for flashing any bootstrap
+            # files and the bootloader itself, at which point the device is
+            # ready to be flashed using the standard means.
+            {
+              name = "bootstrap"
+              bootloader_partitions = bootstrap_parts + bootloader_parts
+              partitions = []
+              oem_files = []
+            },
           ]
         }
       },
@@ -921,6 +981,17 @@ generated_file("fastboot_manifest_archive") {
             name = "fuchsia"
             bootloader_partitions = archive_bootloader_parts
             partitions = archive_parts
+            oem_files = []
+          },
+
+          # "bootstrap" product is only responsible for flashing any bootstrap
+          # files and the bootloader itself, at which point the device is
+          # ready to be flashed using the standard means.
+          {
+            name = "bootstrap"
+            bootloader_partitions =
+                archive_bootstrap_parts + archive_bootloader_parts
+            partitions = []
             oem_files = []
           },
         ]

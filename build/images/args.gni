@@ -45,6 +45,19 @@ declare_args() {
   # that users can easily switch revisions using a single arg.
   firmware_prebuilts_path_suffix = ""
 
+  # List of files needed to bootstrap the device.
+  #
+  # Flashing a device assumes a certain state; bootstrapping instead allows
+  # initially provisioning a device from unknown state, so may require
+  # additional resources that would not be included in an OTA.
+  #
+  # Each entry in the list is a scope containing:
+  #  * `path`: path to file.
+  #  * `partition` (optional): `fastboot flash` partition.
+  #  * `condition` (optional): a scope with `variable` and `value` keys; file is
+  #    only flashed if `fastboot getvar <variable>` == <value>.
+  bootstrap_files = []
+
   # GUID Partition Table (GPT) image.
   #
   # Typically useful for initially flashing a device from zero-state.
