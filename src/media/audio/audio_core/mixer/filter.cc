@@ -157,6 +157,8 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   SincFilter::persistent_cache_->push_back(
       cache->Get(SincFilterCoefficientTable::MakeInputs(96000, 16000)));
   SincFilter::persistent_cache_->push_back(
+      cache->Get(SincFilterCoefficientTable::MakeInputs(48000, 16000)));
+  SincFilter::persistent_cache_->push_back(
       cache->Get(SincFilterCoefficientTable::MakeInputs(44100, 48000)));
 
   return cache;
