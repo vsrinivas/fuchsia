@@ -284,10 +284,13 @@ async fn main() -> Result<(), Error> {
     syslog::fx_log_info!("{}", "Starting factory_store_providers");
 
     let factory_config = load_config_file(FACTORY_DEVICE_CONFIG).unwrap_or_default();
-    let directory_proxy = open_factory_source(factory_config).await.map_err(|e| {
-        syslog::fx_log_info!("{:?}", e);
-        e
-    })?;
+    let directory_proxy = open_factory_source(factory_config)
+        .await
+        .map_err(|e| {
+            syslog::fx_log_err!("{:?}", e);
+            e
+        })
+        .unwrap();
 
     let mut fs = ServiceFs::new();
     fs.dir("svc")
