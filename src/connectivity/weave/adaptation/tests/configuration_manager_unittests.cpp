@@ -34,7 +34,6 @@ namespace {
 
 using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
-using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgr;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
@@ -244,8 +243,6 @@ TEST_F(ConfigurationManagerTest, GetFirmwareRevision_DeviceInfo) {
   // An empty firmware revision will result in falling back to the revision
   // provided in the config-data.
   fake_buildinfo_provider().set_version("");
-  ConfigurationMgrImpl().SetDelegate(nullptr);
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(
       ConfigurationMgr().GetFirmwareRevision(firmware_revision, sizeof(firmware_revision), out_len),
@@ -475,9 +472,6 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber_DeviceInfo) {
   // A non-existent serial number field will result in falling back to the
   // serial number provided in config-data, if one is available.
   fake_hwinfo_device().set_serial_number(std::nullopt);
-  ConfigurationMgrImpl().SetDelegate(nullptr);
-  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-
   EXPECT_EQ(delegate().Init(), WEAVE_NO_ERROR);
   EXPECT_EQ(ConfigurationMgr().GetSerialNumber(serial_num, sizeof(serial_num), out_len),
             WEAVE_NO_ERROR);

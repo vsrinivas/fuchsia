@@ -22,8 +22,8 @@
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 // clang-format on
 
-#include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "test_configuration_manager.h"
 #include "weave_test_fixture.h"
 
 namespace nl {
@@ -33,6 +33,9 @@ namespace Internal {
 namespace testing {
 
 namespace {
+
+using weave::adaptation::testing::TestConfigurationManager;
+
 using fuchsia::lowpan::ConnectivityState;
 using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
@@ -577,92 +580,6 @@ class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
   fidl::Binding<routes::State> binding_{this};
 };
 
-class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
- public:
-  void SetThreadEnabled(bool value) { is_thread_enabled_ = value; }
-
-  void SetThreadJoinableDuration(std::optional<uint32_t> duration) {
-    join_duration_ = std::move(duration);
-  }
-
-  void SetVendorIdDescription(std::optional<std::string> vendor_desc) {
-    vendor_desc_ = std::move(vendor_desc);
-  }
-
-  void SetProductIdDescription(std::optional<std::string> product_desc) {
-    product_desc_ = std::move(product_desc);
-  }
-
-  void SetFirmwareRevision(std::optional<std::string> firmware_version) {
-    firmware_version_ = std::move(firmware_version);
-  }
-
- private:
-  bool is_thread_enabled_ = true;
-  std::optional<uint32_t> join_duration_ = std::nullopt;
-  std::optional<std::string> vendor_desc_ = std::nullopt;
-  std::optional<std::string> product_desc_ = std::nullopt;
-  std::optional<std::string> firmware_version_ = std::nullopt;
-
-  bool IsThreadEnabled() override { return is_thread_enabled_; }
-  WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override {
-    if (!join_duration_) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-
-    *duration = *join_duration_;
-    return WEAVE_NO_ERROR;
-  }
-
-  WEAVE_ERROR GetVendorIdDescription(char* buf, size_t buf_size, size_t& out_len) override {
-    if (!vendor_desc_) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-
-    const auto& desc = vendor_desc_.value();
-
-    if (desc.size() > buf_size) {
-      return WEAVE_ERROR_BUFFER_TOO_SMALL;
-    }
-
-    std::memcpy(buf, desc.data(), desc.size());
-    out_len = desc.size();
-    return WEAVE_NO_ERROR;
-  }
-
-  WEAVE_ERROR GetProductIdDescription(char* buf, size_t buf_size, size_t& out_len) override {
-    if (!product_desc_) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-
-    const auto& desc = product_desc_.value();
-
-    if (desc.size() > buf_size) {
-      return WEAVE_ERROR_BUFFER_TOO_SMALL;
-    }
-
-    std::memcpy(buf, desc.data(), desc.size());
-    out_len = desc.size();
-    return WEAVE_NO_ERROR;
-  }
-
-  WEAVE_ERROR GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len) override {
-    if (!firmware_version_) {
-      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-    }
-
-    const auto& version = firmware_version_.value();
-
-    if (version.size() > buf_size) {
-      return WEAVE_ERROR_BUFFER_TOO_SMALL;
-    }
-
-    std::memcpy(buf, version.data(), version.size());
-    out_len = version.size();
-    return WEAVE_NO_ERROR;
-  }
-};
-
 class MockedEventLoggingThreadStackManagerDelegateImpl : public ThreadStackManagerDelegateImpl {
  public:
   static constexpr nl::Weave::Profiles::DataManagement::event_id_t kFakeEventId = 42;
@@ -773,10 +690,8 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
   }
 
   void ResetConfigMgr() {
-    auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
-    config_delegate_ = config_delegate.get();
     ConfigurationMgrImpl().SetDelegate(nullptr);
-    ConfigurationMgrImpl().SetDelegate(std::move(config_delegate));
+    ConfigurationMgrImpl().SetDelegate(std::make_unique<TestConfigurationManager>());
   }
 
   void SetUp() override {
@@ -785,9 +700,10 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
     RunFixtureLoop();
     ResetConfigMgr();
     ConfigurationMgr().StorePairingCode(kFakePairingCode, sizeof(kFakePairingCode));
-    config_delegate_->SetVendorIdDescription(kFakeVendor);
-    config_delegate_->SetProductIdDescription(kFakeProduct);
-    config_delegate_->SetFirmwareRevision(kFakeVersion);
+    configuration_delegate().set_is_thread_enabled(true);
+    configuration_delegate().set_vendor_id_description(std::string(kFakeVendor));
+    configuration_delegate().set_product_id_description(std::string(kFakeProduct));
+    configuration_delegate().set_firmware_revision(std::string(kFakeVersion));
     auto tsm_delegate = std::make_unique<MockedEventLoggingThreadStackManagerDelegateImpl>();
     tsm_delegate_ = tsm_delegate.get();
     ThreadStackMgrImpl().SetDelegate(std::move(tsm_delegate));
@@ -802,9 +718,12 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
   }
 
  protected:
+  TestConfigurationManager& configuration_delegate() {
+    return *reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
+  }
+
   FakeLowpanLookup fake_lookup_;
   FakeNetRoutes fake_routes_;
-  OverridableThreadConfigurationManagerDelegate* config_delegate_;
   MockedEventLoggingThreadStackManagerDelegateImpl* tsm_delegate_;
 
  private:
@@ -1100,7 +1019,7 @@ TEST_F(ThreadStackManagerTest, ThreadSupportDisabled) {
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
 
   // Initialize TSM with Thread disabled in the config mgr.
-  config_delegate_->SetThreadEnabled(false);
+  configuration_delegate().set_is_thread_enabled(false);
   ASSERT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
 
   EXPECT_FALSE(ThreadStackMgrImpl().IsThreadSupported());
@@ -1173,7 +1092,7 @@ TEST_F(ThreadStackManagerTest, SetThreadJoinable) {
     EXPECT_EQ(calls[0].second, WEAVE_UNSECURED_PORT);
   }
 
-  config_delegate_->SetThreadJoinableDuration(kTestDuration);
+  configuration_delegate().set_thread_joinable_duration(kTestDuration);
   EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(true), WEAVE_NO_ERROR);
   {
     const auto& calls = fake_lookup_.thread_legacy().calls();
@@ -1656,7 +1575,7 @@ TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingPairingCode) 
 TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingVendorName) {
   ThreadStackMgrImpl().SetDelegate(nullptr);
   fake_lookup_.device().provisioning_monitor().Reset();
-  config_delegate_->SetVendorIdDescription(std::nullopt);
+  configuration_delegate().set_vendor_id_description(std::nullopt);
   auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
   ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
   EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
@@ -1666,7 +1585,7 @@ TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingVendorName) {
 TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingProductName) {
   ThreadStackMgrImpl().SetDelegate(nullptr);
   fake_lookup_.device().provisioning_monitor().Reset();
-  config_delegate_->SetProductIdDescription(std::nullopt);
+  configuration_delegate().set_product_id_description(std::nullopt);
   auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
   ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
   EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
@@ -1676,7 +1595,7 @@ TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingProductName) 
 TEST_F(ThreadStackManagerTest, DISABLED_StartupThreadJoiningMissingFirmwareVersion) {
   ThreadStackMgrImpl().SetDelegate(nullptr);
   fake_lookup_.device().provisioning_monitor().Reset();
-  config_delegate_->SetFirmwareRevision(std::nullopt);
+  configuration_delegate().set_firmware_revision(std::nullopt);
   auto delegate = new MockedTimerThreadStackManagerDelegateImpl();
   ThreadStackMgrImpl().SetDelegate(std::unique_ptr<ThreadStackManagerDelegateImpl>(delegate));
   EXPECT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
