@@ -119,20 +119,20 @@ class VirtioNetTest : public TestWithDevice,
 
     // Fake |fuchsia.net.interfaces/Watcher| implementation.
     void Watch(WatchCallback callback) override {
-      // Return a single fake interface.
-      fuchsia::net::interfaces::Properties properties;
       std::vector<fuchsia::net::interfaces::Address> addresses;
-      fuchsia::net::interfaces::Address addr;
-      addr.set_addr({
+      addresses.emplace_back().set_addr({
           .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address()),
           .prefix_len = 0,
       });
-      addresses.emplace_back(std::move(addr));
+
+      fuchsia::net::interfaces::Properties properties;
       properties.set_addresses(std::move(addresses));
       properties.set_online(true);
       properties.set_has_default_ipv4_route(true);
       properties.set_has_default_ipv6_route(false);
 
+      // Return multiple fake interfaces, followed by an idle event. This is to
+      // test that VirtioNet can handle multiple events being returned.
       switch (event_++) {
         case 0:
           properties.set_id(0);
